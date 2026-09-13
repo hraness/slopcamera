@@ -77,3 +77,19 @@ test("the single Sugar High structural line is separately admitted and never mis
  expect(source).toContain('wrappers.length!==1');expect(source).toContain('wrappers[0]!.className!=="sh__line"')
  expect(source).toContain('.syntax-code span:not(.sh__line)');expect(source).toContain('throw Error("Missing syntax kind")')
 })
+
+
+test("the canonical 0.8 install frame admits only its exact 14px radius",async()=>{
+ const source=await readFile(new URL("./site-refinement-browser-contract.ts",import.meta.url),"utf8")
+ expect(source).toContain('sample("#install",{"border-radius":"14px"})')
+ const seams=Object.fromEntries(["top","right","bottom","left"].map(side=>[`border-${side}-color`,"rgb(1, 1, 1)"]))
+ const current:ShellElement={key:"#install[0]",rect:[20,200,280,400],text:"Install",semantics:{role:null},styles:{...seams,"border-radius":"14px",color:"rgb(2, 2, 2)",width:"280px"}}
+ const baseline={...current,styles:{...current.styles,"border-radius":"10px"}}
+ const paint={"#install":{"border-radius":"14px"},"section-line":{"border-top-color":"rgb(1, 1, 1)"}}
+ expect(projectRefinementPaint(current,baseline,paint)).toEqual(baseline)
+ for(let radius=0;radius<=64;radius++)if(radius!==14)expect(()=>projectRefinementPaint({...current,styles:{...current.styles,"border-radius":`${radius}px`}},baseline,paint)).toThrow()
+ expect(()=>projectRefinementPaint({...current,styles:{...current.styles,"border-radius":"14px 10px"}},baseline,paint)).toThrow()
+ const changed={...current,rect:[21,201,281,401],styles:{...current.styles,color:"red",width:"281px"}}
+ const projected=projectRefinementPaint(changed,baseline,paint)
+ expect(projected.rect).toEqual(changed.rect);expect(projected.styles.color).toBe("red");expect(projected.styles.width).toBe("281px")
+})
