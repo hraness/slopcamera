@@ -18,7 +18,7 @@ const homeSlots = [
   ["{{INSTALL_NOTE_CLASS}}", siteInstallClassNames.note, 1],
   ["{{INSTALL_PANEL_NOTE_CLASS}}", siteInstallClassNames.panelNote, 2],
   ["{{INSTALL_PANEL_LINK_CLASS}}", siteInstallClassNames.panelLink, 2],
-  ["{{INSTALL_LABEL_CLASS}}", siteInstallClassNames.label, 2],
+  ["{{INSTALL_LABEL_CLASS}}", siteInstallClassNames.label, 1],
   ["{{INSTALL_COPY_CLASS}}", siteInstallClassNames.command, 1],
   ["{{INSTALL_VALUE_CLASS}}", siteInstallClassNames.value, 1],
   ["{{INSTALL_IDLE_CLASS}}", siteInstallClassNames.idle, 2],
@@ -28,12 +28,6 @@ const homeSlots = [
   ["{{INSTALL_NOTE_CODE_CLASS}}", siteInstallClassNames.noteCode, 1],
   ["{{INSTALL_STATUS_CLASS}}", siteInstallClassNames.status, 1],
   ["{{INSTALL_FALLBACK_CLASS}}", siteInstallClassNames.fallback, 1],
-  ["{{INSTALL_CLI_CLASS}}", siteInstallClassNames.cli, 1],
-  ["{{INSTALL_COMMANDS_CLASS}}", siteInstallClassNames.commands, 1],
-  ["{{INSTALL_ITEM_CLASS}}", siteInstallClassNames.item, 1],
-  ["{{INSTALL_SUBSEQUENT_ITEM_CLASS}}", siteInstallClassNames.subsequentItem, 1],
-  ["{{INSTALL_NUMBER_CLASS}}", siteInstallClassNames.number, 2],
-  ["{{INSTALL_CODE_CLASS}}", siteInstallClassNames.installCode, 2],
 ] as const
 const recoverySlots = [
   ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],

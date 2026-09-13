@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import type { Browser, Page, Request } from "playwright-core"
 import { bounded } from "./preview-browser-contract"
+import { refinementCopyProfile, refinementCopySelectors, refinementCopyCounts, refinementInstallCommand } from "./site-refinement-profile"
 import { assertShellNode, chooseAppearance, compareShellElements, denyShellWebSocket, measure, settle,
   shellContentType, shellContextLifecycle, shellOperationTracker, shellPaintProperties, shellRecord, shellScopeFields, siteShellHeaders, withShellCaseCleanup,
   type ShellCase, type ShellCaseFailure, type ShellElement, type ShellPayload, type ShellRequest } from "./site-shell-browser-contract"
@@ -29,13 +30,25 @@ export const measureCopy = (page: Page, selectors: readonly string[] = copySelec
  * stable wrong sample still reaches the original strict comparison. */
 export async function settleCopyPaint(root: Element, options: {
   readonly selectors: readonly string[]; readonly counts: readonly number[]; readonly properties: readonly string[]; readonly label: string
+  readonly profile?: typeof refinementCopyProfile
 }): Promise<ShellElement[]> {
   const document = root.ownerDocument, view = document.defaultView, label = options.label.slice(0, 192)
   if (view === null || document.querySelectorAll("#install").length !== 1 || document.querySelector("#install") !== root) {
     throw new Error(`${label}: Missing exact copy paint root`)
   }
   const { selectors, counts, properties } = options
-  if (selectors.length !== 16 || counts.length !== 16 || counts.reduce((sum, count) => sum + count, 0) !== 22
+  const refinement = options.profile === "archive-refinement-v1"
+  if (options.profile !== undefined && !refinement) throw new Error(`${label}: Unknown copy paint profile`)
+  if (refinement && (JSON.stringify(selectors) !== JSON.stringify([
+    "#install", ".install-note", ".hraness-marketing-install__heading-group", ".panel-label",
+    ".hraness-marketing-install__commands", ".source-install", ".source-install > summary",
+    ".source-install .hraness-marketing-question__answer", ".panel-note", ".panel-note a",
+    "[data-copy-command]", "[data-copy-command-value]", "[data-copy-command-button]",
+    ".copy-command__note", ".copy-command__note > code", "[data-copy-command-status]",
+  ]) || JSON.stringify(counts) !== JSON.stringify([1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1]))) {
+    throw new Error(`${label}: Refinement copy paint inventory changed`)
+  }
+  if (selectors.length !== 16 || counts.length !== 16 || counts.reduce((sum, count) => sum + count, 0) !== (refinement ? 18 : 22)
     || properties.length < 70 || properties.length > 100 || new Set(properties).size !== properties.length) {
     throw new Error(`${label}: Invalid copy paint inventory`)
   }
@@ -130,10 +143,13 @@ export async function settleCopyPaint(root: Element, options: {
     } catch (error) { finish(error) }
   })
 }
-export async function stableCopyPaint(page: Page, label: string): Promise<ShellElement[]> {
+export async function stableCopyPaint(page: Page, label: string, profile?: typeof refinementCopyProfile): Promise<ShellElement[]> {
+  assert.ok(profile === undefined || profile === refinementCopyProfile, "Unknown copy paint profile")
   await settle(page)
   return page.locator("#install").evaluate(settleCopyPaint,
-    { selectors: copySelectors, counts: copyCounts, properties: [...shellPaintProperties, ...copyProperties], label })
+    { selectors: profile === undefined ? copySelectors : refinementCopySelectors,
+      counts: profile === undefined ? copyCounts : refinementCopyCounts,
+      properties: [...shellPaintProperties, ...copyProperties], label, ...(profile === undefined ? {} : { profile }) })
 }
 export interface CopyEvidence {
   readonly steps: readonly { name: string; elements: readonly ShellElement[] }[]
@@ -251,7 +267,7 @@ export function installCopyProofPorts(): void {
   window.clearTimeout = ((id?: number) => { const timer = id === undefined ? undefined : timers.get(id); if (timer) timer.cancelled = true; originalClear(id) }) as typeof window.clearTimeout
 }
 
-async function copyState(page: Page, state: "idle" | "copied" | "failed"): Promise<void> {
+async function copyState(page: Page, state: "idle" | "copied" | "failed", profile?: typeof refinementCopyProfile): Promise<void> {
   await page.waitForFunction(state => {
     const button = document.querySelector<HTMLButtonElement>("[data-copy-command-button]")
     return button !== null && !button.hidden && (button.dataset.copyState ?? "idle") === state
@@ -262,7 +278,7 @@ async function copyState(page: Page, state: "idle" | "copied" | "failed"): Promi
     live: document.querySelector("[data-copy-command-status]")?.getAttribute("aria-live"),
     atomic: document.querySelector("[data-copy-command-status]")?.getAttribute("aria-atomic"), textareas: document.querySelectorAll("textarea").length }))
   assert.deepEqual(actual, { text: state === "copied" ? "Copied" : "Copy", state: state === "idle" ? null : state, type: "button",
-    described: "skill-install-copy-status", label: "Copy install command", status: state === "idle" ? "" : state === "copied"
+    described: "skill-install-copy-status", label: profile === undefined ? "Copy install command" : "Copy install commands", status: state === "idle" ? "" : state === "copied"
       ? "Install command copied." : "Could not copy the command. Select it and copy it manually.", live: "polite", atomic: "true", textareas: 0 })
 }
 export function assertCopyPorts(ports: CopyPorts, command: string): void {
@@ -284,7 +300,10 @@ export function assertCopyPorts(ports: CopyPorts, command: string): void {
   assert.ok(live !== undefined && live.fired === null && !live.cancelled)
 }
 
-export async function checkCopyCase(browser: Browser, payload: ShellPayload, scenario: ShellCase, negative: boolean): Promise<CopyEvidence> {
+export async function checkCopyCase(browser: Browser, payload: ShellPayload, scenario: ShellCase, negative: boolean,
+  profile?: typeof refinementCopyProfile, observeRefinement?: (page: Page, name: string, elements: readonly ShellElement[]) => Promise<void>): Promise<CopyEvidence> {
+  assert.ok(observeRefinement === undefined || profile === refinementCopyProfile, "Additional copy design observations require the explicit refinement profile")
+  assert.ok(profile === undefined || profile === refinementCopyProfile, "Unknown copy case profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, colorScheme: scenario.system,
     forcedColors: scenario.forced, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
   context.setDefaultTimeout(5_000)
@@ -323,13 +342,18 @@ export async function checkCopyCase(browser: Browser, payload: ShellPayload, sce
     assert.equal(page.frames().length, 1)
     await page.locator('[data-hraness-appearance-menu][data-ready="true"]').waitFor()
     await chooseAppearance(page, scenario.theme, scenario.system)
-    await copyState(page, "idle")
+    await copyState(page, "idle", profile)
     const command = await page.locator("[data-copy-command-value]").innerText()
-    assert.equal(command, "bun apps/desktop/dist/cli/main.js skill install --target agents")
+    assert.equal(command, profile === undefined ? "bun apps/desktop/dist/cli/main.js skill install --target agents" : refinementInstallCommand)
     assert.deepEqual(await page.evaluate(() => ({ width: innerWidth, forced: matchMedia("(forced-colors: active)").matches,
       theme: document.documentElement.dataset.theme })), { width: scenario.width, forced: scenario.forced === "active", theme: scenario.theme })
     const button = page.locator(buttonSelector), steps: { name: string; elements: ShellElement[] }[] = []
-    const sample = async (name: string) => { steps.push({ name, elements: await stableCopyPaint(page, name) }) }
+    const paint = (label: string) => stableCopyPaint(page, label, profile)
+    const sample = async (name: string) => {
+      const elements = await paint(name)
+      if (observeRefinement !== undefined) await observeRefinement(page, name, elements)
+      steps.push({ name, elements })
+    }
     await button.scrollIntoViewIfNeeded()
     // Shift+Tab from the native appearance trigger reaches the preceding public
     // link, so walk forward using actual Tab events to the sole copy button.
@@ -338,27 +362,27 @@ export async function checkCopyCase(browser: Browser, payload: ShellPayload, sce
     await sample("idle-focus")
     await button.hover(); await sample("idle-hover")
     await page.mouse.move(0, 0)
-    await page.keyboard.press("Enter"); await copyState(page, "copied"); await sample("copied-focus")
+    await page.keyboard.press("Enter"); await copyState(page, "copied", profile); await sample("copied-focus")
     await button.hover(); await sample("copied-hover")
-    await copyState(page, "idle"); await sample("reset")
+    await copyState(page, "idle", profile); await sample("reset")
     await page.evaluate(() => { window.__slopcameraCopyProof.write = "reject" })
-    await button.click(); await copyState(page, "copied"); await sample("fallback-success")
+    await button.click(); await copyState(page, "copied", profile); await sample("fallback-success")
     await page.evaluate(() => { window.__slopcameraCopyProof.fallback = "failed" })
-    await button.click(); await copyState(page, "failed"); await page.mouse.move(0, 0); await sample("fallback-failed")
+    await button.click(); await copyState(page, "failed", profile); await page.mouse.move(0, 0); await sample("fallback-failed")
     await button.hover(); await sample("failed-hover")
     await page.evaluate(() => { window.__slopcameraCopyProof.fallback = "throw" })
     await button.click()
     await page.waitForFunction(() => window.__slopcameraCopyProof.fallbacks.length === 3)
-    await copyState(page, "failed"); await sample("fallback-throw")
+    await copyState(page, "failed", profile); await sample("fallback-throw")
     await page.evaluate(() => { window.__slopcameraCopyProof.write = "success" })
-    await button.click(); await copyState(page, "copied"); await sample("recovered")
+    await button.click(); await copyState(page, "copied", profile); await sample("recovered")
     const ports = await page.evaluate(() => window.__slopcameraCopyProof)
     assertCopyPorts(ports, command)
     const controls: string[] = []
     if (negative) {
       // Let the final real success reset finish before adversarial paint
       // controls; a live timer must not contaminate their exact restore proof.
-      await copyState(page, "idle")
+      await copyState(page, "idle", profile)
       // Keep real hover cases above, but hold a neutral native pointer through
       // sheet removal so geometry changes cannot change this control's state.
       await page.mouse.move(0, 0)
@@ -379,28 +403,28 @@ export async function checkCopyCase(browser: Browser, payload: ShellPayload, sce
         return { sheet, check }
       }, payload.finalCss)
       try {
-        const before = await stableCopyPaint(page, "Copy stylesheet baseline")
+        const before = await paint("Copy stylesheet baseline")
         try {
           await restoration.evaluate(value => { value.check(); value.sheet.disabled = true })
-          const disabled = await stableCopyPaint(page, "Copy disabled stylesheet")
+          const disabled = await paint("Copy disabled stylesheet")
           await restoration.evaluate(value => value.check())
           assert.throws(() => compareShellElements(disabled, before, "Copy stylesheet negative control"))
         } finally { await restoration.evaluate(value => { value.sheet.disabled = false }) }
-        compareShellElements(await stableCopyPaint(page, "Copy restored stylesheet"), before, "Copy exact stylesheet recovery")
+        compareShellElements(await paint("Copy restored stylesheet"), before, "Copy exact stylesheet recovery")
         await restoration.evaluate(value => value.check())
       } finally { await restoration.dispose() }
       controls.push(copyNegativeControls[0]!)
       await page.mouse.move(0, 0); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab"); await settle(page)
       assert.equal(await button.evaluate(element => element.matches(":focus-visible")), true)
-      const focused = await stableCopyPaint(page, "Copy focus baseline")
+      const focused = await paint("Copy focus baseline")
       const previousStyle = await button.getAttribute("style")
       assert.equal(previousStyle, null)
       await button.evaluate(element => (element as HTMLElement).style.setProperty("outline-style", "none", "important"))
       try {
-        const suppressed = await stableCopyPaint(page, "Copy suppressed focus")
+        const suppressed = await paint("Copy suppressed focus")
         assert.throws(() => compareShellElements(suppressed, focused, "Copy native focus negative control"))
       } finally { await button.evaluate(element => element.removeAttribute("style")) }
-      compareShellElements(await stableCopyPaint(page, "Copy restored focus"), focused, "Copy exact native focus recovery")
+      compareShellElements(await paint("Copy restored focus"), focused, "Copy exact native focus recovery")
       controls.push(copyNegativeControls[1]!)
     }
     await operations.settle("Copy final operations")

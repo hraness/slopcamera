@@ -51,9 +51,9 @@
       "name": "@hraness/slopcamera-web",
       "version": "0.0.0",
       "dependencies": {
-        "@hraness/design-kit": "github:hraness/design-kit#v0.5.2",
-        "@hraness/site-footer": "github:hraness/site-footer#v0.6.1",
-        "@hraness/ui": "github:hraness/ui#v0.5.7",
+        "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
+        "@hraness/site-footer": "github:hraness/site-footer#v0.6.3",
+        "@hraness/ui": "github:hraness/ui#v0.5.12",
         "@resvg/resvg-js": "2.6.2",
         "posthog-js": "1.413.2",
         "react": "19.2.3",
@@ -70,8 +70,9 @@
         "@types/react": "19.2.14",
         "@types/react-dom": "19.2.3",
         "lightningcss": "1.33.0",
+        "parse5": "8.0.1",
         "playwright-core": "1.62.0",
-        "typescript": "5.9.3",
+        "typescript": "6.0.3",
         "vite": "8.2.1",
       },
     },
@@ -181,17 +182,17 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
-    "@hraness/slopcamera-scene": ["@hraness/slopcamera-scene@workspace:packages/scene"],
-
-    "@hraness/slopcamera-web": ["@hraness/slopcamera-web@workspace:apps/web"],
-
     "@hraness/design-kit": ["@hraness/design-kit@github:hraness/design-kit#a50a8f2", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@stylexjs/stylex": "0.19.0", "motion": "12.42.0", "next-themes": "0.4.6", "react-aria-components": "1.19.0", "recharts": "3.8.0", "sugar-high": "^1.2.1", "web-haptics": "0.0.6" }, "peerDependencies": { "@hraness/ui": ">=0.4.7 <0.5.0", "react": ">=18 <20", "react-dom": ">=18 <20" }, "optionalPeers": ["@hraness/ui"] }, "hraness-design-kit-a50a8f2", "sha512-nCmHqqXFfIbuakK86yXJSiBuoyaCD3IIihLMWEZzITLnkGsPLkFVMvFdiPI492OjfBY4Aq85YRGdAFV8pm350w=="],
 
     "@hraness/direct": ["@hraness/direct@github:hraness/direct#af954e7", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "hraness-direct-af954e7", "sha512-q1iauLS/UaP0gLknME4Roca46yosjsc2oQ3ULrH1cxiUBwbfRMREf0BeiQtiKJGPOkPsHNXUEJM6I68IgRqm/Q=="],
 
-    "@hraness/site-footer": ["@hraness/site-footer@github:hraness/site-footer#590056b", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "hraness-site-footer-590056b", "sha512-/Zi9u1j5uUn0Y0iubtaWfJ69qFO/c/8lyQvXkPyL0ULLCw4SjGRuOqB/ozB0T1QTgcPOR/uxaHVbGWjINYzSiw=="],
+    "@hraness/site-footer": ["@hraness/site-footer@github:hraness/site-footer#f984d97", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "hraness-site-footer-f984d97", "sha512-nDJ+r0ipx6RzLBosf8B6CHMDDgmJwN9H3m7ZAf9sgDxnIVCyAkwMUvqEpa4nyT98AoEi2m3J6YtA7lF8d+E5Wg=="],
 
-    "@hraness/ui": ["@hraness/ui@github:hraness/ui#d5e946f", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@hugeicons/react": "^1.1.9", "@stylexjs/stylex": "0.19.0", "clsx": "^2.1.1", "parse5": "8.0.1", "react-aria": "3.50.0", "react-aria-components": "1.19.0" }, "peerDependencies": { "@babel/core": "7.29.7", "@stylexjs/babel-plugin": "0.19.0", "@types/babel__core": "7.20.5", "@types/bun": "1.3.14", "@types/node": "^20.19.0 || >=22.12.0", "lightningcss": "1.33.0", "next": "16.2.12", "react": ">=18 <20", "react-dom": ">=18 <20", "typescript": "6.0.3", "vite": "7.3.6 || 8.2.1" }, "optionalPeers": ["@babel/core", "@stylexjs/babel-plugin", "@types/babel__core", "@types/bun", "@types/node", "lightningcss", "next", "typescript", "vite"] }, "hraness-ui-d5e946f", "sha512-WEN55r52v9At/NZPijBmcWPZL8QSGLENWKPAf08cF+5r7RwUki2FL4Z1QdtAKiPCCkUnZjbxdJ6ehoUBCsnfVw=="],
+    "@hraness/slopcamera-scene": ["@hraness/slopcamera-scene@workspace:packages/scene"],
+
+    "@hraness/slopcamera-web": ["@hraness/slopcamera-web@workspace:apps/web"],
+
+    "@hraness/ui": ["@hraness/ui@github:hraness/ui#03a8eb2", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@hugeicons/react": "^1.1.9", "@stylexjs/stylex": "0.19.0", "clsx": "^2.1.1", "parse5": "8.0.1", "react-aria": "3.50.0", "react-aria-components": "1.19.0" }, "peerDependencies": { "@babel/core": "7.29.7", "@stylexjs/babel-plugin": "0.19.0", "@types/babel__core": "7.20.5", "@types/bun": "1.3.14", "@types/node": "^20.19.0 || >=22.12.0", "lightningcss": "1.33.0", "next": "16.2.12 || 16.3.3", "react": ">=18 <20", "react-dom": ">=18 <20", "typescript": "6.0.3", "vite": "7.3.6 || 8.2.1" }, "optionalPeers": ["@babel/core", "@stylexjs/babel-plugin", "@types/babel__core", "@types/bun", "@types/node", "lightningcss", "next", "typescript", "vite"] }, "hraness-ui-03a8eb2", "sha512-efu5QVfUsegOGgvVaAF491g9P+07NjvQ8FOMIjUEyIKbc8IfuuP4WAtLGxWT5ZYdTIy/K1wX3xpo+DLzlRlO4A=="],
 
     "@hugeicons/core-free-icons": ["@hugeicons/core-free-icons@4.3.0", "", {}, "sha512-5DC5gq2psNDKBQThOjpuFCtMco8nl2FkrBzZgG15cFGM0kSwUoych/pw0DmjBygF9qRDITdBPtmzJqLsOeImMg=="],
 
@@ -1149,15 +1150,13 @@
 
     "@eslint/eslintrc/ajv": ["ajv@6.15.0", "", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw=="],
 
-    "@hraness/slopcamera-web/@hraness/design-kit": ["@hraness/design-kit@github:hraness/design-kit#0c7e339", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@stylexjs/stylex": "0.19.0", "motion": "12.42.0", "next-themes": "0.4.6", "react-aria-components": "1.19.0", "recharts": "3.8.0", "sugar-high": "^1.2.1", "web-haptics": "0.0.6" }, "peerDependencies": { "@hraness/ui": ">=0.5.4 <0.6.0", "react": ">=18 <20", "react-dom": ">=18 <20" }, "optionalPeers": ["@hraness/ui"] }, "hraness-design-kit-0c7e339", "sha512-YEwnSYFvHkUN2hxuODjzU/0AnsWU/NcGwKmxB404o7y47xfMX8MhUtNiIbCWLuS0E/GVGgOtatSsBE8jX3Bz8g=="],
+    "@hraness/design-kit/@hraness/ui": ["@hraness/ui@github:hraness/ui#2d1a5e1", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@hugeicons/react": "^1.1.9", "@stylexjs/stylex": "0.19.0", "clsx": "^2.1.1", "react-aria": "3.50.0", "react-aria-components": "1.19.0", "tailwind-merge": "^3.6.0" }, "peerDependencies": { "react": ">=18 <20", "react-dom": ">=18 <20" } }, "hraness-ui-2d1a5e1", "sha512-nWNEPPPYJNz6Uq11f9Y8D8XQKhdulgLw8mdCmNB4Zc8rbnwQurqJcQcr+h9Q3ZTtJwp7ifRFtVMWfy5BRuRUTA=="],
+
+    "@hraness/slopcamera-web/@hraness/design-kit": ["@hraness/design-kit@github:hraness/design-kit#7813c9c", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@stylexjs/stylex": "0.19.0", "motion": "12.42.0", "next-themes": "0.4.6", "react-aria-components": "1.19.0", "recharts": "3.8.0", "sugar-high": "^1.2.1", "web-haptics": "0.0.6" }, "peerDependencies": { "@hraness/ui": ">=0.5.12 <0.6.0", "react": ">=18 <20", "react-dom": ">=18 <20" }, "optionalPeers": ["@hraness/ui"] }, "hraness-design-kit-7813c9c", "sha512-erlyNqevsQJUqKbI1vSfJRkU6TDiIEHypuYopjkJotXjaatWd5ouDSBeB5vt4RVa5v8tpeIMb4tb4K3hX6D4CA=="],
 
     "@hraness/slopcamera-web/@hraness/direct": ["@hraness/direct@github:hraness/direct#f19d0fd", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "hraness-direct-f19d0fd", "sha512-rRzriJYSuIobCJFRWNK2Ye4esZYRkfyamsQpIndWf/8Wa0G16f7MQ/bmKr5XFhOYx6MLc8xzkRgfqZdZ8mTAxQ=="],
 
     "@hraness/slopcamera-web/@types/react": ["@types/react@19.2.14", "", { "dependencies": { "csstype": "^3.2.2" } }, "sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w=="],
-
-    "@hraness/slopcamera-web/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "@hraness/design-kit/@hraness/ui": ["@hraness/ui@github:hraness/ui#2d1a5e1", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@hugeicons/react": "^1.1.9", "@stylexjs/stylex": "0.19.0", "clsx": "^2.1.1", "react-aria": "3.50.0", "react-aria-components": "1.19.0", "tailwind-merge": "^3.6.0" }, "peerDependencies": { "react": ">=18 <20", "react-dom": ">=18 <20" } }, "hraness-ui-2d1a5e1", "sha512-nWNEPPPYJNz6Uq11f9Y8D8XQKhdulgLw8mdCmNB4Zc8rbnwQurqJcQcr+h9Q3ZTtJwp7ifRFtVMWfy5BRuRUTA=="],
 
     "@reduxjs/toolkit/immer": ["immer@11.1.18", "", {}, "sha512-EQyQtLiYW029lyoczMl/Hh4Xu7cDecSc58JRYpHyL4tIAu3eqd1yJzQX04d2BZHDkzFFvm6qJEJWOtfDSWAXbQ=="],
 

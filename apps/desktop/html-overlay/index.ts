@@ -34,6 +34,15 @@ export {
 } from "./contracts";
 export { HtmlSceneInputSchema, type HtmlSceneInput } from "./scene";
 export {
+  HTML_AUDIO_REACTIVITY_RESOURCE_NAME,
+  HTML_AUDIO_REACTIVITY_RESOURCE_URL_PATH,
+  HtmlOverlayAudioReactivitySchema,
+  prepareHtmlOverlayAudioReactivity,
+  type HtmlOverlayAudioReactivity,
+  type HtmlOverlayAudioSample,
+  type PreparedHtmlOverlayAudioReactivity,
+} from "./audio-reactivity";
+export {
   HTML_OVERLAY_SCAFFOLD_CLOCK_INTEGRATIONS,
   HTML_OVERLAY_SCAFFOLD_KINDS,
   HTML_OVERLAY_SCAFFOLD_PRIMARY_JOBS,

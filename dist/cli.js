@@ -11,7 +11,7 @@ import {
   renderDiagramFile,
   runMcpServer,
   selectDesktopAsset
-} from "./index-jchqst8w.js";
+} from "./index-rvghzt7b.js";
 import {
   installSkill,
   pathExists

@@ -20,9 +20,9 @@ import { docsDocumentForPage, docPages } from "../src/docs-registry"
 import type { SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.5.2" },
-  { name: "@hraness/site-footer", version: "0.6.1" },
-  { name: "@hraness/ui", version: "0.5.7" },
+  { name: "@hraness/design-kit", version: "0.8.0" },
+  { name: "@hraness/site-footer", version: "0.6.3" },
+  { name: "@hraness/ui", version: "0.5.12" },
 ] as const
 const fontFiles = [
   ...["Light", "Book", "Medium", "Semibold", "Bold", "Black"].flatMap(weight =>
@@ -39,10 +39,10 @@ const documents = [
 const sourceFiles = [
   "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
-  "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/published-release.ts",
+  "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/styles.css",
   "vendor/paper-theme/paper-theme.css",
-  "scripts/build.ts", "scripts/build-site.ts", "scripts/site-contract.ts", "scripts/site-css.ts", "scripts/marketing-preset.ts", "scripts/lantern-material.ts", "scripts/preview-css.ts", "scripts/preview-file.ts",
+  "scripts/build.ts", "scripts/public-identity.ts", "src/icon.png", "src/apple-touch-icon.png", "scripts/build-site.ts", "scripts/site-contract.ts", "scripts/site-css.ts", "scripts/marketing-preset.ts", "scripts/lantern-material.ts", "scripts/preview-css.ts", "scripts/preview-file.ts",
 ] as const
 
 function below(root: string, path: string): string {

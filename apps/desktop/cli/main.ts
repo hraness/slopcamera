@@ -13,6 +13,7 @@ import {
 } from "./portable-surface";
 import { RecordingDaemonClient, runRecordingDaemon } from "./recording-daemon";
 import { renamedEnvironmentValue } from "./renamed-environment";
+import { rootHelpIntro } from "./root-help-intro";
 
 function valueAfter(argv: readonly string[], name: string): string {
   const index = argv.indexOf(name);
@@ -74,6 +75,10 @@ export async function main(
   if (portableExitCode !== undefined) return portableExitCode;
   const earlyCommand = parseCliArgs(unifiedArgv);
   if (earlyCommand.kind === "help" || earlyCommand.kind === "version" || earlyCommand.kind === "complete") {
+    const intro = rootHelpIntro(unifiedArgv, {
+      isTTY: process.stdout.isTTY === true, term: process.env.TERM, columns: process.stdout.columns,
+    });
+    if (intro !== "") processIo.stdout(intro);
     return await runCli(unifiedArgv, { io: processIo });
   }
   const paths = await resolveRepositoryPaths(processIo.cwd(), processIo.env);

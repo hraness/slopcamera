@@ -26,7 +26,10 @@ Save your own request as `music-video.json` at the workspace root, and replace t
   "parameters": {
     "music": { "bpm": 88.88, "beatOffsetUs": 0, "beatsPerBar": 4 }
   },
-  "audio": { "path": "/absolute/path/to/track.mp3" }
+  "audio": {
+    "path": "/absolute/path/to/track.mp3",
+    "reactivity": { "profile": "bands-v1" }
+  }
 }
 ```
 
@@ -54,6 +57,28 @@ SlopcameraOverlay.onFrame(({ timeMs }) => {
 ```
 
 Here `dancer`, `ring`, `scene`, `camera`, and `renderer` are objects your document creates. Use beat and bar positions for choreography, scenery changes, and camera movement, and avoid accumulated rotations, wall-clock time, and a second animation loop. The [SDK reference](/docs/reference/sdk) describes the clock fields and the pulse width. These helpers sample declared timing; they do not analyze the rendered frames for flashes or certify viewer safety, so review the actual movie before delivery.
+
+## React to the audio itself
+
+Add `audio.reactivity` with `profile: "bands-v1"` to derive a bounded offline envelope from the verified soundtrack: bass (35–180 Hz), midrange (180–2,000 Hz), treble (2,000–12,000 Hz), and overall energy, decoded at 24 kHz into a 60 Hz series with a quiet-input floor, useful-range normalization, and attack/release smoothing. Analysis is limited to ten minutes. The generated source request declares a retained `audio-reactivity` resource, so rerendering that source reuses the hash-bound sidecar after checking that it still matches the soundtrack.
+
+Load the declared sidecar once during readiness and sample it from the same absolute frame time:
+
+```ts
+let audio;
+SlopcameraOverlay.ready((async () => {
+  const response = await fetch(SlopcameraOverlay.asset("audio-reactivity"));
+  audio = SlopcameraOverlay.prepareAudioReactivity(await response.json());
+})());
+SlopcameraOverlay.onFrame(({ timeMs }) => {
+  const sample = audio.sample(Math.round(timeMs * 1000));
+  bassLight.intensity = 0.4 + 1.2 * sample.bass;
+  trebleLight.intensity = 0.2 + 0.8 * sample.treble;
+  renderer.render(scene, camera);
+});
+```
+
+`prepareAudioReactivity` validates and copies the sidecar once. Its `sample(timeUs)` method interpolates in constant time, returns zeros outside the analyzed range, and accepts integer microseconds only. Use the returned values for smooth local light and material changes; they do not certify a flash-safe render.
 
 An imported rigged character needs the documented preparation path, which currently supports uncompressed skinned GLB. Draco compression, morph targets, and embedded animation clips are unsupported. Preserve the asset's source and required attribution when you replace the example mascot.
 

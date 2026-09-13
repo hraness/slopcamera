@@ -4,7 +4,7 @@ export const homeMarkdown = `# Direct scenes and films with your coding agent
 
 Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
 
-Free and open source under the MIT license. Source build. Requires Bun 1.3.14 or newer. Recording needs macOS.
+Free and open source under the MIT license. Verified release. Requires Bun 1.3.14 or newer. Recording needs macOS.
 
 ## Your first local diagram
 
@@ -32,26 +32,17 @@ Install the verified Slopcamera v${publishedRelease.version} release with Bun 1.
 ${archiveInstall.command}
 \`\`\`
 
-### Or build from source
-
-You need Git and Bun 1.3.14 or newer. Start a new checkout:
+Then install the matching Agent Skill:
 
 \`\`\`sh
-${sourceInstall.checkoutCommand}
-${sourceInstall.enterCommand}
-\`\`\`
-
-Cloning is only the first step. Follow the [complete source-install guide](${sourceInstall.guideUrl}) to record the commit, install locked dependencies, build the SDK and CLI, and define the \`slopcamera\` command. Native engines install separately.
-
-After building, install the guide from that same checkout:
-
-\`\`\`sh
-${sourceInstall.skillCommand}
+${archiveInstall.skillCommand}
 # For Claude Code:
-${sourceInstall.alternateSkillCommand}
+${archiveInstall.alternateSkillCommand}
 \`\`\`
 
-Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Start a new agent session after installation.
+Start a new agent session. Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
+
+For source-only capabilities or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
 
 ## Give your agent the whole creative job
 
@@ -185,15 +176,15 @@ Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK sup
 
 Use Slopcamera to author portable scenes and direct cameras; film saved worlds; create diagrams and motion graphics; edit footage and deliver multiple formats; or generate images, video, speech, and transcripts through your own Vercel AI Gateway access. Native Blender, CadQuery, and Manim workflows add detailed worlds and educational films in the current source build.
 
-Slopcamera installs from its verified release archive with \`${archiveInstall.command}\` (Bun 1.3.14 or newer) or from a source build of main. It includes portable scenes, the qualified Three.js GPU profile, saved Spark worlds, native studio, shot-recipe directing, and camera-track export. Install the verified release with \`${archiveInstall.command}\` (Bun 1.3.14 or newer), or build from source. Follow the source-install guide and check runtime requirements.
+Install the verified release with \`${archiveInstall.command}\`, then its matching Agent Skill with \`${archiveInstall.skillCommand}\` (Bun 1.3.14 or newer). Portable scenes, the qualified Three.js GPU profile, saved Spark worlds, native studio, shot-recipe directing, and camera-track export require the current source build. Follow the [source-install guide](${sourceInstall.guideUrl}) for those capabilities and check their runtime requirements.
 
 Editing and rendering stay local. Gateway generation and selected cloud analysis upload named media only after acknowledgement. Native Python requires separate authorization. Custom Bun workflow modules execute when loaded, including during check and plan; review their source first. Both run as the current user without an operating-system sandbox. This website accepts no credentials and performs no generation.
 
 ## Start
 
-- [Slopcamera home](https://slopcamera.com/index.md): Product overview, source installation, first task, and limits
+- [Slopcamera home](https://slopcamera.com/index.md): Product overview, installation, first task, and limits
 - [Documentation index](https://slopcamera.com/docs/index.md): Learning, task guides, reference, and explanation
-- [First diagram](https://slopcamera.com/docs/tutorials/first-diagram.md): Complete local input-to-output task
+- [First diagram](https://slopcamera.com/docs/tutorials/first-diagram.md): Complete local input-to-output task using the source-built CLI
 - [Repository README](https://github.com/hraness/slopcamera#readme): Product contract and install
 
 ## Set up an agent

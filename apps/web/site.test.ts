@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { Buffer } from "node:buffer"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -43,6 +44,8 @@ import {
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
 import { renderSlopcameraSocialImage } from "./scripts/generate-og"
+import { htmlText as plainCode } from "./scripts/html-text.testing"
+import { siteContentSlots } from "./src/site-content"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
@@ -136,38 +139,78 @@ async function readBuilt(path: string): Promise<string> {
 }
 
 function assertAuthoredShellBudget(template: string): number {
-  let authored = replaceSiteSlot(template, "{{ARCHIVE_INSTALL_COMMAND}}", archiveInstall.command, 1)
-  authored = replaceSiteSlot(authored, "{{SOURCE_CHECKOUT_COMMAND}}", sourceInstall.checkoutCommand, 1)
-  authored = replaceSiteSlot(authored, "{{SOURCE_ENTER_COMMAND}}", sourceInstall.enterCommand, 1)
-  authored = replaceSiteSlot(authored, "{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1)
-  // Discount only the finite compiler-slot spelling, never authored classes or HTML.
+  let authored = template
+  const outsideContent = new Set(["{{APPEARANCE_MENU}}", "{{HRANESS_SITE_FOOTER}}", "{{THEME_ASSET}}", "{{ASK_AI_ABOUT_THIS}}", "{{ANALYTICS_SCRIPT}}"])
+  for (const [slot, value, count] of siteContentSlots("index.html", { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null })) {
+    if (!outsideContent.has(slot)) authored = replaceSiteSlot(authored, slot, value, count)
+  }
+  // Count the actual highlighted commands. Discount only finite compiler-slot
+  // spelling. The reviewed refinement allowance includes the literal highlighted
+  // terminal, release installer, source disclosure, and four interface examples.
   for (const [slot, count] of [
-    ["{{SITE_SKIP_CLASS}}", 1], ["{{SITE_HEADER_CLASS}}", 1],
-    ["{{SITE_WORDMARK_CLASS}}", 1], ["{{SITE_ACTIONS_CLASS}}", 1],
-    ["{{SITE_NAVIGATION_CLASS}}", 1], ["{{SITE_HOME_NAVIGATION_LINK_CLASS}}", 4],
-    ["{{SITE_NAVIGATION_ACTION_CLASS}}", 1],
-    ["{{INSTALL_NOTE_CLASS}}", 1], ["{{INSTALL_CLI_CLASS}}", 1],
-    ["{{INSTALL_LABEL_CLASS}}", 2], ["{{INSTALL_COMMANDS_CLASS}}", 1],
-    ["{{INSTALL_ITEM_CLASS}}", 1], ["{{INSTALL_SUBSEQUENT_ITEM_CLASS}}", 1],
-    ["{{INSTALL_NUMBER_CLASS}}", 2], ["{{INSTALL_CODE_CLASS}}", 2],
-    ["{{INSTALL_PANEL_NOTE_CLASS}}", 2], ["{{INSTALL_PANEL_LINK_CLASS}}", 2],
-  ] as const) authored = replaceSiteSlot(authored, slot, "", count)
+    ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
+    ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
+    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
+    ["INSTALL_COPY_CLASS", 1], ["INSTALL_VALUE_CLASS", 1], ["INSTALL_IDLE_CLASS", 2], ["INSTALL_COPIED_CLASS", 1],
+    ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
+  ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
   if (/\{\{(?:SITE|INSTALL)_[^{}]*_CLASS\}\}/u.test(authored)) throw new Error("Unexpected site class slot")
-  const bytes = new TextEncoder().encode(authored).byteLength
-  if (bytes >= 32_000) throw new Error(`Authored site shell exceeds its 32,000-byte budget: ${bytes}`)
+  const bytes = Buffer.byteLength(authored, "utf8")
+  if (bytes >= 36_000) throw new Error(`Authored site shell exceeds its 36,000-byte budget: ${bytes}`)
   return bytes
 }
 
+function assertCombinedSiteCssBudget(styles: string, foundation: string): number {
+  // Count both captured artifacts in full, including all three package recipes,
+  // the required 0.8 foundation, canonical snapshots, and retained product CSS.
+  const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
+  if (bytes >= 304_000) throw new Error(`Combined site CSS exceeds its 304,000-byte budget: ${bytes}`)
+  return bytes
+}
+
+function assertBuiltHtmlBudget(html: string): number {
+  // The six code blocks add 2,105 bytes over the admitted 55,043-byte baseline;
+  // all other document content shrinks by 125 bytes. Count the entire seal.
+  const bytes = Buffer.byteLength(html, "utf8")
+  if (bytes >= 58_000) throw new Error(`Built site HTML exceeds its 58,000-byte budget: ${bytes}`)
+  return bytes
+}
+
+test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
+  expect(assertBuiltHtmlBudget("x".repeat(57_999))).toBe(57_999)
+  expect(() => assertBuiltHtmlBudget("x".repeat(58_000)))
+    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58000")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(57_999)}é`))
+    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58001")
+})
+
+test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
+  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(161_200))).toBe(303_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(161_200)))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(161_200)}é`))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(304_000), ""))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(304_000)))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+})
+
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
   const template = await readSource("index.html")
-  expect(assertAuthoredShellBudget(template)).toBeLessThan(32_000)
-  expect(() => assertAuthoredShellBudget(template.replace("</main>", `${"x".repeat(32_000)}</main>`)))
-    .toThrow("Authored site shell exceeds its 32,000-byte budget")
+  const bytes = assertAuthoredShellBudget(template)
+  const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
+  expect(bytes).toBeLessThan(36_000)
+  expect(assertAuthoredShellBudget(grow("x".repeat(35_999 - bytes)))).toBe(35_999)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(36_000 - bytes))))
+    .toThrow("Authored site shell exceeds its 36,000-byte budget: 36000")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(35_999 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 36,000-byte budget: 36001")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
-  for (const [slot, count] of [["INSTALL_NOTE_CLASS", 1], ["INSTALL_NUMBER_CLASS", 2]] as const) {
+  for (const [slot, count] of [["INSTALL_NOTE_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2]] as const) {
     expect(() => assertAuthoredShellBudget(`${template}{{${slot}}}`))
       .toThrow(`Site document must contain ${count} instance(s) of {{${slot}}}`)
     expect(() => assertAuthoredShellBudget(template.replace(`{{${slot}}}`, "")))
@@ -175,7 +218,7 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   }
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_SKIP_CLASS}}`))
     .toThrow("Site document must contain 1 instance(s) of {{SITE_SKIP_CLASS}}")
-  for (const slot of ["ARCHIVE_INSTALL_COMMAND", "SOURCE_CHECKOUT_COMMAND", "SOURCE_ENTER_COMMAND", "SOURCE_INSTALL_URL"]) {
+  for (const slot of ["RELEASE_URL", "RELEASE_VERSION", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL", "DIAGRAM_SESSION", "SKILL_EXAMPLE", "CLI_EXAMPLE", "SDK_EXAMPLE", "MCP_EXAMPLE"]) {
     expect(() => assertAuthoredShellBudget(`${template}{{${slot}}}`))
       .toThrow(`Site document must contain 1 instance(s) of {{${slot}}}`)
   }
@@ -339,13 +382,13 @@ describe("static Slopcamera site", () => {
     expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
-    for (const publicText of [html, homeMarkdown, llmsTxt]) {
+    for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
       expect(publicText).toContain(archiveInstall.command)
       expect(publicText).not.toContain("No Slopcamera release archive has been published.")
       expect(publicText).not.toContain("hraness-atet-")
       expect(publicText).not.toContain("tree/v3.2.3")
     }
-    for (const command of [sourceInstall.checkoutCommand, sourceInstall.enterCommand, sourceInstall.skillCommand]) expect(html).toContain(command)
+    for (const command of [sourceInstall.checkoutCommand, sourceInstall.enterCommand, sourceInstall.skillCommand]) expect(plainCode(html)).not.toContain(command)
     expect(html).toContain(sourceInstall.guideUrl)
     expect(html).not.toMatch(/\{\{(?:PUBLISHED|SOURCE)_[^}]+\}\}/u)
     const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u)![1]!)["@graph"] as Record<string, unknown>[]
@@ -484,10 +527,10 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">')
     expect(html).toContain('<meta name="twitter:image" content="https://slopcamera.com/og.png">')
     expect(html).toContain('<meta name="twitter:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">')
-    expect(html).toContain('<link rel="icon" href="/icon.svg" type="image/svg+xml">')
+    expect(html).toContain('<link rel="icon" href="/icon.png" type="image/png">')
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">')
     expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>')
-    expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="https://github.com/hraness/slopcamera/blob/main/skills/slopcamera/SKILL.md">packaged Agent Skill</a>')
+    expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="https://github.com/hraness/slopcamera/blob/main/skills/slopcamera/SKILL.md">Agent Skill</a>')
   })
 
   test("builds an inert noindex Slopcamera preview with the homepage as canonical", async () => {
@@ -658,7 +701,7 @@ describe("static Slopcamera site", () => {
       const url = new URL(match[1]!, "https://slopcamera.com" + builtAssets.siteFoundationPath)
       expect(url.origin).toBe("https://slopcamera.com")
       return url.pathname.slice(1)
-    }).sort()).toEqual([...fonts, ...images].sort())
+    }).sort()).toEqual([...fonts, ...images, ...images].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
     expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
     expect(foundation).toContain("components.slopcamera-legacy")
@@ -773,7 +816,7 @@ describe("static Slopcamera site", () => {
         installUrl: "https://slopcamera.com/#install",
         publisher: { "@id": "https://hraness.com/#organization" },
         sameAs: ["https://github.com/hraness/slopcamera"],
-        softwareRequirements: "Git and Bun 1.3.14; install from source",
+        softwareRequirements: "Bun 1.3.14 or newer; native engines install separately",
       }),
       expect.objectContaining({
         "@id": "https://slopcamera.com/#source",
@@ -799,23 +842,23 @@ describe("static Slopcamera site", () => {
     ]))
   })
 
-  test("puts the truthful source-install sequence in the first product section", async () => {
+  test("puts the release and matching skill before the source-build disclosure", async () => {
     const html = await readBuilt("index.html")
     const marker = html.indexOf('data-hraness-marketing="install"')
     const installHtml = html.slice(html.lastIndexOf("<section", marker), html.indexOf("</section>", marker))
-    const positions = [sourceInstall.checkoutCommand, sourceInstall.enterCommand, sourceInstall.skillCommand].map(command => installHtml.indexOf(command))
+    const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(installHtml).indexOf(command))
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
-    expect(installHtml).toContain("After building: install the matching Agent Skill")
-    expect(installHtml).toContain("Cloning is the first step.")
-    expect(installHtml).toContain("install locked dependencies, build the SDK and CLI")
+    expect(installHtml).toContain("Install the CLI, then its matching Agent Skill")
+    expect(installHtml).toContain("<summary>Build from source</summary>")
+    expect(installHtml).toContain("installs locked dependencies, builds the SDK and CLI")
     expect(installHtml).toContain(sourceInstall.guideUrl)
-    expect(installHtml).toContain(sourceInstall.alternateSkillCommand)
-    expect(installHtml).toContain(archiveInstall.command)
+    expect(installHtml).toContain(archiveInstall.alternateSkillCommand)
+    expect(plainCode(installHtml)).toContain(archiveInstall.command)
     expect(html).not.toContain("{{SITE")
   })
 
-  test("renders a progressively enhanced reusable copy command in the hero", async () => {
+  test("renders a progressively enhanced release-install copy target", async () => {
     const [html, build, client] = await Promise.all([
       readBuilt("index.html"),
       readSource("site-content.ts"),
@@ -824,11 +867,12 @@ describe("static Slopcamera site", () => {
 
     expect(build).toContain("function renderCopyCommand(options: CopyCommandOptions)")
     expect(html.match(/data-copy-command(?:>|\s)/gu)).toHaveLength(1)
-    expect(html.match(/<code class="copy-command__value [A-Za-z_][A-Za-z0-9_ -]*" data-copy-command-value>([^<]+)<\/code>/u)?.[1])
-      .toBe(sourceInstall.skillCommand)
+    const command = html.match(/<code\b[^>]*data-copy-command-value[^>]*>([\s\S]*?)<\/code>/u)?.[1]
+    expect(command).toBeDefined()
+    expect(plainCode(command!)).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
     expect(html.match(/For Claude Code: <code class="[A-Za-z_][A-Za-z0-9_ -]*">([^<]+)<\/code>/u)?.[1])
-      .toBe(sourceInstall.alternateSkillCommand)
-    expect(html).toContain('aria-label="Copy install command"')
+      .toBe(archiveInstall.alternateSkillCommand)
+    expect(html).toContain('aria-label="Copy install commands"')
     expect(html).toContain("data-copy-command-button hidden type=\"button\">Copy</button>")
     expect(html).toContain('aria-live="polite"')
     expect(html).toContain('aria-describedby="skill-install-copy-status"')
@@ -883,14 +927,14 @@ describe("static Slopcamera site", () => {
   test("states the MCP subset alongside the broader local interfaces", async () => {
     const html = await readBuilt("index.html")
 
-    for (const example of [
+    const examples = [...html.matchAll(/<pre aria-label="([^"]+)" class="hraness-material-code" tabindex="0">([\s\S]*?)<\/pre>/gu)]
+    expect(examples.map(match => match[1])).toEqual(["Agent Skill example", "CLI example", "TypeScript SDK example", "MCP example"])
+    expect(examples.map(match => plainCode(match[2]!))).toEqual([
       "slopcamera skill install --target agents",
       "slopcamera workflows list --json",
       'import { vectorizeImage } from "@hraness/slopcamera"',
       "slopcamera mcp --root /absolute/path/to/workspace",
-    ]) {
-      expect(html).toContain(example)
-    }
+    ])
     expect(html).toContain("Choose how your agent works.")
     expect(html).toContain("It does not expose every CLI command.")
     expect(html).not.toContain("Each one reaches the same project and the same operations.")
@@ -987,7 +1031,7 @@ describe("static Slopcamera site", () => {
     expect(css).not.toMatch(/\.reading-(?:article|card|index|module)/u)
     expect(css).toContain("@media (max-width: 64rem)")
     expect(css).toContain("@media (max-width: 48rem)")
-    expect(css).toContain("@media (max-width: 34rem)")
+    expect(await readBuilt(builtAssets.stylesPath.slice(1))).toMatch(/@media\s*\(width\s*<=\s*34rem\)/u)
     expect(css).toContain("@media (prefers-reduced-motion: reduce)")
     expect(css).toContain("@media (forced-colors: active)")
   })
@@ -1056,7 +1100,9 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
     expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall" data-align="start"')
     expect(css).toContain("grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr)")
-    expect(css).toContain("overflow-wrap: anywhere")
+    for (const declaration of ["white-space: pre", "overflow-wrap: normal", "word-break: normal", "overflow: auto"]) {
+      expect(css).toContain(declaration)
+    }
     expect(html).not.toMatch(/<h1[^>]*>[^<]*(?:bounded|exact|authority|custody|immutable|inspectable|canonical|projection|receipt)/iu)
     const builtCss = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     expect(builtCss).toMatch(/font-family:\s*"?Nebula Sans"?/u)
@@ -1141,9 +1187,9 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.5.2",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.6.1",
-      "@hraness/ui": "github:hraness/ui#v0.5.7",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.6.3",
+      "@hraness/ui": "github:hraness/ui#v0.5.12",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1160,28 +1206,29 @@ describe("static Slopcamera site", () => {
       "@types/react": "19.2.14",
       "@types/react-dom": "19.2.3",
       "lightningcss": "1.33.0",
+      "parse5": "8.0.1",
       "playwright-core": "1.62.0",
-      "typescript": "5.9.3",
+      "typescript": "6.0.3",
       "vite": "8.2.1",
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.5.2"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.8.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.6.1"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.6.3"',
     )
-    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.7"')
+    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(32_000)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(36_000)
     // Bound the full sealed document separately, including compiled classes and content producers.
-    const emittedBytes = new TextEncoder().encode(await readBuilt("index.html")).byteLength
+    const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(56_000)
+    expect(emittedBytes).toBeLessThan(58_000)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1407,7 +1454,7 @@ describe("static Slopcamera site", () => {
       "assets",
       "docs",
       "graphs",
-      "icon.svg",
+      "icon.png",
       "index.html",
       "index.md",
       "lantern-material",
@@ -1434,10 +1481,11 @@ describe("static Slopcamera site", () => {
     expect(stylesAsset).toContain("--hraness-site-footer-social-target")
     expect(stylesAsset).not.toContain("@import \"./dist/stylex.css\"")
     expect(stylesAsset).toMatch(/@media\s*\(pointer:\s*coarse\)/u)
-    // The ordinary graph now includes the complete three-package union, the
-    // documentation recipes, and captured compatibility foundation — never
-    // duplicated standalone sheets.
-    expect(new TextEncoder().encode(stylesAsset + foundationAsset).byteLength).toBeLessThan(260_000)
+    // The reviewed 0.8 refinement graph plus the documentation recipes is
+    // under 298,500 bytes before compression. Keep a strict ceiling over the
+    // full sealed union and captured foundation; no import, recipe, snapshot,
+    // or repeated layered rule is discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(304_000)
     expect(new TextEncoder().encode(themeAsset).byteLength).toBeLessThan(24_000)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)

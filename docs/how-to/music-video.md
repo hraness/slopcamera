@@ -28,7 +28,10 @@ For your own request, save the following as `music-video.json` at the workspace 
   "parameters": {
     "music": { "bpm": 88.88, "beatOffsetUs": 0, "beatsPerBar": 4 }
   },
-  "audio": { "path": "/absolute/path/to/track.mp3" }
+  "audio": {
+    "path": "/absolute/path/to/track.mp3",
+    "reactivity": { "profile": "bands-v1" }
+  }
 }
 ```
 
@@ -44,6 +47,8 @@ The movie dimensions are the specified `canvas.width` and `canvas.height`, which
 
 Set `parameters.music` to the track's known constant tempo, beat-zero offset in integer microseconds, and beats per bar. The example falls back to `88.88`, `0`, and `4` when these values are omitted. Listen to the track with the render to check that the chosen offset matches the intended beat.
 
+Add `audio.reactivity.profile: "bands-v1"` to derive a bounded offline envelope for bass (35–180 Hz), midrange (180–2,000 Hz), treble (2,000–12,000 Hz), and overall energy. The profile decodes the verified soundtrack at 24 kHz, emits a 60 Hz series, applies a quiet-input floor, useful-range normalization, and attack/release smoothing, and retains the JSON sidecar beside the scene. Analysis is limited to ten minutes. The generated source request declares the retained `audio-reactivity` resource, so rerendering that source reuses the hash-bound sidecar after checking that it still matches the soundtrack.
+
 Inside an authored scene, sample the clock from the absolute frame time:
 
 ```js
@@ -58,6 +63,24 @@ SlopcameraOverlay.onFrame(({ timeMs }) => {
   renderer.render(scene, camera);
 });
 ```
+
+For a band-reactive effect, load the declared sidecar once and sample it from the same absolute frame time:
+
+```js
+let audio;
+SlopcameraOverlay.ready((async () => {
+  const response = await fetch(SlopcameraOverlay.asset("audio-reactivity"));
+  audio = SlopcameraOverlay.prepareAudioReactivity(await response.json());
+})());
+SlopcameraOverlay.onFrame(({ timeMs }) => {
+  const sample = audio.sample(Math.round(timeMs * 1000));
+  bassLight.intensity = 0.4 + 1.2 * sample.bass;
+  trebleLight.intensity = 0.2 + 0.8 * sample.treble;
+  renderer.render(scene, camera);
+});
+```
+
+`prepareAudioReactivity` validates and copies the sidecar once. Its `sample(timeUs)` method interpolates in constant time, returns zeros outside the analyzed range, and accepts integer microseconds only. Use the returned values for smooth local light and material changes; they do not certify a flash-safe render.
 
 Here `dancer`, `ring`, `scene`, `camera`, and `renderer` are objects created by your document. Derive every pose from the sampled time or a saved rest pose. Avoid accumulated rotations, wall-clock time, and a second animation loop. Use beat and bar positions for larger changes in choreography, landscapes, and camera movement. The [SDK reference](../reference/sdk.md#music-timing-for-html-scenes) describes the clock fields and pulse width.
 

@@ -30,7 +30,7 @@ const install = stylex.create({
   },
   value: {
     minWidth: 0, paddingTop: "0.9rem", paddingRight: "1rem", paddingBottom: "0.9rem", paddingLeft: "1rem",
-    overflowX: "auto", fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "nowrap",
+    overflowX: "auto", fontSize: "0.875rem", lineHeight: 1.75, whiteSpace: "pre", overflowWrap: "normal", wordBreak: "normal",
   },
   button: {
     minWidth: "4.4rem", minHeight: "2.75rem", paddingTop: "0.6rem", paddingRight: "0.9rem",
@@ -74,12 +74,7 @@ const install = stylex.create({
   noteCode: { color: "var(--night-ink)" },
   status: { position: "absolute", width: "1px", height: "1px", overflow: "hidden", clipPath: "inset(50%)", whiteSpace: "nowrap" },
   fallback: { position: "fixed", top: 0, right: "auto", bottom: "auto", left: "-9999px", opacity: 0 },
-  cli: { marginTop: "1.5rem", paddingTop: "1.5rem", borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "var(--line)" },
-  commands: { marginTop: "0.6rem", padding: 0, listStyleType: "none", listStylePosition: "outside", listStyleImage: "none" },
-  item: { display: "grid", minWidth: 0, paddingTop: "0.75rem", paddingRight: "1rem", paddingBottom: "0.75rem", paddingLeft: "1rem", gap: "0.85rem", gridTemplateColumns: "1.5rem minmax(0, 1fr)" },
-  subsequentItem: { borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "var(--night-line)" },
-  number: { color: "var(--gold-bright)", font: "0.75rem/1.7 var(--font-mono)" },
-  installCode: { overflowWrap: "anywhere", fontSize: "0.82rem", lineHeight: 1.7 },
+
 })
 
 export const siteInstallClassNames = {
@@ -96,10 +91,4 @@ export const siteInstallClassNames = {
   noteCode: stylex.props(install.code, install.noteCode).className,
   status: stylex.props(install.status).className,
   fallback: stylex.props(install.fallback).className,
-  cli: stylex.props(install.cli).className,
-  commands: stylex.props(install.nightPanel, install.commands).className,
-  item: stylex.props(install.item).className,
-  subsequentItem: stylex.props(install.item, install.subsequentItem).className,
-  number: stylex.props(install.number).className,
-  installCode: stylex.props(install.code, install.installCode).className,
 }

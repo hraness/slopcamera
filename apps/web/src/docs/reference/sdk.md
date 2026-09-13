@@ -16,7 +16,7 @@ Installing `@hraness/slopcamera` does not enable every operation in every host. 
 | `@hraness/slopcamera/local/code` | Local declarative authoring, schemas, and the complete media capability projection. |
 | `@hraness/slopcamera/local/code/advanced` | Local graph planning, execution, and host integration. |
 | `@hraness/slopcamera/local/code/workflows` | Checked built-in local workflow definitions. |
-| `@hraness/slopcamera/local/html-overlay` | Local HTML scene authoring, request schemas, music-clock helpers, rigged GLB preparation, and rendering profiles. |
+| `@hraness/slopcamera/local/html-overlay` | Local HTML scene authoring, request schemas, music-clock and audio-reactivity helpers, rigged GLB preparation, and rendering profiles. |
 
 There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint, and no open operation-registration hook on any surface. The `local` subpaths are not browser SDKs; they ship with the source-backed Bun distribution described in [the source build guide](/docs/how-to/install-from-source).
 
@@ -106,6 +106,27 @@ The checked examples in the package show the full surfaces: `examples/declarativ
 | Pulse result | A value in `[0, 1]` with zero slope at the beat seam and support edges. |
 
 These helpers sample declared musical timing. They do not detect tempo, inspect the soundtrack, or analyze rendered flashes; the scene author still owns the amplitude, area, color, and timing of visible effects. See [the music-video guide](/docs/how-to/music-video) for a complete scene request.
+
+## Audio-reactive envelopes for HTML scenes
+
+Set `audio.reactivity` to `{ "profile": "bands-v1" }` in an `html-scene` request to derive a local envelope from the verified soundtrack. The fixed profile analyzes 24 kHz mono PCM into bass (35–180 Hz), midrange (180–2,000 Hz), treble (2,000–12,000 Hz), and overall-energy channels. It applies a quiet-input floor, useful-range normalization, and attack/release smoothing, then retains a hash-bound JSON resource named `audio-reactivity` at `slopcamera/audio-reactivity.json`. Analysis is limited to ten minutes per scene.
+
+The local HTML entrypoint exports `HtmlOverlayAudioReactivitySchema` and `prepareHtmlOverlayAudioReactivity(value)`. Browser documents use the equivalent `SlopcameraOverlay.prepareAudioReactivity(value)` method. Load the declared resource once during readiness and sample it from the absolute frame clock:
+
+```ts
+let envelope;
+SlopcameraOverlay.ready((async () => {
+  const response = await fetch(SlopcameraOverlay.asset("audio-reactivity"));
+  envelope = SlopcameraOverlay.prepareAudioReactivity(await response.json());
+})());
+SlopcameraOverlay.onFrame(({ timeMs }) => {
+  const sample = envelope.sample(Math.round(timeMs * 1000));
+  light.intensity = 0.3 + sample.bass + 0.5 * sample.treble;
+  renderer.render(scene, camera);
+});
+```
+
+`sample(timeUs)` accepts safe integer microseconds, interpolates in constant time, and returns zero outside the analyzed duration. The generated `source.json` retains the resource declaration and reuses it only when its recorded soundtrack digest still matches. Envelopes help drive animation; they are not a flash-safety certification.
 
 ## Prepare rigged GLB assets
 

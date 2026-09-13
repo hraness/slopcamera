@@ -13,7 +13,7 @@ const read = (path: string) => readFile(join(app, path), "utf8")
 describe("Lantern material admission and scope", () => {
   test("admits only the complete released finite inventory and rejects changed ownership or bytes", async () => {
     const admitted = await snapshotLanternMaterial(vendor)
-    expect(admitted.sourceCommit).toBe("eccb0341d8d0ba960a0f02248cf59888062afb0a")
+    expect(admitted.sourceCommit).toBe("0e089bc18f9a0409f0e74b1fb7192f468956e386")
     expect([...admitted.files.keys()].sort()).toEqual(["LICENSE", "check.d.mts", "check.mjs", "lantern-material.css"])
     const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-lantern-")))
     try {
@@ -36,7 +36,7 @@ describe("Lantern material admission and scope", () => {
     } finally { await rm(root, { recursive: true, force: true }) }
   })
 
-  test("changes homepage paint without changing the preview or recovery material scope", async () => {
+  test("refines homepage code and material without changing preview or recovery scope", async () => {
     const [home, missing, preview, foundation, build, css] = await Promise.all([
       read("src/index.html"), read("src/404.html"), read("src/preview.html"),
       read("src/site-foundation.css"), read("scripts/build-site.ts"), read("src/styles.css"),
@@ -45,7 +45,7 @@ describe("Lantern material admission and scope", () => {
     expect(home).toContain('class="topbar hraness-material-chrome {{SITE_HEADER_CLASS}}"')
     expect(home.match(/hraness-material-wall/gu)).toHaveLength(1)
     expect(home).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"')
-    expect(home).toContain('class="hraness-marketing-proof-frame hraness-material-pane"')
+    expect(home).toContain('class="hraness-marketing-proof-frame hraness-material-pane hraness-material-terminal"')
     expect(home).not.toContain('class="hraness-marketing-field"')
     for (const other of [missing, preview]) expect(other).not.toMatch(/data-hraness-material|hraness-material-/u)
     expect(await read("src/preview-foundation.css")).not.toContain("lantern-material")
@@ -53,7 +53,7 @@ describe("Lantern material admission and scope", () => {
     expect(build).toContain('...materialPaths.map(path => join(materialRoot, path))')
     expect(build).toContain('materialSourceCommit: material.sourceCommit')
     expect(build).toContain('path: "lantern-material/LICENSE"')
-    expect(css).toContain('background-size: auto, auto, auto, auto;')
+    expect(css).not.toMatch(/\.hraness-material-wall\s*\{/u)
     expect(css).toContain('min-block-size: 3.25rem;\n  padding-block: 1rem;')
     expect(css).toContain('outline-offset: 2px;')
     expect(css).toContain('background-color: var(--hraness-material-warm-plane);\n  color: var(--hraness-material-ink);')
