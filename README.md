@@ -33,6 +33,9 @@ project database.
 
 ## Install Slopcamera
 
+The source tree prepares v3.2.7 with a compact interactive CLI introduction.
+The install below stays on the verified v3.2.6 release until publication completes.
+
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
 [Slopcamera v3.2.6 release](https://github.com/hraness/slopcamera/releases/tag/v3.2.6)
 from its canonical archive:

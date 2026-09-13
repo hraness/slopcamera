@@ -102,7 +102,7 @@ const TEXT_EXTENSIONS = new Set([
 const CANONICAL_TEXT_SENTINELS = [
   {
     path: "src/version.ts",
-    values: ['export const SLOPCAMERA_VERSION = "3.2.6" as const'],
+    values: ['export const SLOPCAMERA_VERSION = "3.2.7" as const'],
   },
   {
     path: "src/operations.ts",
@@ -124,7 +124,7 @@ const CANONICAL_TEXT_SENTINELS = [
   {
     path: "apps/desktop/dist/cli/main.js",
     values: [
-      '"3.2.6"',
+      '"3.2.7"',
       '"slopcamera.diagram.check"',
       '"slopcamera.edit-plan"',
       '"slopcamera.video-project"',
@@ -388,8 +388,8 @@ if (
 const packageVersion = rootPackage.version;
 if (typeof packageVersion !== "string") {
   problems.push("package.json version must be a string");
-} else if (packageVersion !== "3.2.6") {
-  problems.push("package.json version must be 3.2.6 for this source candidate; it does not identify a published Slopcamera release");
+} else if (packageVersion !== "3.2.7") {
+  problems.push("package.json version must be 3.2.7 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
     ["apps/desktop/app.zon", `.version = ${JSON.stringify(packageVersion)}`],
@@ -428,8 +428,13 @@ if (typeof packageVersion !== "string") {
   }
 }
 const sourceInstallContracts = [
-  ["apps/web/src/index.html", "{{SOURCE_CHECKOUT_COMMAND}}"],
-  ["apps/web/src/index.html", "{{SOURCE_ENTER_COMMAND}}"],
+  ["apps/web/src/index.html", "{{RELEASE_INSTALL_COMMANDS}}"],
+  ["apps/web/src/index.html", "Install the CLI, then its matching Agent Skill"],
+  ["apps/web/src/index.html", "{{SOURCE_INSTALL_URL}}"],
+  ["apps/web/src/index.html", "<summary>Build from source</summary>"],
+  ["apps/web/src/index.html", "installs the guide from that same checkout. Native engines install separately."],
+  ["apps/web/src/site-content.ts", '["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1]'],
+  ["apps/web/src/site-content.ts", 'command: `${archiveInstall.command}\\n${archiveInstall.skillCommand}`'],
   ["README.md", sourceInstall.checkoutCommand],
   ["README.md", "bun install --frozen-lockfile --ignore-scripts"],
   ["README.md", "bun run build:sdk"],

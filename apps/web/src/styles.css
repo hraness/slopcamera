@@ -77,8 +77,8 @@ html[data-theme="dark"]:not([data-hraness-theme="paper"]) {
   }
 }
 
-/* Bridge legacy product roles to the portable paper contract. Terminal and
- * output colors stay fixed so appearance never changes the media itself. */
+/* Bridge legacy product roles to Paper. The independent preview retains its
+ * fixed media palette; ordinary code examples resolve their local theme. */
 :root[data-hraness-theme="paper"] {
   --font-body: var(--font-text);
   --paper: var(--background);
@@ -199,11 +199,6 @@ h3 {
   --hraness-marketing-background: transparent;
 }
 
-/* Lantern changes paint only. Preserve the fixed transcript and native preview. */
-[data-hraness-material="lantern"] .hraness-material-wall {
-  background-size: auto, auto, auto, auto;
-}
-
 /* Retain the established question targets and focus geometry. */
 [data-hraness-material="lantern"] .hraness-material-disclosure > summary {
   min-block-size: 3.25rem;
@@ -271,27 +266,42 @@ h3 {
   color: var(--ink);
 }
 
-.hraness-marketing-page :where(pre) {
-  border: 1px solid var(--night-line);
+/* The installed legacy grammar styles pre elements before the standalone
+ * material hook. Bind these ordinary examples to the same canonical roles. */
+.hraness-marketing-page .hraness-material-code {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 1.25rem;
+  overflow: auto;
+  border: 0;
+  background: var(--hraness-material-plane);
+  color: var(--hraness-material-ink);
+  font: .875rem/1.75 var(--font-mono);
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  tab-size: 2;
+}
+
+.hraness-marketing-page .hraness-material-code code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
 }
 
 .transcript {
-  margin: 0;
-  padding: 1.1rem 1.25rem;
-  border: 0;
   border-radius: 0;
-  font-size: 0.85rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
-.transcript__prompt {
-  color: var(--gold-bright);
-}
-
-.transcript__note {
-  color: var(--night-muted);
+.hraness-marketing-proof-frame__chrome.hraness-material-terminal__bar {
+  padding: .8rem 1.25rem;
+  background-image: var(--hraness-marketing-terminal-chrome);
+  color: var(--hraness-material-muted);
 }
 
 .example-list,
@@ -300,12 +310,33 @@ h3 {
 }
 
 .hraness-marketing-interface-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
-.hraness-marketing-interface pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+.hraness-marketing-interface {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 1.5rem 2rem;
+  min-inline-size: 0;
+  padding: 1.75rem 0;
+  border: 0;
+  border-block-end: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.interface-copy {
+  display: grid;
+  gap: .65rem;
+  min-inline-size: 0;
+  padding-block-start: 2px;
+}
+
+.hraness-marketing-interface .hraness-material-code {
+  border-radius: .875rem;
 }
 
 .hraness-marketing-primitive blockquote p {
@@ -337,8 +368,36 @@ h3 {
   grid-template-columns: minmax(0, 1fr);
 }
 
-[data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading-group > .install-note {
-  overflow-wrap: anywhere;
+/* Give the display font ascent and descent room inside its own heading box. */
+[data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading {
+  padding-block: .2em;
+}
+
+/* Existing compiled copy states read these local roles. They follow the
+ * release's themed terminal palette without changing the preview graph. */
+[data-hraness-marketing-preset="editorial"] .hraness-marketing-install {
+  --night: var(--hraness-marketing-terminal-background);
+  --night-ink: var(--hraness-marketing-terminal-ink);
+  --night-muted: var(--hraness-marketing-terminal-muted);
+  --night-line: var(--hraness-material-seam);
+  --gold-bright: var(--hraness-marketing-terminal-command);
+}
+
+.source-install {
+  margin-block-start: 1.5rem;
+}
+
+@media (forced-colors: active) {
+  [data-hraness-marketing-preset="editorial"] .hraness-marketing-install {
+    --night: Canvas;
+    --night-ink: CanvasText;
+    --night-muted: CanvasText;
+    --night-line: CanvasText;
+    --gold-bright: LinkText;
+  }
+  .hraness-marketing-proof-frame__chrome.hraness-material-terminal__bar {
+    background-image: none;
+  }
 }
 
 /* Maker */
@@ -366,9 +425,6 @@ h3 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .hraness-marketing-interface-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 48rem) {
@@ -376,19 +432,7 @@ h3 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .transcript {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-
-}
-
-@media (max-width: 34rem) {
-  .transcript {
-    font-size: 0.78rem;
-  }
-
-  .hraness-marketing-interface-grid {
+  .hraness-marketing-interface {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -398,13 +442,6 @@ h3 {
   html {
     scroll-behavior: auto;
   }
-}
-
-@media (forced-colors: active) {
-  .transcript {
-    border: 1px solid CanvasText;
-  }
-
 }
 
 [data-hraness-theme="paper"] .hraness-marketing-hero__heading {
@@ -426,4 +463,3 @@ h3 {
   --hraness-marketing-inverse: var(--night);
   --hraness-marketing-inverse-ink: var(--night-ink);
 }
-[data-hraness-theme="paper"] .hraness-marketing-proof-frame { box-shadow: none; }
