@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { Buffer } from "node:buffer"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -36,6 +37,7 @@ import {
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
 import { renderSlopcameraSocialImage } from "./scripts/generate-og"
+import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
@@ -129,12 +131,6 @@ async function readBuilt(path: string): Promise<string> {
   return await readFile(join(appDirectory, "dist", path), "utf8")
 }
 
-function plainCode(html: string): string {
-  return html.replace(/<[^>]+>/gu, "").replace(/&(?:amp|lt|gt|quot|#39);/gu, entity => ({
-    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'",
-  })[entity]!)
-}
-
 function assertAuthoredShellBudget(template: string): number {
   let authored = template
   const outsideContent = new Set(["{{APPEARANCE_MENU}}", "{{HRANESS_SITE_FOOTER}}", "{{THEME_ASSET}}", "{{ASK_AI_ABOUT_THIS}}", "{{ANALYTICS_SCRIPT}}"])
@@ -142,7 +138,8 @@ function assertAuthoredShellBudget(template: string): number {
     if (!outsideContent.has(slot)) authored = replaceSiteSlot(authored, slot, value, count)
   }
   // Count the actual highlighted commands. Discount only finite compiler-slot
-  // spelling, preserving the original 32,000-byte authored-content bound.
+  // spelling. The reviewed refinement allowance includes the literal highlighted
+  // terminal, release installer, source disclosure, and four interface examples.
   for (const [slot, count] of [
     ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
     ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
@@ -151,16 +148,41 @@ function assertAuthoredShellBudget(template: string): number {
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
   if (/\{\{(?:SITE|INSTALL)_[^{}]*_CLASS\}\}/u.test(authored)) throw new Error("Unexpected site class slot")
-  const bytes = new TextEncoder().encode(authored).byteLength
-  if (bytes >= 32_000) throw new Error(`Authored site shell exceeds its 32,000-byte budget: ${bytes}`)
+  const bytes = Buffer.byteLength(authored, "utf8")
+  if (bytes >= 36_000) throw new Error(`Authored site shell exceeds its 36,000-byte budget: ${bytes}`)
   return bytes
 }
 
+function assertCombinedSiteCssBudget(styles: string, foundation: string): number {
+  // Count both captured artifacts in full, including all three package recipes,
+  // the required 0.8 foundation, canonical snapshots, and retained product CSS.
+  const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
+  if (bytes >= 304_000) throw new Error(`Combined site CSS exceeds its 304,000-byte budget: ${bytes}`)
+  return bytes
+}
+
+test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
+  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(161_200))).toBe(303_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(161_200)))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(161_200)}é`))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(304_000), ""))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(304_000)))
+    .toThrow("Combined site CSS exceeds its 304,000-byte budget: 304000")
+})
+
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
   const template = await readSource("index.html")
-  expect(assertAuthoredShellBudget(template)).toBeLessThan(32_000)
-  expect(() => assertAuthoredShellBudget(template.replace("</main>", `${"x".repeat(32_000)}</main>`)))
-    .toThrow("Authored site shell exceeds its 32,000-byte budget")
+  const bytes = assertAuthoredShellBudget(template)
+  const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
+  expect(bytes).toBeLessThan(36_000)
+  expect(assertAuthoredShellBudget(grow("x".repeat(35_999 - bytes)))).toBe(35_999)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(36_000 - bytes))))
+    .toThrow("Authored site shell exceeds its 36,000-byte budget: 36000")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(35_999 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 36,000-byte budget: 36001")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
@@ -654,7 +676,7 @@ describe("static Slopcamera site", () => {
       const url = new URL(match[1]!, "https://slopcamera.com" + builtAssets.siteFoundationPath)
       expect(url.origin).toBe("https://slopcamera.com")
       return url.pathname.slice(1)
-    }).sort()).toEqual([...fonts, ...images].sort())
+    }).sort()).toEqual([...fonts, ...images, ...images].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
     expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
     expect(foundation).toContain("components.slopcamera-legacy")
@@ -721,7 +743,7 @@ describe("static Slopcamera site", () => {
         installUrl: "https://slopcamera.com/#install",
         publisher: { "@id": "https://hraness.com/#organization" },
         sameAs: ["https://github.com/hraness/slopcamera"],
-        softwareRequirements: "Git and Bun 1.3.14; install from source",
+        softwareRequirements: "Bun 1.3.14 or newer; native engines install separately",
       }),
       expect.objectContaining({
         "@id": "https://slopcamera.com/#source",
@@ -832,14 +854,14 @@ describe("static Slopcamera site", () => {
   test("states the MCP subset alongside the broader local interfaces", async () => {
     const html = await readBuilt("index.html")
 
-    for (const example of [
+    const examples = [...html.matchAll(/<pre aria-label="([^"]+)" class="hraness-material-code" tabindex="0">([\s\S]*?)<\/pre>/gu)]
+    expect(examples.map(match => match[1])).toEqual(["Agent Skill example", "CLI example", "TypeScript SDK example", "MCP example"])
+    expect(examples.map(match => plainCode(match[2]!))).toEqual([
       "slopcamera skill install --target agents",
       "slopcamera workflows list --json",
       'import { vectorizeImage } from "@hraness/slopcamera"',
       "slopcamera mcp --root /absolute/path/to/workspace",
-    ]) {
-      expect(html).toContain(example)
-    }
+    ])
     expect(html).toContain("Choose how your agent works.")
     expect(html).toContain("It does not expose every CLI command.")
     expect(html).not.toContain("Each one reaches the same project and the same operations.")
@@ -936,7 +958,7 @@ describe("static Slopcamera site", () => {
     expect(css).not.toMatch(/\.reading-(?:article|card|index|module)/u)
     expect(css).toContain("@media (max-width: 64rem)")
     expect(css).toContain("@media (max-width: 48rem)")
-    expect(css).toContain("@media (max-width: 34rem)")
+    expect(await readBuilt(builtAssets.stylesPath.slice(1))).toMatch(/@media\s*\(max-width:\s*34rem\)/u)
     expect(css).toContain("@media (prefers-reduced-motion: reduce)")
     expect(css).toContain("@media (forced-colors: active)")
   })
@@ -1005,7 +1027,9 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
     expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall" data-align="start"')
     expect(css).toContain("grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr)")
-    expect(css).toContain("overflow-wrap: anywhere")
+    for (const declaration of ["white-space: pre", "overflow-wrap: normal", "word-break: normal", "overflow: auto"]) {
+      expect(css).toContain(declaration)
+    }
     expect(html).not.toMatch(/<h1[^>]*>[^<]*(?:bounded|exact|authority|custody|immutable|inspectable|canonical|projection|receipt)/iu)
     const builtCss = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     expect(builtCss).toMatch(/font-family:\s*"?Nebula Sans"?/u)
@@ -1126,7 +1150,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(32_000)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(36_000)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = new TextEncoder().encode(await readBuilt("index.html")).byteLength
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
@@ -1382,9 +1406,10 @@ describe("static Slopcamera site", () => {
     expect(stylesAsset).toContain("--hraness-site-footer-social-target")
     expect(stylesAsset).not.toContain("@import \"./dist/stylex.css\"")
     expect(stylesAsset).toMatch(/@media\s*\(pointer:\s*coarse\)/u)
-    // The ordinary graph now includes the complete three-package union and
-    // captured compatibility foundation, never duplicated standalone sheets.
-    expect(new TextEncoder().encode(stylesAsset + foundationAsset).byteLength).toBeLessThan(256_000)
+    // The reviewed 0.8 refinement graph is 297,328 bytes before compression.
+    // Keep a strict ceiling over the full sealed union and captured foundation;
+    // no import, recipe, snapshot, or repeated layered rule is discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(304_000)
     expect(new TextEncoder().encode(themeAsset).byteLength).toBeLessThan(24_000)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)

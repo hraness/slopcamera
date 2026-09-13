@@ -1,15 +1,11 @@
 import { expect, test } from "bun:test"
+import { htmlText as text } from "./html-text.testing"
 import { readFile } from "node:fs/promises"
 import { diagramSession, interfaceExamples } from "../src/site-code-examples"
 import { renderHighlightedCode, siteContentSlots } from "../src/site-content"
 import { archiveInstall, publishedRelease } from "../src/published-release"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
-// The producer emits only code/span elements and these escaped text entities.
-const text = (value: string) => value.replace(/<[^>]*>/gu, "")
-  .replace(/&(?:amp|lt|gt|quot|#39);/gu, entity => ({
-    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'",
-  })[entity]!)
 
 test("one copy target installs the verified archive before its matching skill", () => {
   const slots = new Map(siteContentSlots("index.html", { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null }).map(([key, value]) => [key, value]))
@@ -52,7 +48,9 @@ test("highlighted source preserves arbitrary text and never creates executable m
     for (const language of ["shell", "typescript"] as const) {
       const html = renderHighlightedCode(source, language)
       expect(text(html)).toBe(source)
-      expect(html).not.toMatch(/<(?:script|img)|\sstyle=|\sonerror=/u)
+      for (const [tag] of html.matchAll(/<[^>]*>/gu)) {
+        expect(tag).toMatch(/^(?:<\/(?:code|span)>|<code class="syntax-code language-(?:shell|typescript)" data-language="(?:shell|typescript)">|<span class="[A-Za-z0-9_ -]+">)$/u)
+      }
       expect(html).toStartWith(`<code class="syntax-code language-${language}" data-language="${language}">`)
     }
   }
