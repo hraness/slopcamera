@@ -1475,10 +1475,136 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "01178998a485b03e83c1549d15a76cb8f23e8131cd445018d83de5f132ed2d00",
-    "occurrenceCount": 10,
+    "identityLineCount": 8,
+    "identityLinesSha256": "8cc3c4f6af39f0e3d8038b0421e064b2b677d801b963f6348713ace5949da119",
+    "occurrenceCount": 8,
     "path": "apps/web/src/agent-pages.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "316421a06c147c18590bdd9d309744c55f70d43685852466dfc1cf683dbd1f60",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/doc.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "c904f57c6bf2d65bcca502bca50a81d5ab0297af09b52dc91d340cef48c10757",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs-registry.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "2600d1c0ebb7f7fec70f9a9541d16cdabba2293adce613ec340e8d5f5e5dcf0b",
+    "occurrenceCount": 4,
+    "path": "apps/web/src/docs/explanation/extending.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "de09886e28fb805e3410efe083c4bba09d67381ec69378bf5a300d4c6bf50dfa",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/docs/how-to/edit-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "431731d5b05d964fc60bc418dd1f6e6e81d2f738d35ffe0cd298fe88bcebf276",
+    "occurrenceCount": 10,
+    "path": "apps/web/src/docs/how-to/educational-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 27,
+    "identityLinesSha256": "eb4f06b93c2a03afdb245502979ae2a7db223ea738c668f21f2841d7aacfd770",
+    "occurrenceCount": 38,
+    "path": "apps/web/src/docs/how-to/native-films.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "121f26f23f2403bc3ac58e2968987a56dab28f3fffa5f251e1e1e0924bb750f2",
+    "occurrenceCount": 6,
+    "path": "apps/web/src/docs/how-to/run-workflows.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "7b5e4eb0a95cb590e4e8ecc0562f442d70567dac3266e3b2f4d1cea3f56fad66",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/docs/index.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 8,
+    "identityLinesSha256": "b3ef6812129fd7dcf61958aed11f0556dbb216d0356aa47bf4eeefbacea4833a",
+    "occurrenceCount": 8,
+    "path": "apps/web/src/docs/reference/capabilities.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "954f53bb69b964e9e6dfd025dd92eece2ee8f22e5e01de3766b844f85cf3a989",
+    "occurrenceCount": 4,
+    "path": "apps/web/src/docs/reference/engines.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 7,
+    "identityLinesSha256": "b438d81c1d5d9bfee4d687ce818584612d0a52c6be343eb935d9ed3fa3b16b26",
+    "occurrenceCount": 8,
+    "path": "apps/web/src/docs/reference/sdk.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 11,
+    "identityLinesSha256": "62c5cf1e1be12046c433fa2c8c8783f3ddf0927a590f67ceff3f5b2329f6f955",
+    "occurrenceCount": 15,
+    "path": "apps/web/src/docs/tutorials/first-native-film.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "10402730fce1ef3e99a7269a9da69998505ea0496bf36a3eab28363364680dbd",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/tutorials/mcp.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "f55ace514807de59075a86a80685d872a9fd32d8579e0a21e8e9ec8d3d462604",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/tutorials/other-agents.md",
     "categories": [
       "native-film-studio"
     ]
