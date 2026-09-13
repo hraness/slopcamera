@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtemp, realpath, writeFile } from "node:fs/promises"
+import { mkdtemp, readdir, realpath, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -16,6 +16,7 @@ import { readPreviewFile as bytesAt } from "./preview-file"
 import { projectSiteArtifacts, siteSha256, snapshotSiteFoundation, type SiteArtifact } from "./site-contract"
 import { snapshotMarketingPreset } from "./marketing-preset"
 import { snapshotLanternMaterial } from "./lantern-material"
+import { docsDocumentForPage, docPages } from "../src/docs-registry"
 import type { SiteAssets } from "../src/site-content"
 
 const packages = [
@@ -28,9 +29,16 @@ const fontFiles = [
     ["", "Italic"].map(suffix => `nebula-sans/NebulaSans-${weight}${suffix}.woff2`)),
   "geist-mono/GeistMono[wght].woff2",
 ] as const
-const documents = ["404.html", "index.html"] as const
+// Ordinary shell documents use their own templates; every documentation page
+// shares src/doc.html and receives its authored body through sealed inputs.
+const documents = [
+  { outputPath: "404.html", template: "404.html" },
+  { outputPath: "index.html", template: "index.html" },
+  ...docPages.map(page => ({ outputPath: docsDocumentForPage(page), template: "doc.html" })),
+] as const
 const sourceFiles = [
-  "package.json", "bun.lock", "src/index.html", "src/404.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
+  "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
+  "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/published-release.ts",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/styles.css",
   "vendor/paper-theme/paper-theme.css",
@@ -95,11 +103,22 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
   })
   fonts.push(...presetAssets.filter(item => item.path.endsWith(".woff2")))
   const images = presetAssets.filter(item => item.path.endsWith(".svg"))
-  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...[...presetPaths, "provenance.json"].map(path => join(presetRoot, path)), ...materialPaths.map(path => join(materialRoot, path)), ...packageInputs.map(item => item.path), fontCss,
+  const docsSourceDirectory = join(app, "src/docs")
+  const docsSources = (await readdir(docsSourceDirectory, { recursive: true }))
+    .filter((entry): entry is string => typeof entry === "string" && entry.endsWith(".md"))
+    .map(entry => entry.split(sep).join("/"))
+    .sort()
+  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)),
+    ...[...presetPaths, "provenance.json"].map(path => join(presetRoot, path)), ...materialPaths.map(path => join(materialRoot, path)), ...packageInputs.map(item => item.path), fontCss,
     ...(root === app ? [] : [join(root, "package.json"), join(root, "bun.lock")])]
   const inputs = await Promise.all(sourcePaths.map(async path => ({
     path: below(root, path), bytes: await bytesAt(path, 2 * 1024 * 1024),
   })))
+  const docBodies: Record<string, string> = {}
+  for (const input of inputs) {
+    const body = /\/src\/docs\/(.+)\.md$/u.exec(input.path)
+    if (body !== null) docBodies[`docs/${body[1]}.html`] = new TextDecoder("utf-8", { fatal: true }).decode(input.bytes)
+  }
   const snapshot = inputs.map(({ path, bytes }) => ({ path, bytes: bytes.byteLength, sha256: siteSha256(bytes) }))
   const fingerprint = siteSha256(canonicalJson({
     assets, bun: Bun.version, compilerSha256, fonts, images, inputs: snapshot, marketingSourceCommit: preset.sourceCommit, materialSourceCommit: material.sourceCommit,
@@ -115,8 +134,8 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
       ],
       finalCssPath, generationId: "slopcamera-site-shell", outputDirectory,
       packageManifests: packageInputs.map(item => item.path), rootDirectory: root,
-      templates: documents.map(path => ({
-        cssHref: `/${finalCssPath}`, graphId: "site-renderer", outputPath: path, sourcePath: path, stylesheetGraphId: "site-foundation",
+      templates: documents.map(document => ({
+        cssHref: `/${finalCssPath}`, graphId: "site-renderer", outputPath: document.outputPath, sourcePath: document.outputPath, stylesheetGraphId: "site-foundation",
       })),
     })
     const foundation = snapshotSiteFoundation(await viteBuild({
@@ -132,19 +151,20 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     for (const item of renderer.outputs) assert.deepEqual(await artifactForFile(rendererRoot, item.path), item)
     const module: unknown = await import(pathToFileURL(join(rendererRoot, entries[0]!.path)).href)
     assert.ok(module !== null && typeof module === "object" && "renderSiteDocument" in module && typeof module.renderSiteDocument === "function")
+    const sealedAssets: SiteAssets = { ...assets, docBodies }
     for (const document of documents) {
-      const template = inputs.find(item => item.path === below(root, join(app, "src", document)))!
-      const html: unknown = module.renderSiteDocument(new TextDecoder("utf-8", { fatal: true }).decode(template.bytes), document, assets,
+      const template = inputs.find(item => item.path === below(root, join(app, "src", document.template)))!
+      const html: unknown = module.renderSiteDocument(new TextDecoder("utf-8", { fatal: true }).decode(template.bytes), document.outputPath, sealedAssets,
         `<link rel="stylesheet" href="/${foundation.cssPath}">\n    <link rel="stylesheet" href="${STYLEX_TEMPLATE_CSS_PLACEHOLDER}">`)
       assert.ok(typeof html === "string" && Buffer.byteLength(html) <= 128 * 1024)
       assert.doesNotMatch(html, /<style\b|\sstyle\s*=/iu, "Site renderer introduced inline styling")
-      const prepared = await prepareStylexProducedTemplate(generation, document)
+      const prepared = await prepareStylexProducedTemplate(generation, document.outputPath)
       await writeFile(prepared.sourcePath, html, { flag: "wx", mode: 0o644 })
-      await sealStylexProducedTemplate(generation, document)
+      await sealStylexProducedTemplate(generation, document.outputPath)
     }
     const finalized = await finalizeStylexGeneration({ generation, outputDirectory, rootDirectory: root })
     const artifacts = projectSiteArtifacts(JSON.parse(new TextDecoder().decode(await bytesAt(join(finalized, "stylex-complete.json")))) as unknown, {
-      compilerSha256, finalCssPath, foundation,
+      compilerSha256, documents: documents.map(document => document.outputPath), finalCssPath, foundation,
       packages: packageInputs.map(({ name, version, manifestSha256 }) => ({ name, version, manifestSha256 })),
       planSha256: generation.planSha256, unionPolicySha256: stylexUnionPolicySha256,
     })

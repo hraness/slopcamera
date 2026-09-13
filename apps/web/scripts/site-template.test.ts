@@ -93,12 +93,12 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     }
   })
 
-  test("authored slots retain the two semantic shells and their distinct phone navigation", async () => {
-    const [home, missing, recipes, renderer, legacy] = await Promise.all([
-      read("src/index.html"), read("src/404.html"), read("src/site-shell.stylex.ts"),
+  test("authored slots retain the semantic shells and their distinct phone navigation", async () => {
+    const [home, missing, doc, recipes, renderer, legacy] = await Promise.all([
+      read("src/index.html"), read("src/404.html"), read("src/doc.html"), read("src/site-shell.stylex.ts"),
       read("src/site-renderer.ts"), read("src/styles.css"),
     ])
-    for (const document of [home, missing]) {
+    for (const document of [home, missing, doc]) {
       for (const slot of ["SKIP", "HEADER", "WORDMARK", "ACTIONS", "NAVIGATION"]) {
         expect(document.match(new RegExp(`\\{\\{SITE_${slot}_CLASS\\}\\}`, "gu"))).toHaveLength(1)
       }
@@ -115,6 +115,14 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(missing).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
     expect(missing.match(/\{\{SITE_RECOVERY_LINK_CLASS\}\}/gu)).toHaveLength(4)
     expect(missing.match(/\{\{SITE_RECOVERY_PARAGRAPH_CLASS\}\}/gu)).toHaveLength(2)
+    expect(doc.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
+    expect(doc).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
+    for (const slot of ["LAYOUT", "NAV", "ARTICLE", "FOOTER"]) {
+      expect(doc.match(new RegExp(`\\{\\{DOCS_${slot}_CLASS\\}\\}`, "gu"))).toHaveLength(1)
+    }
+    for (const slot of ["TITLE", "DESCRIPTION", "CANONICAL", "MARKDOWN", "JSONLD", "NAV", "HEADER", "BODY", "FOOTER"]) {
+      expect(doc.match(new RegExp(`\\{\\{DOC_${slot}\\}\\}`, "gu"))).not.toBeNull()
+    }
     expect(recipes).toContain('const tablet = "@media (max-width: 48rem)"')
     expect(recipes).toContain('const phone = "@media (max-width: 34rem)"')
     expect(recipes).toContain('display: { default: null, [phone]: "none" }')
@@ -123,7 +131,10 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(recipes).toContain('const coarsePointer = "@media (pointer: coarse)"')
     expect(recipes).toContain('[forcedColors]: {\n        default: "CanvasText",')
     expect(recipes).toContain('minHeight: { default: "var(--hraness-marketing-action-height)", [coarsePointer]: "3rem" }')
-    expect(renderer).toContain('document === "index.html" ? homeSlots : recoverySlots')
+    expect(renderer).toContain('document === "index.html" ? homeSlots')
+    expect(renderer).toContain('document === "404.html" ? recoverySlots')
+    expect(renderer).toContain('isDocs ? docsSlots')
+    expect(renderer).toContain("rendered.replaceAll(placeholder, className)")
     const headerInk = '.topbar nav[aria-label="Primary"] > .site-action {\n  --gold-ink: var(--ink);\n}\n@media (forced-colors: active) {\n  .topbar nav[aria-label="Primary"] > .site-action {\n    --gold-ink: var(--primary-foreground);\n  }\n}'
     expect(legacy.split(headerInk)).toHaveLength(2)
     expect(legacy.replace(headerInk, "")).not.toMatch(/\.skip-link|\.topbar|\.wordmark|\.route-state/u)
@@ -157,9 +168,11 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(foundation).toContain('@import "./site-ask-ai-compatibility.css"')
     expect(foundation).not.toMatch(/hraness-stylex|(?:ui|design-kit|site-footer)\/stylex\.css|preview-foundation/u)
     expect(ua).not.toMatch(/all\s*:|!important/u)
-    expect(build).toContain('const documents = ["404.html", "index.html"] as const')
+    expect(build).toContain('{ outputPath: "404.html", template: "404.html" }')
+    expect(build).toContain('{ outputPath: "index.html", template: "index.html" }')
+    expect(build).toContain('template: "doc.html"')
     expect(build).toContain("packageManifests: packageInputs.map(item => item.path)")
-    expect(build.indexOf("await sealStylexProducedTemplate(generation, document)"))
+    expect(build.indexOf("await sealStylexProducedTemplate(generation, document.outputPath)"))
       .toBeLessThan(build.indexOf("await finalizeStylexGeneration("))
     expect(renderer).toContain("siteContentSlots(document, assets)")
     expect(build).not.toContain('replaceAll("__HRANESS_STYLEX_CSS__"')

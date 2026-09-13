@@ -51,7 +51,7 @@ function completeFixture() {
     kind: "hraness-stylex-complete-generation", packages: structuredClone([packages[0]!, packages[2]!, packages[1]!]),
     planSha256: digest, schemaVersion: 2, state: "complete", unionPolicySha256: digest,
   }
-  const expected = { compilerSha256: digest, finalCssPath: finalCss.path, foundation, packages, planSha256: digest, unionPolicySha256: digest }
+  const expected = { compilerSha256: digest, documents: ["404.html", "index.html"], finalCssPath: finalCss.path, foundation, packages, planSha256: digest, unionPolicySha256: digest }
   return { complete, expected }
 }
 
@@ -69,6 +69,23 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     expect(projected.find(item => item.path === "index.html")).toEqual(complete.artifacts[1])
     expect(projected.map(item => item.path)).toEqual(projected.map(item => item.path).sort())
     expect({ complete, expected }).toEqual(original)
+  })
+
+  test("admits registered documentation documents only through the declared manifest", () => {
+    const { complete, expected } = completeFixture()
+    const documents = [...expected.documents, "docs/index.html", "docs/tutorials/first-diagram.html"]
+    const admitted = { ...expected, documents }
+    for (const path of documents.slice(2)) complete.artifacts.push(artifact(path, "<!doctype html><title>doc</title>"))
+    const projected = projectSiteArtifacts(complete, admitted)
+    expect(projected.filter(item => item.path.endsWith(".html")).map(item => item.path))
+      .toEqual(["404.html", "docs/index.html", "docs/tutorials/first-diagram.html", "index.html"])
+    expect(projected).toHaveLength(18 + documents.length)
+    // An undocumented page is still refused, and a missing declared page fails.
+    const forged = completeFixture()
+    forged.complete.artifacts.push(artifact("docs/quiet.html"))
+    expect(() => projectSiteArtifacts(forged.complete, forged.expected)).toThrow()
+    const missing = completeFixture()
+    expect(() => projectSiteArtifacts(missing.complete, { ...missing.expected, documents: [...missing.expected.documents, "docs/absent.html"] })).toThrow()
   })
 
   test("output and graph order are irrelevant, while the public projection stays deterministic", () => {

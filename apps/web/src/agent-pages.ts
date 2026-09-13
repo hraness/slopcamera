@@ -16,7 +16,7 @@ slopcamera diagram check first.diagram.json --strict
 slopcamera diagram render first.diagram.json
 \`\`\`
 
-The starter writes \`example-flow.tldr\`, \`example-flow.light.svg\`, \`example-flow.dark.svg\`, \`example-flow.light.png\`, and \`example-flow.dark.png\`. Rendering again replaces these derived files. Follow the [complete tutorial](https://github.com/hraness/slopcamera/blob/main/docs/tutorials/first-diagram.md) to inspect the result and change a label.
+The starter writes \`example-flow.tldr\`, \`example-flow.light.svg\`, \`example-flow.dark.svg\`, \`example-flow.light.png\`, and \`example-flow.dark.png\`. Rendering again replaces these derived files. Follow the [complete tutorial](https://slopcamera.com/docs/tutorials/first-diagram.md) to inspect the result and change a label.
 
 Slopcamera covers four output families: images, diagrams, animated loops, and video. Start with the Agent Skill and CLI; the TypeScript SDK supports integrations, and MCP exposes a fixed subset. Video delivery covers 16:9, 9:16, 1:1, and 4:5 with clean and captioned cuts from one edit.
 
@@ -59,27 +59,27 @@ Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\
 
 Create a product reveal with a moving camera. Keep the model editable, mount the product diagram on a screen in the scene, and show contact frames before rendering.
 
-Portable Three.js scenes support a defined GLB subset, calibrated cameras, an explicit hardware GPU profile, and saved splat worlds through Spark. Splats capture appearance, not collision geometry. [Direct a scene](https://github.com/hraness/slopcamera/blob/main/docs/spatial-scenes.md).
+Portable Three.js scenes support a defined GLB subset, calibrated cameras, an explicit hardware GPU profile, and saved splat worlds through Spark. Splats capture appearance, not collision geometry. [Direct a scene](https://slopcamera.com/docs/how-to/direct-scenes.md).
 
 ### Film a native world
 
 Build a shaded street with an original presenter. Put an animated explanation on a screen in the world, then pull the camera back into the city.
 
-Blender handles native scenes, character rigs, cloth and liquid caches; CadQuery handles solids and STEP. Native \`studio\` commands require the current source build and separately installed engines. [Make a native film](https://github.com/hraness/slopcamera/blob/main/docs/tutorials/first-native-film.md).
+Blender handles native scenes, character rigs, cloth and liquid caches; CadQuery handles solids and STEP. Native \`studio\` commands require the current source build and separately installed engines. [Make a native film](https://slopcamera.com/docs/tutorials/first-native-film.md).
 
 ### Explain an idea visually
 
 Turn the services in this repository into an editable diagram, then animate the explanation. Add a presenter, readable mathematics, and captions where they help.
 
-Use diagrams, HTML/SVG motion, shader graphics, and optional vgpu raster passes. Manim educational films use the source-build studio. [Make an educational video](https://github.com/hraness/slopcamera/blob/main/docs/how-to/educational-video.md).
+Use diagrams, HTML/SVG motion, shader graphics, and optional vgpu raster passes. Manim educational films use the source-build studio. [Make an educational video](https://slopcamera.com/docs/how-to/educational-video.md).
 
 ### Edit and finish a video
 
 Record a product demo, remove pauses, zoom into important clicks, and add \`logo.svg\`. Generate a calm voiceover from \`script.txt\`, then preview clean and captioned versions in 16:9, 9:16, 1:1, and 4:5.
 
-Edit screen recordings and imported footage, or generate images, video, and voice through your own Gateway access. Source-build shot recipes retain budgets, reviewed takes, and continuation references. [Edit video](https://github.com/hraness/slopcamera/blob/main/docs/how-to/edit-video.md) · [Generate media](https://github.com/hraness/slopcamera/blob/main/docs/how-to/generate-media.md) · [Direct takes](https://github.com/hraness/slopcamera/blob/main/docs/directing-video.md).
+Edit screen recordings and imported footage, or generate images, video, and voice through your own Gateway access. Source-build shot recipes retain budgets, reviewed takes, and continuation references. [Edit video](https://slopcamera.com/docs/how-to/edit-video.md) · [Generate media](https://slopcamera.com/docs/how-to/generate-media.md) · [Direct takes](https://slopcamera.com/docs/how-to/direct-takes.md).
 
-**Source availability:** Build from \`main\` for portable scenes, the qualified Three.js GPU profile, saved worlds, native \`studio\`, shot-recipe \`direct\`, and \`scene camera-track\`. Engines install separately. [Check capabilities and requirements](https://github.com/hraness/slopcamera/blob/main/docs/reference/capabilities.md).
+**Source availability:** Build from \`main\` for portable scenes, the qualified Three.js GPU profile, saved worlds, native \`studio\`, shot-recipe \`direct\`, and \`scene camera-track\`. Engines install separately. [Check capabilities and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
 After a job runs, your agent should show the result and report the source, preview, and final output files. Ask for changes in the same plain language.
 
@@ -93,7 +93,7 @@ Keep native rigs and simulations, portable geometry and cameras, diagram objects
 4. Review before final. Inspect contact frames, motion, sound, and continuity. Preview and final renders use the same timeline and composition.
 5. Deliver and revise. Export finished videos. Retain sources, project decisions, and receipts for revisions.
 
-Share supported geometry and calibrated cameras, or mount images and video in world space. Raster handoffs preserve pixels, without reconstructing geometry or rigs. [Understand scene interchange](https://github.com/hraness/slopcamera/blob/main/docs/studio.md#share-assets-across-renderers).
+Share supported geometry and calibrated cameras, or mount images and video in world space. Raster handoffs preserve pixels, without reconstructing geometry or rigs. [Understand scene interchange](https://slopcamera.com/docs/how-to/native-films.md).
 
 ## Choose how your agent works
 
@@ -112,12 +112,13 @@ Native Python execution requires separate authorization. Loading a custom Bun wo
 
 ## Documentation
 
-The [documentation index](https://github.com/hraness/slopcamera/blob/main/docs/README.md) connects learning, task guides, reference, and explanation:
+The [documentation index](https://slopcamera.com/docs) connects learning, task guides, reference, and explanation:
 
-- [Your first diagram](https://github.com/hraness/slopcamera/blob/main/docs/tutorials/first-diagram.md)
-- [Run a workflow](https://github.com/hraness/slopcamera/blob/main/docs/how-to/run-workflows.md)
-- [Capabilities and requirements](https://github.com/hraness/slopcamera/blob/main/docs/reference/capabilities.md)
-- [Architecture](https://github.com/hraness/slopcamera/blob/main/docs/architecture.md)
+- [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram)
+- [Set up your coding agent](https://slopcamera.com/docs/tutorials/claude-code)
+- [Run a workflow](https://slopcamera.com/docs/how-to/run-workflows)
+- [Capabilities and requirements](https://slopcamera.com/docs/reference/capabilities)
+- [Architecture](https://slopcamera.com/docs/explanation/architecture)
 
 ## Before you install
 
@@ -168,6 +169,7 @@ export const notFoundMarkdown = `# Page not found
 The requested Slopcamera resource does not exist. Use one of these public indexes to recover:
 
 - [Home and installation guide](https://slopcamera.com/)
+- [Documentation](https://slopcamera.com/docs)
 - [Machine-readable site guide](https://slopcamera.com/llms.txt)
 - [Markdown sitemap](https://slopcamera.com/sitemap.md)
 - [XML sitemap](https://slopcamera.com/sitemap.xml)
@@ -190,25 +192,39 @@ Editing and rendering stay local. Gateway generation and selected cloud analysis
 ## Start
 
 - [Slopcamera home](https://slopcamera.com/index.md): Product overview, source installation, first task, and limits
-- [Documentation index](https://github.com/hraness/slopcamera/blob/main/docs/README.md): Learning, task guides, reference, and explanation
-- [First diagram](https://github.com/hraness/slopcamera/blob/main/docs/tutorials/first-diagram.md): Complete local input-to-output task using the source-built CLI
+- [Documentation index](https://slopcamera.com/docs/index.md): Learning, task guides, reference, and explanation
+- [First diagram](https://slopcamera.com/docs/tutorials/first-diagram.md): Complete local input-to-output task
 - [Repository README](https://github.com/hraness/slopcamera#readme): Product contract and install
+
+## Set up an agent
+
+- [Claude Code](https://slopcamera.com/docs/tutorials/claude-code.md): Install the release and Agent Skill for Claude Code
+- [Codex](https://slopcamera.com/docs/tutorials/codex.md): Install the release and Agent Skill for Codex
+- [MCP clients](https://slopcamera.com/docs/tutorials/mcp.md): Expose the fixed diagram and image toolset
+- [Other agents](https://slopcamera.com/docs/tutorials/other-agents.md): Portable skill target and plain CLI access
 
 ## Choose a task
 
-- [Directed scenes](https://github.com/hraness/slopcamera/blob/main/docs/spatial-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
-- [Native studio](https://github.com/hraness/slopcamera/blob/main/docs/studio.md): Blender, CadQuery, Manim, explicit native trust, and interchange
-- [Edit video](https://github.com/hraness/slopcamera/blob/main/docs/how-to/edit-video.md): Import, edit, preview, and delivery
-- [Generate media](https://github.com/hraness/slopcamera/blob/main/docs/how-to/generate-media.md): Model discovery and caller-owned Gateway access
-- [Direct generated clips](https://github.com/hraness/slopcamera/blob/main/docs/directing-video.md): Source-build shot recipes, budgets, takes, and review
-- [Educational video](https://github.com/hraness/slopcamera/blob/main/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
-- [Run workflows](https://github.com/hraness/slopcamera/blob/main/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
+- [Edit video](https://slopcamera.com/docs/how-to/edit-video.md): Import, edit, preview, and delivery
+- [Generate media](https://slopcamera.com/docs/how-to/generate-media.md): Model discovery and caller-owned Gateway access
+- [Educational video](https://slopcamera.com/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
+- [Music video](https://slopcamera.com/docs/how-to/music-video.md): Authored HTML visuals with a local track
+- [Directed scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
+- [Native films](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
+- [Direct generated clips](https://slopcamera.com/docs/how-to/direct-takes.md): Shot recipes, budgets, takes, and review
+- [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
+- [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup
 
 ## Reference and explanation
 
-- [Capabilities](https://github.com/hraness/slopcamera/blob/main/docs/reference/capabilities.md): Release availability, supported profiles, runtime requirements, and limits
-- [SDK entrypoints](https://github.com/hraness/slopcamera/blob/main/docs/reference/sdk.md): Import surfaces and execution effects
-- [Architecture](https://github.com/hraness/slopcamera/blob/main/docs/architecture.md): Sources, projects, operations, and local host
+- [Capabilities](https://slopcamera.com/docs/reference/capabilities.md): Release availability, supported profiles, runtime requirements, and limits
+- [SDK entrypoints](https://slopcamera.com/docs/reference/sdk.md): Import surfaces and execution effects
+- [Engine stack](https://slopcamera.com/docs/reference/engines.md): What each part of the multimedia engine does and needs
+- [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): What a retained-source local studio gives an agent
+- [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
+- [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
+- [Tutorials](https://slopcamera.com/docs/index.md): First diagram and first native film
 - [Security policy](https://github.com/hraness/slopcamera/blob/main/SECURITY.md): Trust boundary and reporting
 - [Markdown sitemap](https://slopcamera.com/sitemap.md): Public page indexes
 - [XML sitemap](https://slopcamera.com/sitemap.xml): Search-engine sitemap
@@ -219,8 +235,42 @@ export const sitemapMarkdown = `# Sitemap
 ## Slopcamera
 
 - [Slopcamera home](https://slopcamera.com/index.md): Visual studio overview, installation, examples, workflow, and trust
-- [Documentation](https://github.com/hraness/slopcamera/blob/main/docs/README.md): Tutorials, task guides, reference, and explanation
+- [Documentation](https://slopcamera.com/docs/index.md): Tutorials, task guides, reference, and explanation
 - [Machine-readable site guide](https://slopcamera.com/llms.txt): When to use Slopcamera and the public indexes
+
+## Tutorials
+
+- [Create and revise your first diagram](https://slopcamera.com/docs/tutorials/first-diagram.md)
+- [Render your first native film](https://slopcamera.com/docs/tutorials/first-native-film.md)
+- [Set up Slopcamera for Claude Code](https://slopcamera.com/docs/tutorials/claude-code.md)
+- [Set up Slopcamera for Codex](https://slopcamera.com/docs/tutorials/codex.md)
+- [Use Slopcamera from an MCP client](https://slopcamera.com/docs/tutorials/mcp.md)
+- [Set up Slopcamera for other coding agents](https://slopcamera.com/docs/tutorials/other-agents.md)
+
+## How-to guides
+
+- [Build Slopcamera from source](https://slopcamera.com/docs/how-to/install-from-source.md)
+- [Edit and deliver video](https://slopcamera.com/docs/how-to/edit-video.md)
+- [Generate images, video, and narration](https://slopcamera.com/docs/how-to/generate-media.md)
+- [Make an educational video](https://slopcamera.com/docs/how-to/educational-video.md)
+- [Make a music video from an HTML scene](https://slopcamera.com/docs/how-to/music-video.md)
+- [Render and edit spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md)
+- [Author a native film](https://slopcamera.com/docs/how-to/native-films.md)
+- [Direct short generated clips](https://slopcamera.com/docs/how-to/direct-takes.md)
+- [Run or recover a workflow](https://slopcamera.com/docs/how-to/run-workflows.md)
+
+## Reference
+
+- [Capabilities, versions, and platforms](https://slopcamera.com/docs/reference/capabilities.md)
+- [SDK surfaces](https://slopcamera.com/docs/reference/sdk.md)
+- [The Slopcamera engine stack](https://slopcamera.com/docs/reference/engines.md)
+
+## Explanation
+
+- [Source, representations, and projects](https://slopcamera.com/docs/explanation/architecture.md)
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md)
+- [Extend Slopcamera](https://slopcamera.com/docs/explanation/extending.md)
+- [Choose an HTML authoring surface](https://slopcamera.com/docs/explanation/html-authoring.md)
 `
 
 export const robotsTxt = `User-agent: OAI-SearchBot
