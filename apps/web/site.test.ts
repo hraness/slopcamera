@@ -161,6 +161,22 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   return bytes
 }
 
+function assertBuiltHtmlBudget(html: string): number {
+  // The six code blocks add 2,105 bytes over the admitted 55,043-byte baseline;
+  // all other document content shrinks by 125 bytes. Count the entire seal.
+  const bytes = Buffer.byteLength(html, "utf8")
+  if (bytes >= 58_000) throw new Error(`Built site HTML exceeds its 58,000-byte budget: ${bytes}`)
+  return bytes
+}
+
+test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
+  expect(assertBuiltHtmlBudget("x".repeat(57_999))).toBe(57_999)
+  expect(() => assertBuiltHtmlBudget("x".repeat(58_000)))
+    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58000")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(57_999)}é`))
+    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58001")
+})
+
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
   expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(161_200))).toBe(303_999)
   expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(161_200)))
@@ -958,7 +974,7 @@ describe("static Slopcamera site", () => {
     expect(css).not.toMatch(/\.reading-(?:article|card|index|module)/u)
     expect(css).toContain("@media (max-width: 64rem)")
     expect(css).toContain("@media (max-width: 48rem)")
-    expect(await readBuilt(builtAssets.stylesPath.slice(1))).toMatch(/@media\s*\(max-width:\s*34rem\)/u)
+    expect(await readBuilt(builtAssets.stylesPath.slice(1))).toMatch(/@media\s*\(width\s*<=\s*34rem\)/u)
     expect(css).toContain("@media (prefers-reduced-motion: reduce)")
     expect(css).toContain("@media (forced-colors: active)")
   })
@@ -1133,6 +1149,7 @@ describe("static Slopcamera site", () => {
       "@types/react": "19.2.14",
       "@types/react-dom": "19.2.3",
       "lightningcss": "1.33.0",
+      "parse5": "8.0.1",
       "playwright-core": "1.62.0",
       "typescript": "6.0.3",
       "vite": "8.2.1",
@@ -1152,9 +1169,9 @@ describe("static Slopcamera site", () => {
     expect(localLockfile).not.toContain("catalog:")
     expect(assertAuthoredShellBudget(html)).toBeLessThan(36_000)
     // Bound the full sealed document separately, including compiled classes and content producers.
-    const emittedBytes = new TextEncoder().encode(await readBuilt("index.html")).byteLength
+    const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(56_000)
+    expect(emittedBytes).toBeLessThan(58_000)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
