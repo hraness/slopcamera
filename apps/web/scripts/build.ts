@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto"
-import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
-import { basename, dirname, join } from "node:path"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { renderSlopcameraSocialImage } from "./generate-og"
 import { buildPreview } from "./build-preview"
 import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
+import { publicIdentity, readPublicIcons } from "./public-identity"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
 import {
@@ -22,10 +23,7 @@ const defaultOutputDirectory = join(appDirectory, "dist")
 const posthogIngestOrigin = "https://us.i.posthog.com"
 const siteOrigin = "https://slopcamera.com"
 const posthogPackageDirectory = dirname(fileURLToPath(import.meta.resolve("posthog-js/package.json")))
-const copiedFiles = [
-  "apple-touch-icon.png",
-  "icon.svg",
-] as const
+const copiedFiles = publicIdentity.files
 
 const generatedTextFiles = {
   "index.md": homeMarkdown,
@@ -173,6 +171,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   // All content and stylesheet substitutions happen inside the sealed producers.
   const site = await buildSite(appDirectory, { themePath, analyticsPath })
   const preview = await buildPreview(appDirectory)
+  const icons = await readPublicIcons(appDirectory)
 
   await rm(outputDirectory, { force: true, recursive: true })
   await mkdir(join(outputDirectory, "assets"), { recursive: true })
@@ -190,16 +189,8 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const file of copiedFiles) {
-    const source = join(sourceDirectory, file)
-    const sourceStat = await stat(source)
-    if (!sourceStat.isFile()) {
-      throw new Error(`Static source is not a regular file: ${basename(source)}`)
-    }
-    await cp(source, join(outputDirectory, file), {
-      dereference: true,
-      errorOnExist: true,
-    })
+  for (const { path, bytes } of icons) {
+    await writeFile(join(outputDirectory, path), bytes, { flag: "wx", mode: 0o644 })
   }
 
   await Promise.all(Object.entries(generatedTextFiles).map(([file, contents]) => (

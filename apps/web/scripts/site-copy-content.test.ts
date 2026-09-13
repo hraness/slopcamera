@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { homeMarkdown, llmsTxt, sitemapMarkdown } from "../src/agent-pages"
-import { publishedArchiveUrl, sourceInstall } from "../src/published-release"
+import { archiveInstall, publishedArchiveUrl, sourceInstall } from "../src/published-release"
+import { diagramSession } from "../src/site-code-examples"
 import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
@@ -22,7 +23,12 @@ describe("visual studio public copy (pure, process-free)", () => {
     }
     expect(readme).toContain("Historical Atet release evidence")
     expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz")
-    expect(html).toContain("{{ARCHIVE_INSTALL_COMMAND}}")
+    expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
+    expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
+    expect(html).toContain('<summary>Build from source</summary>')
+    expect(homeMarkdown).toContain(archiveInstall.skillCommand)
+    expect(llmsTxt).toContain("camera-track export require the current source build")
+    expect(llmsTxt.match(/Install the verified release with/gu)).toHaveLength(1)
     const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u)![1]!)["@graph"] as Record<string, unknown>[]
     for (const item of graph) {
       expect(item).not.toHaveProperty("softwareVersion")
@@ -31,20 +37,18 @@ describe("visual studio public copy (pure, process-free)", () => {
     }
   })
 
-  test("the original camera mark produces the exact desktop and web icon derivatives", async () => {
+  test("the historical camera mark still reproduces its desktop asset and recorded derivatives", async () => {
     const icon = await renderSlopcameraIcons()
-    const [desktop, apple, manifest, provenance] = await Promise.all([
+    const [desktop, manifest, provenance] = await Promise.all([
       readFile(new URL("../../desktop/assets/icon.png", import.meta.url)),
-      readFile(new URL("../src/apple-touch-icon.png", import.meta.url)),
       read("apps/desktop/assets/brand-emoji/manifest.json"),
       read("apps/desktop/assets/brand-provenance.json"),
     ])
     expect(icon.desktop).toEqual(new Uint8Array(desktop))
-    expect(icon.apple).toEqual(new Uint8Array(apple))
     expect(JSON.parse(manifest).assets[0]).toMatchObject({ domain: "slopcamera.com", emoji: "📷", codePointID: "1f4f7", sha256: icon.sourceSha256 })
     expect(JSON.parse(provenance).source.sha256).toBe(icon.sourceSha256)
     for (const output of JSON.parse(provenance).outputs as { path: string; bytes: number; sha256: string }[]) {
-      const bytes = output.path === "icon.png" ? desktop : apple
+      const bytes = output.path === "icon.png" ? desktop : icon.apple
       expect(bytes.byteLength).toBe(output.bytes)
       expect(new Bun.CryptoHasher("sha256").update(bytes).digest("hex")).toBe(output.sha256)
     }
@@ -62,19 +66,20 @@ describe("visual studio public copy (pure, process-free)", () => {
     }
   })
 
-  test("first value includes the source-built starter and names its real five derived outputs", async () => {
+  test("first value includes the released starter and names its real five derived outputs", async () => {
     const [readme, html, cli, artifacts] = await Promise.all([
       read("README.md"), read("apps/web/src/index.html"), read("src/cli.ts"), read("src/artifacts.ts"),
     ])
     expect(cli).toContain('name: "example-flow"')
     expect(artifacts).toContain('`${spec.name}.tldr`')
     const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
-    for (const source of [readme, html, homeMarkdown]) {
+    expect(html).toContain("{{DIAGRAM_SESSION}}")
+    expect(html).toContain("docs/tutorials/first-diagram.md")
+    for (const source of [readme, diagramSession, homeMarkdown]) {
       const positions = commands.map(command => source.indexOf(command))
       expect(positions.every(position => position >= 0)).toBe(true)
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
       expect(source).not.toContain("--input job.json")
-      expect(source).toContain("docs/tutorials/first-diagram.md")
     }
     for (const suffix of ["tldr", "light.svg", "dark.svg", "light.png", "dark.png"]) {
       for (const source of [readme, homeMarkdown]) expect(source).toContain(`example-flow.${suffix}`)

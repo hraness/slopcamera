@@ -56,7 +56,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-jchqst8w.js";
+} from "./index-rvghzt7b.js";
 import {
   bundledSkillPath,
   installSkill

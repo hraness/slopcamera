@@ -2,7 +2,9 @@ import { renderHranessSiteFooter } from "@hraness/site-footer"
 import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { archiveInstall, sourceInstall } from "./published-release"
+import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
+import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
+import { diagramSession, interfaceExamples } from "./site-code-examples"
 
 // Existing content producers run within the ordinary page's captured SSR
 // graph. They introduce no client renderer and retain their public APIs.
@@ -48,6 +50,11 @@ function escapeHtml(value: string): string {
   })[character] ?? character)
 }
 
+export function renderHighlightedCode(value: string, language: SyntaxLanguage): string {
+  const highlighted = highlightCode(value, language, { styles: "classes" })
+  return `<code class="${highlighted.className}" data-language="${highlighted.language}">${highlighted.html}</code>`
+}
+
 type CopyCommandOptions = Readonly<{
   alternateCommand: string
   command: string
@@ -56,11 +63,11 @@ type CopyCommandOptions = Readonly<{
 
 function renderCopyCommand(options: CopyCommandOptions): string {
   const alternateCommand = escapeHtml(options.alternateCommand)
-  const command = escapeHtml(options.command)
+  const command = highlightCode(options.command, "shell", { styles: "classes" })
   const id = escapeHtml(options.id)
   return `<div class="copy-command {{INSTALL_COPY_CLASS}}" data-copy-command>
-    <code class="copy-command__value {{INSTALL_VALUE_CLASS}}" data-copy-command-value>${command}</code>
-    <button aria-describedby="${id}" aria-label="Copy install command" class="copy-command__button {{INSTALL_IDLE_CLASS}}"
+    <code class="copy-command__value ${command.className} {{INSTALL_VALUE_CLASS}}" data-language="shell" data-copy-command-value tabindex="0">${command.html}</code>
+    <button aria-describedby="${id}" aria-label="Copy install commands" class="copy-command__button {{INSTALL_IDLE_CLASS}}"
       data-copy-idle-class="copy-command__button {{INSTALL_IDLE_CLASS}}"
       data-copy-copied-class="copy-command__button {{INSTALL_COPIED_CLASS}}"
       data-copy-failed-class="copy-command__button {{INSTALL_FAILED_CLASS}}"
@@ -88,14 +95,18 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   if (document === "404.html") return common
   return [...common,
     ["{{ASK_AI_ABOUT_THIS}}", renderAskAiAboutThis("https://slopcamera.com/"), 1],
-    ["{{ARCHIVE_INSTALL_COMMAND}}", archiveInstall.command, 1],
-    ["{{SOURCE_CHECKOUT_COMMAND}}", sourceInstall.checkoutCommand, 1],
-    ["{{SOURCE_ENTER_COMMAND}}", sourceInstall.enterCommand, 1],
+    ["{{RELEASE_VERSION}}", publishedRelease.version, 1],
+    ["{{RELEASE_URL}}", publishedRelease.releaseUrl, 1],
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
+    ["{{DIAGRAM_SESSION}}", renderHighlightedCode(diagramSession, "shell"), 1],
+    ["{{SKILL_EXAMPLE}}", renderHighlightedCode(interfaceExamples.skill, "shell"), 1],
+    ["{{CLI_EXAMPLE}}", renderHighlightedCode(interfaceExamples.cli, "shell"), 1],
+    ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],
+    ["{{MCP_EXAMPLE}}", renderHighlightedCode(interfaceExamples.mcp, "shell"), 1],
     ["{{ANALYTICS_SCRIPT}}", assets.analyticsPath === null ? "" : `<script src="${assets.analyticsPath}" type="module"></script>`, 1],
-    ["{{SKILL_INSTALL_COMMAND}}", renderCopyCommand({
-      alternateCommand: sourceInstall.alternateSkillCommand,
-      command: sourceInstall.skillCommand,
+    ["{{RELEASE_INSTALL_COMMANDS}}", renderCopyCommand({
+      alternateCommand: archiveInstall.alternateSkillCommand,
+      command: `${archiveInstall.command}\n${archiveInstall.skillCommand}`,
       id: "skill-install-copy-status",
     }), 1],
   ]

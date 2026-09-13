@@ -84,7 +84,7 @@ function assertCopyContract(compiled: StylexTransformResult): void {
     }
     expect(rules.join("\n")).not.toMatch(/outline|appearance:|forced-color-adjust|\[data-|\.copy-command/u)
   }
-  for (const slot of ["command", "commands"]) {
+  for (const slot of ["command"]) {
     required(compiled, slot, ".slot{border-width:1px}")
     required(compiled, slot, ".slot{border-style:solid}")
     required(compiled, slot, "@media (forced-colors: active){.slot.slot{border-color:CanvasText}}")
@@ -95,11 +95,12 @@ function assertCopyContract(compiled: StylexTransformResult): void {
   for (const declaration of ["position:fixed", "top:0", "right:auto", "bottom:auto", "left:-9999px", "opacity:0"]) required(compiled, "fallback", `.slot{${declaration}}`)
   for (const declaration of ["position:absolute", "width:1px", "height:1px", "overflow:hidden", "clip-path:inset(50%)", "white-space:nowrap"]) required(compiled, "status", `.slot{${declaration}}`)
   required(compiled, "value", ".slot{overflow-x:auto}")
-  required(compiled, "value", ".slot{white-space:nowrap}")
+  required(compiled, "value", ".slot{white-space:pre}")
+  required(compiled, "value", ".slot{overflow-wrap:normal}")
+  required(compiled, "value", ".slot{word-break:normal}")
   required(compiled, "panelLink", ".slot{color:var(--gold)}")
   required(compiled, "panelNote", ".slot{margin-top:1rem}")
-  required(compiled, "number", ".slot{font:.75rem/1.7 var(--font-mono)}")
-  for (const slot of ["value", "noteCode", "installCode"]) required(compiled, slot, ".slot{background-position:0 0}")
+  for (const slot of ["value", "noteCode"]) required(compiled, slot, ".slot{background-position:0 0}")
 }
 
 describe("install/copy compiled ownership (pure, process-free)", () => {
@@ -117,7 +118,7 @@ describe("install/copy compiled ownership (pure, process-free)", () => {
       source.replaceAll('[forcedColors]: "CanvasText"', '[forcedColors]: "var(--night-line)"'),
       source.replace('left: "-9999px"', 'left: 0'),
       source.replace('opacity: 0', 'opacity: 1'),
-      source.replace('font: "0.75rem/1.7 var(--font-mono)"', 'font: "inherit"'),
+      source.replace('whiteSpace: "pre"', 'whiteSpace: "pre-wrap"'),
       source.replace('  button: {', '  button: { outline: "none",'),
       source.replace('  button: {', '  button: { forcedColorAdjust: "none",'),
       source.replace('backgroundPosition: "0px 0px"', 'backgroundPosition: "initial"'),
@@ -141,7 +142,7 @@ describe("install/copy compiled ownership (pure, process-free)", () => {
       html = replaceSiteSlot(html, placeholder, value, count)
     }
     const slots = [...renderer.matchAll(/\["(\{\{INSTALL_[A-Z_]+\}\})", siteInstallClassNames\.(\w+), (\d+)\]/gu)]
-    expect(slots).toHaveLength(19)
+    expect(slots).toHaveLength(13)
     for (const match of slots) {
       const placeholder = match[1]; const slot = match[2]; const count = Number(match[3])
       if (!placeholder || !slot) throw new Error("Missing counted slot")
@@ -167,14 +168,10 @@ describe("install/copy compiled ownership (pure, process-free)", () => {
 
   test("removes only local ownership from legacy CSS and retains global native focus and marketing boundaries", async () => {
     const css = await read("src/styles.css")
-    // Only the reviewed editorial heading layout and archive-text wrapping stay
-    // in marketing CSS. The compiled install/copy recipes retain every other rule.
+    // The heading remains a finite marketing layout seam. The release command
+    // itself stays in the compiled copy recipe, with intact source lines.
     const editorialInstall = `[data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading-group {
   grid-template-columns: minmax(0, 1fr);
-}
-
-[data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading-group > .install-note {
-  overflow-wrap: anywhere;
 }`
     expect(css.split(editorialInstall)).toHaveLength(2)
     expect(css.replace(editorialInstall, "")).not.toMatch(/\.copy-command|\.cli-install|\.install-commands|\.panel-label|\.install-note|\.panel-note/u)

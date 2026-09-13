@@ -22,7 +22,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": [
-      "bun"
+      "bun",
+      "vite/client"
     ]
   },
   "include": [
@@ -33,6 +34,7 @@
     "scripts/site-css.test.ts",
     "scripts/site-template.test.ts",
     "scripts/site-copy-content.test.ts",
+    "scripts/site-code-examples.test.ts",
     "scripts/site-install.test.ts",
     "src/copy-command.ts",
     "src/copy-command.test.ts",
@@ -50,6 +52,7 @@
     "src/site-renderer.ts",
     "src/site-template.ts",
     "src/site-content.ts",
+    "src/site-code-examples.ts",
     "src/site-foundation.ts",
     "scripts/build-preview.ts",
     "scripts/preview-contract.ts",
@@ -74,6 +77,11 @@
     "scripts/site-marketing-browser-contract.test.ts",
     "scripts/lantern-material.test.ts",
     "scripts/site-marketing-font-diagnostic.ts",
-    "scripts/site-marketing-font-diagnostic.test.ts"
+    "scripts/site-marketing-font-diagnostic.test.ts",
+    "scripts/public-identity.ts",
+    "scripts/public-identity.test.ts",
+    "scripts/verify-site-refinement.ts",
+    "scripts/verify-site-refinement-copy.ts",
+    "scripts/site-refinement-browser-contract.test.ts"
   ]
 }
