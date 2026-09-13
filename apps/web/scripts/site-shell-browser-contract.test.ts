@@ -14,6 +14,7 @@ function operationDeferred() {
 function restorationFixture(recovery = false) {
   let now = 0, id = 0, discovered = false, running = true, paint = "0px", frameTime = 0
   const frames = new Map<number, (time: number) => void>(), timers = new Map<number, () => void>(), events = new Map<string, () => void>()
+  const loadedFonts = new Set<string>(), fontLoads: string[] = []
   const href = "http://127.0.0.1:1/assets/site.css", selected = new Map<string, object[]>()
   const view = { performance: { now: () => now }, scrollY: 0,
     getComputedStyle: () => ({ getPropertyValue: () => paint }),
@@ -27,7 +28,7 @@ function restorationFixture(recovery = false) {
   const document = { defaultView: view, styleSheets: [] as object[],
     querySelectorAll: (selector: string) => selected.get(selector) ?? [],
     querySelector: (selector: string) => selected.get(selector)?.[0] ?? null,
-    fonts: { ready: Promise.resolve(), load: async () => [{ status: "loaded" }] },
+    fonts: { ready: Promise.resolve(), check: (font: string) => loadedFonts.has(font), load: async (font: string) => { fontLoads.push(font); loadedFonts.add(font); return [{ status: "loaded" }] } },
   }
   class Link { ownerDocument = document; isConnected = true; disabled = false; href = href; sheet?: object }
   const link = new Link()
@@ -53,7 +54,7 @@ function restorationFixture(recovery = false) {
     now = Math.max(now, at); frameTime = at
     const pending = [...frames.values()]; frames.clear(); for (const callback of pending) callback(at)
   }
-  return { start, generic, frame, owners, sheet, link, document, selected,
+  return { start, generic, frame, owners, sheet, link, document, selected, fontLoads,
     read: () => { owners[0]!.getBoundingClientRect(); return paint },
     expire: () => { now = 1_000; for (const callback of [...timers.values()]) callback() },
     setClock: (value: number) => { now = value },
@@ -71,6 +72,19 @@ test("restoration sampling discovers the transition that generic two frames miss
   const actual = restorationFixture(), result = actual.start()
   actual.frame(); actual.frame("144px"); actual.frame(); await result
   expect(actual.read()).toBe("144px"); expect(actual.pending).toEqual([0, 0, 0])
+})
+
+test("font settlement loads each local face once per document", async () => {
+  const fixture = restorationFixture()
+  const first = fixture.generic()
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  fixture.frame(); fixture.frame()
+  await first
+  const second = fixture.generic()
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  fixture.frame(); fixture.frame()
+  await second
+  expect(fixture.fontLoads).toEqual(['400 44px "Instrument Serif"', '400 16px "Nebula Sans"', '500 16px "Nebula Sans"'])
 })
 
 test("restoration settlement keeps stable wrong observations strict and requires distinct frames", async () => {

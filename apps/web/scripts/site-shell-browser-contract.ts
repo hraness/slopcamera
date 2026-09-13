@@ -345,11 +345,8 @@ export async function settle(page: Page, direction?: "rtl"): Promise<void> {
     // after navigation. The authoritative served HTML and CSS remain intact.
     if (direction === "rtl") document.documentElement.setAttribute("dir", direction)
     await document.fonts.ready
-    const fonts = await Promise.all([
-      document.fonts.load('400 44px "Instrument Serif"'),
-      document.fonts.load('400 16px "Nebula Sans"'),
-      document.fonts.load('500 16px "Nebula Sans"'),
-    ])
+    const requested = ['400 44px "Instrument Serif"', '400 16px "Nebula Sans"', '500 16px "Nebula Sans"']
+    const fonts = await Promise.all(requested.filter(font => !document.fonts.check(font)).map(font => document.fonts.load(font)))
     if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   }, direction)
