@@ -1566,7 +1566,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "b3ef6812129fd7dcf61958aed11f0556dbb216d0356aa47bf4eeefbacea4833a",
+    "identityLinesSha256": "feb0fba3a3e073aa39a5648afeda9d565a9d4032949badcd2884c0accb1427be",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1747,7 +1747,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "a94db3ac76b874e876ac419f5abee7cbbb6eed11a2dc68e27f361955c1a9a745",
+    "identityLinesSha256": "aed7fc0e14ebc0c627f284f5a489deaa16d44d5a4817ffd6caa6481d1e946466",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1774,7 +1774,7 @@
   },
   {
     "identityLineCount": 40,
-    "identityLinesSha256": "65c625a4d813fc25aa89d21c3daef5e55ff43ba1c4e5a2e0a8038d62b1056357",
+    "identityLinesSha256": "248f2ce880c7ba778675f68a0bc58ff1aa157576c9b9be2df829b49f4059bb9a",
     "occurrenceCount": 54,
     "path": "docs/studio.md",
     "categories": [
