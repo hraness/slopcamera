@@ -149,7 +149,11 @@ async function fixture() {
         expect(options?.inheritedFileDescriptors).toEqual([]);
         if (basename(argv[0]) === "ffprobe") {
           const deliveryProbe = argv.includes("-count_frames");
-          const soundtrackSource = !deliveryProbe && (await readFile(argv.at(-1)!)).subarray(0, 4).toString() === "RIFF";
+          const sourcePath = argv.at(-1)!;
+          const soundtrackSource = !deliveryProbe && (
+            (await readFile(sourcePath)).subarray(0, 4).toString() === "RIFF"
+            || /\.(?:wav|aif|aiff|mp3|flac)$/iu.test(sourcePath)
+          );
           const data = deliveryProbe ? state.probe : soundtrackSource ? state.soundtrackProbe : importProbe(false);
           if (!deliveryProbe && !soundtrackSource && state.mutateOutputDuringProjectImport) {
             await writeFile(join(dirname(state.renderRequests[0]!.outputDirectory), "video.mp4"), "changed delivery after its probe and hash");
@@ -157,6 +161,15 @@ async function fixture() {
           return { exitCode: 0, stderr: "", stdout: JSON.stringify(data) };
         }
         state.encodeCalls++;
+        if (argv.at(-1)?.endsWith("audio-reactivity.f32le")) {
+          const samples = 36_000;
+          const pcm = Buffer.alloc(samples * 4);
+          for (let index = 0; index < samples; index += 1) {
+            pcm.writeFloatLE(Math.sin(2 * Math.PI * 110 * index / 24_000) * 0.4, index * 4);
+          }
+          await writeFile(argv.at(-1)!, pcm, { mode: 0o600 });
+          return { exitCode: 0, stderr: "", stdout: "" };
+        }
         if (state.failEncode === state.encodeCalls) return { exitCode: 9, stderr: "controlled encoder failure", stdout: "" };
         await writeFile(argv.at(-1)!, state.encodeCalls === 1 ? LOSSLESS : DELIVERY, { mode: 0o600 });
         if (state.mutateFramesAfterEncode && state.encodeCalls === 1) {
@@ -284,6 +297,52 @@ describe("HTML scene export", () => {
     expect(result.verification).toMatchObject({ width: 32, height: 18 });
     const project = VideoProjectV1Schema.parse(JSON.parse(await readFile(join(f.root, result.projectPath), "utf8")));
     expect(project.assets.find(asset => asset.role === "screen")?.streams[0]).toMatchObject({ pixelWidth: 32, pixelHeight: 18 });
+  });
+
+  test("derives and retains an audio-reactive resource bound to the imported soundtrack", async () => {
+    const f = await fixture();
+    const input = { ...f.input, audio: { ...f.input.audio!, reactivity: { profile: "bands-v1" as const } } };
+    const result = await f.render(input);
+    expect(f.state.stages).toContain("audio-analysis");
+    expect(typeof result.audioReactivity?.bytes).toBe("number");
+    expect(typeof result.audioReactivity?.sha256).toBe("string");
+    const request = f.state.renderRequests[0]!;
+    const declared = request.authoring.resources.find(resource => resource.name === "audio-reactivity");
+    expect(declared).toMatchObject({ mediaType: "application/json", transport: "fetch", urlPath: "slopcamera/audio-reactivity.json" });
+    const sidecar = JSON.parse(await readFile(join(f.root, result.audioReactivity!.path), "utf8"));
+    expect(sidecar.profile).toBe("bands-v1");
+    expect(sidecar.rateHz).toBe(60);
+    expect(typeof sidecar.source.sha256).toBe("string");
+    const project = VideoProjectV1Schema.parse(JSON.parse(await readFile(join(f.root, result.projectPath), "utf8")));
+    const audioAsset = project.assets.find(asset => asset.role === "music");
+    expect(typeof audioAsset?.streams[0]?.segments[0]?.sha256).toBe("string");
+    expect(sidecar.source.sha256).toBe(audioAsset?.streams[0]?.segments[0]?.sha256);
+    const source = JSON.parse(await readFile(join(f.root, result.source.path), "utf8"));
+    expect(source.audio.reactivity).toEqual({ profile: "bands-v1", resource: "audio-reactivity", sha256: result.audioReactivity?.sha256 });
+    expect(source.resources.some((resource: { name: string }) => resource.name === "audio-reactivity")).toBe(true);
+  });
+
+  test("reuses a retained audio-reactive resource without decoding it again", async () => {
+    const f = await fixture();
+    const input = { ...f.input, audio: { ...f.input.audio!, reactivity: { profile: "bands-v1" as const } } };
+    const first = await f.render(input);
+    const retainedSource = JSON.parse(await readFile(join(f.root, first.source.path), "utf8"));
+    const callsAfterFirst = f.state.encodeCalls;
+    const second = await f.render(retainedSource);
+    expect(f.state.encodeCalls - callsAfterFirst).toBe(2);
+    expect(second.audioReactivity?.sha256).toBe(first.audioReactivity?.sha256);
+    expect(f.state.stages.filter(stage => stage === "audio-analysis")).toHaveLength(1);
+  });
+
+  test("rejects a changed retained audio-reactive sidecar before rendering", async () => {
+    const f = await fixture();
+    const input = { ...f.input, audio: { ...f.input.audio!, reactivity: { profile: "bands-v1" as const } } };
+    const first = await f.render(input);
+    const retainedSource = JSON.parse(await readFile(join(f.root, first.source.path), "utf8"));
+    const sidecarPath = join(f.root, first.audioReactivity!.path);
+    await writeFile(sidecarPath, `${await readFile(sidecarPath, "utf8")}\n`);
+    await expect(f.render(retainedSource)).rejects.toThrow(/sidecar bytes/u);
+    expect(f.state.renderCalls).toBe(1);
   });
 
   test("rejects foreign or symlinked browser resources before binding capabilities", async () => {

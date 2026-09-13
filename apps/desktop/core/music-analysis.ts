@@ -89,7 +89,7 @@ function validatePcm(pcm: MonoPcm): void {
   }
 }
 
-function fftPowerSpectrum(samples: readonly number[]): Float64Array {
+export function fftPowerSpectrum(samples: readonly number[]): Float64Array {
   let size = 1;
   while (size < samples.length) size *= 2;
   const real = new Float64Array(size);
