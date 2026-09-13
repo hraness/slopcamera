@@ -11,6 +11,7 @@ import {
 import { htmlOverlayAssetLocalUrl } from "./libraries";
 import { HTML_OVERLAY_RANDOM_ALGORITHM } from "./random";
 import { createHtmlOverlayMusicClockRuntimeSource } from "./music-clock";
+import { createHtmlOverlayAudioReactivityRuntimeSource } from "./audio-reactivity";
 
 const Uint32Schema = z.number().int().safe().min(0).max(0xffff_ffff);
 
@@ -713,6 +714,7 @@ export function createHtmlOverlayBrowserRuntimeSource(
       };
     },
     ...${createHtmlOverlayMusicClockRuntimeSource()},
+    ...${createHtmlOverlayAudioReactivityRuntimeSource()},
     parameters: deepFreeze(config.parameters),
     random,
     randomFor,

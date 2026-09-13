@@ -28,8 +28,10 @@ import {
 import { HtmlSceneInputSchema } from "../html-overlay/scene";
 import { HtmlOverlayActiveLibraryLocksSchema, getApprovedHtmlOverlayLibraryLock } from "../html-overlay/libraries";
 import { assertHtmlOverlayGpuEvidenceProfile } from "../html-overlay/execution-profile";
+import { HTML_AUDIO_REACTIVITY_MAX_BYTES, HTML_AUDIO_REACTIVITY_RESOURCE_NAME, HTML_AUDIO_REACTIVITY_RESOURCE_URL_PATH, HtmlOverlayAudioReactivitySchema } from "../html-overlay/audio-reactivity";
 import { CliError } from "./errors";
 import { ingestProjectMedia, SELF_CONTAINED_MEDIA_INPUT_ARGUMENTS } from "./media-ingest";
+import { analyzeRetainedAudioReactivity } from "./music-analysis-service";
 import { withMutationLock } from "./mutation-lock";
 import { ensurePhysicalPrivateDirectoryWithin } from "./paths";
 import { resolveVerifiedProjectMedia } from "./project-media-integrity";
@@ -39,7 +41,7 @@ const MAX_MEDIA_BYTES = 512 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 const PROCESS_TIMEOUT_MS = 5 * 60_000;
 
-export type HtmlSceneStage = "source" | "browser" | "frames" | "encode" | "verify" | "project" | "complete";
+export type HtmlSceneStage = "source" | "browser" | "audio-analysis" | "frames" | "encode" | "verify" | "project" | "complete";
 export interface HtmlSceneDependencies {
   /** Internal controlled-test seams; invocation input cannot replace host capabilities. */
   readonly bindBrowser?: typeof bindHtmlOverlayBrowserRuntime;
@@ -106,6 +108,9 @@ export async function planHtmlScene(application: ApplicationContext, input: unkn
     audio: source.request.audio === undefined ? "none" : "explicit-local-import",
     timingPolicy: "ceil-frames-trim-or-pad-audio-v1",
     audioValidated: false,
+    audioReactivity: source.request.audio?.reactivity === undefined ? null : {
+      profile: "bands-v1", validated: false, resourceName: HTML_AUDIO_REACTIVITY_RESOURCE_NAME,
+    },
   };
 }
 
@@ -200,9 +205,9 @@ export async function renderHtmlScene(
   });
   return await withMutationLock(jobDirectory, { command: "html render", label: source.request.name }, async lease => {
     const fence = async () => { await active(); await lease.assertOwned(); };
-    const retainJson = async (path: string, value: unknown) => {
+    const retainJson = async (path: string, value: unknown, maximumBytes = 4 * 1024 * 1024) => {
       await fs.writeTextNoReplace!(path, `${canonicalJson(value)}\n`, fence);
-      return await artifact(path, 4 * 1024 * 1024);
+      return await artifact(path, maximumBytes);
     };
     const run = async (argv: readonly [string, ...string[]]) => {
       await fence();
@@ -224,6 +229,8 @@ export async function renderHtmlScene(
       retainedResources.push({ ...resource, ...loaded.artifact, path: relative(application.paths.repositoryRoot, join(jobDirectory, destination)), absolutePath: join(jobDirectory, destination) });
     }
     let audio: Awaited<ReturnType<typeof ingestProjectMedia>> | undefined;
+    let authoring = source.authoring;
+    let audioReactivity: MediaArtifactReference | undefined;
     if (source.request.audio !== undefined) {
       audio = await ingestProjectMedia({ ffprobe: tool("ffprobe").command, now: application.clock.now(),
         projectDirectory: jobDirectory, repositoryRoot: application.paths.repositoryRoot, role: "music",
@@ -235,33 +242,69 @@ export async function renderHtmlScene(
         || soundtrack.segments[0]!.fileRange.startUs !== 0) {
         throw new CliError("invalid-data", "A scene soundtrack must begin at the imported media timeline origin. Supply an audio file without a delayed stream start.");
       }
+      if (source.request.audio.reactivity !== undefined) {
+        const segment = soundtrack.segments[0]!;
+        if (source.request.audio.reactivity.resource === undefined) {
+          dependencies.progress?.("audio-analysis");
+          const analysis = await analyzeRetainedAudioReactivity({ repositoryRoot: application.paths.repositoryRoot,
+            jobDirectory, audio: segment, durationUs: Math.min(source.durationUs, segment.assetRange.endUs),
+            streamIndex: segment.streamIndex, ffmpeg: tool("ffmpeg").command, run, fence });
+          audioReactivity = await retainJson("source/audio-reactivity.json", analysis, HTML_AUDIO_REACTIVITY_MAX_BYTES);
+          const declaration = { name: HTML_AUDIO_REACTIVITY_RESOURCE_NAME, urlPath: HTML_AUDIO_REACTIVITY_RESOURCE_URL_PATH,
+            mediaType: "application/json", transport: "fetch" as const };
+          retainedResources.push({ ...declaration, ...audioReactivity, absolutePath: join(jobDirectory, "source/audio-reactivity.json") });
+          authoring = HtmlOverlayAuthoringInputSchema.parse({ ...authoring,
+            resources: [...authoring.resources, { ...declaration, bytes: audioReactivity.bytes, sha256: audioReactivity.sha256 }] });
+        } else {
+          const retained = source.resources.find(item => item.declaration.name === HTML_AUDIO_REACTIVITY_RESOURCE_NAME);
+          if (retained === undefined) throw new CliError("invalid-data", "Audio reactivity source does not declare its retained resource.");
+          if (retained.loaded.artifact.bytes > HTML_AUDIO_REACTIVITY_MAX_BYTES) {
+            throw new CliError("invalid-data", "Audio reactivity resource exceeds its 4 MiB sidecar bound.");
+          }
+          if (source.request.audio.reactivity.sha256 !== retained.loaded.artifact.sha256) {
+            throw new CliError("conflict", "Audio reactivity source does not match the retained sidecar bytes.");
+          }
+          let parsed: unknown;
+          try { parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(retained.loaded.data)); }
+          catch { throw new CliError("invalid-data", "Audio reactivity resource is not valid UTF-8 JSON."); }
+          const analysis = HtmlOverlayAudioReactivitySchema.parse(parsed);
+          if (analysis.source.bytes !== segment.bytes || analysis.source.sha256 !== segment.sha256) {
+            throw new CliError("conflict", "Audio reactivity resource does not match the retained soundtrack.");
+          }
+          audioReactivity = retainedResources.find(item => item.name === HTML_AUDIO_REACTIVITY_RESOURCE_NAME);
+          if (audioReactivity === undefined) throw new CliError("invalid-data", "Audio reactivity resource was not retained.");
+        }
+      }
     }
+    const retainedAudio = source.request.audio;
     const retainedInput = HtmlSceneInputSchema.parse({ ...source.request,
       document: { path: relative(application.paths.repositoryRoot, join(jobDirectory, "source/scene.html")) },
       resources: retainedResources.map(({ absolutePath: _absolutePath, bytes: _bytes, sha256: _sha256, ...resource }) => resource),
-      ...(audio === undefined ? {} : { audio: { path: relative(application.paths.repositoryRoot, audio.absolutePath) } }),
+      ...(audio === undefined || retainedAudio === undefined ? {} : { audio: { ...retainedAudio, path: relative(application.paths.repositoryRoot, audio.absolutePath),
+        ...(retainedAudio.reactivity === undefined ? {} : { reactivity: { profile: "bands-v1", resource: HTML_AUDIO_REACTIVITY_RESOURCE_NAME,
+          sha256: audioReactivity?.sha256 ?? retainedAudio.reactivity.sha256 } }) } }),
     });
     const retainedSource = await retainJson("source.json", retainedInput);
-    const authoringReceipt = await retainJson("authoring.json", source.authoring);
+    const authoringReceipt = await retainJson("authoring.json", authoring);
     const intent = await retainJson("intent.json", { kind: "slopcamera.html-scene-intent", schemaVersion: 1,
       source: retainedSource, document: retainedDocument, authoring: authoringReceipt, tools, frameCount: source.frameCount,
       durationUs: source.durationUs, requestedDurationUs: source.request.timing.durationUs,
       timingPolicy: "ceil-frames-trim-or-pad-audio-v1" });
     dependencies.progress?.("frames");
     const frameDirectory = await ensurePhysicalPrivateDirectoryWithin(jobDirectory, "render");
-    const frames = await application.htmlOverlayRenderer!.renderFrames({ authoring: source.authoring,
+    const frames = await application.htmlOverlayRenderer!.renderFrames({ authoring,
       browserRuntime, outputDirectory: frameDirectory, resources: retainedResources,
       ...(source.request.executionProfile === undefined ? {} : { executionProfile: source.request.executionProfile }) }, signal);
     await fence();
     if (frames.frameCount !== source.frameCount || frames.framePattern !== join(frameDirectory, "frames", "frame-%08d.png")) {
       throw new CliError("invalid-data", "Scene renderer returned an unexpected frame count or output location.");
     }
-    const expectedIntegrity = createHtmlOverlayExecutionBundle(source.authoring, browserRuntime, source.request.executionProfile).integrity;
+    const expectedIntegrity = createHtmlOverlayExecutionBundle(authoring, browserRuntime, source.request.executionProfile).integrity;
     if (canonicalJsonSha256(HtmlOverlayExecutionIntegritySchema.parse(frames.executionIntegrity)) !== canonicalJsonSha256(expectedIntegrity)) {
       throw new CliError("conflict", "Scene renderer returned integrity evidence that differs from the bound browser execution.");
     }
     if (canonicalJsonSha256(HtmlOverlayActiveLibraryLocksSchema.parse(frames.libraryLocks))
-      !== canonicalJsonSha256(source.authoring.libraries.map(getApprovedHtmlOverlayLibraryLock))) {
+      !== canonicalJsonSha256(authoring.libraries.map(getApprovedHtmlOverlayLibraryLock))) {
       throw new CliError("conflict", "Scene renderer returned library locks that differ from the authoring selection.");
     }
     assertHtmlOverlayGpuEvidenceProfile(source.request.executionProfile, frames.gpuEvidence);
@@ -348,14 +391,14 @@ export async function renderHtmlScene(
     const receipt = await retainJson("receipt.json", { kind: "slopcamera.html-scene-receipt", schemaVersion: 1,
       intent, source: retainedSource, document: retainedDocument, authoring: authoringReceipt, frameReceipt, video: videoArtifact, output,
       projectId, projectSha256: canonicalJsonSha256(project), planSha256: canonicalJsonSha256(plan), verification,
-      audio: audio?.asset ?? null, timingPolicy: "ceil-frames-trim-or-pad-audio-v1" });
+      audio: audio?.asset ?? null, audioReactivity: audioReactivity ?? null, timingPolicy: "ceil-frames-trim-or-pad-audio-v1" });
     await projectFs.writeTextNoReplace!("html-scene.json", canonicalJson({ source: retainedSource, receipt }), fence);
     await projectFs.writeTextNoReplace!("edits/current.json", canonicalJson(plan), fence);
     await projectFs.writeTextNoReplace!("project.json", canonicalJson(project), fence);
     await fence();
     dependencies.progress?.("complete");
     return { kind: "slopcamera.html-scene-export" as const, schemaVersion: 1 as const, output, receipt,
-      source: retainedSource, projectId, projectPath: relative(application.paths.repositoryRoot, join(projectDirectory, "project.json")), verification };
+      source: retainedSource, audioReactivity: audioReactivity ?? null, projectId, projectPath: relative(application.paths.repositoryRoot, join(projectDirectory, "project.json")), verification };
   });
 }
 

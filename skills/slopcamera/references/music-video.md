@@ -95,9 +95,26 @@ Maintain multisample antialiasing on the scene render target if adding
 post-processing. Bound draw calls, geometry, and shader work, and validate frame
 zero before a full render.
 
+Set `audio.reactivity` to `{ "profile": "bands-v1" }` when local lights or
+materials should follow separate bass, midrange, treble, and overall-energy
+envelopes. Slopcamera derives these bands offline from the verified soundtrack
+(35–180 Hz, 180–2,000 Hz, 2,000–12,000 Hz), smooths them, and retains a
+hash-bound 60 Hz JSON resource named `audio-reactivity`. Load that resource once
+with `SlopcameraOverlay.asset("audio-reactivity")`, pass its JSON to
+`SlopcameraOverlay.prepareAudioReactivity`, and sample by integer microseconds
+inside `onFrame`. The profile is limited to ten minutes and returns zero outside
+its analyzed range. It is an envelope for animation, not a flash-safety
+certificate.
+
 Smooth effects are not a seizure-safety certificate. The timing and pulse helpers
 do not analyze rendered flashes or certify safety. Review the actual result and
 avoid claiming a safety guarantee.
+
+For emissive trails and communication ribbons, discard inactive fragments before
+computing color, clamp nonnegative bases before fractional `pow`, and handle
+degenerate segment vectors. Review native lossless frames when a glow appears as
+a block or stripe. Small diagnostics should use area averaging; ordinary video
+resampling can turn legitimate dark shadows into black samples.
 
 ## Validate, render, and review
 
