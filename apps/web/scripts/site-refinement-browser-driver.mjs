@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url"
 import { bounded, withPreviewCancellation } from "./preview-browser-contract"
 import { assertShellNode, checkShellCase, ShellPairFailure, settleShellPair } from "./site-shell-browser-contract"
 import { parseRefinementRequest, parseRefinementPhase, refinementCases, refinementDeadline, refinementCaseFailure,
-  observeRefinementDesign, refinementDom, compareRefinementEvidence, compareRefinementCopy, observeRefinementCopyPaint } from "./site-refinement-browser-contract"
+  observeRefinementDesign, observeRefinementHero, refinementDom, compareRefinementEvidence, compareRefinementCopy, observeRefinementCopyPaint } from "./site-refinement-browser-contract"
 import { refinementScope, refinementCopyScope, refinementCopyProfile } from "./site-refinement-profile"
 import { decodeWorkerJson, encodeWorkerJson, publishWorkerPhase, workerAttachmentMs, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
@@ -59,7 +59,7 @@ async function main() {
         assert.ok(remaining > 0, "Shell matrix exceeded its absolute deadline")
         const negative = copy ? scenario === siteCopyCases[0]
           : scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light"
-        let design, currentDom, baselineDom
+        let design, currentDom, baselineDom, currentHero, baselineHero
         const [evidence, old] = await cancellation.wait(() => {
           // Both callbacks create independent contexts and retain their complete
           // page/input/route/media/error state. The same 60-second side ceiling
@@ -72,10 +72,12 @@ async function main() {
             () => checkCopyCase(browser, request.baseline, scenario, false)) : settleShellPair(
             () => checkShellCase(browser, request.current, scenario, "current", negative, async page => {
               currentDom = await refinementDom(page, true, scenario)
+              currentHero = await observeRefinementHero(page, scenario)
               design = await observeRefinementDesign(page, scenario, request.current, request.fieldAssets, negative && scenario.route === "/")
             }, refinementScope),
             () => checkShellCase(browser, request.baseline, scenario, "current", false, async page => {
               baselineDom = await refinementDom(page, false, scenario)
+              baselineHero = await observeRefinementHero(page, scenario)
             }, refinementScope))
           return bounded(activePair, `Current/baseline ${scenario.name}`, Math.min(60_000, remaining))
         })
@@ -85,7 +87,7 @@ async function main() {
         }
         else {
           assert.ok(design !== undefined && typeof currentDom === "string" && typeof baselineDom === "string")
-          compareRefinementEvidence({...evidence, dom:currentDom}, {...old, dom:baselineDom}, scenario, design.paint)
+          compareRefinementEvidence({...evidence, dom:currentDom}, {...old, dom:baselineDom}, scenario, design.paint, {current:currentHero,baseline:baselineHero})
           observations.push(design.observation)
         }
         cases.push(scenario.name)

@@ -184,11 +184,78 @@ function siblingProjection(items: readonly ShellElement[], owner: ShellEvidence)
     return {...item,rect:item.rect.map((value,axis)=>axis===1?value-anchor.rect[1]!:value)}
   })
 }
+/** The unchanged hero centers its copy beside the intentionally taller terminal.
+ * Prove the complete row placement on each side before comparing the two
+ * retained text anchors relative to their own copy column. */
+const refinementHeroCopySelector=".slopcamera-product-hero > .hraness-marketing-hero__copy"
+export interface RefinementHero {readonly copyTop:number;readonly boundaryLines:number;readonly boundaryLineHeight:number;readonly elements:readonly ShellElement[]}
+export async function observeRefinementHero(page:Page,scenario:ShellCase):Promise<RefinementHero|undefined> {
+  if(scenario.route!=="/")return undefined
+  const observation=await page.evaluate(({width})=>{
+    const one=(selector:string)=>{const nodes=document.querySelectorAll<HTMLElement>(selector);if(nodes.length!==1)throw Error(`Exact hero owner ${selector}`);return nodes[0]!}
+    const hero=one(".slopcamera-product-hero"),copy=one(".slopcamera-product-hero > .hraness-marketing-hero__copy"),frame=one(".slopcamera-product-hero > .hraness-marketing-hero__frame"),facts=one(".slopcamera-product-hero > .hraness-marketing-facts")
+    const hs=getComputedStyle(hero),cs=getComputedStyle(copy),fs=getComputedStyle(frame),ds=getComputedStyle(facts)
+    if(hero.children.length!==3||hs.display!=="grid"||hs.alignItems!=="center"||cs.display!=="grid"||ds.display!=="grid")throw Error("Exact centered hero grid")
+    const columns=hs.gridTemplateColumns.split(" ").map(Number.parseFloat),count=width>=992?2:1
+    if(columns.length!==count||columns.some(value=>!Number.isFinite(value)||value<=0))throw Error("Exact 62rem hero columns")
+    const close=(actual:number,expected:number,label:string,tolerance=.5)=>{if(!Number.isFinite(actual)||!Number.isFinite(expected)||Math.abs(actual-expected)>tolerance)throw Error(`Hero ${label}: ${actual} != ${expected}`)}
+    const box=(element:HTMLElement)=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y+scrollY,width:r.width,height:r.height,right:r.right,bottom:r.bottom+scrollY}}
+    const h=box(hero),c=box(copy),f=box(frame),d=box(facts),px=(name:string)=>Number.parseFloat(hs.getPropertyValue(name))
+    const top=h.y+px("border-top-width")+px("padding-top"),left=h.x+px("border-left-width")+px("padding-left"),right=h.right-px("border-right-width")-px("padding-right"),gap=px("row-gap")
+    for(const [owner,style]of [[c,cs],[f,fs],[d,ds]] as const){if(owner.width<=0||owner.height<=0)throw Error("Visible hero row owner");for(const side of ["top","right","bottom","left"])close(Number.parseFloat(style.getPropertyValue(`margin-${side}`)),0,"child margin")}
+    close(gap,Math.min(56,Math.max(32,width*.04)),"row gap");close(px("column-gap"),gap,"column gap")
+    close(c.width,columns[0]!,"copy width")
+    if(count===2){
+      close(columns[0]!/columns[1]!,.9/1.1,"column ratio",.005)
+      close(f.width,columns[1]!,"frame width")
+      const row=Math.max(c.height,f.height)
+      close(c.y,top+(row-c.height)/2,"copy vertical center");close(f.y,top+(row-f.height)/2,"frame vertical center")
+      close(d.y,top+row+gap,"facts follow shared row")
+      if(hs.direction==="rtl"){close(c.right,right,"RTL copy edge");close(f.x,left,"RTL frame edge");close(c.x-f.right,gap,"RTL column separation")}
+      else{close(c.x,left,"copy edge");close(f.right,right,"frame edge");close(f.x-c.right,gap,"column separation")}
+    }else{
+      close(c.x,left,"stacked copy edge");close(f.x,left,"stacked frame edge");close(f.width,columns[0]!,"stacked frame width")
+      close(c.y,top,"stacked copy top");close(f.y,c.bottom+gap,"frame follows copy");close(d.y,f.bottom+gap,"facts follow frame")
+    }
+    close(d.x,left,"facts edge");close(d.right,right,"facts width");close(h.bottom,d.bottom+px("padding-bottom")+px("border-bottom-width"),"complete hero height")
+    for(const selector of ["#page-title",".hraness-marketing-hero__summary"]){const t=box(one(selector));if(t.x<c.x-.5||t.right>c.right+.5||t.y<c.y-.5||t.bottom>c.bottom+.5)throw Error(`Hero text owner ${selector}`)}
+    const boundary=one(".slopcamera-product-hero > .hraness-marketing-hero__copy > .hraness-marketing-hero__boundary")
+    if(copy.children.length!==5||copy.lastElementChild!==boundary||boundary.childNodes.length!==1||boundary.firstChild?.nodeType!==Node.TEXT_NODE)throw Error("Closed hero copy and boundary inventory")
+    const range=document.createRange();range.selectNodeContents(boundary)
+    const fragments=[...range.getClientRects()].filter(rect=>rect.width>0&&rect.height>0),lines:number[]=[]
+    for(const rect of fragments){if(!lines.some(y=>Math.abs(y-rect.y)<=.5))lines.push(rect.y);const owner=boundary.getBoundingClientRect();if(rect.x<owner.x-.5||rect.right>owner.right+.5)throw Error("Contained literal hero boundary")}
+    const lineHeight=Number.parseFloat(getComputedStyle(boundary).lineHeight)
+    if(lines.length<1||lines.length>16||!Number.isFinite(lineHeight)||lineHeight<=0)throw Error("Finite hero boundary lines")
+    close(boundary.getBoundingClientRect().height,lines.length*lineHeight,"natural boundary line height")
+    return {copyTop:c.y,boundaryLines:lines.length,boundaryLineHeight:lineHeight}
+  },{width:scenario.width})
+  return {...observation,elements:await measure(page,[refinementHeroCopySelector,`${refinementHeroCopySelector} > *`],["top","right","bottom","left","align-self"])}
+}
+/** Only literal boundary wrapping may change copy height. Every other measured
+ * container/child style, dimension and relative position remains paired. */
+export function compareRefinementHeroCopies(current:RefinementHero,baseline:RefinementHero):void {
+  const inventory=[`${refinementHeroCopySelector}[0]`,...Array.from({length:5},(_,i)=>`${refinementHeroCopySelector} > *[${i}]`)]
+  for(const side of [current,baseline]){
+    assert.deepEqual(side.elements.map(item=>item.key),inventory)
+    assert.ok(Number.isFinite(side.copyTop)&&Number.isInteger(side.boundaryLines)&&side.boundaryLines>=1&&side.boundaryLines<=16&&Number.isFinite(side.boundaryLineHeight)&&side.boundaryLineHeight>0)
+    near(side.elements[0]!.rect[1]!,side.copyTop,"Measured hero copy top")
+    near(side.elements[5]!.rect[3]!,side.boundaryLines*side.boundaryLineHeight,"Exact natural boundary height")
+  }
+  near(current.elements[0]!.rect[3]!-baseline.elements[0]!.rect[3]!,current.elements[5]!.rect[3]!-baseline.elements[5]!.rect[3]!,"Copy height delta comes only from literal boundary wrapping")
+  const relative=(side:RefinementHero)=>side.elements.map(item=>({...item,rect:item.rect.map((value,axis)=>axis===1&&item.styles.display!=="none"?value-side.copyTop:value)}))
+  const a=relative(current),b=relative(baseline)
+  compareShellElements(a.map((item,index)=>index===0||index===5?{...item,text:b[index]!.text,styles:{...item.styles,height:b[index]!.styles.height!},rect:item.rect.map((value,axis)=>axis===3?b[index]!.rect[3]!:value)}:item),b,"Exact retained hero copy styles and geometry")
+}
+export function projectRefinementHeroPosition(item:ShellElement,currentCopyTop:number,baselineCopyTop:number):ShellElement {
+  assert.ok(Number.isFinite(currentCopyTop)&&Number.isFinite(baselineCopyTop))
+  if(item.key!=="#page-title[0]"&&item.key!==".hraness-marketing-hero__summary[0]")return item
+  return {...item,rect:item.rect.map((value,axis)=>axis===1?value-currentCopyTop+baselineCopyTop:value)}
+}
 /** Explicit flow changes: only these ancestors contain redesigned content.
  * Everything else keeps exact geometry relative to its unchanged section. */
-export function compareRefinementEvidence(actual:ShellEvidence,baseline:ShellEvidence,scenario:ShellCase,paint?:RefinementPaint):void {
+export function compareRefinementEvidence(actual:ShellEvidence,baseline:ShellEvidence,scenario:ShellCase,paint?:RefinementPaint,hero?:{current:RefinementHero|undefined;baseline:RefinementHero|undefined}):void {
   if(scenario.route==="/404.html"){compareShellEvidence(actual,baseline,scenario.name);return}
-  assert.ok(paint);assert.equal(actual.dom,baseline.dom,"Exact DOM outside six positively admitted islands")
+  assert.ok(paint);assert.ok(hero?.current!==undefined&&hero.baseline!==undefined);compareRefinementHeroCopies(hero.current,hero.baseline);const currentCopyTop=hero.current.copyTop,baselineCopyTop=hero.baseline.copyTop;assert.equal(actual.dom,baseline.dom,"Exact DOM outside six positively admitted islands")
   assert.equal(actual.direction,baseline.direction);assert.equal(actual.recovery,baseline.recovery)
   assertMarketingFlow(actual.elements,baseline.elements)
   const landmark = (items: readonly ShellElement[], key: string) => { const item=items.find(item=>item.key===`${key}[0]`); assert.ok(item); return item }
@@ -206,8 +273,7 @@ export function compareRefinementEvidence(actual:ShellEvidence,baseline:ShellEvi
     const old=b[index]!,item=projectRefinementPaint(value,old,paint),styles={...item.styles},rect=[...item.rect]
     if(heights.has(item.key)){assert.ok(rect[3]!>0);styles.height=old.styles.height!;rect[3]=old.rect[3]!}
     if(marketingSectionIds.some(id=>item.key===`#${id}[0]`))rect[1]=old.rect[1]!
-    // Hero summary and title remain exact relative to the hero's copy column.
-    return {...item,styles,rect,text:texts.has(item.key)?old.text:item.text}
+    return projectRefinementHeroPosition({...item,styles,rect,text:texts.has(item.key)?old.text:item.text},currentCopyTop,baselineCopyTop)
   })
   compareShellElements(projected,b,`${scenario.name} finite refinement geometry/paint`)
   compareShellFocusedSkip(actual.skip,baseline.skip,`${scenario.name} focused skip`)

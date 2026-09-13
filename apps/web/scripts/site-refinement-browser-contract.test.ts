@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { parseRefinementRequest, parseRefinementPhase, refinementCaseFailure, parseRefinementCaseFailure,
-  refinementCases, refinementDeadline, projectRefinementPaint } from "./site-refinement-browser-contract"
+  refinementCases, refinementDeadline, projectRefinementPaint, projectRefinementHeroPosition, compareRefinementHeroCopies } from "./site-refinement-browser-contract"
 import { refinementScope, refinementCopyScope, refinementBaselineProfile, refinementBaselineRevision, refinementBaselineTree,
   refinementIntegratedRevision, refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { refinementIslands } from "./site-refinement-fixtures"
@@ -92,4 +92,34 @@ test("the canonical 0.8 install frame admits only its exact 14px radius",async()
  const changed={...current,rect:[21,201,281,401],styles:{...current.styles,color:"red",width:"281px"}}
  const projected=projectRefinementPaint(changed,baseline,paint)
  expect(projected.rect).toEqual(changed.rect);expect(projected.styles.color).toBe("red");expect(projected.styles.width).toBe("281px")
+})
+
+
+test("hero centering projects only the shared copy offset of two retained text anchors",()=>{
+ const base:ShellElement={key:"#page-title[0]",rect:[40,112,400,120],text:"Title",semantics:{role:"heading"},styles:{color:"black",height:"120px"}}
+ for(const key of ["#page-title[0]",".hraness-marketing-hero__summary[0]"])for(let shift=-64;shift<=64;shift++){
+  const current={...base,key,rect:[40,112+shift/4,400,120]}
+  expect(projectRefinementHeroPosition(current,112+shift/4,112)).toEqual({...base,key})
+ }
+ for(const key of [".topbar[0]","#install[0]",".hraness-marketing-hero[0]","#page-title[1]",".hraness-marketing-hero__actions[0]"]){const other={...base,key};expect(projectRefinementHeroPosition(other,128.75,112)).toBe(other)}
+ const changed={...base,rect:[41,130,401,121],text:"Changed",styles:{color:"red",height:"121px"}}
+ expect(projectRefinementHeroPosition(changed,128.75,112)).toEqual({...changed,rect:[41,113.25,401,121]})
+ for(const invalid of [NaN,Infinity,-Infinity])expect(()=>projectRefinementHeroPosition(base,invalid,112)).toThrow()
+})
+
+
+test("hero copy height admits only natural literal boundary wrapping, never container or child drift",()=>{
+ const selector=".slopcamera-product-hero > .hraness-marketing-hero__copy"
+ const side=(top:number,lines:number)=>({copyTop:top,boundaryLines:lines,boundaryLineHeight:20,elements:Array.from({length:6},(_,index)=>({
+  key:index===0?`${selector}[0]`:`${selector} > *[${index-1}]`,rect:[40,index===0?top:top+(index-1)*40,400,index===0?160+lines*20:index===5?lines*20:20],text:index===0||index===5?`Boundary lines ${lines}`:`Child ${index}`,semantics:{role:null},styles:{display:index===0?"grid":"block",height:`${index===0?160+lines*20:index===5?lines*20:20}px`,"padding-bottom":"0px","row-gap":"20px",color:"black"}
+ }))})
+ const baseline=side(112,2),current=side(128.75,3)
+ expect(()=>compareRefinementHeroCopies(current,baseline)).not.toThrow()
+ for(let extra=1;extra<=32;extra++){
+  const padding=structuredClone(current);padding.elements[0]!.styles={...padding.elements[0]!.styles,"padding-bottom":`${extra}px`};expect(()=>compareRefinementHeroCopies(padding,baseline)).toThrow()
+  const height=structuredClone(current);height.elements[0]!.rect=[40,128.75,400,220+extra];height.elements[0]!.styles={...height.elements[0]!.styles,height:`${220+extra}px`};expect(()=>compareRefinementHeroCopies(height,baseline)).toThrow()
+ }
+ for(const index of [1,2,3,4]){const changed=structuredClone(current);changed.elements[index]!.rect=[41,changed.elements[index]!.rect[1]!,400,20];expect(()=>compareRefinementHeroCopies(changed,baseline)).toThrow()}
+ const paddedBoundary=structuredClone(current);paddedBoundary.elements[5]!.rect=[40,288.75,400,80];paddedBoundary.elements[0]!.rect=[40,128.75,400,240];expect(()=>compareRefinementHeroCopies(paddedBoundary,baseline)).toThrow()
+ const gap=structuredClone(current);gap.elements[0]!.styles={...gap.elements[0]!.styles,"row-gap":"21px"};expect(()=>compareRefinementHeroCopies(gap,baseline)).toThrow()
 })
