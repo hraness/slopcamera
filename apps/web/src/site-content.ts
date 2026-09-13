@@ -2,6 +2,10 @@ import { renderHranessSiteFooter } from "@hraness/site-footer"
 import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
+import {
+  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument,
+  renderDocsArticleHeader, renderDocsBody, renderDocsNav,
+} from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 import { diagramSession, interfaceExamples } from "./site-code-examples"
@@ -79,8 +83,17 @@ function renderCopyCommand(options: CopyCommandOptions): string {
   </div>`
 }
 
-export type SiteDocument = "index.html" | "404.html"
-export type SiteAssets = Readonly<{ themePath: string; analyticsPath: string | null }>
+export type SiteDocument = "index.html" | "404.html" | `docs/${string}.html`
+export type SiteAssets = Readonly<{
+  themePath: string
+  analyticsPath: string | null
+  docBodies?: Readonly<Record<string, string>>
+}>
+
+function renderDocsFooter(slug: string): string {
+  const sourcePath = `apps/web/src/docs/${slug}.md`
+  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a>.</p>`
+}
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {
   if (!/^\/assets\/theme-[a-f0-9]{12}\.js$/u.test(assets.themePath)
@@ -93,6 +106,22 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
   if (document === "404.html") return common
+  const docsPage = docsPageForDocument(document)
+  if (docsPage !== undefined) {
+    const body = assets.docBodies?.[document]
+    if (body === undefined) throw new Error(`Documentation body missing for ${document}`)
+    return [...common,
+      ["{{DOC_TITLE}}", escapeHtml(docsPage.title), 3],
+      ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],
+      ["{{DOC_CANONICAL}}", docsCanonicalUrl(docsPage), 2],
+      ["{{DOC_MARKDOWN}}", docsMarkdownUrl(docsPage), 1],
+      ["{{DOC_JSONLD}}", docsJsonLd(docsPage), 1],
+      ["{{DOC_NAV}}", renderDocsNav(docsPage), 1],
+      ["{{DOC_HEADER}}", renderDocsArticleHeader(docsPage), 1],
+      ["{{DOC_BODY}}", renderDocsBody(body), 1],
+      ["{{DOC_FOOTER}}", renderDocsFooter(docsPage.slug), 1],
+    ]
+  }
   return [...common,
     ["{{ASK_AI_ABOUT_THIS}}", renderAskAiAboutThis("https://slopcamera.com/"), 1],
     ["{{RELEASE_VERSION}}", publishedRelease.version, 1],

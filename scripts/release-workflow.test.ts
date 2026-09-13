@@ -1127,7 +1127,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   }
   expect(siteProducer).toContain('entrypoints: [below(root, join(app, "src/site-renderer.ts"))], id: "site-renderer", kind: "ssr"')
   const produce = siteProducer.indexOf("const html: unknown = module.renderSiteDocument(")
-  const seal = siteProducer.indexOf("await sealStylexProducedTemplate(generation, document)")
+  const seal = siteProducer.indexOf("await sealStylexProducedTemplate(generation, document.outputPath)")
   const finalize = siteProducer.indexOf("await finalizeStylexGeneration(")
   expect(produce).toBeGreaterThan(-1)
   expect(seal).toBeGreaterThan(produce)

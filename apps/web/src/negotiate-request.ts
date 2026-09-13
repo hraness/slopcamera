@@ -3,6 +3,11 @@ import {
   notFoundMarkdown,
 } from "./agent-pages"
 import {
+  docsCanonicalUrl,
+  docsMarkdownUrl,
+  docsPageForRequestPath,
+} from "./docs-registry"
+import {
   htmlMediaType,
   markdownMediaType,
   notAcceptableBody,
@@ -24,8 +29,8 @@ export function isHomePath(pathname: string): boolean {
   return pathname === "/" || pathname === "/index.html"
 }
 
-export function isPreservedRedirectPath(pathname: string): boolean {
-  return pathname === "/docs" || pathname.startsWith("/docs/")
+export function isDocsPath(pathname: string): boolean {
+  return pathname === "/docs" || pathname === "/docs/" || pathname.startsWith("/docs/")
 }
 
 export function isPreviewPath(pathname: string): boolean {
@@ -36,10 +41,7 @@ export function isNegotiableDocumentPath(pathname: string): boolean {
   if (isPreviewPath(pathname)) {
     return true
   }
-  if (
-    isHomePath(pathname)
-    || isPreservedRedirectPath(pathname)
-  ) {
+  if (isHomePath(pathname)) {
     return true
   }
   if (pathname.startsWith("/assets/")) {
@@ -59,7 +61,7 @@ export function negotiateSiteRequest(request: Request): Response | undefined {
   }
 
   const pathname = new URL(request.url).pathname
-  if (!isNegotiableDocumentPath(pathname) || isPreservedRedirectPath(pathname)) {
+  if (!isNegotiableDocumentPath(pathname)) {
     return undefined
   }
 
@@ -76,6 +78,20 @@ export function negotiateSiteRequest(request: Request): Response | undefined {
           "Content-Type": markdownContentType,
           "Link": `<${canonicalHomeUrl(request)}>; rel="canonical", </index.md>; rel="alternate"; type="text/markdown"`,
           "Vary": varyAcceptAndEncoding,
+        },
+        status: 200,
+      })
+    }
+
+    // Documentation markdown is a sealed sibling of the HTML page. The edge
+    // rewrites to the static mirror so a direct .md request is identical.
+    const docsPage = docsPageForRequestPath(pathname)
+    if (docsPage !== null) {
+      return new Response(null, {
+        headers: {
+          "Link": `<${docsCanonicalUrl(docsPage)}>; rel="canonical", <${docsMarkdownUrl(docsPage)}>; rel="alternate"; type="text/markdown"`,
+          "Vary": varyAcceptAndEncoding,
+          "x-middleware-rewrite": new URL(docsMarkdownUrl(docsPage), request.url).href,
         },
         status: 200,
       })

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -10,6 +10,7 @@ import { buildSite } from "./build-site"
 import { publicIdentity, readPublicIcons } from "./public-identity"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
+import { docsCanonicalUrl, docsMarkdownUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
 import {
   homeMarkdown,
   llmsTxt,
@@ -25,6 +26,8 @@ const siteOrigin = "https://slopcamera.com"
 const posthogPackageDirectory = dirname(fileURLToPath(import.meta.resolve("posthog-js/package.json")))
 const copiedFiles = publicIdentity.files
 
+const docsLastmod = "2026-09-13"
+
 const generatedTextFiles = {
   "index.md": homeMarkdown,
   "llms.txt": llmsTxt,
@@ -32,6 +35,22 @@ const generatedTextFiles = {
   "sitemap.xml": renderSitemapXml(),
   "sitemap.md": sitemapMarkdown,
 } as const
+
+async function docsMirrors(): Promise<Readonly<Record<string, string>>> {
+  const files: Record<string, string> = {}
+  const onDisk = new Set(
+    (await readdir(join(sourceDirectory, "docs"), { recursive: true }))
+      .filter((entry): entry is string => typeof entry === "string" && entry.endsWith(".md"))
+      .map(entry => entry.replace(/\\/gu, "/").replace(/\.md$/u, "")),
+  )
+  for (const page of docPages) {
+    if (!onDisk.delete(page.slug)) throw new Error(`Documentation page is missing its source: src/docs/${page.slug}.md`)
+    const body = await readFile(join(sourceDirectory, "docs", `${page.slug}.md`), "utf8")
+    files[`docs/${page.slug}.md`] = docsPageMarkdown(page, body)
+  }
+  if (onDisk.size !== 0) throw new Error(`Documentation sources missing registry entries: ${[...onDisk].join(", ")}`)
+  return files
+}
 
 function assetPath(name: string, bytes: Uint8Array): string {
   const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12)
@@ -58,6 +77,14 @@ export function renderSitemapXml(): string {
   const entries = [
     renderSitemapUrl("/", "2026-09-09", "1.0"),
     renderSitemapUrl("/index.md", "2026-09-09", "0.8"),
+    ...docPages.flatMap(page => {
+      const canonical = docsCanonicalUrl(page).slice(siteOrigin.length)
+      const mirror = docsMarkdownUrl(page)
+      return [
+        renderSitemapUrl(canonical, docsLastmod, page.slug === "index" ? "0.8" : "0.7"),
+        renderSitemapUrl(mirror, docsLastmod, "0.5"),
+      ]
+    }),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -193,9 +220,12 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
     await writeFile(join(outputDirectory, path), bytes, { flag: "wx", mode: 0o644 })
   }
 
-  await Promise.all(Object.entries(generatedTextFiles).map(([file, contents]) => (
-    writeFile(join(outputDirectory, file), contents)
-  )))
+  const docsTextFiles = await docsMirrors()
+  await Promise.all(Object.entries({ ...generatedTextFiles, ...docsTextFiles }).map(async ([file, contents]) => {
+    const target = join(outputDirectory, file)
+    await mkdir(dirname(target), { recursive: true })
+    await writeFile(target, contents)
+  }))
 
   return {
     analyticsPath, stylesPath: site.stylesPath, themePath,

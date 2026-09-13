@@ -28,9 +28,16 @@ import {
   preferredRepresentationFrom,
 } from "./src/negotiate"
 import {
+  docsCanonicalUrl,
+  docsDocumentForPage,
+  docsMarkdownUrl,
+  docsPageForRequestPath,
+  docPages,
+} from "./src/docs-registry"
+import {
+  isDocsPath,
   isHomePath,
   isNegotiableDocumentPath,
-  isPreservedRedirectPath,
   isPreviewPath,
   negotiateSiteRequest,
 } from "./src/negotiate-request"
@@ -658,13 +665,15 @@ describe("static Slopcamera site", () => {
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
   })
 
-  test("publishes two sealed ordinary documents with one complete union and bound local fonts", async () => {
+  test("publishes the sealed ordinary and documentation documents with one complete union and bound local fonts", async () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
-    expect(artifacts).toHaveLength(20)
+    expect(artifacts).toHaveLength(18 + 2 + docPages.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(20)
-    expect(paths.filter(path => path.endsWith(".html"))).toEqual(["404.html", "index.html"])
+    expect(new Set(paths).size).toBe(18 + 2 + docPages.length)
+    expect(paths.filter(path => path.endsWith(".html"))).toEqual([
+      "404.html", ...docPages.map(docsDocumentForPage), "index.html",
+    ].sort())
     expect(paths.filter(path => path.endsWith(".css")).sort()).toEqual([
       builtAssets.stylesPath.slice(1), builtAssets.siteFoundationPath.slice(1),
     ].sort())
@@ -722,6 +731,54 @@ describe("static Slopcamera site", () => {
         }
       }
     }
+  })
+
+  test("renders every registered documentation page with mirrors, metadata, and sealed classes", async () => {
+    const stylesheets = `<link rel="stylesheet" href="${builtAssets.siteFoundationPath}">\n    <link rel="stylesheet" href="${builtAssets.stylesPath}">`
+    const titles = new Set<string>()
+    const descriptions = new Set<string>()
+    for (const page of docPages) {
+      const document = docsDocumentForPage(page)
+      const [html, mirror] = await Promise.all([
+        readBuilt(document),
+        readBuilt(`docs/${page.slug}.md`),
+      ])
+      expect(html).toContain(stylesheets)
+      expect(html).not.toMatch(/\{\{|<style\b|\sstyle\s*=|graphs\/site-renderer|analytics-/u)
+      expect(html.match(/<h1\b/gu)).toHaveLength(1)
+      expect(html).toContain(`<title>${page.title} · Slopcamera</title>`)
+      expect(html).toContain(`<meta name="description" content="${page.description}">`)
+      expect(html).toContain(`<link rel="canonical" href="${docsCanonicalUrl(page)}">`)
+      expect(html).toContain(`<link rel="alternate" type="text/markdown" href="${docsMarkdownUrl(page)}">`)
+      expect(html).toContain('<meta name="robots" content="index, follow')
+      expect(html).toContain('aria-label="Documentation"')
+      expect(html).toContain('aria-current="page"')
+      const jsonLd = /<script type="application\/ld\+json">([\s\S]+?)<\/script>/u.exec(html)?.[1]
+      const graph = (JSON.parse(jsonLd ?? "null") as { "@graph"?: Array<Record<string, unknown>> })["@graph"] ?? []
+      expect(graph.some(node => node["@type"] === "TechArticle" && node.url === docsCanonicalUrl(page))).toBe(true)
+      expect(graph.some(node => node["@type"] === "BreadcrumbList")).toBe(true)
+      expect(mirror.startsWith(`# ${page.title}\n\n${page.description}`)).toBe(true)
+      expect(mirror).not.toMatch(/\{\{/u)
+      titles.add(page.title)
+      descriptions.add(page.description)
+    }
+    expect(titles.size).toBe(docPages.length)
+    expect(descriptions.size).toBe(docPages.length)
+
+    // The index is a real navigation page, not a redirect stub.
+    const index = await readBuilt("docs/index.html")
+    expect(index).toContain('href="/docs/tutorials/first-diagram"')
+    expect(index).toContain("Tutorials")
+    expect(index).toContain("How-to guides")
+    expect(index).toContain("Reference")
+    expect(index).toContain("Explanation")
+
+    // A rendered article carries authored prose, compiled classes, and anchors.
+    const diagram = await readBuilt("docs/tutorials/first-diagram.html")
+    expect(diagram).toContain('id="create-the-source"')
+    expect(diagram).toContain("example-flow.light.png")
+    expect(diagram).toMatch(/<pre class="[^"]+"[^>]*><code class="[^"]+">/u)
+    expect(diagram).not.toContain("{{")
   })
 
   test("links the website, product, and source in structured data", async () => {
@@ -1395,6 +1452,7 @@ describe("static Slopcamera site", () => {
       "404.html",
       "apple-touch-icon.png",
       "assets",
+      "docs",
       "graphs",
       "icon.png",
       "index.html",
@@ -1423,9 +1481,10 @@ describe("static Slopcamera site", () => {
     expect(stylesAsset).toContain("--hraness-site-footer-social-target")
     expect(stylesAsset).not.toContain("@import \"./dist/stylex.css\"")
     expect(stylesAsset).toMatch(/@media\s*\(pointer:\s*coarse\)/u)
-    // The reviewed 0.8 refinement graph is 297,328 bytes before compression.
-    // Keep a strict ceiling over the full sealed union and captured foundation;
-    // no import, recipe, snapshot, or repeated layered rule is discounted.
+    // The reviewed 0.8 refinement graph plus the documentation recipes is
+    // under 298,500 bytes before compression. Keep a strict ceiling over the
+    // full sealed union and captured foundation; no import, recipe, snapshot,
+    // or repeated layered rule is discounted.
     expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(304_000)
     expect(new TextEncoder().encode(themeAsset).byteLength).toBeLessThan(24_000)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
@@ -1441,6 +1500,7 @@ describe("static Slopcamera site", () => {
     expect(locations).toEqual([
       "https://slopcamera.com/",
       "https://slopcamera.com/index.md",
+      ...docPages.flatMap(page => [docsCanonicalUrl(page), `https://slopcamera.com${docsMarkdownUrl(page)}`]),
     ])
     expect(await readBuilt("index.md")).toBe(homeMarkdown)
     expect(await readBuilt("llms.txt")).toBe(llmsTxt)
@@ -1511,10 +1571,8 @@ describe("static Slopcamera site", () => {
         permanent: redirect.permanent,
       }))
 
-    expect(routeRedirects).toEqual([
-      { source: "/docs", destination: "https://github.com/hraness/slopcamera/blob/main/docs/README.md", permanent: true },
-      { source: "/docs/:path*", destination: "https://github.com/hraness/slopcamera/blob/main/docs/README.md", permanent: true },
-    ])
+    // /docs is first-party now: no path-level redirects remain.
+    expect(routeRedirects).toEqual([])
     expect(hostRedirects).toEqual([
       { source: "/", host: { type: "host", value: "atet.sh" }, destination: "https://slopcamera.com/", permanent: true },
       { source: "/:path*", host: { type: "host", value: "atet.sh" }, destination: "https://slopcamera.com/:path*", permanent: true },
@@ -1639,6 +1697,11 @@ describe("static Slopcamera site", () => {
       key: "Content-Type",
       value: "text/markdown; charset=utf-8",
     })
+    const docsMarkdown = vercel.headers?.find(entry => entry.source === "/docs/(.*\\.md)")?.headers ?? []
+    expect(docsMarkdown).toContainEqual({
+      key: "Content-Type",
+      value: "text/markdown; charset=utf-8",
+    })
     expect(llms).toContainEqual({
       key: "Content-Type",
       value: "text/plain; charset=utf-8",
@@ -1726,8 +1789,10 @@ describe("static Slopcamera site", () => {
   test("negotiates homepage markdown, generic failures, and retired reading 404s", async () => {
     expect(isHomePath("/")).toBe(true)
     expect(isHomePath("/index.html")).toBe(true)
-    expect(isPreservedRedirectPath("/docs")).toBe(true)
-    expect(isPreservedRedirectPath("/docs/install")).toBe(true)
+    expect(isDocsPath("/docs")).toBe(true)
+    expect(isDocsPath("/docs/")).toBe(true)
+    expect(isDocsPath("/docs/install")).toBe(true)
+    expect(isDocsPath("/documentation")).toBe(false)
     expect(isPreviewPath("/preview")).toBe(true)
     expect(isPreviewPath("/preview.html")).toBe(true)
     expect(isPreviewPath("/preview/child")).toBe(false)
@@ -1749,7 +1814,32 @@ describe("static Slopcamera site", () => {
     expect(negotiateSiteRequest(new Request("https://slopcamera.com/", {
       headers: { Accept: "text/html" },
     }))).toBeUndefined()
-    expect(negotiateSiteRequest(new Request("https://slopcamera.com/docs", {
+
+    // Documentation markdown rewrites to the sealed .md sibling of each page.
+    for (const path of ["/docs", "/docs/", "/docs/tutorials/claude-code"]) {
+      const docsPage = docsPageForRequestPath(path)
+      expect(docsPage).not.toBeNull()
+      const negotiated = negotiateSiteRequest(new Request(`https://slopcamera.com${path}`, {
+        headers: { Accept: "text/markdown" },
+      }))
+      expect(negotiated?.status).toBe(200)
+      expect(negotiated?.headers.get("x-middleware-rewrite"))
+        .toBe(`https://slopcamera.com${docsMarkdownUrl(docsPage!)}`)
+      expect(negotiated?.headers.get("link")).toContain(`<${docsCanonicalUrl(docsPage!)}>; rel="canonical"`)
+      expect(negotiated?.headers.get("vary")).toBe("Accept, Accept-Encoding")
+      expect(negotiateSiteRequest(new Request(`https://slopcamera.com${path}`, {
+        headers: { Accept: "text/html" },
+      }))).toBeUndefined()
+    }
+
+    // Unknown documentation paths fail closed to the same markdown 404.
+    const docsNotFound = negotiateSiteRequest(new Request("https://slopcamera.com/docs/not-a-page", {
+      headers: { Accept: "text/markdown" },
+    }))
+    expect(docsNotFound?.status).toBe(404)
+    expect(docsNotFound?.headers.get("x-robots-tag")).toBe("noindex")
+    // Direct .md and .html requests bypass negotiation and serve statically.
+    expect(negotiateSiteRequest(new Request("https://slopcamera.com/docs/index.md", {
       headers: { Accept: "text/markdown" },
     }))).toBeUndefined()
 
