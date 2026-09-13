@@ -332,6 +332,7 @@ h3 {
   display: grid;
   gap: .65rem;
   min-inline-size: 0;
+  padding-block-start: 2px;
 }
 
 .hraness-marketing-interface .hraness-material-code {
@@ -365,6 +366,11 @@ h3 {
 
 [data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading-group {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Give the display font ascent and descent room inside its own heading box. */
+[data-hraness-marketing-preset="editorial"] .hraness-marketing-install__heading {
+  padding-block: .2em;
 }
 
 /* Existing compiled copy states read these local roles. They follow the
