@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import ts from "typescript";
 
@@ -12,11 +12,38 @@ const WORKFLOW_GLOBALS_SOURCE = [
   "declare const process: any;",
   "",
 ].join("\n");
+// Packed distributions ship no host tsconfig; this closed fallback preserves
+// the host compiler contract instead of adopting a foreign caller tsconfig.
+const PACKED_WORKFLOW_CONFIG = {
+  compilerOptions: {
+    allowImportingTsExtensions: true,
+    exactOptionalPropertyTypes: true,
+    isolatedModules: true,
+    jsx: "react-jsx",
+    lib: ["ES2023", "DOM", "DOM.Iterable"],
+    module: "Preserve",
+    moduleDetection: "force",
+    moduleResolution: "Bundler",
+    noEmit: true,
+    noFallthroughCasesInSwitch: true,
+    noImplicitOverride: true,
+    noImplicitReturns: true,
+    noUncheckedIndexedAccess: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
+    skipLibCheck: true,
+    strict: true,
+    target: "ES2023",
+    useUnknownInCatchVariables: true,
+    verbatimModuleSyntax: true,
+  },
+};
 
 export interface TypecheckWorkflowSnapshotOptions {
   readonly aliases: Readonly<Record<string, string>>;
   readonly configSearchPath: string;
   readonly entryPath: string;
+  readonly hostBoundary: string;
   readonly includeRuntimeTypes: boolean;
   readonly sourceRoot: string;
 }
@@ -24,6 +51,37 @@ export interface TypecheckWorkflowSnapshotOptions {
 function isWithin(root: string, candidate: string): boolean {
   const fromRoot = relative(root, candidate);
   return fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot));
+}
+
+/** Finds the host tsconfig without crossing into a foreign caller tree. */
+function boundedHostConfigPath(
+  searchPath: string,
+  boundary: string,
+): string | undefined {
+  const limit = resolve(boundary);
+  let candidate = resolve(searchPath);
+  while (isWithin(limit, candidate)) {
+    const path = join(candidate, "tsconfig.json");
+    if (ts.sys.fileExists(path)) return path;
+    const parent = dirname(candidate);
+    if (parent === candidate) return undefined;
+    candidate = parent;
+  }
+  return undefined;
+}
+
+/**
+ * Resolves the installed @types/bun package from the host tree so runtime
+ * types never depend on the caller's working directory or dependencies.
+ */
+function bunTypeRoots(hostBoundary: string): string | undefined {
+  try {
+    return dirname(dirname(
+      Bun.resolveSync("@types/bun/package.json", resolve(hostBoundary)),
+    ));
+  } catch {
+    return undefined;
+  }
 }
 
 function diagnosticText(
@@ -77,49 +135,72 @@ function boundedDiagnostics(
 export function typecheckWorkflowSnapshot(
   options: TypecheckWorkflowSnapshotOptions,
 ): void {
-  const configPath = ts.findConfigFile(
-    resolve(options.configSearchPath),
-    path => ts.sys.fileExists(path),
-    "tsconfig.json",
+  const configPath = boundedHostConfigPath(
+    options.configSearchPath,
+    options.hostBoundary,
   );
+  const hostDirectory = configPath === undefined
+    ? resolve(options.hostBoundary)
+    : dirname(configPath);
+  let parsedOptions: ts.CompilerOptions;
   if (configPath === undefined) {
-    throw new ApplicationError(
-      "internal",
-      "Workflow semantic checking could not locate the host TypeScript configuration.",
+    const parsed = ts.parseJsonConfigFileContent(
+      PACKED_WORKFLOW_CONFIG,
+      ts.sys,
+      hostDirectory,
+      {
+        composite: false,
+        declaration: false,
+        emitDeclarationOnly: false,
+        incremental: false,
+        noEmit: true,
+      },
+      "slopcamera-packed-workflow.tsconfig.json",
     );
-  }
-  const config = ts.readConfigFile(configPath, path => ts.sys.readFile(path));
-  if (config.error !== undefined) {
-    throw new ApplicationError(
-      "internal",
-      `Workflow semantic checking could not read the host TypeScript configuration: ${
-        diagnosticText(config.error, options.sourceRoot)
-      }`,
+    if (parsed.errors.length > 0) {
+      throw new ApplicationError(
+        "internal",
+        `Workflow semantic checking could not apply its packed TypeScript configuration:\n${
+          boundedDiagnostics(parsed.errors, options.sourceRoot)
+        }`,
+      );
+    }
+    parsedOptions = parsed.options;
+  } else {
+    const config = ts.readConfigFile(configPath, path => ts.sys.readFile(path));
+    if (config.error !== undefined) {
+      throw new ApplicationError(
+        "internal",
+        `Workflow semantic checking could not read the host TypeScript configuration: ${
+          diagnosticText(config.error, options.sourceRoot)
+        }`,
+      );
+    }
+    const parsed = ts.parseJsonConfigFileContent(
+      config.config,
+      ts.sys,
+      hostDirectory,
+      {
+        composite: false,
+        declaration: false,
+        emitDeclarationOnly: false,
+        incremental: false,
+        noEmit: true,
+      },
+      configPath,
     );
-  }
-  const parsed = ts.parseJsonConfigFileContent(
-    config.config,
-    ts.sys,
-    dirname(configPath),
-    {
-      composite: false,
-      declaration: false,
-      emitDeclarationOnly: false,
-      incremental: false,
-      noEmit: true,
-    },
-    configPath,
-  );
-  if (parsed.errors.length > 0) {
-    throw new ApplicationError(
-      "internal",
-      `Workflow semantic checking could not parse the host TypeScript configuration:\n${
-        boundedDiagnostics(parsed.errors, options.sourceRoot)
-      }`,
-    );
+    if (parsed.errors.length > 0) {
+      throw new ApplicationError(
+        "internal",
+        `Workflow semantic checking could not parse the host TypeScript configuration:\n${
+          boundedDiagnostics(parsed.errors, options.sourceRoot)
+        }`,
+      );
+    }
+    parsedOptions = parsed.options;
   }
   const typecheckImporterPath = resolve(
-    dirname(configPath),
+    hostDirectory,
     "slopcamera-workflow-typecheck.ts",
   );
   const aliasPaths = Object.fromEntries(
@@ -132,7 +213,7 @@ export function typecheckWorkflowSnapshot(
         const declaration = ts.resolveModuleName(
           specifier,
           typecheckImporterPath,
-          parsed.options,
+          parsedOptions,
           ts.sys,
         ).resolvedModule?.resolvedFileName;
         return [
@@ -143,8 +224,14 @@ export function typecheckWorkflowSnapshot(
         ];
       }),
   );
+  // Runtime-typed workflows use the host's installed @types/bun when it is
+  // present and the explicit any-globals shim when it is not.
+  const runtimeTypeRoots = options.includeRuntimeTypes
+    ? bunTypeRoots(options.hostBoundary)
+    : undefined;
+  const realRuntimeTypes = runtimeTypeRoots !== undefined;
   const compilerOptions: ts.CompilerOptions = {
-    ...parsed.options,
+    ...parsedOptions,
     baseUrl: options.sourceRoot,
     composite: false,
     declaration: false,
@@ -152,10 +239,11 @@ export function typecheckWorkflowSnapshot(
     incremental: false,
     noEmit: true,
     paths: {
-      ...parsed.options.paths,
+      ...parsedOptions.paths,
       ...aliasPaths,
     },
-    types: options.includeRuntimeTypes ? ["bun"] : [],
+    ...(realRuntimeTypes ? { typeRoots: [runtimeTypeRoots] } : {}),
+    types: realRuntimeTypes ? ["bun"] : [],
   };
   delete compilerOptions.tsBuildInfoFile;
   const host = ts.createCompilerHost(compilerOptions, true);
@@ -189,7 +277,7 @@ export function typecheckWorkflowSnapshot(
     options: compilerOptions,
     rootNames: [
       options.entryPath,
-      ...(options.includeRuntimeTypes ? [] : [WORKFLOW_GLOBALS_PATH]),
+      ...(realRuntimeTypes ? [] : [WORKFLOW_GLOBALS_PATH]),
     ],
   });
   const diagnostics = program.getSourceFiles()

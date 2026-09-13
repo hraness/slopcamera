@@ -9,7 +9,6 @@ import {
   extname,
   join,
   relative,
-  resolve,
   sep,
 } from "node:path";
 
@@ -31,6 +30,7 @@ import {
   WorkflowRuntimeIdentitySchema,
   type WorkflowRuntimeIdentity,
 } from "./contracts";
+import { hostSourceRoots } from "./host-source-layout";
 import type { WorkflowSourceBundle } from "./source-bundle";
 
 export interface CreateWorkflowRuntimeIdentityOptions {
@@ -38,7 +38,7 @@ export interface CreateWorkflowRuntimeIdentityOptions {
   readonly bundle: WorkflowSourceBundle;
 }
 
-const APPLICATION_BUILD_DOMAIN = "studio.application-build/v1";
+const APPLICATION_BUILD_DOMAIN = "studio.application-build/v2";
 const HOST_APPLICATION_BUILD_DOMAIN = "studio.host-application-build/v1";
 const APPLICATION_SOURCE_EXTENSIONS = new Set([
   ".json",
@@ -63,6 +63,15 @@ const DESKTOP_SOURCE_DIRECTORIES = [
 ] as const;
 const MAXIMUM_APPLICATION_SOURCE_FILES = 4_096;
 const MAXIMUM_APPLICATION_SOURCE_FILE_BYTES = 64 * 1024 * 1024;
+// The reviewed packed boundary never ships the Zig runtime build tree or the
+// root lockfile, while the committed CLI bundle ships beside the checked
+// sources in both layouts. Each of these inputs stays hash-bound wherever it
+// is present and is skipped only when it is absent.
+const OPTIONAL_DESKTOP_SOURCE_DIRECTORIES = new Set<string>(["runtime"]);
+const OPTIONAL_APPLICATION_SOURCE_FILES = new Set<string>([
+  "apps/desktop/dist/cli/main.js",
+  "bun.lock",
+]);
 let cachedApplicationBuild: Promise<string> | undefined;
 
 function isWithin(root: string, candidate: string): boolean {
@@ -137,6 +146,22 @@ async function collectSourceFiles(
   }
 }
 
+async function presentDesktopDirectory(
+  desktopRoot: string,
+  directory: string,
+): Promise<string | undefined> {
+  const path = join(desktopRoot, directory);
+  try {
+    if ((await lstat(path)).isDirectory()) return path;
+    return undefined;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 async function computeApplicationBuildIdentity(options: {
   readonly desktopRoot: string;
   readonly repositoryRoot: string;
@@ -151,9 +176,17 @@ async function computeApplicationBuildIdentity(options: {
   }
   const sources: Array<{ readonly logicalPath: string; readonly path: string }> = [];
   for (const directory of DESKTOP_SOURCE_DIRECTORIES) {
+    const path = await presentDesktopDirectory(desktopRoot, directory);
+    if (path === undefined) {
+      if (OPTIONAL_DESKTOP_SOURCE_DIRECTORIES.has(directory)) continue;
+      throw new ApplicationError(
+        "not-found",
+        `Application build source directory is missing: apps/desktop/${directory}`,
+      );
+    }
     await collectSourceFiles(
       desktopRoot,
-      join(desktopRoot, directory),
+      path,
       `apps/desktop/${directory}`,
       sources,
     );
@@ -176,10 +209,20 @@ async function computeApplicationBuildIdentity(options: {
     );
   }
   for (const [logicalPath, path] of [
+    ["apps/desktop/dist/cli/main.js", join(desktopRoot, "dist", "cli", "main.js")],
     ["bun.lock", join(repositoryRoot, "bun.lock")],
     ["package.json", join(repositoryRoot, "package.json")],
   ] as const) {
-    const physical = await realpath(path);
+    let physical: string;
+    try {
+      physical = await realpath(path);
+    } catch (error) {
+      if (
+        OPTIONAL_APPLICATION_SOURCE_FILES.has(logicalPath)
+        && error instanceof Error && "code" in error && error.code === "ENOENT"
+      ) continue;
+      throw error;
+    }
     if (!isWithin(repositoryRoot, physical)) {
       throw new ApplicationError("unsafe-path", `Application build source escapes: ${logicalPath}`);
     }
@@ -227,8 +270,11 @@ export async function createApplicationBuildIdentity(options: {
   readonly desktopRoot?: string;
   readonly repositoryRoot?: string;
 } = {}): Promise<string> {
-  const defaultDesktopRoot = resolve(import.meta.dir, "..");
-  const defaultRepositoryRoot = resolve(defaultDesktopRoot, "../..");
+  // Inside the committed bundle, import.meta.dir is apps/desktop/dist/cli;
+  // the checked host sources stay at their installed paths below apps/desktop.
+  const defaults = hostSourceRoots(import.meta.dir);
+  const defaultDesktopRoot = defaults.desktopRoot;
+  const defaultRepositoryRoot = defaults.repositoryRoot;
   if (options.desktopRoot !== undefined || options.repositoryRoot !== undefined) {
     return await computeApplicationBuildIdentity({
       desktopRoot: options.desktopRoot ?? defaultDesktopRoot,

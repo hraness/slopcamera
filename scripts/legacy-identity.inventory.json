@@ -880,15 +880,24 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "f7047f3e12cf0d3ddd7068b7050eeeabec5eb022afadbd0499fa675553e20cb3",
-    "occurrenceCount": 5,
-    "path": "apps/desktop/code/runtime-identity.ts",
+    "categories": [
+      "test-fixture"
+    ],
+    "identityLineCount": 1,
+    "identityLinesSha256": "a53b6c4dfd48ae78d4b382c3c0eb0406fe0d2ed5e4b25832aee146494c382d86",
+    "occurrenceCount": 1,
+    "path": "apps/desktop/code/runtime-identity.test.ts"
+  },
+  {
     "categories": [
       "native-film-studio",
       "serialized-reader",
       "stable-hash-domain"
-    ]
+    ],
+    "identityLineCount": 5,
+    "identityLinesSha256": "0a93452fbb87b7857599baf2d5e8cb6dfd35263ba9ed1315fa5f9e9c9ebec1b9",
+    "occurrenceCount": 5,
+    "path": "apps/desktop/code/runtime-identity.ts"
   },
   {
     "identityLineCount": 20,
@@ -1267,13 +1276,13 @@
     ]
   },
   {
-    "identityLineCount": 83,
-    "identityLinesSha256": "6d23f99152f0225baf2e58ba213504523ab987df7fd74427616ade074448491c",
-    "occurrenceCount": 443,
-    "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
-    ]
+    ],
+    "identityLineCount": 83,
+    "identityLinesSha256": "535df0529c4db86cceea90d61be79f2ad6bc74c91c70256433847e4009f963e7",
+    "occurrenceCount": 443,
+    "path": "apps/desktop/dist/cli/main.js"
   },
   {
     "identityLineCount": 1,
@@ -1557,7 +1566,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "b3ef6812129fd7dcf61958aed11f0556dbb216d0356aa47bf4eeefbacea4833a",
+    "identityLinesSha256": "feb0fba3a3e073aa39a5648afeda9d565a9d4032949badcd2884c0accb1427be",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1738,7 +1747,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "a94db3ac76b874e876ac419f5abee7cbbb6eed11a2dc68e27f361955c1a9a745",
+    "identityLinesSha256": "aed7fc0e14ebc0c627f284f5a489deaa16d44d5a4817ffd6caa6481d1e946466",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1765,7 +1774,7 @@
   },
   {
     "identityLineCount": 40,
-    "identityLinesSha256": "65c625a4d813fc25aa89d21c3daef5e55ff43ba1c4e5a2e0a8038d62b1056357",
+    "identityLinesSha256": "248f2ce880c7ba778675f68a0bc58ff1aa157576c9b9be2df829b49f4059bb9a",
     "occurrenceCount": 54,
     "path": "docs/studio.md",
     "categories": [

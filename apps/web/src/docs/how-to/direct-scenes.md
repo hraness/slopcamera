@@ -126,7 +126,7 @@ slopcamera workflows plan directed-scene --input prepared-render.json --json
 slopcamera workflows run directed-scene --input prepared-render.json --json
 ```
 
-Workflow planning and execution bind a build identity over the checked-out source tree, so these commands require a [source build](/docs/how-to/install-from-source); [Run or recover a workflow](/docs/how-to/run-workflows) covers the run model. The run verifies encoded dimensions, pixel format, frame timestamps, and audio duration before publishing, and a later project edit does not invalidate an already prepared composition. A changed source artifact or toolchain rejects the render. Output paths are project-relative and never overwrite another render.
+Workflow planning and execution bind a build identity over the installed host source tree, so these commands require the installed Bun package or a checkout rather than a copied standalone executable; [Run or recover a workflow](/docs/how-to/run-workflows) covers the run model. The run verifies encoded dimensions, pixel format, frame timestamps, and audio duration before publishing, and a later project edit does not invalidate an already prepared composition. A changed source artifact or toolchain rejects the render. Output paths are project-relative and never overwrite another render.
 
 ## Know the bounds
 
