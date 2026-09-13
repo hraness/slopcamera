@@ -116,7 +116,9 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
   })))
   const docBodies: Record<string, string> = {}
   for (const input of inputs) {
-    const body = /\/src\/docs\/(.+)\.md$/u.exec(input.path)
+    // Root-relative input paths start at src/ when the app's root directory is
+    // also the repository root (the Vercel deployment layout).
+    const body = /(?:^|\/)src\/docs\/(.+)\.md$/u.exec(input.path)
     if (body !== null) docBodies[`docs/${body[1]}.html`] = new TextDecoder("utf-8", { fatal: true }).decode(input.bytes)
   }
   const snapshot = inputs.map(({ path, bytes }) => ({ path, bytes: bytes.byteLength, sha256: siteSha256(bytes) }))
