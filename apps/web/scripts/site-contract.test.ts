@@ -24,7 +24,7 @@ function foundationOutput() {
     },
     { type: "asset", fileName: "assets/style-fixture.css", source: fontSources.map((_, index) =>
       `@font-face{font-family:fixture${index};src:url(./font-${index}.woff2)}`).join("")
-      + imageSources.map((_, index) => `.texture${index}{background:url(./texture-${index}.svg)}`).join("") },
+      + imageSources.map((_, index) => `.texture${index}{--field:url(./texture-${index}.svg);--wall:url(./texture-${index}.svg)}`).join("") },
     ...fontSources.map((source, index) => ({ type: "asset", fileName: `assets/font-${index}.woff2`, source })),
     ...imageSources.map((source, index) => ({ type: "asset", fileName: `assets/texture-${index}.svg`, source })),
   ] }
@@ -37,9 +37,9 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.5.2" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.6.1" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.7" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.8.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.6.3" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.12" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),
@@ -175,7 +175,7 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     expect(() => snapshotSiteFoundation(output)).toThrow()
   })
 
-  test("binds every CSS URL exactly once and propagates parser errors", () => {
+  test("binds each font once and each shared texture twice and propagates parser errors", () => {
     const output = foundationOutput()
     output.output[1]!.source = String(output.output[1]!.source).replace("./font-0.woff2", "./font-1.woff2")
     expect(() => snapshotSiteFoundation(output)).toThrow("link every captured font and texture")
@@ -190,6 +190,28 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     renamed.output[2]!.fileName = "assets/GeistMono_wght_-Vc9u_qg9.woff2"
     renamed.output[1]!.source = String(renamed.output[1]!.source).replace("./font-0.woff2", "./GeistMono_wght_-Vc9u_qg9.woff2")
     expect(snapshotSiteFoundation(renamed).artifacts).toHaveLength(18)
+  })
+
+  test("resource ordering preserves the finite font/texture multiplicity; missing or added references fail", () => {
+    let seed = 0x16c0de
+    const admitted = [...fontSources.map((_, index) => `./font-${index}.woff2`),
+      ...imageSources.flatMap((_, index) => [`./texture-${index}.svg`, `./texture-${index}.svg`])]
+    for (let sample = 0; sample < 64; sample++) {
+      const urls = [...admitted]
+      for (let at = urls.length - 1; at > 0; at--) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+        const other = seed % (at + 1)
+        ;[urls[at], urls[other]] = [urls[other]!, urls[at]!]
+      }
+      const capture = (values: readonly string[]) => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => values, imageHashes)
+      expect(capture(urls).artifacts).toHaveLength(18)
+      const index = sample % urls.length
+      expect(() => capture(urls.filter((_, at) => at !== index))).toThrow("link every captured font and texture")
+      expect(() => capture([...urls, urls[index]!])).toThrow("link every captured font and texture")
+    }
+    const unbalanced = admitted.map((url, index) => index === admitted.length - 1 ? "./texture-0.svg" : url)
+    expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => unbalanced, imageHashes))
+      .toThrow("link every captured font and texture")
   })
 
   test.each(["../outside.css", "/outside.css", "graphs//x.css", "graphs/%2e%2e/x.css", "graphs\\other.js", "graphs/./x.js", "graphs/../x.js",

@@ -1110,7 +1110,8 @@ export function shellContextLifecycle(error: (message: string) => void) {
 
 export async function checkShellCase(browser: Browser, payload: ShellPayload, scenario: ShellCase,
   source: "current" | "baseline", negative: boolean,
-  observeCurrentDesign?: (page: Page) => Promise<void>): Promise<ShellEvidence> {
+  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1"): Promise<ShellEvidence> {
+  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1", "Unknown ordinary DOM profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height },
     deviceScaleFactor: scenario.reflowEquivalent ? 2 : 1, colorScheme: scenario.system, forcedColors: scenario.forced,
     hasTouch: scenario.coarse, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
@@ -1227,7 +1228,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     const direction = media.direction
     assert.ok(direction === "ltr" || direction === "rtl")
     const selectors = [...commonSelectors, ...(scenario.route === "/" ? homeSelectors : recoverySelectors)]
-    const dom = normalizeInstallTransport(await page.evaluate(() => {
+    const serializedDom = await page.evaluate(() => {
       const root = document.body.cloneNode(true) as HTMLElement
       for (const element of root.querySelectorAll("script")) element.remove()
       const migrated = ".skip-link, .topbar, .wordmark, .topbar-actions, .topbar nav[aria-label=\"Primary\"], .topbar nav[aria-label=\"Primary\"] a, .route-state, .route-state > h1, .route-state > p, .route-state a"
@@ -1237,7 +1238,10 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
         // retained marketing, Ask AI, appearance and footer DOM stays exact.
       }
       return root.outerHTML
-    }), source === "current")
+    })
+    // Refinement keeps the full serialized body for its own closed current-design
+    // oracle. Historical callers retain the exact original transport projection.
+    const dom = domProfile === undefined ? normalizeInstallTransport(serializedDom, source === "current") : serializedDom
     const elements = await measure(page, selectors)
     assertShellFocusUnchanged(transferred, elements, `${source} ${scenario.name} reload transfer`)
     const nav = elements.filter(item => item.key.startsWith('.topbar nav[aria-label="Primary"] a['))

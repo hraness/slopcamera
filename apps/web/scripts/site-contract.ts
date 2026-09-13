@@ -15,9 +15,9 @@ export const siteSha256 = (value: string | Uint8Array): string => createHash("sh
 const foundationRoot = "graphs/site-foundation/"
 const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
-  { name: "@hraness/design-kit", version: "0.5.2" },
-  { name: "@hraness/site-footer", version: "0.6.1" },
-  { name: "@hraness/ui", version: "0.5.7" },
+  { name: "@hraness/design-kit", version: "0.8.0" },
+  { name: "@hraness/site-footer", version: "0.6.3" },
+  { name: "@hraness/ui", version: "0.5.12" },
 ] as const
 
 function record(value: unknown): Record<string, unknown> {
@@ -133,10 +133,12 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   const cssOutput = output.map(record).find(item => item.fileName === css[0]!.path)!
   const cssSource = typeof cssOutput.source === "string" ? cssOutput.source : new TextDecoder("utf-8", { fatal: true }).decode(cssOutput.source as Uint8Array)
   const urls = inspectCss(cssSource, css[0]!.path)
+  // The canonical 0.8 preset names each texture in both the editorial field
+  // and material wall. Physical artifacts remain one per admitted byte hash.
   assert.deepEqual(urls.map(url => {
     assert.match(url, /^(?:\.\/)?[A-Za-z0-9_-]+\.(?:woff2|svg)$/u, "Site foundation must use canonical local emitted font and texture URLs")
     return `assets/${url.replace(/^\.\//u, "")}`
-  }).sort(), [...fonts, ...images].map(item => item.path).sort(), "Site stylesheet must link every captured font and texture exactly once")
+  }).sort(), [...fonts, ...images, ...images].map(item => item.path).sort(), "Site stylesheet must link every captured font and texture with exact canonical multiplicity")
   const foundation = { artifacts, cssPath: `${foundationRoot}${css[0]!.path}`, privateScriptPath: `${foundationRoot}${chunk.fileName}` }
   capturedFoundation(foundation)
   return foundation

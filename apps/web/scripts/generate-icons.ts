@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Resvg } from "@resvg/resvg-js"
@@ -8,6 +8,8 @@ const app = dirname(dirname(fileURLToPath(import.meta.url)))
 const desktop = join(app, "../desktop/assets")
 const sha256 = (value: Uint8Array | string) => createHash("sha256").update(value).digest("hex")
 
+/** Reproduce the historical desktop identity and its original touch derivative.
+ * Public website PNGs now come from the separately reviewed identity handoff. */
 export async function renderSlopcameraIcons(): Promise<Readonly<{ apple: Uint8Array; desktop: Uint8Array; sourceSha256: string }>> {
   const [source, webSource, manifest] = await Promise.all([
     readFile(join(desktop, "brand-emoji/slopcamera.com.svg"), "utf8"),
@@ -26,21 +28,4 @@ export async function renderSlopcameraIcons(): Promise<Readonly<{ apple: Uint8Ar
     return png
   }
   return { apple: render(180), desktop: render(1024), sourceSha256: sha256(source) }
-}
-
-if (import.meta.main) {
-  const result = await renderSlopcameraIcons()
-  await writeFile(join(app, "src/apple-touch-icon.png"), result.apple)
-  await writeFile(join(desktop, "icon.png"), result.desktop)
-  await writeFile(join(desktop, "brand-provenance.json"), `${JSON.stringify({
-    kind: "slopcamera.original-vector-brand", schemaVersion: 1,
-    authorship: "Original repository-authored SVG camera artwork; no model generation or external image source.",
-    source: { path: "brand-emoji/slopcamera.com.svg", sha256: result.sourceSha256 },
-    renderer: { name: "@resvg/resvg-js", version: "2.6.2", systemFonts: false },
-    outputs: [
-      { path: "icon.png", width: 1024, height: 1024, bytes: result.desktop.byteLength, sha256: sha256(result.desktop) },
-      { path: "../../web/src/apple-touch-icon.png", width: 180, height: 180, bytes: result.apple.byteLength, sha256: sha256(result.apple) },
-    ],
-  }, null, 2)}\n`)
-  console.log(`Generated camera icons from ${result.sourceSha256}`)
 }

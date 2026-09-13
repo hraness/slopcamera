@@ -25,6 +25,12 @@ import { parseMarketingCaseFailure as parseShellCaseFailure, parseMarketingPhase
   marketingScope, marketingBaselineProfile, marketingBaselineRevision, marketingBaselineTree,
   type MarketingRequest as ShellRequest } from "./site-marketing-browser-contract"
 
+import { parseRefinementCaseFailure, parseRefinementPhase, parseRefinementRequest, refinementCases, refinementDeadline, type RefinementRequest } from "./site-refinement-browser-contract"
+import { refinementScope, refinementCopyScope, refinementBaselineProfile, refinementBaselineRevision, refinementBaselineTree, refinementIntegratedRevision, refinementMaterialRevision } from "./site-refinement-profile"
+type NativeRequest = ShellRequest | RefinementRequest
+const isRefinement = (request: NativeRequest): request is RefinementRequest => request.scope === refinementScope || request.scope === refinementCopyScope
+const parseNativePhase = (value: unknown, sequence: 0 | 1 | 2, request: NativeRequest) => isRefinement(request) ? parseRefinementPhase(value, sequence, request) : parseShellPhase(value, sequence, request)
+
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
 async function inventory(directory: string, root = directory, depth = 0): Promise<string[]> {
@@ -92,6 +98,16 @@ export function assertMarketingBaselineManifest(value: unknown, snapshot: ShellS
   assert.deepEqual(manifest.inputs, snapshot.inputs, "Reviewed baseline input bytes changed")
   assert.deepEqual(manifest.artifacts, snapshot.artifacts, "Reviewed baseline artifact bytes changed")
 }
+export function assertRefinementBaselineManifest(value: unknown, snapshot: ShellSnapshot): void {
+  const manifest = shellRecord(value)
+  assert.deepEqual(Object.keys(manifest).sort(), ["artifacts", "baselineProfile", "checkoutRevision", "inputs", "integratedRevision", "schemaVersion", "sourceRevision", "sourceTree"])
+  assert.equal(manifest.schemaVersion, 4); assert.equal(manifest.baselineProfile, refinementBaselineProfile)
+  assert.equal(manifest.checkoutRevision, refinementBaselineRevision); assert.equal(manifest.sourceRevision, refinementBaselineRevision)
+  assert.equal(manifest.sourceTree, refinementBaselineTree); assert.equal(manifest.integratedRevision, refinementIntegratedRevision)
+  assert.equal(snapshot.stylesheets.length, 2)
+  assert.deepEqual(manifest.inputs, snapshot.inputs, "Reviewed refinement baseline input bytes changed")
+  assert.deepEqual(manifest.artifacts, snapshot.artifacts, "Reviewed refinement baseline artifact bytes changed")
+}
 function serve(snapshot: ShellSnapshot) {
   const rejected: string[] = []
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
@@ -120,9 +136,9 @@ async function executableIdentity(path: string): Promise<readonly number[]> {
   assert.ok(stat.isFile() && stat.size > 0 && stat.size <= 1024 * 1024 * 1024)
   return [stat.dev, stat.ino, stat.size, stat.mode, stat.nlink, stat.mtimeMs, stat.ctimeMs]
 }
-async function buildDriver(profile: string): Promise<{ path: string; bytes: Uint8Array }> {
+async function buildDriver(profile: string, refinement = false): Promise<{ path: string; bytes: Uint8Array }> {
   assert.equal(Bun.version, "1.3.14")
-  const result = await Bun.build({ entrypoints: [join(appDirectory, "scripts/site-marketing-browser-driver.mjs")], target: "node",
+  const result = await Bun.build({ entrypoints: [join(appDirectory, refinement ? "scripts/site-refinement-browser-driver.mjs" : "scripts/site-marketing-browser-driver.mjs")], target: "node",
     env: "disable", format: "esm", minify: false, sourcemap: "none", packages: "external" })
   assert.ok(result.success && result.outputs.length === 1, "Could not compile the private Node shell worker")
   const bytes = new Uint8Array(await result.outputs[0]!.arrayBuffer())
@@ -133,8 +149,8 @@ async function buildDriver(profile: string): Promise<{ path: string; bytes: Uint
   return { path, bytes }
 }
 interface ShellObservation { readonly result: Record<string, unknown>; readonly phases: readonly Uint8Array[] }
-async function observe(directory: string, request: ShellRequest, signal: AbortSignal, exited: Promise<unknown>, absoluteDeadline: number): Promise<ShellObservation> {
-  const limit = marketingDeadlineMs
+async function observe(directory: string, request: NativeRequest, signal: AbortSignal, exited: Promise<unknown>, absoluteDeadline: number): Promise<ShellObservation> {
+  const limit = isRefinement(request) ? refinementDeadline(request.scope) : marketingDeadlineMs
   const phases: Uint8Array[] = []
   let processExited = false
   void exited.then(() => { processExited = true }, () => { processExited = true })
@@ -150,7 +166,7 @@ async function observe(directory: string, request: ShellRequest, signal: AbortSi
           "Worker phase read deadline", Math.max(1, deadline - performance.now()))
         signal.throwIfAborted()
         assert.ok(performance.now() < deadline, "Worker phase arrived after its deadline")
-        result = parseShellPhase(decodeWorkerJson(bytes), sequence, request)
+        result = parseNativePhase(decodeWorkerJson(bytes), sequence, request)
         phases.push(Uint8Array.from(bytes))
         break
       } catch (error) {
@@ -180,19 +196,21 @@ async function collectProtocol(directory: string, observation: ShellObservation)
   assertWorkerProtocolSnapshot(paths, bytes, { phases: observation.phases,
     result: observation.result as unknown as Parameters<typeof assertWorkerProtocolSnapshot>[2]["result"] })
 }
-async function readCaseFailure(profile: string, request: ShellRequest) {
+async function readCaseFailure(profile: string, request: NativeRequest) {
   try {
-    return parseShellCaseFailure(
-      decodeWorkerJson(await readPreviewFile(join(profile, "site-marketing-case-failure.json"), workerProtocolLimit)), request)
+    const value = decodeWorkerJson(await readPreviewFile(join(profile, "site-marketing-case-failure.json"), workerProtocolLimit))
+    return isRefinement(request) ? parseRefinementCaseFailure(value, request) : parseShellCaseFailure(value, request)
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return undefined
     throw error
   }
 }
 
-export async function verifySiteMarketing(args: readonly string[]): Promise<void> {
-  const scope = marketingScope, baselineProfile = marketingBaselineProfile
-  const limit = marketingDeadlineMs
+export async function verifySiteMarketing(args: readonly string[], refinement?: typeof refinementScope | typeof refinementCopyScope): Promise<void> {
+  assert.ok(refinement === undefined || refinement === refinementScope || refinement === refinementCopyScope, "Unknown current-design scope")
+  const scope = refinement ?? marketingScope, baselineProfile = refinement === undefined ? marketingBaselineProfile : refinementBaselineProfile
+  const limit = refinement === undefined ? marketingDeadlineMs : refinementDeadline(refinement)
+  const cases = refinement === undefined ? siteShellCases : refinementCases(refinement)
   const options = parseShellArguments(args), deadline = performance.now() + limit
   const actualApp = await realpath(appDirectory)
   assert.notEqual(options.baseline, actualApp, "Baseline must be separate from the changed app")
@@ -204,7 +222,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
   let chromeAbsent = false, workerAbsent = false, completed = false
   let chromeOutput: string | undefined, workerOutput: string | undefined
   let signal: AbortSignal | undefined, observation: ShellObservation | undefined
-  let workerRequest: ShellRequest | undefined
+  let workerRequest: NativeRequest | undefined
   let inputs: readonly WorkerInputSnapshot[] | undefined, manifestBefore: Uint8Array | undefined
   let current: MarketingSnapshot | undefined, baseline: ShellSnapshot | undefined
   let candidate: CandidateIdentity | undefined, baselineIdentity: CandidateIdentity | undefined
@@ -225,11 +243,13 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
       }
       candidate = await step(async () => candidateIdentity(actualApp))
       baselineIdentity = await step(async () => candidateIdentity(options.baseline))
-      assert.equal(baselineIdentity.sha, marketingBaselineRevision); assert.equal(baselineIdentity.tree, marketingBaselineTree)
+      assert.equal(baselineIdentity.sha, refinement === undefined ? marketingBaselineRevision : refinementBaselineRevision); assert.equal(baselineIdentity.tree, refinement === undefined ? marketingBaselineTree : refinementBaselineTree)
       current = await step(() => readMarketingSnapshot(actualApp))
       baseline = await step(() => readShellSnapshot(options.baseline, true))
       manifestBefore = Uint8Array.from(await step(() => readPreviewFile(options.manifest, 128 * 1024)))
-      assertMarketingBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
+      const assertBaseline = refinement === undefined ? assertMarketingBaselineManifest : assertRefinementBaselineManifest
+      assertBaseline(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
+      if (refinement !== undefined) assert.equal(current.materialSourceCommit, refinementMaterialRevision)
       const node = await step(() => executable("NODE_EXECUTABLE_PATH")), browserPath = await step(() => executable("SLOPCAMERA_CHROME_PATH"))
       assert.ok(process.env.PLAYWRIGHT_BROWSERS_PATH !== undefined && isAbsolute(process.env.PLAYWRIGHT_BROWSERS_PATH),
         "PLAYWRIGHT_BROWSERS_PATH must select the explicit task-owned pinned Chrome for Testing installation")
@@ -244,7 +264,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
       executableInputs = await Promise.all([node, browserPath].map(async path => ({ path, identity: await executableIdentity(path) })))
       profile = await mkdtemp(join(await realpath(tmpdir()), "slopcamera-site-marketing-"))
       signal.throwIfAborted()
-      const driver = await step(() => buildDriver(profile!))
+      const driver = await step(() => buildDriver(profile!, refinement !== undefined))
       const currentServer = serve(current); servers.push(currentServer)
       const baselineServer = serve(baseline); servers.push(baselineServer)
       signal.throwIfAborted()
@@ -255,7 +275,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
       const endpoint = await waitEndpoint(profile, chrome.exited, signal, endpointEvidence)
       protocolDirectory = join(profile, "worker-protocol")
       await mkdir(protocolDirectory, { mode: 0o700 })
-      const request = parseShellRequest({ schemaVersion: 1, token: randomUUID(), scope, baselineProfile, appDirectory: actualApp, chromeExecutable: browserPath,
+      const request = (refinement === undefined ? parseShellRequest : parseRefinementRequest)({ schemaVersion: 1, token: randomUUID(), scope, baselineProfile, appDirectory: actualApp, chromeExecutable: browserPath,
         endpoint, current: browserPayload(current, currentServer.server.url.origin), baseline: browserPayload(baseline, baselineServer.server.url.origin), fieldAssets: current.fieldAssets })
       workerRequest = request
       const requestPath = join(profile, "site-marketing-browser-request.json"), bytes = encodeWorkerJson(request)
@@ -272,7 +292,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
       signal.throwIfAborted()
       worker = spawnVerificationServer({ cwd: actualApp, detachedProcessGroup: true, logLimit: 12_000,
         omitEnvironment: ["NODE_OPTIONS", "NODE_PATH"], command: [node, driver.path, actualApp, requestPath] })
-      console.error(`slopcamera-site-marketing: verifying ${siteShellCases.length} mandatory ${scope} current/baseline cases`)
+      console.error(`slopcamera-site-marketing: verifying ${cases.length} mandatory ${scope} current/baseline cases`)
       observation = await observe(protocolDirectory, request, signal, worker.exited, deadline)
       await step(() => bounded(worker!.exited, "Shell worker successful exit", 5_000))
       assert.equal(worker.exitCode(), 0)
@@ -282,7 +302,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
         candidate, baselineIdentity, baselineManifestSha256: digest(manifestBefore), currentArtifacts: current.artifacts,
         materialSourceCommit: current.materialSourceCommit, materialManifestSha256: current.materialManifestSha256,
         presetSourceCommit: current.presetSourceCommit, presetManifestSha256: current.presetManifestSha256,
-        expectationsSha256: current.inputs.find(input => input.path === "scripts/site-marketing-browser-contract.ts")!.sha256 }
+        expectationsSha256: current.inputs.find(input => input.path === (refinement === undefined ? "scripts/site-marketing-browser-contract.ts" : "scripts/site-refinement-browser-contract.ts"))!.sha256 }
     }, async () => {
       const failures: unknown[] = []
       const collect = async (operation: () => Promise<unknown>, role?: "worker" | "chrome") => {
@@ -326,7 +346,7 @@ export async function verifySiteMarketing(args: readonly string[]): Promise<void
         assert.ok(performance.now() < deadline, "Collection completed after the absolute deadline")
       })
       if (profile !== undefined && (!completed || failures.length > 0 || signal?.aborted === true)) await collect(async () => {
-        let caseFailure: ReturnType<typeof parseShellCaseFailure> | undefined
+        let caseFailure: Record<string, unknown> | undefined
         // Missing partial evidence is possible before the first case. Malformed
         // evidence remains a collector failure, never a fallback success.
         if (workerRequest !== undefined && workerAbsent) await collect(async () => { caseFailure = await readCaseFailure(profile!, workerRequest!) })

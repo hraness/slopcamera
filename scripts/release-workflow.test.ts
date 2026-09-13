@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url"
 import { gzipSync } from "node:zlib"
 
 import { verifyNpmPackageIdentity } from "./npm-package-identity"
-import { publishedArchiveUrl, publishedRelease, sourceInstall } from "../apps/web/src/published-release"
+import { archiveInstall, publishedArchiveUrl, publishedRelease, sourceInstall } from "../apps/web/src/published-release"
 import { homeMarkdown } from "../apps/web/src/agent-pages"
 import { verifyNpmPublishAuthority } from "./npm-publish-authority"
 import { verifyNpmPublishConfig, verifyNpmPublishManifest } from "./npm-publish-policy"
@@ -1089,14 +1089,14 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.2.6")
+  expect(manifest.version).toBe("3.2.7")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
   expect(publishedRelease.version).toBe("3.2.6")
   expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz")
-  for (const source of [readme, skillInstall, homeMarkdown]) {
+  for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
   for (const source of [readme, skillInstall]) {
@@ -1104,12 +1104,20 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
     expect(source).toContain("bun run build:sdk")
     expect(source).toContain("bun run build:desktop:cli")
   }
-  expect(siteContent).toContain('import { archiveInstall, sourceInstall } from "./published-release"')
-  for (const slot of ["SOURCE_CHECKOUT_COMMAND", "SOURCE_ENTER_COMMAND", "SOURCE_INSTALL_URL"]) {
+  for (const command of [archiveInstall.command, archiveInstall.skillCommand, archiveInstall.alternateSkillCommand]) {
+    expect(homeMarkdown).toContain(command)
+  }
+  expect(homeMarkdown).toContain(sourceInstall.guideUrl)
+  expect(homeMarkdown).not.toContain(sourceInstall.checkoutCommand)
+  expect(siteContent).toContain('import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"')
+  for (const slot of ["RELEASE_VERSION", "RELEASE_URL", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL"]) {
     expect(siteTemplate.match(new RegExp(`\\{\\{${slot}\\}\\}`, "gu"))).toHaveLength(1)
   }
-  expect(siteContent).toContain("sourceInstall.alternateSkillCommand")
-  expect(siteContent).toContain("sourceInstall.skillCommand")
+  for (const slot of ["SOURCE_CHECKOUT_COMMAND", "SOURCE_ENTER_COMMAND"]) {
+    expect(siteTemplate).not.toContain(`{{${slot}}}`)
+  }
+  expect(siteContent).toContain("archiveInstall.alternateSkillCommand")
+  expect(siteContent).toContain("`${archiveInstall.command}\\n${archiveInstall.skillCommand}`")
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")

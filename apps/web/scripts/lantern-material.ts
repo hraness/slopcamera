@@ -7,7 +7,7 @@ import { siteSha256 } from "./site-contract"
 /** Admit the complete immutable, asset-free material before the compiler reads it. */
 export async function snapshotLanternMaterial(directory: string) {
   const manifest = await checkLanternMaterialSnapshot(directory)
-  assert.equal(manifest.source.commit, "eccb0341d8d0ba960a0f02248cf59888062afb0a")
+  assert.equal(manifest.source.commit, "0e089bc18f9a0409f0e74b1fb7192f468956e386")
   const files = new Map<string, Uint8Array>()
   for (const [path, receipt] of Object.entries(manifest.files)) {
     const bytes = await readPreviewFile(join(directory, path), 128 * 1024)
