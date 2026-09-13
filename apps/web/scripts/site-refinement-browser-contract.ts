@@ -245,7 +245,7 @@ export function compareRefinementHeroCopies(current:RefinementHero,baseline:Refi
     assert.deepEqual(side.nameComputedInsets,{top:"auto",right:"auto",bottom:"auto",left:"auto"})
     const name=side.elements[1]!
     assert.equal(name.text,"Slopcamera");assert.equal(name.rect[2],1);assert.equal(name.rect[3],1)
-    for(const [property,value]of Object.entries({position:"absolute",width:"1px",height:"1px",clip:"rect(0px, 0px, 0px, 0px)","clip-path":"inset(50%)","white-space":"nowrap","overflow-x":"hidden","overflow-y":"hidden",...Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"-1px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))}))assert.equal(name.styles[property],value,`Exact hidden hero name ${property}`)
+    for(const [property,value]of Object.entries({position:"absolute",width:"1px",height:"1px",clip:"rect(0px, 0px, 0px, 0px)","clip-path":"inset(50%)","white-space":"nowrap","overflow-x":"hidden","overflow-y":"hidden",...Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"0px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))}))assert.equal(name.styles[property],value,`Exact hidden hero name ${property}`)
     near(side.elements[0]!.rect[1]!,side.copyTop,"Measured hero copy top")
     near(side.elements[5]!.rect[3]!,side.boundaryLines*side.boundaryLineHeight,"Exact natural boundary height")
   }
