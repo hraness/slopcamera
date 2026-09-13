@@ -110,9 +110,9 @@ test("hero centering projects only the shared copy offset of two retained text a
 
 test("hero copy height admits only natural literal boundary wrapping, never container or child drift",()=>{
  const selector=".slopcamera-product-hero > .hraness-marketing-hero__copy"
- const side=(top:number,lines:number)=>({copyTop:top,boundaryLines:lines,boundaryLineHeight:20,elements:Array.from({length:6},(_,index)=>({
-  key:index===0?`${selector}[0]`:`${selector} > *[${index-1}]`,rect:[40,index===0?top:top+(index-1)*40,400,index===0?160+lines*20:index===5?lines*20:20],text:index===0||index===5?`Boundary lines ${lines}`:`Child ${index}`,semantics:{role:null},styles:{display:index===0?"grid":"block",height:`${index===0?160+lines*20:index===5?lines*20:20}px`,"padding-bottom":"0px","row-gap":"20px",color:"black"}
- }))})
+ const side=(top:number,lines:number)=>({copyTop:top,boundaryLines:lines,boundaryLineHeight:20,nameComputedInsets:{top:"auto",right:"auto",bottom:"auto",left:"auto"},elements:Array.from({length:6},(_,index)=>({
+  key:index===0?`${selector}[0]`:`${selector} > *[${index-1}]`,rect:[40,index===0?top:top+(index-1)*40,400,index===0?160+lines*20:index===5?lines*20:20],text:index===0||index===5?`Boundary lines ${lines}`:`Child ${index}`,semantics:{role:null},styles:{display:index===0?"grid":"block",height:`${index===0?160+lines*20:index===5?lines*20:20}px`,"padding-bottom":"0px","row-gap":"20px",color:"black"} as Record<string,string>
+ })).map((item,index)=>index!==1?item:{...item,text:"Slopcamera",rect:[40,top,1,1],styles:{...item.styles,position:"absolute",width:"1px",height:"1px",clip:"rect(0px, 0px, 0px, 0px)","clip-path":"inset(50%)","white-space":"nowrap","overflow-x":"hidden","overflow-y":"hidden",top:`${top}px`,right:"400px",bottom:`${400-top}px`,left:"40px",...Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"-1px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))}})})
  const baseline=side(112,2),current=side(128.75,3)
  expect(()=>compareRefinementHeroCopies(current,baseline)).not.toThrow()
  for(let extra=1;extra<=32;extra++){
@@ -122,4 +122,8 @@ test("hero copy height admits only natural literal boundary wrapping, never cont
  for(const index of [1,2,3,4]){const changed=structuredClone(current);changed.elements[index]!.rect=[41,changed.elements[index]!.rect[1]!,400,20];expect(()=>compareRefinementHeroCopies(changed,baseline)).toThrow()}
  const paddedBoundary=structuredClone(current);paddedBoundary.elements[5]!.rect=[40,288.75,400,80];paddedBoundary.elements[0]!.rect=[40,128.75,400,240];expect(()=>compareRefinementHeroCopies(paddedBoundary,baseline)).toThrow()
  const gap=structuredClone(current);gap.elements[0]!.styles={...gap.elements[0]!.styles,"row-gap":"21px"};expect(()=>compareRefinementHeroCopies(gap,baseline)).toThrow()
+ for(const property of ["top","right","bottom","left"] as const)for(const value of ["0px","1px","-1px","1%","initial"]){const inset=structuredClone(current);inset.nameComputedInsets[property]=value;expect(()=>compareRefinementHeroCopies(inset,baseline)).toThrow()}
+ for(const property of ["position","clip","clip-path","white-space","margin-top","padding-bottom"]){const changed=structuredClone(current);changed.elements[1]!.styles={...changed.elements[1]!.styles,[property]:"initial"};expect(()=>compareRefinementHeroCopies(changed,baseline)).toThrow()}
+ const displacedName=structuredClone(current);displacedName.elements[1]!.rect=[40,129.75,1,1];expect(()=>compareRefinementHeroCopies(displacedName,baseline)).toThrow()
+ const visibleInset=structuredClone(current);visibleInset.elements[2]!.styles={...visibleInset.elements[2]!.styles,top:"1px"};expect(()=>compareRefinementHeroCopies(visibleInset,baseline)).toThrow()
 })

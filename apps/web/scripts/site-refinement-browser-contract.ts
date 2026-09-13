@@ -188,7 +188,7 @@ function siblingProjection(items: readonly ShellElement[], owner: ShellEvidence)
  * Prove the complete row placement on each side before comparing the two
  * retained text anchors relative to their own copy column. */
 const refinementHeroCopySelector=".slopcamera-product-hero > .hraness-marketing-hero__copy"
-export interface RefinementHero {readonly copyTop:number;readonly boundaryLines:number;readonly boundaryLineHeight:number;readonly elements:readonly ShellElement[]}
+export interface RefinementHero {readonly copyTop:number;readonly boundaryLines:number;readonly boundaryLineHeight:number;readonly nameComputedInsets:Readonly<Record<string,string>>;readonly elements:readonly ShellElement[]}
 export async function observeRefinementHero(page:Page,scenario:ShellCase):Promise<RefinementHero|undefined> {
   if(scenario.route!=="/")return undefined
   const observation=await page.evaluate(({width})=>{
@@ -221,15 +221,19 @@ export async function observeRefinementHero(page:Page,scenario:ShellCase):Promis
     for(const selector of ["#page-title",".hraness-marketing-hero__summary"]){const t=box(one(selector));if(t.x<c.x-.5||t.right>c.right+.5||t.y<c.y-.5||t.bottom>c.bottom+.5)throw Error(`Hero text owner ${selector}`)}
     const boundary=one(".slopcamera-product-hero > .hraness-marketing-hero__copy > .hraness-marketing-hero__boundary")
     if(copy.children.length!==5||copy.lastElementChild!==boundary||boundary.childNodes.length!==1||boundary.firstChild?.nodeType!==Node.TEXT_NODE)throw Error("Closed hero copy and boundary inventory")
+    const name=one(".slopcamera-product-hero > .hraness-marketing-hero__copy > .hraness-marketing-hero__name")
+    if(copy.firstElementChild!==name)throw Error("Exact first hidden hero name")
+    const computed=name.computedStyleMap(),nameComputedInsets:Record<string,string>={}
+    for(const property of ["top","right","bottom","left"]){const value=computed.get(property);if(!(value instanceof CSSKeywordValue)||value.value!=="auto")throw Error(`Hero name computed ${property} must remain auto`);nameComputedInsets[property]=value.value}
     const range=document.createRange();range.selectNodeContents(boundary)
     const fragments=[...range.getClientRects()].filter(rect=>rect.width>0&&rect.height>0),lines:number[]=[]
     for(const rect of fragments){if(!lines.some(y=>Math.abs(y-rect.y)<=.5))lines.push(rect.y);const owner=boundary.getBoundingClientRect();if(rect.x<owner.x-.5||rect.right>owner.right+.5)throw Error("Contained literal hero boundary")}
     const lineHeight=Number.parseFloat(getComputedStyle(boundary).lineHeight)
     if(lines.length<1||lines.length>16||!Number.isFinite(lineHeight)||lineHeight<=0)throw Error("Finite hero boundary lines")
     close(boundary.getBoundingClientRect().height,lines.length*lineHeight,"natural boundary line height")
-    return {copyTop:c.y,boundaryLines:lines.length,boundaryLineHeight:lineHeight}
+    return {copyTop:c.y,boundaryLines:lines.length,boundaryLineHeight:lineHeight,nameComputedInsets}
   },{width:scenario.width})
-  return {...observation,elements:await measure(page,[refinementHeroCopySelector,`${refinementHeroCopySelector} > *`],["top","right","bottom","left","align-self"])}
+  return {...observation,elements:await measure(page,[refinementHeroCopySelector,`${refinementHeroCopySelector} > *`],["top","right","bottom","left","align-self","clip","clip-path"])}
 }
 /** Only literal boundary wrapping may change copy height. Every other measured
  * container/child style, dimension and relative position remains paired. */
@@ -238,13 +242,20 @@ export function compareRefinementHeroCopies(current:RefinementHero,baseline:Refi
   for(const side of [current,baseline]){
     assert.deepEqual(side.elements.map(item=>item.key),inventory)
     assert.ok(Number.isFinite(side.copyTop)&&Number.isInteger(side.boundaryLines)&&side.boundaryLines>=1&&side.boundaryLines<=16&&Number.isFinite(side.boundaryLineHeight)&&side.boundaryLineHeight>0)
+    assert.deepEqual(side.nameComputedInsets,{top:"auto",right:"auto",bottom:"auto",left:"auto"})
+    const name=side.elements[1]!
+    assert.equal(name.text,"Slopcamera");assert.equal(name.rect[2],1);assert.equal(name.rect[3],1)
+    for(const [property,value]of Object.entries({position:"absolute",width:"1px",height:"1px",clip:"rect(0px, 0px, 0px, 0px)","clip-path":"inset(50%)","white-space":"nowrap","overflow-x":"hidden","overflow-y":"hidden",...Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"-1px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))}))assert.equal(name.styles[property],value,`Exact hidden hero name ${property}`)
     near(side.elements[0]!.rect[1]!,side.copyTop,"Measured hero copy top")
     near(side.elements[5]!.rect[3]!,side.boundaryLines*side.boundaryLineHeight,"Exact natural boundary height")
   }
   near(current.elements[0]!.rect[3]!-baseline.elements[0]!.rect[3]!,current.elements[5]!.rect[3]!-baseline.elements[5]!.rect[3]!,"Copy height delta comes only from literal boundary wrapping")
   const relative=(side:RefinementHero)=>side.elements.map(item=>({...item,rect:item.rect.map((value,axis)=>axis===1&&item.styles.display!=="none"?value-side.copyTop:value)}))
   const a=relative(current),b=relative(baseline)
-  compareShellElements(a.map((item,index)=>index===0||index===5?{...item,text:b[index]!.text,styles:{...item.styles,height:b[index]!.styles.height!},rect:item.rect.map((value,axis)=>axis===3?b[index]!.rect[3]!:value)}:item),b,"Exact retained hero copy styles and geometry")
+  // Only this proven absolute, clipped name has auto computed insets whose
+  // CSSOM resolved strings contain used pixels from the moving static position.
+  // Its actual copy-relative rectangle and every other measured style stay exact.
+  compareShellElements(a.map((item,index)=>index===1?{...item,styles:{...item.styles,...Object.fromEntries(["top","right","bottom","left"].map(property=>[property,b[index]!.styles[property]!]))}}:index===0||index===5?{...item,text:b[index]!.text,styles:{...item.styles,height:b[index]!.styles.height!},rect:item.rect.map((value,axis)=>axis===3?b[index]!.rect[3]!:value)}:item),b,"Exact retained hero copy styles and geometry")
 }
 export function projectRefinementHeroPosition(item:ShellElement,currentCopyTop:number,baselineCopyTop:number):ShellElement {
   assert.ok(Number.isFinite(currentCopyTop)&&Number.isFinite(baselineCopyTop))
