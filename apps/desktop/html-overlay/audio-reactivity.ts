@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { AudioReactivityBands } from "../core/audio-reactivity";
+import type { AudioReactivityBands } from "../core/music-analysis";
 
 export const HTML_AUDIO_REACTIVITY_RESOURCE_NAME = "audio-reactivity";
 export const HTML_AUDIO_REACTIVITY_RESOURCE_URL_PATH = "slopcamera/audio-reactivity.json";

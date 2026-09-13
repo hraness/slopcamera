@@ -6,7 +6,7 @@ import {
 } from "./contracts";
 import { HtmlOverlayExecutionProfileSchema } from "./execution-profile";
 import { HtmlOverlayLibrarySelectionSchema } from "./libraries";
-import { AUDIO_REACTIVITY_MAX_DURATION_US } from "../core/audio-reactivity";
+import { AUDIO_REACTIVITY_MAX_DURATION_US } from "../core/music-analysis";
 import { HTML_AUDIO_REACTIVITY_RESOURCE_NAME, HTML_AUDIO_REACTIVITY_RESOURCE_URL_PATH } from "./audio-reactivity";
 
 const ResourceSchema = HtmlOverlayDeclaredResourceSchema.omit({ bytes: true, sha256: true }).extend({

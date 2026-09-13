@@ -7,7 +7,7 @@ import {
   AUDIO_REACTIVITY_SAMPLE_RATE_HZ,
   analyzeAudioReactivity,
   type AudioReactivityBands,
-} from "./audio-reactivity";
+} from "./music-analysis";
 
 const RATE = AUDIO_REACTIVITY_SAMPLE_RATE_HZ;
 const BAND_NAMES = ["bass", "mid", "treble", "energy"] as const;

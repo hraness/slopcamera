@@ -1,6 +1,5 @@
 export * from "./auto-zoom";
 export * from "./audio-alignment";
-export * from "./audio-reactivity";
 export * from "./alignment-apply";
 export * from "./canonical-json";
 export * from "./emoji";

@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 
 import { assertProperty, fc } from "../testing/property";
-import { AUDIO_REACTIVITY_SAMPLE_RATE_HZ, analyzeAudioReactivity } from "./audio-reactivity";
+import { AUDIO_REACTIVITY_SAMPLE_RATE_HZ, analyzeAudioReactivity } from "./music-analysis";
 
 test("audio reactivity is bounded, deterministic and invariant to PCM polarity", () => {
   assertProperty(fc.property(
