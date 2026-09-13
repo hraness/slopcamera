@@ -22,6 +22,7 @@ import { z } from "zod";
 
 import { ApplicationError } from "../application/errors";
 import type { OperationDiscovery } from "../application/registry";
+import { hostSourceRoots } from "./host-source-layout";
 import { canonicalJson } from "../core/canonical-json";
 import {
   AuthoredWorkflowGraphV1Schema,
@@ -46,6 +47,9 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAXIMUM_DIAGNOSTIC_BYTES = 64 * 1024;
 const CODE_WORKER_CANCEL_GRACE_MS = 250;
 export const MAX_CODE_WORKER_POOL_SIZE = 4;
+// Spawned helpers always run the checked TypeScript sources, never a path
+// derived from this module's bundled location below apps/desktop/dist/cli.
+const HOST_ROOTS = hostSourceRoots(import.meta.dir);
 
 const WorkerBuiltWorkflowSchema = z.strictObject({
   graph: AuthoredWorkflowGraphV1Schema,
@@ -856,7 +860,11 @@ async function startCodeWorkerLeaseGuardian(options: {
       "Code-worker host-resource lease descriptor is unsafe to inherit.",
     );
   }
-  const guardianEntryPath = join(import.meta.dir, "worker-lease-guardian.ts");
+  const guardianEntryPath = join(
+    HOST_ROOTS.desktopRoot,
+    "code",
+    "worker-lease-guardian.ts",
+  );
   const guardian = spawn(
     options.bunExecutable,
     [
@@ -1435,7 +1443,11 @@ export async function startCodeWorker(
     );
   }
   const workerEntryPath = resolve(
-    options.workerEntryPath ?? join(import.meta.dir, "worker-entry.ts"),
+    options.workerEntryPath ?? join(
+      HOST_ROOTS.desktopRoot,
+      "code",
+      "worker-entry.ts",
+    ),
   );
   const workerEntrySha256 = createHash("sha256")
     .update(await readFile(workerEntryPath))

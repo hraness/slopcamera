@@ -18,7 +18,7 @@ Planning binds the relevant structure and policy without executing registered me
 
 ## Author a trusted Bun module
 
-Custom local workflows are explicitly imported TypeScript modules over the same fixed registry. They need the source-backed Bun distribution from [Build Slopcamera from source](/docs/how-to/install-from-source), because a copied binary or installed package does not provide the local Code Mode build-identity scan.
+Custom local workflows are explicitly imported TypeScript modules over the same fixed registry. They need the source-backed Bun distribution — the installed package or a checkout — because a copied standalone executable does not provide the local Code Mode build-identity scan.
 
 ```sh
 slopcamera code init film.ts

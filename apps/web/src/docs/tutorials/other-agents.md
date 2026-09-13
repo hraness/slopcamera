@@ -26,7 +26,7 @@ Every read and mutation accepts `--json` for machine-readable receipts, and `slo
 
 ## Use the SDK
 
-An agent embedding TypeScript can skip the shell and import the same contracts: `@hraness/slopcamera` for the portable surface, `@hraness/slopcamera/code` for declarative graphs, and `@hraness/slopcamera/workflow` for trusted Bun workflow modules. The `local` subpaths need the source-backed distribution described in [Build Slopcamera from source](/docs/how-to/install-from-source). [SDK surfaces](/docs/reference/sdk) names each entrypoint's boundary.
+An agent embedding TypeScript can skip the shell and import the same contracts: `@hraness/slopcamera` for the portable surface, `@hraness/slopcamera/code` for declarative graphs, and `@hraness/slopcamera/workflow` for trusted Bun workflow modules. The `local` subpaths ship with the source-backed Bun package or a checkout. [SDK surfaces](/docs/reference/sdk) names each entrypoint's boundary.
 
 ## What the agent still needs
 

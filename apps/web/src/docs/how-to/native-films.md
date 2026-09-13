@@ -110,7 +110,7 @@ slopcamera code run film.ts --input input.json --studio-python /absolute/venv/bi
 slopcamera runs resume <run-id> --studio-python /absolute/venv/bin/python --allow-trusted-code --json
 ```
 
-The same runtime and authorization flags are available on `workflows run`. Changing a runtime, source, or job after binding requires a compatible new plan. These durable workflow commands bind a build identity over the checked-out source tree, so they require the source-backed distribution described in [Build Slopcamera from source](/docs/how-to/install-from-source); [Run or recover a workflow](/docs/how-to/run-workflows) covers resume semantics.
+The same runtime and authorization flags are available on `workflows run`. Changing a runtime, source, or job after binding requires a compatible new plan. These durable workflow commands bind a build identity over the installed host source tree, so they require the Bun package or a checkout rather than a copied standalone executable; [Run or recover a workflow](/docs/how-to/run-workflows) covers resume semantics.
 
 ## Inspect and recover
 

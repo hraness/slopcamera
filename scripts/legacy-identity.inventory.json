@@ -880,15 +880,24 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "f7047f3e12cf0d3ddd7068b7050eeeabec5eb022afadbd0499fa675553e20cb3",
-    "occurrenceCount": 5,
-    "path": "apps/desktop/code/runtime-identity.ts",
+    "categories": [
+      "test-fixture"
+    ],
+    "identityLineCount": 1,
+    "identityLinesSha256": "a53b6c4dfd48ae78d4b382c3c0eb0406fe0d2ed5e4b25832aee146494c382d86",
+    "occurrenceCount": 1,
+    "path": "apps/desktop/code/runtime-identity.test.ts"
+  },
+  {
     "categories": [
       "native-film-studio",
       "serialized-reader",
       "stable-hash-domain"
-    ]
+    ],
+    "identityLineCount": 5,
+    "identityLinesSha256": "0a93452fbb87b7857599baf2d5e8cb6dfd35263ba9ed1315fa5f9e9c9ebec1b9",
+    "occurrenceCount": 5,
+    "path": "apps/desktop/code/runtime-identity.ts"
   },
   {
     "identityLineCount": 20,
@@ -1267,13 +1276,13 @@
     ]
   },
   {
-    "identityLineCount": 83,
-    "identityLinesSha256": "6d23f99152f0225baf2e58ba213504523ab987df7fd74427616ade074448491c",
-    "occurrenceCount": 443,
-    "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
-    ]
+    ],
+    "identityLineCount": 83,
+    "identityLinesSha256": "535df0529c4db86cceea90d61be79f2ad6bc74c91c70256433847e4009f963e7",
+    "occurrenceCount": 443,
+    "path": "apps/desktop/dist/cli/main.js"
   },
   {
     "identityLineCount": 1,

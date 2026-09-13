@@ -1,4 +1,4 @@
-Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed Slopcamera distribution and its admitted tools. Check [release and platform support](/docs/reference/capabilities) before relying on a current-source addition.
+Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed Slopcamera distribution — the installed Bun package or a checkout — and its admitted tools. Check [release and platform support](/docs/reference/capabilities) before relying on a current-source addition.
 
 ## Public entrypoints
 
@@ -18,7 +18,7 @@ Installing `@hraness/slopcamera` does not enable every operation in every host. 
 | `@hraness/slopcamera/local/code/workflows` | Checked built-in local workflow definitions. |
 | `@hraness/slopcamera/local/html-overlay` | Local HTML scene authoring, request schemas, music-clock and audio-reactivity helpers, rigged GLB preparation, and rendering profiles. |
 
-There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint, and no open operation-registration hook on any surface. The `local` subpaths are not browser SDKs; they ship with the source-backed Bun distribution described in [the source build guide](/docs/how-to/install-from-source).
+There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint, and no open operation-registration hook on any surface. The `local` subpaths are not browser SDKs; they ship with the source-backed Bun package or a checkout.
 
 ## The portable projection
 

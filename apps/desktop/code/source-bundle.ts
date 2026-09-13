@@ -28,6 +28,7 @@ import {
   canonicalJson,
   sha256Hex,
 } from "../core/canonical-json";
+import { hostSourceRoots } from "./host-source-layout";
 import type { WorkflowBundleIdentity as GraphWorkflowBundleIdentity } from "./contracts";
 import { typecheckWorkflowSnapshot } from "./source-typecheck";
 import { captureWorkerProcessStartIdentity } from "./worker-process-identity";
@@ -51,6 +52,10 @@ const MAX_BUNDLER_DURATION_MS = 60_000;
 const MAX_TIMER_DURATION_MS = 2_147_483_647;
 const BUNDLER_GUARDIAN_HANDSHAKE_MS = 2_000;
 const BUNDLER_GUARDIAN_DIAGNOSTIC_BYTES = 2_000;
+
+// Spawned helpers always run the checked TypeScript sources, never a path
+// derived from this module's bundled location below apps/desktop/dist/cli.
+const HOST_ROOTS = hostSourceRoots(import.meta.dir);
 
 const BUNDLE_SUBPROCESS_SOURCE = String.raw`
 import { fstatSync } from "node:fs";
@@ -756,11 +761,16 @@ async function startBundlerRetirementGuardian(options: {
         "--has-lease",
         options.inheritedHostResourceFileDescriptor === 0 ? "false" : "true",
         "--identity-module",
-        pathToFileURL(join(import.meta.dir, "worker-process-identity.ts")).href,
+        pathToFileURL(join(
+          HOST_ROOTS.desktopRoot,
+          "code",
+          "worker-process-identity.ts",
+        )).href,
         "--host-resource-lock-module",
         pathToFileURL(join(
-          import.meta.dir,
-          "../../../src/host-resource-posix.ts",
+          HOST_ROOTS.repositoryRoot,
+          "src",
+          "host-resource-posix.ts",
         )).href,
       ],
       {
@@ -941,6 +951,7 @@ async function buildWorkflowBundle(
   modules: readonly CapturedSourceModule[],
   aliases: Readonly<Record<string, string>>,
   configSearchPath: string,
+  hostBoundary: string,
   includeRuntimeTypes: boolean,
   semanticCheck: boolean,
   inheritedHostResourceFileDescriptor: number,
@@ -979,6 +990,7 @@ async function buildWorkflowBundle(
         aliases,
         configSearchPath,
         entryPath,
+        hostBoundary,
         includeRuntimeTypes,
         sourceRoot,
       });
@@ -997,7 +1009,11 @@ async function buildWorkflowBundle(
         outputPath,
         inheritedHostResourceFileDescriptor === 0 ? "0" : "3",
         String(maximumBundleBytes),
-        pathToFileURL(join(import.meta.dir, "worker-process-identity.ts")).href,
+        pathToFileURL(join(
+          HOST_ROOTS.desktopRoot,
+          "code",
+          "worker-process-identity.ts",
+        )).href,
       ],
       {
         cwd: sourceRoot,
@@ -1571,14 +1587,15 @@ async function bundleWorkflowSourceInternal(
   const aliasSpecifiers = new Set(sourceGraph.bareImports);
   const aliases = await bareImportAliases(
     [...aliasSpecifiers].sort(),
-    resolve(options.bareImportResolutionRoot ?? import.meta.dir),
+    resolve(options.bareImportResolutionRoot ?? HOST_ROOTS.desktopRoot),
   );
   const entryRelativePath = relative(allowedRoot, entryPath);
   const bytes = await buildWorkflowBundle(
     entryRelativePath,
     sourceGraph.modules,
     aliases,
-    resolve(options.bareImportResolutionRoot ?? import.meta.dir),
+    resolve(options.bareImportResolutionRoot ?? HOST_ROOTS.desktopRoot),
+    HOST_ROOTS.repositoryRoot,
     (
       sourceGraph.bareImports.some(specifier => (
         specifier === "bun" || specifier.startsWith("node:")

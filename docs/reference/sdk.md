@@ -17,7 +17,7 @@ Slopcamera exposes a portable Bun SDK and a complete local media host. Imports s
 | `@hraness/slopcamera/local/code/workflows` | Checked built-in local workflow definitions. |
 | `@hraness/slopcamera/local/html-overlay` | Local HTML authoring, scene-input schemas, music-clock and audio-reactivity helpers, rigged GLB preparation, profiles and contracts. |
 
-There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint. The local subpaths need the source-backed Bun distribution; they are not browser SDKs.
+There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint. The local subpaths need the source-backed Bun distribution — the installed package or a checkout, never a copied standalone executable; they are not browser SDKs.
 
 ## Portable and local operations
 
