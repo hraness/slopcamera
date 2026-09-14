@@ -519,7 +519,18 @@ await coordinator.withLease(
     await writeFile(
       join(root, "workflow.ts"),
       `import { z } from "zod";
-import { defineWorkflow } from "@hraness/slopcamera/local/code";
+import { defineCompute, defineWorkflow } from "@hraness/slopcamera/local/code";
+
+const gate = defineCompute({
+  key: "example.gate",
+  inputSchema: z.strictObject({ microphone: z.literal("on") }),
+  inputSchemaId: "example.gate.input/v1",
+  outputSchema: z.strictObject({}),
+  outputSchemaId: "example.gate.output/v1",
+  run() {
+    return {};
+  },
+});
 
 export default defineWorkflow({
   id: "invalid-recording",
@@ -528,14 +539,7 @@ export default defineWorkflow({
   version: 1,
   build(workflow) {
     return {
-      recording: workflow.recording.start("start", {
-        camera: { kind: "default" },
-        displays: { kind: "all" },
-        microphone: "yes",
-        strictInputs: true,
-        systemAudio: true,
-        typedText: false,
-      }),
+      gate: workflow.compute("gate", gate, { microphone: "yes" }),
     };
   },
 });

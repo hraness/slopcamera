@@ -485,7 +485,7 @@ describe("static Slopcamera site", () => {
       "MCP server",
       "Vercel AI Gateway",
       "local visual studio for coding agents",
-      "record a screen, camera, microphone, and system audio",
+      "import existing footage or recording bundles",
       "image, video, speech, and transcription models",
       "clean and captioned versions",
     ]) {

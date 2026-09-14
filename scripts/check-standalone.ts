@@ -392,28 +392,13 @@ if (typeof packageVersion !== "string") {
   problems.push("package.json version must be 3.2.7 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
-    ["apps/desktop/app.zon", `.version = ${JSON.stringify(packageVersion)}`],
-    ["apps/desktop/build.zig", `{s}-${packageVersion}-{s}-{s}{s}`],
-    ["apps/desktop/build.zig.zon", `.version = ${JSON.stringify(packageVersion)}`],
     [
       "apps/desktop/application/operation.ts",
       `SLOPCAMERA_APPLICATION_TOOL_VERSION = ${JSON.stringify(`slopcamera-${packageVersion}`)}`,
     ],
     [
-      "apps/desktop/capture/Info.plist",
-      `<key>CFBundleShortVersionString</key>\n  <string>${packageVersion}</string>`,
-    ],
-    [
       "apps/desktop/cli/commands.ts",
       `export const SLOPCAMERA_VERSION = ${JSON.stringify(packageVersion)}`,
-    ],
-    [
-      "apps/desktop/cli/recording-controller.ts",
-      `toolVersion: ${JSON.stringify(packageVersion)}`,
-    ],
-    [
-      "apps/desktop/runtime/package-macos.ts",
-      `slopcamera-${packageVersion}-macos-ReleaseFast.app`,
     ],
     [
       "schema/diagram.schema.json",

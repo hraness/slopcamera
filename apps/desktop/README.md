@@ -1,10 +1,10 @@
 # Slopcamera desktop and CLI
 
-Slopcamera captures synchronized raw inputs into repository-local bundles, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. The macOS window remains only start, pause, resume, stop, and input status.
+Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. An optional `slopcamera menubar` companion surfaces the agent outputs directory in the macOS menu bar; it carries no capture or editing authority.
 
 ## Recording bundles
 
-The default root is `artifacts/slopcamera/recordings/`, resolved from the Slopcamera checkout. `artifacts/` is gitignored and excluded from Vercel uploads. Slopcamera never falls back to an external data directory.
+The default root is `artifacts/slopcamera/recordings/`, resolved from the Slopcamera checkout. `artifacts/` is gitignored and excluded from Vercel uploads. Slopcamera never falls back to an external data directory. Bundles are produced outside this CLI and arrive as finished, immutable directories.
 
 ```text
 rec_<id>/
@@ -25,9 +25,9 @@ rec_<id>/
 └── renders/
 ```
 
-Each connected display is recorded independently. System audio, microphone audio, and webcam video remain independently addressable logical tracks even when a native container carries multiple streams. Pause finalizes the current synchronized segment; resume opens another. Finalized media and event streams are immutable.
+Each display occupies its own track. System audio, microphone audio, and webcam video remain independently addressable logical tracks even when a native container carries multiple streams. Each synchronized segment is immutable once finalized.
 
-Cursor, click, key activity, focused-input bounds, window geometry, display topology, and lifecycle metadata use integer source-time microseconds plus native monotonic timestamps. Typed-text capture is disabled by default. Secure fields are always redacted.
+Cursor, click, key activity, focused-input bounds, window geometry, display topology, and lifecycle metadata use integer source-time microseconds plus native monotonic timestamps.
 
 ## Multi-asset projects
 
@@ -62,16 +62,8 @@ changes instead of detaching from the pixels they annotate.
 Run commands from the repository root:
 
 ```sh
-# Capture and inspect one synchronized recording.
+# Inspect an existing recording bundle and render it.
 slopcamera doctor
-slopcamera record start
-slopcamera record start \
-  --display <display-id> \
-  --camera-device <camera-id> \
-  --microphone-device <microphone-id>
-slopcamera record pause
-slopcamera record resume
-slopcamera record stop
 slopcamera recordings list --json
 slopcamera inspect <recording>
 slopcamera events <recording> --kind click --around 12.5s --jsonl
@@ -136,13 +128,6 @@ slopcamera project edit <project> overlay add --kind gif --source reaction.gif -
 slopcamera project render plan <project> --json
 slopcamera project render run <project> --output renders/final.mp4
 ```
-
-`record start` defaults to every connected display, system audio, the default
-camera, and the default microphone. `doctor --json` exposes the exact selectable
-IDs. Repeat `--display` for a bounded display subset, or pass
-`--camera-device`/`--microphone-device` to pin a device instead of following the
-system default. Duplicate IDs, unavailable IDs, and selections above the
-16-display capture bound fail before media starts.
 
 Read commands default to a bounded text summary and accept `--json`; event queries also accept `--jsonl`. Mutations write atomically and return a normalized plan hash. Camera mutation receipts additionally return the created move ID, keyframe count, bounded face selection when applicable, and exact `camera show`/`camera remove` next commands.
 
@@ -486,7 +471,7 @@ workflow outputs, or inspect the persisted evidence with
 remain an explicit local `slopcamera analyze scenes ... --execute
 --allow-cloud-upload` action.
 
-The scheduler runs dependency-ready nodes concurrently while obeying the stricter of `--jobs`, the four-worker hard cap, and host resource pools for FFmpeg, Vision, local I/O, paid calls, output publication, project publication, and capture. Parallel analyses bind an append-only project edit basis, so one sibling may publish while another is paused without authorizing structural or prior-evidence drift. Mutable edits join into one ordered recoverable project transaction. Rendering first freezes the complete project and edit documents into an immutable geometry-bound revision, resolves an exact tool, media, and recording-metadata-bound plan, and publishes video plus receipt through an output-specific lease and durable precommit. Landscape, square, and portrait branches therefore remain independent.
+The scheduler runs dependency-ready nodes concurrently while obeying the stricter of `--jobs`, the four-worker hard cap, and host resource pools for FFmpeg, Vision, local I/O, paid calls, output publication, and project publication. Parallel analyses bind an append-only project edit basis, so one sibling may publish while another is paused without authorizing structural or prior-evidence drift. Mutable edits join into one ordered recoverable project transaction. Rendering first freezes the complete project and edit documents into an immutable geometry-bound revision, resolves an exact tool, media, and recording-metadata-bound plan, and publishes video plus receipt through an output-specific lease and durable precommit. Landscape, square, and portrait branches therefore remain independent.
 
 Every run is durable under `artifacts/slopcamera/private/workflow-runs/<run-id>/`. Inspect it with `runs list` and `runs show`; use `runs resume`, `runs approve`, or `runs cancel` when the bounded summary provides that next action. A normal resume reconstructs unfinished host operations from the persisted graph without evaluating the workflow bundle. Exact canonical analysis orphans and output-only render commits are adopted only through their run-bound recovery evidence. An interrupted arbitrary compute callback becomes `ambiguous-code` and requires an exact node-specific replay acknowledgement. Attached cancellation first aborts that callback's real signal, then force-retires an uncooperative worker after a bounded grace period. A paid request uses an exact request ID and durable dispatch journal; an unknown post-dispatch outcome is never submitted again automatically. Live recording actions reconcile against the same controller used by the desktop app and are never automatically replayed.
 
@@ -822,7 +807,7 @@ For a normalized video-layer layout, face following records the declared output 
 
 ## Development
 
-Use Bun 1.3.14. Portable checks do not compile native capture:
+Use Bun 1.3.14. Portable checks do not compile native helpers:
 
 ```sh
 bun test apps/desktop
@@ -834,16 +819,11 @@ bun run test:html-overlay
 bun run benchmark:code-concurrency
 ```
 
-Native capture targets Apple Silicon macOS 15 or newer. It uses ScreenCaptureKit for every display and system audio, plus AVFoundation for independent webcam and microphone files.
+The optional Rust menu-bar companion lives under `desktop/` at the repository root and builds with Cargo:
 
 ```sh
-bun x native doctor --manifest apps/desktop/app.zon --strict
-bun run apps/desktop/capture/build.ts
-bun run apps/desktop/analysis/build.ts
-bun run dev:desktop
-bun run build:desktop:macos
-bun run package:desktop:macos
-bun run verify:html-overlay:macos
+cargo build --manifest-path desktop/menubar/Cargo.toml
+slopcamera menubar
 ```
 
 `test:html-overlay` is portable and leaves the real-browser tests registered as
@@ -868,99 +848,3 @@ diagram initialization/rendering plus PNG-to-SVG vectorization without
 `node_modules`.
 
 Screen recording, microphone, camera, Input Monitoring, and Accessibility are separate macOS permissions. A missing optional source becomes a typed diagnostic; strict-input mode fails before recording begins. Packaged local builds are ad hoc signed evidence until a release workflow adds Developer ID signing, notarization, and updates.
-
-### Real capture hardware smoke
-
-The real hardware smoke is deliberately outside portable and ordinary macOS
-checks. Without the exact confirmation below it is registered as skipped and
-does not build or probe the helper, inspect permissions, or create artifact
-directories:
-
-```sh
-SLOPCAMERA_CAPTURE_HARDWARE_CONFIRM=record-local-displays-and-selected-inputs \
-  bun run test:capture:hardware:macos
-```
-
-The default profile records every connected display twice, with a pause between
-the two immutable segments. It leaves system audio, camera, microphone, and
-typed text disabled. Enable selected inputs explicitly:
-
-```sh
-SLOPCAMERA_CAPTURE_HARDWARE_CONFIRM=record-local-displays-and-selected-inputs \
-SLOPCAMERA_CAPTURE_HARDWARE_SYSTEM_AUDIO=true \
-SLOPCAMERA_CAPTURE_HARDWARE_CAMERA=true \
-SLOPCAMERA_CAPTURE_HARDWARE_MICROPHONE=true \
-SLOPCAMERA_CAPTURE_HARDWARE_MIN_DISPLAYS=2 \
-  bun run test:capture:hardware:macos
-```
-
-Add `SLOPCAMERA_CAPTURE_HARDWARE_INTERACTIONS=true` for the owned interaction
-fixture. The fixture activates its nonce-titled window, performs one fixed
-public → secure → public exercise against its own fields, and remains open with
-neutral focus until capture stops. It can post only the built-in `a`, `s`, and
-`b` canaries to its own PID at verified coordinates inside its focused window;
-it accepts no arbitrary text, key, coordinate, or target from the caller. Do
-not type, click, or switch applications until the command exits because doing
-so can disturb focus or fixture timing. The fixture-PID event tap excludes
-clicks and keys delivered to other applications from the exact evidence gate.
-The profile binds the fixture's native-clock receipt to exact ordered click/key
-pairs, display identity, fixture process identity, public and secure focus
-transitions, and one native `focused` window transition. With the default
-typed-text opt-out, the stopped bundle must contain no `typing.input` event and
-no key cadence from the secure phase.
-
-Set `SLOPCAMERA_CAPTURE_HARDWARE_TYPED_TEXT=true` together with the interaction
-profile to verify explicit typed-text capture. That profile accepts exactly the
-public `a` and `b` canaries in metadata; a native focus-identity allowlist binds
-text persistence to the fixture's nonce-derived field ID, PID, window ID, and
-nonce title. Text from any other input remains unpersisted, and the secure `s`
-canary must remain absent. Failed typed-text evidence is deleted regardless of
-the artifact retention setting. Typed-text hardware verification is
-unavailable without the owned fixture.
-
-Before capture, the smoke performs the helper's read-only strict probe. Screen
-Recording, Input Monitoring, Accessibility, and window metadata must already be
-authorized; each selected optional input must also be authorized and present.
-An explicitly requested run fails before `start` when a prerequisite is
-missing, so it cannot open a surprise permission prompt. Grant permissions by
-running Slopcamera interactively first. Strict capture also creates and disables
-the listen-only input event tap before starting any media recorder, then waits
-for the tap's run-loop thread to confirm that it is enabled. Metadata writes
-display, focus, window, and cursor boundary snapshots only after that handshake
-and before a recorder can emit its first sample. At pause or stop, the
-user-visible clock freezes, every recorder drains, all metadata pollers are
-cancelled and joined on one serial queue, and metadata takes a final boundary
-snapshot; finalization latency therefore does not become blank footage.
-Tap creation or activation failure aborts the strict segment instead of
-silently losing clicks and keys. Window focus comes from the frontmost
-application's actual Accessibility-focused window matched back to its
-positioned Core Graphics record, not the first enumerated window owned by that
-process.
-
-The smoke writes to a unique directory below
-`artifacts/slopcamera/recordings/.hardware-smoke/`, verifies that Git ignores the
-directory, drives the real start/pause/resume/stop controller, probes every
-finalized media stream with FFprobe, and validates verified `capture-sync-v1`
-sample-clock measurements in the manifest. Controller-lifecycle and
-container-length checks are supplemental diagnostics, not substitutes for
-sample timing. It also re-hashes every physical media file, streams and
-re-hashes every event file through the production event parser, checks its
-declared record count and time interval, and requires real cursor, display
-topology, positioned-window, focus, and exact pause/resume lifecycle events.
-For both active segments, opening lifecycle and environment snapshots must
-precede the earliest retained sample across every selected display, system
-audio, camera, and microphone stream, while a closing cursor and lifecycle
-marker must follow the latest retained sample across that same complete
-envelope.
-Any native dropped-event diagnostic fails the run. Typed-text opt-out and any
-observed secure-focus interval are checked directly against the parsed input
-events.
-
-Failed evidence is retained by default and its absolute path is printed. Set
-`SLOPCAMERA_CAPTURE_HARDWARE_KEEP_ARTIFACTS=never` to remove every run or `always`
-to keep successful runs too. Optional-input values must be exactly `true` or
-`false`; the minimum-display value is bounded from 1 through 16.
-
-## Direct
-
-`bun run direct:slopcamera` opens the deterministic recorder and project-evidence lab without native capture, FFmpeg, whisper.cpp, Python, or cloud calls. It exposes compact fixtures for multi-angle placement, alignment, music, scene boundaries/descriptions, speech fillers, synchronized edits, and all overlay kinds. Permission, analyzer, and project worlds are fixture evidence, not claims about live native execution. `bun run verify:slopcamera:direct` drives every declared browser scenario and writes agent-readable evidence.

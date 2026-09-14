@@ -183,19 +183,18 @@ uploading local references requires the matching explicit acknowledgement.
 
 ### Edit footage and deliver finished videos
 
-Record a screen, camera, microphone, and system audio on macOS, or import existing
-footage. Remove pauses and filler words, align sound, reframe speakers, zoom into
-screen actions, and add captions, graphics, color, and audio treatment. Preview
-candidates before selecting a result, then export clean and captioned versions
-in 16:9, 9:16, 1:1, and 4:5 from the same edit.
+Import existing footage or recording bundles. Remove pauses and filler words,
+align sound, reframe speakers, zoom into screen actions, and add captions,
+graphics, color, and audio treatment. Preview candidates before selecting a
+result, then export clean and captioned versions in 16:9, 9:16, 1:1, and 4:5
+from the same edit.
 
 > Edit my product demo: cut the pauses, zoom into each important click, keep the
 > speaker framed, add captions and `logo.svg`, and show a preview before export.
 
-Recording requires the corresponding macOS permissions. Input-event capture can
-include clicks, cursor movement, key activity, and focused-input information;
-typed-text capture is separately opt-in and secure fields are suppressed. Read
-[`PRIVACY.md`](PRIVACY.md) before recording sensitive material.
+Recording bundles can carry clicks, cursor movement, key activity, and
+focused-input information. Read [`PRIVACY.md`](PRIVACY.md) before editing
+sensitive material.
 
 Start with [Edit a video](docs/how-to/edit-video.md) or inspect a reusable recipe:
 
@@ -234,8 +233,8 @@ declarative graphs, approvals, and resuming work.
 
 ## Important limitations
 
-- **Runtime support varies.** The CLI uses Bun on macOS, Linux, and Windows;
-  capture is macOS-specific. Media, browser, GPU, and native studio profiles
+- **Runtime support varies.** The CLI uses Bun on macOS, Linux, and Windows.
+  Media, browser, GPU, and native studio profiles
   have additional requirements. Use the capability reference and `slopcamera doctor`.
 - **Interchange preserves a supported subset.** Native rigs and simulations do
   not become editable Three scenes by exporting a GLB. An image or video on a

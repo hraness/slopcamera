@@ -103,7 +103,7 @@ async function runWorkflowScript(
   return Object.freeze({ exitCode, stderr, stdout })
 }
 
-test("public CI routes independent Slopcamera SDK, local-runtime, site, and native proofs", async () => {
+test("public CI routes independent Slopcamera SDK, local-runtime, site, and package proofs", async () => {
   const workflow = await readWorkflow("public-ci.yml", "ci.yml")
 
   expect(workflow).toContain("plan:\n    name: Plan")
@@ -112,27 +112,19 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and nati
   expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime")
   expect(workflow).toContain("site:\n    name: Slopcamera site")
   expect(workflow).toContain("package:\n    name: Slopcamera packed consumer")
-  expect(workflow).toContain("native:\n    name: Slopcamera macOS shell")
   expect(workflow).toContain("if: needs.plan.outputs.sdk == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.desktop == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.site == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.package == 'true'")
-  expect(workflow).toContain("if: needs.plan.outputs.native == 'true'")
   expect(workflow).toContain("bun run check:standalone")
   expect(workflow).toContain("bun run check:sdk")
   expect(workflow).toContain("bun run check:desktop")
   expect(workflow).toContain("bash scripts/install-ci-ffmpeg.sh")
   expect(workflow).toContain("bun run check:web")
   expect(workflow).toContain("bun run test:package")
-  expect(workflow).toContain("bun run test:desktop:macos")
-  expect(workflow).toContain("bun run package:desktop:macos")
-  expect(workflow).toContain(
-    "mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29",
-  )
-  expect(workflow).toContain('version: "0.16.0"')
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- dist bun.lock")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
-  expect(workflow).toContain("needs: [plan, boundary, sdk, desktop, site, package, native]")
+  expect(workflow).toContain("needs: [plan, boundary, sdk, desktop, site, package]")
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
   expect(workflow).not.toContain(["projects", "slopcamera"].join("/"))
@@ -156,7 +148,7 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "32f2de3515f5873abff676c478045898af79d51e7ccc91d5c1b4137893825de8") {
+  if (priorDigest !== "ae8b1d5dfa3f3c67ad6870b379170099a8aed8c6d4705fa9d6609e961d5d144c") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
@@ -196,7 +188,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   ))).toThrow("prior coverage")
 })
 
-test("site CI installs app-pinned Chromium in runner temp before the unchanged native gate", async () => {
+test("site CI installs app-pinned Chromium in runner temp before the site check", async () => {
   const workflow = await readWorkflow("public-ci.yml", "ci.yml")
   const site = workflow.slice(workflow.indexOf("\n  site:\n"), workflow.indexOf("\n  package:\n"))
   expect(site).toContain("timeout-minutes: 10")
@@ -838,7 +830,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
 
   expect(workflow.slice(0, workflow.indexOf("permissions:"))).not.toContain("workflow_dispatch")
   expect(publishJob).toContain("name: Publish exact npm package")
-  expect(publishJob).toContain("needs: [verify, official_vtracer, native_macos, attest, publish]")
+  expect(publishJob).toContain("needs: [verify, official_vtracer, attest, publish]")
   expect(publishJob).toContain("environment: npm-release")
   expect(publishJob).toContain("permissions:\n      actions: read\n      contents: read\n      id-token: write")
   expect(workflow.match(/environment: npm-release/gu)).toHaveLength(1)

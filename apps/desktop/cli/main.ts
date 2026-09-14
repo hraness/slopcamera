@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-import { join, resolve } from "node:path";
 import { parseCliArgs } from "./args";
 import { runCli } from "./commands";
 import { asCliError, CliError, EXIT_CODE } from "./errors";
@@ -11,27 +10,8 @@ import {
   runPortableSurface,
   type PortableSurfaceDependencies,
 } from "./portable-surface";
-import { RecordingDaemonClient, runRecordingDaemon } from "./recording-daemon";
-import { renamedEnvironmentValue } from "./renamed-environment";
+
 import { rootHelpIntro } from "./root-help-intro";
-
-function valueAfter(argv: readonly string[], name: string): string {
-  const index = argv.indexOf(name);
-  const value = index === -1 ? undefined : argv[index + 1];
-  if (value === undefined || value.startsWith("--")) throw new CliError("usage", `${name} requires a value.`);
-  return value;
-}
-
-export function daemonCommandFor(executableInput: string, entrypointInput: string): readonly [string, ...string[]] {
-  const executable = resolve(executableInput);
-  if (entrypointInput.includes("$bunfs")) return [executable];
-  const entrypoint = resolve(entrypointInput);
-  return executable === entrypoint ? [executable] : [executable, entrypoint];
-}
-
-function daemonCommand(): readonly [string, ...string[]] {
-  return daemonCommandFor(process.execPath, import.meta.path);
-}
 
 export function isEmbeddedVectorizeWorkerInvocation(
   argv: readonly string[],
@@ -55,21 +35,6 @@ export async function main(
     await import("../../../src/vectorize/worker.ts");
     return typeof process.exitCode === "number" ? process.exitCode : 0;
   }
-  if (argv[0] === "__record_daemon") {
-    if (argv.length !== 5 || argv[1] !== "--artifact-root" || argv[3] !== "--helper") {
-      throw new CliError("usage", "Invalid internal recording-daemon invocation.");
-    }
-    const paths = await resolveRepositoryPaths(process.cwd(), process.env);
-    const artifactRoot = valueAfter(argv, "--artifact-root");
-    if (resolve(artifactRoot) !== resolve(paths.artifactRoot)) {
-      throw new CliError("unsafe-path", "Recording daemon artifact root differs from the repository-owned root.");
-    }
-    await runRecordingDaemon({
-      artifactRoot,
-      helperExecutable: valueAfter(argv, "--helper"),
-    });
-    return 0;
-  }
   const unifiedArgv = canonicalizeUnifiedCliArgs(argv);
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);
   if (portableExitCode !== undefined) return portableExitCode;
@@ -82,13 +47,6 @@ export async function main(
     return await runCli(unifiedArgv, { io: processIo });
   }
   const paths = await resolveRepositoryPaths(processIo.cwd(), processIo.env);
-  const helperExecutable = renamedEnvironmentValue(processIo.env, "SLOPCAMERA_CAPTURE_HELPER")
-    ?? join(paths.desktopRoot, "capture", "dist", "slopcamera-capture");
-  const recordingController = new RecordingDaemonClient({
-    artifactRoot: paths.artifactRoot,
-    daemonCommand: daemonCommand(),
-    helperExecutable,
-  });
   if (earlyCommand.kind === "html-render" || earlyCommand.kind === "spatial-world" || earlyCommand.kind === "directing" || earlyCommand.kind === "studio"
     || earlyCommand.kind === "spatial-scene" && earlyCommand.action === "camera-track") {
     const controller = new AbortController();
@@ -96,7 +54,7 @@ export async function main(
     process.on("SIGINT", cancel);
     process.on("SIGTERM", cancel);
     try {
-      return await runCli(unifiedArgv, { io: processIo, paths, recordingController,
+      return await runCli(unifiedArgv, { io: processIo, paths,
         runner: new BunProcessRunner(), abortSignal: controller.signal });
     } finally {
       process.off("SIGINT", cancel);
@@ -106,7 +64,6 @@ export async function main(
   return await runCli(unifiedArgv, {
     io: processIo,
     paths,
-    recordingController,
     runner: new BunProcessRunner(),
   });
 }

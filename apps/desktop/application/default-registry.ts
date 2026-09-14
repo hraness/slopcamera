@@ -39,11 +39,6 @@ import {
   projectRenderOperationDefinitionV3,
   projectRenderOperationDefinitionV4,
   projectSnapshotOperationDefinition,
-  recordingPauseOperationDefinition,
-  recordingResumeOperationDefinition,
-  recordingStartOperationDefinition,
-  recordingStartOperationDefinitionV1,
-  recordingStopOperationDefinition,
   slopcameraDiagramCheckOperationDefinition,
   slopcameraDiagramRenderOperationDefinition,
   slopcameraImageVectorizeOperationDefinition,
@@ -131,11 +126,6 @@ export function createApplicationOperationRegistry(
   registry.register(projectRenderOperationDefinitionV3);
   registry.register(projectRenderOperationDefinitionV4);
   registry.register(materializeVariantSelectionOperationDefinition);
-  registry.register(recordingStartOperationDefinitionV1);
-  registry.register(recordingStartOperationDefinition);
-  registry.register(recordingPauseOperationDefinition);
-  registry.register(recordingResumeOperationDefinition);
-  registry.register(recordingStopOperationDefinition);
   registry.register(slopcameraDiagramCheckOperationDefinition);
   registry.register(slopcameraDiagramRenderOperationDefinition);
   registry.register(slopcameraImageVectorizeOperationDefinition);

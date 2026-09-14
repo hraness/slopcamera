@@ -5,12 +5,11 @@ operator owns or is authorized to record, import, edit, analyze, and publish.
 This document describes the data it can capture, the local execution boundary,
 and the selected media that can leave the machine.
 
-On macOS, Slopcamera can request permission to record selected displays, system
-audio, a selected camera, and a selected microphone. When interaction metadata
-is enabled, it can record cursor positions, clicks, key activity, focused-input
-bounds, display topology, and changed window snapshots. Typed-text collection
-is separately opt-in. Slopcamera suppresses secure fields even when typed-text
-collection is enabled.
+Slopcamera imports finished recording bundles that can contain display video,
+system audio, camera and microphone tracks, and interaction metadata such as
+cursor positions, clicks, key activity, focused-input bounds, display topology,
+and window snapshots. It reads that evidence locally and never records new
+input itself.
 
 Slopcamera can also read caller-selected local media and project files, invoke
 bounded local browser and media subprocesses, analyze faces locally without
@@ -23,7 +22,7 @@ than sandboxed input.
 Generation and model-backed media analysis can send an explicit prompt and
 caller-selected media to Vercel AI Gateway. Local media upload requires the
 matching command acknowledgement. Local vectorization, face detection,
-ordinary media editing, diagram rendering, and capture remain local. Slopcamera does
+ordinary media editing, and diagram rendering remain local. Slopcamera does
 not provide an account service and does not upload a project to a Slopcamera
 service.
 

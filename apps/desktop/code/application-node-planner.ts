@@ -51,7 +51,6 @@ import {
   bindProjectRenderInputV2,
   bindProjectRenderInputV3,
   bindProjectRenderToolchain,
-  parseRecordingOperationOutput,
   projectEditCommitReceipt,
   projectEditTransactionId,
   reconcileVariantSelectionPromotion,
@@ -105,7 +104,6 @@ import type {
 import { workflowBoundary, workflowValidation, type WorkflowFailure } from "./workflow-effects";
 
 const ANALYSIS_ID_DOMAIN = "studio.workflow.analysis-id/v1";
-type RecordingOperationKind = Extract<OperationKind, `recording.${string}`>;
 type GatewayOperationKind = Extract<OperationKind, `gateway.${string}`>;
 
 export const APPLICATION_VERIFIED_RECEIPT_RECONCILER_KINDS =
@@ -113,15 +111,6 @@ export const APPLICATION_VERIFIED_RECEIPT_RECONCILER_KINDS =
     ...LOCAL_VERIFIED_RECEIPT_OPERATION_KINDS,
     "render.project",
   ] as const satisfies readonly OperationKind[]);
-
-function isRecordingOperationKind(
-  kind: OperationKind,
-): kind is RecordingOperationKind {
-  return kind === "recording.start"
-    || kind === "recording.pause"
-    || kind === "recording.resume"
-    || kind === "recording.stop";
-}
 
 function isGatewayOperationKind(
   kind: OperationKind,
@@ -934,36 +923,6 @@ function renderNodeReconciliation(result: ProjectRenderReconciliation | Awaited<
   };
 }
 
-async function reconcileRecordingNode(
-  application: ApplicationContext,
-  operationKind: RecordingOperationKind,
-): Promise<NodeReconciliation> {
-  const controller = application.recordingController;
-  if (controller === undefined) {
-    return {
-      kind: "ambiguous",
-      message: "Recording controller is unavailable for live-state reconciliation.",
-    };
-  }
-  let output;
-  try {
-    output = parseRecordingOperationOutput(await controller.status());
-  } catch (error) {
-    return {
-      kind: "ambiguous",
-      message: error instanceof Error
-        ? `Recording state could not be reconciled: ${error.message}`
-        : "Recording state could not be reconciled.",
-    };
-  }
-  return {
-    kind: "ambiguous",
-    message: `Current controller state ${output.state} for ${
-      output.recordingId ?? "no active recording"
-    } is not an exact receipt proving ${operationKind} completed; issue a new explicit action.`,
-  };
-}
-
 async function reconcileGatewayNode(
   application: ApplicationContext,
   request: NodeReconciliationRequest,
@@ -1220,12 +1179,6 @@ async function reconcileApplicationNode(
     return await reconcileGatewayNode(
       application,
       request,
-      request.operation.kind,
-    );
-  }
-  if (isRecordingOperationKind(request.operation.kind)) {
-    return await reconcileRecordingNode(
-      application,
       request.operation.kind,
     );
   }

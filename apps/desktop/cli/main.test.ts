@@ -3,19 +3,9 @@ import { z } from "zod";
 
 import { assertAppleSiliconMacosCompiledCliHost } from "./build-compiled";
 import {
-  daemonCommandFor,
   isEmbeddedVectorizeWorkerInvocation,
   main,
 } from "./main";
-
-test("self-spawns source and compiled CLI entrypoints without shell interpolation", () => {
-  expect(daemonCommandFor("/opt/homebrew/bin/bun", "/repo/cli/main.ts"))
-    .toEqual(["/opt/homebrew/bin/bun", "/repo/cli/main.ts"]);
-  expect(daemonCommandFor("/repo/dist/slopcamera", "/$bunfs/root/cli/main.ts"))
-    .toEqual(["/repo/dist/slopcamera"]);
-  expect(daemonCommandFor("/repo/dist/slopcamera", "/repo/dist/slopcamera"))
-    .toEqual(["/repo/dist/slopcamera"]);
-});
 
 test("accepts only the compiled bundle's exact internal vectorizer worker invocation", () => {
   expect(isEmbeddedVectorizeWorkerInvocation(

@@ -271,6 +271,8 @@ export type CliCommand =
       readonly tint: number | undefined;
       readonly videoStreamIndex: number;
     } & JsonOption)
+  | ({ readonly kind: "menubar" } & JsonOption)
+  | ({ readonly kind: "outputs" } & JsonOption)
   | ({ readonly kind: "recordings-list"; readonly limit: number } & JsonOption)
   | ({ readonly kind: "projects-list"; readonly limit: number } & JsonOption)
   | ({
@@ -489,20 +491,6 @@ export type CliCommand =
       readonly limit: number;
       readonly recording: string;
       readonly to: string | undefined;
-    })
-  | ({
-      readonly action: "start";
-      readonly cameraDeviceId: string | undefined;
-      readonly displays: readonly string[];
-      readonly microphone: boolean;
-      readonly microphoneDeviceId: string | undefined;
-      readonly strictInputs: boolean;
-      readonly systemAudio: boolean;
-      readonly typedText: boolean;
-      readonly webcam: boolean;
-    } & JsonOption & { readonly kind: "record" })
-  | ({ readonly action: "pause" | "resume" | "stop" | "status" } & JsonOption & {
-      readonly kind: "record";
     })
   | ({
       readonly edit: EditCommand;
@@ -797,22 +785,6 @@ function strictBoolean(value: string | undefined, name: string, defaults: boolea
   if (value === "true") return true;
   if (value === "false") return false;
   fail(`${name} must be true or false.`);
-}
-
-function captureSourceId(
-  value: string | undefined,
-  name: string,
-  maximumUTF8Bytes: number,
-): string | undefined {
-  if (value === undefined) return undefined;
-  if (
-    value.length === 0
-    || value.includes("\0")
-    || new TextEncoder().encode(value).byteLength > maximumUTF8Bytes
-  ) {
-    fail(`${name} must be a non-empty, non-NUL source ID of at most ${maximumUTF8Bytes} UTF-8 bytes.`);
-  }
-  return value;
 }
 
 function oneOf<T extends string>(
@@ -1825,61 +1797,6 @@ function parseEvents(argv: readonly string[]): CliCommand {
   };
 }
 
-function parseRecord(argv: readonly string[]): CliCommand {
-  const action = argv[0];
-  if (action === "start") {
-    const parsed = parseOptions(argv.slice(1), {
-      ...JSON_SPEC,
-      "--camera-device": "value",
-      "--display": "repeat",
-      "--microphone": "value",
-      "--microphone-device": "value",
-      "--strict-inputs": "flag",
-      "--system-audio": "value",
-      "--typed-text": "value",
-      "--webcam": "value",
-    });
-    exactPositionals(parsed, 0, "slopcamera record start [options]");
-    const displays = optionStrings(parsed, "--display").map((displayId) =>
-      captureSourceId(displayId, "--display", 64)!
-    );
-    if (displays.length > 16) fail("--display may be specified at most 16 times.");
-    if (new Set(displays).size !== displays.length) fail("--display IDs must be unique.");
-    const microphone = strictBoolean(optionString(parsed, "--microphone"), "--microphone", true);
-    const webcam = strictBoolean(optionString(parsed, "--webcam"), "--webcam", true);
-    const cameraDeviceId = captureSourceId(optionString(parsed, "--camera-device"), "--camera-device", 256);
-    const microphoneDeviceId = captureSourceId(
-      optionString(parsed, "--microphone-device"),
-      "--microphone-device",
-      256,
-    );
-    if (!webcam && cameraDeviceId !== undefined) {
-      fail("--camera-device cannot be combined with --webcam false.");
-    }
-    if (!microphone && microphoneDeviceId !== undefined) {
-      fail("--microphone-device cannot be combined with --microphone false.");
-    }
-    return {
-      action,
-      cameraDeviceId,
-      displays,
-      json: optionFlag(parsed, "--json"),
-      kind: "record",
-      microphone,
-      microphoneDeviceId,
-      strictInputs: optionFlag(parsed, "--strict-inputs"),
-      systemAudio: strictBoolean(optionString(parsed, "--system-audio"), "--system-audio", true),
-      typedText: strictBoolean(optionString(parsed, "--typed-text"), "--typed-text", false),
-      webcam,
-    };
-  }
-  if (action === "pause" || action === "resume" || action === "stop" || action === "status") {
-    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
-    exactPositionals(parsed, 0, `slopcamera record ${action} [--json]`);
-    return { action, json: optionFlag(parsed, "--json"), kind: "record" };
-  }
-  fail("Usage: slopcamera record <start|pause|resume|stop|status> [options]");
-}
 
 const TIME_RANGE_SPEC = {
   "--end": "value",
@@ -3175,7 +3092,16 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "project": return parseProject(argv.slice(1));
     case "inspect": return parseInspect(argv.slice(1));
     case "events": return parseEvents(argv.slice(1));
-    case "record": return parseRecord(argv.slice(1));
+    case "menubar": {
+      const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+      exactPositionals(parsed, 0, "slopcamera menubar [--json]");
+      return { kind: "menubar", json: optionFlag(parsed, "--json") };
+    }
+    case "outputs": {
+      const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+      exactPositionals(parsed, 0, "slopcamera outputs [--json]");
+      return { kind: "outputs", json: optionFlag(parsed, "--json") };
+    }
     case "edit": return parseEdit(argv.slice(1));
     case "analyze": return parseAnalyze(argv.slice(1));
     case "faces": return parseFaces(argv.slice(1));
