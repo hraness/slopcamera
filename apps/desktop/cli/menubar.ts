@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { lstatSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { CliError } from "./errors";
 import type { CliIo } from "./io";
@@ -35,9 +35,19 @@ export function resolveMenubarBinary(
     resolve(repositoryRoot, "desktop", "target", "debug", "slopcamera-menubar"),
   ];
   for (const candidate of candidates) {
-    if (candidate !== undefined && candidate !== "" && existsSync(candidate)) return candidate;
+    if (candidate !== undefined && candidate !== "" && qualifiedBinary(candidate)) return candidate;
   }
   return null;
+}
+
+/** Detached launchers only accept private, prebuilt executables. */
+function qualifiedBinary(path: string): boolean {
+  try {
+    const info = lstatSync(path);
+    return info.isFile() && (info.mode & 0o111) !== 0 && (info.mode & 0o022) === 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function launchMenubar(
