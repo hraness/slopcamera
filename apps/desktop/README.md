@@ -1,6 +1,6 @@
-# Slopcamera desktop and CLI
+# Slopcamera local host and CLI
 
-Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. An optional `slopcamera menubar` companion surfaces the agent outputs directory in the macOS menu bar; it carries no capture or editing authority.
+Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. An optional unbundled `slopcamera menubar` companion surfaces the agent outputs directory in the macOS menu bar; it carries no capture or editing authority.
 
 ## Recording bundles
 
@@ -473,7 +473,7 @@ remain an explicit local `slopcamera analyze scenes ... --execute
 
 The scheduler runs dependency-ready nodes concurrently while obeying the stricter of `--jobs`, the four-worker hard cap, and host resource pools for FFmpeg, Vision, local I/O, paid calls, output publication, and project publication. Parallel analyses bind an append-only project edit basis, so one sibling may publish while another is paused without authorizing structural or prior-evidence drift. Mutable edits join into one ordered recoverable project transaction. Rendering first freezes the complete project and edit documents into an immutable geometry-bound revision, resolves an exact tool, media, and recording-metadata-bound plan, and publishes video plus receipt through an output-specific lease and durable precommit. Landscape, square, and portrait branches therefore remain independent.
 
-Every run is durable under `artifacts/slopcamera/private/workflow-runs/<run-id>/`. Inspect it with `runs list` and `runs show`; use `runs resume`, `runs approve`, or `runs cancel` when the bounded summary provides that next action. A normal resume reconstructs unfinished host operations from the persisted graph without evaluating the workflow bundle. Exact canonical analysis orphans and output-only render commits are adopted only through their run-bound recovery evidence. An interrupted arbitrary compute callback becomes `ambiguous-code` and requires an exact node-specific replay acknowledgement. Attached cancellation first aborts that callback's real signal, then force-retires an uncooperative worker after a bounded grace period. A paid request uses an exact request ID and durable dispatch journal; an unknown post-dispatch outcome is never submitted again automatically. Live recording actions reconcile against the same controller used by the desktop app and are never automatically replayed.
+Every run is durable under `artifacts/slopcamera/private/workflow-runs/<run-id>/`. Inspect it with `runs list` and `runs show`; use `runs resume`, `runs approve`, or `runs cancel` when the bounded summary provides that next action. A normal resume reconstructs unfinished host operations from the persisted graph without evaluating the workflow bundle. Exact canonical analysis orphans and output-only render commits are adopted only through their run-bound recovery evidence. An interrupted arbitrary compute callback becomes `ambiguous-code` and requires an exact node-specific replay acknowledgement. Attached cancellation first aborts that callback's real signal, then force-retires an uncooperative worker after a bounded grace period. A paid request uses an exact request ID and durable dispatch journal; an unknown post-dispatch outcome is never submitted again automatically. Live recording actions reconcile against the same controller used by the local host and are never automatically replayed.
 
 Custom code mode is trusted code, not a sandbox. Module top-level code and explicitly replayed compute callbacks run as the current user and can use ambient filesystem, process and network authority. Slopcamera keeps its own credentials and privileged handles out of the worker, but it cannot contain malicious repository code. Review custom source before `code check`, `code plan`, or `code run`.
 
@@ -718,7 +718,7 @@ the moved tree closed a second time before cleanup. Normal teardown
 rechecks the complete runtime manifest and every direct child, then
 atomically changes its held active lease to a released marker before removing
 validated children; that marker is unlinked last, so an interrupted cleanup is
-recoverable even while the desktop process remains alive. These gates prevent
+recoverable even while the local host process remains alive. These gates prevent
 deletion from colliding with a new render container or a swapped peer subtree.
 The signed snapshot is prepared once per render request and shared by every
 frame in that sequence; callers should submit a complete loop or overlay range

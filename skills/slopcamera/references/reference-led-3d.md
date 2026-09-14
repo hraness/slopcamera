@@ -1,7 +1,7 @@
 # Reference-led Three.js and metallic treatments
 
 Use this guide only when Slopcamera's complete local Code Mode host is available.
-It ships in this repository alongside the thin desktop capture shell. The
+It ships in this repository alongside the local CLI host and optional unbundled menu-bar companion. The
 portable `@hraness/slopcamera/code` and `@hraness/slopcamera/workflow`
 entrypoints intentionally expose no HTML renderer, Three.js operation, or
 arbitrary source execution. Those capabilities belong to the local host.

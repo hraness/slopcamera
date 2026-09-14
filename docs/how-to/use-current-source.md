@@ -15,6 +15,15 @@ bun run build:desktop:cli
 
 These commands build the SDK and source-backed CLI. They do not build the menu-bar companion or run a native scene. Keep the commit file with your work: the branch can advance while a source build retains the same package version.
 
+To use the optional macOS menu-bar companion, build it explicitly and then launch it through the CLI:
+
+```sh
+cargo build --manifest-path desktop/menubar/Cargo.toml
+slopcamera menubar
+```
+
+The companion is an unbundled status item. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
+
 In this shell, make `slopcamera` invoke that exact checkout:
 
 ```sh

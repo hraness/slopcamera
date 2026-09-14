@@ -1,6 +1,6 @@
 # Contents
 
-- `menubar/` – the `slopcamera-menubar` Rust binary: a Tauri status item that renders the per-user agent outputs directory newest-first with image thumbnails.
+- `menubar/` – the `slopcamera-menubar` Rust binary: an unbundled macOS status item that renders the per-user agent outputs directory newest-first with image thumbnails.
 
 # Guidelines
 
