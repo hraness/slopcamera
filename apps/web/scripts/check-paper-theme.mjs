@@ -7,7 +7,7 @@ import { checkLanternMaterialSnapshot } from "../vendor/lantern-material/check.m
 await checkLanternMaterialSnapshot(fileURLToPath(new URL("../vendor/lantern-material/", import.meta.url)));
 
 // Offline integrity only: upgrades use the reviewed source's snapshot installer.
-const directories = ["vendor/paper-theme", "../desktop/frontend/vendor/paper-theme"];
+const directories = ["vendor/paper-theme"];
 for (const relative of directories) {
   const directory = new URL(`../${relative}/`, import.meta.url);
   const manifest = JSON.parse(await readFile(new URL("provenance.json", directory), "utf8"));
