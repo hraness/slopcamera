@@ -17,7 +17,7 @@ export function outputsRoot(stateRoot: string): string {
   return join(productRoot, "outputs");
 }
 export function resolveMenubarBinary(repositoryRoot: string, environment: Readonly<Record<string, string | undefined>> = process.env): string | null {
-  const candidates = [environment.SLOPCAMERA_DESKTOP, resolve(dirname(process.execPath), "slopcamera-menubar"), resolve(repositoryRoot, "desktop", "target", "release", "slopcamera-menubar")];
+  const candidates = [environment.SLOPCAMERA_MENUBAR, resolve(dirname(process.execPath), "slopcamera-menubar"), ...(environment.HOME === undefined || environment.HOME === "" ? [] : [installedBinaryPath(environment)]), resolve(repositoryRoot, "desktop", "target", "release", "slopcamera-menubar")];
   for (const candidate of candidates) if (candidate !== undefined && candidate !== "" && exists(candidate)) return candidate;
   return null;
 }
@@ -65,7 +65,7 @@ async function runBinary(binary: string, foreground: boolean): Promise<number> {
 }
 export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: boolean, mode: "foreground" | "background" = "foreground"): Promise<void> {
   const binary = resolveMenubarBinary(repositoryRoot, io.env);
-  if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_DESKTOP.");
+  if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_MENUBAR.");
   const code = await runBinary(binary, mode === "foreground");
   if (code !== 0) throw new CliError("unavailable", "The Slopcamera menu bar exited during startup.");
   if (asJson) writeJson(io, { running: true, foreground: mode === "foreground" });
@@ -73,7 +73,7 @@ export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: b
 }
 export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean): Promise<void> {
   const binary = resolveMenubarBinary(repositoryRoot, io.env);
-  if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_DESKTOP.");
+  if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_MENUBAR.");
   const stable = installedBinaryPath(io.env);
   const state = action === "install" ? installLaunchAgent(binary, io.env) : action === "uninstall" ? uninstallLaunchAgent(stable, io.env) : launchAgentState(stable, io.env);
   if (asJson) writeJson(io, { launchAgent: state });

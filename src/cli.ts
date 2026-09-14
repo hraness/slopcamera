@@ -2,17 +2,11 @@
 
 import { writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
-import { createInterface } from "node:readline/promises"
 import {
   artifactSummary,
   checkDiagramFile,
-  desktopStatus,
-  getLatestDesktopRelease,
-  installDesktop,
-  openInDesktop,
   renderDiagramFile,
   runMcpServer,
-  selectDesktopAsset,
   vectorizeImage,
 } from "./index.js"
 import {
@@ -48,10 +42,6 @@ Usage:
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
-  slopcamera canvas open <file.tldr|file.tldraw>
-  slopcamera canvas status
-  slopcamera canvas url
-  slopcamera canvas install [--yes] [--download-only]
   slopcamera doctor
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
@@ -63,9 +53,8 @@ Render writes the same five replaceable artifacts on every run:
   <name>.light.png
   <name>.dark.png
 
-The .tldr file is editable tldraw interchange. It imports into tldraw Offline,
-which can save the newer app-owned .tldraw bundle. Rendering does not require
-tldraw Offline or the tldraw SDK.
+  The .tldr file is editable interchange for browser-based canvas tooling.
+  Rendering does not require a desktop application or a bundled UI runtime.
 
 Vectorize adaptively traces a raster with a checksum-pinned VTracer binary.
 It enforces bounded input, decode, time, path, and output budgets and emits a
@@ -191,21 +180,6 @@ const starter = {
   edges: [{ id: "source-result", from: "source", to: "result" }],
 }
 
-async function confirmInstall(): Promise<boolean> {
-  if (!process.stdin.isTTY) {
-    throw new Error("Pass --yes to download the 100–230 MB official tldraw Offline installer")
-  }
-  const prompt = createInterface({ input: process.stdin, output: process.stdout })
-  try {
-    const answer = await prompt.question(
-      "Download, verify, and launch the official tldraw Offline installer? [y/N] ",
-    )
-    return answer.trim().toLowerCase() === "y" || answer.trim().toLowerCase() === "yes"
-  } finally {
-    prompt.close()
-  }
-}
-
 export interface SlopcameraCliDependencies {
   readonly generate?: typeof generateSlopcameraImageFile
   readonly hostResourceCoordinator?: HostResourceCoordinator
@@ -235,21 +209,12 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     }
     throw new Error("Use slopcamera image vectorize or generate")
   }
-  if (surface === "canvas") {
-    if (subcommand === "open") return ["open", ...rest]
-    if (subcommand === "status" || subcommand === "url" || subcommand === "install") {
-      return ["desktop", subcommand, ...rest]
-    }
-    throw new Error("Use slopcamera canvas open, status, url, or install")
-  }
   if (
     surface === "init" ||
     surface === "check" ||
     surface === "render" ||
     surface === "vectorize" ||
-    surface === "generate" ||
-    surface === "open" ||
-    surface === "desktop"
+    surface === "generate"
   ) {
     throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help}`)
   }
@@ -479,15 +444,7 @@ export async function main(
     return
   }
 
-  if (command === "open") {
-    const parsed = parseArguments(rest, new Set())
-    await openInDesktop(requiredPositional(parsed, 0, "tldraw file"))
-    console.log("Opened in tldraw Offline.")
-    return
-  }
-
   if (command === "doctor") {
-    const status = await desktopStatus()
     console.log(`slopcamera ${slopcameraCliVersion}`)
     console.log(`Bun ${process.versions.bun ?? "not detected"}`)
     console.log("Headless diagram SVG/PNG/tldraw renderer ready")
@@ -503,58 +460,7 @@ export async function main(
         ? `Vercel AI Gateway ready via ${gateway.source}`
         : "Vercel AI Gateway requires AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN",
     )
-    console.log(
-      status.installedPath === null
-        ? "tldraw Offline not installed (optional)"
-        : `tldraw Offline: ${status.installedPath}`,
-    )
-    console.log(
-      status.server === null
-        ? "tldraw Offline agent server not running (optional)"
-        : `tldraw Offline agent server: localhost:${status.server.port}`,
-    )
     return
-  }
-
-  if (command === "desktop") {
-    const [subcommand, ...subcommandArgs] = rest
-    if (subcommand === "status") {
-      const status = await desktopStatus()
-      console.log(JSON.stringify(status, null, 2))
-      return
-    }
-    if (subcommand === "url") {
-      const release = await getLatestDesktopRelease()
-      const asset = selectDesktopAsset(release)
-      console.log(
-        JSON.stringify(
-          {
-            release: release.tag_name,
-            releaseUrl: release.html_url,
-            asset: asset.name,
-            url: asset.browser_download_url,
-            bytes: asset.size,
-            sha256: asset.digest,
-          },
-          null,
-          2,
-        ),
-      )
-      return
-    }
-    if (subcommand === "install") {
-      const parsed = parseArguments(subcommandArgs, new Set())
-      if (!parsed.flags.has("yes") && !(await confirmInstall())) {
-        console.log("Cancelled.")
-        return
-      }
-      const result = await installDesktop({ downloadOnly: parsed.flags.has("download-only") })
-      console.log(
-        `${parsed.flags.has("download-only") ? "Downloaded" : "Prepared"} tldraw Offline ${result.release}: ${result.filePath}`,
-      )
-      return
-    }
-    throw new Error("Use slopcamera canvas status, url, or install")
   }
 
   if (command === "skill") {

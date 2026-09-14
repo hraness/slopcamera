@@ -25,18 +25,12 @@ import {
   WorkspaceBoundaryError,
   artifactSummary,
   checkDiagramFile,
-  desktopDownloadPage,
-  desktopStatus,
   diagramApi,
-  findDesktopApplication,
-  getLatestDesktopRelease,
   inspectStudioBundle,
   inspectStudioPlan,
-  installDesktop,
   mcpMaximumRenderedPixels,
   mcpMaximumScale,
   mcpSourceByteLimit,
-  openInDesktop,
   parseStudioJob,
   parseStudioPlan,
   parseStudioReceipt,
@@ -46,7 +40,6 @@ import {
   readDiagramFile,
   renderDiagramFile,
   runMcpServer,
-  selectDesktopAsset,
   slopcameraApi,
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
@@ -56,7 +49,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-rvghzt7b.js";
+} from "./index-14fdv91w.js";
 import {
   bundledSkillPath,
   installSkill
@@ -66,7 +59,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-mcy8z0br.js";
+} from "./index-fava6pge.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -91,7 +84,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-z7239b4h.js";
+} from "./index-h1k0fnjq.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -100,7 +93,7 @@ import {
   vectorizeImage,
   vectorizeProfileNames,
   vtracerReleases
-} from "./index-p63wavx0.js";
+} from "./index-zfnddgay.js";
 import {
   SlopcameraCloudError,
   createFixedGatewayFetch,
@@ -154,7 +147,6 @@ export {
   slopcameraGatewayApiBaseUrl,
   slopcameraApi,
   serializeTldr,
-  selectDesktopAsset,
   searchSlopcameraOperations,
   runSlopcameraWorkflow,
   runMcpServer,
@@ -174,7 +166,6 @@ export {
   parseSlopcameraOperationInput,
   parseDiagramSpec,
   parseDiagramSource,
-  openInDesktop,
   normalizeHostResourceProfile,
   normalizeHostResourceClaims,
   mcpSourceByteLimit,
@@ -183,18 +174,13 @@ export {
   lintDiagram,
   isSlopcameraOperationCode,
   installSkill,
-  installDesktop,
   inspectStudioPlan,
   inspectStudioBundle,
-  getLatestDesktopRelease,
   generateSlopcameraImageFile,
   generateSlopcameraImage,
-  findDesktopApplication,
   executeSlopcameraOperationWithLease,
   executeSlopcameraOperation,
   diagramApi,
-  desktopStatus,
-  desktopDownloadPage,
   defineSlopcameraWorkflow,
   defaultSlopcameraHostResourceStateRoot,
   defaultSlopcameraHostResourceProfile,

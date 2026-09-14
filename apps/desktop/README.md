@@ -847,4 +847,4 @@ The compiled smoke copies the executable away from the checkout and proves
 diagram initialization/rendering plus PNG-to-SVG vectorization without
 `node_modules`.
 
-Screen recording, microphone, camera, Input Monitoring, and Accessibility are separate macOS permissions. A missing optional source becomes a typed diagnostic; strict-input mode fails before recording begins. Packaged local builds are ad hoc signed evidence until a release workflow adds Developer ID signing, notarization, and updates.
+Screen recording, microphone, camera, Input Monitoring, and Accessibility are separate macOS permissions. A missing optional source becomes a typed diagnostic; strict-input mode fails before recording begins. Slopcamera ships as a CLI with an optional unbundled menu-bar companion; it does not produce, install, sign, or notarize a desktop application.

@@ -69,7 +69,7 @@ describe("Slopcamera CLI", () => {
       "slopcamera diagram render",
       "slopcamera image vectorize",
       "slopcamera image generate",
-      "slopcamera canvas open",
+      "slopcamera doctor",
       "slopcamera code search",
       "slopcamera code execute",
       "search_slopcamera/execute_slopcamera",

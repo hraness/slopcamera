@@ -16,7 +16,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-mcy8z0br.js";
+} from "./index-fava6pge.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -39,13 +39,12 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-z7239b4h.js";
+} from "./index-h1k0fnjq.js";
 import {
   VectorizeError,
-  nonGatewayChildEnvironment,
   vectorizeHardLimits,
   vectorizeImage
-} from "./index-p63wavx0.js";
+} from "./index-zfnddgay.js";
 import {
   SlopcameraCloudError,
   generateSlopcameraImage,
@@ -288,204 +287,19 @@ function artifactSummary(artifacts) {
 `);
 }
 
-// src/desktop.ts
-import { createHash } from "crypto";
-import { createReadStream, createWriteStream } from "fs";
-import { chmod, mkdir as mkdir2, readFile as readFile3, rename as rename2, rm as rm2 } from "fs/promises";
-import { homedir, platform as hostPlatform, arch as hostArch } from "os";
-import { dirname as dirname3, join as join2, resolve as resolve3 } from "path";
-import { Readable } from "stream";
-import { pipeline } from "stream/promises";
-var releaseApi = "https://api.github.com/repos/tldraw/tldraw-offline/releases/latest";
-var desktopDownloadPage = "https://offline.tldraw.com";
-function isRecord2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parseRelease(value) {
-  if (!isRecord2(value) || typeof value.tag_name !== "string" || typeof value.html_url !== "string" || !Array.isArray(value.assets)) {
-    throw new Error("GitHub returned an invalid tldraw Offline release");
-  }
-  const assets = value.assets.map((asset, index) => {
-    if (!isRecord2(asset) || typeof asset.name !== "string" || typeof asset.browser_download_url !== "string" || typeof asset.size !== "number" || asset.digest !== null && asset.digest !== undefined && typeof asset.digest !== "string") {
-      throw new Error(`GitHub returned an invalid release asset at index ${index}`);
-    }
-    return {
-      name: asset.name,
-      browser_download_url: asset.browser_download_url,
-      size: asset.size,
-      digest: asset.digest ?? null
-    };
-  });
-  return { tag_name: value.tag_name, html_url: value.html_url, assets };
-}
-function selectDesktopAsset(release, platform = hostPlatform(), architecture = hostArch()) {
-  const expectedName = platform === "darwin" ? "tldraw-offline-mac-universal.dmg" : platform === "win32" ? architecture === "arm64" ? "tldraw-offline-win-arm64.exe" : "tldraw-offline-win-x64.exe" : platform === "linux" ? architecture === "arm64" ? "tldraw-offline-linux-arm64.AppImage" : "tldraw-offline-linux-x86_64.AppImage" : null;
-  if (expectedName === null) {
-    throw new Error(`tldraw Offline has no automated installer for ${platform}/${architecture}`);
-  }
-  const asset = release.assets.find((candidate) => candidate.name === expectedName);
-  if (asset === undefined) {
-    throw new Error(`The latest tldraw Offline release does not contain ${expectedName}`);
-  }
-  return asset;
-}
-async function getLatestDesktopRelease() {
-  const response = await fetch(releaseApi, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      "User-Agent": "hraness-slopcamera",
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
-  });
-  if (!response.ok)
-    throw new Error(`GitHub release lookup failed with HTTP ${response.status}`);
-  return parseRelease(await response.json());
-}
-async function sha256(filePath) {
-  const hash = createHash("sha256");
-  for await (const chunk of createReadStream(filePath))
-    hash.update(chunk);
-  return hash.digest("hex");
-}
-async function download(asset, filePath) {
-  const response = await fetch(asset.browser_download_url, {
-    headers: { "User-Agent": "hraness-slopcamera" },
-    redirect: "follow"
-  });
-  if (!response.ok || response.body === null) {
-    throw new Error(`Installer download failed with HTTP ${response.status}`);
-  }
-  const temporary = `${filePath}.part-${process.pid}`;
-  await mkdir2(dirname3(filePath), { recursive: true });
-  try {
-    await pipeline(Readable.fromWeb(response.body), createWriteStream(temporary, { mode: 384 }));
-    const expected = asset.digest?.startsWith("sha256:") ? asset.digest.slice(7) : null;
-    if (expected === null) {
-      throw new Error("GitHub did not publish a SHA-256 digest for this installer");
-    }
-    const actual = await sha256(temporary);
-    if (actual !== expected) {
-      throw new Error(`Installer checksum mismatch: expected ${expected}, received ${actual}`);
-    }
-    await rename2(temporary, filePath);
-  } catch (error) {
-    await rm2(temporary, { force: true });
-    throw error;
-  }
-}
-function spawnDetached(command) {
-  const child = Bun.spawn([...command], {
-    env: nonGatewayChildEnvironment(),
-    stdin: "ignore",
-    stdout: "ignore",
-    stderr: "ignore"
-  });
-  child.unref();
-}
-async function installDesktop(options) {
-  const release = await getLatestDesktopRelease();
-  const asset = selectDesktopAsset(release);
-  const cacheDirectory = join2(homedir(), ".cache", "slopcamera", "installers", release.tag_name);
-  const installerPath = join2(cacheDirectory, asset.name);
-  let reusable = false;
-  if (await pathExists(installerPath)) {
-    const expected = asset.digest?.startsWith("sha256:") ? asset.digest.slice(7) : null;
-    reusable = expected !== null && await sha256(installerPath) === expected;
-  }
-  if (!reusable)
-    await download(asset, installerPath);
-  if (hostPlatform() === "linux") {
-    const installedPath = join2(homedir(), ".local", "bin", "tldraw-offline");
-    await mkdir2(dirname3(installedPath), { recursive: true });
-    const temporary = `${installedPath}.tmp-${process.pid}`;
-    await Bun.write(temporary, Bun.file(installerPath));
-    await chmod(temporary, 493);
-    await rename2(temporary, installedPath);
-    if (!options.downloadOnly)
-      spawnDetached([installedPath]);
-    return { filePath: installedPath, release: release.tag_name };
-  }
-  if (!options.downloadOnly) {
-    if (hostPlatform() === "darwin") {
-      spawnDetached(["open", installerPath]);
-    } else {
-      spawnDetached(["cmd.exe", "/d", "/s", "/c", "start", "", installerPath]);
-    }
-  }
-  return { filePath: installerPath, release: release.tag_name };
-}
-async function findDesktopApplication() {
-  const candidates = hostPlatform() === "darwin" ? [
-    "/Applications/tldraw offline.app",
-    join2(homedir(), "Applications", "tldraw offline.app")
-  ] : hostPlatform() === "linux" ? [join2(homedir(), ".local", "bin", "tldraw-offline")] : [
-    join2(process.env.LOCALAPPDATA ?? join2(homedir(), "AppData", "Local"), "Programs", "tldraw offline", "tldraw offline.exe")
-  ];
-  for (const candidate of candidates)
-    if (await pathExists(candidate))
-      return candidate;
-  return null;
-}
-function serverFilePath() {
-  if (hostPlatform() === "darwin") {
-    return join2(homedir(), "Library", "Application Support", "tldraw", "server.json");
-  }
-  if (hostPlatform() === "win32") {
-    return join2(process.env.APPDATA ?? join2(homedir(), "AppData", "Roaming"), "tldraw", "server.json");
-  }
-  return join2(process.env.XDG_CONFIG_HOME ?? join2(homedir(), ".config"), "tldraw", "server.json");
-}
-async function desktopStatus() {
-  const installedPath = await findDesktopApplication();
-  const filePath = serverFilePath();
-  if (!await pathExists(filePath))
-    return { installedPath, server: null };
-  try {
-    const parsed = JSON.parse(await readFile3(filePath, "utf8"));
-    if (!isRecord2(parsed) || typeof parsed.port !== "number") {
-      return { installedPath, server: null };
-    }
-    return {
-      installedPath,
-      server: {
-        port: parsed.port,
-        pid: typeof parsed.pid === "number" ? parsed.pid : null
-      }
-    };
-  } catch {
-    return { installedPath, server: null };
-  }
-}
-async function openInDesktop(filePath) {
-  const absolutePath = resolve3(filePath);
-  if (!await pathExists(absolutePath))
-    throw new Error(`File does not exist: ${absolutePath}`);
-  const application = await findDesktopApplication();
-  if (application === null) {
-    throw new Error(`tldraw Offline is not installed. Run "slopcamera canvas install" or visit ${desktopDownloadPage}`);
-  }
-  if (hostPlatform() === "darwin") {
-    spawnDetached(["open", "-a", application, absolutePath]);
-  } else if (hostPlatform() === "win32") {
-    spawnDetached(["cmd.exe", "/d", "/s", "/c", "start", "", absolutePath]);
-  } else {
-    spawnDetached([application, absolutePath]);
-  }
-}
-
 // src/mcp/tools.ts
-import { rename as rename3, rm as rm3, writeFile as writeFile2 } from "fs/promises";
-import { dirname as dirname5, join as join4 } from "path";
+import { rename as rename2, rm as rm2, writeFile as writeFile2 } from "fs/promises";
+import { dirname as dirname4, join as join3 } from "path";
 
 // src/mcp/boundary.ts
-import { open, mkdir as mkdir3, realpath, stat } from "fs/promises";
+import { open, mkdir as mkdir2, realpath, stat } from "fs/promises";
 import {
   basename as basename2,
-  dirname as dirname4,
+  dirname as dirname3,
   isAbsolute as isAbsolute2,
-  join as join3,
+  join as join2,
   relative,
-  resolve as resolve4,
+  resolve as resolve3,
   win32
 } from "path";
 var mcpSourceByteLimit = 1024 * 1024;
@@ -578,7 +392,7 @@ class WorkspaceBoundary {
   static async create(rootDirectory) {
     let resolvedRoot;
     try {
-      resolvedRoot = await realpath(resolve4(rootDirectory));
+      resolvedRoot = await realpath(resolve3(rootDirectory));
       if (!(await stat(resolvedRoot)).isDirectory()) {
         throw new WorkspaceBoundaryError("OUTPUT_NOT_DIRECTORY", "MCP root must be a directory.");
       }
@@ -601,7 +415,7 @@ class WorkspaceBoundary {
   }
   async readSource(value) {
     const normalized = normalizeRelativePath(value, { allowRoot: false });
-    const lexicalPath = resolve4(this.rootDirectory, normalized.native);
+    const lexicalPath = resolve3(this.rootDirectory, normalized.native);
     this.assertConfined(lexicalPath);
     let canonicalPath;
     try {
@@ -621,7 +435,7 @@ class WorkspaceBoundary {
   }
   async resolveInputFile(value, maximumBytes) {
     const normalized = normalizeRelativePath(value, { allowRoot: false });
-    const lexicalPath = resolve4(this.rootDirectory, normalized.native);
+    const lexicalPath = resolve3(this.rootDirectory, normalized.native);
     this.assertConfined(lexicalPath);
     let canonicalPath;
     try {
@@ -653,8 +467,8 @@ class WorkspaceBoundary {
     if (fileName === "." || fileName === ".." || fileName.length === 0) {
       throw new WorkspaceBoundaryError("INVALID_PATH", "Output path must identify a file below the root.");
     }
-    const directory = await this.prepareOutputDirectory(dirname4(normalized.native));
-    const absolutePath = join3(directory.absolutePath, fileName);
+    const directory = await this.prepareOutputDirectory(dirname3(normalized.native));
+    const absolutePath = join2(directory.absolutePath, fileName);
     this.assertConfined(absolutePath);
     return {
       absolutePath,
@@ -663,7 +477,7 @@ class WorkspaceBoundary {
   }
   async prepareOutputDirectory(value) {
     const normalized = normalizeRelativePath(value, { allowRoot: true });
-    const lexicalPath = resolve4(this.rootDirectory, normalized.native);
+    const lexicalPath = resolve3(this.rootDirectory, normalized.native);
     this.assertConfined(lexicalPath);
     let ancestor = lexicalPath;
     for (;; ) {
@@ -677,7 +491,7 @@ class WorkspaceBoundary {
         if (filesystemCode(error) !== "ENOENT") {
           throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Output directory could not be resolved.");
         }
-        const parent = dirname4(ancestor);
+        const parent = dirname3(ancestor);
         if (parent === ancestor) {
           throw new WorkspaceBoundaryError("PATH_OUTSIDE_ROOT", "Output directory resolves outside the MCP root.");
         }
@@ -685,7 +499,7 @@ class WorkspaceBoundary {
       }
     }
     try {
-      await mkdir3(lexicalPath, { recursive: true });
+      await mkdir2(lexicalPath, { recursive: true });
       const canonicalPath = await realpath(lexicalPath);
       this.assertConfined(canonicalPath);
       if (!(await stat(canonicalPath)).isDirectory()) {
@@ -959,7 +773,7 @@ class ToolFailure extends Error {
       this.issues = issues;
   }
 }
-function isRecord3(value) {
+function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function safeFragment(value, maximumLength = 160) {
@@ -984,14 +798,14 @@ function parsePath(value) {
   return value;
 }
 function parseCheckArguments(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord2(value)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
   }
   rejectUnknownKeys(value, new Set(["path"]));
   return { path: parsePath(value.path) };
 }
 function parseRenderArguments(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord2(value)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
   }
   rejectUnknownKeys(value, new Set(["path", "out_dir", "scale"]));
@@ -1010,7 +824,7 @@ function parseRenderArguments(value) {
   };
 }
 function parseSearchArguments(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord2(value)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
   }
   rejectUnknownKeys(value, new Set(["query", "limit"]));
@@ -1022,11 +836,11 @@ function parseSearchArguments(value) {
   return { query, limit };
 }
 function parseExecuteArguments(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord2(value)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
   }
   rejectUnknownKeys(value, new Set(["operation", "input"]));
-  if (typeof value.operation !== "string" || !slopcameraOperationCodes.includes(value.operation) || !isRecord3(value.input)) {
+  if (typeof value.operation !== "string" || !slopcameraOperationCodes.includes(value.operation) || !isRecord2(value.input)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "operation must be an exact Slopcamera operation code and input must be an object.");
   }
   return {
@@ -1048,7 +862,7 @@ function assertComplexityLimits(spec) {
   }
 }
 function assertRawComplexityLimits(value) {
-  if (!isRecord3(value))
+  if (!isRecord2(value))
     return;
   const shapeCount = Array.isArray(value.shapes) ? value.shapes.length : 0;
   const edgeCount = Array.isArray(value.edges) ? value.edges.length : 0;
@@ -1131,20 +945,20 @@ function portableDirectory(filePath) {
   return separator === -1 ? "." : filePath.slice(0, separator);
 }
 async function atomicOverwrite(filePath, data) {
-  const temporaryPath = join4(dirname5(filePath), `.${crypto.randomUUID()}.slopcamera-mcp.tmp`);
+  const temporaryPath = join3(dirname4(filePath), `.${crypto.randomUUID()}.slopcamera-mcp.tmp`);
   try {
     await writeFile2(temporaryPath, data, { flag: "wx" });
     try {
-      await rename3(temporaryPath, filePath);
+      await rename2(temporaryPath, filePath);
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
       if (code !== "EEXIST" && code !== "EPERM")
         throw error;
-      await rm3(filePath, { force: true });
-      await rename3(temporaryPath, filePath);
+      await rm2(filePath, { force: true });
+      await rename2(temporaryPath, filePath);
     }
   } finally {
-    await rm3(temporaryPath, { force: true });
+    await rm2(temporaryPath, { force: true });
   }
 }
 async function loadDiagram(boundary, path) {
@@ -1307,11 +1121,11 @@ class SlopcameraMcpToolRuntime {
     const darkPng = renderPng(dark, builtInConfig, options.scale);
     const absoluteArtifacts = {
       spec: source.absolutePath,
-      tldr: join4(outputDirectory.absolutePath, `${spec.name}.tldr`),
-      lightSvg: join4(outputDirectory.absolutePath, `${spec.name}.light.svg`),
-      darkSvg: join4(outputDirectory.absolutePath, `${spec.name}.dark.svg`),
-      lightPng: join4(outputDirectory.absolutePath, `${spec.name}.light.png`),
-      darkPng: join4(outputDirectory.absolutePath, `${spec.name}.dark.png`)
+      tldr: join3(outputDirectory.absolutePath, `${spec.name}.tldr`),
+      lightSvg: join3(outputDirectory.absolutePath, `${spec.name}.light.svg`),
+      darkSvg: join3(outputDirectory.absolutePath, `${spec.name}.dark.svg`),
+      lightPng: join3(outputDirectory.absolutePath, `${spec.name}.light.png`),
+      darkPng: join3(outputDirectory.absolutePath, `${spec.name}.dark.png`)
     };
     await Promise.all([
       atomicOverwrite(absoluteArtifacts.tldr, tldr),
@@ -1353,17 +1167,17 @@ var SLOPCAMERA_VERSION = "3.2.7";
 var slopcameraMcpProtocolVersion = "2025-11-25";
 var slopcameraMcpServerName = "hraness-slopcamera";
 var maximumMessageBytes = 1024 * 1024;
-function isRecord4(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isJsonRpcId(value) {
   return typeof value === "string" || typeof value === "number" && Number.isSafeInteger(value);
 }
 function isInitializeParams(value) {
-  return isRecord4(value) && typeof value.protocolVersion === "string" && isRecord4(value.capabilities) && isRecord4(value.clientInfo) && typeof value.clientInfo.name === "string" && typeof value.clientInfo.version === "string";
+  return isRecord3(value) && typeof value.protocolVersion === "string" && isRecord3(value.capabilities) && isRecord3(value.clientInfo) && typeof value.clientInfo.name === "string" && typeof value.clientInfo.version === "string";
 }
 function parseRequest(value) {
-  if (!isRecord4(value) || value.jsonrpc !== "2.0" || typeof value.method !== "string" || value.method.length === 0 || "id" in value && !isJsonRpcId(value.id)) {
+  if (!isRecord3(value) || value.jsonrpc !== "2.0" || typeof value.method !== "string" || value.method.length === 0 || "id" in value && !isJsonRpcId(value.id)) {
     throw new Error("invalid request");
   }
   return {
@@ -1380,7 +1194,7 @@ function failure(id, code, message) {
   return { jsonrpc: "2.0", id, error: { code, message } };
 }
 function parseToolCall(params) {
-  if (!isRecord4(params) || typeof params.name !== "string" || params.arguments !== undefined && !isRecord4(params.arguments)) {
+  if (!isRecord3(params) || typeof params.name !== "string" || params.arguments !== undefined && !isRecord3(params.arguments)) {
     throw new Error("invalid params");
   }
   const unknownKeys = Object.keys(params).filter((key) => key !== "name" && key !== "arguments");
@@ -1442,7 +1256,7 @@ class SlopcameraMcpSession {
     if (request.method === "ping")
       return success(id, {});
     if (request.method === "tools/list") {
-      if (request.params !== undefined && (!isRecord4(request.params) || Object.keys(request.params).length > 0)) {
+      if (request.params !== undefined && (!isRecord3(request.params) || Object.keys(request.params).length > 0)) {
         return failure(id, -32602, "Invalid tools/list parameters");
       }
       return success(id, { tools: slopcameraMcpTools });
@@ -1462,11 +1276,11 @@ class SlopcameraMcpSession {
   }
 }
 async function defaultWriteLine(line) {
-  await new Promise((resolve5, reject) => {
+  await new Promise((resolve4, reject) => {
     process.stdout.write(`${line}
 `, (error) => {
       if (error === null || error === undefined)
-        resolve5();
+        resolve4();
       else
         reject(error);
     });
@@ -1966,27 +1780,21 @@ var slopcameraApi = Object.freeze({
   builtInIcons,
   bundledSkillPath,
   checkDiagramFile,
-  desktopDownloadPage,
-  desktopStatus,
   defineSlopcameraWorkflow,
   DiagramValidationError,
-  findDesktopApplication,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
-  getLatestDesktopRelease,
   slopcameraGatewayCredentialStatus,
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
   slopcameraMcpTools,
   slopcameraOperationRegistry,
   SlopcameraMcpToolRuntime,
-  installDesktop,
   installSkill,
   lintDiagram,
   mcpMaximumRenderedPixels,
   mcpMaximumScale,
   mcpSourceByteLimit,
-  openInDesktop,
   parseDiagramSource,
   parseDiagramSpec,
   readDiagramFile,
@@ -1999,7 +1807,6 @@ var slopcameraApi = Object.freeze({
   runSlopcameraWorkflow,
   runMcpServer,
   searchSlopcameraOperations,
-  selectDesktopAsset,
   serializeTldr,
   stackLayoutDefaults,
   StackLayoutError,
@@ -2010,4 +1817,4 @@ var slopcameraApi = Object.freeze({
   executeSlopcameraOperation
 });
 var diagramApi = slopcameraApi;
-export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, desktopDownloadPage, selectDesktopAsset, getLatestDesktopRelease, installDesktop, findDesktopApplication, desktopStatus, openInDesktop, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };
+export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };

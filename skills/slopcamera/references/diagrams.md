@@ -124,21 +124,12 @@ assets for ordinary proportional text while retaining host discovery for
 explicit mono and custom font roles.
 
 
-## Use tldraw deliberately
+## Use browser canvas tooling deliberately
 
-The generated `.tldr` file is editable interchange and does not require the
-tldraw SDK or desktop app to create. Open it in tldraw Offline when a person
-wants direct canvas editing:
-
-```sh
-slopcamera canvas open diagrams/<slug>.tldr
-```
-
-If the optional app is absent, `slopcamera canvas install` resolves the current
-official release, verifies its published SHA-256 digest, and launches the
-platform installer. The app imports `.tldr` as an unsaved document; save it
-there to create its newer native `.tldraw` bundle. Never rewrite a native
-`.tldraw` ZIP/SQLite bundle directly.
+The generated `.tldr` file is editable interchange and does not require a
+desktop application to create. Open it in a browser-based canvas editor when a
+person wants direct canvas editing. Slopcamera does not install or launch a
+desktop editor, and `.tldraw` application bundles are outside its contract.
 
 ## Verify
 
