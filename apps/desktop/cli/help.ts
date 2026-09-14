@@ -26,7 +26,8 @@ Commands:
   ai models|image|video|speech|transcribe
                                  Discover and run Vercel AI Gateway media models
   media audio|color              Apply local non-destructive audio and video effects
-  menubar                        Launch the detached menu-bar companion
+  menubar [--background]         Run the prebuilt menu-bar companion
+  menubar install|uninstall|status  Manage its per-user LaunchAgent
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording

@@ -271,7 +271,7 @@ export type CliCommand =
       readonly tint: number | undefined;
       readonly videoStreamIndex: number;
     } & JsonOption)
-  | ({ readonly kind: "menubar" } & JsonOption)
+  | ({ readonly kind: "menubar"; readonly action: "run" | "install" | "uninstall" | "status"; readonly mode: "foreground" | "background" } & JsonOption)
   | ({ readonly kind: "outputs" } & JsonOption)
   | ({ readonly kind: "recordings-list"; readonly limit: number } & JsonOption)
   | ({ readonly kind: "projects-list"; readonly limit: number } & JsonOption)
@@ -3093,9 +3093,11 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "inspect": return parseInspect(argv.slice(1));
     case "events": return parseEvents(argv.slice(1));
     case "menubar": {
-      const parsed = parseOptions(argv.slice(1), JSON_SPEC);
-      exactPositionals(parsed, 0, "slopcamera menubar [--json]");
-      return { kind: "menubar", json: optionFlag(parsed, "--json") };
+      const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--foreground": "flag", "--background": "flag" });
+      const positionals = parsed.positionals;
+      if (positionals.length > 1 || (positionals[0] !== undefined && !["install", "uninstall", "status"].includes(positionals[0]))) throw new CliError("usage", "Use slopcamera menubar [--foreground|--background] | install|uninstall|status");
+      if (positionals[0] !== undefined && (optionFlag(parsed, "--foreground") || optionFlag(parsed, "--background"))) throw new CliError("usage", "Choose a menu-bar action or a run mode, not both.");
+      return { kind: "menubar", action: (positionals[0] as "install" | "uninstall" | "status" | undefined) ?? "run", mode: optionFlag(parsed, "--background") ? "background" : "foreground", json: optionFlag(parsed, "--json") };
     }
     case "outputs": {
       const parsed = parseOptions(argv.slice(1), JSON_SPEC);
