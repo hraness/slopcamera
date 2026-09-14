@@ -2,7 +2,7 @@
 
 Slopcamera retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 
-These pages describe Slopcamera from current source. [Install that source](how-to/use-current-source.md) to use the CLI, SDK and matching Agent Skill; no Slopcamera release archive is available yet. Historical Atet archives retain their original package and commands. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+These pages describe Slopcamera from current source. [Install that source](how-to/use-current-source.md) to use the CLI, SDK and matching Agent Skill; no Slopcamera release archive is available yet. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
