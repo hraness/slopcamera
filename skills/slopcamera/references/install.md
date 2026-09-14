@@ -51,7 +51,7 @@ slopcamera skill path
 ## Add only required optional tools
 
 Treat `slopcamera doctor --json` as the readiness report. Install FFmpeg, a supported
-browser, native capture support, VTracer, tldraw Offline, or another optional
+browser, native capture support, VTracer, or another optional
 dependency only when the requested workflow needs it and the user has
 authorized that machine change. Slopcamera obtains its checksum-pinned VTracer on
 first vectorization use; do not replace that path with an unverified binary.

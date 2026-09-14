@@ -1238,14 +1238,6 @@ if (downbeat.beatPosition !== 4 || downbeat.beatIndex !== 4 || downbeat.beatPhas
   if ([...runnerRubberStampReference.matchAll(/skill_root="\$\(slopcamera skill path\)"/gu)].length !== 2) {
     throw new Error("Runner-installed skill lost packaged-resource discovery.");
   }
-  const canvasStatus = record(JSON.parse(await runOutput([
-    join(consumer, "node_modules", ".bin", "slopcamera"),
-    "canvas",
-    "status",
-  ], consumer)) as unknown, "slopcamera canvas status");
-  if (!("installedPath" in canvasStatus) || !("server" in canvasStatus)) {
-    throw new Error("Packed CLI did not delegate canvas status.");
-  }
   await runFailure([
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "mcp",

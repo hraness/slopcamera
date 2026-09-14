@@ -173,4 +173,4 @@ Effect approval and native source authorization have different scopes. `runs app
 
 `slopcamera mcp` offers compatibility diagram tools and the bounded portable semantic registry. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. The CLI supports larger checked diagrams and trusted workspace configuration.
 
-Generated `.tldr` is editable interchange. `slopcamera canvas open <file.tldr>` passes it to tldraw Offline; saving there creates the app's native `.tldraw` bundle. The diagram JSON remains Slopcamera's authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.
+Generated `.tldr` is editable interchange for browser-based canvas tooling. Slopcamera does not install or launch a desktop editor, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.
