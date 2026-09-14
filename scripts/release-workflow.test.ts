@@ -334,6 +334,7 @@ const packedRequiredPaths = [
   "dist/NebulaSans-Book-8cenzchw.otf",
   "package.json",
   "skills/slopcamera/SKILL.md",
+  "skills/slopcamera/references/web-media-excerpts.md",
   "src/assets/fonts/nebula-sans/LICENSE.txt",
   "src/assets/fonts/nebula-sans/NebulaSans-Bold.otf",
   "src/assets/fonts/nebula-sans/NebulaSans-Bold.woff2",
@@ -851,12 +852,13 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 450")
+  expect(publishJob).toContain("const maximumFiles = 460")
   expect(publishJob).toContain("const maximumPackedBytes = 4_300_000")
   expect(publishJob).toContain("const maximumUnpackedBytes = 11_300_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
   expect(publishJob).toContain("unpackedSize !== record.unpackedSize")
   expect(publishJob).toContain('"src/assets/fonts/nebula-sans/PROVENANCE.md"')
+  expect(publishJob).toContain('"skills/slopcamera/references/web-media-excerpts.md"')
   expect(publishJob).toContain("Downloaded files differ from the trusted verification digests")
   expect(publishJob).toContain('JSON.stringify(["access", "registry"])')
   expect(publishJob).toContain("Packed package manifest can override the canonical npm publication boundary")

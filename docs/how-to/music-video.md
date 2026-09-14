@@ -37,6 +37,8 @@ For your own request, save the following as `music-video.json` at the workspace 
 
 Run the commands from the workspace root. `document.path` and each declared resource's `path` are relative to that root, including when the JSON lives in a subdirectory. Keep the HTML and its resources inside the workspace. `audio.path` can be an explicit absolute local path. Omit the `audio` object for a silent video.
 
+When the soundtrack starts as a public web URL, acquire and verify a bounded local excerpt before authoring the request. Follow the [web-media excerpt guidance](../../skills/slopcamera/references/web-media-excerpts.md); the HTML renderer does not fetch remote media during a render.
+
 The soundtrack must contain exactly one playable audio stream beginning at the imported media timeline origin. A delayed audio stream start is rejected before rendering frames.
 
 Set `timing.durationUs` explicitly, even when supplying audio. Version one does not infer duration, tempo, or downbeats from the track. The final duration rounds up to a whole number of frames. Audio begins at time zero and is trimmed or padded with silence to that duration. `beatOffsetUs` controls the visual beat clock; it does not move or trim the audio.
@@ -106,7 +108,7 @@ slopcamera html render --input music-video.json --json
 
 Progress goes to stderr; `--json` keeps stdout machine-readable. Use the returned `output.path`, `receipt.path`, `source.path`, `projectId`, and `projectPath`. Artifact paths are relative to the workspace root.
 
-The retained job under `artifacts/slopcamera/generated/html-scenes/` includes the HTML, declared resources, original soundtrack when supplied, source and render receipts, a lossless RGB `scene.mp4`, and the delivery `video.mp4`. The delivery uses H.264 video and, when audio is present, 48 kHz stereo AAC at 320 kb/s. The ordinary project references the scene video and original music separately. The input files remain unchanged.
+The retained job under `artifacts/slopcamera/generated/html-scenes/` includes the HTML, declared resources, original soundtrack when supplied, source and render receipts, a lossless RGB `scene.mp4`, and the delivery `video.mp4`. The delivery uses H.264 video and, when audio is present, 48 kHz stereo AAC at 320 kb/s. Both generated media files use the 512 MiB local media bound. The scene intermediate is checked for its complete declared frame count before it is retained; if the bound truncates it, the command reports an actionable bounded-render error so you can lower the canvas, frame rate, or duration. The ordinary project references the scene video and original music separately. The input files remain unchanged.
 
 The returned `source.path` identifies `source.json`, a reusable scene request. It preserves the original canvas, frame rate, timing, seed, parameters, and other render settings, with source paths pointing to retained inputs. To rerun those scene settings, replace `<source.path>` with that returned path:
 

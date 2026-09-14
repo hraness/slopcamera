@@ -14,7 +14,7 @@ import { VideoProjectV1Schema } from "../contracts";
 import { htmlOverlayFrameCount } from "../html-overlay/contracts";
 import { getApprovedHtmlOverlayLibraryLock } from "../html-overlay/libraries";
 import { HtmlSceneInputSchema } from "../html-overlay/scene";
-import { renderHtmlScene, planHtmlScene, verifyHtmlSceneProbe, type HtmlSceneDependencies } from "./html-scene";
+import { renderHtmlScene, planHtmlScene, verifyHtmlSceneIntermediateProbe, verifyHtmlSceneProbe, type HtmlSceneDependencies } from "./html-scene";
 import { ingestProjectMedia } from "./media-ingest";
 import { createCliTestHostResourceCoordinator } from "./run-cli-test-helper";
 
@@ -124,7 +124,9 @@ async function fixture() {
     mutateOutputDuringProjectImport: false,
     frameFault: "" as "" | "integrity" | "libraries" | "path" | "count" | "dimensions" | "symlink",
     changeEncoderOnFrames: false,
+    malformedSceneProbe: false,
     probe: finalProbe(),
+    sceneProbe: finalProbe(false),
     soundtrackProbe: importProbe(true),
     stages: [] as string[],
     calls: [] as { argv: readonly string[]; options: ApplicationProcessRunOptions | undefined }[],
@@ -148,13 +150,15 @@ async function fixture() {
         expect(options?.abortSignal).toBe(controller.signal);
         expect(options?.inheritedFileDescriptors).toEqual([]);
         if (basename(argv[0]) === "ffprobe") {
-          const deliveryProbe = argv.includes("-count_frames");
           const sourcePath = argv.at(-1)!;
+          const intermediateProbe = argv.includes("-count_frames") && basename(sourcePath) === "scene.mp4";
+          const deliveryProbe = argv.includes("-count_frames") && basename(sourcePath) === "video.mp4";
           const soundtrackSource = !deliveryProbe && (
             (await readFile(sourcePath)).subarray(0, 4).toString() === "RIFF"
             || /\.(?:wav|aif|aiff|mp3|flac)$/iu.test(sourcePath)
           );
-          const data = deliveryProbe ? state.probe : soundtrackSource ? state.soundtrackProbe : importProbe(false);
+          const data = intermediateProbe ? state.sceneProbe : deliveryProbe ? state.probe : soundtrackSource ? state.soundtrackProbe : importProbe(false);
+          if (intermediateProbe && state.malformedSceneProbe) return { exitCode: 0, stderr: "", stdout: "not-json" };
           if (!deliveryProbe && !soundtrackSource && state.mutateOutputDuringProjectImport) {
             await writeFile(join(dirname(state.renderRequests[0]!.outputDirectory), "video.mp4"), "changed delivery after its probe and hash");
           }
@@ -473,9 +477,38 @@ describe("HTML scene export", () => {
     expect(await readdir(f.projectRoot)).toEqual([]);
     expect(f.state.stages).not.toContain("project");
   });
+
+  test("rejects a truncated lossless intermediate before retaining or importing it", async () => {
+    const f = await fixture(); f.state.sceneProbe.streams[0]!.nb_read_frames = "2";
+    await expect(f.render()).rejects.toThrow(/lossless HTML scene intermediate.*512 MiB/iu);
+    expect(f.state.encodeCalls).toBe(1);
+    expect(await readdir(f.projectRoot)).toEqual([]);
+    expect(f.state.stages).not.toContain("verify");
+  });
+
+  test("rejects an uninspectable lossless intermediate with a bounded render error", async () => {
+    const f = await fixture(); f.state.malformedSceneProbe = true;
+    await expect(f.render()).rejects.toThrow(/could not be inspected.*512 MiB/iu);
+    expect(f.state.encodeCalls).toBe(1);
+    expect(await readdir(f.projectRoot)).toEqual([]);
+  });
 });
 
 describe("HTML scene final media verification", () => {
+  test("accepts an exact lossless intermediate probe", () => {
+    expect(verifyHtmlSceneIntermediateProbe(finalProbe(false), EXPECTED)).toMatchObject({
+      frameCount: 3, width: 32, height: 18, durationUs: 1_500_000,
+    });
+  });
+
+  test("reports malformed or partial lossless intermediates as bounded render errors", () => {
+    const probe = finalProbe(false);
+    probe.streams[0]!.nb_read_frames = "2";
+    expect(() => verifyHtmlSceneIntermediateProbe(probe, EXPECTED)).toThrow(/512 MiB/iu);
+    expect(() => verifyHtmlSceneIntermediateProbe({ streams: [], format: { duration: "1.5" } }, EXPECTED))
+      .toThrow(/lossless HTML scene intermediate/iu);
+  });
+
   test("accepts exact video/audio properties and explicitly silent deliveries", () => {
     expect(verifyHtmlSceneProbe(finalProbe(), EXPECTED)).toMatchObject({ frameCount: 3, durationUs: 1_500_000,
       audio: { codec: "aac", channels: 2, sampleRateHz: 48_000, startTimeUs: 0 } });

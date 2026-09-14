@@ -1258,13 +1258,13 @@
     ]
   },
   {
+    "identityLineCount": 83,
+    "identityLinesSha256": "bba76c5b65b96b31b6929dbe68026ba98be1d4bed736b6376e28e820e39e54dc",
+    "occurrenceCount": 443,
+    "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
-    ],
-    "identityLineCount": 83,
-    "identityLinesSha256": "f0eaa44b4f77d02ea7fd98a0d9ffad7ab6c16a4f51f3ce2329a02553d3ce9371",
-    "occurrenceCount": 443,
-    "path": "apps/desktop/dist/cli/main.js"
+    ]
   },
   {
     "identityLineCount": 1,

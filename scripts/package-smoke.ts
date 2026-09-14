@@ -83,6 +83,7 @@ const requiredPackedPaths = [
   "skills/slopcamera/references/native-studio.md",
   "docs/studio.md",
   "skills/slopcamera/SKILL.md",
+  "skills/slopcamera/references/web-media-excerpts.md",
   "skills/slopcamera/references/rubber-stamp-examples/poster-example-1.jpg",
   "skills/slopcamera/references/rubber-stamp-examples/stamp-style-1.png",
   "skills/slopcamera/scripts/compose-rubber-stamp-field-note.ts",
