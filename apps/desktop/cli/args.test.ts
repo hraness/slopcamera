@@ -16,34 +16,6 @@ test("parses agent-friendly microsecond, millisecond, second, clock, and frame t
   expect(() => parseCliTime("30f")).toThrow("requires --fps");
 });
 
-test("parses exact capture-source IDs and rejects ambiguous or duplicate selections", () => {
-  expect(parseCliArgs([
-    "record", "start",
-    "--display", "display-left",
-    "--display", "display-right",
-    "--camera-device", "camera-external",
-    "--microphone-device", "microphone-usb",
-  ])).toMatchObject({
-    action: "start",
-    cameraDeviceId: "camera-external",
-    displays: ["display-left", "display-right"],
-    kind: "record",
-    microphone: true,
-    microphoneDeviceId: "microphone-usb",
-    systemAudio: true,
-    webcam: true,
-  });
-  expect(() => parseCliArgs([
-    "record", "start", "--display", "display-left", "--display", "display-left",
-  ])).toThrow(/unique/u);
-  expect(() => parseCliArgs([
-    "record", "start", "--webcam", "false", "--camera-device", "camera-external",
-  ])).toThrow(/cannot be combined/u);
-  expect(() => parseCliArgs([
-    "record", "start", "--microphone", "false", "--microphone-device", "microphone-usb",
-  ])).toThrow(/cannot be combined/u);
-});
-
 test("parses manual zoom transition timing and emoji overlay providers", () => {
   const zoom = parseCliArgs([
     "edit", "rec_example001", "zoom", "add",
@@ -251,8 +223,8 @@ test("help and version do not require repository discovery", async () => {
   expect(stderr).toBe("");
 
   stdout = "";
-  expect(await runCli(["help", "record"], { io })).toBe(0);
-  expect(stdout).toContain("slopcamera record");
+  expect(await runCli(["help", "recordings"], { io })).toBe(0);
+  expect(stdout).toContain("slopcamera recordings");
   expect(stderr).toBe("");
 });
 

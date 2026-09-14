@@ -5,11 +5,6 @@ export default [
   {
     ignores: [
       "analysis/dist/**",
-      "capture/dist/**",
-      "direct/dist/**",
-      "frontend/dist/**",
-      "runtime/dist/**",
-      "zig-out/**",
     ],
   },
 ];

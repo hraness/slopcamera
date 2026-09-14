@@ -135,6 +135,7 @@ import { commandHelp, completions } from "./help";
 import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
+import { launchMenubar, reportOutputsRoot } from "./menubar";
 import {
   codePreparationHostResourceClaims,
   combineHostResourceClaims,
@@ -175,12 +176,6 @@ import {
   type OpenProject,
 } from "./project-service";
 import { resolveVerifiedProjectMedia } from "./project-media-integrity";
-import {
-  executeRecordingAction,
-  type RecordingController,
-  type RecordingSnapshot,
-  type RecordingStartOptions,
-} from "./recording-controller";
 import { buildFfmpegInvocation, prepareOverlaySources } from "./renderer";
 import { buildProjectFfmpegInvocation } from "./project-renderer";
 import {
@@ -320,7 +315,6 @@ export interface CliDependencies {
   readonly hostResourceCoordinator?: HostResourceCoordinator;
   readonly io?: CliIo;
   readonly paths?: RepositoryPaths;
-  readonly recordingController?: RecordingController;
   readonly runner?: ProcessRunner;
   readonly sceneProviderFactory?: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
   readonly sleep?: (milliseconds: number) => Promise<void>;
@@ -347,7 +341,6 @@ interface CommandContext {
   readonly hostResourceCoordinator: HostResourceCoordinator;
   readonly io: CliIo;
   readonly paths: RepositoryPaths;
-  readonly recordingController: RecordingController | undefined;
   readonly runner: ProcessRunner;
   readonly sceneProviderFactory: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
   readonly sleep: (milliseconds: number) => Promise<void>;
@@ -541,7 +534,6 @@ function applicationContext(
   context: CommandContext,
   providerOptions?: GatewayProviderOptions,
 ): ApplicationContext {
-  const recordingController = context.recordingController;
   const toApplicationCapability = (capability: Capability) => ({
     available: capability.available,
     ...(capability.command === undefined ? {} : { command: capability.command }),
@@ -572,21 +564,6 @@ function applicationContext(
       : { hostResourceLease: context.hostResourceLease }),
     machineStateRoot: context.stateRoot,
     paths: context.paths,
-    ...(recordingController === undefined
-      ? {}
-      : {
-          recordingController: {
-            execute: async (
-              action: "pause" | "resume" | "start" | "stop",
-              options?: unknown,
-            ) => await executeRecordingAction(
-              recordingController,
-              action,
-              options as RecordingStartOptions | undefined,
-            ),
-            status: async () => await recordingController.status(),
-          },
-        }),
     runner: context.runner,
   };
   return {
@@ -1713,11 +1690,6 @@ async function handleRender(
   });
   const completed = { ...output, output: outputIntegrity };
   writeValue(context.io, command.json, completed, () => `rendered ${output.outputPath}; plan=${artifactPath}`);
-}
-
-function snapshotHuman(snapshot: RecordingSnapshot): string {
-  if (snapshot.state === "idle") return "idle";
-  return `${snapshot.state} ${snapshot.recordingId ?? "unknown"} ${humanTime(snapshot.logicalTimeUs)} segments=${snapshot.completedSegmentCount}`;
 }
 
 async function handleProjectEdit(
@@ -6260,18 +6232,14 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
       for (const completion of completions(command.words)) writeLine(context.io, completion);
       return;
     case "doctor": {
-      const [capabilities, emoji, active, macVersion] = await Promise.all([
+      const [capabilities, emoji, macVersion] = await Promise.all([
         context.capabilities(),
         inspectEmojiAssets(context.paths.repositoryRoot),
-        context.recordingController === undefined
-          ? Promise.resolve(null)
-          : context.recordingController.status(),
         context.io.platform === "darwin"
           ? context.runner.run(["/usr/bin/sw_vers", "-productVersion"], { maxOutputBytes: 4_096 })
           : Promise.resolve({ exitCode: 0, stderr: "", stdout: "not-macos" }),
       ]);
       const output = {
-        activeRecording: active,
         artifactRoot: displayPath(context.paths.repositoryRoot, context.paths.artifactRoot),
         gatewayCredential: inspectGatewayCredential(context.io.env),
         emoji: {
@@ -6290,7 +6258,6 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
         `artifacts ${output.artifactRoot}`,
         `platform ${output.platform.name} ${output.platform.macOSVersion}`,
         ...capabilities.map((item) => `${item.name} ${item.available ? item.version ?? item.command : "unavailable"}`),
-        `recording ${active === null ? "controller-unavailable" : snapshotHuman(active)}`,
         `emoji ${emoji.provenance} ${emoji.installedCount}/${emoji.catalogCount}; generate: ${emoji.generationCommand}`,
       ].join("\n"));
       return;
@@ -6326,6 +6293,14 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "ai-transcribe": await handleAiTranscribe(context, command); return;
     case "media-audio": await handleMediaAudio(context, command); return;
     case "media-color": await handleMediaColor(context, command); return;
+    case "menubar": {
+      await launchMenubar(context.io, context.paths.repositoryRoot, command.json);
+      return;
+    }
+    case "outputs": {
+      await reportOutputsRoot(context.io, context.stateRoot, command.json);
+      return;
+    }
     case "recordings-list": {
       const directories = (await listRecordingDirectories(context.paths.artifactRoot)).slice(0, command.limit);
       const recordings = await Promise.all(directories.map(async ({ id }) => {
@@ -6509,32 +6484,6 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
       ).join("\n"));
       return;
     }
-    case "record": {
-      if (context.recordingController === undefined) throw new CliError("unavailable", "Recording controller is unavailable.");
-      const options = command.action === "start"
-        ? {
-            camera: !command.webcam
-              ? { kind: "disabled" as const }
-              : command.cameraDeviceId === undefined
-              ? { kind: "default" as const }
-              : { deviceId: command.cameraDeviceId, kind: "device" as const },
-            displays: command.displays.length === 0
-              ? { kind: "all" as const }
-              : { displayIds: command.displays, kind: "selected" as const },
-            microphone: !command.microphone
-              ? { kind: "disabled" as const }
-              : command.microphoneDeviceId === undefined
-              ? { kind: "default" as const }
-              : { deviceId: command.microphoneDeviceId, kind: "device" as const },
-            strictInputs: command.strictInputs,
-            systemAudio: command.systemAudio,
-            typedText: command.typedText,
-          }
-        : undefined;
-      const snapshot = await executeRecordingAction(context.recordingController, command.action, options);
-      writeValue(context.io, command.json, snapshot, () => snapshotHuman(snapshot));
-      return;
-    }
     case "edit": await handleEdit(context, command); return;
     case "analyze-inactivity": await handleInactivity(context, command); return;
     case "analyze-faces": await handleFaceAnalysis(context, command); return;
@@ -6662,11 +6611,12 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "fillers-list":
     case "emoji-search":
     case "emoji-resolve":
+    case "menubar":
+    case "outputs":
     case "complete": return undefined;
-    // These write outside an existing mutable bundle: fresh projects publish by
-    // atomic rename and capture has its own controller.
-    case "projects-create":
-    case "record": return undefined;
+    // Fresh projects write outside an existing mutable bundle and publish by
+    // atomic rename.
+    case "projects-create": return undefined;
   }
 }
 
@@ -6808,7 +6758,6 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
         ?? createDefaultHostResourceCoordinator(),
       io,
       paths,
-      recordingController: dependencies.recordingController,
       runner,
       sceneProviderFactory: dependencies.sceneProviderFactory
         ?? (options => createGatewaySceneProvider(options)),

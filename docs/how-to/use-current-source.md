@@ -13,7 +13,7 @@ bun run build:sdk
 bun run build:desktop:cli
 ```
 
-These commands build the SDK and source-backed CLI. They do not build the desktop app or run a native scene. Keep the commit file with your work: the branch can advance while a source build retains the same package version.
+These commands build the SDK and source-backed CLI. They do not build the menu-bar companion or run a native scene. Keep the commit file with your work: the branch can advance while a source build retains the same package version.
 
 In this shell, make `slopcamera` invoke that exact checkout:
 
@@ -45,4 +45,4 @@ cd ../slopcamera-production
 
 The function continues using the built CLI while artifacts belong to the caller's working directory. Save the checkout path and commit so a later shell can restore the same function. Do not replace an existing checkout, its dependencies or its generated build during an active durable run: resume checks the runtime identity.
 
-Install only the native tools required by your chosen workflow. The [first native film tutorial](../tutorials/first-native-film.md) uses a specific local Blender installation; the [studio guide](../studio.md) also covers Python environments for Manim and CadQuery. The portable source build does not provide those engines, operating-system capture permissions or a GPU.
+Install only the native tools required by your chosen workflow. The [first native film tutorial](../tutorials/first-native-film.md) uses a specific local Blender installation; the [studio guide](../studio.md) also covers Python environments for Manim and CadQuery. The portable source build does not provide those engines or a GPU.

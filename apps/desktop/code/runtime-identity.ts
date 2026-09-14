@@ -52,12 +52,10 @@ const APPLICATION_SOURCE_EXTENSIONS = new Set([
 const DESKTOP_SOURCE_DIRECTORIES = [
   "analysis",
   "application",
-  "capture",
   "cli",
   "code",
   "contracts",
   "core",
-  "runtime",
   "studio",
   "workflows",
 ] as const;
@@ -67,7 +65,6 @@ const MAXIMUM_APPLICATION_SOURCE_FILE_BYTES = 64 * 1024 * 1024;
 // root lockfile, while the committed CLI bundle ships beside the checked
 // sources in both layouts. Each of these inputs stays hash-bound wherever it
 // is present and is skipped only when it is absent.
-const OPTIONAL_DESKTOP_SOURCE_DIRECTORIES = new Set<string>(["runtime"]);
 const OPTIONAL_APPLICATION_SOURCE_FILES = new Set<string>([
   "apps/desktop/dist/cli/main.js",
   "bun.lock",
@@ -178,7 +175,6 @@ async function computeApplicationBuildIdentity(options: {
   for (const directory of DESKTOP_SOURCE_DIRECTORIES) {
     const path = await presentDesktopDirectory(desktopRoot, directory);
     if (path === undefined) {
-      if (OPTIONAL_DESKTOP_SOURCE_DIRECTORIES.has(directory)) continue;
       throw new ApplicationError(
         "not-found",
         `Application build source directory is missing: apps/desktop/${directory}`,

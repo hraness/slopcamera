@@ -1,10 +1,10 @@
 # How Slopcamera connects sources, scenes and films
 
-Slopcamera keeps authored source available while turning it into inspectable visual artifacts. A diagram, a native Blender scene, an AI-generated clip and a recorded screen can all contribute to a film, but they retain different editing capabilities and provenance. A finished image or video is a useful common boundary between renderers; it does not preserve every property of the source that produced it.
+Slopcamera keeps authored source available while turning it into inspectable visual artifacts. A diagram, a native Blender scene, an AI-generated clip and a recorded screen bundle can all contribute to a film, but they retain different editing capabilities and provenance. A finished image or video is a useful common boundary between renderers; it does not preserve every property of the source that produced it.
 
 ## One local host, several authoring representations
 
-The portable SDK owns diagram, graph, spatial-scene and native-job contracts. The local host adds durable jobs, media import, rendering, project storage and resource admission. The CLI and desktop shell use that host; the shell adds native capture, operating-system permissions and UI. The [SDK reference](reference/sdk.md) distinguishes the portable four-operation projection from the complete local registry.
+The portable SDK owns diagram, graph, spatial-scene and native-job contracts. The local host adds durable jobs, media import, rendering, project storage and resource admission. The CLI uses that host; an optional Rust menu-bar companion renders the agent outputs directory and holds no product authority. The [SDK reference](reference/sdk.md) distinguishes the portable four-operation projection from the complete local registry.
 
 Structured spatial scenes give agents named entities, calibrated cameras and typed patches. Three renders the supported mesh and media-surface profile; Spark adds bounded saved splat environments. These sources expose a deliberately bounded editing contract.
 

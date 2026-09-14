@@ -57,7 +57,6 @@ const requiredPackedPaths = [
   "README.md",
   "SECURITY.md",
   "apps/desktop/analysis/protocol.ts",
-  "apps/desktop/capture/protocol.ts",
   "apps/desktop/code/host-source-layout.ts",
   "apps/desktop/code/worker-entry.ts",
   "apps/desktop/code/worker-lease-guardian.ts",

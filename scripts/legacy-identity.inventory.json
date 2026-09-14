@@ -289,24 +289,6 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "fe41e1d49ba6b752f96609b2bd51b26636748439291915bc441a2fa1f342252a",
-    "occurrenceCount": 3,
-    "path": "apps/desktop/capture/interruption-state.macos.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "61a18c415699f8aa257a1222628dd2d0b7f83c50365dc70d31c4642cee4ee566",
-    "occurrenceCount": 1,
-    "path": "apps/desktop/capture/recorder-single-flight.macos.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 3,
     "identityLinesSha256": "d8624a139ff5c1fc29de4393879a1e0fdf17739dedba0fea6bc44190a5a76641",
     "occurrenceCount": 3,
     "path": "apps/desktop/cli/AGENTS.md",
@@ -448,7 +430,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "b76e2d280a51f37b3789a18db17dbf4c11d31473fd4912bfa4af7fa6b93de1bb",
+    "identityLinesSha256": "77247e0134fbc29103e54d319e15c81fb7de90c39f4784b139d6f5d7bb5b49d6",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -1280,7 +1262,7 @@
       "generated"
     ],
     "identityLineCount": 83,
-    "identityLinesSha256": "535df0529c4db86cceea90d61be79f2ad6bc74c91c70256433847e4009f963e7",
+    "identityLinesSha256": "f0eaa44b4f77d02ea7fd98a0d9ffad7ab6c16a4f51f3ce2329a02553d3ce9371",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js"
   },
@@ -1310,24 +1292,6 @@
     "path": "apps/desktop/html-overlay/random.ts",
     "categories": [
       "serialized-reader"
-    ]
-  },
-  {
-    "identityLineCount": 3,
-    "identityLinesSha256": "4662880aaf46cd2203b7ff59bb1b3c5f354aef76e0335b0a94a714a65bb3cb2c",
-    "occurrenceCount": 3,
-    "path": "apps/desktop/runtime/src/gateway.integration.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "3d174528c2b88e9da4a8009fc2b3b2b1f1b75d7d241c4b2d67271079604a5c8a",
-    "occurrenceCount": 1,
-    "path": "apps/desktop/runtime/src/recording-service.test.ts",
-    "categories": [
-      "test-fixture"
     ]
   },
   {
@@ -1720,7 +1684,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "bbc456d8f88fca204fdac8eef70b716616679a7b2bfb82d85f261fdce7944c03",
+    "identityLinesSha256": "d97dff740e2c21e9152906bbf16ae996e612ca445bcfee6095561b859563849f",
     "occurrenceCount": 3,
     "path": "docs/how-to/use-current-source.md",
     "categories": [
@@ -1747,7 +1711,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "aed7fc0e14ebc0c627f284f5a489deaa16d44d5a4817ffd6caa6481d1e946466",
+    "identityLinesSha256": "465be4ab07b5d156c8912046ae363c977294d62a5dfa58bbf581f06431e66fcb",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1927,7 +1891,7 @@
   },
   {
     "identityLineCount": 17,
-    "identityLinesSha256": "e3bf7030b073e985ad713e4ac2688ea9c81a1bbd983566fa33aae04847451134",
+    "identityLinesSha256": "6f7adc7e3c513c517083cdd747b1410cc4313538d22aab79fb46759aa50a98a6",
     "occurrenceCount": 17,
     "path": "package.json",
     "categories": [

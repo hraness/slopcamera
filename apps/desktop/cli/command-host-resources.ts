@@ -226,15 +226,16 @@ export function commandHostResourceClaims(
     case "fillers-list":
     case "help":
     case "inspect":
+    case "menubar":
     case "operations-list":
     case "operations-show":
+    case "outputs":
     case "project-camera-edit":
     case "project-edit":
     case "project-inspect":
     case "project-metadata-edit":
     case "projects-create":
     case "projects-list":
-    case "record":
     case "recordings-list":
     case "runs-approve":
     case "runs-cancel":

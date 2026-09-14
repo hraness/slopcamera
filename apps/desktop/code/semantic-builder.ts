@@ -50,11 +50,6 @@ import type {
   ProjectRenderPlanOutput,
   ProjectSnapshotOutput,
   PromoteVariantSelectionOutput,
-  RecordingPauseOutput,
-  RecordingResumeOutput,
-  RecordingStartInput,
-  RecordingStartOutput,
-  RecordingStopOutput,
   SceneAnalysisOperationInput,
   SceneAnalysisOperationOutput,
   SelectVariantInput,
@@ -301,8 +296,6 @@ export type MediaAudioEffectsOptions =
   OperationInputValue<MediaAudioEffectsInput>;
 export type MediaColorGradeOptions =
   OperationInputValue<MediaColorGradeInput>;
-export type RecordingStartOptions =
-  OperationInputValue<RecordingStartInput>;
 
 export type FaceFollowOptions = {
   readonly [Key in keyof Omit<FollowFacesInput, "project">]:
@@ -1341,42 +1334,6 @@ export class WorkflowBuilder {
       },
       kind: "render.project",
       version: 3,
-    }, options),
-  });
-
-  readonly recording = Object.freeze({
-    pause: (
-      key: string,
-      options?: OperationNodeOptions,
-    ): Ref<RecordingPauseOutput> => this.#graph.operationByKind(key, {
-      input: {},
-      kind: "recording.pause",
-      version: 1,
-    }, options),
-    resume: (
-      key: string,
-      options?: OperationNodeOptions,
-    ): Ref<RecordingResumeOutput> => this.#graph.operationByKind(key, {
-      input: {},
-      kind: "recording.resume",
-      version: 1,
-    }, options),
-    start: (
-      key: string,
-      input: RecordingStartOptions,
-      options?: OperationNodeOptions,
-    ): Ref<RecordingStartOutput> => this.#graph.operationByKind(key, {
-      input,
-      kind: "recording.start",
-      version: 2,
-    }, options),
-    stop: (
-      key: string,
-      options?: OperationNodeOptions,
-    ): Ref<RecordingStopOutput> => this.#graph.operationByKind(key, {
-      input: {},
-      kind: "recording.stop",
-      version: 1,
     }, options),
   });
 

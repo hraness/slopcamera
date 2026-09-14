@@ -2,7 +2,7 @@
 # Contents
 
 - `src/` – portable declarative and imperative workflow SDKs, host-resource admission, diagrams, direct Vercel AI Gateway generation, local vectorization, semantic operations, MCP, and canvas integration.
-- `apps/desktop/` – the canonical `slopcamera` CLI, complete local media host, durable scheduler, HTML and Three.js overlays, native capture helpers, frontend, and desktop shell.
+- `apps/desktop/` – the canonical `slopcamera` CLI, complete local media host, durable scheduler, HTML and Three.js overlays, and the local Vision analysis helper.
 - `apps/web/` – the static `slopcamera.com` site, with a local browser bundle and a production-only anonymous pageview boundary but no API, account, or credential surface.
 - `packages/scene/` – the shared local scene-analysis contract.
 - `src/code/` – portable declarative graph authoring, the closed public capability projection, compilation, planning, and execution contracts.
@@ -49,7 +49,7 @@
 - The fixed `slopcamera.studio.run` operation is an explicit native-authoring exception: it may execute a previously retained, hash-bound Python or native-scene bundle through a closed Blender/Manim/CadQuery host adapter. It requires a separate invocation-scoped trusted-current-user envelope; source import, pure planning and inspection stay inert. Runtime paths and argv remain host-owned, and the profile declares no OS sandbox or hermetic dependency closure.
 - Preserve the root module and `./workflow` v0.8 imperative APIs. Add declarative graphs through `./code` and lower-level compiler contracts through `./code/advanced`; do not add `./code/testing` or `./code/workflows` exports.
 - Treat explicitly imported workflow modules as trusted current-user Bun code. Compile graphs only against the host's closed capability projection, reject an unsupported capability before executor or resource admission, and do not add an open operation-registration hook.
-- Treat the portable SDK and core as the canonical graph contract. The complete local host consumes that contract through its own closed projection and owns durable media execution. The Desktop shell adds only native capture, permissions, and UI.
+- Treat the portable SDK and core as the canonical graph contract. The complete local host consumes that contract through its own closed projection and owns durable media execution. The optional Rust menu-bar companion under `desktop/` is a disposable outputs-directory client with no product authority.
 - Model one project as immutable source plus explicit revisions, candidates, selections, and delivery variants. Keep ready work bounded by resource claims and serialize expensive encodes by default.
 - Keep imperative workflows as explicitly imported trusted Bun modules over the fixed operation registry. Parse runtime input, bound and uniquely identify steps, drain dispatched work before returning, retain completed-step receipts on every failure path, and do not load caller-selected source paths.
 - Keep semantic SDK, CLI, MCP, and workflow resource admission machine-global and crash-safe on macOS and Linux, with a truthful process-local fallback elsewhere. Preserve profile identity, FIFO admission for overlapping claims, callback-settlement ownership, and inherited lease descriptors through spawned vectorizer processes.

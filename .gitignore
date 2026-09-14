@@ -10,12 +10,5 @@ next-env.d.ts
 *.tsbuildinfo
 .DS_Store
 .vercel/
-apps/desktop/.zig-cache/
-apps/desktop/zig-cache/
-apps/desktop/zig-out/
 apps/desktop/analysis/dist/
-apps/desktop/capture/dist/
-apps/desktop/direct/dist/
-apps/desktop/frontend/dist/
-apps/desktop/runtime/dist/
-apps/desktop/runtime/.release-cache/
+/desktop/target/
