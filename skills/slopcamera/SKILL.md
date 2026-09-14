@@ -22,6 +22,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
 | Record, clean up, caption, frame or deliver video | [Video projects](references/video-projects.md) |
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
+| Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |

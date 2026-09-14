@@ -41,9 +41,9 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Native studio archive: 429 files, 4,001,095 packed and 10,680,817 unpacked bytes.
-// Keep bounded headroom aligned with the independent release artifact readers.
-const maximumPackedFiles = 450;
+// Keep the packaged surface bounded. This ceiling includes the separately
+// routed web-media reference and is mirrored in the release workflow.
+const maximumPackedFiles = 451;
 const maximumPackedBytes = 4_300_000;
 const maximumUnpackedBytes = 11_300_000;
 const packedHtmlExamplePaths = [
@@ -83,6 +83,7 @@ const requiredPackedPaths = [
   "skills/slopcamera/references/native-studio.md",
   "docs/studio.md",
   "skills/slopcamera/SKILL.md",
+  "skills/slopcamera/references/web-media-excerpts.md",
   "skills/slopcamera/references/rubber-stamp-examples/poster-example-1.jpg",
   "skills/slopcamera/references/rubber-stamp-examples/stamp-style-1.png",
   "skills/slopcamera/scripts/compose-rubber-stamp-field-note.ts",

@@ -133,9 +133,12 @@ Use returned `output.path`, `receipt.path`, `source.path`, `projectId`, and
 `projectPath`. Artifact paths are relative to the workspace root. The retained
 job includes original HTML, declared resources, original music when supplied,
 source and render receipts, lossless RGB `scene.mp4`, and delivery `video.mp4`.
-The delivery is H.264 with optional 48 kHz stereo AAC at 320 kb/s. Its ordinary
-project keeps the scene video and original music separate. Input files remain
-unchanged.
+The delivery is H.264 with optional 48 kHz stereo AAC at 320 kb/s. Both generated
+media files use the 512 MiB local media bound. The scene intermediate is checked
+for its complete declared frame count before retention; when the bound truncates
+it, the command reports an actionable bounded-render error and suggests lowering
+the canvas, frame rate, or duration. Its ordinary project keeps the scene video
+and original music separate. Input files remain unchanged.
 
 The returned `source.path` identifies a reusable `source.json` request with the
 original canvas, frame rate, timing, seed, parameters, and other render settings.

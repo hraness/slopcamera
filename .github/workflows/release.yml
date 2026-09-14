@@ -480,7 +480,7 @@ jobs:
           const { posix } = require("node:path");
           const { gunzipSync } = require("node:zlib");
 
-          const maximumFiles = 450;
+          const maximumFiles = 451;
           const maximumMetadataBytes = 1_000_000;
           const maximumPackedBytes = 4_300_000;
           const maximumUnpackedBytes = 11_300_000;
@@ -592,6 +592,7 @@ jobs:
             "dist/NebulaSans-Book-8cenzchw.otf",
             "package.json",
             "skills/slopcamera/SKILL.md",
+            "skills/slopcamera/references/web-media-excerpts.md",
             "src/assets/fonts/nebula-sans/LICENSE.txt",
             "src/assets/fonts/nebula-sans/NebulaSans-Bold.otf",
             "src/assets/fonts/nebula-sans/NebulaSans-Bold.woff2",

@@ -1268,7 +1268,7 @@
   },
   {
     "identityLineCount": 83,
-    "identityLinesSha256": "6d23f99152f0225baf2e58ba213504523ab987df7fd74427616ade074448491c",
+    "identityLinesSha256": "ef43c6592955558e69e912eda16b41fd66027966175a615df8b3a0b5383d0e9e",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1809,9 +1809,9 @@
     ]
   },
   {
-    "identityLineCount": 18,
-    "identityLinesSha256": "70b543f43bd2a05400b52471a2695c183947f5a4351fa9e1e833b7a3f535a393",
-    "occurrenceCount": 18,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
+    "occurrenceCount": 17,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"

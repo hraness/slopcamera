@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { open, readdir } from "node:fs/promises";
+import { lstat, open, readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { z } from "zod";
 import type { ApplicationContext } from "../application/context";
@@ -40,6 +40,8 @@ import { readSpatialJson } from "./spatial-scene-service";
 const MAX_MEDIA_BYTES = 512 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
 const PROCESS_TIMEOUT_MS = 5 * 60_000;
+const SCENE_MEDIA_LIMIT_MESSAGE = "The lossless HTML scene intermediate may have reached the 512 MiB media bound; reduce canvas, frame rate, or duration and retry.";
+const SCENE_MEDIA_TOO_LARGE_MESSAGE = "Lossless HTML scene intermediate exceeds the 512 MiB media bound; reduce canvas, frame rate, or duration and retry.";
 
 export type HtmlSceneStage = "source" | "browser" | "audio-analysis" | "frames" | "encode" | "verify" | "project" | "complete";
 export interface HtmlSceneDependencies {
@@ -126,6 +128,44 @@ const ProbeSchema = z.object({
   format: z.object({ duration: z.string() }),
 });
 
+function probeTimeUs(text: string | undefined): number {
+  return text !== undefined && /^-?\d+(?:\.\d+)?$/u.test(text)
+    ? Math.round(Number(text) * 1_000_000) : Number.NaN;
+}
+
+/**
+ * Verify the lossless RGB intermediate before it is retained or imported.
+ * FFmpeg's `-fs` option can stop with a successful exit after writing a
+ * playable but truncated MP4. Checking the declared frame count here turns
+ * that silent truncation into an actionable bounded-render error.
+ */
+export function verifyHtmlSceneIntermediateProbe(input: unknown, expected: {
+  readonly width: number; readonly height: number; readonly frameCount: number;
+  readonly durationUs: number;
+}) {
+  const parsed = ProbeSchema.safeParse(input);
+  const videos = parsed.success ? parsed.data.streams.filter(stream => stream.codec_type === "video") : [];
+  const audios = parsed.success ? parsed.data.streams.filter(stream => stream.codec_type === "audio") : [];
+  const video = videos[0];
+  const durationUs = parsed.success ? probeTimeUs(parsed.data.format.duration) : Number.NaN;
+  const valid = parsed.success && videos.length === 1 && audios.length === 0
+    && video?.codec_name === "h264"
+    && video.width === expected.width && video.height === expected.height
+    && Number(video.nb_read_frames) === expected.frameCount
+    && Number.isSafeInteger(probeTimeUs(video.start_time))
+    && Math.abs(probeTimeUs(video.start_time)) <= 1
+    && Number.isSafeInteger(probeTimeUs(video.duration))
+    && Math.abs(probeTimeUs(video.duration) - expected.durationUs) <= 50_000
+    && Number.isSafeInteger(durationUs)
+    && Math.abs(durationUs - expected.durationUs) <= 50_000;
+  if (!valid) {
+    const reported = video?.nb_read_frames === undefined ? "an unknown number of"
+      : `${video.nb_read_frames} of ${expected.frameCount}`;
+    throw new CliError("invalid-data", `Lossless HTML scene intermediate failed frame verification (reported ${reported} frames). ${SCENE_MEDIA_LIMIT_MESSAGE}`);
+  }
+  return { frameCount: expected.frameCount, width: video.width, height: video.height, durationUs };
+}
+
 export function verifyHtmlSceneProbe(input: unknown, expected: {
   readonly width: number; readonly height: number; readonly frameCount: number;
   readonly durationUs: number; readonly audio: boolean;
@@ -134,26 +174,24 @@ export function verifyHtmlSceneProbe(input: unknown, expected: {
   const videos = probe.streams.filter(stream => stream.codec_type === "video");
   const audios = probe.streams.filter(stream => stream.codec_type === "audio");
   const video = videos[0];
-  const timeUs = (text: string | undefined): number => text !== undefined && /^-?\d+(?:\.\d+)?$/u.test(text)
-    ? Math.round(Number(text) * 1_000_000) : Number.NaN;
-  const durationUs = timeUs(probe.format.duration);
+  const durationUs = probeTimeUs(probe.format.duration);
   if (videos.length !== 1 || video?.codec_name !== "h264"
     || video.pix_fmt !== "yuv420p" || video.color_range !== "tv" || video.color_space !== "bt709"
     || video.color_transfer !== "bt709" || video.color_primaries !== "bt709"
     || video.width !== expected.width || video.height !== expected.height
     || Number(video.nb_read_frames) !== expected.frameCount
-    || !Number.isSafeInteger(timeUs(video.start_time)) || Math.abs(timeUs(video.start_time)) > 1
-    || !Number.isSafeInteger(timeUs(video.duration)) || Math.abs(timeUs(video.duration) - expected.durationUs) > 2
+    || !Number.isSafeInteger(probeTimeUs(video.start_time)) || Math.abs(probeTimeUs(video.start_time)) > 1
+    || !Number.isSafeInteger(probeTimeUs(video.duration)) || Math.abs(probeTimeUs(video.duration) - expected.durationUs) > 2
     || !Number.isSafeInteger(durationUs) || Math.abs(durationUs - expected.durationUs) > 50_000
     || audios.length !== (expected.audio ? 1 : 0)
-    || audios.some(audio => audio.codec_name !== "aac" || !Number.isSafeInteger(timeUs(audio.start_time))
-      || Math.abs(timeUs(audio.start_time)) > 30_000
-      || !Number.isSafeInteger(timeUs(audio.duration)) || Math.abs(timeUs(audio.duration) - expected.durationUs) > 30_000
+    || audios.some(audio => audio.codec_name !== "aac" || !Number.isSafeInteger(probeTimeUs(audio.start_time))
+      || Math.abs(probeTimeUs(audio.start_time)) > 30_000
+      || !Number.isSafeInteger(probeTimeUs(audio.duration)) || Math.abs(probeTimeUs(audio.duration) - expected.durationUs) > 30_000
       || audio.channels !== 2 || audio.sample_rate !== "48000")) {
     throw new CliError("invalid-data", "Encoded scene failed dimensions, frame count, duration, color, or audio verification.");
   }
   return { frameCount: expected.frameCount, width: video.width, height: video.height, durationUs,
-    audio: audios.length === 0 ? null : { codec: "aac", channels: 2, sampleRateHz: 48000, startTimeUs: timeUs(audios[0]!.start_time), durationUs: timeUs(audios[0]!.duration) } };
+    audio: audios.length === 0 ? null : { codec: "aac", channels: 2, sampleRateHz: 48000, startTimeUs: probeTimeUs(audios[0]!.start_time), durationUs: probeTimeUs(audios[0]!.duration) } };
 }
 
 function placement(asset: ProjectAssetV1, durationUs: number, suffix: string) {
@@ -332,14 +370,44 @@ export async function renderHtmlScene(
     const frameRate = String(source.request.timing.fps), duration = (source.durationUs / 1_000_000).toFixed(6);
     const background = source.request.background.replace("#", "0x");
     dependencies.progress?.("encode");
-    await run([tool("ffmpeg").command, "-nostdin", "-v", "error", "-n", "-threads", "2",
-      "-protocol_whitelist", "file", "-f", "image2", "-framerate", frameRate, "-start_number", "0", "-i", frames.framePattern,
-      "-filter_complex_threads", "1", "-filter_complex",
-      `color=c=${background}:s=${source.width}x${source.height}:r=${frameRate},format=rgba[bg];[bg][0:v]overlay=shortest=1:format=auto,format=rgb24[v]`,
-      "-map", "[v]", "-an", "-frames:v", String(source.frameCount), "-c:v", "libx264rgb", "-crf", "0", "-preset", "fast",
-      "-threads", "2", "-color_trc", "iec61966-2-1", "-color_primaries", "bt709", "-colorspace", "rgb", "-color_range", "pc",
-      "-fs", String(MAX_MEDIA_BYTES), videoPath]);
-    const videoArtifact = await artifact("scene.mp4");
+    try {
+      await run([tool("ffmpeg").command, "-nostdin", "-v", "error", "-n", "-threads", "2",
+        "-protocol_whitelist", "file", "-f", "image2", "-framerate", frameRate, "-start_number", "0", "-i", frames.framePattern,
+        "-filter_complex_threads", "1", "-filter_complex",
+        `color=c=${background}:s=${source.width}x${source.height}:r=${frameRate},format=rgba[bg];[bg][0:v]overlay=shortest=1:format=auto,format=rgb24[v]`,
+        "-map", "[v]", "-an", "-frames:v", String(source.frameCount), "-c:v", "libx264rgb", "-crf", "0", "-preset", "fast",
+        "-threads", "2", "-color_trc", "iec61966-2-1", "-color_primaries", "bt709", "-colorspace", "rgb", "-color_range", "pc",
+        "-fs", String(MAX_MEDIA_BYTES), videoPath]);
+    } catch (error) {
+      const details = await lstat(videoPath, { bigint: true }).catch(() => undefined);
+      if (details?.isFile() && details.size >= BigInt(MAX_MEDIA_BYTES)) throw new CliError("invalid-data", SCENE_MEDIA_LIMIT_MESSAGE);
+      throw error;
+    }
+    const intermediateProbe = await (async () => {
+      try {
+        return await run([tool("ffprobe").command, "-v", "error", ...SELF_CONTAINED_MEDIA_INPUT_ARGUMENTS,
+          "-count_frames", "-show_entries", "stream=codec_type,codec_name,width,height,nb_read_frames,start_time,duration:format=duration", "-of", "json", videoPath]);
+      } catch (error) {
+        const details = await lstat(videoPath, { bigint: true }).catch(() => undefined);
+        if (details?.isFile() && details.size >= BigInt(MAX_MEDIA_BYTES)) throw new CliError("invalid-data", SCENE_MEDIA_LIMIT_MESSAGE);
+        throw error;
+      }
+    })();
+    let intermediateJson: unknown;
+    try { intermediateJson = JSON.parse(intermediateProbe.stdout) as unknown; }
+    catch { throw new CliError("invalid-data", `Lossless HTML scene intermediate could not be inspected. ${SCENE_MEDIA_LIMIT_MESSAGE}`); }
+    verifyHtmlSceneIntermediateProbe(intermediateJson, source);
+    const videoArtifact = await (async () => {
+      try {
+        return await artifact("scene.mp4");
+      } catch (error) {
+        const details = await lstat(videoPath, { bigint: true }).catch(() => undefined);
+        if (details?.isFile() && details.size > BigInt(MAX_MEDIA_BYTES)) {
+          throw new CliError("invalid-data", SCENE_MEDIA_TOO_LARGE_MESSAGE);
+        }
+        throw error;
+      }
+    })();
     if (await verifyFrames() !== frameSha256) throw new CliError("conflict", "Scene frame bytes changed during encoding.");
     const audioStream = audio?.asset.streams.find(stream => stream.kind === "audio");
     if (audio !== undefined) for (const stream of audio.asset.streams) for (const segment of stream.segments) {
