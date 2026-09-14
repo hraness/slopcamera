@@ -289,24 +289,6 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "fe41e1d49ba6b752f96609b2bd51b26636748439291915bc441a2fa1f342252a",
-    "occurrenceCount": 3,
-    "path": "apps/desktop/capture/interruption-state.macos.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "61a18c415699f8aa257a1222628dd2d0b7f83c50365dc70d31c4642cee4ee566",
-    "occurrenceCount": 1,
-    "path": "apps/desktop/capture/recorder-single-flight.macos.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 3,
     "identityLinesSha256": "d8624a139ff5c1fc29de4393879a1e0fdf17739dedba0fea6bc44190a5a76641",
     "occurrenceCount": 3,
     "path": "apps/desktop/cli/AGENTS.md",
@@ -448,7 +430,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "b76e2d280a51f37b3789a18db17dbf4c11d31473fd4912bfa4af7fa6b93de1bb",
+    "identityLinesSha256": "77247e0134fbc29103e54d319e15c81fb7de90c39f4784b139d6f5d7bb5b49d6",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -880,15 +862,24 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "f7047f3e12cf0d3ddd7068b7050eeeabec5eb022afadbd0499fa675553e20cb3",
-    "occurrenceCount": 5,
-    "path": "apps/desktop/code/runtime-identity.ts",
+    "categories": [
+      "test-fixture"
+    ],
+    "identityLineCount": 1,
+    "identityLinesSha256": "a53b6c4dfd48ae78d4b382c3c0eb0406fe0d2ed5e4b25832aee146494c382d86",
+    "occurrenceCount": 1,
+    "path": "apps/desktop/code/runtime-identity.test.ts"
+  },
+  {
     "categories": [
       "native-film-studio",
       "serialized-reader",
       "stable-hash-domain"
-    ]
+    ],
+    "identityLineCount": 5,
+    "identityLinesSha256": "0a93452fbb87b7857599baf2d5e8cb6dfd35263ba9ed1315fa5f9e9c9ebec1b9",
+    "occurrenceCount": 5,
+    "path": "apps/desktop/code/runtime-identity.ts"
   },
   {
     "identityLineCount": 20,
@@ -1268,7 +1259,7 @@
   },
   {
     "identityLineCount": 83,
-    "identityLinesSha256": "ef43c6592955558e69e912eda16b41fd66027966175a615df8b3a0b5383d0e9e",
+    "identityLinesSha256": "bba76c5b65b96b31b6929dbe68026ba98be1d4bed736b6376e28e820e39e54dc",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1301,24 +1292,6 @@
     "path": "apps/desktop/html-overlay/random.ts",
     "categories": [
       "serialized-reader"
-    ]
-  },
-  {
-    "identityLineCount": 3,
-    "identityLinesSha256": "4662880aaf46cd2203b7ff59bb1b3c5f354aef76e0335b0a94a714a65bb3cb2c",
-    "occurrenceCount": 3,
-    "path": "apps/desktop/runtime/src/gateway.integration.test.ts",
-    "categories": [
-      "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "3d174528c2b88e9da4a8009fc2b3b2b1f1b75d7d241c4b2d67271079604a5c8a",
-    "occurrenceCount": 1,
-    "path": "apps/desktop/runtime/src/recording-service.test.ts",
-    "categories": [
-      "test-fixture"
     ]
   },
   {
@@ -1475,10 +1448,136 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "01178998a485b03e83c1549d15a76cb8f23e8131cd445018d83de5f132ed2d00",
-    "occurrenceCount": 10,
+    "identityLineCount": 8,
+    "identityLinesSha256": "8cc3c4f6af39f0e3d8038b0421e064b2b677d801b963f6348713ace5949da119",
+    "occurrenceCount": 8,
     "path": "apps/web/src/agent-pages.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "316421a06c147c18590bdd9d309744c55f70d43685852466dfc1cf683dbd1f60",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/doc.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "c904f57c6bf2d65bcca502bca50a81d5ab0297af09b52dc91d340cef48c10757",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs-registry.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "2600d1c0ebb7f7fec70f9a9541d16cdabba2293adce613ec340e8d5f5e5dcf0b",
+    "occurrenceCount": 4,
+    "path": "apps/web/src/docs/explanation/extending.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "de09886e28fb805e3410efe083c4bba09d67381ec69378bf5a300d4c6bf50dfa",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/docs/how-to/edit-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "431731d5b05d964fc60bc418dd1f6e6e81d2f738d35ffe0cd298fe88bcebf276",
+    "occurrenceCount": 10,
+    "path": "apps/web/src/docs/how-to/educational-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 27,
+    "identityLinesSha256": "eb4f06b93c2a03afdb245502979ae2a7db223ea738c668f21f2841d7aacfd770",
+    "occurrenceCount": 38,
+    "path": "apps/web/src/docs/how-to/native-films.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "121f26f23f2403bc3ac58e2968987a56dab28f3fffa5f251e1e1e0924bb750f2",
+    "occurrenceCount": 6,
+    "path": "apps/web/src/docs/how-to/run-workflows.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "7b5e4eb0a95cb590e4e8ecc0562f442d70567dac3266e3b2f4d1cea3f56fad66",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/docs/index.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 8,
+    "identityLinesSha256": "feb0fba3a3e073aa39a5648afeda9d565a9d4032949badcd2884c0accb1427be",
+    "occurrenceCount": 8,
+    "path": "apps/web/src/docs/reference/capabilities.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "954f53bb69b964e9e6dfd025dd92eece2ee8f22e5e01de3766b844f85cf3a989",
+    "occurrenceCount": 4,
+    "path": "apps/web/src/docs/reference/engines.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 7,
+    "identityLinesSha256": "b438d81c1d5d9bfee4d687ce818584612d0a52c6be343eb935d9ed3fa3b16b26",
+    "occurrenceCount": 8,
+    "path": "apps/web/src/docs/reference/sdk.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 11,
+    "identityLinesSha256": "62c5cf1e1be12046c433fa2c8c8783f3ddf0927a590f67ceff3f5b2329f6f955",
+    "occurrenceCount": 15,
+    "path": "apps/web/src/docs/tutorials/first-native-film.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "10402730fce1ef3e99a7269a9da69998505ea0496bf36a3eab28363364680dbd",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/tutorials/mcp.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "f55ace514807de59075a86a80685d872a9fd32d8579e0a21e8e9ec8d3d462604",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/tutorials/other-agents.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1585,7 +1684,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "bbc456d8f88fca204fdac8eef70b716616679a7b2bfb82d85f261fdce7944c03",
+    "identityLinesSha256": "d97dff740e2c21e9152906bbf16ae996e612ca445bcfee6095561b859563849f",
     "occurrenceCount": 3,
     "path": "docs/how-to/use-current-source.md",
     "categories": [
@@ -1612,7 +1711,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "a94db3ac76b874e876ac419f5abee7cbbb6eed11a2dc68e27f361955c1a9a745",
+    "identityLinesSha256": "465be4ab07b5d156c8912046ae363c977294d62a5dfa58bbf581f06431e66fcb",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1639,7 +1738,7 @@
   },
   {
     "identityLineCount": 40,
-    "identityLinesSha256": "65c625a4d813fc25aa89d21c3daef5e55ff43ba1c4e5a2e0a8038d62b1056357",
+    "identityLinesSha256": "248f2ce880c7ba778675f68a0bc58ff1aa157576c9b9be2df829b49f4059bb9a",
     "occurrenceCount": 54,
     "path": "docs/studio.md",
     "categories": [
@@ -1792,7 +1891,7 @@
   },
   {
     "identityLineCount": 17,
-    "identityLinesSha256": "e3bf7030b073e985ad713e4ac2688ea9c81a1bbd983566fa33aae04847451134",
+    "identityLinesSha256": "6f7adc7e3c513c517083cdd747b1410cc4313538d22aab79fb46759aa50a98a6",
     "occurrenceCount": 17,
     "path": "package.json",
     "categories": [
@@ -1801,7 +1900,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "b76841a85f70d75b00b04bf94e293fc9b8a05caa2eb39facacce2beeda7a8b6e",
+    "identityLinesSha256": "2a698802f5b7fc34d55902af4acf8be05ee2ef38b417171a23799c52e234913c",
     "occurrenceCount": 7,
     "path": "README.md",
     "categories": [
@@ -1809,9 +1908,9 @@
     ]
   },
   {
-    "identityLineCount": 17,
-    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
-    "occurrenceCount": 17,
+    "identityLineCount": 18,
+    "identityLinesSha256": "70b543f43bd2a05400b52471a2695c183947f5a4351fa9e1e833b7a3f535a393",
+    "occurrenceCount": 18,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"

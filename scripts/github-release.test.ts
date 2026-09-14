@@ -245,12 +245,12 @@ test("live admission rejects drift anywhere in the transitive release helper clo
     else process.env.GH_TOKEN = originalToken;
   }
 });
-test("canonical workflow preserves all source/native gates before scoped signing and immutable publication", async () => {
+test("canonical workflow preserves all source gates before scoped signing and immutable publication", async () => {
   const source = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
-  for (const command of ["bun run check", "bun run test:vectorize:official", "bun run test:desktop:macos", "bun run package:desktop:macos",
+  for (const command of ["bun run check", "bun run test:vectorize:official",
     "bun run scripts/package-smoke.ts", "bun run scripts/prepare-github-release.ts"]) expect(source).toContain(command);
   for (const platform of ["linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64", "win32-x64"]) expect(source).toContain(`target: ${platform}`);
-  expect(source).toContain("needs: [verify, official_vtracer, native_macos, attest]");
+  expect(source).toContain("needs: [verify, official_vtracer, attest]");
   expect(source).toContain("fetch-tags: false");
   expect(source).toContain('git fetch --no-tags --unshallow origin "refs/heads/main:refs/remotes/origin/main"');
   const privileged = source.slice(source.indexOf("\n  attest:\n"), source.indexOf("\n  publish_npm:\n"));

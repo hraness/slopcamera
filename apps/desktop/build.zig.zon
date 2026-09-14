@@ -1,8 +1,0 @@
-.{
-    .name = .slopcamera,
-    .fingerprint = 0x2bde09c7305cd630,
-    .version = "3.2.7",
-    .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
-    .paths = .{ "build.zig", "build.zig.zon", "src", "assets", "frontend", "app.zon", "README.md" },
-}

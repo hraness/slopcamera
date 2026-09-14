@@ -22,12 +22,12 @@ Commands:
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
   runs list|show|resume|approve|cancel
                                  Inspect and control durable workflow runs
-  doctor                         Check local capture, render, and asset capabilities
+  doctor                         Check local render and asset capabilities
   ai models|image|video|speech|transcribe
                                  Discover and run Vercel AI Gateway media models
   media audio|color              Apply local non-destructive audio and video effects
-  record start|pause|resume|stop|status
-                                 Control the repository-local capture session
+  menubar                        Launch the detached menu-bar companion
+  outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
   project inspect|add|edit|render
@@ -419,19 +419,6 @@ Apply accepts only candidates with safe acoustic boundaries and current placemen
         [--min-duration <time>] [--min-confidence <0..1>] [--limit <1..1000>] [--json]
 
 Face track IDs describe local geometry continuity inside one immutable analysis. They do not identify a person.`,
-  record: `Usage:
-  slopcamera record start [--display <id> ...]
-        [--camera-device <id>] [--microphone-device <id>]
-        [--webcam <true|false>] [--microphone <true|false>]
-        [--system-audio <true|false>] [--typed-text <true|false>]
-        [--strict-inputs] [--json]
-  slopcamera record pause|resume|stop|status [--json]
-
-Capture defaults to every current display, system audio, the default microphone,
-and the default camera. Repeat --display to record an exact non-empty subset.
-Device IDs select the exact camera or microphone reported by slopcamera doctor;
-unknown or duplicate IDs fail closed. Typed-text capture remains opt-in with
---typed-text true.`,
   recordings: `Usage: slopcamera recordings list [--limit <n>] [--json]`,
   projects: `Usage:
   slopcamera projects list [--limit <n>] [--json]
@@ -481,7 +468,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "record", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -494,7 +481,6 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
-  if (command === "record") return ["start", "pause", "resume", "stop", "status"];
   if (command === "recordings") return ["list"];
   if (command === "projects") return ["list", "create"];
   if (command === "project") return ["inspect", "add", "edit", "render"];

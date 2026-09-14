@@ -52,14 +52,6 @@ export interface ApplicationCapability {
   readonly version?: string;
 }
 
-export interface ApplicationRecordingController {
-  execute(
-    action: "pause" | "resume" | "start" | "stop",
-    options?: unknown,
-  ): Promise<unknown>;
-  status(): Promise<unknown>;
-}
-
 export interface ApplicationClock {
   readonly now: () => Date;
   readonly timestampMilliseconds: () => number;
@@ -92,6 +84,5 @@ export interface ApplicationContext {
   /** Per-user host state shared by repository worktrees for mutation leases. */
   readonly machineStateRoot?: string;
   readonly paths: ApplicationPaths;
-  readonly recordingController?: ApplicationRecordingController;
   readonly runner: ApplicationProcessRunner;
 }

@@ -8,7 +8,7 @@ Slopcamera v3.2.6 installs from its [canonical release archive](https://github.c
 
 | Surface | Historical Atet v3.2.3 | Slopcamera v3.2.6 |
 | --- | --- | --- |
-| Diagrams, vectorization, Gateway media, recording, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available |
+| Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; current source no longer captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
 | Paid World Labs world commands | Present in the historical release | Removed; saved-world import and historical provenance replay remain |
 | Retained short-video directing: `direct …` | Absent | Available |
@@ -42,7 +42,6 @@ The portable `code search/execute` and MCP surface has four operations: diagram 
 | Diagram JSON, SVG/PNG and tldraw export | Bun package and bundled rendering dependencies; no tldraw app required |
 | Vectorization | Bounded macOS/Linux profile; checksum-pinned VTracer can be obtained on first use. Windows deliberately rejects this profile |
 | Ordinary media and delivery | FFmpeg/FFprobe; additional analysis dependencies are reported by `doctor` |
-| Screen/camera/microphone/system-audio recording | Native macOS capture support and the selected operating-system permissions |
 | HTML or Three rendering | Admitted local Chrome runtime and declared assets; dependencies may need initial verified provisioning |
 | `three-webgl2-hardware-v1` | Qualified macOS ANGLE Metal WebGL2 context; software or unknown fallback rejects |
 | `three-spark-webgl2-hardware-v1` | Separate qualified Spark profile for bounded saved splats; its format, camera and output limits apply |
@@ -52,9 +51,9 @@ The portable `code search/execute` and MCP surface has four operations: diagram 
 
 Native studio qualification used Blender 5.2.1 LTS, CadQuery 2.8.0 and Manim Community 0.21.0. These observations do not certify every plugin, solver, device or imported asset. [Native profile limits](../studio.md#qualified-profiles-and-extension-limits) and [spatial asset limits](../spatial-scenes.md#asset-and-rendering-profile) describe the admitted representations.
 
-The copied macOS executable supports direct studio commands with embedded starters and drivers. Local Code Mode workflows still require the source-backed Bun distribution for their build-identity scan. A desktop UI, a copied binary, and the Bun package are not interchangeable installation prerequisites.
+The copied macOS executable supports direct studio commands with embedded starters and drivers. Local Code Mode workflows bind a build identity over the installed host source tree, so they run from the installed Bun package or a checkout but not from a copied standalone executable, which embeds no physical source tree. A desktop UI, a copied binary, and the Bun package are not interchangeable installation prerequisites.
 
-Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a stopped recording, a successful studio/directing assembly, or, in current source, an authored scene rendered with `html render`. The scene command accepts an optional explicit local soundtrack and retains the scene video and original music as separate sources. Arbitrary standalone files alone cannot create an empty project. [Video editing](../how-to/edit-video.md#inspect-the-source-and-project) explains these entry paths.
+Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a finished recording bundle, a successful studio/directing assembly, or, in current source, an authored scene rendered with `html render`. The scene command accepts an optional explicit local soundtrack and retains the scene video and original music as separate sources. Arbitrary standalone files alone cannot create an empty project. [Video editing](../how-to/edit-video.md#inspect-the-source-and-project) explains these entry paths.
 
 Current-source `html render` exports H.264 video with optional 48 kHz stereo AAC at 320 kb/s and retains a lossless RGB scene intermediate. Duration is explicit and rounds up to whole frames; the audio is trimmed or padded to fit. The music-clock helpers use declared constant tempo and offset, without detecting either from audio. Follow [the music-video guide](../how-to/music-video.md), and inspect `slopcamera help html` before assuming an installed version includes this command.
 

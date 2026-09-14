@@ -22,7 +22,7 @@ Planning does not execute registered media effects. It binds the relevant struct
 
 ## Author a local graph
 
-Use the source-backed Bun distribution for local Code Mode:
+Use the installed Bun package or a source checkout for local Code Mode; a copied standalone executable does not carry the checked host sources the build-identity scan binds:
 
 ```sh
 slopcamera code init film.ts

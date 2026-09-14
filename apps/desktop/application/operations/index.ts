@@ -18,7 +18,6 @@ export * from "./iteration/select";
 export * from "./project/commit-edits";
 export * from "./project/promote-selection";
 export * from "./project/snapshot";
-export * from "./recording";
 export * from "./render/bind-candidate-output";
 export * from "./render/project-plan";
 export * from "./render/project";

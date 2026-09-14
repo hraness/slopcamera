@@ -41,9 +41,9 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Keep the packaged surface bounded. This ceiling includes the separately
-// routed web-media reference and is mirrored in the release workflow.
-const maximumPackedFiles = 451;
+// Native studio archive: 429 files, 4,001,095 packed and 10,680,817 unpacked bytes.
+// Keep bounded headroom aligned with the independent release artifact readers.
+const maximumPackedFiles = 460;
 const maximumPackedBytes = 4_300_000;
 const maximumUnpackedBytes = 11_300_000;
 const packedHtmlExamplePaths = [
@@ -57,7 +57,7 @@ const requiredPackedPaths = [
   "README.md",
   "SECURITY.md",
   "apps/desktop/analysis/protocol.ts",
-  "apps/desktop/capture/protocol.ts",
+  "apps/desktop/code/host-source-layout.ts",
   "apps/desktop/code/worker-entry.ts",
   "apps/desktop/code/worker-lease-guardian.ts",
   "apps/desktop/code/worker-process-identity.ts",
@@ -1069,6 +1069,83 @@ if (downbeat.beatPosition !== 4 || downbeat.beatIndex !== 4 || downbeat.beatPhas
   if (!Array.isArray(semanticOperations) || semanticOperations.length !== 1) {
     throw new Error("Packed CLI did not delegate semantic code search.");
   }
+  // Code mode and durable runs must resolve checked host sources from the
+  // packed layout, where apps/desktop/dist/cli/main.js is the entrypoint.
+  const installedWorkflow = join(consumer, "installed-workflow.ts");
+  const installedDiagram = join(consumer, "installed.diagram.json");
+  const installedWorkflowInput = join(consumer, "installed-workflow-input.json");
+  await writeFile(installedWorkflow, [
+    'import { defineWorkflow } from "@hraness/slopcamera/local/code";',
+    'import { z } from "zod";',
+    "",
+    "export default defineWorkflow({",
+    '  id: "packed-smoke",',
+    "  version: 1,",
+    '  inputSchemaId: "packed-smoke-input-v1",',
+    "  inputSchema: z.strictObject({ path: z.string().min(1) }),",
+    "  build(workflow, input) {",
+    '    const check = workflow.operationByKind("diagram", {',
+    '      input: { path: input.path },',
+    '      kind: "slopcamera.diagram.check",',
+    "      version: 1,",
+    "    });",
+    "    return { check };",
+    "  },",
+    "});",
+    "",
+  ].join("\n"), { flag: "wx" });
+  await writeFile(installedDiagram, `${JSON.stringify({
+    canvas: { height: 360, padding: 32, width: 640 },
+    edges: [{ from: "a", id: "ab", to: "b" }],
+    name: "smoke",
+    shapes: [
+      { height: 80, id: "a", label: "A", type: "rect", width: 160, x: 64, y: 64 },
+      { height: 80, id: "b", label: "B", type: "rect", width: 160, x: 320, y: 64 },
+    ],
+    version: 1,
+  }, null, 2)}\n`, { flag: "wx" });
+  await writeFile(installedWorkflowInput, '{"path":"installed.diagram.json"}\n', { flag: "wx" });
+  const checkedWorkflow = record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "code", "check", "installed-workflow.ts", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed code check");
+  if (
+    typeof checkedWorkflow.bundleSha256 !== "string"
+    || !/^[a-f0-9]{64}$/u.test(checkedWorkflow.bundleSha256)
+  ) {
+    throw new Error("Packed CLI did not bundle and semantic-check workflow source.");
+  }
+  const plannedWorkflow = record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "code", "plan", "installed-workflow.ts", "--input", "installed-workflow-input.json", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed code plan");
+  if (
+    typeof plannedWorkflow.graphPlanSha256 !== "string"
+    || !/^[a-f0-9]{64}$/u.test(plannedWorkflow.graphPlanSha256)
+    || JSON.stringify(plannedWorkflow.operationKinds) !== '["slopcamera.diagram.check"]'
+  ) {
+    throw new Error("Packed CLI did not produce a workflow graph plan.");
+  }
+  const ranWorkflow = record(record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "code", "run", "installed-workflow.ts", "--input", "installed-workflow-input.json", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed code run").summary, "packed code run summary");
+  if (ranWorkflow.status !== "completed" || typeof ranWorkflow.runId !== "string") {
+    throw new Error("Packed CLI did not execute a durable workflow run.");
+  }
+  const resumedRun = record(record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "runs", "resume", String(ranWorkflow.runId), "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed runs resume").summary, "packed runs resume summary");
+  if (resumedRun.status !== "completed") {
+    throw new Error("Packed CLI did not resume a durable workflow run.");
+  }
+  const builtInInput = join(consumer, "installed-builtin-input.json");
+  await writeFile(builtInInput, '{"cameraSource":"cam.mov","project":"project_packed"}\n', { flag: "wx" });
+  await runFailure([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "workflows", "plan", "talking-head-cleanup", "--input", "installed-builtin-input.json",
+  ], consumer, "No project matches", packageEnvironment);
   const skillPath = (await runOutput([
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "skill",

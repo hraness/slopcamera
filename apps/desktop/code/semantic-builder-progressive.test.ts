@@ -8,20 +8,14 @@ import {
   gatewayVideoOperationDefinition,
 } from "../application/operations/gateway";
 import {
-  RecordingStartInputSchema,
   commitProjectEditsOperationDefinition,
   deriveEditBatchOperationDefinition,
-  type RecordingStartInput,
   htmlOverlayOperationDefinition,
   mediaAudioEffectsOperationDefinition,
   mediaColorGradeOperationDefinition,
   mediaIngestOperationDefinition,
   mediaOverlayOperationDefinition,
   projectSnapshotOperationDefinition,
-  recordingPauseOperationDefinition,
-  recordingResumeOperationDefinition,
-  recordingStartOperationDefinition,
-  recordingStopOperationDefinition,
 } from "../application/operations";
 import { OperationRegistry } from "../application/registry";
 import {
@@ -50,27 +44,16 @@ function operationRegistry(): OperationRegistry {
   registry.register(gatewayVideoOperationDefinition);
   registry.register(gatewaySpeechOperationDefinition);
   registry.register(gatewayTranscriptionOperationDefinition);
-  registry.register(recordingStartOperationDefinition);
-  registry.register(recordingPauseOperationDefinition);
-  registry.register(recordingResumeOperationDefinition);
-  registry.register(recordingStopOperationDefinition);
   return registry;
 }
 
-const RecordingConfig = defineCompute({
-  key: "test.recording-config",
+const SnapshotTarget = defineCompute({
+  key: "test.snapshot-target",
   inputSchema: z.strictObject({}),
-  inputSchemaId: "test.recording-config.input/v1",
-  outputSchema: RecordingStartInputSchema,
-  outputSchemaId: "test.recording-config.output/v1",
-  run: (): RecordingStartInput => ({
-    camera: { kind: "disabled" },
-    displays: { kind: "all" },
-    microphone: { kind: "default" },
-    strictInputs: true,
-    systemAudio: true,
-    typedText: false,
-  }),
+  inputSchemaId: "test.snapshot-target.input/v1",
+  outputSchema: z.strictObject({ project: z.string() }),
+  outputSchemaId: "test.snapshot-target.output/v1",
+  run: () => ({ project: "project_progressive02" }),
 });
 
 const progressiveMedia = defineWorkflowFragment((
@@ -211,33 +194,37 @@ describe("progressive semantic workflow helpers", () => {
     const workflow = WorkflowBuilder.create(operationRegistry());
     const project = workflow.project.snapshot("project", "project_progressive01");
     const media = workflow.fragment("assets", progressiveMedia, { project });
-    const recordingConfig = workflow.compute("recording-config", RecordingConfig, {});
-    const recordingStart = workflow.recording.start(
-      "recording-start",
-      recordingConfig,
+    const snapshotTarget = workflow.compute("snapshot-target", SnapshotTarget, {});
+    const snapshotA = workflow.project.snapshot(
+      "snapshot-a",
+      "project_progressive01",
+      { after: snapshotTarget },
     );
-    const recordingPause = workflow.recording.pause(
-      "recording-pause",
-      { after: recordingStart },
+    const snapshotB = workflow.project.snapshot(
+      "snapshot-b",
+      "project_progressive02",
+      { after: snapshotA.snapshot },
     );
-    const recordingResume = workflow.recording.resume(
-      "recording-resume",
-      { after: recordingPause },
+    const snapshotC = workflow.project.snapshot(
+      "snapshot-c",
+      "project_progressive03",
+      { after: snapshotB.snapshot },
     );
-    const recording = {
-      pause: recordingPause,
-      resume: recordingResume,
-      start: recordingStart,
-      stop: workflow.recording.stop(
-        "recording-stop",
-        { after: recordingResume },
+    const snapshots = {
+      a: snapshotA,
+      b: snapshotB,
+      c: snapshotC,
+      d: workflow.project.snapshot(
+        "snapshot-d",
+        "project_progressive04",
+        { after: snapshotC.snapshot },
       ),
     };
     const graph = workflow.build({
       id: "progressive-api",
       inputSchemaId: "test.progressive-api.input/v1",
       version: 1,
-    }, { media, recording });
+    }, { media, snapshots: { a: snapshots.a.snapshot, b: snapshots.b.snapshot, c: snapshots.c.snapshot, d: snapshots.d.snapshot } });
 
     const nodes = new Map(graph.nodes.map(node => [node.key, node]));
     expect(nodes.get("assets/ingest")?.input).toMatchObject({
@@ -275,11 +262,11 @@ describe("progressive semantic workflow helpers", () => {
         name: "reference-image",
       }],
     });
-    expect(nodes.get("recording-start")?.executor).toEqual({
+    expect(nodes.get("snapshot-a")?.executor).toEqual({
       kind: "operation",
       operation: {
-        kind: "recording.start",
-        version: 2,
+        kind: "project.snapshot",
+        version: 1,
       },
     });
     expect(nodes.get("assets/overlay")?.dependencies).toEqual([
@@ -303,14 +290,14 @@ describe("progressive semantic workflow helpers", () => {
     expect(nodes.get("assets/video")?.dependencies).toEqual(["assets/image"]);
     expect(nodes.get("assets/transcription")?.dependencies)
       .toEqual(["assets/speech"]);
-    expect(nodes.get("recording-start")?.dependencies)
-      .toEqual(["recording-config"]);
-    expect(nodes.get("recording-pause")?.dependencies)
-      .toEqual(["recording-start"]);
-    expect(nodes.get("recording-resume")?.dependencies)
-      .toEqual(["recording-pause"]);
-    expect(nodes.get("recording-stop")?.dependencies)
-      .toEqual(["recording-resume"]);
+    expect(nodes.get("snapshot-a")?.dependencies)
+      .toEqual(["snapshot-target"]);
+    expect(nodes.get("snapshot-b")?.dependencies)
+      .toEqual(["snapshot-a"]);
+    expect(nodes.get("snapshot-c")?.dependencies)
+      .toEqual(["snapshot-b"]);
+    expect(nodes.get("snapshot-d")?.dependencies)
+      .toEqual(["snapshot-c"]);
 
     expect(nodes.get("assets/audio")?.outputSchemaId)
       .toBe("slopcamera.operation.media.audio-effects.output/v1");

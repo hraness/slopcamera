@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="system" data-hraness-theme="paper">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f8f7f4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#12100f" media="(prefers-color-scheme: dark)">
+    <script src="{{THEME_ASSET}}"></script>
+    <title>{{DOC_TITLE}} · Slopcamera</title>
+    <meta name="description" content="{{DOC_DESCRIPTION}}">
+    <meta name="application-name" content="Slopcamera">
+    <meta name="generator" content="Bun 1.3.14">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="{{DOC_CANONICAL}}">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    {{SITE_STYLES}}
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="alternate" type="text/markdown" href="{{DOC_MARKDOWN}}">
+    <link rel="describedby" href="/llms.txt">
+
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Slopcamera">
+    <meta property="og:title" content="{{DOC_TITLE}} · Slopcamera">
+    <meta property="og:description" content="{{DOC_DESCRIPTION}}">
+    <meta property="og:url" content="{{DOC_CANONICAL}}">
+    <meta property="og:image" content="https://slopcamera.com/og.png">
+    <meta property="og:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{DOC_TITLE}} · Slopcamera">
+    <meta name="twitter:description" content="{{DOC_DESCRIPTION}}">
+    <meta name="twitter:image" content="https://slopcamera.com/og.png">
+    <meta name="twitter:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">
+
+    <script type="application/ld+json">
+{{DOC_JSONLD}}
+    </script>
+  </head>
+  <body>
+    <a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">Skip to content</a>
+    <header class="topbar {{SITE_HEADER_CLASS}}">
+      <a aria-label="Slopcamera home" class="wordmark {{SITE_WORDMARK_CLASS}}" href="/">Slopcamera</a>
+      <div class="topbar-actions {{SITE_ACTIONS_CLASS}}">
+        <nav aria-label="Primary" class="{{SITE_NAVIGATION_CLASS}}">
+          <a class="{{SITE_NAVIGATION_LINK_CLASS}}" href="/">Home</a>
+          <a class="{{SITE_NAVIGATION_LINK_CLASS}}" href="https://github.com/hraness/slopcamera">GitHub</a>
+        </nav>
+        {{APPEARANCE_MENU}}
+      </div>
+    </header>
+    <div class="{{DOCS_LAYOUT_CLASS}}">
+      <nav aria-label="Documentation" class="{{DOCS_NAV_CLASS}}">
+        {{DOC_NAV}}
+      </nav>
+      <main id="main" tabindex="-1">
+        <article class="{{DOCS_ARTICLE_CLASS}}">
+          {{DOC_HEADER}}
+          {{DOC_BODY}}
+          <footer class="{{DOCS_FOOTER_CLASS}}">
+            {{DOC_FOOTER}}
+          </footer>
+        </article>
+      </main>
+    </div>
+    {{HRANESS_SITE_FOOTER}}
+  </body>
+</html>

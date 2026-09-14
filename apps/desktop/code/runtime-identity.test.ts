@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ApplicationContext } from "../application/context";
 import {
+  createApplicationBuildIdentity,
   createHostApplicationBuildIdentity,
   createWorkflowRuntimeIdentity,
 } from "./runtime-identity";
@@ -84,5 +85,70 @@ describe("workflow runtime identity", () => {
     await writeFile(executable, "native helper v2\n", { mode: 0o700 });
     const second = await createHostApplicationBuildIdentity(application);
     expect(first).not.toBe(second);
+  });
+});
+
+describe("application build identity", () => {
+  async function createPackedInstallTree(root: string): Promise<void> {
+    for (const directory of [
+      "analysis",
+      "application",
+      "capture",
+      "cli",
+      "code",
+      "contracts",
+      "core",
+      "studio",
+      "workflows",
+    ]) {
+      const path = join(root, "apps", "desktop", directory);
+      await mkdir(path, { recursive: true });
+      await writeFile(join(path, "module.ts"), `export const ${directory.replaceAll("-", "_")} = 1;\n`);
+    }
+    await mkdir(join(root, "apps", "desktop", "dist", "cli"), { recursive: true });
+    await writeFile(join(root, "apps", "desktop", "dist", "cli", "main.js"), "bundle v1\n");
+    await mkdir(join(root, "src"), { recursive: true });
+    await writeFile(join(root, "src", "host.ts"), "export const host = 1;\n");
+    await mkdir(join(root, "packages", "scene", "src"), { recursive: true });
+    await writeFile(join(root, "packages", "scene", "src", "scene.ts"), "export const scene = 1;\n");
+    await writeFile(join(root, "package.json"), "{\"name\":\"@hraness/slopcamera\"}\n");
+  }
+
+  test("computes identity over a packed install without runtime sources or a lockfile", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-packed-build-"));
+    temporaryDirectories.push(root);
+    await createPackedInstallTree(root);
+    const identity = await createApplicationBuildIdentity({
+      desktopRoot: join(root, "apps", "desktop"),
+      repositoryRoot: root,
+    });
+    expect(identity).toMatch(/^slopcamera\/[a-f0-9]{64}$/u);
+  });
+
+  test("binds the shipped CLI bundle bytes when they change", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-packed-build-"));
+    temporaryDirectories.push(root);
+    await createPackedInstallTree(root);
+    const first = await createApplicationBuildIdentity({
+      desktopRoot: join(root, "apps", "desktop"),
+      repositoryRoot: root,
+    });
+    await writeFile(join(root, "apps", "desktop", "dist", "cli", "main.js"), "bundle v2\n");
+    const second = await createApplicationBuildIdentity({
+      desktopRoot: join(root, "apps", "desktop"),
+      repositoryRoot: root,
+    });
+    expect(first).not.toBe(second);
+  });
+
+  test("still rejects a packed tree missing a required source area", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-packed-build-"));
+    temporaryDirectories.push(root);
+    await createPackedInstallTree(root);
+    await rm(join(root, "apps", "desktop", "code"), { force: true, recursive: true });
+    await expect(createApplicationBuildIdentity({
+      desktopRoot: join(root, "apps", "desktop"),
+      repositoryRoot: root,
+    })).rejects.toThrow("apps/desktop/code");
   });
 });

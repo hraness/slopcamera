@@ -153,6 +153,7 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
   packages: readonly SitePackage[]
   finalCssPath: string
   foundation: SiteFoundation
+  documents: readonly string[]
 }>): readonly SiteArtifact[] {
   const complete = record(value)
   assert.deepEqual(Object.keys(complete).sort(), ["artifacts", "compilerSha256", "finalCss", "generationId", "graphs", "kind", "packages", "planSha256", "schemaVersion", "state", "unionPolicySha256"])
@@ -182,7 +183,15 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
   const captured = capturedFoundation(expected.foundation)
   assert.deepEqual(sorted(artifacts.filter(item => item.path.startsWith(foundationRoot))), captured,
     "Finalized site foundation differs from captured Vite output")
-  const allowed = new Set(["404.html", "index.html", finalCss.path,
+  assert.ok(Array.isArray(expected.documents) && expected.documents.length >= 2, "Site requires its ordinary documents")
+  for (const document of expected.documents) {
+    assert.ok(typeof document === "string" && document.endsWith(".html")
+      && document.split("/").every(part => /^[A-Za-z0-9_.-]+$/u.test(part)), `Unsafe site document path: ${document}`)
+  }
+  assert.ok(expected.documents.includes("index.html") && expected.documents.includes("404.html"),
+    "Site documents must include the home and recovery pages")
+  assert.equal(new Set(expected.documents).size, expected.documents.length, "Duplicate site document")
+  const allowed = new Set([...expected.documents, finalCss.path,
     ...captured.filter(item => item.path !== expected.foundation.privateScriptPath).map(item => item.path)])
   let rendererEntries = 0
   const publicArtifacts = [...artifacts, finalCss].filter(item => {
@@ -196,7 +205,7 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
     return false
   })
   assert.equal(rendererEntries, 1, "Site generation requires one captured renderer entry")
-  assert.equal(publicArtifacts.length, 20)
+  assert.equal(publicArtifacts.length, 18 + expected.documents.length)
   for (const path of allowed) assert.ok(publicArtifacts.some(item => item.path === path), `Missing public site artifact: ${path}`)
   return sorted(publicArtifacts)
 }

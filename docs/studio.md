@@ -197,7 +197,7 @@ slopcamera runs resume <run-id> --studio-python /absolute/venv/bin/python --allo
 
 The same runtime/authorization flags are available on `workflows run`. Runtime selection alone does not authorize source execution. A missing native trust envelope pauses the node before dispatch; adding the explicit flag on resume permits the exact bound plan. Generic stored write approval cannot grant native code permission. Changing a runtime, source or job after binding requires a compatible new plan.
 
-Use the source-backed Bun package for `code` workflows and local SDK imports. The copied macOS executable supports direct `studio` commands with embedded starters and drivers; its older workflow build-identity scanner still requires the installed source distribution.
+Use the source-backed Bun package for `code` workflows and local SDK imports. The copied macOS executable supports direct `studio` commands with embedded starters and drivers; durable workflow commands bind a build identity over the installed host source tree, so they run from the installed package or a checkout but not from the copied executable, which embeds no physical source tree.
 
 Native results can be imported into ordinary Slopcamera projects with their declared video/audio roles. The existing V2 spatial renderer still has its qualified Three-specific rendering path; attaching a native candidate does not make that path consume it. Preserve a native shot's source and receipt alongside its ordinary project media derivative.
 

@@ -1,5 +1,7 @@
 import { siteShellClassNames } from "./site-shell.stylex"
 import { siteInstallClassNames } from "./site-install.stylex"
+import { siteDocsClassNames } from "./site-docs.stylex"
+import { docsPageForDocument } from "./docs"
 import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"
 import { assertCompiledSiteClass, replaceSiteSlot } from "./site-template"
 
@@ -36,20 +38,68 @@ const recoverySlots = [
   ["{{SITE_RECOVERY_LINK_CLASS}}", siteShellClassNames.recoveryLink, 4],
   ["{{SITE_RECOVERY_ACTION_CLASS}}", siteShellClassNames.recoveryAction, 1],
 ] as const
+const docsSlots = [
+  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],
+] as const
+// Documentation markup emits DOCS_*_CLASS tokens at variable counts, so the
+// sealed graph fills them from this closed inventory instead of slot counts.
+const docsClassSlots = {
+  "{{DOCS_LAYOUT_CLASS}}": siteDocsClassNames.layout,
+  "{{DOCS_NAV_CLASS}}": siteDocsClassNames.nav,
+  "{{DOCS_NAV_HOME_CLASS}}": siteDocsClassNames.navHome,
+  "{{DOCS_NAV_SECTION_CLASS}}": siteDocsClassNames.navSection,
+  "{{DOCS_NAV_SECTION_LABEL_CLASS}}": siteDocsClassNames.navSectionLabel,
+  "{{DOCS_NAV_LIST_CLASS}}": siteDocsClassNames.navList,
+  "{{DOCS_NAV_LINK_CLASS}}": siteDocsClassNames.navLink,
+  "{{DOCS_NAV_LINK_CURRENT_CLASS}}": siteDocsClassNames.navLinkCurrent,
+  "{{DOCS_ARTICLE_CLASS}}": siteDocsClassNames.article,
+  "{{DOCS_SECTION_LABEL_CLASS}}": siteDocsClassNames.sectionLabel,
+  "{{DOCS_HEADING_CLASS}}": siteDocsClassNames.heading,
+  "{{DOCS_LEDE_CLASS}}": siteDocsClassNames.lede,
+  "{{DOCS_H2_CLASS}}": siteDocsClassNames.h2,
+  "{{DOCS_H3_CLASS}}": siteDocsClassNames.h3,
+  "{{DOCS_P_CLASS}}": siteDocsClassNames.p,
+  "{{DOCS_LIST_CLASS}}": siteDocsClassNames.list,
+  "{{DOCS_LIST_ITEM_CLASS}}": siteDocsClassNames.listItem,
+  "{{DOCS_LINK_CLASS}}": siteDocsClassNames.link,
+  "{{DOCS_CODE_CLASS}}": siteDocsClassNames.code,
+  "{{DOCS_PRE_CLASS}}": siteDocsClassNames.pre,
+  "{{DOCS_PRE_CODE_CLASS}}": siteDocsClassNames.preCode,
+  "{{DOCS_BLOCKQUOTE_CLASS}}": siteDocsClassNames.blockquote,
+  "{{DOCS_TABLE_WRAP_CLASS}}": siteDocsClassNames.tableWrap,
+  "{{DOCS_TABLE_CLASS}}": siteDocsClassNames.table,
+  "{{DOCS_TH_CLASS}}": siteDocsClassNames.th,
+  "{{DOCS_TD_CLASS}}": siteDocsClassNames.td,
+  "{{DOCS_HR_CLASS}}": siteDocsClassNames.hr,
+  "{{DOCS_FOOTER_CLASS}}": siteDocsClassNames.footnote,
+  "{{DOCS_ANCHOR_CLASS}}": siteDocsClassNames.anchor,
+} as const
 
 /** Produce the complete authored document once, before the public compiler
  * seals it. No class, stylesheet, script or content is rewritten afterward. */
 export function renderSiteDocument(template: string, document: SiteDocument, assets: SiteAssets, stylesheetLinks: string): string {
-  if (document !== "index.html" && document !== "404.html") throw new Error("Unexpected site document")
+  const isDocs = docsPageForDocument(document) !== undefined
+  const documentSlots = document === "index.html" ? homeSlots
+    : document === "404.html" ? recoverySlots
+    : isDocs ? docsSlots
+    : null
+  if (documentSlots === null) throw new Error("Unexpected site document")
   let rendered = template
   // Copy content contains finite recipe slots. Fill it before the closed class
   // inventory; both substitutions are completed inside the sealed SSR graph.
   for (const [placeholder, value, count] of siteContentSlots(document, assets)) {
     rendered = replaceSiteSlot(rendered, placeholder, value, count)
   }
-  for (const [placeholder, className, count] of [...commonSlots, ...(document === "index.html" ? homeSlots : recoverySlots)]) {
+  for (const [placeholder, className, count] of [...commonSlots, ...documentSlots]) {
     assertCompiledSiteClass(className, placeholder)
     rendered = replaceSiteSlot(rendered, placeholder, className, count)
+  }
+  if (isDocs) {
+    for (const [placeholder, className] of Object.entries(docsClassSlots)) {
+      assertCompiledSiteClass(className, placeholder)
+      rendered = rendered.replaceAll(placeholder, className)
+    }
+    if (/\{\{DOCS_[A-Z_]+\}\}/u.test(rendered)) throw new Error("Documentation page kept an unresolved class token")
   }
   rendered = replaceSiteSlot(rendered, "{{SITE_STYLES}}", stylesheetLinks, 1)
   if (/\{\{[^{}]*\}\}/u.test(rendered)) throw new Error("Site document contains an unresolved placeholder")

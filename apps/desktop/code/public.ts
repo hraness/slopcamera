@@ -100,7 +100,6 @@ export {
   type ProducedVariantMatrixHandle,
   type ProducedVariantSelectionHandle,
   type ProjectSnapshotHandle,
-  type RecordingStartOptions,
   type SelectCreativeVariantOptions,
   type VariantMatrixHandle,
   type VariantSelectionHandle,

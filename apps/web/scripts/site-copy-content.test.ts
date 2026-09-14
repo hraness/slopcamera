@@ -8,7 +8,6 @@ import { renderSlopcameraIcons } from "./generate-icons"
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
 const definition = "Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
-const docs = "https://github.com/hraness/slopcamera/blob/main/docs/README.md"
 
 describe("visual studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
@@ -111,15 +110,13 @@ describe("visual studio public copy (pure, process-free)", () => {
     expect(html).toContain("qualified Three.js GPU profile")
   })
 
-  test("documentation discovery reaches the canonical index without inventing a hosted manual", async () => {
+  test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {
     const [html, config] = await Promise.all([read("apps/web/src/index.html"), read("apps/web/vercel.json")])
     expect(html).toContain('href="/docs">Docs</a>')
-    for (const source of [homeMarkdown, llmsTxt, sitemapMarkdown]) expect(source).toContain(docs)
+    for (const source of [homeMarkdown, llmsTxt, sitemapMarkdown]) expect(source).toContain("https://slopcamera.com/docs")
+    // /docs is a sealed first-party surface: no path-level redirect may return.
     const routes = JSON.parse(config).redirects.filter((route: { has?: unknown }) => route.has === undefined)
-    expect(routes).toEqual([
-      { source: "/docs", destination: docs, permanent: true },
-      { source: "/docs/:path*", destination: docs, permanent: true },
-    ])
+    expect(routes).toEqual([])
     const links = [...html.matchAll(/href="(https:\/\/github.com\/hraness\/slopcamera\/blob\/main\/docs\/[^"#]+)(?:#[^"]*)?"/gu)]
     expect(links.length).toBeGreaterThan(5)
     const allowed = new Set(["README.md", "tutorials/first-diagram.md", "tutorials/first-native-film.md", "spatial-scenes.md", "studio.md", "directing-video.md", "how-to/edit-video.md", "how-to/generate-media.md", "how-to/educational-video.md", "how-to/run-workflows.md", "reference/capabilities.md", "architecture.md", "how-to/use-current-source.md"])

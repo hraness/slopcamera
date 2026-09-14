@@ -115,16 +115,6 @@
       ],
       "destination": "https://slopcamera.com/:path*",
       "permanent": true
-    },
-    {
-      "source": "/docs",
-      "destination": "https://github.com/hraness/slopcamera/blob/main/docs/README.md",
-      "permanent": true
-    },
-    {
-      "source": "/docs/:path*",
-      "destination": "https://github.com/hraness/slopcamera/blob/main/docs/README.md",
-      "permanent": true
     }
   ],
   "rewrites": [
@@ -243,6 +233,15 @@
     },
     {
       "source": "/sitemap.md",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/markdown; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/docs/(.*\\.md)",
       "headers": [
         {
           "key": "Content-Type",
