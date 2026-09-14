@@ -1,10 +1,12 @@
-# Menu-bar companion release contract
+# Unbundled menu-bar companion release contract
 
 The `slopcamera menubar` command runs a prebuilt macOS companion in the
 foreground by default. Launching it never invokes the Rust or Bun build.
 
 The canonical npm archive is produced by a Linux release workflow and remains
-platform-neutral. The menu-bar executable is a platform-specific companion
+platform-neutral. Slopcamera has no desktop application release: the companion is
+an unbundled status-item executable and requires no installer, signing, or
+notarization. The menu-bar executable is a platform-specific companion
 asset published alongside that archive for supported architectures:
 
 ```

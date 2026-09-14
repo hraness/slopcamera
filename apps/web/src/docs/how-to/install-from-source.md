@@ -26,7 +26,16 @@ bun run build:sdk
 bun run build:desktop:cli
 ```
 
-These build the portable SDK and the source-backed CLI entrypoint at `apps/desktop/dist/cli/main.js`. They do not build the desktop app, provision a native engine, or run a scene.
+These build the portable SDK and the source-backed CLI entrypoint at `apps/desktop/dist/cli/main.js`. They do not build a desktop application, provision a native engine, or run a scene.
+
+To use the optional macOS menu-bar companion, build it explicitly and then launch it through the CLI:
+
+```sh
+cargo build --manifest-path desktop/menubar/Cargo.toml
+slopcamera menubar
+```
+
+The companion is an unbundled status item. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
 
 ## Define the slopcamera command
 

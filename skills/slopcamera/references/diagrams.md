@@ -127,9 +127,9 @@ explicit mono and custom font roles.
 ## Use browser canvas tooling deliberately
 
 The generated `.tldr` file is editable interchange and does not require a
-desktop application to create. Open it in a browser-based canvas editor when a
+separate application to create. Open it in a browser-based canvas editor when a
 person wants direct canvas editing. Slopcamera does not install or launch a
-desktop editor, and `.tldraw` application bundles are outside its contract.
+diagram editor or application bundle, and `.tldraw` application bundles are outside its contract.
 
 ## Verify
 
