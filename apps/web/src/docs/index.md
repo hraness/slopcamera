@@ -1,4 +1,4 @@
-Slopcamera is a local visual studio for coding agents. It retains editable sources, renders local or generated media, and assembles everything into inspectable projects on your machine. These pages describe Slopcamera from current source.
+Slopcamera is a local visual studio for coding agents. It retains editable sources, renders local or generated media, and assembles everything into inspectable projects on your machine. These pages describe the current CLI, SDK, Agent Skill, and optional unbundled macOS menu-bar companion.
 
 Install the verified v{{PUBLISHED_VERSION}} release, or build from source for the complete capability set:
 
