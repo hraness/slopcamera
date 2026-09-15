@@ -52,7 +52,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-        "@hraness/site-footer": "github:hraness/site-footer#v0.9.2",
+        "@hraness/site-footer": "github:hraness/site-footer#v0.11.1",
         "@hraness/ui": "github:hraness/ui#v0.5.12",
         "@resvg/resvg-js": "2.6.2",
         "posthog-js": "1.413.2",
@@ -186,7 +186,7 @@
 
     "@hraness/direct": ["@hraness/direct@github:hraness/direct#af954e7", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "hraness-direct-af954e7", "sha512-q1iauLS/UaP0gLknME4Roca46yosjsc2oQ3ULrH1cxiUBwbfRMREf0BeiQtiKJGPOkPsHNXUEJM6I68IgRqm/Q=="],
 
-    "@hraness/site-footer": ["@hraness/site-footer@github:hraness/site-footer#feee409", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "hraness-site-footer-feee409", "sha512-War5yfDab+S0nYJnew551AGEASp4GSnoN9ltst4ScKJokV8RnYA8ttVGMhkqT1AtOzP4Bge/iFngkllQlNzhFg=="],
+    "@hraness/site-footer": ["@hraness/site-footer@github:hraness/site-footer#79520f8", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "hraness-site-footer-79520f8", "sha512-sI70nIuGcUr/CQs4vR75yB1WLoWwPSZN14xsQG0cFArSkohzHR50I6ebV31bEgwwO6PO7QeZow/SAeeZrIG8WQ=="],
 
     "@hraness/slopcamera-scene": ["@hraness/slopcamera-scene@workspace:packages/scene"],
 
