@@ -110,12 +110,15 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("boundary:\n    name: Slopcamera standalone boundary")
   expect(workflow).toContain("sdk:\n    name: Slopcamera SDK")
   expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime")
+  expect(workflow).toContain("menubar:\n    name: Slopcamera menu-bar companion")
   expect(workflow).toContain("site:\n    name: Slopcamera site")
   expect(workflow).toContain("package:\n    name: Slopcamera packed consumer")
   expect(workflow).toContain("if: needs.plan.outputs.sdk == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.desktop == 'true'")
+  expect(workflow).toContain("if: needs.plan.outputs.menubar == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.site == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.package == 'true'")
+  expect(workflow).toContain("cargo build --release --locked --manifest-path desktop/Cargo.toml")
   expect(workflow).toContain("bun run check:standalone")
   expect(workflow).toContain("bun run check:sdk")
   expect(workflow).toContain("bun run check:desktop")
@@ -124,7 +127,7 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("bun run test:package")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- dist bun.lock")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
-  expect(workflow).toContain("needs: [plan, boundary, sdk, desktop, site, package]")
+  expect(workflow).toContain("needs: [plan, boundary, sdk, desktop, menubar, site, package]")
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
   expect(workflow).not.toContain(["projects", "slopcamera"].join("/"))
@@ -148,7 +151,7 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "ae8b1d5dfa3f3c67ad6870b379170099a8aed8c6d4705fa9d6609e961d5d144c") {
+  if (priorDigest !== "da8102073aae050b954fea2e7e8504f0916d23f16227018ca2a6976334c02461") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
