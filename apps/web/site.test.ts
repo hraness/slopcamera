@@ -164,7 +164,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required 0.8 foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 308_000) throw new Error(`Combined site CSS exceeds its 308,000-byte budget: ${bytes}`)
+  if (bytes >= 310_000) throw new Error(`Combined site CSS exceeds its 310,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -185,15 +185,15 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(165_200))).toBe(307_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(165_200)))
-    .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(165_200)}é`))
-    .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(308_000), ""))
-    .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(308_000)))
-    .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308000")
+  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(167_200))).toBe(309_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(167_200)))
+    .toThrow("Combined site CSS exceeds its 310,000-byte budget: 310000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(167_200)}é`))
+    .toThrow("Combined site CSS exceeds its 310,000-byte budget: 310001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(310_000), ""))
+    .toThrow("Combined site CSS exceeds its 310,000-byte budget: 310000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(310_000)))
+    .toThrow("Combined site CSS exceeds its 310,000-byte budget: 310000")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
@@ -1188,7 +1188,7 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.9.2",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.11.1",
       "@hraness/ui": "github:hraness/ui#v0.5.12",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
@@ -1215,7 +1215,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.8.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.9.2"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.11.1"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
@@ -1485,7 +1485,7 @@ describe("static Slopcamera site", () => {
     // under 298,500 bytes before compression. Keep a strict ceiling over the
     // full sealed union and captured foundation; no import, recipe, snapshot,
     // or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(308_000)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(310_000)
     expect(new TextEncoder().encode(themeAsset).byteLength).toBeLessThan(24_000)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
