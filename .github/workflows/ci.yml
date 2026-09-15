@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       desktop: ${{ steps.routes.outputs.desktop }}
+      menubar: ${{ steps.routes.outputs.menubar }}
       package: ${{ steps.routes.outputs.package }}
       sdk: ${{ steps.routes.outputs.sdk }}
       site: ${{ steps.routes.outputs.site }}
@@ -36,11 +37,13 @@ jobs:
           set -euo pipefail
           sdk=false
           desktop=false
+          menubar=false
           package=false
           site=false
           if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BASE_SHA^{commit}"; then
             sdk=true
             desktop=true
+            menubar=true
             package=true
             site=true
           else
@@ -49,8 +52,12 @@ jobs:
                 .github/*|package.json|bun.lock|tsconfig.json|eslint.config.mjs|scripts/*)
                   sdk=true
                   desktop=true
+                  menubar=true
                   package=true
                   site=true
+                  ;;
+                desktop/*)
+                  menubar=true
                   ;;
                 src/*|schema/*|examples/*|skills/*|packages/scene/*)
                   sdk=true
@@ -72,8 +79,8 @@ jobs:
               esac
             done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
           fi
-          printf 'sdk=%s\ndesktop=%s\npackage=%s\nsite=%s\n' \
-            "$sdk" "$desktop" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
+          printf 'sdk=%s\ndesktop=%s\nmenubar=%s\npackage=%s\nsite=%s\n' \
+            "$sdk" "$desktop" "$menubar" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
 
   boundary:
     name: Slopcamera standalone boundary
@@ -143,6 +150,19 @@ jobs:
             exit 1
           fi
 
+  menubar:
+    name: Slopcamera menu-bar companion
+    needs: plan
+    if: needs.plan.outputs.menubar == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Build the menu-bar companion
+        run: cargo build --release --locked --manifest-path desktop/Cargo.toml
+
   site:
     name: Slopcamera site
     needs: plan
@@ -200,7 +220,7 @@ jobs:
   required:
     name: Required
     if: always()
-    needs: [plan, boundary, sdk, desktop, site, package]
+    needs: [plan, boundary, sdk, desktop, menubar, site, package]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -210,12 +230,13 @@ jobs:
           BOUNDARY: ${{ needs.boundary.result }}
           SDK: ${{ needs.sdk.result }}
           DESKTOP: ${{ needs.desktop.result }}
+          MENUBAR: ${{ needs.menubar.result }}
           SITE: ${{ needs.site.result }}
           PACKAGE: ${{ needs.package.result }}
         run: |
           set -euo pipefail
           [[ "$PLAN" == success ]]
           [[ "$BOUNDARY" == success ]]
-          for result in "$SDK" "$DESKTOP" "$SITE" "$PACKAGE"; do
+          for result in "$SDK" "$DESKTOP" "$MENUBAR" "$SITE" "$PACKAGE"; do
             [[ "$result" == success || "$result" == skipped ]]
           done
