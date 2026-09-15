@@ -40,7 +40,7 @@ export function resolveMenubarBinary(
   return null;
 }
 
-/** Detached launchers only accept private, prebuilt executables. */
+/** Require a regular executable without group/other write bits; reject symlinks. */
 function qualifiedBinary(path: string): boolean {
   try {
     const info = lstatSync(path);
