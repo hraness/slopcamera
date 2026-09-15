@@ -185,10 +185,10 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(161_200))).toBe(303_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(161_200)))
+  expect(assertCombinedSiteCssBudget("x".repeat(142_799), "x".repeat(165_200))).toBe(307_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_800), "x".repeat(165_200)))
     .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(161_200)}é`))
+  expect(() => assertCombinedSiteCssBudget("x".repeat(142_799), `${"x".repeat(165_200)}é`))
     .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308001")
   expect(() => assertCombinedSiteCssBudget("x".repeat(308_000), ""))
     .toThrow("Combined site CSS exceeds its 308,000-byte budget: 308000")
