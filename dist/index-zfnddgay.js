@@ -2026,4 +2026,4 @@ async function writeSvgAtomically(path, svg) {
   return outputPath;
 }
 
-export { nonGatewayChildEnvironment, vectorizeProfileNames, VectorizeError, vectorizeHardLimits, vectorizeDefaultLimits, withInheritedCommandFileDescriptors, forwardVectorizeWorkerTermination, VTRACER_VERSION, vtracerReleases, configureVectorizeSharpConcurrency, VECTORIZE_WORKER_PROTOCOL, MAX_VECTORIZE_REQUEST_BYTES, MAX_VECTORIZE_RESPONSE_BYTES, vectorizeImage, vectorizeImageInProcess };
+export { vectorizeProfileNames, VectorizeError, vectorizeHardLimits, vectorizeDefaultLimits, withInheritedCommandFileDescriptors, forwardVectorizeWorkerTermination, VTRACER_VERSION, vtracerReleases, configureVectorizeSharpConcurrency, VECTORIZE_WORKER_PROTOCOL, MAX_VECTORIZE_REQUEST_BYTES, MAX_VECTORIZE_RESPONSE_BYTES, vectorizeImage, vectorizeImageInProcess };

@@ -135,7 +135,7 @@ import { commandHelp, completions } from "./help";
 import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
-import { launchMenubar, reportOutputsRoot } from "./menubar";
+import { launchMenubar, manageMenubar, reportOutputsRoot } from "./menubar";
 import {
   codePreparationHostResourceClaims,
   combineHostResourceClaims,
@@ -6294,7 +6294,8 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "media-audio": await handleMediaAudio(context, command); return;
     case "media-color": await handleMediaColor(context, command); return;
     case "menubar": {
-      await launchMenubar(context.io, context.paths.repositoryRoot, command.json);
+      if (command.action === "run") await launchMenubar(context.io, context.paths.repositoryRoot, command.json, command.mode);
+      else await manageMenubar(context.io, context.paths.repositoryRoot, command.action, command.json);
       return;
     }
     case "outputs": {

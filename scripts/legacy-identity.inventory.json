@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 83,
-    "identityLinesSha256": "bba76c5b65b96b31b6929dbe68026ba98be1d4bed736b6376e28e820e39e54dc",
+    "identityLinesSha256": "acb33456bfd660472e8b44bd02dce59c55d2a2ccfc04bf70361c1123e8f5ef1c",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1521,7 +1521,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "7b5e4eb0a95cb590e4e8ecc0562f442d70567dac3266e3b2f4d1cea3f56fad66",
+    "identityLinesSha256": "debfe84e6b0beb4fb2fdbddb3a5f730cfcf84db6f074bc12e7e7f8701df57899",
     "occurrenceCount": 2,
     "path": "apps/web/src/docs/index.md",
     "categories": [
@@ -1530,7 +1530,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "feb0fba3a3e073aa39a5648afeda9d565a9d4032949badcd2884c0accb1427be",
+    "identityLinesSha256": "0d420a57fc494e3279005dc4a2b0102a540de4068ae76de0d12ead90315ea88a",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1620,19 +1620,19 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
-    "occurrenceCount": 9,
-    "path": "dist/index-42zsesc1.js",
+    "identityLineCount": 142,
+    "identityLinesSha256": "d3194f74bce8707ee2e6e33730495249349f0e5254818d9e25a94ca1d79537a3",
+    "occurrenceCount": 237,
+    "path": "dist/index-14fdv91w.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "e91181ab2773a1435458dfd1882ddfa12cf529dfc20648fa1460e9c868bc17a0",
-    "occurrenceCount": 237,
-    "path": "dist/index-rvghzt7b.js",
+    "identityLineCount": 9,
+    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
+    "occurrenceCount": 9,
+    "path": "dist/index-42zsesc1.js",
     "categories": [
       "generated"
     ]
@@ -1711,7 +1711,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "465be4ab07b5d156c8912046ae363c977294d62a5dfa58bbf581f06431e66fcb",
+    "identityLinesSha256": "c14e51aa76b1f49449ec8e74c0f6b473f122b38cc8458b85fd3b6216248a2bb5",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [

@@ -1,7 +1,7 @@
 // @bun
 import {
   vectorizeImage
-} from "./index-p63wavx0.js";
+} from "./index-zfnddgay.js";
 import {
   generateSlopcameraImageFile,
   slopcameraMaximumPromptBytes
