@@ -15,7 +15,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use desktop_foundation::outputs::OutputsSection;
-use desktop_foundation::{AccessibilityMetadata, Host, MenuItem, MenuModel, MenuNode, Options};
+use desktop_foundation::{
+    AccessibilityMetadata, DispatchOutcome, Host, MenuItem, MenuModel, MenuNode, Options,
+    RenderError,
+};
 
 /// `~/Library/Application Support/Slopcamera` on macOS, mirroring
 /// `defaultCliStateRoot` in `apps/desktop/cli/paths.ts`; XDG state elsewhere.
@@ -59,8 +62,16 @@ impl Host for SlopcameraHost {
         }
     }
 
-    fn dispatch(&self, id: &str) {
-        self.outputs.dispatch(id);
+    fn dispatch_result(&self, id: &str) -> DispatchOutcome {
+        if self.outputs.dispatch(id) {
+            DispatchOutcome::Accepted
+        } else {
+            DispatchOutcome::Rejected
+        }
+    }
+
+    fn render_failed(&self, error: RenderError) {
+        eprintln!("slopcamera-menubar: render failed: {error:?}");
     }
 }
 
