@@ -31,7 +31,7 @@ These build the portable SDK and the source-backed CLI entrypoint at `apps/deskt
 To use the optional macOS menu-bar companion, build it explicitly and then launch it through the CLI:
 
 ```sh
-cargo build --manifest-path desktop/menubar/Cargo.toml
+cargo build --release --manifest-path desktop/menubar/Cargo.toml
 slopcamera menubar
 ```
 

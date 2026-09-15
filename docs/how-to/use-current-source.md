@@ -18,7 +18,7 @@ These commands build the SDK and source-backed CLI. They do not build the menu-b
 To use the optional macOS menu-bar companion, build it explicitly and then launch it through the CLI:
 
 ```sh
-cargo build --manifest-path desktop/menubar/Cargo.toml
+cargo build --release --manifest-path desktop/menubar/Cargo.toml
 slopcamera menubar
 ```
 
