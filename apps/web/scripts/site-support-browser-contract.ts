@@ -121,7 +121,7 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   assert.equal(await page.locator("footer form,footer input,footer iframe").count(), 0)
   await link.scrollIntoViewIfNeeded(); await settle(page, scenario.direction)
   const targetEvidence = await link.evaluate(node => {
-    const box = node.getBoundingClientRect(), style = getComputedStyle(node), footer = node.closest("footer")!.getBoundingClientRect()
+    const box = node.getBoundingClientRect(), style = getComputedStyle(node), footer = node.closest(".hraness-site-footer__inner")!.getBoundingClientRect()
     const visible = box.width >= 24 && box.height >= 24 && style.display !== "none" && style.visibility === "visible" && Number(style.opacity) === 1
       && box.left >= -.5 && box.right <= innerWidth + .5 && box.top >= -.5 && box.bottom <= innerHeight + .5
       && box.top >= footer.top - .5 && box.bottom <= footer.bottom + .5
