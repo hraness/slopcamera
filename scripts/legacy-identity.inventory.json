@@ -439,7 +439,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "2c06a61a54b0917605f28c9529c6b8c4eba62d05f8072dcd7235f93991c8ef37",
+    "identityLinesSha256": "dd6b7023cf72ce655ac251318d83374e00bfd89215af618f63cd9fdcfc116d73",
     "occurrenceCount": 1,
     "path": "apps/desktop/cli/main.ts",
     "categories": [
