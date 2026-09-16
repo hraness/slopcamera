@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "surfaces": {
+    "posthog:$pageview": {
+      "kind": "telemetry",
+      "retention": "ttl:P365D",
+      "owner": "apps/web/src/analytics.ts",
+      "maxBytesPerEvent": 512,
+      "note": "cookieless canonical-production-only"
+    }
+  },
+  "exempt": []
+}
