@@ -20,7 +20,7 @@ test("only the exact independent static URL oracle is excluded from the hosted-s
 
 
 test("only the exact inert support anchor on registered generated pages is excluded", () => {
-  const anchor = `<a class="hraness-site-footer__support x9f619 xlashs9 xjb2p0i x1t35e8 x1aazh3f x1xh6y1q xd4aj15 xvmqkbn x10rt0pk x1rcybi7 x61gc8y xkyhvkk x2ga2k1 x3nfvp2 x6s0dn4 xl56j7k xyc0pis x18a9hih x6i6fhv xj5idha x1dcheo9 xk50ysn xo5v014 x1bvjpef x1ohr1zr xuxw1ft x784prv x9v5kkp xxuwnm0 xz4eswf xj3ae5l" data-slot="hraness-support-link" href="${supportHref.replace("&", "&amp;")}" aria-label="Support Slopcamera: optional paid membership" title="Support ongoing development of local visual tools for agents. Review optional paid membership." lang="en" dir="ltr">Support</a>`;
+  const anchor = `<a class="hraness-site-footer__support x9f619 xlashs9 xjb2p0i x1t35e8 x1aazh3f x1xh6y1q xd4aj15 xvmqkbn x10rt0pk x1rcybi7 x61gc8y xkyhvkk x2ga2k1 x3nfvp2 x6s0dn4 xl56j7k xyc0pis x18a9hih x6i6fhv xj5idha x1dcheo9 xk50ysn xo5v014 x1bvjpef x1ohr1zr xuxw1ft x784prv x9v5kkp xxuwnm0 xz4eswf xj3ae5l" data-slot="hraness-support-link" href="${supportHref.replaceAll("&", "&amp;")}" aria-label="Support Slopcamera: optional paid membership" title="Support ongoing development of local visual tools for agents. Review optional paid membership." lang="en" dir="ltr">Support</a>`;
   const footer = `<footer id="hraness-site-footer">${anchor}</footer>`;
   const path = "apps/web/dist/index.html";
   expect(standaloneSupportFixtureScanText(path, footer)).toBe('<footer id="hraness-site-footer"></footer>');
