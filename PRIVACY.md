@@ -28,9 +28,8 @@ service.
 
 Optional support notices are local. After useful command-line work, the
 `slopcamera` executable can print a short discovery notice to stderr and, on
-request, an optional support offer that links to the shared Hraness support
-page at `https://account.hraness.com/support`. Opening that page and any
-payment are explicit human choices in a browser. The notice preferences,
+request, an optional support offer that names the shared Hraness support page.
+Opening that page and any payment are explicit human choices in a browser. The notice preferences,
 throttles, and last presentation are stored only in local JSON files under
 `$XDG_STATE_HOME/hraness/support` (by default `~/.local/state/hraness/support`),
 shared with other Hraness tools for the same user. No email address, task

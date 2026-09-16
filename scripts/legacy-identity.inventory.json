@@ -430,7 +430,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "77247e0134fbc29103e54d319e15c81fb7de90c39f4784b139d6f5d7bb5b49d6",
+    "identityLinesSha256": "f25d0451dced7c9a936ad4b46102445f59a4981f65ed9a51495440a25bfde85d",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
