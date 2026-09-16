@@ -21,7 +21,7 @@ Prefer helpers over hand-written scene JSON. The `@hraness/slopcamera/code` expo
 1. Build or generate the scene JSON.
 2. `slopcamera scene audit scene.json --camera camera_hero --json` samples evaluated geometry across the duration and reports per-entity frustum state, projected pixel footprint, and findings such as off-camera or never-visible entities. `--times-us` picks explicit samples; `--asset-bounds bounds.json` supplies decoded asset enclosures as a bounds map, an admission document, a `{manifest, facts}` pair, or an array of those.
 3. Fix with a typed `scene patch` carrying `expectedSceneSha256`, or regenerate. `slopcamera scene diff before.json after.json --json` shows the exact structural difference a patch produced.
-4. Re-audit, then render. Audit is geometric only: it cannot see occlusion, transparency, material or texture failure, text layout, or splat internals, and it reports bounds as unknown until you supply them. It is not a substitute for inspecting the rendered output.
+4. Re-audit, then verify pixels with `slopcamera scene render-audit scene.json --camera camera_hero --json` — it renders the real object-ID pass in the bound browser runtime at each sampled time and counts attributed pixels per entity, catching occlusion and never-rendered cases geometric audit cannot see. Splats and camera-bound view surfaces report honestly as unsupported or non-attributable rather than estimated. Neither audit tier inspects beauty output — materials, textures, text layout, and splat internals still need rendered-frame inspection.
 
 ## Generate procedural scenes
 
