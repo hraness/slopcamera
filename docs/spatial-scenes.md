@@ -16,7 +16,7 @@ slopcamera scene audit product.scene.json --camera camera_hero --json
 slopcamera scene render-audit product.scene.json --camera camera_hero --json
 ```
 
-The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON map. `render-audit` is the rendered tier of that audit: it opens the bound browser runtime, renders the real object-ID pass at each sampled time, and counts attributed pixels per entity, reporting splats and camera-bound view surfaces honestly instead of estimating them. Save this request as `frame.json`:
+The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON bounds map or asset admission documents. `render-audit` is the rendered tier of that audit: it opens the bound browser runtime, renders the real object-ID pass at each sampled time, and counts attributed pixels per entity, reporting splats and camera-bound view surfaces honestly instead of estimating them. Save this request as `frame.json`:
 
 ```json
 {
@@ -74,14 +74,14 @@ Use `three-spark-webgl2-hardware-v1` for scenes containing splats. Its pinned Sp
 
 `scene world import` accepts exact local payload references and a declared normalization. The input contains:
 
-- `splat`: a root-relative `path`, `bytes`, and SHA-256. An optional `collider` uses the same payload reference.
+- `splat`: a root-relative `path`, `bytes`, and SHA-256. Optional `collider` and `providerMetadata` use the same payload reference.
 - `identities`: stable `assetId`, `entityId`, and `name`; supply `colliderAssetId` exactly when a collider is present.
 - `normalization`: `metersPerUnit`, `sourceUp`, `sourceHandedness: "right"`, and a complete `transform` with position, XYZW rotation and uniform scale.
 - `provenance`: `kind: "saved"` or `"worldlabs-marble"` and a description. World Labs provenance requires `worldId`, the exact retained collider, and the provider `receipt`, whose world and payload identities must match the import.
 
 Existing `slopcamera.world-labs-provenance` receipts remain readable for imported worlds. Their exact metadata and payload hashes are validated locally; source files and historical provider attempt records remain unchanged. The paid World Labs generation commands have been removed.
 
-Use the provider's returned scale/ground metadata when available, then verify the imported orientation and camera framing. Missing metadata is unknown; explicitly calibrate it rather than labeling an assumed scale as measured.
+A `providerMetadata` reference names a provider metadata export such as a Marble `semantics_metadata` JSON document. Its recognized scale, ground-plane and up-axis fields surface in the output manifest under `suggestedNormalization` with `status: "unverified-provider-declared"` and the artifact's SHA-256. Unknown provider fields are tolerated; malformed, oversized or unreadable artifacts fail the import. The suggestion is advisory only: `normalization` remains caller-declared and is the only applied normalization. Missing or unrecognized metadata is unknown; explicitly calibrate rather than labeling an assumed scale as measured, and verify the imported orientation and camera framing.
 
 ```sh
 slopcamera scene world import --input import.json --source-root . --output-root artifacts/slopcamera/generated/courtyard --json
@@ -122,13 +122,13 @@ A stale digest rejects the edit. The command requires a new output path, so both
 slopcamera scene asset admit model.glb --source-root assets --output model.manifest.json --json
 ```
 
-The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. Bounds from the facts manifest feed `scene audit --asset-bounds`, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
+The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. The admission document feeds `scene audit --asset-bounds` directly, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
 
 The `@hraness/slopcamera/code` SDK also exports pure scene builders — camera poses from FOV and look-at, baked easing channels, grid/scatter layout, and placement relations — that return validated scene data for programmatic authoring. They are documented in the Slopcamera Agent Skill under scene building.
 
 ## Generate procedural output at authoring time
 
-`scene generate` executes a single-file TypeScript generator module — trusted current-user code, like an explicitly imported workflow module — and retains its output inside a scene source:
+`scene generate` executes a TypeScript generator module — trusted current-user code, like an explicitly imported workflow module — and retains its output inside a scene source:
 
 ```sh
 slopcamera scene generate --module examples/scene-generators/grid-city.ts \
@@ -138,7 +138,7 @@ slopcamera scene generate --module examples/scene-generators/grid-city.ts \
   --into city.scene.json --output city-v2.scene.json --json
 ```
 
-A module exports `generate(ctx)` returning `{ entities, editableKeys? }`. Each entity carries a stable `key` instead of `entityId`/`origin`; the host stamps `entityId` derived from the generator and key, so generated parts cannot forge authored provenance. `ctx.seed` (from `--seed`, or derived from the source digest), bounded `ctx.parameters` (≤64 KiB JSON), and `ctx.lib.entityId(key)` for parent links inside one output are the only inputs. Generated entities emit mesh primitives, lights, and groups; asset references are not supported in this version. The retained generator record pins source, parameters, seed, runtime, and output digests, so an identical run reproduces the identical scene. `--into` replaces this generator's prior output wholesale while preserving authored entities and other generators' output; regeneration that would orphan a declared override or animation is rejected. Generation is authoring-time only and is never rerun by inspect, evaluate, or render.
+A module exports `generate(ctx)` returning `{ entities, editableKeys? }`. Each entity carries a stable `key` instead of `entityId`/`origin`; the host stamps `entityId` derived from the generator and key, so generated parts cannot forge authored provenance. `ctx.seed` (from `--seed`, or derived from the source digest), bounded `ctx.parameters` (≤64 KiB JSON), and `ctx.lib.entityId(key)` for parent links inside one output are the only inputs. Generated entities emit mesh primitives, lights, and groups; asset references are not supported in this version. Transitive relative `.ts`/`.js`/`.json` imports are allowed while they stay inside the module's own directory — a real, non-symlink file tree bounded to 64 files and 1 MiB total — and the retained `closureSha256` is the canonical digest of that file set (`sourceSha256` remains the entry-file digest, and the two are equal for a single-file module). Absolute, escaping, `require()`, and dynamic `import()` specifiers are rejected; bare package specifiers still resolve ambient dependencies the closure digest does not cover. The retained generator record pins source, parameters, seed, runtime, and output digests, so an identical run reproduces the identical scene. `--into` replaces this generator's prior output wholesale while preserving authored entities and other generators' output; regeneration that would orphan a declared override or animation is rejected. Generation is authoring-time only and is never rerun by inspect, evaluate, or render.
 
 Camera changes affect view identity without changing the evaluated world state. Shot overrides affect only that shot. An animated property cannot receive a conflicting constant override. Imported GLB source-material mode exposes transform edits; color and opacity edits require entity-material mode and are rejected when they would have no effect.
 

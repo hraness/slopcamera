@@ -4,10 +4,12 @@
  *   slopcamera scene generate --module examples/scene-generators/grid-city.ts \
  *     --generator-id generator_grid_city --output city.scene.json --json
  *
- * Modules are single-file trusted TypeScript: entities are returned without
- * entityId/origin, each carrying a stable "key" the host converts into derived
- * generated identity. Randomness must flow from ctx.seed — the retained
- * generator record pins seed and outputSha256, so nondeterminism is detectable.
+ * Modules are trusted TypeScript; transitive relative .ts/.js/.json imports
+ * inside the module's own directory are covered by the retained closure
+ * digest. Entities are returned without entityId/origin, each carrying a
+ * stable "key" the host converts into derived generated identity. Randomness
+ * must flow from ctx.seed — the retained generator record pins seed and
+ * outputSha256, so nondeterminism is detectable.
  */
 
 interface GenerateContext {

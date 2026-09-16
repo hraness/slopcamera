@@ -115,6 +115,37 @@ describe("saved world import and exact source closure", () => {
       await expect(importSavedSpatialWorld(fixture)).rejects.toThrow(); expect(await readdir(fixture.destinationRoot)).toEqual([]);
     }
   });
+  test("declared provider metadata yields an advisory suggestion without changing the applied normalization", async () => {
+    const baseline = await importSavedSpatialWorld(await setup(false));
+    expect(baseline.manifest.suggestedNormalization).toBeUndefined();
+    const documents = [
+      { document: { metric_scale_factor: 0.5, ground_plane_offset: 0.25 },
+        declared: { metricScaleFactor: 0.5, groundPlaneOffset: 0.25 },
+        suggestion: { metersPerUnit: 0.5, groundPlane: { axis: "y", offset: 0.25 } } },
+      { document: { semantics_metadata: { metric_scale_factor: 0.5, ground_plane_offset: null, future_provider_key: { deep: [1, "two"] } } },
+        declared: { metricScaleFactor: 0.5, groundPlaneOffset: null },
+        suggestion: { metersPerUnit: 0.5 } },
+      { document: { semanticsMetadata: { metricScaleFactor: null, groundPlaneOffset: -2, groundPlaneAxis: "z", upAxis: "+Z" } },
+        declared: { metricScaleFactor: null, groundPlaneOffset: -2, groundPlaneAxis: "z", upAxis: "+Z" },
+        suggestion: { sourceUp: "z", groundPlane: { axis: "z", offset: -2 } } },
+      { document: { unrelated: true }, declared: {}, suggestion: {} },
+    ] as const;
+    for (const { document, declared, suggestion } of documents) {
+      const fixture = await setup(false);
+      const metadata = Buffer.from(JSON.stringify(document));
+      await writeFile(join(fixture.sourceRoot, "semantics_metadata.json"), metadata);
+      const providerMetadata = { path: "semantics_metadata.json", bytes: metadata.length, sha256: createHash("sha256").update(metadata).digest("hex") };
+      const output = await importSavedSpatialWorld({ ...fixture, input: { ...fixture.input, providerMetadata } });
+      expect(output.manifest.suggestedNormalization).toEqual({
+        provider: "worldlabs-marble", schema: "semantics_metadata", status: "unverified-provider-declared",
+        artifactSha256: providerMetadata.sha256, declared, suggestion,
+      });
+      const { suggestedNormalization: _suggested, ...manifestRest } = output.manifest;
+      expect(manifestRest).toEqual(baseline.manifest);
+      expect(output.entity).toEqual(baseline.entity);
+      expect(output.assets).toHaveLength(2);
+    }
+  });
   test("failure after immutable publication retains exact evidence and clears private staging", async () => {
     const fixture = await setup(); let guards = 0;
     try { await importSavedSpatialWorld({ ...fixture, beforePublication: async () => { if (++guards === 3) throw new Error("custody lost"); } }); throw new Error("Expected publication failure"); }

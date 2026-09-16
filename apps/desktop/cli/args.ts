@@ -3088,7 +3088,7 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
   }
   if (action === "audit") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--camera": "value", "--times-us": "value", "--asset-bounds": "value" });
-    const [path] = exactPositionals(parsed, 1, "slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds.json>] [--json]");
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds-or-admission.json>] [--json]");
     const camera = optionString(parsed, "--camera"), times = optionString(parsed, "--times-us"), assetBounds = optionString(parsed, "--asset-bounds");
     if (camera === undefined) fail("scene audit requires --camera.");
     let timesUs: number[] | undefined;
