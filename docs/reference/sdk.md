@@ -21,7 +21,7 @@ There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slop
 
 ## Portable and local operations
 
-The portable projection contains diagram check/render and image generate/vectorize. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
+The portable projection contains diagram check/render and image generate/vectorize/icon. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
 
 The local builder adds `analysis`, `edits`, `gateway`, `iteration`, `studio`, `scene`, `spatialProject`, `media`, `project`, `render` and `recording` operations. Inspect the current registry and built-in schemas through the host:
 

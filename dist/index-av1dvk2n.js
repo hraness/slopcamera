@@ -16,13 +16,14 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-fava6pge.js";
+} from "./index-gwq5jc3q.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
   StackLayoutError,
   builtInIcons,
   executeSlopcameraOperation,
+  generateSlopcameraIcon,
   lintDiagram,
   parseDiagramSource,
   parseDiagramSpec,
@@ -39,18 +40,18 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-h1k0fnjq.js";
+} from "./index-rqcqb1h8.js";
 import {
   VectorizeError,
   vectorizeHardLimits,
   vectorizeImage
-} from "./index-zfnddgay.js";
+} from "./index-9ajx7fzb.js";
 import {
   SlopcameraCloudError,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
   slopcameraGatewayCredentialStatus
-} from "./index-r7gdhmsp.js";
+} from "./index-231ernwj.js";
 import {
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";
@@ -1784,6 +1785,7 @@ var slopcameraApi = Object.freeze({
   DiagramValidationError,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  generateSlopcameraIcon,
   slopcameraGatewayCredentialStatus,
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,

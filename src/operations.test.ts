@@ -46,7 +46,7 @@ function recordingCoordinator(record: {
 }
 
 describe("canonical Slopcamera operations", () => {
-  test("publishes four exact semantic codes in stable order", () => {
+  test("publishes five exact semantic codes in stable order", () => {
     expect(slopcameraOperationRegistry.map(({ code }) => code)).toEqual(
       [...slopcameraOperationCodes],
     )
@@ -106,7 +106,32 @@ describe("canonical Slopcamera operations", () => {
           { resource: "paid-call", amount: 1 },
         ],
       },
+      {
+        code: "slopcamera.image.icon",
+        resources: [
+          { resource: "cpu", amount: 1 },
+          { resource: "local-io", amount: 1 },
+          { resource: "network", amount: 1 },
+          { resource: "paid-call", amount: 1 },
+        ],
+      },
     ])
+    expect(
+      slopcameraOperationRegistry.find(
+        ({ code }) => code === "slopcamera.image.icon",
+      ),
+    ).toMatchObject({
+      execution: "gateway",
+      authentication: "environment",
+      destructive: true,
+      idempotent: false,
+      transport: {
+        method: "POST",
+        authority: "https://ai-gateway.vercel.sh/v4/ai",
+        authorization: "bearer",
+        retry: "never",
+      },
+    })
     expect(Object.isFrozen(slopcameraOperationRegistry[0]?.resources)).toBe(true)
   })
 

@@ -16,7 +16,7 @@ Commands:
                                  Direct short Gateway clips with retained takes and budgets
   studio init|bundle|plan|probe|run|encode|asset|assemble|inspect|reconcile
                                  Author and render retained Blender, CAD and Manim productions
-  image vectorize|generate      Create a local SVG or generated image file
+  image vectorize|generate|icon Create a local SVG or generated image file
   html catalog|scaffold|render   Author HTML scenes and export video with local audio
   workflows list|show|plan|run   Plan or run a reviewed reusable workflow
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
@@ -161,11 +161,17 @@ operations separately publish equivalent derivatives by content hash for workflo
   slopcamera image generate <prompt> --output <file.webp> [--model <model>]
         [--idempotency-key <key>] [--json]
   slopcamera image generate --model <gateway-model> --prompt <prompt>
+  slopcamera image icon <subject> --output <file.svg> [--model <model>]
+        [--ink <#rgb>] [--rounds <1-4>] [--critique-model <model>]
+        [--keep-raster] [--json]
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
 caller's environment credential. The --prompt spelling without --output is an alias for the desktop
-content-addressed \`ai image generate\` lane and returns project-composable content hash references.`,
+content-addressed \`ai image generate\` lane and returns project-composable content hash references.
+Icon combines a style-locked Gateway raster, local ink extraction and VTracer tracing into a
+canonical isometric line-art SVG; --rounds above 1 adds a vision-model critique that revises the
+prompt between attempts.`,
   html: `Usage:
   slopcamera html catalog [--json]
   slopcamera html scaffold <${HTML_OVERLAY_SCAFFOLD_KIND_HELP}> --output <file.html>
@@ -485,7 +491,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
   if (command === "operations") return ["list", "show"];
   if (command === "diagram") return ["check", "render"];
-  if (command === "image") return ["vectorize"];
+  if (command === "image") return ["vectorize", "icon"];
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
