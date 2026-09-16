@@ -1112,10 +1112,17 @@ export function shellContextLifecycle(error: (message: string) => void) {
   }
 }
 
+/** The new profile binds current footer 0.11.2/0.12.1 (four social links).
+ * Historical migration/refinement profiles retain their five-link contract. */
+export function assertFooterKeyboardCoverage(focus: readonly ShellElement[], profile?: "marketing-refinement-v1" | "optional-support-v1"): void {
+  assert.ok(profile === undefined || profile === "marketing-refinement-v1" || profile === "optional-support-v1", "Unknown ordinary DOM profile")
+  assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__social-link[")).length,
+    profile === "optional-support-v1" ? 4 : 5, "Footer keyboard coverage incomplete")
+}
 export async function checkShellCase(browser: Browser, payload: ShellPayload, scenario: ShellCase,
   source: "current" | "baseline", negative: boolean,
-  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1"): Promise<ShellEvidence> {
-  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1", "Unknown ordinary DOM profile")
+  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1"): Promise<ShellEvidence> {
+  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1" || domProfile === "optional-support-v1", "Unknown ordinary DOM profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height },
     deviceScaleFactor: scenario.reflowEquivalent ? 2 : 1, colorScheme: scenario.system, forcedColors: scenario.forced,
     hasTouch: scenario.coarse, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
@@ -1315,7 +1322,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     assert.equal(focus.filter(item => item.key.startsWith("[data-hraness-appearance-menu] button[")).length, 1,
       "Appearance keyboard coverage incomplete")
     assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__brand[")).length, 1)
-    assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__social-link[")).length, 5, "Footer keyboard coverage incomplete")
+    assertFooterKeyboardCoverage(focus, domProfile)
     if (scenario.route === "/") assert.equal(focus.filter(item => item.key.startsWith(".slopcamera-ask-ai a[")).length, 4)
     else assert.equal(focus.filter(item => item.key.startsWith(".route-state a[")).length, 5)
     await page.goto(`${payload.origin}${scenario.route}`, { waitUntil: "load" }); await settleCase()

@@ -8,7 +8,7 @@ import { assertShellNode, checkShellCase, ShellPairFailure, settleShellPair } fr
 import { parseSupportRequest, parseSupportPhase, supportCases, supportDeadline, supportCaseFailure,
   supportDom, compareSupportEvidence, compareSupportCopy, observeSupportFooter } from "./site-support-browser-contract"
 import { supportScope, supportCopyScope } from "./site-support-profile"
-import { refinementScope, refinementCopyProfile } from "./site-refinement-profile"
+import { refinementCopyProfile } from "./site-refinement-profile"
 import { decodeWorkerJson, encodeWorkerJson, publishWorkerPhase, workerAttachmentMs, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
 import { assertOwnedPreviewEndpoint, closeOwnedPreviewBrowser } from "./preview-browser-shutdown"
@@ -68,10 +68,10 @@ async function main() {
             () => checkShellCase(browser, request.current, scenario, "current", negative, async page => {
               currentDom = await supportDom(page, true)
               design = await observeSupportFooter(page, scenario, `${request.current.origin}${request.current.stylesheets[0]}`, negative && scenario.route === "/")
-            }, refinementScope),
+            }, supportScope),
             () => checkShellCase(browser, request.baseline, scenario, "current", false, async page => {
               baselineDom = await supportDom(page, false)
-            }, refinementScope))
+            }, supportScope))
           return bounded(activePair, `Current/baseline ${scenario.name}`, Math.min(60_000, remaining))
         })
         stage = "comparison"

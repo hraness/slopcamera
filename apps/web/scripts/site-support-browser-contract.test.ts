@@ -4,7 +4,7 @@ import { parseSupportRequest, parseSupportPhase, parseSupportCaseFailure, suppor
   supportCases, supportDeadline, compareSupportEvidence, compareSupportCopy } from "./site-support-browser-contract"
 import { supportScope, supportCopyScope, supportBaselineProfile, supportBaselineRevision, supportBaselineTree, supportFooterDigests } from "./site-support-profile"
 import { assertSupportBaselineManifest } from "./verify-site-marketing"
-import { shellAppearanceSteps, siteShellCases, siteShellDeadlineMs, type ShellElement, type ShellEvidence } from "./site-shell-browser-contract"
+import { assertFooterKeyboardCoverage, shellAppearanceSteps, siteShellCases, siteShellDeadlineMs, type ShellElement, type ShellEvidence } from "./site-shell-browser-contract"
 import { copySteps, copyNegativeControls, siteCopyCases, siteCopyDeadlineMs, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 const css = `/assets/site-${"a".repeat(64)}.css`
@@ -87,4 +87,15 @@ test("the new driver retains pinned browser and shared parent process custody", 
   const [parent, driver] = await Promise.all([readFile(new URL("./verify-site-marketing.ts", import.meta.url), "utf8"), readFile(new URL("./site-support-browser-driver.mjs", import.meta.url), "utf8")])
   for (const boundary of ["assertWorkerInputsUnchanged(inputs, after)", "collectProtocol(protocolDirectory, observation)", "workerAbsent && chromeAbsent", "servers.every(server => server.closed)", "candidateIdentity(actualApp), candidate", "performance.now() < deadline"]) expect(parent).toContain(boundary)
   for (const boundary of ['manifest.version, "1.62.0"', 'realpath(chromium.executablePath()), request.chromeExecutable', "closeOwnedPreviewBrowser", "Both underlying case settlements", "parsePhase(result, 2, request)", "publishWorkerPhase(directory, 2, result)"]) expect(driver).toContain(boundary)
+})
+
+
+test("current footer keyboard coverage requires four links without relaxing historical five-link profiles", () => {
+  const focused = (count: number) => Array.from({ length: count }, (_, i) => element(`.hraness-site-footer__social-link[${i}]`))
+  expect(() => assertFooterKeyboardCoverage(focused(4), supportScope)).not.toThrow()
+  for (const count of [0, 1, 3, 5, 6]) expect(() => assertFooterKeyboardCoverage(focused(count), supportScope)).toThrow()
+  for (const profile of [undefined, "marketing-refinement-v1"] as const) {
+    expect(() => assertFooterKeyboardCoverage(focused(5), profile)).not.toThrow()
+    expect(() => assertFooterKeyboardCoverage(focused(4), profile)).toThrow()
+  }
 })
