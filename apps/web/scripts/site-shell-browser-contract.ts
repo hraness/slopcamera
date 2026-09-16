@@ -1312,7 +1312,16 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
       assert.ok(observation.sample !== null, "Focused target measurement missing")
       const { viewport, measured } = observation.sample
       assert.ok(viewport[1] >= -0.5 && viewport[1] + viewport[3] <= scenario.height + 0.5, `Focused target not reachable: ${key}`)
-      assertShellFocusFragments(observation.fragments, key)
+      try { assertShellFocusFragments(observation.fragments, key) }
+      catch (error) {
+        const diagnostic = await target.evaluate(element => {
+          const rect = element.getClientRects()[0]!, hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+          const footer = document.querySelector(".hraness-site-footer__inner")
+          return { hit: hit === null ? null : { tag: hit.tagName, id: hit.id, className: hit.getAttribute("class")?.slice(0, 256) },
+            footer: footer?.getBoundingClientRect().toJSON(), scrollY, viewport: [innerWidth, innerHeight] }
+        })
+        throw new Error(`${String(error)}; native hit diagnostic ${JSON.stringify(diagnostic)}`, { cause: error })
+      }
       assert.ok(measured.styles["outline-style"] !== "none" && Number.parseFloat(measured.styles["outline-width"]!) > 0,
         `Visible focus outline missing: ${key}`)
       focus.push(measured)
