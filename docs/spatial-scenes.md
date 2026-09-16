@@ -15,7 +15,7 @@ slopcamera scene evaluate product.scene.json --camera camera_hero --time-us 1000
 slopcamera scene audit product.scene.json --camera camera_hero --json
 ```
 
-The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON map. Save this request as `frame.json`:
+The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON bounds map or asset admission documents. Save this request as `frame.json`:
 
 ```json
 {
@@ -73,14 +73,14 @@ Use `three-spark-webgl2-hardware-v1` for scenes containing splats. Its pinned Sp
 
 `scene world import` accepts exact local payload references and a declared normalization. The input contains:
 
-- `splat`: a root-relative `path`, `bytes`, and SHA-256. An optional `collider` uses the same payload reference.
+- `splat`: a root-relative `path`, `bytes`, and SHA-256. Optional `collider` and `providerMetadata` use the same payload reference.
 - `identities`: stable `assetId`, `entityId`, and `name`; supply `colliderAssetId` exactly when a collider is present.
 - `normalization`: `metersPerUnit`, `sourceUp`, `sourceHandedness: "right"`, and a complete `transform` with position, XYZW rotation and uniform scale.
 - `provenance`: `kind: "saved"` or `"worldlabs-marble"` and a description. World Labs provenance requires `worldId`, the exact retained collider, and the provider `receipt`, whose world and payload identities must match the import.
 
 Existing `slopcamera.world-labs-provenance` receipts remain readable for imported worlds. Their exact metadata and payload hashes are validated locally; source files and historical provider attempt records remain unchanged. The paid World Labs generation commands have been removed.
 
-Use the provider's returned scale/ground metadata when available, then verify the imported orientation and camera framing. Missing metadata is unknown; explicitly calibrate it rather than labeling an assumed scale as measured.
+A `providerMetadata` reference names a provider metadata export such as a Marble `semantics_metadata` JSON document. Its recognized scale, ground-plane and up-axis fields surface in the output manifest under `suggestedNormalization` with `status: "unverified-provider-declared"` and the artifact's SHA-256. Unknown provider fields are tolerated; malformed, oversized or unreadable artifacts fail the import. The suggestion is advisory only: `normalization` remains caller-declared and is the only applied normalization. Missing or unrecognized metadata is unknown; explicitly calibrate rather than labeling an assumed scale as measured, and verify the imported orientation and camera framing.
 
 ```sh
 slopcamera scene world import --input import.json --source-root . --output-root artifacts/slopcamera/generated/courtyard --json
@@ -121,7 +121,7 @@ A stale digest rejects the edit. The command requires a new output path, so both
 slopcamera scene asset admit model.glb --source-root assets --output model.manifest.json --json
 ```
 
-The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. Bounds from the facts manifest feed `scene audit --asset-bounds`, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
+The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. The admission document feeds `scene audit --asset-bounds` directly, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
 
 The `@hraness/slopcamera/code` SDK also exports pure scene builders — camera poses from FOV and look-at, baked easing channels, grid/scatter layout, and placement relations — that return validated scene data for programmatic authoring. They are documented in the Slopcamera Agent Skill under scene building.
 

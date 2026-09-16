@@ -19,7 +19,7 @@ Prefer helpers over hand-written scene JSON. The `@hraness/slopcamera/code` expo
 ## The create → audit → patch loop
 
 1. Build or generate the scene JSON.
-2. `slopcamera scene audit scene.json --camera camera_hero --json` samples evaluated geometry across the duration and reports per-entity frustum state, projected pixel footprint, and findings such as off-camera or never-visible entities. `--times-us` picks explicit samples; `--asset-bounds bounds.json` supplies decoded asset enclosures.
+2. `slopcamera scene audit scene.json --camera camera_hero --json` samples evaluated geometry across the duration and reports per-entity frustum state, projected pixel footprint, and findings such as off-camera or never-visible entities. `--times-us` picks explicit samples; `--asset-bounds bounds.json` supplies decoded asset enclosures as a bounds map, an admission document, a `{manifest, facts}` pair, or an array of those.
 3. Fix with a typed `scene patch` carrying `expectedSceneSha256`, or regenerate. `slopcamera scene diff before.json after.json --json` shows the exact structural difference a patch produced.
 4. Re-audit, then render. Audit is geometric only: it cannot see occlusion, transparency, material or texture failure, text layout, or splat internals, and it reports bounds as unknown until you supply them. It is not a substitute for inspecting the rendered output.
 
@@ -29,4 +29,4 @@ Prefer helpers over hand-written scene JSON. The `@hraness/slopcamera/code` expo
 
 ## Admit a local glTF asset
 
-`slopcamera scene asset admit model.glb --source-root <dir> --output manifest.json --json` validates a local GLB 2.0 against the closed profile, stores it content-addressed, derives model-space and scene-space bounds into a sibling facts manifest, and emits the mesh entity plus ready `add-asset`/`add-entity` patch operations. The source path must stay inside `--source-root`; unsupported GLB features reject rather than degrade. Apply the returned operations through `scene patch`, then feed the facts manifest's scene-space bounds to `scene audit --asset-bounds`.
+`slopcamera scene asset admit model.glb --source-root <dir> --output manifest.json --json` validates a local GLB 2.0 against the closed profile, stores it content-addressed, derives model-space and scene-space bounds into a sibling facts manifest, and emits the mesh entity plus ready `add-asset`/`add-entity` patch operations. The source path must stay inside `--source-root`; unsupported GLB features reject rather than degrade. Apply the returned operations through `scene patch`, then feed the admission document itself to `scene audit --asset-bounds`.
