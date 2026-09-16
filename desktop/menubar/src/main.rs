@@ -17,8 +17,20 @@ use std::time::Duration;
 use desktop_foundation::outputs::OutputsSection;
 use desktop_foundation::{
     AccessibilityMetadata, DispatchOutcome, Host, MenuItem, MenuModel, MenuNode, Options,
-    RenderError,
+    RenderError, RgbaIcon,
 };
+
+/// Camera status mark. macOS renders `MARK_TITLE` as native colored emoji
+/// text; icon-only trays use this pre-rendered 32px Twemoji bitmap
+/// (U+1F4F7, CC-BY 4.0 — https://twemoji.twitter.com).
+const MARK_TITLE: &str = "\u{1f4f7}";
+fn mark_icon() -> RgbaIcon {
+    RgbaIcon {
+        rgba: include_bytes!("../icons/mark.rgba").to_vec(),
+        width: 32,
+        height: 32,
+    }
+}
 
 /// `~/Library/Application Support/Slopcamera` on macOS, mirroring
 /// `defaultCliStateRoot` in `apps/desktop/cli/paths.ts`; XDG state elsewhere.
@@ -54,12 +66,13 @@ impl Host for SlopcameraHost {
                     hint: Some("Exit the Slopcamera menu bar companion".to_owned()),
                 }),
         ));
-        MenuModel {
-            title: Some("Slopcamera".to_owned()),
+        let mut model = MenuModel {
             tooltip: Some("Slopcamera — agent outputs".to_owned()),
-            icon: None,
             nodes,
-        }
+            ..MenuModel::default()
+        };
+        model.mark(MARK_TITLE, Some(mark_icon()));
+        model
     }
 
     fn dispatch_result(&self, id: &str) -> DispatchOutcome {
