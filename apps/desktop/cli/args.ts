@@ -71,6 +71,7 @@ export type DirectingCommand = JsonOption & { readonly kind: "directing" } & (
 );
 export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene"; readonly path: string } & (
   | { readonly action: "init" | "inspect" }
+  | { readonly action: "diff"; readonly other: string }
   | { readonly action: "patch"; readonly patch: string; readonly output: string }
   | { readonly action: "evaluate"; readonly camera: string; readonly timeUs: number }
   | { readonly action: "camera-track"; readonly request: string; readonly output: string }
@@ -3022,6 +3023,11 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const [path] = exactPositionals(parsed, 1, `slopcamera scene ${action} <scene.json> [--json]`);
     return { kind: "spatial-scene", action: action === "check" ? "inspect" : action, path: path!, json: optionFlag(parsed, "--json") };
   }
+  if (action === "diff") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    const [path, other] = exactPositionals(parsed, 2, "slopcamera scene diff <scene-a.json> <scene-b.json> [--json]");
+    return { kind: "spatial-scene", action, path: path!, other: other!, json: optionFlag(parsed, "--json") };
+  }
   if (action === "patch") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--patch": "value", "--output": "value" });
     const [path] = exactPositionals(parsed, 1, "slopcamera scene patch <scene.json> --patch <patch.json> --output <new-scene.json>");
@@ -3051,7 +3057,7 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const executionProfile = spatialCliExecutionProfile(optionString(parsed, "--profile"));
     return { kind: "spatial-scene", action, path: path!, request, ...(assets === undefined ? {} : { assets }), ...(executionProfile === undefined ? {} : { executionProfile }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|patch|evaluate|camera-track|plan|render> ...");
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|camera-track|plan|render> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

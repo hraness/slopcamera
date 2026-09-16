@@ -3,6 +3,7 @@ import { open, realpath } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { canonicalJson } from "../../../src/code/canonical-json";
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
+import { diffSpatialScenes } from "../../../src/spatial-scene/patch";
 import { SPATIAL_SCENE_LIMITS } from "../../../src/spatial-scene/contracts";
 import { parseSpatialScene, spatialSceneSha256 } from "../../../src/spatial-scene/index";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
@@ -63,6 +64,10 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     return { path: sourcePath, sceneSha256: spatialSceneSha256(scene) };
   }
   const scene = parseSpatialScene(await readSpatialJson(sourcePath));
+  if (command.action === "diff") {
+    const other = parseSpatialScene(await readSpatialJson(resolve(application.paths.repositoryRoot, command.other)));
+    return { sceneSha256: spatialSceneSha256(scene), otherSha256: spatialSceneSha256(other), diff: diffSpatialScenes(scene, other) };
+  }
   if (command.action === "camera-track") {
     const fence = async () => {
       assertCameraTrackActive(signal);

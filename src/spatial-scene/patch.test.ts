@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import fc from "fast-check"
-import { applySpatialScenePatch } from "./patch.js"
+import { applySpatialScenePatch, diffSpatialScenes } from "./patch.js"
 import { spatialAssetClosureDigests, spatialGeneratorOutputSha256, spatialSceneSha256 } from "./identity.js"
 import { fixtureAsset, fixtureEntity, fixtureGenerated, fixtureScene } from "./test-fixture.js"
 
@@ -74,6 +74,20 @@ describe("typed atomic authored scene patches", () => {
     expect(result.scene.assets.find(asset => asset.assetId === meshAsset.assetId)).toEqual(meshAsset)
     expect(spatialAssetClosureDigests(result.scene.assets)[meshAsset.assetId]).not.toBe(spatialAssetClosureDigests(scene.assets)[meshAsset.assetId])
     expect(result.diff).toEqual([{ kind: "changed", collection: "assets", id: dependency.assetId, properties: ["payload"] }])
+  })
+
+  test("scene diff reports empty for identical scenes and exact entries for a patch", () => {
+    const scene = fixtureScene()
+    expect(diffSpatialScenes(scene, scene)).toEqual([])
+    const patched = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-color", entityId: "entity_box", color: "#ff0000" }, { kind: "add-entity", entity: fixtureEntity("entity_extra") }]))
+    expect(diffSpatialScenes(scene, patched.scene)).toEqual([
+      { kind: "changed", collection: "entities", id: "entity_box", properties: ["material"] },
+      { kind: "added", collection: "entities", id: "entity_extra", properties: patched.scene.entities.find(e => e.entityId === "entity_extra") ? Object.keys(patched.scene.entities.find(e => e.entityId === "entity_extra")!).sort() : [] },
+    ])
+    expect(diffSpatialScenes(patched.scene, scene)).toEqual([
+      { kind: "changed", collection: "entities", id: "entity_box", properties: ["material"] },
+      { kind: "removed", collection: "entities", id: "entity_extra", properties: Object.keys(fixtureEntity("entity_extra")).sort() },
+    ])
   })
 
   test("patch parser rejects unknown operations, unsafe shape, duplicate additions and oversize batches", () => {
