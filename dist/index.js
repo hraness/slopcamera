@@ -49,7 +49,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-7131pg1c.js";
+} from "./index-av1dvk2n.js";
 import {
   bundledSkillPath,
   installSkill
@@ -59,14 +59,18 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-fava6pge.js";
+} from "./index-gwq5jc3q.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
   StackLayoutError,
   builtInIcons,
+  critiqueIconRaster,
   executeSlopcameraOperation,
   executeSlopcameraOperationWithLease,
+  extractIconLineArt,
+  generateSlopcameraIcon,
+  iconPromptFor,
   isSlopcameraOperationCode,
   lintDiagram,
   parseDiagramSource,
@@ -79,12 +83,19 @@ import {
   resolveStackLayout,
   searchSlopcameraOperations,
   serializeTldr,
+  slopcameraIconCritiqueDefaultModel,
+  slopcameraIconCritiqueTimeoutMs,
+  slopcameraIconDefaultInk,
+  slopcameraIconDefaultRounds,
+  slopcameraIconMaximumRounds,
+  slopcameraIconPanel,
+  slopcameraIconSubjectMaximumBytes,
   slopcameraOperationCodes,
   slopcameraOperationHostResourceClaims,
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-h1k0fnjq.js";
+} from "./index-rqcqb1h8.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -93,19 +104,20 @@ import {
   vectorizeImage,
   vectorizeProfileNames,
   vtracerReleases
-} from "./index-zfnddgay.js";
+} from "./index-9ajx7fzb.js";
 import {
   SlopcameraCloudError,
   createFixedGatewayFetch,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  resolveSlopcameraGatewayCredential,
   slopcameraGatewayApiBaseUrl,
   slopcameraGatewayCredentialStatus,
   slopcameraImageModels,
   slopcameraMaximumPromptBytes,
   slopcameraMaximumRawImageBytes,
   slopcameraResponseMediaTypes
-} from "./index-r7gdhmsp.js";
+} from "./index-231ernwj.js";
 import {
   HOST_RESOURCE_MAX_WAIT_MILLISECONDS,
   HostResourceError,
@@ -142,6 +154,13 @@ export {
   slopcameraMaximumRawImageBytes,
   slopcameraMaximumPromptBytes,
   slopcameraImageModels,
+  slopcameraIconSubjectMaximumBytes,
+  slopcameraIconPanel,
+  slopcameraIconMaximumRounds,
+  slopcameraIconDefaultRounds,
+  slopcameraIconDefaultInk,
+  slopcameraIconCritiqueTimeoutMs,
+  slopcameraIconCritiqueDefaultModel,
   slopcameraHostResourceNames,
   slopcameraGatewayCredentialStatus,
   slopcameraGatewayApiBaseUrl,
@@ -151,6 +170,7 @@ export {
   runSlopcameraWorkflow,
   runMcpServer,
   resolveStackLayout,
+  resolveSlopcameraGatewayCredential,
   resolveEdge,
   resolveDiagramSource,
   renderSvg,
@@ -176,14 +196,18 @@ export {
   installSkill,
   inspectStudioPlan,
   inspectStudioBundle,
+  iconPromptFor,
   generateSlopcameraImageFile,
   generateSlopcameraImage,
+  generateSlopcameraIcon,
+  extractIconLineArt,
   executeSlopcameraOperationWithLease,
   executeSlopcameraOperation,
   diagramApi,
   defineSlopcameraWorkflow,
   defaultSlopcameraHostResourceStateRoot,
   defaultSlopcameraHostResourceProfile,
+  critiqueIconRaster,
   createProcessLocalHostResourceCoordinator,
   createHostResourceCoordinator,
   createFixedGatewayFetch,

@@ -235,7 +235,7 @@ export async function runPortableSurface(
     )
     || (
       argv[0] === "image"
-      && (argv[1] === "vectorize" || argv[1] === "generate")
+      && (argv[1] === "vectorize" || argv[1] === "generate" || argv[1] === "icon")
     );
   if (!delegatesToHeadless) return undefined;
 

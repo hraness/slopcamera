@@ -46,7 +46,7 @@ function credentialValue(value) {
 function environment(injected) {
   return injected ?? process.env;
 }
-function resolveGatewayCredential(injected) {
+function resolveSlopcameraGatewayCredential(injected) {
   const values = environment(injected);
   if (values.AI_GATEWAY_API_KEY !== undefined) {
     return {
@@ -336,7 +336,7 @@ function parseResult(value, model) {
 async function performGeneration(input, dependencies) {
   const model = validateModel(input.model);
   const prompt = validatePrompt(input.prompt);
-  const credential = resolveGatewayCredential(dependencies.environment);
+  const credential = resolveSlopcameraGatewayCredential(dependencies.environment);
   const timeout = combineSignals(input.signal, validateTimeout(input.timeoutMs));
   try {
     const generation = (async () => {
@@ -421,4 +421,4 @@ async function generateSlopcameraImageFile(input, dependencies = {}) {
   };
 }
 
-export { SlopcameraCloudError, slopcameraGatewayApiBaseUrl, slopcameraImageModels, slopcameraResponseMediaTypes, slopcameraMaximumPromptBytes, slopcameraMaximumRawImageBytes, slopcameraGatewayCredentialStatus, createFixedGatewayFetch, generateSlopcameraImage, generateSlopcameraImageFile };
+export { SlopcameraCloudError, slopcameraGatewayApiBaseUrl, slopcameraImageModels, slopcameraResponseMediaTypes, slopcameraMaximumPromptBytes, slopcameraMaximumRawImageBytes, resolveSlopcameraGatewayCredential, slopcameraGatewayCredentialStatus, createFixedGatewayFetch, generateSlopcameraImage, generateSlopcameraImageFile };

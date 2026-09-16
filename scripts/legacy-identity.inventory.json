@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 83,
-    "identityLinesSha256": "92d6add3d91f39a552494db53ea1e58cabcf80410dbb75bc7be7712794200d52",
+    "identityLinesSha256": "af1f8ddf8d63959056d37205aabded4f4e7b2e0f9fa65d1708776e4b53c79ee8",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1632,7 +1632,7 @@
     "identityLineCount": 142,
     "identityLinesSha256": "d3194f74bce8707ee2e6e33730495249349f0e5254818d9e25a94ca1d79537a3",
     "occurrenceCount": 237,
-    "path": "dist/index-7131pg1c.js",
+    "path": "dist/index-av1dvk2n.js",
     "categories": [
       "generated"
     ]
@@ -1720,7 +1720,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "4d365961f6175db811e93f3d15389f7d7a27dc92697c8af98c185938eb8c310e",
+    "identityLinesSha256": "8eac8ed1c6033a6e902f0427177912bdbc67253b776db368c678ff1032a18f0d",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [

@@ -15,6 +15,12 @@ import {
   type SlopcameraImageModel,
 } from "./generate.js"
 import {
+  generateSlopcameraIcon,
+  slopcameraIconMaximumRounds,
+  slopcameraIconSubjectMaximumBytes,
+  type SlopcameraIconReceipt,
+} from "./icon.js"
+import {
   vectorizeImage,
   type VectorizeReceipt,
 } from "./vectorize/index.js"
@@ -30,6 +36,7 @@ export const slopcameraOperationCodes = [
   "slopcamera.diagram.render",
   "slopcamera.image.vectorize",
   "slopcamera.image.generate",
+  "slopcamera.image.icon",
 ] as const
 
 export type SlopcameraOperationCode = (typeof slopcameraOperationCodes)[number]
@@ -209,6 +216,53 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
         retry: "never",
       },
     },
+    {
+      code: "slopcamera.image.icon",
+      title: "Generate line-art icon",
+      description:
+        "Generate one isometric line-art SVG icon: a style-locked Vercel AI Gateway raster normalized to canonical ink-on-transparent pixels, traced locally, and optionally critiqued by a vision model across bounded rounds.",
+      execution: "gateway",
+      authentication: "environment",
+      destructive: true,
+      idempotent: false,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["subject", "outputPath"],
+        properties: {
+          subject: {
+            type: "string",
+            minLength: 1,
+            maxLength: slopcameraIconSubjectMaximumBytes,
+          },
+          outputPath: pathSchema,
+          model: modelSchema,
+          critiqueModel: modelSchema,
+          ink: {
+            type: "string",
+            pattern: "^#[a-fA-F0-9]{3}(?:[a-fA-F0-9]{3})?$",
+          },
+          rounds: {
+            type: "integer",
+            minimum: 1,
+            maximum: slopcameraIconMaximumRounds,
+          },
+          keepRaster: { type: "boolean" },
+        },
+      },
+      resources: [
+        { resource: "cpu", amount: 1 },
+        { resource: "local-io", amount: 1 },
+        { resource: "network", amount: 1 },
+        { resource: "paid-call", amount: 1 },
+      ],
+      transport: {
+        method: "POST",
+        authority: "https://ai-gateway.vercel.sh/v4/ai",
+        authorization: "bearer",
+        retry: "never",
+      },
+    },
   ] satisfies readonly SlopcameraOperationDescriptor[])
 
 export interface CheckSlopcameraOperationInput {
@@ -234,11 +288,22 @@ export interface GenerateSlopcameraOperationInput {
   readonly outputPath: string
 }
 
+export interface IconSlopcameraOperationInput {
+  readonly subject: string
+  readonly outputPath: string
+  readonly model?: SlopcameraImageModel
+  readonly critiqueModel?: string
+  readonly ink?: string
+  readonly rounds?: number
+  readonly keepRaster?: boolean
+}
+
 export interface SlopcameraOperationInputMap {
   readonly "slopcamera.diagram.check": CheckSlopcameraOperationInput
   readonly "slopcamera.diagram.render": RenderSlopcameraOperationInput
   readonly "slopcamera.image.vectorize": VectorizeSlopcameraOperationInput
   readonly "slopcamera.image.generate": GenerateSlopcameraOperationInput
+  readonly "slopcamera.image.icon": IconSlopcameraOperationInput
 }
 
 export interface SlopcameraOperationResultMap {
@@ -256,6 +321,7 @@ export interface SlopcameraOperationResultMap {
     readonly receipt: VectorizeReceipt
   }
   readonly "slopcamera.image.generate": GeneratedSlopcameraImageFile
+  readonly "slopcamera.image.icon": SlopcameraIconReceipt
 }
 
 function operationFailure(message: string): never {
@@ -401,6 +467,82 @@ function parseGenerate(value: unknown): GenerateSlopcameraOperationInput {
   }
 }
 
+function parseIcon(value: unknown): IconSlopcameraOperationInput {
+  const input = record(value, [
+    "subject",
+    "outputPath",
+    "model",
+    "critiqueModel",
+    "ink",
+    "rounds",
+    "keepRaster",
+  ])
+  if (
+    typeof input.subject !== "string" ||
+    input.subject.trim().length < 1 ||
+    /[\u0000-\u001f\u007f]/u.test(input.subject) ||
+    Buffer.byteLength(input.subject, "utf8") > slopcameraIconSubjectMaximumBytes
+  ) {
+    operationFailure(
+      `subject must be non-empty and no more than ${slopcameraIconSubjectMaximumBytes} UTF-8 bytes.`,
+    )
+  }
+  const outputPath = pathValue(input.outputPath, "outputPath")
+  if (!outputPath.toLowerCase().endsWith(".svg")) {
+    operationFailure("outputPath must end in .svg.")
+  }
+  for (const name of ["model", "critiqueModel"] as const) {
+    const model = input[name]
+    if (
+      model !== undefined &&
+      (typeof model !== "string" ||
+        model.length > 256 ||
+        !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model))
+    ) {
+      operationFailure(`${name} must be a bounded Vercel AI Gateway provider/model id.`)
+    }
+  }
+  if (
+    input.ink !== undefined &&
+    (typeof input.ink !== "string" ||
+      !/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu.test(input.ink))
+  ) {
+    operationFailure("ink must be a #rgb or #rrggbb color.")
+  }
+  const rounds = input.rounds
+  if (
+    rounds !== undefined &&
+    (!Number.isInteger(rounds) ||
+      (rounds as number) < 1 ||
+      (rounds as number) > slopcameraIconMaximumRounds)
+  ) {
+    operationFailure(
+      `rounds must be an integer from 1 through ${slopcameraIconMaximumRounds}.`,
+    )
+  }
+  if (
+    input.keepRaster !== undefined &&
+    typeof input.keepRaster !== "boolean"
+  ) {
+    operationFailure("keepRaster must be a boolean.")
+  }
+  return {
+    subject: input.subject,
+    outputPath,
+    ...(input.model === undefined
+      ? {}
+      : { model: input.model as SlopcameraImageModel }),
+    ...(input.critiqueModel === undefined
+      ? {}
+      : { critiqueModel: input.critiqueModel as string }),
+    ...(input.ink === undefined ? {} : { ink: input.ink as string }),
+    ...(rounds === undefined ? {} : { rounds: rounds as number }),
+    ...(input.keepRaster === undefined
+      ? {}
+      : { keepRaster: input.keepRaster as boolean }),
+  }
+}
+
 export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>(
   code: C,
   input: unknown,
@@ -414,6 +556,8 @@ export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>
       return parseVectorize(input) as SlopcameraOperationInputMap[C]
     case "slopcamera.image.generate":
       return parseGenerate(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.image.icon":
+      return parseIcon(input) as SlopcameraOperationInputMap[C]
     default:
       throw new SlopcameraOperationError(
         "INVALID_OPERATION",
@@ -694,6 +838,24 @@ async function executeSlopcameraOperationUncoordinated<
           ...(dependencies.signal === undefined
             ? {}
             : { signal: dependencies.signal }),
+        },
+        dependencies,
+      )) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.image.icon": {
+      const options = input as IconSlopcameraOperationInput
+      return (await generateSlopcameraIcon(
+        {
+          ...options,
+          ...(dependencies.signal === undefined
+            ? {}
+            : { signal: dependencies.signal }),
+          ...(dependencies.inheritedFileDescriptors === undefined
+            ? {}
+            : {
+                inheritedFileDescriptors:
+                  dependencies.inheritedFileDescriptors,
+              }),
         },
         dependencies,
       )) as SlopcameraOperationResultMap[C]

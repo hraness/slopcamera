@@ -116,7 +116,7 @@ function environment(
   return injected ?? process.env
 }
 
-function resolveGatewayCredential(
+export function resolveSlopcameraGatewayCredential(
   injected: SlopcameraEnvironment | undefined,
 ): Readonly<{
   source: SlopcameraGatewayCredentialSource
@@ -588,7 +588,7 @@ async function performGeneration(
 }>> {
   const model = validateModel(input.model)
   const prompt = validatePrompt(input.prompt)
-  const credential = resolveGatewayCredential(dependencies.environment)
+  const credential = resolveSlopcameraGatewayCredential(dependencies.environment)
   const timeout = combineSignals(input.signal, validateTimeout(input.timeoutMs))
   try {
     const generation = (async () => {
