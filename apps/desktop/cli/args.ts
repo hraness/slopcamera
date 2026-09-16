@@ -58,6 +58,12 @@ export type SpatialWorldCommand = JsonOption & {
   readonly kind: "spatial-world"; readonly action: "import";
   readonly input: string; readonly sourceRoot: string; readonly outputRoot: string;
 };
+export type SpatialAssetCommand = JsonOption & {
+  readonly kind: "spatial-asset"; readonly action: "admit";
+  readonly file: string; readonly output: string;
+  readonly sourceRoot?: string; readonly assetId?: string;
+  readonly metersPerUnit: number; readonly sourceUp: "x" | "y" | "z";
+};
 export type DirectingCommand = JsonOption & { readonly kind: "directing" } & (
   | { readonly action: "init"; readonly path: string }
   | { readonly action: "anchor"; readonly input: string }
@@ -90,6 +96,7 @@ export type CliCommand =
   | StudioCommand
   | DirectingCommand
   | SpatialWorldCommand
+  | SpatialAssetCommand
   | SpatialSceneCommand
   | SpatialProjectCommand
   | { readonly kind: "help"; readonly topic: readonly string[] }
@@ -2991,9 +2998,36 @@ function parseSpatialWorldArgs(argv: readonly string[]): SpatialWorldCommand {
   return fail("Usage: slopcamera scene world import --input <request.json> --source-root <directory> --output-root <artifact-directory>");
 }
 
-function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialProjectCommand | SpatialWorldCommand {
+const SPATIAL_ASSET_ADMIT_USAGE = "slopcamera scene asset admit <model.glb> --output <manifest.json> [--source-root <directory>] [--asset-id <id>] [--meters-per-unit <n>] [--source-up x|y|z] [--json]";
+
+function parseSpatialAssetArgs(argv: readonly string[]): SpatialAssetCommand {
+  const action = argv[0];
+  if (action !== "admit") return fail(`Usage: ${SPATIAL_ASSET_ADMIT_USAGE}`);
+  const parsed = parseOptions(argv.slice(1), {
+    ...JSON_SPEC, "--source-root": "value", "--asset-id": "value",
+    "--meters-per-unit": "value", "--source-up": "value", "--output": "value",
+  });
+  const [file] = exactPositionals(parsed, 1, SPATIAL_ASSET_ADMIT_USAGE);
+  const output = optionString(parsed, "--output");
+  if (output === undefined) fail("scene asset admit requires --output.");
+  const assetId = optionString(parsed, "--asset-id");
+  if (assetId !== undefined && (assetId.length > 128 || !/^asset_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(assetId))) {
+    fail("--asset-id must be an asset_-prefixed identifier of at most 128 characters.");
+  }
+  return {
+    kind: "spatial-asset", action, file: file!, output,
+    ...(optionString(parsed, "--source-root") === undefined ? {} : { sourceRoot: optionString(parsed, "--source-root")! }),
+    ...(assetId === undefined ? {} : { assetId }),
+    metersPerUnit: boundedNumber(optionString(parsed, "--meters-per-unit"), "--meters-per-unit", 0.000001, 1_000_000, 1),
+    sourceUp: oneOf(optionString(parsed, "--source-up"), "--source-up", ["x", "y", "z"], "y"),
+    json: optionFlag(parsed, "--json"),
+  };
+}
+
+function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialProjectCommand | SpatialWorldCommand | SpatialAssetCommand {
   const action = argv[0];
   if (action === "world") return parseSpatialWorldArgs(argv.slice(1));
+  if (action === "asset") return parseSpatialAssetArgs(argv.slice(1));
   if (action === "project") {
     const projectAction = argv[1];
     if (projectAction === "snapshot") {
@@ -3057,7 +3091,7 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const executionProfile = spatialCliExecutionProfile(optionString(parsed, "--profile"));
     return { kind: "spatial-scene", action, path: path!, request, ...(assets === undefined ? {} : { assets }), ...(executionProfile === undefined ? {} : { executionProfile }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|camera-track|plan|render> ...");
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|camera-track|plan|render|asset|project|world> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

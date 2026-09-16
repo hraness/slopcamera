@@ -132,10 +132,16 @@ or real-time session. Use slopcamera ai models list --type video for live model 
         <project-id> --input <request.json> [--json]
   slopcamera scene world import --input <import.json> --source-root <directory>
         --output-root <directory-below-artifacts/slopcamera/generated> [--json]
+  slopcamera scene asset admit <model.glb> --output <manifest.json>
+        [--source-root <directory>] [--asset-id <id>]
+        [--meters-per-unit <n>] [--source-up x|y|z] [--json]
 
 Hardware profiles: three-webgl2-hardware-v1 and three-spark-webgl2-hardware-v1.
 An explicit profile must agree with the request; omitting it preserves the request.
 Saved-world import works offline and preserves imported provenance receipts.
+Asset admit copies one local GLB into content-addressed storage beside --output,
+derives bounds and a mesh entity, and emits manifests plus ready-to-apply patch
+operations without overwriting existing paths.
 Scene sources retain stable entities, cameras, asset manifests and animation channels.
 Inspect reports editable controls and known bounds without decoding assets. Patch requires
 the exact expected scene digest in its patch document and writes a new source without

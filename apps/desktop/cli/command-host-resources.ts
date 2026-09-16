@@ -185,6 +185,7 @@ export function commandHostResourceClaims(
         ? claims(coordinator, ["cpu", "local-io", "ffmpeg", "output-publication"])
         : claims(coordinator, ["cpu", "local-io"]);
     case "spatial-world":
+    case "spatial-asset":
       return claims(coordinator, ["cpu", "local-io"]);
     case "spatial-scene":
       return command.action === "render"
