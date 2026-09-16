@@ -237,7 +237,8 @@
     "kb:check:lane": "bunx --bun github:hraness/kb#v0.15.2 check --root kb --no-catalog",
     "kb:check": "bunx --bun github:hraness/kb#v0.15.2 check --root kb && bunx --bun github:hraness/kb#v0.15.2 agents check --root kb --repo .",
     "kb:catalog": "bunx --bun github:hraness/kb#v0.15.2 catalog --root kb",
-    "check": "bun run check:standalone && bun run check:sdk && bun run check:desktop && bun run check:web && bun run check:standalone && bun run test:package",
+    "check:cost-surfaces": "bun ./scripts/check-cost-surfaces.mjs",
+    "check": "bun run check:cost-surfaces && bun run check:standalone && bun run check:sdk && bun run check:desktop && bun run check:web && bun run check:standalone && bun run test:package",
     "prepack": "bun run check",
     "check:effect": "bun run ./scripts/check-effect-policy.ts && bun test ./scripts/check-effect-architecture.test.ts"
   },

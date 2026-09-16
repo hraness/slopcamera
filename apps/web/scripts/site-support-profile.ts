@@ -10,3 +10,9 @@ export const supportFooterDigests = {
   current: "4b8fa313a56dfa8e622115d69590037d22ab04bfeee31d7e448ea52744886b61",
 } as const
 export const supportHref = "https://account.hraness.com/support?product=slopcamera&source=web#support"
+/** The immutable support baseline (425066a) advertises v3.2.6; the current page
+ * advertises the verified v3.2.8 release, so the copy scope compares each side
+ * against its own exact install command while the copy state machine stays
+ * paired. The full-page optional-support-v1 pairing was accepted at 8ba5b24,
+ * before v3.2.8 was advertised. */
+export const supportBaselineInstallCommand = "bun add --global https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz\nslopcamera skill install --target agents"

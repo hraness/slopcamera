@@ -161,8 +161,8 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   const root = JSON.parse(await readFile(join(import.meta.dir, "../package.json"), "utf8"))
   const site = JSON.parse(await readFile(join(import.meta.dir, "../apps/web/package.json"), "utf8"))
   expect(root.scripts.check.split(" && ")).toEqual([
-    "bun run check:standalone", "bun run check:sdk", "bun run check:desktop",
-    "bun run check:web", "bun run check:standalone", "bun run test:package",
+    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:sdk",
+    "bun run check:desktop", "bun run check:web", "bun run check:standalone", "bun run test:package",
   ])
   expect(root.scripts["check:sdk"].split(" && ")).toEqual([
     "bun run typecheck:sdk", "bun run lint:sdk", "bun run build:sdk",
@@ -1091,8 +1091,8 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.2.6")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz")
+  expect(publishedRelease.version).toBe("3.2.8")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.8/hraness-slopcamera-3.2.8.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
