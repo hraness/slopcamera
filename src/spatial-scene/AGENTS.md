@@ -1,7 +1,7 @@
 # Contents
 
 - `contracts.ts` – bounded authored spatial scene, asset, camera, animation and patch data.
-- Pure identity, evaluation and inspection modules – scene source and derived state without host effects.
+- Pure identity, evaluation, inspection and audit modules – scene source and derived state without host effects.
 - Colocated deterministic and property tests – reference, transformation, time and edit laws.
 
 # Guidelines

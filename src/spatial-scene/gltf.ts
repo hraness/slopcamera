@@ -556,3 +556,15 @@ export function evaluateSpatialGlb(model: SpatialGlbModel, options: SpatialGlbEv
   if (!(model instanceof SpatialGlbModel)) fail("Evaluation requires a parsed GLB model.")
   return model.evaluate(options)
 }
+
+/**
+ * Model-space axis-aligned bounds for the default scene's static pose: the
+ * file's own units and axes, after node transforms, with no unit scaling or
+ * up-axis conversion. Derived from decoded vertex positions (tighter than
+ * transformed accessor min/max corners — the parser already proves declared
+ * min/max equal the decoded values). Evaluate with the manifest's
+ * interpretation for scene-space meters on the declared Y-up frame.
+ */
+export function spatialGlbBounds(model: SpatialGlbModel): Bounds {
+  return evaluateSpatialGlb(model, { metersPerUnit: 1, sourceUp: "y", timeUs: 0 }).bounds
+}

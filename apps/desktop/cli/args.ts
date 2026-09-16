@@ -58,6 +58,12 @@ export type SpatialWorldCommand = JsonOption & {
   readonly kind: "spatial-world"; readonly action: "import";
   readonly input: string; readonly sourceRoot: string; readonly outputRoot: string;
 };
+export type SpatialAssetCommand = JsonOption & {
+  readonly kind: "spatial-asset"; readonly action: "admit";
+  readonly file: string; readonly output: string;
+  readonly sourceRoot?: string; readonly assetId?: string;
+  readonly metersPerUnit: number; readonly sourceUp: "x" | "y" | "z";
+};
 export type DirectingCommand = JsonOption & { readonly kind: "directing" } & (
   | { readonly action: "init"; readonly path: string }
   | { readonly action: "anchor"; readonly input: string }
@@ -69,12 +75,15 @@ export type DirectingCommand = JsonOption & { readonly kind: "directing" } & (
   | { readonly action: "resume" | "cleanup"; readonly id: string; readonly attempt: string }
   | { readonly action: "review"; readonly id: string; readonly attempt: string; readonly decision: "accepted" | "rejected"; readonly note: string }
 );
-export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene"; readonly path: string } & (
-  | { readonly action: "init" | "inspect" }
-  | { readonly action: "patch"; readonly patch: string; readonly output: string }
-  | { readonly action: "evaluate"; readonly camera: string; readonly timeUs: number }
-  | { readonly action: "camera-track"; readonly request: string; readonly output: string }
-  | { readonly action: "plan" | "render"; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
+export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" } & (
+  | { readonly action: "init" | "inspect"; readonly path: string }
+  | { readonly action: "diff"; readonly path: string; readonly other: string }
+  | { readonly action: "patch"; readonly path: string; readonly patch: string; readonly output: string }
+  | { readonly action: "evaluate"; readonly path: string; readonly camera: string; readonly timeUs: number }
+  | { readonly action: "audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly assetBounds?: string }
+  | { readonly action: "camera-track"; readonly path: string; readonly request: string; readonly output: string }
+  | { readonly action: "plan" | "render"; readonly path: string; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
+  | { readonly action: "generate"; readonly module: string; readonly generatorId: string; readonly parameters?: string; readonly seed?: number; readonly into?: string; readonly output: string }
 );
 export type SpatialProjectCommand = JsonOption & {
   readonly kind: "spatial-project"; readonly project: string;
@@ -89,6 +98,7 @@ export type CliCommand =
   | StudioCommand
   | DirectingCommand
   | SpatialWorldCommand
+  | SpatialAssetCommand
   | SpatialSceneCommand
   | SpatialProjectCommand
   | { readonly kind: "help"; readonly topic: readonly string[] }
@@ -2990,9 +3000,36 @@ function parseSpatialWorldArgs(argv: readonly string[]): SpatialWorldCommand {
   return fail("Usage: slopcamera scene world import --input <request.json> --source-root <directory> --output-root <artifact-directory>");
 }
 
-function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialProjectCommand | SpatialWorldCommand {
+const SPATIAL_ASSET_ADMIT_USAGE = "slopcamera scene asset admit <model.glb> --output <manifest.json> [--source-root <directory>] [--asset-id <id>] [--meters-per-unit <n>] [--source-up x|y|z] [--json]";
+
+function parseSpatialAssetArgs(argv: readonly string[]): SpatialAssetCommand {
+  const action = argv[0];
+  if (action !== "admit") return fail(`Usage: ${SPATIAL_ASSET_ADMIT_USAGE}`);
+  const parsed = parseOptions(argv.slice(1), {
+    ...JSON_SPEC, "--source-root": "value", "--asset-id": "value",
+    "--meters-per-unit": "value", "--source-up": "value", "--output": "value",
+  });
+  const [file] = exactPositionals(parsed, 1, SPATIAL_ASSET_ADMIT_USAGE);
+  const output = optionString(parsed, "--output");
+  if (output === undefined) fail("scene asset admit requires --output.");
+  const assetId = optionString(parsed, "--asset-id");
+  if (assetId !== undefined && (assetId.length > 128 || !/^asset_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(assetId))) {
+    fail("--asset-id must be an asset_-prefixed identifier of at most 128 characters.");
+  }
+  return {
+    kind: "spatial-asset", action, file: file!, output,
+    ...(optionString(parsed, "--source-root") === undefined ? {} : { sourceRoot: optionString(parsed, "--source-root")! }),
+    ...(assetId === undefined ? {} : { assetId }),
+    metersPerUnit: boundedNumber(optionString(parsed, "--meters-per-unit"), "--meters-per-unit", 0.000001, 1_000_000, 1),
+    sourceUp: oneOf(optionString(parsed, "--source-up"), "--source-up", ["x", "y", "z"], "y"),
+    json: optionFlag(parsed, "--json"),
+  };
+}
+
+function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialProjectCommand | SpatialWorldCommand | SpatialAssetCommand {
   const action = argv[0];
   if (action === "world") return parseSpatialWorldArgs(argv.slice(1));
+  if (action === "asset") return parseSpatialAssetArgs(argv.slice(1));
   if (action === "project") {
     const projectAction = argv[1];
     if (projectAction === "snapshot") {
@@ -3022,6 +3059,11 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const [path] = exactPositionals(parsed, 1, `slopcamera scene ${action} <scene.json> [--json]`);
     return { kind: "spatial-scene", action: action === "check" ? "inspect" : action, path: path!, json: optionFlag(parsed, "--json") };
   }
+  if (action === "diff") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    const [path, other] = exactPositionals(parsed, 2, "slopcamera scene diff <scene-a.json> <scene-b.json> [--json]");
+    return { kind: "spatial-scene", action, path: path!, other: other!, json: optionFlag(parsed, "--json") };
+  }
   if (action === "patch") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--patch": "value", "--output": "value" });
     const [path] = exactPositionals(parsed, 1, "slopcamera scene patch <scene.json> --patch <patch.json> --output <new-scene.json>");
@@ -3043,6 +3085,19 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     if (camera === undefined || time === undefined || !/^\d+$/u.test(time) || !Number.isSafeInteger(Number(time))) fail("scene evaluate requires --camera and integer --time-us.");
     return { kind: "spatial-scene", action, path: path!, camera, timeUs: Number(time), json: optionFlag(parsed, "--json") };
   }
+  if (action === "audit") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--camera": "value", "--times-us": "value", "--asset-bounds": "value" });
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds.json>] [--json]");
+    const camera = optionString(parsed, "--camera"), times = optionString(parsed, "--times-us"), assetBounds = optionString(parsed, "--asset-bounds");
+    if (camera === undefined) fail("scene audit requires --camera.");
+    let timesUs: number[] | undefined;
+    if (times !== undefined) {
+      if (!/^\d+(,\d+)*$/u.test(times)) return fail("scene audit --times-us must be a comma-separated list of nonnegative integers.");
+      timesUs = times.split(",").map(Number);
+      if (timesUs.length > 64) return fail("scene audit --times-us is bounded to 64 samples.");
+    }
+    return { kind: "spatial-scene", action, path: path!, camera, ...(timesUs === undefined ? {} : { timesUs }), ...(assetBounds === undefined ? {} : { assetBounds }), json: optionFlag(parsed, "--json") };
+  }
   if (action === "plan" || action === "render") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--request": "value", "--assets": "value", "--profile": "value" });
     const [path] = exactPositionals(parsed, 1, `slopcamera scene ${action} <scene.json> --request <request.json> [--assets <bindings.json>]`);
@@ -3051,7 +3106,17 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const executionProfile = spatialCliExecutionProfile(optionString(parsed, "--profile"));
     return { kind: "spatial-scene", action, path: path!, request, ...(assets === undefined ? {} : { assets }), ...(executionProfile === undefined ? {} : { executionProfile }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|patch|evaluate|camera-track|plan|render> ...");
+  if (action === "generate") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--module": "value", "--generator-id": "value", "--parameters": "value", "--seed": "value", "--into": "value", "--output": "value" });
+    exactPositionals(parsed, 0, "slopcamera scene generate --module <generator.ts> --generator-id <id> [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]");
+    const modulePath = optionString(parsed, "--module"), generatorId = optionString(parsed, "--generator-id"), output = optionString(parsed, "--output");
+    if (modulePath === undefined || generatorId === undefined || output === undefined) fail("scene generate requires --module, --generator-id, and --output.");
+    const seed = optionalNonNegativeInteger(optionString(parsed, "--seed"), "--seed");
+    if (seed !== undefined && seed > 0xffff_ffff) fail("--seed must be between 0 and 4294967295.");
+    const parameters = optionString(parsed, "--parameters"), into = optionString(parsed, "--into");
+    return { kind: "spatial-scene", action, module: modulePath, generatorId, output, ...(parameters === undefined ? {} : { parameters }), ...(seed === undefined ? {} : { seed }), ...(into === undefined ? {} : { into }), json: optionFlag(parsed, "--json") };
+  }
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|camera-track|generate|plan|render|asset|project|world> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

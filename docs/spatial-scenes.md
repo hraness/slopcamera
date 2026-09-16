@@ -12,9 +12,10 @@ Install [current Slopcamera source](how-to/use-current-source.md) for these comm
 slopcamera scene init product.scene.json --json
 slopcamera scene inspect product.scene.json --json
 slopcamera scene evaluate product.scene.json --camera camera_hero --time-us 1000000 --json
+slopcamera scene audit product.scene.json --camera camera_hero --json
 ```
 
-The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. Save this request as `frame.json`:
+The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON map. Save this request as `frame.json`:
 
 ```json
 {
@@ -109,6 +110,20 @@ slopcamera scene patch product.scene.json --patch patch.json --output product-or
 ```
 
 A stale digest rejects the edit. The command requires a new output path, so both sources remain available. Patches also support transforms, cameras, animation channels, hierarchy changes, and explicitly declared generated-part overrides. Generated entities retain their generator/key correspondence; inspecting, seeking, and patching never rerun generator source. Replacing generator output is an explicit operation carrying new provenance.
+
+## Generate procedural output at authoring time
+
+`scene generate` executes a single-file TypeScript generator module — trusted current-user code, like an explicitly imported workflow module — and retains its output inside a scene source:
+
+```sh
+slopcamera scene generate --module examples/scene-generators/grid-city.ts \
+  --generator-id generator_grid_city --output city.scene.json --json
+slopcamera scene generate --module examples/scene-generators/grid-city.ts \
+  --generator-id generator_grid_city --parameters params.json --seed 42 \
+  --into city.scene.json --output city-v2.scene.json --json
+```
+
+A module exports `generate(ctx)` returning `{ entities, editableKeys? }`. Each entity carries a stable `key` instead of `entityId`/`origin`; the host stamps `entityId` derived from the generator and key, so generated parts cannot forge authored provenance. `ctx.seed` (from `--seed`, or derived from the source digest), bounded `ctx.parameters` (≤64 KiB JSON), and `ctx.lib.entityId(key)` for parent links inside one output are the only inputs. Generated entities emit mesh primitives, lights, and groups; asset references are not supported in this version. The retained generator record pins source, parameters, seed, runtime, and output digests, so an identical run reproduces the identical scene. `--into` replaces this generator's prior output wholesale while preserving authored entities and other generators' output; regeneration that would orphan a declared override or animation is rejected. Generation is authoring-time only and is never rerun by inspect, evaluate, or render.
 
 Camera changes affect view identity without changing the evaluated world state. Shot overrides affect only that shot. An animated property cannot receive a conflicting constant override. Imported GLB source-material mode exposes transform edits; color and opacity edits require entity-material mode and are rejected when they would have no effect.
 

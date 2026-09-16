@@ -54,7 +54,7 @@ export async function main(
     return await runCli(unifiedArgv, { io: processIo });
   }
   const paths = await resolveRepositoryPaths(processIo.cwd(), processIo.env);
-  if (earlyCommand.kind === "html-render" || earlyCommand.kind === "spatial-world" || earlyCommand.kind === "directing" || earlyCommand.kind === "studio"
+  if (earlyCommand.kind === "html-render" || earlyCommand.kind === "spatial-world" || earlyCommand.kind === "spatial-asset" || earlyCommand.kind === "directing" || earlyCommand.kind === "studio"
     || earlyCommand.kind === "spatial-scene" && earlyCommand.action === "camera-track") {
     const controller = new AbortController();
     const cancel = () => controller.abort(new CliError("cancelled", "Command interrupted."));

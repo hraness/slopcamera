@@ -3,6 +3,7 @@ import { open, realpath } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { canonicalJson } from "../../../src/code/canonical-json";
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
+import { diffSpatialScenes } from "../../../src/spatial-scene/patch";
 import { SPATIAL_SCENE_LIMITS } from "../../../src/spatial-scene/contracts";
 import { parseSpatialScene, spatialSceneSha256 } from "../../../src/spatial-scene/index";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
@@ -12,6 +13,7 @@ import { planSpatialRender } from "../application/spatial-render";
 import { createNodeBundleFileSystem } from "../core/storage";
 import type { SpatialCliExecutionProfile, SpatialSceneCommand } from "./args";
 import { CliError } from "./errors";
+import { executeSpatialGenerateCommand } from "./spatial-generate-service";
 
 /** Capture an explicit local regular file once, without following a leaf symlink. */
 export async function readSpatialJson(path: string, maximumBytes: number = SPATIAL_SCENE_LIMITS.sourceBytes): Promise<unknown> {
@@ -55,6 +57,7 @@ function assertCameraTrackActive(signal: AbortSignal | undefined): void {
 }
 
 export async function executeSpatialSceneCommand(application: ApplicationContext, command: SpatialSceneCommand, signal?: AbortSignal): Promise<unknown> {
+  if (command.action === "generate") return executeSpatialGenerateCommand(application, command);
   if (command.action === "camera-track") assertCameraTrackActive(signal);
   const sourcePath = resolve(application.paths.repositoryRoot, command.path);
   if (command.action === "init") {
@@ -63,6 +66,10 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     return { path: sourcePath, sceneSha256: spatialSceneSha256(scene) };
   }
   const scene = parseSpatialScene(await readSpatialJson(sourcePath));
+  if (command.action === "diff") {
+    const other = parseSpatialScene(await readSpatialJson(resolve(application.paths.repositoryRoot, command.other)));
+    return { sceneSha256: spatialSceneSha256(scene), otherSha256: spatialSceneSha256(other), diff: diffSpatialScenes(scene, other) };
+  }
   if (command.action === "camera-track") {
     const fence = async () => {
       assertCameraTrackActive(signal);
@@ -90,6 +97,17 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     return result.output;
   }
   const registry = createApplicationOperationRegistry();
+  if (command.action === "audit") {
+    const result = await registry.execute({ application, abortSignal: new AbortController().signal }, {
+      kind: "scene.audit", version: 1,
+      input: {
+        scene, cameraId: command.camera,
+        ...(command.timesUs === undefined ? {} : { timesUs: [...command.timesUs] }),
+        ...(command.assetBounds === undefined ? {} : { assetBounds: await readSpatialJson(resolve(application.paths.repositoryRoot, command.assetBounds)) }),
+      },
+    });
+    return result.output;
+  }
   const input = command.action === "patch"
     ? { scene, patch: await readSpatialJson(resolve(application.paths.repositoryRoot, command.patch)) }
     : command.action === "evaluate" ? { scene, cameraId: command.camera, timeUs: command.timeUs } : { scene };

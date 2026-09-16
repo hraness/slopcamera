@@ -10,7 +10,7 @@ Usage: slopcamera <command> [options]
 Commands:
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|patch|evaluate|camera-track|plan|render
+  scene init|check|inspect|diff|patch|evaluate|audit|camera-track|generate|plan|render
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -124,7 +124,10 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene inspect <scene.json> [--json]
   slopcamera scene patch <scene.json> --patch <patch.json> --output <new-scene.json> [--json]
   slopcamera scene evaluate <scene.json> --camera <camera-id> --time-us <integer> [--json]
+  slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds.json>] [--json]
   slopcamera scene camera-track <scene.json> --request <sampling.json> --output <new-track.json> [--json]
+  slopcamera scene generate --module <generator.ts> --generator-id <id>
+        [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]
   slopcamera scene plan|render <scene.json> --request <request.json> [--assets <bindings.json>] [--profile <profile>] [--json]
   slopcamera scene project snapshot <project-id> [--json]
   slopcamera scene project prepare-render <project-id> --input <request.json> --output <prepared-render.json> [--profile <profile>] [--json]
@@ -132,14 +135,28 @@ or real-time session. Use slopcamera ai models list --type video for live model 
         <project-id> --input <request.json> [--json]
   slopcamera scene world import --input <import.json> --source-root <directory>
         --output-root <directory-below-artifacts/slopcamera/generated> [--json]
+  slopcamera scene asset admit <model.glb> --output <manifest.json>
+        [--source-root <directory>] [--asset-id <id>]
+        [--meters-per-unit <n>] [--source-up x|y|z] [--json]
 
 Hardware profiles: three-webgl2-hardware-v1 and three-spark-webgl2-hardware-v1.
 An explicit profile must agree with the request; omitting it preserves the request.
 Saved-world import works offline and preserves imported provenance receipts.
+Asset admit copies one local GLB into content-addressed storage beside --output,
+derives bounds and a mesh entity, and emits manifests plus ready-to-apply patch
+operations without overwriting existing paths.
 Scene sources retain stable entities, cameras, asset manifests and animation channels.
 Inspect reports editable controls and known bounds without decoding assets. Patch requires
 the exact expected scene digest in its patch document and writes a new source without
 overwriting either revision. Evaluate samples absolute time without launching a renderer.
+<<<<<<< HEAD
+Audit samples bounded geometry against one camera over time and reports deterministic
+frustum findings; --asset-bounds supplies decoded glTF/splat enclosures as JSON.
+=======
+Generate runs a trusted single-file TypeScript generator at authoring time, stamps retained
+output with derived entity identity, and records source, parameters, seed and runtime digests;
+it never reruns source during inspect, evaluate or render.
+>>>>>>> 871ce9c (proto: scene generate — trusted authoring-time generator modules)
 Project operations use the exact full project ID and a versioned whole-project basis.
 Discover each request with slopcamera operations show spatial.project.<action> --json.
 Migration retains the frozen media/edit pair in V2 authority. Legacy project commands

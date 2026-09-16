@@ -3,6 +3,7 @@ import { createDirectingBlobSession } from "./directing-blob";
 import { assembleDirectingClips, extractDirectingEndpoint, importDirectingAnchor } from "./directing-media";
 import { executeDirectingCommand } from "./directing-service";
 import { createHash, randomUUID } from "node:crypto";
+import { executeSpatialAssetCommand } from "./spatial-asset-service";
 import { executeSpatialSceneCommand } from "./spatial-scene-service";
 import { executeSpatialProjectCommand } from "./spatial-project-service";
 import { executeSpatialWorldCommand } from "./spatial-world-service";
@@ -5769,6 +5770,13 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
       return;
     }
+    case "spatial-asset": {
+      const output = await executeSpatialAssetCommand(applicationContext(context), command, {
+        ...(context.abortSignal === undefined ? {} : { signal: context.abortSignal }),
+      });
+      writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
+      return;
+    }
     case "spatial-scene": {
       const output = await executeSpatialSceneCommand(applicationContext(context), command, context.abortSignal);
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
@@ -6545,6 +6553,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "studio": return undefined; // Native jobs and the machine custody marker own explicit leases.
     case "directing": return undefined; // The directing store owns its explicit lease.
     case "spatial-world": return undefined; // Immutable world attempts and imports own their publication custody.
+    case "spatial-asset": return undefined; // Content-addressed asset admission owns its publication custody.
     case "spatial-scene": return command.action === "init" || command.action === "patch" || command.action === "camera-track" ? { kind: "workspace-private" } : undefined;
     case "spatial-project": return undefined; // Its explicit application adapter owns one version-aware lease.
     case "project-camera-edit": return command.action === "show"

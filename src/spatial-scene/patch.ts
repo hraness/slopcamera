@@ -33,6 +33,20 @@ function diffCollection<T extends object>(collection: SpatialSceneDiffEntry["col
   return result
 }
 
+/** Structural comparison of two parsed scenes, in canonical collection order. */
+export function diffSpatialScenes(beforeInput: unknown, afterInput: unknown): readonly SpatialSceneDiffEntry[] {
+  const before = parseSpatialScene(beforeInput)
+  const after = parseSpatialScene(afterInput)
+  return deepFreezeJson([
+    ...diffCollection("assets", before.assets, after.assets, asset => asset.assetId),
+    ...diffCollection("entities", before.entities, after.entities, entity => entity.entityId),
+    ...diffCollection("cameras", before.cameras, after.cameras, camera => camera.cameraId),
+    ...diffCollection("animations", before.animations, after.animations, channel => channel.channelId),
+    ...diffCollection("generators", before.generators, after.generators, generator => generator.generatorId),
+    ...diffCollection("overrides", before.overrides, after.overrides, override => `${override.entityId}:${override.property}`),
+  ])
+}
+
 /** Atomic in-memory transaction. Final closure is checked once, before publishing any result. */
 export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown): SpatialScenePatchResult {
   const original = parseSpatialScene(sceneInput)
@@ -119,13 +133,6 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
       throw new SpatialSceneError("conflict", "Replacing addressed GLB bytes requires explicit set-mesh-geometry with the new local node/clip addresses; internal correspondence is not inferred.")
     }
   }
-  const diff = [
-    ...diffCollection("assets", original.assets, scene.assets, asset => asset.assetId),
-    ...diffCollection("entities", original.entities, scene.entities, entity => entity.entityId),
-    ...diffCollection("cameras", original.cameras, scene.cameras, camera => camera.cameraId),
-    ...diffCollection("animations", original.animations, scene.animations, channel => channel.channelId),
-    ...diffCollection("generators", original.generators, scene.generators, generator => generator.generatorId),
-    ...diffCollection("overrides", original.overrides, scene.overrides, override => `${override.entityId}:${override.property}`),
-  ]
+  const diff = diffSpatialScenes(original, scene)
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff })
 }
