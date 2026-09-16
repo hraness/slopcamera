@@ -21,7 +21,7 @@ import type { SiteAssets } from "../src/site-content"
 
 const packages = [
   { name: "@hraness/design-kit", version: "0.8.0" },
-  { name: "@hraness/site-footer", version: "0.11.1" },
+  { name: "@hraness/site-footer", version: "0.11.2" },
   { name: "@hraness/ui", version: "0.5.12" },
 ] as const
 const fontFiles = [
