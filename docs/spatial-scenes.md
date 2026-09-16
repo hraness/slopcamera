@@ -12,9 +12,10 @@ Install [current Slopcamera source](how-to/use-current-source.md) for these comm
 slopcamera scene init product.scene.json --json
 slopcamera scene inspect product.scene.json --json
 slopcamera scene evaluate product.scene.json --camera camera_hero --time-us 1000000 --json
+slopcamera scene audit product.scene.json --camera camera_hero --json
 ```
 
-The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. Save this request as `frame.json`:
+The starter contains a turning product, a pedestal, lights, and a calibrated 960 × 540 camera. `audit` samples bounded geometry against one camera across the scene duration and reports deterministic frustum findings without a renderer; `--times-us` selects explicit samples and `--asset-bounds` supplies decoded glTF/splat enclosures as a JSON map. Save this request as `frame.json`:
 
 ```json
 {

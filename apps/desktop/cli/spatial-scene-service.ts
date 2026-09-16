@@ -95,6 +95,17 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     return result.output;
   }
   const registry = createApplicationOperationRegistry();
+  if (command.action === "audit") {
+    const result = await registry.execute({ application, abortSignal: new AbortController().signal }, {
+      kind: "scene.audit", version: 1,
+      input: {
+        scene, cameraId: command.camera,
+        ...(command.timesUs === undefined ? {} : { timesUs: [...command.timesUs] }),
+        ...(command.assetBounds === undefined ? {} : { assetBounds: await readSpatialJson(resolve(application.paths.repositoryRoot, command.assetBounds)) }),
+      },
+    });
+    return result.output;
+  }
   const input = command.action === "patch"
     ? { scene, patch: await readSpatialJson(resolve(application.paths.repositoryRoot, command.patch)) }
     : command.action === "evaluate" ? { scene, cameraId: command.camera, timeUs: command.timeUs } : { scene };

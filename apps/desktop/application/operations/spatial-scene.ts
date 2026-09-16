@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createBoundedJsonValueSnapshot } from "../../../../src/code/json-snapshot";
+import { SpatialAuditReportSchema, auditSpatialScene } from "../../../../src/spatial-scene/audit";
 import {
   EvaluatedSpatialSceneSchema, SpatialAssetManifestSchema, SpatialCameraSchema,
   SpatialDigestSchema, SpatialEntityIdSchema, SpatialGeneratorSchema,
@@ -44,12 +45,19 @@ export const SpatialEvaluateInputSchema = z.preprocess(capture, z.strictObject({
   scene: SpatialSceneV1Schema, timeUs: SpatialTimeUsSchema, cameraId: z.string(),
   cameraPoseOverride: SpatialPoseSchema.optional(),
 }));
+export const SpatialAuditInputSchema = z.preprocess(capture, z.strictObject({
+  scene: SpatialSceneV1Schema, cameraId: z.string(),
+  timesUs: z.array(SpatialTimeUsSchema).max(64).optional(),
+  assetBounds: z.record(z.string(), z.strictObject({ min: boundedVector, max: boundedVector })).optional(),
+}));
 export type SpatialInspectInput = z.infer<typeof SpatialInspectInputSchema>;
 export type SpatialInspectOutput = z.infer<typeof SpatialSceneInspectionOutputSchema>;
 export type SpatialPatchInput = z.infer<typeof SpatialPatchInputSchema>;
 export type SpatialPatchOutput = z.infer<typeof SpatialPatchOutputSchema>;
 export type SpatialEvaluateInput = z.infer<typeof SpatialEvaluateInputSchema>;
 export type SpatialEvaluateOutput = z.infer<typeof EvaluatedSpatialSceneSchema>;
+export type SpatialAuditInput = z.infer<typeof SpatialAuditInputSchema>;
+export type SpatialAuditOutput = z.infer<typeof SpatialAuditReportSchema>;
 
 const purePolicy = Object.freeze({
   cache: "content-addressed", cancellable: true, effect: "pure", maxDurationMs: 10_000,
@@ -95,3 +103,19 @@ export const spatialEvaluateOperationDefinition = {
   } },
   summarize: output => ({ kind: "scene.evaluate", fields: { sceneSha256: output.sceneSha256, viewSha256: output.viewSha256, timeUs: output.timeUs } }),
 } satisfies OperationDefinition<"scene.evaluate", SpatialEvaluateInput, SpatialEvaluateOutput>;
+
+export const spatialAuditOperationDefinition = {
+  kind: "scene.audit", version: 1,
+  inputSchema: SpatialAuditInputSchema, inputSchemaId: "slopcamera.operation.scene.audit.input/v1",
+  outputSchema: SpatialAuditReportSchema, outputSchemaId: "slopcamera.operation.scene.audit.output/v1",
+  policy: purePolicy,
+  lifecycle: { kind: "pure", execute: (context, input) => {
+    throwIfAborted(context.abortSignal);
+    return Promise.resolve(SpatialAuditReportSchema.parse(auditSpatialScene(input.scene, {
+      cameraId: input.cameraId,
+      ...(input.timesUs === undefined ? {} : { timesUs: input.timesUs }),
+      ...(input.assetBounds === undefined ? {} : { assetBounds: input.assetBounds }),
+    })));
+  } },
+  summarize: output => ({ kind: "scene.audit", fields: { sceneSha256: output.sceneSha256, cameraId: output.cameraId, samples: output.timesUs.length, findings: output.findings.length } }),
+} satisfies OperationDefinition<"scene.audit", SpatialAuditInput, SpatialAuditOutput>;
