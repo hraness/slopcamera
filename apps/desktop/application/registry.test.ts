@@ -91,7 +91,7 @@ describe("operation registry", () => {
       operation.inputSchemaId.startsWith("slopcamera.operation.")
       && operation.outputSchemaId.startsWith("slopcamera.operation.")
     ))).toBe(true);
-    expect(descriptions).toHaveLength(59);
+    expect(descriptions).toHaveLength(60);
     expect(registry.list().filter(operation => (
       operation.kind.startsWith("scene.") || operation.kind.startsWith("spatial.project.")
     )).map(operation => `${operation.kind}@${operation.version}`)).toEqual([
@@ -100,6 +100,7 @@ describe("operation registry", () => {
       "scene.inspect@1",
       "scene.patch@1",
       "scene.render@1",
+      "scene.render-audit@1",
       "spatial.project.add-candidate@1",
       "spatial.project.add-shot@1",
       "spatial.project.migrate@1",

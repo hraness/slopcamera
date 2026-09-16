@@ -10,7 +10,7 @@ Usage: slopcamera <command> [options]
 Commands:
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|diff|patch|evaluate|audit|camera-track|generate|plan|render
+  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|camera-track|generate|plan|render
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -125,6 +125,7 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene patch <scene.json> --patch <patch.json> --output <new-scene.json> [--json]
   slopcamera scene evaluate <scene.json> --camera <camera-id> --time-us <integer> [--json]
   slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds-or-admission.json>] [--json]
+  slopcamera scene render-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--json]
   slopcamera scene camera-track <scene.json> --request <sampling.json> --output <new-track.json> [--json]
   slopcamera scene generate --module <generator.ts> --generator-id <id>
         [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]
@@ -152,6 +153,9 @@ overwriting either revision. Evaluate samples absolute time without launching a 
 Audit samples bounded geometry against one camera over time and reports deterministic
 frustum findings; --asset-bounds supplies scene-space enclosures as a bounds map,
 admission documents, {manifest, facts} pairs, or arrays of those.
+Render-audit renders the real object-ID pass in the bound browser runtime and counts
+per-entity pixels at each sampled time, reporting splats and camera-bound view masks
+honestly as unsupported or non-attributable rather than estimating them.
 Generate runs a trusted TypeScript generator at authoring time, stamps retained
 output with derived entity identity, and records source, closure, parameters, seed and
 runtime digests; it never reruns source during inspect, evaluate or render.

@@ -190,7 +190,9 @@ export function commandHostResourceClaims(
     case "spatial-scene":
       return command.action === "render"
         ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication"])
-        : claims(coordinator, ["cpu", "local-io"]);
+        : command.action === "render-audit"
+          ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg"])
+          : claims(coordinator, ["cpu", "local-io"]);
     case "spatial-project":
       return command.action === "prepare-render"
         ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication", "project-render"])

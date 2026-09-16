@@ -12,6 +12,7 @@ export const OPERATION_KINDS = [
   "scene.patch",
   "scene.evaluate",
   "scene.render",
+  "scene.render-audit",
   "slopcamera.studio.run",
   "spatial.project.snapshot",
   "spatial.project.migrate",

@@ -336,7 +336,7 @@ export class SpatialRenderFailure extends ApplicationError {
 }
 
 /** Descriptor-bound, bounded read. Parent paths and the named leaf must retain physical identity. */
-async function readPhysical(path: string, maximumBytes: number, signal: AbortSignal): Promise<Uint8Array> {
+export async function readPhysical(path: string, maximumBytes: number, signal: AbortSignal): Promise<Uint8Array> {
   checked(await realpath(path) === path, "Spatial render files must have physical paths.");
   const parents: { path: string; dev: number; ino: number }[] = [];
   for (let parent = dirname(path);; parent = dirname(parent)) {
@@ -378,7 +378,8 @@ async function stageJson(path: string, input: unknown, maximumBytes: number): Pr
   await stageBytes(path, bytes);
   return bytes;
 }
-async function verifyPng(bytes: Uint8Array, width: number, height: number): Promise<void> {
+/** Returns the fully decoded RGBA8 raster; the rendered audit consumes it as data. */
+export async function verifyPng(bytes: Uint8Array, width: number, height: number): Promise<Uint8Array> {
   const decoder = sharp(bytes, { failOn: "warning", limitInputPixels: SPATIAL_RENDER_LIMITS.framePixels });
   const metadata = await decoder.metadata();
   checked(metadata.format === "png" && metadata.width === width && metadata.height === height && metadata.depth === "uchar"
@@ -387,6 +388,7 @@ async function verifyPng(bytes: Uint8Array, width: number, height: number): Prom
   // Fully decode before accepting renderer bytes. This preserves data-pass channel values.
   const decoded = await decoder.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   checked(decoded.info.channels === 4 && decoded.data.length === width * height * 4, "Renderer PNG did not decode to its declared RGBA raster.");
+  return decoded.data;
 }
 
 const integerText = z.union([z.number().int().safe(), z.string().regex(/^-?(?:0|[1-9]\d{0,23})$/u)]).transform(String);
@@ -668,7 +670,7 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
   return completed;
 }
 
-function frameName(index: number): string { return `frame-${String(index).padStart(8, "0")}.png`; }
+export function frameName(index: number): string { return `frame-${String(index).padStart(8, "0")}.png`; }
 function prospective(context: OperationExecutionContext, category: "outputs" | "receipts", extension: string, bytes: Uint8Array): MediaArtifactReference {
   const digest = sha256(bytes);
   return MediaArtifactReferenceSchema.parse({ sha256: digest, bytes: bytes.length,

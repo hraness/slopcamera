@@ -117,6 +117,16 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     await publishSpatialSource(sourcePath, scene);
     return { path: sourcePath, sceneSha256: spatialSceneSha256(scene) };
   }
+  if (command.action === "render-audit") {
+    const result = await createApplicationOperationRegistry().execute({ application, abortSignal: signal ?? new AbortController().signal }, {
+      kind: "scene.render-audit", version: 1,
+      input: {
+        source: { path: relative(application.paths.repositoryRoot, sourcePath) },
+        request: { cameraId: command.camera, ...(command.timesUs === undefined ? {} : { timesUs: [...command.timesUs] }) },
+      },
+    });
+    return result.output;
+  }
   const scene = parseSpatialScene(await readSpatialJson(sourcePath));
   if (command.action === "diff") {
     const other = parseSpatialScene(await readSpatialJson(resolve(application.paths.repositoryRoot, command.other)));
