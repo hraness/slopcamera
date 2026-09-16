@@ -75,14 +75,15 @@ export type DirectingCommand = JsonOption & { readonly kind: "directing" } & (
   | { readonly action: "resume" | "cleanup"; readonly id: string; readonly attempt: string }
   | { readonly action: "review"; readonly id: string; readonly attempt: string; readonly decision: "accepted" | "rejected"; readonly note: string }
 );
-export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene"; readonly path: string } & (
-  | { readonly action: "init" | "inspect" }
-  | { readonly action: "diff"; readonly other: string }
-  | { readonly action: "patch"; readonly patch: string; readonly output: string }
-  | { readonly action: "evaluate"; readonly camera: string; readonly timeUs: number }
-  | { readonly action: "audit"; readonly camera: string; readonly timesUs?: readonly number[]; readonly assetBounds?: string }
-  | { readonly action: "camera-track"; readonly request: string; readonly output: string }
-  | { readonly action: "plan" | "render"; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
+export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" } & (
+  | { readonly action: "init" | "inspect"; readonly path: string }
+  | { readonly action: "diff"; readonly path: string; readonly other: string }
+  | { readonly action: "patch"; readonly path: string; readonly patch: string; readonly output: string }
+  | { readonly action: "evaluate"; readonly path: string; readonly camera: string; readonly timeUs: number }
+  | { readonly action: "audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly assetBounds?: string }
+  | { readonly action: "camera-track"; readonly path: string; readonly request: string; readonly output: string }
+  | { readonly action: "plan" | "render"; readonly path: string; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
+  | { readonly action: "generate"; readonly module: string; readonly generatorId: string; readonly parameters?: string; readonly seed?: number; readonly into?: string; readonly output: string }
 );
 export type SpatialProjectCommand = JsonOption & {
   readonly kind: "spatial-project"; readonly project: string;
@@ -3105,7 +3106,17 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const executionProfile = spatialCliExecutionProfile(optionString(parsed, "--profile"));
     return { kind: "spatial-scene", action, path: path!, request, ...(assets === undefined ? {} : { assets }), ...(executionProfile === undefined ? {} : { executionProfile }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|camera-track|plan|render|asset|project|world> ...");
+  if (action === "generate") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--module": "value", "--generator-id": "value", "--parameters": "value", "--seed": "value", "--into": "value", "--output": "value" });
+    exactPositionals(parsed, 0, "slopcamera scene generate --module <generator.ts> --generator-id <id> [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]");
+    const modulePath = optionString(parsed, "--module"), generatorId = optionString(parsed, "--generator-id"), output = optionString(parsed, "--output");
+    if (modulePath === undefined || generatorId === undefined || output === undefined) fail("scene generate requires --module, --generator-id, and --output.");
+    const seed = optionalNonNegativeInteger(optionString(parsed, "--seed"), "--seed");
+    if (seed !== undefined && seed > 0xffff_ffff) fail("--seed must be between 0 and 4294967295.");
+    const parameters = optionString(parsed, "--parameters"), into = optionString(parsed, "--into");
+    return { kind: "spatial-scene", action, module: modulePath, generatorId, output, ...(parameters === undefined ? {} : { parameters }), ...(seed === undefined ? {} : { seed }), ...(into === undefined ? {} : { into }), json: optionFlag(parsed, "--json") };
+  }
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|camera-track|generate|plan|render|asset|project|world> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

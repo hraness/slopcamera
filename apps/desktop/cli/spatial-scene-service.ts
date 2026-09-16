@@ -13,6 +13,7 @@ import { planSpatialRender } from "../application/spatial-render";
 import { createNodeBundleFileSystem } from "../core/storage";
 import type { SpatialCliExecutionProfile, SpatialSceneCommand } from "./args";
 import { CliError } from "./errors";
+import { executeSpatialGenerateCommand } from "./spatial-generate-service";
 
 /** Capture an explicit local regular file once, without following a leaf symlink. */
 export async function readSpatialJson(path: string, maximumBytes: number = SPATIAL_SCENE_LIMITS.sourceBytes): Promise<unknown> {
@@ -56,6 +57,7 @@ function assertCameraTrackActive(signal: AbortSignal | undefined): void {
 }
 
 export async function executeSpatialSceneCommand(application: ApplicationContext, command: SpatialSceneCommand, signal?: AbortSignal): Promise<unknown> {
+  if (command.action === "generate") return executeSpatialGenerateCommand(application, command);
   if (command.action === "camera-track") assertCameraTrackActive(signal);
   const sourcePath = resolve(application.paths.repositoryRoot, command.path);
   if (command.action === "init") {
