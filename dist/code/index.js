@@ -179,7 +179,7 @@ var SpatialAssetInterpretationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("gltf"), format: z.enum(["glb", "gltf"]), metersPerUnit: positiveDimension, sourceUp: z.enum(["x", "y", "z"]) }),
   z.strictObject({ kind: z.literal("font"), format: z.enum(["otf", "woff2"]), family: z.string().min(1).max(128) }),
   z.strictObject({ kind: z.literal("splat"), format: z.enum(["spz", "ply"]), metersPerUnit: positiveDimension, sourceUp: z.enum(["x", "y", "z"]) }),
-  z.strictObject({ kind: z.literal("metadata"), format: z.literal("json"), schema: z.enum(["slopcamera.spatial-world-import", "slopcamera.world-labs-provenance"]) })
+  z.strictObject({ kind: z.literal("metadata"), format: z.literal("json"), schema: z.enum(["slopcamera.spatial-world-import", "slopcamera.world-labs-provenance", "slopcamera.spatial-asset-facts"]) })
 ]);
 var SpatialAssetManifestSchema = z.strictObject({
   assetId: SpatialAssetIdSchema,
@@ -1037,6 +1037,18 @@ function diffCollection(collection, before, after, identify) {
   }
   return result;
 }
+function diffSpatialScenes(beforeInput, afterInput) {
+  const before = parseSpatialScene(beforeInput);
+  const after = parseSpatialScene(afterInput);
+  return deepFreezeJson([
+    ...diffCollection("assets", before.assets, after.assets, (asset) => asset.assetId),
+    ...diffCollection("entities", before.entities, after.entities, (entity) => entity.entityId),
+    ...diffCollection("cameras", before.cameras, after.cameras, (camera2) => camera2.cameraId),
+    ...diffCollection("animations", before.animations, after.animations, (channel) => channel.channelId),
+    ...diffCollection("generators", before.generators, after.generators, (generator) => generator.generatorId),
+    ...diffCollection("overrides", before.overrides, after.overrides, (override) => `${override.entityId}:${override.property}`)
+  ]);
+}
 function applySpatialScenePatch(sceneInput, patchInput) {
   const original = parseSpatialScene(sceneInput);
   const patch = parseSpatialValue(SpatialScenePatchV1Schema, patchInput, "scene patch");
@@ -1154,14 +1166,7 @@ function applySpatialScenePatch(sceneInput, patchInput) {
       throw new SpatialSceneError("conflict", "Replacing addressed GLB bytes requires explicit set-mesh-geometry with the new local node/clip addresses; internal correspondence is not inferred.");
     }
   }
-  const diff = [
-    ...diffCollection("assets", original.assets, scene.assets, (asset) => asset.assetId),
-    ...diffCollection("entities", original.entities, scene.entities, (entity) => entity.entityId),
-    ...diffCollection("cameras", original.cameras, scene.cameras, (camera2) => camera2.cameraId),
-    ...diffCollection("animations", original.animations, scene.animations, (channel) => channel.channelId),
-    ...diffCollection("generators", original.generators, scene.generators, (generator) => generator.generatorId),
-    ...diffCollection("overrides", original.overrides, scene.overrides, (override) => `${override.entityId}:${override.property}`)
-  ];
+  const diff = diffSpatialScenes(original, scene);
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
@@ -1213,6 +1218,360 @@ function inspectSpatialScene(input) {
     assets: scene.assets.map((manifest) => ({ assetId: manifest.assetId, manifestSha256: digests[manifest.assetId], manifest })),
     generators: scene.generators
   });
+}
+
+// src/spatial-scene/audit.ts
+import { z as z3 } from "zod";
+var SPATIAL_AUDIT_LIMITS = Object.freeze({
+  samples: 64,
+  defaultSamples: 9,
+  findings: 1024,
+  entitySamples: 65536,
+  reportBytes: 33554432
+});
+var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"];
+var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
+var CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"];
+var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"];
+var CONTAINED_HISTOGRAM_ORDER = ["full", "partial", "outside", "clipped", "behind-camera"];
+var auditVector = z3.tuple([
+  z3.number().finite().min(-1000000000000).max(1000000000000),
+  z3.number().finite().min(-1000000000000).max(1000000000000),
+  z3.number().finite().min(-1000000000000).max(1000000000000)
+]);
+var SpatialAuditBoundsSchema = z3.strictObject({ min: auditVector, max: auditVector }).refine((bounds) => bounds.min.every((value, index) => value <= bounds.max[index]), "Bounds min must not exceed max.");
+var SpatialAuditOptionsSchema = z3.strictObject({
+  cameraId: SpatialCameraIdSchema,
+  timesUs: z3.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples).optional(),
+  assetBounds: z3.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional()
+});
+var SpatialAuditFrustumSchema = z3.strictObject({
+  contained: z3.enum(CONTAINED),
+  pixelFootprint: z3.number().finite().min(0).max(1000000000000000)
+});
+var SpatialAuditSampleSchema = z3.strictObject({
+  timeUs: SpatialTimeUsSchema,
+  visible: z3.boolean(),
+  bounds: SpatialAuditBoundsSchema.optional(),
+  frustum: SpatialAuditFrustumSchema.optional(),
+  note: z3.enum(["out-of-range", "other-camera"]).optional()
+});
+var SpatialAuditEntitySchema = z3.strictObject({
+  entityId: SpatialEntityIdSchema,
+  name: z3.string().min(1).max(256),
+  kind: z3.enum(ENTITY_KINDS),
+  placement: SpatialPlacementSchema,
+  enclosure: z3.discriminatedUnion("status", [
+    z3.strictObject({ status: z3.literal("bounded") }),
+    z3.strictObject({ status: z3.literal("unknown"), reason: z3.enum(BOUNDS_UNKNOWN_REASONS) })
+  ]),
+  samples: z3.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples)
+});
+var SpatialAuditFindingSchema = z3.strictObject({
+  severity: z3.enum(["info", "warning"]),
+  kind: z3.enum(FINDING_KINDS),
+  entityId: SpatialEntityIdSchema.optional(),
+  timeUs: SpatialTimeUsSchema.optional(),
+  detail: z3.string().min(1).max(1024)
+});
+var entityKindCounts = z3.strictObject({
+  group: z3.number().int().min(0),
+  mesh: z3.number().int().min(0),
+  image: z3.number().int().min(0),
+  diagram: z3.number().int().min(0),
+  video: z3.number().int().min(0),
+  text: z3.number().int().min(0),
+  light: z3.number().int().min(0),
+  splat: z3.number().int().min(0)
+});
+var SpatialAuditReportSchema = z3.strictObject({
+  kind: z3.literal("slopcamera.spatial-audit"),
+  schemaVersion: z3.literal(1),
+  sceneId: SpatialSceneIdSchema,
+  sceneSha256: SpatialDigestSchema,
+  cameraId: SpatialCameraIdSchema,
+  durationUs: SpatialTimeUsSchema,
+  timesUs: z3.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples),
+  summary: z3.strictObject({
+    entities: z3.strictObject({
+      total: z3.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      bounded: z3.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      unknownBounds: z3.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      byKind: entityKindCounts
+    }),
+    animations: z3.strictObject({
+      channels: z3.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
+      targets: z3.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities + SPATIAL_SCENE_LIMITS.cameras),
+      properties: z3.strictObject({
+        position: z3.number().int().min(0),
+        rotation: z3.number().int().min(0),
+        scale: z3.number().int().min(0),
+        opacity: z3.number().int().min(0)
+      })
+    }),
+    cameras: z3.array(SpatialCameraIdSchema).max(SPATIAL_SCENE_LIMITS.cameras),
+    entitiesNeverVisible: z3.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesNeverInFrustum: z3.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities)
+  }),
+  entities: z3.array(SpatialAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+  findings: z3.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
+  omittedFindings: z3.number().int().min(0)
+});
+function auditLocalBounds(entity, assetBounds) {
+  const supplied = (assetId) => assetBounds[assetId] === undefined ? { status: "unknown", reason: "requires-asset-decoding" } : { status: "bounded", bounds: assetBounds[assetId] };
+  let half;
+  if (entity.kind === "mesh") {
+    switch (entity.geometry.kind) {
+      case "asset":
+        return supplied(entity.geometry.assetId);
+      case "box":
+        half = entity.geometry.size.map((value) => value / 2);
+        break;
+      case "plane":
+        half = [entity.geometry.width / 2, entity.geometry.height / 2, 0];
+        break;
+      case "sphere":
+        half = [entity.geometry.radius, entity.geometry.radius, entity.geometry.radius];
+        break;
+      case "cylinder":
+        half = [entity.geometry.radius, entity.geometry.height / 2, entity.geometry.radius];
+        break;
+    }
+  } else if (entity.kind === "image" || entity.kind === "diagram" || entity.kind === "video") {
+    half = [entity.width / 2, entity.height / 2, 0];
+  } else if (entity.kind === "splat")
+    return supplied(entity.assetId);
+  else
+    return { status: "unknown", reason: entity.kind === "text" ? "requires-text-layout" : "no-surface" };
+  return { status: "bounded", bounds: { min: [-half[0], -half[1], -half[2]], max: half } };
+}
+var round3 = (value) => Math.round(value * 1000) / 1000;
+function boundsCorners(bounds) {
+  const corners = [];
+  for (let mask = 0;mask < 8; mask++) {
+    corners.push([
+      mask & 1 ? bounds.max[0] : bounds.min[0],
+      mask & 2 ? bounds.max[1] : bounds.min[1],
+      mask & 4 ? bounds.max[2] : bounds.min[2]
+    ]);
+  }
+  return corners;
+}
+function classifyWorldFrustum(view, bounds) {
+  const { width, height } = view.projection;
+  let behind = 0, inside = 0, inClip = 0;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const corner of boundsCorners(bounds)) {
+    const projected = projectPoint(view, corner);
+    if (projected === null) {
+      behind++;
+      continue;
+    }
+    minX = Math.min(minX, projected.pixel[0]);
+    maxX = Math.max(maxX, projected.pixel[0]);
+    minY = Math.min(minY, projected.pixel[1]);
+    maxY = Math.max(maxY, projected.pixel[1]);
+    if (projected.insideClip)
+      inClip++;
+    if (projected.insideImage && projected.insideClip)
+      inside++;
+  }
+  const contained = behind === 8 ? "behind-camera" : inside === 8 ? "full" : inside > 0 || behind > 0 ? "partial" : inClip > 0 ? "outside" : "clipped";
+  const pixelFootprint = behind === 8 ? 0 : round3(Math.max(0, Math.min(maxX, width) - Math.max(minX, 0)) * Math.max(0, Math.min(maxY, height) - Math.max(minY, 0)));
+  return { contained, pixelFootprint };
+}
+function classifyViewOverlay(bounds, units, width, height) {
+  const scaleX = units === "normalized" ? width : 1;
+  const scaleY = units === "normalized" ? height : 1;
+  const minX = bounds.min[0] * scaleX, maxX = bounds.max[0] * scaleX;
+  const minY = bounds.min[1] * scaleY, maxY = bounds.max[1] * scaleY;
+  const pixelFootprint = round3(Math.max(0, Math.min(maxX, width) - Math.max(minX, 0)) * Math.max(0, Math.min(maxY, height) - Math.max(minY, 0)));
+  const contained = minX >= 0 && minY >= 0 && maxX <= width && maxY <= height ? "full" : pixelFootprint > 0 ? "partial" : "outside";
+  return { contained, pixelFootprint };
+}
+function defaultTimesUs(durationUs) {
+  const count = SPATIAL_AUDIT_LIMITS.defaultSamples;
+  return Array.from({ length: count }, (_, index) => Math.round(index * durationUs / (count - 1)));
+}
+var findingOrder = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
+function auditSpatialScene(sceneInput, options) {
+  const scene = parseSpatialScene(sceneInput);
+  const captured = parseSpatialValue(SpatialAuditOptionsSchema, options, "audit options");
+  const cameraId = captured.cameraId;
+  if (!scene.cameras.some((camera2) => camera2.cameraId === cameraId)) {
+    throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId");
+  }
+  const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
+  const assetBounds = Object.create(null);
+  for (const [assetId, bounds] of Object.entries(captured.assetBounds ?? {})) {
+    if (!assetIds.has(assetId))
+      throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId}.`, "assetBounds");
+    assetBounds[assetId] = Object.freeze({ min: Object.freeze([...bounds.min]), max: Object.freeze([...bounds.max]) });
+  }
+  const timesUs = [...new Set(captured.timesUs ?? defaultTimesUs(scene.durationUs))].sort((a, b) => a - b);
+  for (const timeUs of timesUs) {
+    if (timeUs > scene.durationUs)
+      throw new SpatialSceneError("invalid-data", "Audit sample time exceeds scene duration.", "timesUs");
+  }
+  if (scene.entities.length * timesUs.length > SPATIAL_AUDIT_LIMITS.entitySamples) {
+    throw new SpatialSceneError("invalid-data", "Audit entity-sample budget exceeded; pass fewer timesUs samples.", "timesUs");
+  }
+  const enclosures = new Map(scene.entities.map((entity) => [entity.entityId, auditLocalBounds(entity, assetBounds)]));
+  const samplesByEntity = new Map(scene.entities.map((entity) => [entity.entityId, []]));
+  for (const timeUs of timesUs) {
+    const snapshot = evaluateSpatialScene(scene, { timeUs, cameraId });
+    const view = cameraMathView(snapshot.camera);
+    const { width, height } = snapshot.camera.projection;
+    for (const entry of snapshot.entities) {
+      const entity = entry.entity;
+      const samples = samplesByEntity.get(entity.entityId);
+      const placement = entity.placement;
+      if (placement.kind === "view" && placement.cameraId !== cameraId) {
+        samples.push({ timeUs, visible: entry.visible, note: "other-camera" });
+        continue;
+      }
+      const enclosure = enclosures.get(entity.entityId);
+      if (enclosure.status === "unknown") {
+        samples.push({ timeUs, visible: entry.visible });
+        continue;
+      }
+      try {
+        const domain = transformBounds(entry.worldMatrix, enclosure.bounds);
+        const frustum = placement.kind === "view" ? classifyViewOverlay(domain, placement.units, width, height) : classifyWorldFrustum(view, domain);
+        samples.push({ timeUs, visible: entry.visible, bounds: domain, frustum });
+      } catch (error) {
+        if (!(error instanceof RangeError))
+          throw error;
+        samples.push({ timeUs, visible: entry.visible, note: "out-of-range" });
+      }
+    }
+  }
+  const findings = [];
+  const neverVisible = [];
+  const neverInFrustum = [];
+  const auditedEntities = [];
+  for (const entity of scene.entities) {
+    const enclosure = enclosures.get(entity.entityId);
+    const samples = samplesByEntity.get(entity.entityId);
+    auditedEntities.push({
+      entityId: entity.entityId,
+      name: entity.name,
+      kind: entity.kind,
+      placement: entity.placement,
+      enclosure: enclosure.status === "bounded" ? { status: "bounded" } : { status: "unknown", reason: enclosure.reason },
+      samples
+    });
+    const applicable = samples.filter((sample) => sample.note !== "other-camera");
+    const visible = applicable.filter((sample) => sample.visible);
+    if (visible.length === 0) {
+      neverVisible.push(entity.entityId);
+      findings.push({
+        severity: "info",
+        kind: "never-visible",
+        entityId: entity.entityId,
+        detail: entity.placement.kind === "view" && entity.placement.cameraId !== cameraId ? `View-bound to ${entity.placement.cameraId}; not evaluated under ${cameraId}.` : "Effective visibility is false at every sampled time."
+      });
+      continue;
+    }
+    if (enclosure.status === "unknown") {
+      if (enclosure.reason !== "no-surface") {
+        findings.push({
+          severity: "info",
+          kind: "bounds-unknown",
+          entityId: entity.entityId,
+          detail: enclosure.reason === "requires-asset-decoding" ? "Bounds require decoded asset data; supply assetBounds to audit this entity." : "Text bounds require font layout; audited for visibility only."
+        });
+      }
+      continue;
+    }
+    const outOfRange = visible.filter((sample) => sample.note === "out-of-range").length;
+    if (outOfRange > 0) {
+      findings.push({
+        severity: "info",
+        kind: "bounds-unknown",
+        entityId: entity.entityId,
+        detail: `World bounds exceed numeric limits at ${String(outOfRange)} visible sample${outOfRange === 1 ? "" : "s"}.`
+      });
+    }
+    const statuses = visible.filter((sample) => sample.frustum !== undefined).map((sample) => sample.frustum.contained);
+    if (statuses.length === 0)
+      continue;
+    if (!statuses.some((status) => status === "full" || status === "partial")) {
+      neverInFrustum.push(entity.entityId);
+      if (statuses.every((status) => status === "behind-camera")) {
+        findings.push({
+          severity: "warning",
+          kind: "behind-camera-all-samples",
+          entityId: entity.entityId,
+          detail: `Every visible sample is behind the camera plane (${String(statuses.length)} sample${statuses.length === 1 ? "" : "s"}).`
+        });
+      } else {
+        const histogram = CONTAINED_HISTOGRAM_ORDER.map((status) => [status, statuses.filter((value) => value === status).length]).filter(([, count]) => count > 0).map(([status, count]) => `${status} \xD7${String(count)}`).join(", ");
+        findings.push({
+          severity: "warning",
+          kind: "off-camera",
+          entityId: entity.entityId,
+          detail: `Never inside the camera frustum: ${histogram} across ${String(statuses.length)} visible samples.`
+        });
+      }
+    }
+  }
+  const boundedVisible = scene.entities.filter((entity) => enclosures.get(entity.entityId).status === "bounded" && samplesByEntity.get(entity.entityId).some((sample) => sample.visible && sample.note !== "other-camera")).length;
+  const everInFrustum = scene.entities.some((entity) => samplesByEntity.get(entity.entityId).some((sample) => sample.visible && (sample.frustum?.contained === "full" || sample.frustum?.contained === "partial")));
+  if (!everInFrustum) {
+    const unknownCount = scene.entities.length - [...enclosures.values()].filter((item) => item.status === "bounded").length;
+    findings.push({
+      severity: "warning",
+      kind: "empty-scene-region",
+      detail: `No visible bounded entity intersects the camera frustum at any sampled time (${String(boundedVisible)} bounded visible, ${String(unknownCount)} with unknown bounds).`
+    });
+  }
+  const sortedFindings = sortSpatialBy(findings, findingOrder);
+  const retainedFindings = sortedFindings.slice(0, SPATIAL_AUDIT_LIMITS.findings);
+  const byKind = Object.fromEntries(ENTITY_KINDS.map((kind) => [kind, 0]));
+  for (const entity of scene.entities)
+    byKind[entity.kind]++;
+  const properties = { position: 0, rotation: 0, scale: 0, opacity: 0 };
+  for (const channel of scene.animations)
+    properties[channel.property]++;
+  const report = {
+    kind: "slopcamera.spatial-audit",
+    schemaVersion: 1,
+    sceneId: scene.sceneId,
+    sceneSha256: spatialValueSha256(scene),
+    cameraId,
+    durationUs: scene.durationUs,
+    timesUs,
+    summary: {
+      entities: {
+        total: scene.entities.length,
+        bounded: [...enclosures.values()].filter((item) => item.status === "bounded").length,
+        unknownBounds: [...enclosures.values()].filter((item) => item.status === "unknown").length,
+        byKind
+      },
+      animations: {
+        channels: scene.animations.length,
+        targets: new Set(scene.animations.map((channel) => channel.targetId)).size,
+        properties
+      },
+      cameras: scene.cameras.map((camera2) => camera2.cameraId),
+      entitiesNeverVisible: sortSpatialBy(neverVisible, (id) => id),
+      entitiesNeverInFrustum: sortSpatialBy(neverInFrustum, (id) => id)
+    },
+    entities: auditedEntities,
+    findings: retainedFindings,
+    omittedFindings: sortedFindings.length - retainedFindings.length
+  };
+  const parsed = SpatialAuditReportSchema.parse(report);
+  try {
+    createBoundedJsonValueSnapshot(parsed, SPATIAL_AUDIT_LIMITS.reportBytes, "audit report", {
+      maximumDepth: SPATIAL_SCENE_LIMITS.sourceDepth + 8,
+      maximumValues: SPATIAL_SCENE_LIMITS.sourceValues + SPATIAL_AUDIT_LIMITS.entitySamples * 16
+    });
+  } catch (error) {
+    throw new SpatialSceneError("invalid-data", error instanceof Error ? error.message : "Audit report exceeds its bounded size.", "audit");
+  }
+  return deepFreezeJson(parsed);
 }
 
 // src/spatial-scene/time.ts
@@ -1331,8 +1690,593 @@ function createSpatialSceneStarter() {
   });
 }
 
+// src/spatial-scene/build.ts
+import { z as z4 } from "zod";
+var AXIS_INDEX = { x: 0, y: 1, z: 2 };
+var WORLD_UP = [0, 1, 0];
+var DEG = Math.PI / 180;
+var SCATTER_MAX_ATTEMPTS = 128;
+var scalarKeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: z4.number().finite().min(0).max(1) });
+var vec3KeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialVec3Schema });
+var quaternionKeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialQuaternionSchema });
+function finite(value, label) {
+  if (!Number.isFinite(value))
+    throw new RangeError(`${label} must be finite`);
+  return value;
+}
+function vec32(value, label) {
+  if (!Array.isArray(value) || value.length !== 3)
+    throw new RangeError(`${label} must have 3 components`);
+  for (let index = 0;index < 3; index++)
+    finite(value[index], `${label}[${index}]`);
+  return value;
+}
+function quaternion(value, label) {
+  if (!Array.isArray(value) || value.length !== 4)
+    throw new RangeError(`${label} must have 4 components`);
+  for (let index = 0;index < 4; index++)
+    finite(value[index], `${label}[${index}]`);
+  return value;
+}
+function timeUs(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > SPATIAL_SCENE_LIMITS.durationUs) {
+    throw new RangeError(`${label} must be an integer microsecond within [0, ${SPATIAL_SCENE_LIMITS.durationUs}]`);
+  }
+  return value;
+}
+function segments(value, durationUs) {
+  if (value === undefined)
+    return Math.min(64, Math.max(16, Math.ceil(durationUs / 166667)));
+  if (!Number.isSafeInteger(value) || value < 1 || value > SPATIAL_SCENE_LIMITS.keysPerChannel - 1) {
+    throw new RangeError(`segments must be an integer within [1, ${SPATIAL_SCENE_LIMITS.keysPerChannel - 1}]`);
+  }
+  return value;
+}
+function bounds(value, label) {
+  vec32(value.min, `${label}.min`);
+  vec32(value.max, `${label}.max`);
+  if (value.min.some((part, index) => part > value.max[index]))
+    throw new RangeError(`${label} requires min <= max`);
+  return value;
+}
+function transform(value, label) {
+  vec32(value.position, `${label}.position`);
+  quaternion(value.rotation, `${label}.rotation`);
+  vec32(value.scale, `${label}.scale`);
+  return value;
+}
+function unitQuaternion(value) {
+  return normalizeQuaternion(value).map((component) => Math.min(1, Math.max(-1, component)));
+}
+function emitTransform(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialTransformSchema, {
+    position: [...input.position],
+    rotation: unitQuaternion(input.rotation),
+    scale: [...input.scale]
+  }, "transform"));
+}
+function emitPose(position, rotation) {
+  return deepFreezeJson(parseSpatialValue(SpatialPoseSchema, { position: [...position], rotation }, "pose"));
+}
+function subtract(a, b) {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
+function cross(a, b) {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+function quaternionFromBasis(xAxis, yAxis, zAxis) {
+  const [m00, m01, m02] = [xAxis[0], yAxis[0], zAxis[0]];
+  const [m10, m11, m12] = [xAxis[1], yAxis[1], zAxis[1]];
+  const [m20, m21, m22] = [xAxis[2], yAxis[2], zAxis[2]];
+  const trace = m00 + m11 + m22;
+  let q;
+  if (trace > 0) {
+    const s = Math.sqrt(trace + 1) * 2;
+    q = [(m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, s / 4];
+  } else if (m00 > m11 && m00 > m22) {
+    const s = Math.sqrt(1 + m00 - m11 - m22) * 2;
+    q = [s / 4, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s];
+  } else if (m11 > m22) {
+    const s = Math.sqrt(1 + m11 - m00 - m22) * 2;
+    q = [(m01 + m10) / s, s / 4, (m12 + m21) / s, (m02 - m20) / s];
+  } else {
+    const s = Math.sqrt(1 + m22 - m00 - m11) * 2;
+    q = [(m02 + m20) / s, (m12 + m21) / s, s / 4, (m10 - m01) / s];
+  }
+  return unitQuaternion(q);
+}
+function lookRotation(position, target, up) {
+  const back = subtract(position, target);
+  const backLength = Math.hypot(...back);
+  if (backLength === 0)
+    throw new RangeError("position and target must differ");
+  const zAxis = back.map((component) => component / backLength);
+  const right = cross(up, zAxis);
+  const rightLength = Math.hypot(...right);
+  let xAxis;
+  if (rightLength < 0.000000000001) {
+    const candidates = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    const fallback = candidates.reduce((best, axis) => Math.abs(axis[0] * zAxis[0] + axis[1] * zAxis[1] + axis[2] * zAxis[2]) < Math.abs(best[0] * zAxis[0] + best[1] * zAxis[1] + best[2] * zAxis[2]) ? axis : best);
+    const retry = cross(fallback, zAxis);
+    const retryLength = Math.hypot(...retry);
+    xAxis = retry.map((component) => component / retryLength);
+  } else {
+    xAxis = right.map((component) => component / rightLength);
+  }
+  return quaternionFromBasis(xAxis, cross(zAxis, xAxis), zAxis);
+}
+var EASINGS = {
+  linear: (t) => t,
+  "ease-in": (t) => t * t * t,
+  "ease-out": (t) => 1 - (1 - t) * (1 - t) * (1 - t),
+  "ease-in-out": (t) => t * t * (3 - 2 * t)
+};
+function keyTimes(startUs, durationUs, spans) {
+  const times = [];
+  for (let index = 0;index <= spans; index++) {
+    const time = Math.round(startUs + index / spans * durationUs);
+    if (times.length === 0 || time > times[times.length - 1][0])
+      times.push([time, index / spans]);
+  }
+  return times;
+}
+function perspectiveFromFov(input) {
+  const fov = finite(input.fovDeg, "fovDeg");
+  if (fov <= 0 || fov >= 180)
+    throw new RangeError("fovDeg must lie within (0, 180)");
+  finite(input.near, "near");
+  finite(input.far, "far");
+  const cx = input.cx ?? input.width / 2;
+  const cy = input.cy ?? input.height / 2;
+  const focal = input.width / 2 / Math.tan(fov / 2 * DEG);
+  return deepFreezeJson(parseSpatialValue(SpatialProjectionSchema, {
+    kind: "perspective",
+    width: input.width,
+    height: input.height,
+    near: input.near,
+    far: input.far,
+    fx: focal,
+    fy: focal,
+    cx,
+    cy
+  }, "projection"));
+}
+function lookAtPose(position, target, up = WORLD_UP) {
+  vec32(position, "position");
+  vec32(target, "target");
+  vec32(up, "up");
+  if (Math.hypot(...up) === 0)
+    throw new RangeError("up must be nonzero");
+  return emitPose(position, lookRotation(position, target, up));
+}
+function easeKeys(input) {
+  return bakeKeys(input);
+}
+function bakeKeys(input) {
+  const startUs = timeUs(input.startUs ?? 0, "startUs");
+  const duration2 = timeUs(input.durationUs, "durationUs");
+  if (duration2 === 0)
+    throw new RangeError("durationUs must be positive");
+  timeUs(startUs + duration2, "startUs + durationUs");
+  const easing = EASINGS[input.easing];
+  if (easing === undefined)
+    throw new RangeError(`unsupported easing ${String(input.easing)}`);
+  const spans = segments(input.segments, duration2);
+  const times = keyTimes(startUs, duration2, spans);
+  const { from, to } = input;
+  if (typeof from === "number" && typeof to === "number") {
+    finite(from, "from");
+    finite(to, "to");
+    return deepFreezeJson(times.map(([time, t]) => parseSpatialValue(scalarKeySchema, {
+      timeUs: time,
+      value: t === 0 ? from : t === 1 ? to : from + (to - from) * easing(t)
+    }, "opacity key")));
+  }
+  if (Array.isArray(from) && Array.isArray(to) && from.length === 3 && to.length === 3) {
+    const a = vec32(from, "from"), b = vec32(to, "to");
+    return deepFreezeJson(times.map(([time, t]) => {
+      const eased = easing(t);
+      return parseSpatialValue(vec3KeySchema, {
+        timeUs: time,
+        value: t === 0 ? [...a] : t === 1 ? [...b] : [a[0] + (b[0] - a[0]) * eased, a[1] + (b[1] - a[1]) * eased, a[2] + (b[2] - a[2]) * eased]
+      }, "vec3 key");
+    }));
+  }
+  if (Array.isArray(from) && Array.isArray(to) && from.length === 4 && to.length === 4) {
+    const a = quaternion(from, "from"), b = quaternion(to, "to");
+    return deepFreezeJson(times.map(([time, t]) => parseSpatialValue(quaternionKeySchema, {
+      timeUs: time,
+      value: t === 0 ? unitQuaternion(a) : t === 1 ? unitQuaternion(b) : unitQuaternion(slerpQuaternion(a, b, easing(t)))
+    }, "rotation key")));
+  }
+  throw new RangeError("from and to must share one shape: scalar opacity, vec3, or quaternion");
+}
+function easeChannel(input) {
+  const keys = bakeKeys(input);
+  const interpolation = input.interpolation ?? (input.property === "rotation" ? "slerp" : "linear");
+  return deepFreezeJson(parseSpatialValue(SpatialAnimationSchema, {
+    channelId: input.channelId,
+    targetId: input.targetId,
+    property: input.property,
+    interpolation,
+    keys
+  }, "animation channel"));
+}
+function worldBounds(entry) {
+  if (entry.bounds === undefined) {
+    const p = entry.transform.position;
+    return { min: [p[0], p[1], p[2]], max: [p[0], p[1], p[2]] };
+  }
+  return transformBounds(composeTransform(entry.transform), entry.bounds);
+}
+function moved(transformValue, axis, position) {
+  const next = [transformValue.position[0], transformValue.position[1], transformValue.position[2]];
+  next[axis] = position;
+  return emitTransform({ position: next, rotation: transformValue.rotation, scale: transformValue.scale });
+}
+function shifted(transformValue, delta) {
+  const p = transformValue.position;
+  return emitTransform({ position: [p[0] + delta[0], p[1] + delta[1], p[2] + delta[2]], rotation: transformValue.rotation, scale: transformValue.scale });
+}
+function align(items, axis, edge) {
+  const index = AXIS_INDEX[axis];
+  if (items.length === 0)
+    return deepFreezeJson([]);
+  for (const entry of items)
+    transform(entry.transform, "transform");
+  const enclosed = items.map(worldBounds);
+  const lows = enclosed.map((item) => item.min[index]);
+  const highs = enclosed.map((item) => item.max[index]);
+  const target = edge === "min" ? Math.min(...lows) : edge === "max" ? Math.max(...highs) : (Math.min(...lows) + Math.max(...highs)) / 2;
+  return deepFreezeJson(items.map((item, itemIndex) => {
+    const current = edge === "min" ? lows[itemIndex] : edge === "max" ? highs[itemIndex] : (lows[itemIndex] + highs[itemIndex]) / 2;
+    return moved(item.transform, index, item.transform.position[index] + target - current);
+  }));
+}
+function distribute(items, axis, mode) {
+  const index = AXIS_INDEX[axis];
+  if (items.length < 2)
+    return deepFreezeJson(items.map((item) => emitTransform(item.transform)));
+  for (const entry of items)
+    transform(entry.transform, "transform");
+  const enclosed = items.map(worldBounds);
+  const order = items.map((_, itemIndex) => itemIndex).sort((a, b) => items[a].transform.position[index] - items[b].transform.position[index] || a - b);
+  const positions = new Array(items.length);
+  const first = order[0];
+  positions[first] = items[first].transform.position[index];
+  let edge = enclosed[first].max[index];
+  const gap = "gap" in mode ? finite(mode.gap, "gap") : (finite(mode.span, "span") - order.reduce((total, itemIndex) => total + enclosed[itemIndex].max[index] - enclosed[itemIndex].min[index], 0)) / (items.length - 1);
+  for (let place = 1;place < order.length; place++) {
+    const itemIndex = order[place];
+    const offset = enclosed[itemIndex].min[index] - items[itemIndex].transform.position[index];
+    positions[itemIndex] = edge + gap - offset;
+    edge = edge + gap + enclosed[itemIndex].max[index] - enclosed[itemIndex].min[index];
+  }
+  return deepFreezeJson(items.map((item, itemIndex) => moved(item.transform, index, positions[itemIndex])));
+}
+function row(items, mode) {
+  return distribute(items, "x", mode);
+}
+function column(items, mode) {
+  return distribute(items, "y", mode);
+}
+function stack(items, mode) {
+  return distribute(items, "z", mode);
+}
+function grid(input) {
+  if (!Number.isSafeInteger(input.rows) || input.rows < 1)
+    throw new RangeError("rows must be a positive integer");
+  if (!Number.isSafeInteger(input.columns) || input.columns < 1)
+    throw new RangeError("columns must be a positive integer");
+  if (input.rows * input.columns > SPATIAL_SCENE_LIMITS.entities)
+    throw new RangeError("grid exceeds the entity limit");
+  const spacing = typeof input.cellSize === "number" ? [input.cellSize, input.cellSize] : input.cellSize;
+  if (!Array.isArray(spacing) || spacing.length !== 2)
+    throw new RangeError("cellSize must be a scalar or [x, z] pair");
+  const [sx, sz] = [finite(spacing[0], "cellSize[0]"), finite(spacing[1], "cellSize[1]")];
+  const origin = input.origin === undefined ? [0, 0, 0] : vec32(input.origin, "origin");
+  return deepFreezeJson(parseSpatialValue(z4.array(SpatialVec3Schema), Array.from({ length: input.rows * input.columns }, (_, cell) => [origin[0] + cell % input.columns * sx, origin[1], origin[2] + Math.floor(cell / input.columns) * sz]), "grid"));
+}
+function groundSnap(transformValue, halfHeight, floorY = 0) {
+  finite(halfHeight, "halfHeight");
+  finite(floorY, "floorY");
+  if (halfHeight < 0)
+    throw new RangeError("halfHeight must be nonnegative");
+  transform(transformValue, "transform");
+  return emitTransform({
+    position: [transformValue.position[0], floorY + halfHeight, transformValue.position[2]],
+    rotation: transformValue.rotation,
+    scale: transformValue.scale
+  });
+}
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = state + 1831565813 >>> 0;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+function scatter(input) {
+  if (!Number.isSafeInteger(input.seed) || input.seed < 0 || input.seed > 4294967295) {
+    throw new RangeError("seed must be an integer within [0, 2^32 - 1]");
+  }
+  if (!Number.isSafeInteger(input.count) || input.count < 0 || input.count > SPATIAL_SCENE_LIMITS.entities) {
+    throw new RangeError(`count must be an integer within [0, ${SPATIAL_SCENE_LIMITS.entities}]`);
+  }
+  const region = input.region;
+  for (const [value, label] of [[region.minX, "minX"], [region.maxX, "maxX"], [region.minZ, "minZ"], [region.maxZ, "maxZ"]])
+    finite(value, `region.${label}`);
+  if (region.minX > region.maxX || region.minZ > region.maxZ)
+    throw new RangeError("region requires min <= max");
+  const spacing = input.minSpacing === undefined ? 0 : finite(input.minSpacing, "minSpacing");
+  if (spacing < 0)
+    throw new RangeError("minSpacing must be nonnegative");
+  const random = mulberry32(input.seed);
+  const accepted = [];
+  for (let placed = 0;placed < input.count; placed++) {
+    let done = false;
+    for (let attempt = 0;attempt < SCATTER_MAX_ATTEMPTS && !done; attempt++) {
+      const x = region.minX + random() * (region.maxX - region.minX);
+      const z5 = region.minZ + random() * (region.maxZ - region.minZ);
+      if (spacing === 0 || accepted.every(([px, , pz]) => (px - x) * (px - x) + (pz - z5) * (pz - z5) >= spacing * spacing)) {
+        accepted.push([x, 0, z5]);
+        done = true;
+      }
+    }
+    if (!done)
+      throw new RangeError("scatter could not satisfy minSpacing within the region");
+  }
+  return deepFreezeJson(parseSpatialValue(z4.array(SpatialVec3Schema), accepted, "scatter"));
+}
+function onTopOf(moverBounds, moverTransform, targetBounds, targetTransform) {
+  const mover = transformBounds(composeTransform(transform(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
+  const target = transformBounds(composeTransform(transform(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
+  return shifted(moverTransform, [
+    (target.min[0] + target.max[0]) / 2 - (mover.min[0] + mover.max[0]) / 2,
+    target.max[1] - mover.min[1],
+    (target.min[2] + target.max[2]) / 2 - (mover.min[2] + mover.max[2]) / 2
+  ]);
+}
+function nextTo(moverBounds, moverTransform, targetBounds, targetTransform, options) {
+  const index = AXIS_INDEX[options?.axis ?? "x"];
+  const side = options?.side ?? "after";
+  const gap = finite(options?.gap ?? 0, "gap");
+  const mover = transformBounds(composeTransform(transform(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
+  const target = transformBounds(composeTransform(transform(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
+  const delta = [0, 0, 0];
+  delta[index] = side === "after" ? target.max[index] + gap - mover.min[index] : target.min[index] - gap - mover.max[index];
+  for (const other of [0, 1, 2]) {
+    if (other === index)
+      continue;
+    delta[other] = (target.min[other] + target.max[other]) / 2 - (mover.min[other] + mover.max[other]) / 2;
+  }
+  return shifted(moverTransform, delta);
+}
+function facing(transformValue, target, up = WORLD_UP) {
+  transform(transformValue, "transform");
+  vec32(target, "target");
+  vec32(up, "up");
+  if (Math.hypot(...up) === 0)
+    throw new RangeError("up must be nonzero");
+  return emitTransform({
+    position: transformValue.position,
+    rotation: lookRotation(transformValue.position, target, up),
+    scale: transformValue.scale
+  });
+}
+function orbitKeys(input) {
+  const center = vec32(input.center, "center");
+  const radius = finite(input.radius, "radius");
+  if (radius < 0)
+    throw new RangeError("radius must be nonnegative");
+  const height = input.height === undefined ? center[1] : finite(input.height, "height");
+  const revolutions = finite(input.revolutions ?? 1, "revolutions");
+  const up = input.up === undefined ? WORLD_UP : vec32(input.up, "up");
+  if (Math.hypot(...up) === 0)
+    throw new RangeError("up must be nonzero");
+  const startUs = timeUs(input.startUs ?? 0, "startUs");
+  const duration2 = timeUs(input.durationUs, "durationUs");
+  if (duration2 === 0)
+    throw new RangeError("durationUs must be positive");
+  timeUs(startUs + duration2, "startUs + durationUs");
+  const times = keyTimes(startUs, duration2, segments(input.segments, duration2));
+  const position = [];
+  const rotation = [];
+  for (const [time, t] of times) {
+    const angle = 2 * Math.PI * revolutions * t % (2 * Math.PI);
+    const at = [center[0] + radius * Math.cos(angle), height, center[2] + radius * Math.sin(angle)];
+    position.push(parseSpatialValue(vec3KeySchema, { timeUs: time, value: at }, "orbit position key"));
+    rotation.push(parseSpatialValue(quaternionKeySchema, { timeUs: time, value: lookRotation(at, center, up) }, "orbit rotation key"));
+  }
+  return deepFreezeJson({ position, rotation });
+}
+function frameFitPose(boundsInput, projectionInput, marginInput = 0.1) {
+  const box = bounds(boundsInput, "bounds");
+  const projection2 = parseSpatialValue(SpatialProjectionSchema, projectionInput, "projection");
+  const margin = finite(marginInput, "margin");
+  if (margin < 0 || margin >= 1)
+    throw new RangeError("margin must lie within [0, 1)");
+  const center = [(box.min[0] + box.max[0]) / 2, (box.min[1] + box.max[1]) / 2, (box.min[2] + box.max[2]) / 2];
+  const half = [(box.max[0] - box.min[0]) / 2, (box.max[1] - box.min[1]) / 2, (box.max[2] - box.min[2]) / 2];
+  const pad = Math.max(0.000000001, projection2.near * 0.000000001);
+  if (projection2.kind === "perspective") {
+    const roomX2 = Math.min(projection2.cx, projection2.width - projection2.cx) * (1 - margin);
+    const roomY2 = Math.min(projection2.cy, projection2.height - projection2.cy) * (1 - margin);
+    if (roomX2 <= 0 || roomY2 <= 0)
+      throw new RangeError("projection has no image room around its principal point");
+    const distance = Math.max(projection2.fx * half[0] / roomX2 + half[2], projection2.fy * half[1] / roomY2 + half[2], projection2.near + half[2]) + pad;
+    if (distance + half[2] > projection2.far)
+      throw new RangeError("bounds exceed the projection's far clipping distance");
+    return emitPose([center[0], center[1], center[2] + distance], [0, 0, 0, 1]);
+  }
+  const roomX = (projection2.right - projection2.left) / 2 * (1 - margin);
+  const roomY = (projection2.top - projection2.bottom) / 2 * (1 - margin);
+  if (half[0] > roomX || half[1] > roomY)
+    throw new RangeError("bounds exceed the shrunken orthographic extents");
+  return emitPose([
+    center[0] - (projection2.left + projection2.right) / 2,
+    center[1] - (projection2.top + projection2.bottom) / 2,
+    center[2] + projection2.near + half[2] + pad
+  ], [0, 0, 0, 1]);
+}
+
+// src/spatial-scene/generate.ts
+import { z as z5 } from "zod";
+var SPATIAL_GENERATOR_LIMITS = Object.freeze({
+  moduleSourceBytes: 1048576,
+  parametersBytes: 65536,
+  parametersDepth: 16,
+  parametersValues: 8192
+});
+var moduleResultSchema = z5.strictObject({
+  entities: z5.array(z5.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
+  editableKeys: SpatialGeneratorSchema.shape.editableKeys.optional()
+});
+function parseSpatialGeneratorParameters(input) {
+  return createBoundedJsonValueSnapshot(input, SPATIAL_GENERATOR_LIMITS.parametersBytes, "generator parameters", {
+    maximumDepth: SPATIAL_GENERATOR_LIMITS.parametersDepth,
+    maximumValues: SPATIAL_GENERATOR_LIMITS.parametersValues
+  }).value;
+}
+function spatialGeneratorParametersSha256(parameters) {
+  return spatialValueSha256({ domain: "slopcamera.generator-parameters.v1", parameters });
+}
+function deriveSpatialGeneratorSeed(sourceSha256) {
+  SpatialDigestSchema.parse(sourceSha256);
+  return Number.parseInt(sourceSha256.slice(0, 8), 16);
+}
+function spatialGeneratorAttemptId(options) {
+  return `attempt_${spatialValueSha256({ domain: "slopcamera.generator-attempt.v1", ...options }).slice(0, 32)}`;
+}
+function generatedAssetReference(entity) {
+  if (entity.kind === "mesh" && entity.geometry.kind === "asset")
+    return entity.geometry.assetId;
+  if (entity.kind === "text")
+    return entity.fontAssetId;
+  return "assetId" in entity ? entity.assetId : undefined;
+}
+function validateSpatialGeneratorOutput(generatorId, output) {
+  SpatialGeneratorIdSchema.parse(generatorId);
+  const result = parseSpatialValue(moduleResultSchema, output, "generator output");
+  const seen = new Set;
+  const entities = [];
+  for (const [index, raw] of result.entities.entries()) {
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      throw new SpatialSceneError("invalid-data", `Generated entity ${index} must be a plain object carrying a stable key.`, "generator output");
+    }
+    const record = raw;
+    const key2 = record.key;
+    if (typeof key2 !== "string" || key2.length < 1 || key2.length > 256) {
+      throw new SpatialSceneError("invalid-data", `Generated entity ${index} must carry a string "key" of 1\u2013256 characters.`, "generator output");
+    }
+    if ("entityId" in record || "origin" in record) {
+      throw new SpatialSceneError("invalid-data", `Generated entity "${key2}" must not set entityId or origin; the host stamps generated identity.`, "generator output");
+    }
+    if (seen.has(key2))
+      throw new SpatialSceneError("invalid-data", `Duplicate generator output key "${key2}".`, "generator output");
+    seen.add(key2);
+    const { key: _omitted, ...fields } = record;
+    const entity = parseSpatialValue(SpatialEntitySchema, {
+      ...fields,
+      entityId: generatedSpatialEntityId(generatorId, key2),
+      origin: { kind: "generated", generatorId, key: key2 }
+    }, `generator output ${key2}`);
+    const assetId = generatedAssetReference(entity);
+    if (assetId !== undefined) {
+      throw new SpatialSceneError("invalid-data", `Generated entity "${key2}" references ${assetId}; generated entities cannot reference assets in this version.`, "generator output");
+    }
+    entities.push(entity);
+  }
+  const editableKeys = result.editableKeys ?? [];
+  const declared = new Set;
+  for (const editable of editableKeys) {
+    if (declared.has(editable.key))
+      throw new SpatialSceneError("invalid-data", `Duplicate editable key "${editable.key}".`, "generator editableKeys");
+    declared.add(editable.key);
+    if (!seen.has(editable.key)) {
+      throw new SpatialSceneError("invalid-data", `Editable key "${editable.key}" does not match any produced entity key.`, "generator editableKeys");
+    }
+  }
+  return deepFreezeJson({ entities, editableKeys });
+}
+function buildSpatialGeneratorRecord(options) {
+  const outputSha256 = spatialGeneratorOutputSha256(options.entities);
+  const attemptId = spatialGeneratorAttemptId({
+    generatorId: options.generatorId,
+    sourceSha256: options.sourceSha256,
+    parametersSha256: options.parametersSha256,
+    runtimeSha256: options.runtimeSha256,
+    outputSha256,
+    seed: options.seed
+  });
+  return parseSpatialValue(SpatialGeneratorSchema, {
+    generatorId: options.generatorId,
+    sourceSha256: options.sourceSha256,
+    closureSha256: options.closureSha256,
+    parametersSha256: options.parametersSha256,
+    seed: options.seed,
+    outputSha256,
+    execution: { kind: "attempt", attemptId, runtimeSha256: options.runtimeSha256 },
+    editableKeys: options.editableKeys
+  }, "generator");
+}
+function createSpatialGeneratorSceneShell() {
+  return {
+    kind: "slopcamera.spatial-scene",
+    schemaVersion: 1,
+    sceneId: "scene_generated",
+    coordinates: "right-handed-y-up-meters",
+    durationUs: 4000000,
+    entities: [],
+    cameras: [{
+      cameraId: "camera_main",
+      name: "Main",
+      pose: { position: [0, 3, 8], rotation: [0, 0, 0, 1] },
+      projection: { kind: "perspective", width: 960, height: 540, fx: 650, fy: 650, cx: 480, cy: 270, near: 0.1, far: 200 }
+    }],
+    assets: [],
+    animations: [],
+    generators: [],
+    overrides: []
+  };
+}
+function mergeSpatialGeneratorOutput(scene, generator, entities) {
+  const base = scene ?? parseSpatialScene(createSpatialGeneratorSceneShell());
+  const retained = new Set(entities.map((entity) => entity.entityId));
+  const removed = new Set;
+  const kept = [];
+  for (const entity of base.entities) {
+    if (entity.origin.kind === "generated" && entity.origin.generatorId === generator.generatorId) {
+      if (!retained.has(entity.entityId))
+        removed.add(entity.entityId);
+      continue;
+    }
+    kept.push(entity);
+  }
+  for (const override of base.overrides) {
+    if (removed.has(override.entityId)) {
+      throw new SpatialSceneError("conflict", `Regeneration removed ${override.entityId}; remove its ${override.property} override or restore the produced key.`, "overrides");
+    }
+  }
+  for (const channel of base.animations) {
+    if (removed.has(channel.targetId)) {
+      throw new SpatialSceneError("conflict", `Regeneration removed ${channel.targetId}; remove channel ${channel.channelId} or restore the produced key.`, "animations");
+    }
+  }
+  const keptIds = new Set(kept.map((entity) => entity.entityId));
+  for (const entity of entities) {
+    if (keptIds.has(entity.entityId))
+      throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`, "entities");
+  }
+  const generators = [...base.generators.filter((record) => record.generatorId !== generator.generatorId), generator];
+  return parseSpatialScene({ ...base, entities: [...kept, ...entities], generators });
+}
+
 // src/spatial-scene/gltf.ts
-import { z as z3 } from "zod";
+import { z as z6 } from "zod";
 var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
 var SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134217728,
@@ -1357,84 +2301,84 @@ var SPATIAL_GLB_LIMITS = Object.freeze({
   animationKeys: 4096,
   durationSeconds: 3600
 });
-var finite = z3.number().finite().min(-1e6).max(1e6);
-var index = z3.number().int().min(0).max(65535);
-var unit2 = z3.number().finite().min(0).max(1);
-var vec32 = z3.tuple([finite, finite, finite]);
-var signedUnit = z3.number().finite().min(-1).max(1);
-var quaternion = z3.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
-var metadata = { name: z3.string().max(1024).optional(), extras: z3.unknown().optional(), extensions: z3.never().optional() };
-var byteOffset = z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
-var textureInfo = z3.strictObject({ ...metadata, index, texCoord: z3.literal(0).optional() });
-var samplerSchema = z3.strictObject({
+var finite2 = z6.number().finite().min(-1e6).max(1e6);
+var index = z6.number().int().min(0).max(65535);
+var unit2 = z6.number().finite().min(0).max(1);
+var vec33 = z6.tuple([finite2, finite2, finite2]);
+var signedUnit = z6.number().finite().min(-1).max(1);
+var quaternion2 = z6.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
+var metadata = { name: z6.string().max(1024).optional(), extras: z6.unknown().optional(), extensions: z6.never().optional() };
+var byteOffset = z6.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
+var textureInfo = z6.strictObject({ ...metadata, index, texCoord: z6.literal(0).optional() });
+var samplerSchema = z6.strictObject({
   ...metadata,
-  magFilter: z3.union([z3.literal(9728), z3.literal(9729)]).optional(),
-  minFilter: z3.union([z3.literal(9728), z3.literal(9729), z3.literal(9984), z3.literal(9985), z3.literal(9986), z3.literal(9987)]).optional(),
-  wrapS: z3.union([z3.literal(33071), z3.literal(33648), z3.literal(10497)]).default(10497),
-  wrapT: z3.union([z3.literal(33071), z3.literal(33648), z3.literal(10497)]).default(10497)
+  magFilter: z6.union([z6.literal(9728), z6.literal(9729)]).optional(),
+  minFilter: z6.union([z6.literal(9728), z6.literal(9729), z6.literal(9984), z6.literal(9985), z6.literal(9986), z6.literal(9987)]).optional(),
+  wrapS: z6.union([z6.literal(33071), z6.literal(33648), z6.literal(10497)]).default(10497),
+  wrapT: z6.union([z6.literal(33071), z6.literal(33648), z6.literal(10497)]).default(10497)
 });
-var nodeSchema = z3.strictObject({
+var nodeSchema = z6.strictObject({
   ...metadata,
-  children: z3.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
+  children: z6.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
   mesh: index.optional(),
-  translation: vec32.optional(),
-  rotation: quaternion.optional(),
-  scale: vec32.optional(),
-  matrix: z3.array(finite).length(16).optional()
+  translation: vec33.optional(),
+  rotation: quaternion2.optional(),
+  scale: vec33.optional(),
+  matrix: z6.array(finite2).length(16).optional()
 });
-var accessorSchema = z3.strictObject({
+var accessorSchema = z6.strictObject({
   ...metadata,
   bufferView: index,
   byteOffset: byteOffset.default(0),
-  componentType: z3.union([z3.literal(5121), z3.literal(5123), z3.literal(5125), z3.literal(5126)]),
-  normalized: z3.boolean().default(false),
-  count: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z3.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
-  min: z3.array(finite).min(1).max(4).optional(),
-  max: z3.array(finite).min(1).max(4).optional()
+  componentType: z6.union([z6.literal(5121), z6.literal(5123), z6.literal(5125), z6.literal(5126)]),
+  normalized: z6.boolean().default(false),
+  count: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
+  type: z6.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
+  min: z6.array(finite2).min(1).max(4).optional(),
+  max: z6.array(finite2).min(1).max(4).optional()
 });
-var gltfSchema = z3.strictObject({
+var gltfSchema = z6.strictObject({
   ...metadata,
-  asset: z3.strictObject({ version: z3.literal("2.0"), minVersion: z3.literal("2.0").optional(), generator: z3.string().max(1024).optional(), copyright: z3.string().max(4096).optional(), extras: z3.unknown().optional(), extensions: z3.never().optional() }),
-  extensionsUsed: z3.array(z3.never()).optional(),
-  extensionsRequired: z3.array(z3.never()).optional(),
-  buffers: z3.array(z3.strictObject({ ...metadata, byteLength: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
-  bufferViews: z3.array(z3.strictObject({ ...metadata, buffer: z3.literal(0), byteOffset: byteOffset.default(0), byteLength: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z3.number().int().min(4).max(252).optional(), target: z3.union([z3.literal(34962), z3.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
-  accessors: z3.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
+  asset: z6.strictObject({ version: z6.literal("2.0"), minVersion: z6.literal("2.0").optional(), generator: z6.string().max(1024).optional(), copyright: z6.string().max(4096).optional(), extras: z6.unknown().optional(), extensions: z6.never().optional() }),
+  extensionsUsed: z6.array(z6.never()).optional(),
+  extensionsRequired: z6.array(z6.never()).optional(),
+  buffers: z6.array(z6.strictObject({ ...metadata, byteLength: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
+  bufferViews: z6.array(z6.strictObject({ ...metadata, buffer: z6.literal(0), byteOffset: byteOffset.default(0), byteLength: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z6.number().int().min(4).max(252).optional(), target: z6.union([z6.literal(34962), z6.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
+  accessors: z6.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
   scene: index.optional(),
-  scenes: z3.array(z3.strictObject({ ...metadata, nodes: z3.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
-  nodes: z3.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  meshes: z3.array(z3.strictObject({ ...metadata, primitives: z3.array(z3.strictObject({
+  scenes: z6.array(z6.strictObject({ ...metadata, nodes: z6.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
+  nodes: z6.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  meshes: z6.array(z6.strictObject({ ...metadata, primitives: z6.array(z6.strictObject({
     ...metadata,
-    attributes: z3.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
+    attributes: z6.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
     indices: index.optional(),
     material: index.optional(),
-    mode: z3.literal(4).default(4)
+    mode: z6.literal(4).default(4)
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
-  materials: z3.array(z3.strictObject({
+  materials: z6.array(z6.strictObject({
     ...metadata,
-    pbrMetallicRoughness: z3.strictObject({ ...metadata, baseColorFactor: z3.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
-    alphaMode: z3.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
+    pbrMetallicRoughness: z6.strictObject({ ...metadata, baseColorFactor: z6.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
+    alphaMode: z6.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
     alphaCutoff: unit2.default(0.5),
-    doubleSided: z3.boolean().default(false),
-    emissiveFactor: z3.tuple([z3.literal(0), z3.literal(0), z3.literal(0)]).optional()
+    doubleSided: z6.boolean().default(false),
+    emissiveFactor: z6.tuple([z6.literal(0), z6.literal(0), z6.literal(0)]).optional()
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
-  images: z3.array(z3.strictObject({ ...metadata, bufferView: index, mimeType: z3.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  textures: z3.array(z3.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  samplers: z3.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
-  animations: z3.array(z3.strictObject({
+  images: z6.array(z6.strictObject({ ...metadata, bufferView: index, mimeType: z6.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  textures: z6.array(z6.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  samplers: z6.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
+  animations: z6.array(z6.strictObject({
     ...metadata,
-    samplers: z3.array(z3.strictObject({ ...metadata, input: index, output: index, interpolation: z3.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z3.array(z3.strictObject({ ...metadata, sampler: index, target: z3.strictObject({ ...metadata, node: index, path: z3.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
+    samplers: z6.array(z6.strictObject({ ...metadata, input: index, output: index, interpolation: z6.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
+    channels: z6.array(z6.strictObject({ ...metadata, sampler: index, target: z6.strictObject({ ...metadata, node: index, path: z6.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips).default([])
 });
-var optionsSchema = z3.strictObject({
-  metersPerUnit: z3.number().finite().min(0.000001).max(1e6),
-  sourceUp: z3.enum(["x", "y", "z"]),
+var optionsSchema = z6.strictObject({
+  metersPerUnit: z6.number().finite().min(0.000001).max(1e6),
+  sourceUp: z6.enum(["x", "y", "z"]),
   nodeIndex: index.optional(),
-  materialMode: z3.enum(["source", "entity"]).default("entity"),
-  timeUs: z3.number().int().min(0).max(3600000000),
-  clip: z3.strictObject({ index, offsetUs: z3.number().int().min(0).max(3600000000), playback: z3.enum(["once", "loop", "freeze"]) }).optional()
+  materialMode: z6.enum(["source", "entity"]).default("entity"),
+  timeUs: z6.number().int().min(0).max(3600000000),
+  clip: z6.strictObject({ index, offsetUs: z6.number().int().min(0).max(3600000000), playback: z6.enum(["once", "loop", "freeze"]) }).optional()
 });
 function fail(message, path = "glb") {
   throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path);
@@ -1519,9 +2463,9 @@ function imageHeader(bytes, mimeType) {
   } else {
     if (bytes.length < 10 || bytes[0] !== 255 || bytes[1] !== 216 || bytes.at(-2) !== 255 || bytes.at(-1) !== 217)
       fail("Embedded image MIME does not match a complete JPEG envelope.");
-    let cursor = 2, segments = 0;
+    let cursor = 2, segments2 = 0;
     while (cursor + 4 <= bytes.length) {
-      if (++segments > 65536 || bytes[cursor++] !== 255)
+      if (++segments2 > 65536 || bytes[cursor++] !== 255)
         fail("Malformed JPEG marker.");
       while (bytes[cursor] === 255)
         cursor++;
@@ -1950,21 +2894,21 @@ class SpatialGlbModel {
         triangles += (primitive.indices?.length ?? primitive.positions.length / 3) / 3;
         if (triangles > SPATIAL_GLB_LIMITS.triangles)
           fail("Instanced triangle budget exceeded.");
-        const bounds2 = vertexBounds(primitive.positions, primitive.indices, matrix2);
+        const bounds3 = vertexBounds(primitive.positions, primitive.indices, matrix2);
         const { material, ...geometry } = primitive;
         if (options.materialMode === "source" && material.baseColorTexture)
           imageIds.add(material.baseColorTexture.imageIndex);
-        primitives.push({ ...geometry, matrix: matrix2, bounds: bounds2, sourceNodeIndex, sourcePrimitiveIndex, ...options.materialMode === "source" ? { material } : {} });
+        primitives.push({ ...geometry, matrix: matrix2, bounds: bounds3, sourceNodeIndex, sourcePrimitiveIndex, ...options.materialMode === "source" ? { material } : {} });
       }
     }
     if (primitives.length === 0)
       fail("Selected scene or subtree contains no triangle geometry.");
-    const bounds = combineBounds(primitives.map((primitive) => primitive.bounds));
+    const bounds2 = combineBounds(primitives.map((primitive) => primitive.bounds));
     const images = [...imageIds].sort((a, b) => a - b).map((index2) => {
       const image = state.images[index2];
       return Object.freeze({ ...image, bytes: image.bytes.slice() });
     });
-    return Object.freeze({ profile: SPATIAL_GLB_PROFILE, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds, sourceTimeSeconds });
+    return Object.freeze({ profile: SPATIAL_GLB_PROFILE, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds: bounds2, sourceTimeSeconds });
   }
 }
 function vertexBounds(positions, indices, matrix2) {
@@ -1980,9 +2924,9 @@ function vertexBounds(positions, indices, matrix2) {
   }
   return deepFreezeJson({ min: low, max: high });
 }
-function combineBounds(bounds) {
+function combineBounds(bounds2) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-  for (const bound of bounds)
+  for (const bound of bounds2)
     for (let axis = 0;axis < 3; axis++) {
       min[axis] = Math.min(min[axis], bound.min[axis]);
       max[axis] = Math.max(max[axis], bound.max[axis]);
@@ -1997,27 +2941,30 @@ function evaluateSpatialGlb(model, options) {
     fail("Evaluation requires a parsed GLB model.");
   return model.evaluate(options);
 }
+function spatialGlbBounds(model) {
+  return evaluateSpatialGlb(model, { metersPerUnit: 1, sourceUp: "y", timeUs: 0 }).bounds;
+}
 
 // src/spatial-scene/camera-track.ts
-import { z as z4 } from "zod";
+import { z as z7 } from "zod";
 var SPATIAL_CAMERA_TRACK_MAX_FRAMES = 2048;
-var clockSchema = z4.strictObject({
+var clockSchema = z7.strictObject({
   startUs: SpatialTimeUsSchema,
   frameRate: SpatialFrameRateSchema,
-  frameCount: z4.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
+  frameCount: z7.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
 });
-var rationalSchema = z4.strictObject({
-  numerator: z4.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
-  denominator: z4.string().regex(/^[1-9][0-9]{0,6}$/u)
+var rationalSchema = z7.strictObject({
+  numerator: z7.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
+  denominator: z7.string().regex(/^[1-9][0-9]{0,6}$/u)
 });
-var SpatialCameraTrackSchema = z4.strictObject({
-  kind: z4.literal("slopcamera.spatial-camera-track"),
-  schemaVersion: z4.literal(1),
+var SpatialCameraTrackSchema = z7.strictObject({
+  kind: z7.literal("slopcamera.spatial-camera-track"),
+  schemaVersion: z7.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   clock: clockSchema,
-  samples: z4.array(z4.strictObject({
-    frameIndex: z4.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
+  samples: z7.array(z7.strictObject({
+    frameIndex: z7.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
     timeUs: SpatialTimeUsSchema,
     exactTimeUs: rationalSchema,
     camera: SpatialCameraSchema
@@ -2089,17 +3036,22 @@ function compileWorkflowGraph2(options) {
 export {
   validateSpatialShot,
   validateSpatialOverrides,
+  validateSpatialGeneratorOutput,
   unprojectPixel,
   transformPoint,
   transformDirection,
   transformBounds,
+  stack,
   spatialValueSha256,
   spatialTopologicalIds,
   spatialStateValueSha256,
   spatialSceneSha256,
   spatialPropertySupported,
   spatialOutputDuration,
+  spatialGlbBounds,
+  spatialGeneratorParametersSha256,
   spatialGeneratorOutputSha256,
+  spatialGeneratorAttemptId,
   spatialFrameSample,
   spatialFrameCount,
   spatialAssetManifestSha256,
@@ -2109,45 +3061,68 @@ export {
   slerpQuaternion,
   sha256Hex,
   seconds,
+  scatter,
   sampleSpatialCameraTrack,
   runWorkflow,
   runBuiltWorkflow,
+  row,
   reduceSpatialFrameRate,
   projectPoint,
   pixelRay,
+  perspectiveFromFov,
   parseSpatialValue,
   parseSpatialScene,
   parseSpatialGlb,
+  parseSpatialGeneratorParameters,
   parseSpatialCameraTrack,
+  orbitKeys,
+  onTopOf,
   normalizeQuaternion,
+  nextTo,
   multiplyTransforms,
   mergeSpatialOverrides,
+  mergeSpatialGeneratorOutput,
+  lookAtPose,
   isPortableSlopcameraOperationKind,
   invertTransform,
   inspectSpatialScene,
+  groundSnap,
+  grid,
   generatedSpatialEntityId,
+  frameFitPose,
+  facing,
   evaluateSpatialScene,
   evaluateSpatialGlb,
+  easeKeys,
+  easeChannel,
+  distribute,
+  diffSpatialScenes,
+  deriveSpatialGeneratorSeed,
   defineWorkflow,
   definePortableWorkflowFragment,
   createWorkflowGraphHash,
   createWorkflowCompilationHash,
   createSpatialSceneStarter,
+  createSpatialGeneratorSceneShell,
   createSlopcameraCodeHost,
   createPublicWorkflowRegistryProjection,
   createGraphHash,
   composeTransform,
   compileWorkflowGraph2 as compileWorkflowGraph,
+  column,
   canonicalJsonSha256,
   canonicalJson,
   cameraMathView,
   buildWorkflowGraph,
   buildWorkflow,
+  buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  auditSpatialScene,
   asSlopcameraCodeError,
   applySpatialScenePatch,
   applySpatialEntityOverride,
+  align,
   WORKFLOW_REF_VERSION,
   WORKFLOW_REF_BRAND,
   WORKFLOW_NODE_RECEIPT_VERSION,
@@ -2187,6 +3162,13 @@ export {
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
   SpatialCameraIdSchema,
+  SpatialAuditSampleSchema,
+  SpatialAuditReportSchema,
+  SpatialAuditOptionsSchema,
+  SpatialAuditFrustumSchema,
+  SpatialAuditFindingSchema,
+  SpatialAuditEntitySchema,
+  SpatialAuditBoundsSchema,
   SpatialAssetManifestSchema,
   SpatialAssetInterpretationSchema,
   SpatialAssetIdSchema,
@@ -2211,7 +3193,9 @@ export {
   SPATIAL_SCENE_LIMITS,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
+  SPATIAL_GENERATOR_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
+  SPATIAL_AUDIT_LIMITS,
   RequirementEnvelopeSchema,
   REQUIREMENT_ENVELOPE_VERSION,
   PortableWorkflowBuilder,

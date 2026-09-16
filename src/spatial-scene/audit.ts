@@ -36,7 +36,6 @@ const auditVector = z.tuple([
 ])
 export const SpatialAuditBoundsSchema = z.strictObject({ min: auditVector, max: auditVector })
   .refine(bounds => bounds.min.every((value, index) => value <= bounds.max[index]!), "Bounds min must not exceed max.")
-export type SpatialAuditBounds = z.infer<typeof SpatialAuditBoundsSchema>
 
 export const SpatialAuditOptionsSchema = z.strictObject({
   cameraId: SpatialCameraIdSchema,
@@ -120,11 +119,74 @@ export const SpatialAuditReportSchema = z.strictObject({
   omittedFindings: z.number().int().min(0),
 })
 
-type DeepReadonly<T> = T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> } : T
-export type SpatialAuditFinding = DeepReadonly<z.infer<typeof SpatialAuditFindingSchema>>
-export type SpatialAuditEntity = DeepReadonly<z.infer<typeof SpatialAuditEntitySchema>>
-export type SpatialAuditSample = DeepReadonly<z.infer<typeof SpatialAuditSampleSchema>>
-export type SpatialAuditReport = DeepReadonly<z.infer<typeof SpatialAuditReportSchema>>
+/**
+ * Structural report types mirror the schemas above rather than inferring from
+ * them: recursive readonly mappers over the strict-object graph measurably
+ * slow every authored-source typecheck that reaches this module through the
+ * `./code` surface. `auditSpatialScene` returns schema-parsed output, so any
+ * divergence between a schema and its declared type fails compilation at the
+ * return site below.
+ */
+export interface SpatialAuditBounds {
+  readonly min: readonly [number, number, number]
+  readonly max: readonly [number, number, number]
+}
+export interface SpatialAuditFrustum {
+  readonly contained: (typeof CONTAINED)[number]
+  readonly pixelFootprint: number
+}
+export interface SpatialAuditSample {
+  readonly timeUs: number
+  readonly visible: boolean
+  readonly bounds?: SpatialAuditBounds | undefined
+  readonly frustum?: SpatialAuditFrustum | undefined
+  readonly note?: "out-of-range" | "other-camera" | undefined
+}
+export interface SpatialAuditEntity {
+  readonly entityId: string
+  readonly name: string
+  readonly kind: (typeof ENTITY_KINDS)[number]
+  readonly placement: SpatialEntity["placement"]
+  readonly enclosure:
+    | { readonly status: "bounded" }
+    | { readonly status: "unknown"; readonly reason: (typeof BOUNDS_UNKNOWN_REASONS)[number] }
+  readonly samples: readonly SpatialAuditSample[]
+}
+export interface SpatialAuditFinding {
+  readonly severity: "info" | "warning"
+  readonly kind: (typeof FINDING_KINDS)[number]
+  readonly entityId?: string | undefined
+  readonly timeUs?: number | undefined
+  readonly detail: string
+}
+export interface SpatialAuditReport {
+  readonly kind: "slopcamera.spatial-audit"
+  readonly schemaVersion: 1
+  readonly sceneId: string
+  readonly sceneSha256: string
+  readonly cameraId: string
+  readonly durationUs: number
+  readonly timesUs: readonly number[]
+  readonly summary: {
+    readonly entities: {
+      readonly total: number
+      readonly bounded: number
+      readonly unknownBounds: number
+      readonly byKind: Readonly<Record<(typeof ENTITY_KINDS)[number], number>>
+    }
+    readonly animations: {
+      readonly channels: number
+      readonly targets: number
+      readonly properties: Readonly<Record<"position" | "rotation" | "scale" | "opacity", number>>
+    }
+    readonly cameras: readonly string[]
+    readonly entitiesNeverVisible: readonly string[]
+    readonly entitiesNeverInFrustum: readonly string[]
+  }
+  readonly entities: readonly SpatialAuditEntity[]
+  readonly findings: readonly SpatialAuditFinding[]
+  readonly omittedFindings: number
+}
 
 type Enclosure =
   | { readonly status: "bounded"; readonly bounds: Bounds }
@@ -174,7 +236,7 @@ function boundsCorners(bounds: Bounds): readonly Vec3[] {
  * footprint is the projected-corner bbox intersected with the image, which may
  * still cover the frame when all corners fall outside it.
  */
-function classifyWorldFrustum(view: Camera, bounds: Bounds): z.infer<typeof SpatialAuditFrustumSchema> {
+function classifyWorldFrustum(view: Camera, bounds: Bounds): SpatialAuditFrustum {
   const { width, height } = view.projection
   let behind = 0, inside = 0, inClip = 0
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -205,7 +267,7 @@ function classifyWorldFrustum(view: Camera, bounds: Bounds): z.infer<typeof Spat
  */
 function classifyViewOverlay(
   bounds: Bounds, units: "pixels" | "normalized", width: number, height: number,
-): z.infer<typeof SpatialAuditFrustumSchema> {
+): SpatialAuditFrustum {
   const scaleX = units === "normalized" ? width : 1
   const scaleY = units === "normalized" ? height : 1
   const minX = bounds.min[0] * scaleX, maxX = bounds.max[0] * scaleX
@@ -226,7 +288,7 @@ function defaultTimesUs(durationUs: number): readonly number[] {
   return Array.from({ length: count }, (_, index) => Math.round(index * durationUs / (count - 1)))
 }
 
-type Finding = z.infer<typeof SpatialAuditFindingSchema>
+type Finding = SpatialAuditFinding
 const findingOrder = (finding: Finding): string =>
   `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`
 
@@ -235,7 +297,7 @@ interface SampleDraft {
   readonly timeUs: number
   readonly visible: boolean
   readonly bounds?: Bounds
-  readonly frustum?: z.infer<typeof SpatialAuditFrustumSchema>
+  readonly frustum?: SpatialAuditFrustum
   readonly note?: "out-of-range" | "other-camera"
 }
 interface EntityDraft {
@@ -414,7 +476,7 @@ export function auditSpatialScene(sceneInput: unknown, options: SpatialAuditOpti
     findings: retainedFindings,
     omittedFindings: sortedFindings.length - retainedFindings.length,
   }
-  const parsed = SpatialAuditReportSchema.parse(report)
+  const parsed: SpatialAuditReport = SpatialAuditReportSchema.parse(report)
   try {
     createBoundedJsonValueSnapshot(parsed, SPATIAL_AUDIT_LIMITS.reportBytes, "audit report", {
       maximumDepth: SPATIAL_SCENE_LIMITS.sourceDepth + 8,
