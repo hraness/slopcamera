@@ -152,9 +152,9 @@ overwriting either revision. Evaluate samples absolute time without launching a 
 Audit samples bounded geometry against one camera over time and reports deterministic
 frustum findings; --asset-bounds supplies scene-space enclosures as a bounds map,
 admission documents, {manifest, facts} pairs, or arrays of those.
-Generate runs a trusted single-file TypeScript generator at authoring time, stamps retained
-output with derived entity identity, and records source, parameters, seed and runtime digests;
-it never reruns source during inspect, evaluate or render.
+Generate runs a trusted TypeScript generator at authoring time, stamps retained
+output with derived entity identity, and records source, closure, parameters, seed and
+runtime digests; it never reruns source during inspect, evaluate or render.
 Project operations use the exact full project ID and a versioned whole-project basis.
 Discover each request with slopcamera operations show spatial.project.<action> --json.
 Migration retains the frozen media/edit pair in V2 authority. Legacy project commands

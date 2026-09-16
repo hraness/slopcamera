@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   generatedSpatialEntityId, parseSpatialScene, spatialGeneratorOutputSha256,
   type SpatialSceneV1,
 } from "../../../src/spatial-scene/index";
+import { canonicalJsonSha256, sha256Hex } from "../core/canonical-json";
 import { operationApplicationContext } from "../application/operations/test-support";
 import { parseCliArgs } from "./args";
 import { executeSpatialSceneCommand } from "./spatial-scene-service";
@@ -123,9 +124,92 @@ test("scene generate surfaces module contract violations by name", async () => a
   await expect(run(`export function generate() { return { entities: [{ key: "x", name: "X", kind: "image", parentId: null, transform: { position: [0,0,0], rotation: [0,0,0,1], scale: [1,1,1] }, placement: { kind: "world" }, visible: true, assetId: "asset_a", width: 1, height: 1, fit: "contain", opacity: 1 }] }; }\n`))
     .rejects.toThrow("cannot reference assets");
   await expect(run(`export const notGenerate = 1;\n`)).rejects.toThrow('must export a "generate" function');
-  await expect(run(`import { helper } from "./helper.ts";\nexport function generate() { return { entities: [] }; }\n`)).rejects.toThrow("single-file");
+  await expect(run(`import { helper } from "./helper.ts";\nexport function generate() { return { entities: [] }; }\n`)).rejects.toThrow("does not resolve");
   await expect(run(`export function generate() { return { entities: Array.from({ length: 5000 }, (_, i) => ({ key: "e" + i, name: "E" + i, kind: "mesh", parentId: null, transform: { position: [0,0,0], rotation: [0,0,0,1], scale: [1,1,1] }, placement: { kind: "world" }, visible: true, geometry: { kind: "box", size: [1,1,1] }, material: { kind: "unlit", color: "#ffffff", opacity: 1 } })) }; }\n`))
     .rejects.toThrow();
+}));
+
+test("scene generate covers a transitive relative-import closure", async () => await fixture(async root => {
+  await mkdir(join(root, "lib"), { recursive: true });
+  // A cycle back to the entry file is legal and deduped by real path.
+  await writeFile(join(root, "shared.ts"), `import "./gen.ts";\nexport const SHARED = "shared-box";\n`);
+  await writeFile(join(root, "cfg.json"), JSON.stringify({ color: "#123456" }));
+  const helperV1 = `import { SHARED } from "../shared.ts";\nexport function makeBox(name, color) { return { key: SHARED, name, kind: "mesh", parentId: null, transform: { position: [0,0,0], rotation: [0,0,0,1], scale: [1,1,1] }, placement: { kind: "world" }, visible: true, geometry: { kind: "box", size: [1,1,1] }, material: { kind: "unlit", color, opacity: 1 } }; }\n`;
+  const helperV2 = helperV1.replace('geometry: { kind: "box", size: [1,1,1] }', 'geometry: { kind: "sphere", radius: 0.5 }');
+  await writeFile(join(root, "lib", "helper.ts"), helperV1);
+  await writeFile(join(root, "lib", "fmt.js"), `export function tag(value) { return "T-" + value; }\n`);
+  // Extensionless specifier, a .js member, a .json member, a cycle, and an ambient builtin.
+  await writeFile(join(root, "gen.ts"), `import { createHash } from "node:crypto";\nimport { tag } from "./lib/fmt.js";\nimport { makeBox } from "./lib/helper";\nimport cfg from "./cfg.json";\nexport function generate() { const mark = createHash("sha256").update("ambient").digest("hex").slice(0, 6); return { entities: [makeBox(tag(mark), cfg.color)] }; }\n`);
+
+  const application = operationApplicationContext(root);
+  const first = await executeSpatialSceneCommand(application,
+    generateArgs(["--module", "gen.ts", "--generator-id", "generator_t", "--seed", "1", "--output", "one.json"])) as { sourceSha256: string };
+  const scene = parseSpatialScene(JSON.parse(await readFile(join(root, "one.json"), "utf8")));
+  const generator = scene.generators[0]!;
+  expect(generator.sourceSha256).toBe(first.sourceSha256);
+  expect(generator.closureSha256).not.toBe(generator.sourceSha256);
+  const entity = scene.entities.find(candidate => candidate.origin.kind === "generated")!;
+  expect(entity.name).toMatch(/^T-[a-f0-9]{6}$/u);
+  expect(entity).toMatchObject({ kind: "mesh", geometry: { kind: "box" }, material: { color: "#123456" } });
+
+  // closureSha256 is the canonical-JSON digest of the sorted {relativePath, sha256} manifest.
+  const manifest = await Promise.all(["cfg.json", "gen.ts", "lib/fmt.js", "lib/helper.ts", "shared.ts"]
+    .map(async relativePath => ({ relativePath, sha256: sha256Hex(await readFile(join(root, ...relativePath.split("/")), "utf8")) })));
+  expect(generator.closureSha256).toBe(canonicalJsonSha256(manifest));
+
+  // Editing a dependency changes the retained digest and reruns the new bytes.
+  await writeFile(join(root, "lib", "helper.ts"), helperV2);
+  await executeSpatialSceneCommand(application,
+    generateArgs(["--module", "gen.ts", "--generator-id", "generator_t", "--seed", "1", "--output", "two.json"]));
+  const secondScene = parseSpatialScene(JSON.parse(await readFile(join(root, "two.json"), "utf8")));
+  const second = secondScene.generators[0]!;
+  expect(second.sourceSha256).toBe(generator.sourceSha256);
+  expect(second.closureSha256).not.toBe(generator.closureSha256);
+  expect(secondScene.entities.find(candidate => candidate.origin.kind === "generated")).toMatchObject({ geometry: { kind: "sphere" } });
+}));
+
+test("scene generate rejects closure escapes, symlinks, and invisible forms", async () => await fixture(async root => {
+  const application = operationApplicationContext(root);
+  await mkdir(join(root, "mod", "realdir"), { recursive: true });
+  await writeFile(join(root, "escape.ts"), `export const E = 1;\n`);
+  await writeFile(join(root, "mod", "real.ts"), `export const R = 1;\n`);
+  await writeFile(join(root, "mod", "realdir", "x.ts"), `export const X = 1;\n`);
+  await writeFile(join(root, "mod", "bad.ts"), `const r = require("./real.ts");\nexport const B = r;\n`);
+  await symlink("real.ts", join(root, "mod", "link.ts"));
+  await symlink("realdir", join(root, "mod", "linkdir"), "dir");
+  const tail = `export function generate() { return { entities: [] }; }\n`;
+  const run = (source: string) => writeFile(join(root, "mod", "gen.ts"), source).then(() =>
+    executeSpatialSceneCommand(application, generateArgs(["--module", "mod/gen.ts", "--generator-id", "generator_t", "--output", "out.json"])));
+  await expect(run(`import { E } from "../escape.ts";\n${tail}`)).rejects.toThrow("escapes the generator module directory");
+  await expect(run(`import { E } from "/etc/escape.ts";\n${tail}`)).rejects.toThrow("absolute");
+  await expect(run(`import { E } from "file:///etc/escape.ts";\n${tail}`)).rejects.toThrow("absolute");
+  await expect(run(`import { R } from "./link.ts";\n${tail}`)).rejects.toThrow("symlink");
+  await expect(run(`import { X } from "./linkdir/x.ts";\n${tail}`)).rejects.toThrow("symlink");
+  await expect(run(`const r = require("./real.ts");\n${tail}`)).rejects.toThrow("require()");
+  await expect(run(`import { B } from "./bad.ts";\n${tail}`)).rejects.toThrow("require()");
+  await expect(run(`export async function generate() { await import("./real.ts"); return { entities: [] }; }\n`)).rejects.toThrow("dynamic import()");
+  await expect(run(`import "./data.css";\n${tail}`)).rejects.toThrow(".ts, .js, or .json");
+  await expect(run(`import { R } from "./missing.ts";\n${tail}`)).rejects.toThrow("does not resolve");
+}));
+
+test("scene generate bounds closure file count and total bytes", async () => await fixture(async root => {
+  const application = operationApplicationContext(root);
+  const tail = `export function generate() { return { entities: [] }; }\n`;
+  const imports: string[] = [];
+  for (let index = 0; index < 64; index += 1) {
+    await writeFile(join(root, `dep-${index}.ts`), `export const v${index} = ${index};\n`);
+    imports.push(`import "./dep-${index}.ts";`);
+  }
+  await writeFile(join(root, "gen.ts"), `${imports.join("\n")}\n${tail}`);
+  await expect(executeSpatialSceneCommand(application, generateArgs(["--module", "gen.ts", "--generator-id", "generator_t", "--output", "out.json"])))
+    .rejects.toThrow("exceeds 64 files");
+
+  const pad = `// ${"x".repeat(600_000)}\n`;
+  await writeFile(join(root, "big-a.ts"), `${pad}export const a = 1;\n`);
+  await writeFile(join(root, "big-b.ts"), `${pad}export const b = 1;\n`);
+  await writeFile(join(root, "gen.ts"), `import "./big-a.ts";\nimport "./big-b.ts";\n${tail}`);
+  await expect(executeSpatialSceneCommand(application, generateArgs(["--module", "gen.ts", "--generator-id", "generator_t", "--output", "big.json"])))
+    .rejects.toThrow("total bytes");
 }));
 
 test("scene generate refuses regeneration that orphans a declared override", async () => await fixture(async root => {
