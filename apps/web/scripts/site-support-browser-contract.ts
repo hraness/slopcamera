@@ -208,9 +208,18 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   }
   return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
 }
-const collapseCommand = (value: string) => value.replace(/\s+/gu, " ").trim()
+const releaseVersion = (command: string): string => {
+  const match = /releases\/download\/v(\d+\.\d+\.\d+)\//u.exec(command)
+  assert.ok(match !== null, "Install command must name one canonical release archive"); return match[1]!
+}
+const supportBaselineVersion = releaseVersion(supportBaselineInstallCommand), supportCurrentVersion = releaseVersion(refinementInstallCommand)
+const projectVersionText = (value: string): string => value.replaceAll(`v${supportBaselineVersion}`, `v${supportCurrentVersion}`).replaceAll(`-${supportBaselineVersion}.tgz`, `-${supportCurrentVersion}.tgz`)
+/** The immutable baseline names the older verified archive in its copied
+ * command, release links and install copy; project only those exact version
+ * strings (equal length, so geometry stays paired) onto the current release. */
 export const projectSupportBaselineCommand = (element: ShellElement): ShellElement => ({ ...element,
-  text: element.text.replaceAll(collapseCommand(supportBaselineInstallCommand), collapseCommand(refinementInstallCommand)) })
+  text: projectVersionText(element.text),
+  semantics: Object.fromEntries(Object.entries(element.semantics).map(([key, value]) => [key, typeof value === "string" ? projectVersionText(value) : value])) })
 export function compareSupportCopy(current: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
   assert.equal(current.command, refinementInstallCommand); assert.equal(baseline.command, supportBaselineInstallCommand)
   assert.deepEqual(current.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
