@@ -31,7 +31,27 @@ const identitiesSchema = z.strictObject({ assetId: SpatialAssetIdSchema, collide
   .refine(value => value.assetId !== value.colliderAssetId, "World and collider assets need distinct identities.");
 const provenanceSchema = z.strictObject({ kind: z.enum(["saved", "worldlabs-marble"]), description: z.string().min(1).max(2048), worldId: z.string().min(1).max(256).optional(), receipt: SpatialPayloadSchema.optional() })
   .refine(value => value.kind !== "worldlabs-marble" || (value.worldId !== undefined && value.receipt !== undefined), "Generated Marble provenance requires its exact world ID and retained provider receipt.");
-const importSchema = z.strictObject({ splat: SpatialPayloadSchema, collider: SpatialPayloadSchema.optional(), identities: identitiesSchema, normalization: normalizationSchema, provenance: provenanceSchema })
+// Provider-declared normalization hints (for example a Marble
+// `semantics_metadata` export) are extracted verbatim under `declared` and then
+// mapped into the caller-facing normalization vocabulary under `suggestion`.
+// Both remain advisory: `normalization` stays the only applied normalization.
+export const SpatialWorldSuggestedNormalizationSchema = z.strictObject({
+  provider: z.literal("worldlabs-marble"), schema: z.literal("semantics_metadata"),
+  status: z.literal("unverified-provider-declared"), artifactSha256: SpatialDigestSchema,
+  declared: z.strictObject({
+    metricScaleFactor: z.number().finite().positive().max(1_000_000).nullable().optional(),
+    groundPlaneOffset: z.number().finite().min(-1_000_000).max(1_000_000).nullable().optional(),
+    groundPlaneAxis: z.string().min(1).max(16).nullable().optional(),
+    upAxis: z.string().min(1).max(16).nullable().optional(),
+  }),
+  suggestion: z.strictObject({
+    metersPerUnit: z.number().finite().min(0.000001).max(1_000_000).optional(),
+    sourceUp: z.enum(["x", "y", "z"]).optional(),
+    groundPlane: z.strictObject({ axis: z.enum(["x", "y", "z"]), offset: z.number().finite().min(-1_000_000).max(1_000_000) }).optional(),
+  }),
+});
+export type SpatialWorldSuggestedNormalization = Readonly<z.infer<typeof SpatialWorldSuggestedNormalizationSchema>>;
+const importSchema = z.strictObject({ splat: SpatialPayloadSchema, collider: SpatialPayloadSchema.optional(), providerMetadata: SpatialPayloadSchema.optional(), identities: identitiesSchema, normalization: normalizationSchema, provenance: provenanceSchema })
   .refine(value => (value.collider === undefined) === (value.identities.colliderAssetId === undefined), "Collider bytes and colliderAssetId must be supplied together.")
   .refine(value => value.provenance.kind !== "worldlabs-marble" || value.collider !== undefined, "Generated Marble provenance requires its retained collider.");
 export const SavedSpatialWorldImportInputSchema = z.preprocess(value => createBoundedJsonSnapshot(value, SPATIAL_SPLAT_LIMITS.metadataBytes, "Saved world import", { maximumDepth: 16, maximumValues: 4096 }).value, importSchema);
@@ -41,6 +61,7 @@ export const SpatialWorldImportManifestSchema = z.strictObject({
   splat: z.strictObject({ payload: SpatialPayloadSchema, facts: SpatialSpzFactsSchema }),
   collider: z.strictObject({ payload: SpatialPayloadSchema, role: z.literal("approximate-collider"), validation: z.literal("bounded-glb-structure-only") }).nullable(),
   identities: identitiesSchema, normalization: normalizationSchema, provenance: provenanceSchema,
+  suggestedNormalization: SpatialWorldSuggestedNormalizationSchema.optional(),
   capabilities: z.strictObject({ beauty: z.literal(true), semanticIds: z.literal("authored-wrapper-only"), depth: z.literal("unsupported"), objectId: z.literal("unsupported"), physics: z.enum(["unvalidated", "unavailable"]) }),
 }).refine(value => (value.collider === null) === (value.identities.colliderAssetId === undefined) && value.capabilities.physics === (value.collider === null ? "unavailable" : "unvalidated"), "Collider presence and capability evidence must agree.");
 export type SpatialWorldImportManifest = Readonly<z.infer<typeof SpatialWorldImportManifestSchema>>;

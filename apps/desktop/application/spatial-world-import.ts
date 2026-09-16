@@ -9,7 +9,8 @@ import { SpatialAssetManifestSchema, SpatialEntitySchema } from "../../../src/sp
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { createNodeSpatialDurability } from "../core/spatial-durability";
 import { createNodeBundleFileSystem } from "../core/storage";
-import { SavedSpatialWorldImportInputSchema, SavedSpatialWorldImportOutputSchema, SpatialWorldImportManifestSchema, SPATIAL_SPLAT_LIMITS, type SavedSpatialWorldImportOutput } from "../contracts/spatial-world";
+import { SavedSpatialWorldImportInputSchema, SavedSpatialWorldImportOutputSchema, SpatialWorldImportManifestSchema, SPATIAL_SPLAT_LIMITS, type SavedSpatialWorldImportOutput, type SpatialWorldSuggestedNormalization } from "../contracts/spatial-world";
+import { extractWorldProviderMetadata } from "./spatial-world-metadata";
 import { inspectSpatialSpz } from "./spatial-spz";
 import { WorldLabsProvenanceSchema } from "./spatial-world-provenance";
 
@@ -59,7 +60,8 @@ export async function importSavedSpatialWorld(options: {
 }): Promise<SavedSpatialWorldImportOutput> {
   const input = SavedSpatialWorldImportInputSchema.parse(options.input);
   if (input.provenance.receipt !== undefined && input.provenance.receipt.bytes > SPATIAL_SPLAT_LIMITS.metadataBytes) throw new RangeError("World provenance receipt exceeds one MiB.");
-  const sourceClosureBytes = input.splat.bytes + (input.collider?.bytes ?? 0) + (input.provenance.receipt?.bytes ?? 0);
+  if (input.providerMetadata !== undefined && input.providerMetadata.bytes > SPATIAL_SPLAT_LIMITS.metadataBytes) throw new RangeError("World provider metadata exceeds one MiB.");
+  const sourceClosureBytes = input.splat.bytes + (input.collider?.bytes ?? 0) + (input.provenance.receipt?.bytes ?? 0) + (input.providerMetadata?.bytes ?? 0);
   // Reserve the bounded import manifest as part of the returned asset closure
   // before reading/copying any payload, so a successful import is renderable
   // under the same 256 MiB source-asset ceiling.
@@ -77,6 +79,18 @@ export async function importSavedSpatialWorld(options: {
     const matches = (actual: Artifact, expected: Artifact) => actual.bytes === expected.bytes && actual.sha256 === expected.sha256;
     if (!matches(value.assets.splat, input.splat) || input.collider === undefined || !matches(value.assets.collider, input.collider)
       || (input.provenance.worldId !== undefined && value.world.worldId !== input.provenance.worldId)) throw new RangeError("World provider provenance does not match the retained world and exact SPZ/collider bytes.");
+  }
+  let suggestedNormalization: SpatialWorldSuggestedNormalization | undefined;
+  if (input.providerMetadata !== undefined) {
+    const metadataBytes = await readExact(sourceRoot, input.providerMetadata, options.signal).catch((error: unknown) => {
+      if (options.signal.aborted || error instanceof RangeError) throw error;
+      throw new RangeError("World provider metadata source could not be read as declared.", { cause: error });
+    });
+    let document: unknown;
+    try { document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(metadataBytes)); }
+    catch (error) { throw new RangeError("World provider metadata is not valid UTF-8 JSON.", { cause: error }); }
+    const captured = createBoundedJsonSnapshot(document, 256 * 1024, "World provider metadata", { maximumDepth: 16, maximumValues: 4096 });
+    suggestedNormalization = { ...extractWorldProviderMetadata(captured.value), artifactSha256: input.providerMetadata.sha256 };
   }
   const fs = createNodeBundleFileSystem(destinationRoot), durability = createNodeSpatialDurability(destinationRoot);
   const published: Artifact[] = [];
@@ -102,6 +116,7 @@ export async function importSavedSpatialWorld(options: {
       splat: { payload: splat, facts }, collider: collider === undefined ? null : { payload: collider, role: "approximate-collider", validation: "bounded-glb-structure-only" },
       identities: input.identities, normalization: input.normalization,
       provenance: { ...input.provenance, ...(receipt === undefined ? {} : { receipt }) },
+      ...(suggestedNormalization === undefined ? {} : { suggestedNormalization }),
       capabilities: { beauty: true, semanticIds: "authored-wrapper-only", depth: "unsupported", objectId: "unsupported", physics: collider === undefined ? "unavailable" : "unvalidated" },
     });
     const text = `${canonicalJson(manifest)}\n`, sha256 = createHash("sha256").update(text).digest("hex");
