@@ -1188,7 +1188,7 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.11.1",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.11.2",
       "@hraness/ui": "github:hraness/ui#v0.5.12",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
@@ -1215,7 +1215,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.8.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.11.1"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.11.2"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
