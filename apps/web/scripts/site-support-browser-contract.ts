@@ -120,16 +120,18 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   assert.equal(await link.textContent(), "Support"); assert.equal(await link.getAttribute("target"), null)
   assert.equal(await page.locator("footer form,footer input,footer iframe").count(), 0)
   await link.scrollIntoViewIfNeeded(); await settle(page, scenario.direction)
-  assert.equal(await link.evaluate(node => {
+  const targetEvidence = await link.evaluate(node => {
     const box = node.getBoundingClientRect(), style = getComputedStyle(node), footer = node.closest("footer")!.getBoundingClientRect()
-    if (box.width < 24 || box.height < 24 || style.display === "none" || style.visibility !== "visible" || Number(style.opacity) !== 1
-      || box.left < -.5 || box.right > innerWidth + .5 || box.top < -.5 || box.bottom > innerHeight + .5
-      || box.top < footer.top - .5 || box.bottom > footer.bottom + .5) return false
+    const visible = box.width >= 24 && box.height >= 24 && style.display !== "none" && style.visibility === "visible" && Number(style.opacity) === 1
+      && box.left >= -.5 && box.right <= innerWidth + .5 && box.top >= -.5 && box.bottom <= innerHeight + .5
+      && box.top >= footer.top - .5 && box.bottom <= footer.bottom + .5
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
     const peers = [...document.querySelectorAll(".hraness-site-footer__brand,.hraness-site-footer__links")].map(node => node.getBoundingClientRect())
-    return (hit === node || hit !== null && node.contains(hit)) && peers.every(other =>
-      Math.min(box.right, other.right) - Math.max(box.left, other.left) <= .5 || Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top) <= .5)
-  }), true, `${scenario.name}: support link visible, reachable and not overlapping`)
+    const reachable = hit === node || hit !== null && node.contains(hit)
+    const disjoint = peers.every(other => Math.min(box.right, other.right) - Math.max(box.left, other.left) <= .5 || Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top) <= .5)
+    return { visible, reachable, disjoint, box: box.toJSON(), footer: footer.toJSON(), peers: peers.map(box => box.toJSON()), hit: hit?.tagName, display: style.display, visibility: style.visibility, opacity: style.opacity, viewport: [innerWidth, innerHeight] }
+  })
+  assert.ok(targetEvidence.visible && targetEvidence.reachable && targetEvidence.disjoint, `${scenario.name}: support target ${JSON.stringify(targetEvidence)}`)
   await page.locator(".hraness-site-footer__brand").focus(); await page.keyboard.press("Tab"); await settle(page, scenario.direction)
   assert.equal(await link.evaluate(node => node === document.activeElement && node.matches(":focus-visible")), true)
   const focused = (await measure(page, [selector]))[0]!
