@@ -307,3 +307,22 @@ under `slopcamera-worktrees/proto-*` for reference.
   remaining seam); generator multi-file closure should reuse the source-bundle
   machinery; audit currently re-parses the scene per sample (bounded 64×);
   `apps/desktop/dist/cli` rebuild lands with `check:desktop`.
+- 2026-09-16 — Integration fixes and delivery. The admit lane's
+  `main.ts` cancellation-guard extension touched a tracked `studio` identity
+  line; the reviewed inventory row was re-hashed (`d5e0bd3`). Audit report
+  types switched from `DeepReadonly<z.infer<…>>` to structural interfaces
+  after the recursive mapper added ~15–17 s to every authored-source
+  `code check` typecheck (`c26df21`); schema-parse-to-declared-type
+  assignment at the return site keeps drift compile-time-visible. Desktop CLI
+  dist rebuilt (`4cb8b9b`). Pushed `agentic-scene-authoring`; opened
+  [PR #125](https://github.com/hraness/slopcamera/pull/125).
+- Verification evidence at PR-open: focused suites 111 pass;
+  `typecheck:sdk`/`typecheck:desktop` clean; `lint` 0 errors (16 warnings
+  identical to main); `check:standalone` (1014 files), release-workflows,
+  schema, skill, effect, web — green; package smoke tarball install + help
+  verified, `studio init` step still queued behind unrelated local jobs.
+  Full local `bun run check` could not complete cleanly under sustained host
+  contention (load ~25): the identical 18 subprocess-timeout failures
+  reproduce on unmodified `main`, and every affected suite passes in
+  isolation on this branch. Fresh CI on the PR is the arbiter per
+  CONTRIBUTING.md.
