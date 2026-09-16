@@ -79,8 +79,11 @@ explains workspace placement and durable-run identity; the
 
 Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion can show
 the files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
-prebuilt companion directly and does not install or launch an application bundle.
-Build it explicitly with `cargo build --release --manifest-path desktop/menubar/Cargo.toml`
+companion directly and does not install or launch an application bundle. The
+companion is a thin product binary over the shared
+[desktop-foundation](https://github.com/hraness/desktop-foundation) crate, pinned
+by immutable tag. Build it explicitly with
+`cargo build --release --manifest-path desktop/menubar/Cargo.toml`
 when working from source.
 
 <details>
