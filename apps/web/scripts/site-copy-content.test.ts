@@ -103,7 +103,7 @@ describe("visual studio public copy (pure, process-free)", () => {
     }
     const codes = operations.match(/export const slopcameraOperationCodes = \[([\s\S]*?)\] as const/u)![1]!
     expect([...codes.matchAll(/"([^"]+)"/gu)].map(match => match[1])).toEqual([
-      "slopcamera.diagram.check", "slopcamera.diagram.render", "slopcamera.image.vectorize", "slopcamera.image.generate",
+      "slopcamera.diagram.check", "slopcamera.diagram.render", "slopcamera.image.vectorize", "slopcamera.image.generate", "slopcamera.image.icon",
     ])
     expect(html).toContain("It does not expose every CLI command.")
     expect(readme).toContain("Seven editable")

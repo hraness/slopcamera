@@ -1,19 +1,34 @@
 // @bun
 import {
+  VectorizeDeadline,
+  encodeTracePng,
+  loadRaster,
+  normalizedHexColor,
+  parseHexColor,
+  resolveVectorizeLimits,
+  vectorizeHardLimits,
   vectorizeImage
-} from "./index-zfnddgay.js";
+} from "./index-9ajx7fzb.js";
 import {
+  SlopcameraCloudError,
+  createFixedGatewayFetch,
+  generateSlopcameraImage,
   generateSlopcameraImageFile,
+  resolveSlopcameraGatewayCredential,
+  slopcameraGatewayApiBaseUrl,
   slopcameraMaximumPromptBytes
-} from "./index-r7gdhmsp.js";
+} from "./index-231ernwj.js";
 import {
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";
+import {
+  __require
+} from "./index-z1w83f81.js";
 
 // src/operations.ts
-import { randomUUID } from "crypto";
-import { mkdir, readFile as readFile2, rename, rm, writeFile } from "fs/promises";
-import { dirname, join, resolve } from "path";
+import { randomUUID as randomUUID2 } from "crypto";
+import { mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, writeFile as writeFile2 } from "fs/promises";
+import { dirname as dirname2, join, resolve as resolve2 } from "path";
 
 // src/icons.ts
 var shared = 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
@@ -1923,12 +1938,569 @@ function serializeTldr(spec, config) {
   return `${JSON.stringify({ tldrawFileFormatVersion: 1, schema, records }, null, 2)}
 `;
 }
+
+// src/icon.ts
+import { createHash, randomUUID } from "crypto";
+import { mkdir, rename, rm, writeFile } from "fs/promises";
+import { dirname, resolve } from "path";
+import { z } from "zod";
+var slopcameraIconDefaultInk = "#2474d4";
+var slopcameraIconPanel = "#f7f8fb";
+var slopcameraIconDefaultRounds = 2;
+var slopcameraIconMaximumRounds = 4;
+var slopcameraIconSubjectMaximumBytes = 1024;
+var slopcameraIconCritiqueDefaultModel = "google/gemini-3-flash";
+var slopcameraIconCritiqueTimeoutMs = 120000;
+var iconCritiqueMaximumResponseBytes = 8 * 1024 * 1024;
+var iconPreviewMaximumEdge = 448;
+var iconCoverageAlphaFloor = 24;
+var iconCropAlphaFloor = 16;
+var iconMarginRatio = 0.08;
+var CRITIQUE_SYSTEM = `You are a strict design reviewer for isometric line-art product icons.
+
+Style contract:
+- Orthographic isometric line drawing of the requested subject.
+- Uniform-weight outline strokes in exactly one ink color.
+- No filled areas, shading, gradients, shadows, text, or stray background objects.
+- Clean geometric edges, centered with generous margin, light or transparent background.
+
+Judge the attached rendered icon against the contract and whether it clearly
+depicts the requested subject. Return pass only when the icon is ready to ship.
+Score is an integer from 0 to 100. When it fails, make promptFix a concrete
+image-prompt correction that addresses the listed problems.`;
+function invalidArgument(message) {
+  throw new SlopcameraCloudError("INVALID_ARGUMENT", message);
+}
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isObjectLike(value) {
+  return typeof value === "object" && value !== null || typeof value === "function";
+}
+function validateSubject(value) {
+  if (typeof value !== "string" || value.trim().length === 0 || /[\u0000-\u001f\u007f]/u.test(value) || Buffer.byteLength(value, "utf8") > slopcameraIconSubjectMaximumBytes) {
+    invalidArgument(`Subject must be non-empty text no more than ${slopcameraIconSubjectMaximumBytes} UTF-8 bytes.`);
+  }
+  return value.trim();
+}
+function validateIconModel(value, name) {
+  if (typeof value !== "string" || value.length < 3 || value.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(value)) {
+    invalidArgument(`${name} must be a bounded Vercel AI Gateway provider/model id.`);
+  }
+  return value;
+}
+function validateRounds(value) {
+  const rounds = value ?? slopcameraIconDefaultRounds;
+  if (!Number.isInteger(rounds) || rounds < 1 || rounds > slopcameraIconMaximumRounds) {
+    invalidArgument(`rounds must be an integer from 1 through ${slopcameraIconMaximumRounds}.`);
+  }
+  return rounds;
+}
+function iconPromptFor(subject, options = {}) {
+  const ink = normalizedHexColor(options.ink ?? slopcameraIconDefaultInk);
+  const sections = [
+    `A single minimal isometric line-art illustration of ${subject} for a developer-tool landing page.`,
+    "Style rules: orthographic isometric projection; uniform thin outline strokes; " + `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` + "no fills, no shading, no gradients, no shadows, no text, no extra objects; " + "the subject centered with generous margin; clean geometric edges."
+  ];
+  const feedback = options.feedback?.trim();
+  if (feedback !== undefined && feedback.length > 0) {
+    sections.push(`The previous attempt was rejected. Correct it: ${feedback}`);
+  }
+  return sections.join(`
+
+`);
+}
+function medianChannel(values) {
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+function borderBackground(rgba, width, height) {
+  const thickness = Math.max(1, Math.round(Math.min(width, height) * 0.02));
+  const step = Math.max(1, Math.floor(2 * thickness * (width + height) / 8192));
+  const red = [];
+  const green = [];
+  const blue = [];
+  let sampled = 0;
+  const collect = (x, y) => {
+    if (sampled % step !== 0) {
+      sampled += 1;
+      return;
+    }
+    sampled += 1;
+    const index = (y * width + x) * 4;
+    const alpha = rgba[index + 3];
+    if (alpha < 128)
+      return;
+    red.push(rgba[index]);
+    green.push(rgba[index + 1]);
+    blue.push(rgba[index + 2]);
+  };
+  for (let y = 0;y < height; y += 1) {
+    for (let x = 0;x < width; x += 1) {
+      if (x < thickness || x >= width - thickness || y < thickness || y >= height - thickness) {
+        collect(x, y);
+      }
+    }
+  }
+  if (red.length === 0) {
+    return [252, 252, 252];
+  }
+  return [medianChannel(red), medianChannel(green), medianChannel(blue)];
+}
+function measuredInkColor(rgba, width, height, background) {
+  const total = width * height;
+  const step = Math.max(1, Math.floor(total / 1e6));
+  const bins = new Map;
+  const counts = new Map;
+  for (let pixel = 0;pixel < total; pixel += step) {
+    const index = pixel * 4;
+    if (rgba[index + 3] < 128)
+      continue;
+    const dr = rgba[index] - background[0];
+    const dg = rgba[index + 1] - background[1];
+    const db = rgba[index + 2] - background[2];
+    if (Math.sqrt(dr * dr + dg * dg + db * db) < 44)
+      continue;
+    const key = rgba[index] >> 3 << 10 | rgba[index + 1] >> 3 << 5 | rgba[index + 2] >> 3;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const bucket2 = bins.get(key) ?? [];
+    if (bucket2.length < 4096) {
+      bucket2.push(rgba[index], rgba[index + 1], rgba[index + 2]);
+      bins.set(key, bucket2);
+    }
+  }
+  const dominant = [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0] - right[0])[0];
+  if (dominant === undefined) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The generated icon raster contains no ink strokes.");
+  }
+  const bucket = bins.get(dominant[0]);
+  const red = [];
+  const green = [];
+  const blue = [];
+  for (let index = 0;index + 2 < bucket.length; index += 3) {
+    red.push(bucket[index]);
+    green.push(bucket[index + 1]);
+    blue.push(bucket[index + 2]);
+  }
+  return [medianChannel(red), medianChannel(green), medianChannel(blue)];
+}
+function dropSpeckles(alpha, width, height) {
+  const minimumComponent = Math.max(8, Math.floor(width * height * 0.00004));
+  const seen = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let removed = 0;
+  for (let start = 0;start < alpha.length; start += 1) {
+    if (alpha[start] < iconCoverageAlphaFloor || seen[start] === 1)
+      continue;
+    let head = 0;
+    let tail = 0;
+    queue[tail] = start;
+    tail += 1;
+    seen[start] = 1;
+    const component = [];
+    while (head < tail) {
+      const pixel = queue[head];
+      head += 1;
+      component.push(pixel);
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
+      const neighbors = [
+        x > 0 ? pixel - 1 : -1,
+        x < width - 1 ? pixel + 1 : -1,
+        y > 0 ? pixel - width : -1,
+        y < height - 1 ? pixel + width : -1
+      ];
+      for (const neighbor of neighbors) {
+        if (neighbor >= 0 && seen[neighbor] === 0 && alpha[neighbor] >= iconCoverageAlphaFloor) {
+          seen[neighbor] = 1;
+          queue[tail] = neighbor;
+          tail += 1;
+        }
+      }
+    }
+    if (component.length < minimumComponent) {
+      removed += 1;
+      for (const pixel of component)
+        alpha[pixel] = 0;
+    }
+  }
+  return removed;
+}
+function extractIconLineArt(rgba, width, height, options = {}) {
+  if (rgba.length === 0 || rgba.length % 4 !== 0 || !Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || rgba.length !== width * height * 4) {
+    invalidArgument("Icon line-art extraction requires a nonempty RGBA raster.");
+  }
+  const ink = normalizedHexColor(options.ink ?? slopcameraIconDefaultInk);
+  const [inkRed, inkGreen, inkBlue] = parseHexColor(ink);
+  const background = borderBackground(rgba, width, height);
+  const measured = measuredInkColor(rgba, width, height, background);
+  const axis = [
+    measured[0] - background[0],
+    measured[1] - background[1],
+    measured[2] - background[2]
+  ];
+  let axisLength2 = axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2];
+  let direction = axis;
+  if (axisLength2 < 27) {
+    direction = [-1, -1, -1];
+    axisLength2 = 3;
+  }
+  const alpha = new Uint8Array(width * height);
+  let coverageMass = 0;
+  for (let pixel = 0;pixel < width * height; pixel += 1) {
+    const index = pixel * 4;
+    const sourceAlpha = rgba[index + 3] / 255;
+    const coverage2 = Math.max(0, Math.min(1, ((rgba[index] - background[0]) * direction[0] + (rgba[index + 1] - background[1]) * direction[1] + (rgba[index + 2] - background[2]) * direction[2]) / axisLength2));
+    const value = Math.round(255 * coverage2 * sourceAlpha);
+    alpha[pixel] = value;
+    coverageMass += value;
+  }
+  if (coverageMass === 0) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The generated icon raster contains no ink coverage.");
+  }
+  const removedComponents = dropSpeckles(alpha, width, height);
+  let minimumX = width;
+  let minimumY = height;
+  let maximumX = -1;
+  let maximumY = -1;
+  for (let y = 0;y < height; y += 1) {
+    for (let x = 0;x < width; x += 1) {
+      if (alpha[y * width + x] >= iconCropAlphaFloor) {
+        if (x < minimumX)
+          minimumX = x;
+        if (x > maximumX)
+          maximumX = x;
+        if (y < minimumY)
+          minimumY = y;
+        if (y > maximumY)
+          maximumY = y;
+      }
+    }
+  }
+  if (maximumX < 0) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The generated icon raster contains no ink coverage.");
+  }
+  const margin = Math.round(Math.max(maximumX - minimumX + 1, maximumY - minimumY + 1) * iconMarginRatio);
+  const cropX = Math.max(0, minimumX - margin);
+  const cropY = Math.max(0, minimumY - margin);
+  const cropWidth = Math.min(width, maximumX + 1 + margin) - cropX;
+  const cropHeight = Math.min(height, maximumY + 1 + margin) - cropY;
+  const pixels = new Uint8Array(cropWidth * cropHeight * 4);
+  let coverage = 0;
+  for (let y = 0;y < cropHeight; y += 1) {
+    for (let x = 0;x < cropWidth; x += 1) {
+      const sourceIndex = (cropY + y) * width + cropX + x;
+      const targetIndex = (y * cropWidth + x) * 4;
+      const value = alpha[sourceIndex];
+      coverage += value;
+      pixels[targetIndex] = inkRed;
+      pixels[targetIndex + 1] = inkGreen;
+      pixels[targetIndex + 2] = inkBlue;
+      pixels[targetIndex + 3] = value;
+    }
+  }
+  const toHex = (channel) => channel.toString(16).padStart(2, "0");
+  return {
+    background: `#${background.map(toHex).join("")}`,
+    coverageRatio: coverage / (cropWidth * cropHeight * 255),
+    height: cropHeight,
+    measuredInk: `#${measured.map(toHex).join("")}`,
+    pixels,
+    removedComponents,
+    sourceHeight: height,
+    sourceWidth: width,
+    width: cropWidth
+  };
+}
+var iconCritiqueSchema = z.object({
+  pass: z.boolean(),
+  problems: z.array(z.string()),
+  promptFix: z.string(),
+  score: z.number()
+});
+function boundedText(value, maximum) {
+  return value.replace(/[\u0000-\u001f\u007f]/gu, " ").slice(0, maximum);
+}
+function parseIconCritique(output, resolvedModel) {
+  const parsed = iconCritiqueSchema.safeParse(output);
+  if (!parsed.success) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The icon critique returned an invalid bounded object.");
+  }
+  const score = parsed.data.score;
+  if (!Number.isFinite(score)) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The icon critique returned an invalid score.");
+  }
+  return {
+    pass: parsed.data.pass,
+    problems: parsed.data.problems.slice(0, 8).map((problem) => boundedText(problem, 300)),
+    promptFix: boundedText(parsed.data.promptFix, 2000),
+    resolvedModel,
+    score: Math.max(0, Math.min(100, score))
+  };
+}
+async function loadIconLanguageRuntime() {
+  let aiModule;
+  let gatewayModule;
+  try {
+    [aiModule, gatewayModule] = await Promise.all([
+      import("ai-v7"),
+      import("@ai-sdk/gateway-v4")
+    ]);
+  } catch {
+    throw new SlopcameraCloudError("GENERATION_FAILED", "The Vercel AI Gateway runtime is unavailable.");
+  }
+  if (!isRecord2(aiModule) || !isRecord2(gatewayModule) || typeof aiModule.generateText !== "function" || !isRecord2(aiModule.Output) || typeof aiModule.Output.object !== "function" || typeof gatewayModule.createGateway !== "function") {
+    throw new SlopcameraCloudError("GENERATION_FAILED", "The Vercel AI Gateway runtime is unavailable.");
+  }
+  const createGateway = gatewayModule.createGateway;
+  return {
+    Output: aiModule.Output,
+    createGateway: (settings) => {
+      const provider = createGateway(settings);
+      if (!isObjectLike(provider) || typeof provider.languageModel !== "function") {
+        throw new SlopcameraCloudError("GENERATION_FAILED", "The Vercel AI Gateway runtime is unavailable.");
+      }
+      const languageModel = provider.languageModel;
+      return { languageModel: (id) => languageModel.call(provider, id) };
+    },
+    generateText: aiModule.generateText
+  };
+}
+function disableAiSdkWarningLogging() {
+  globalThis.AI_SDK_LOG_WARNINGS = false;
+}
+function resolvedModelId(value) {
+  const modelId = isRecord2(value) ? value.modelId : undefined;
+  return typeof modelId === "string" && modelId.length > 0 && modelId.length <= 256 ? modelId : null;
+}
+async function critiqueIconRaster(input, dependencies) {
+  const runtime = await (dependencies.loadLanguageRuntime ?? loadIconLanguageRuntime)();
+  const controller = new AbortController;
+  const abort = () => controller.abort(input.signal?.reason);
+  input.signal?.addEventListener("abort", abort, { once: true });
+  if (input.signal?.aborted === true)
+    abort();
+  const timer = setTimeout(() => controller.abort(), slopcameraIconCritiqueTimeoutMs);
+  try {
+    disableAiSdkWarningLogging();
+    const apiKey = resolveSlopcameraGatewayCredential(dependencies.environment).token;
+    const gateway = runtime.createGateway({
+      apiKey,
+      baseURL: slopcameraGatewayApiBaseUrl,
+      fetch: createFixedGatewayFetch({
+        ...dependencies.fetch === undefined ? {} : { fetch: dependencies.fetch },
+        maximumResponseBytes: iconCritiqueMaximumResponseBytes
+      })
+    });
+    const output = runtime.Output.object({
+      description: "One bounded style critique for a rendered isometric line-art icon.",
+      name: "slopcamera_icon_critique",
+      schema: iconCritiqueSchema
+    });
+    const result = await runtime.generateText({
+      abortSignal: controller.signal,
+      maxOutputTokens: 2048,
+      maxRetries: 0,
+      messages: [
+        {
+          content: [
+            {
+              text: `Subject: ${input.subject}
+Ink: ${input.ink}
+` + "Judge this rendered icon against the style contract.",
+              type: "text"
+            },
+            {
+              data: input.png,
+              mediaType: "image/png",
+              type: "file"
+            }
+          ],
+          role: "user"
+        }
+      ],
+      model: gateway.languageModel(input.model),
+      output,
+      providerOptions: {
+        gateway: {
+          disallowPromptTraining: true,
+          tags: ["slopcamera", "icon-critique", "v1"],
+          zeroDataRetention: true
+        }
+      },
+      system: CRITIQUE_SYSTEM,
+      temperature: 0
+    });
+    return parseIconCritique(isRecord2(result) ? result.output : undefined, resolvedModelId(isRecord2(result) ? result.response : undefined));
+  } catch (error) {
+    if (error instanceof SlopcameraCloudError)
+      throw error;
+    throw new SlopcameraCloudError("GENERATION_FAILED", "The icon critique request failed; it was not retried.");
+  } finally {
+    clearTimeout(timer);
+    input.signal?.removeEventListener("abort", abort);
+  }
+}
+async function renderIconPreview(svg) {
+  try {
+    const sharp = (await import("sharp")).default;
+    return Uint8Array.from(await sharp(Buffer.from(svg), {
+      density: 96,
+      failOn: "error",
+      limitInputPixels: vectorizeHardLimits.maxDecodedPixels
+    }).resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
+      fit: "inside"
+    }).flatten({ background: slopcameraIconPanel }).png({ compressionLevel: 9 }).toBuffer());
+  } catch (error) {
+    throw new SlopcameraCloudError("GENERATION_FAILED", "The canonical icon SVG could not be rendered for critique.", { cause: error });
+  }
+}
+async function writeAtomically(path, value) {
+  const absolutePath = resolve(path);
+  await mkdir(dirname(absolutePath), { recursive: true });
+  const temporaryPath = `${absolutePath}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, value, { flag: "wx" });
+    await rename(temporaryPath, absolutePath);
+    return absolutePath;
+  } catch (error) {
+    await rm(temporaryPath, { force: true }).catch(() => {
+      return;
+    });
+    throw new SlopcameraCloudError("OUTPUT_WRITE_FAILED", `Slopcamera could not atomically write ${absolutePath}.`, { cause: error });
+  }
+}
+async function generateSlopcameraIcon(input, dependencies = {}) {
+  const subject = validateSubject(input.subject);
+  if (typeof input.outputPath !== "string" || input.outputPath.length < 1 || input.outputPath.length > 4096 || input.outputPath.includes("\x00") || !input.outputPath.toLowerCase().endsWith(".svg")) {
+    invalidArgument("outputPath must be a bounded local path ending in .svg.");
+  }
+  const model = validateIconModel(input.model ?? "recraft/recraft-v4.1-utility", "model");
+  const rounds = validateRounds(input.rounds);
+  const ink = normalizedHexColor(input.ink ?? slopcameraIconDefaultInk);
+  const critiqueModel = input.critiqueModel === undefined ? slopcameraIconCritiqueDefaultModel : validateIconModel(input.critiqueModel, "critiqueModel");
+  const critiqueEnabled = rounds > 1 || input.critiqueModel !== undefined;
+  const generate = dependencies.generate ?? generateSlopcameraImage;
+  const vectorize = dependencies.vectorize ?? vectorizeImage;
+  const critique = dependencies.critique ?? ((critiqueInput) => critiqueIconRaster(critiqueInput, dependencies));
+  const limits = resolveVectorizeLimits({});
+  const attempts = [];
+  const candidates = [];
+  let feedback;
+  let lastError;
+  for (let round = 1;round <= rounds; round += 1) {
+    if (input.signal?.aborted === true) {
+      throw new SlopcameraCloudError("GENERATION_FAILED", "Icon generation was cancelled.");
+    }
+    const prompt = iconPromptFor(subject, { ink, ...feedback === undefined ? {} : { feedback } });
+    let candidate;
+    let extraction;
+    try {
+      const generated = await generate({
+        model,
+        prompt,
+        ...input.signal === undefined ? {} : { signal: input.signal }
+      }, dependencies);
+      const bytes = Buffer.from(generated.image.base64, "base64");
+      const raster = await loadRaster(Uint8Array.from(bytes), limits, new VectorizeDeadline(limits.maxDurationMs));
+      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, { ink });
+      const png = await encodeTracePng(extraction.pixels, extraction.width, extraction.height);
+      const traced = await vectorize(png, {
+        ...input.inheritedFileDescriptors === undefined ? {} : { inheritedFileDescriptors: input.inheritedFileDescriptors }
+      });
+      candidate = {
+        png,
+        requestId: generated.requestId,
+        svg: traced.svg,
+        vectorize: traced.receipt,
+        warnings: generated.warnings
+      };
+    } catch (error) {
+      lastError = error;
+      attempts.push({
+        requestId: "",
+        round,
+        status: "failed",
+        warnings: []
+      });
+      continue;
+    }
+    let review = null;
+    let critiqueError;
+    if (critiqueEnabled) {
+      try {
+        const preview = await (dependencies.rasterize ?? renderIconPreview)(candidate.svg);
+        review = await critique({
+          ink,
+          model: critiqueModel,
+          png: preview,
+          ...input.signal === undefined ? {} : { signal: input.signal },
+          subject
+        });
+      } catch (error) {
+        critiqueError = error instanceof SlopcameraCloudError ? error.code : "critique-failed";
+        review = null;
+      }
+    }
+    candidates.push({ candidate, critique: review, extraction, round });
+    attempts.push({
+      ...critiqueError === undefined ? {} : { critiqueError },
+      ...review === null ? {} : { critiqueModel: review.resolvedModel ?? critiqueModel },
+      ...review === null ? {} : { pass: review.pass },
+      ...review === null ? {} : { problems: review.problems },
+      requestId: candidate.requestId,
+      round,
+      ...review === null ? {} : { score: review.score },
+      status: "candidate",
+      svgSha256: createHash("sha256").update(candidate.svg).digest("hex"),
+      vectorize: candidate.vectorize,
+      warnings: candidate.warnings
+    });
+    if (review === null || review.pass)
+      break;
+    feedback = [...review.problems, review.promptFix].filter((part) => part.length > 0).join("; ");
+  }
+  if (candidates.length === 0) {
+    if (lastError instanceof Error)
+      throw lastError;
+    throw new SlopcameraCloudError("GENERATION_FAILED", "Every icon generation attempt failed.");
+  }
+  const selected = [...candidates].sort((left, right) => (right.critique?.score ?? -1) - (left.critique?.score ?? -1) || right.round - left.round)[0];
+  const selectedAttempt = attempts.findIndex((attempt) => attempt.round === selected.round && attempt.status === "candidate");
+  if (selectedAttempt >= 0) {
+    attempts[selectedAttempt] = {
+      ...attempts[selectedAttempt],
+      status: "selected"
+    };
+  }
+  const outputPath = await writeAtomically(input.outputPath, selected.candidate.svg);
+  const receipt = {
+    attempts,
+    ink,
+    model,
+    outputPath,
+    receiptVersion: 1,
+    rounds,
+    selectedRound: selected.round,
+    subject,
+    svgSha256: createHash("sha256").update(selected.candidate.svg).digest("hex")
+  };
+  if (input.keepRaster === true) {
+    const rasterPath = input.outputPath.replace(/\.svg$/iu, ".lineart.png");
+    return {
+      ...receipt,
+      rasterPath: await writeAtomically(rasterPath, selected.candidate.png)
+    };
+  }
+  return receipt;
+}
 // src/operations.ts
 var slopcameraOperationCodes = [
   "slopcamera.diagram.check",
   "slopcamera.diagram.render",
   "slopcamera.image.vectorize",
-  "slopcamera.image.generate"
+  "slopcamera.image.generate",
+  "slopcamera.image.icon"
 ];
 
 class SlopcameraOperationError extends Error {
@@ -2071,16 +2643,62 @@ var slopcameraOperationRegistry = deepFreeze([
       authorization: "bearer",
       retry: "never"
     }
+  },
+  {
+    code: "slopcamera.image.icon",
+    title: "Generate line-art icon",
+    description: "Generate one isometric line-art SVG icon: a style-locked Vercel AI Gateway raster normalized to canonical ink-on-transparent pixels, traced locally, and optionally critiqued by a vision model across bounded rounds.",
+    execution: "gateway",
+    authentication: "environment",
+    destructive: true,
+    idempotent: false,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["subject", "outputPath"],
+      properties: {
+        subject: {
+          type: "string",
+          minLength: 1,
+          maxLength: slopcameraIconSubjectMaximumBytes
+        },
+        outputPath: pathSchema,
+        model: modelSchema,
+        critiqueModel: modelSchema,
+        ink: {
+          type: "string",
+          pattern: "^#[a-fA-F0-9]{3}(?:[a-fA-F0-9]{3})?$"
+        },
+        rounds: {
+          type: "integer",
+          minimum: 1,
+          maximum: slopcameraIconMaximumRounds
+        },
+        keepRaster: { type: "boolean" }
+      }
+    },
+    resources: [
+      { resource: "cpu", amount: 1 },
+      { resource: "local-io", amount: 1 },
+      { resource: "network", amount: 1 },
+      { resource: "paid-call", amount: 1 }
+    ],
+    transport: {
+      method: "POST",
+      authority: "https://ai-gateway.vercel.sh/v4/ai",
+      authorization: "bearer",
+      retry: "never"
+    }
   }
 ]);
 function operationFailure(message) {
   throw new SlopcameraOperationError("INVALID_OPERATION_INPUT", message);
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function record(value, allowedKeys) {
-  if (!isRecord2(value))
+  if (!isRecord3(value))
     operationFailure("Operation input must be an object.");
   const unknown = Object.keys(value).filter((key) => !allowedKeys.includes(key));
   if (unknown.length > 0) {
@@ -2161,6 +2779,49 @@ function parseGenerate(value) {
     outputPath
   };
 }
+function parseIcon(value) {
+  const input = record(value, [
+    "subject",
+    "outputPath",
+    "model",
+    "critiqueModel",
+    "ink",
+    "rounds",
+    "keepRaster"
+  ]);
+  if (typeof input.subject !== "string" || input.subject.trim().length < 1 || /[\u0000-\u001f\u007f]/u.test(input.subject) || Buffer.byteLength(input.subject, "utf8") > slopcameraIconSubjectMaximumBytes) {
+    operationFailure(`subject must be non-empty and no more than ${slopcameraIconSubjectMaximumBytes} UTF-8 bytes.`);
+  }
+  const outputPath = pathValue(input.outputPath, "outputPath");
+  if (!outputPath.toLowerCase().endsWith(".svg")) {
+    operationFailure("outputPath must end in .svg.");
+  }
+  for (const name of ["model", "critiqueModel"]) {
+    const model = input[name];
+    if (model !== undefined && (typeof model !== "string" || model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model))) {
+      operationFailure(`${name} must be a bounded Vercel AI Gateway provider/model id.`);
+    }
+  }
+  if (input.ink !== undefined && (typeof input.ink !== "string" || !/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu.test(input.ink))) {
+    operationFailure("ink must be a #rgb or #rrggbb color.");
+  }
+  const rounds = input.rounds;
+  if (rounds !== undefined && (!Number.isInteger(rounds) || rounds < 1 || rounds > slopcameraIconMaximumRounds)) {
+    operationFailure(`rounds must be an integer from 1 through ${slopcameraIconMaximumRounds}.`);
+  }
+  if (input.keepRaster !== undefined && typeof input.keepRaster !== "boolean") {
+    operationFailure("keepRaster must be a boolean.");
+  }
+  return {
+    subject: input.subject,
+    outputPath,
+    ...input.model === undefined ? {} : { model: input.model },
+    ...input.critiqueModel === undefined ? {} : { critiqueModel: input.critiqueModel },
+    ...input.ink === undefined ? {} : { ink: input.ink },
+    ...rounds === undefined ? {} : { rounds },
+    ...input.keepRaster === undefined ? {} : { keepRaster: input.keepRaster }
+  };
+}
 function parseSlopcameraOperationInput(code, input) {
   switch (code) {
     case "slopcamera.diagram.check":
@@ -2171,6 +2832,8 @@ function parseSlopcameraOperationInput(code, input) {
       return parseVectorize(input);
     case "slopcamera.image.generate":
       return parseGenerate(input);
+    case "slopcamera.image.icon":
+      return parseIcon(input);
     default:
       throw new SlopcameraOperationError("INVALID_OPERATION", "Unknown Slopcamera operation code.");
   }
@@ -2228,7 +2891,7 @@ var operationBuiltInConfig = Object.freeze({
   icons: builtInIcons
 });
 async function readOperationDiagram(path) {
-  const absolutePath = resolve(path);
+  const absolutePath = resolve2(path);
   let value;
   try {
     value = JSON.parse(await readFile2(absolutePath, "utf8"));
@@ -2244,12 +2907,12 @@ async function readOperationDiagram(path) {
   return { absolutePath, spec };
 }
 async function atomicOperationWrite(path, value) {
-  const temporaryPath = join(dirname(path), `.${randomUUID()}.slopcamera-operation.tmp`);
+  const temporaryPath = join(dirname2(path), `.${randomUUID2()}.slopcamera-operation.tmp`);
   try {
-    await writeFile(temporaryPath, value, { flag: "wx" });
-    await rename(temporaryPath, path);
+    await writeFile2(temporaryPath, value, { flag: "wx" });
+    await rename2(temporaryPath, path);
   } finally {
-    await rm(temporaryPath, { force: true }).catch(() => {
+    await rm2(temporaryPath, { force: true }).catch(() => {
       return;
     });
   }
@@ -2263,7 +2926,7 @@ async function checkOperationDiagram(path) {
 }
 async function renderOperationDiagram(input) {
   const { absolutePath, spec } = await readOperationDiagram(input.path);
-  const outputDirectory = resolve(input.outDirectory ?? dirname(absolutePath));
+  const outputDirectory = resolve2(input.outDirectory ?? dirname2(absolutePath));
   const scale = input.scale ?? 2;
   const [light, dark] = await Promise.all([
     renderSvg(spec, "light", operationBuiltInConfig),
@@ -2281,7 +2944,7 @@ async function renderOperationDiagram(input) {
     lightPng: join(outputDirectory, `${spec.name}.light.png`),
     darkPng: join(outputDirectory, `${spec.name}.dark.png`)
   };
-  await mkdir(outputDirectory, { recursive: true });
+  await mkdir2(outputDirectory, { recursive: true });
   await Promise.all([
     atomicOperationWrite(artifacts.tldr, serializeTldr(spec, operationBuiltInConfig)),
     atomicOperationWrite(artifacts.lightSvg, light.svg),
@@ -2332,6 +2995,16 @@ async function executeSlopcameraOperationUncoordinated(code, value, dependencies
         ...dependencies.signal === undefined ? {} : { signal: dependencies.signal }
       }, dependencies);
     }
+    case "slopcamera.image.icon": {
+      const options = input;
+      return await generateSlopcameraIcon({
+        ...options,
+        ...dependencies.signal === undefined ? {} : { signal: dependencies.signal },
+        ...dependencies.inheritedFileDescriptors === undefined ? {} : {
+          inheritedFileDescriptors: dependencies.inheritedFileDescriptors
+        }
+      }, dependencies);
+    }
     default:
       throw new SlopcameraOperationError("INVALID_OPERATION", "Unknown Slopcamera operation code.");
   }
@@ -2360,4 +3033,4 @@ async function executeSlopcameraOperation(code, value, dependencies = {}) {
   return await withSlopcameraOperationHostAdmission(code, async (lease) => await executeSlopcameraOperationUncoordinated(code, input, operationDependenciesWithLease(dependencies, lease)), dependencies);
 }
 
-export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };
+export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraIconDefaultInk, slopcameraIconPanel, slopcameraIconDefaultRounds, slopcameraIconMaximumRounds, slopcameraIconSubjectMaximumBytes, slopcameraIconCritiqueDefaultModel, slopcameraIconCritiqueTimeoutMs, iconPromptFor, extractIconLineArt, critiqueIconRaster, generateSlopcameraIcon, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };

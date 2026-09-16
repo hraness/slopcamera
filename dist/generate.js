@@ -3,13 +3,14 @@ import {
   createFixedGatewayFetch,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  resolveSlopcameraGatewayCredential,
   slopcameraGatewayApiBaseUrl,
   slopcameraGatewayCredentialStatus,
   slopcameraImageModels,
   slopcameraMaximumPromptBytes,
   slopcameraMaximumRawImageBytes,
   slopcameraResponseMediaTypes
-} from "./index-r7gdhmsp.js";
+} from "./index-231ernwj.js";
 import"./index-z1w83f81.js";
 export {
   slopcameraResponseMediaTypes,
@@ -18,6 +19,7 @@ export {
   slopcameraImageModels,
   slopcameraGatewayCredentialStatus,
   slopcameraGatewayApiBaseUrl,
+  resolveSlopcameraGatewayCredential,
   generateSlopcameraImageFile,
   generateSlopcameraImage,
   createFixedGatewayFetch
