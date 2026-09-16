@@ -52,3 +52,5 @@ Do not automatically repeat an ambiguous paid call. Zero client retries do not p
 For several shots, accepted takes, endpoint continuity and one retained budget, use [short-video directing](../directing-video.md) on a compatible current-source CLI. Its private reference-hosting adapter is separate from ordinary URL inputs; Blob charges remain outside the model estimate.
 
 For one explicitly named output file, the portable lane is `slopcamera image generate '<prompt>' --output image.webp`. That lane has its own bounded model contract and does not expose the full content-addressed `ai` grammar. Vectorization is a separate local operation and requires no Gateway credential.
+
+For a scalable isometric line-art icon, `slopcamera image icon '<subject>' --output icon.svg` chains the two: one style-locked Gateway raster is normalized to canonical ink-on-transparent pixels, traced by the local vectorizer, and — unless `--rounds 1` — scored by a vision model whose prompt fix drives the next attempt. The SVG is ink-only with a transparent background; `--ink` recolors the strokes and `--keep-raster` retains the intermediate line-art PNG.

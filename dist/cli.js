@@ -6,28 +6,30 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-7131pg1c.js";
+} from "./index-av1dvk2n.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
 import"./index-8txs6fkn.js";
-import"./index-fava6pge.js";
+import"./index-gwq5jc3q.js";
 import {
   executeSlopcameraOperation,
+  generateSlopcameraIcon,
   isSlopcameraOperationCode,
   searchSlopcameraOperations,
+  slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-h1k0fnjq.js";
+} from "./index-rqcqb1h8.js";
 import {
   vectorizeImage
-} from "./index-zfnddgay.js";
+} from "./index-9ajx7fzb.js";
 import {
   generateSlopcameraImageFile,
   slopcameraGatewayCredentialStatus,
   slopcameraImageModels
-} from "./index-r7gdhmsp.js";
+} from "./index-231ernwj.js";
 import"./index-sh6xbav6.js";
 import {
   __require
@@ -99,6 +101,9 @@ Usage:
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
+  slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
+    [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
+    [--keep-raster] [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -126,6 +131,12 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- \u2026\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+Icon produces isometric line-art SVG: a style-locked Gateway raster is
+normalized to canonical ink-on-transparent pixels, traced by the local
+vectorizer, and (when --rounds exceeds 1) critiqued by a vision model whose
+feedback revises the prompt for the next attempt. Only Slopcamera's own
+generated output is uploaded for critique \u2014 never user media.
 
 Optional support: after useful work, agents can read slopcamera support protocol --json.
 Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
@@ -245,10 +256,10 @@ function canonicalArguments(args) {
     throw new Error("Use slopcamera diagram init, check, or render");
   }
   if (surface === "image") {
-    if (subcommand === "vectorize" || subcommand === "generate") {
+    if (subcommand === "vectorize" || subcommand === "generate" || subcommand === "icon") {
       return [subcommand, ...rest];
     }
-    throw new Error("Use slopcamera image vectorize or generate");
+    throw new Error("Use slopcamera image vectorize, generate, or icon");
   }
   if (surface === "init" || surface === "check" || surface === "render" || surface === "vectorize" || surface === "generate") {
     throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.
@@ -363,6 +374,53 @@ async function main(args, dependencies = {}) {
       (dependencies.log ?? console.log)(`Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})`);
     }
     reportUsefulResult(dependencies.onUsefulResult);
+    return;
+  }
+  if (command === "icon") {
+    const parsed = parseArguments(rest, new Set(["model", "output", "ink", "rounds", "critique-model"]));
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "keep-raster");
+    if (unknownFlags.length > 0) {
+      throw new Error(`Unknown icon option: --${unknownFlags[0]}`);
+    }
+    if (parsed.positionals.length !== 1) {
+      throw new Error("slopcamera image icon accepts exactly one subject");
+    }
+    const output = requiredOption(parsed, "output");
+    if (!output.toLowerCase().endsWith(".svg")) {
+      throw new Error("--output must end in .svg");
+    }
+    const model = parsed.options.model ?? slopcameraImageModels[1];
+    if (model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)) {
+      throw new Error("--model must be a bounded Vercel AI Gateway provider/model id");
+    }
+    const critiqueModel = parsed.options["critique-model"];
+    if (critiqueModel !== undefined && (critiqueModel.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(critiqueModel))) {
+      throw new Error("--critique-model must be a bounded Vercel AI Gateway provider/model id");
+    }
+    const ink = parsed.options.ink;
+    if (ink !== undefined && !/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu.test(ink)) {
+      throw new Error("--ink must be a #rgb or #rrggbb color");
+    }
+    const rounds = parsePositiveInteger(parsed.options.rounds, "rounds");
+    if (rounds !== undefined && rounds > slopcameraIconMaximumRounds) {
+      throw new Error(`--rounds must be at most ${slopcameraIconMaximumRounds}`);
+    }
+    const result = await withSlopcameraOperationHostAdmission("slopcamera.image.icon", async (lease) => await (dependencies.icon ?? generateSlopcameraIcon)({
+      keepRaster: parsed.flags.has("keep-raster"),
+      model,
+      outputPath: output,
+      subject: requiredPositional(parsed, 0, "subject"),
+      inheritedFileDescriptors: [lease.inheritedFileDescriptor],
+      ...critiqueModel === undefined ? {} : { critiqueModel },
+      ...ink === undefined ? {} : { ink },
+      ...rounds === undefined ? {} : { rounds }
+    }), hostAdmissionOptions(dependencies));
+    if (parsed.flags.has("json")) {
+      (dependencies.log ?? console.log)(JSON.stringify(result, null, 2));
+    } else {
+      const scored = result.attempts.map((attempt) => attempt.score === undefined ? `#${attempt.round}` : `#${attempt.round}=${attempt.score}`).join(" ");
+      (dependencies.log ?? console.log)(`Icon ${result.svgSha256.slice(0, 12)} round ${result.selectedRound}/${result.attempts.length} (${scored}): ${result.outputPath}`);
+    }
     return;
   }
   if (command === "code") {

@@ -70,6 +70,7 @@ describe("Slopcamera CLI", () => {
       "slopcamera diagram render",
       "slopcamera image vectorize",
       "slopcamera image generate",
+      "slopcamera image icon",
       "slopcamera doctor",
       "slopcamera code search",
       "slopcamera code execute",
@@ -221,6 +222,68 @@ describe("Slopcamera CLI", () => {
     await expect(
       runSlopcameraCliInProcess(["vectorize", "source.png", "--output", "source.svg"]),
     ).rejects.toThrow("flat `vectorize` command moved")
+  })
+
+  test("routes isometric icon generation through the registered operation", async () => {
+    const output: string[] = []
+    const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+    await runSlopcameraCliInProcess(
+      [
+        "image",
+        "icon",
+        "a paper airplane",
+        "--output",
+        "plane.svg",
+        "--ink",
+        "#2474d4",
+        "--rounds",
+        "2",
+        "--json",
+      ],
+      {
+        hostResourceCoordinator: recordingCoordinator(admission, 91),
+        icon: async (input) => {
+          expect(input).toMatchObject({
+            ink: "#2474d4",
+            outputPath: "plane.svg",
+            rounds: 2,
+            subject: "a paper airplane",
+            inheritedFileDescriptors: [91],
+          })
+          return {
+            attempts: [
+              {
+                pass: true,
+                requestId: "req_one",
+                round: 1,
+                score: 91,
+                status: "selected",
+                warnings: [],
+              },
+            ],
+            ink: "#2474d4",
+            model: "recraft/recraft-v4.1-utility",
+            outputPath: "/workspace/plane.svg",
+            receiptVersion: 1,
+            rounds: 2,
+            selectedRound: 1,
+            subject: "a paper airplane",
+            svgSha256: "3".repeat(64),
+          }
+        },
+        log: (line) => output.push(line),
+      },
+    )
+    expect(admission.claims).toEqual([[
+      { resource: "cpu", amount: 1 },
+      { resource: "local-io", amount: 1 },
+      { resource: "network", amount: 1 },
+      { resource: "paid-call", amount: 1 },
+    ]])
+    expect(JSON.parse(output.join("\n"))).toMatchObject({
+      outputPath: "/workspace/plane.svg",
+      selectedRound: 1,
+    })
   })
 
   test("executes exact typed JSON without loading workspace code", async () => {

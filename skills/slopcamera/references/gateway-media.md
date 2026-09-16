@@ -125,6 +125,8 @@ Use [directing video](directing-video.md) for budgeted takes, accepted predecess
 
 The small portable `slopcamera image generate '<prompt>' --output image.webp` command defaults to `recraft/recraft-v4.1-utility` and admits PNG/JPEG/WebP output. It is distinct from the local `ai` catalog workflow. Preserve literal prompts when requested, keep its output inside the intended workspace and never automatically retry a failed paid call.
 
+For isometric line-art SVG icons, `slopcamera image icon '<subject>' --output icon.svg` is the canned pipeline: one style-locked Gateway raster is normalized to canonical ink-on-transparent pixels and traced locally. `--rounds 2` (the default) adds a vision-model critique that revises the prompt between attempts; `--rounds 1` is a single paid generation with no critique call. `--ink` overrides the stroke color and `--keep-raster` retains the normalized line-art PNG beside the SVG.
+
 ## Style recipes
 
 For the rubber-stamp travel field-note layout (photograph left, small hand-stamped

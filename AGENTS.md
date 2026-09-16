@@ -35,7 +35,7 @@
 - Freeze shared interfaces before parallel lanes begin. Give one integration owner manifests, lockfiles, generated registries, and other convergence files, then let consumers upgrade immutable releases independently.
 - Keep mandatory edit-time rules in the closest `AGENTS.md`, current procedures in `docs/`, executable contracts in types, schemas, and tests, and rationale, evidence, synthesis, and plans in `kb/`. KB lanes run `bun run kb:check:lane`; the integrator performs one refresh and `bun run kb:check`.
 - Keep `@hraness/slopcamera` at the repository root. The root package owns both the portable SDK and canonical `slopcamera` binary built from `apps/desktop/cli/main.ts`.
-- Keep canonical commands namespaced as `slopcamera diagram init|check|render`, `slopcamera image generate|vectorize`, and the `code`, `mcp`, `canvas`, `skill`, and `doctor` surfaces.
+- Keep canonical commands namespaced as `slopcamera diagram init|check|render`, `slopcamera image generate|vectorize|icon`, and the `code`, `mcp`, `canvas`, `skill`, and `doctor` surfaces.
 - Keep local vectorization authentication-free and network-silent. Gateway generation reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`, never persists credentials, pins the Gateway origin, bounds responses, and sets `maxRetries: 0`.
 - Keep `/artifacts/`, `.env`, and `.env.*` ignored. Recordings, imported media, private project metadata, Gateway tokens, and provider options must never enter Git or a package artifact.
 - Treat `vercel env run -- <command>` as the ergonomic local Vercel path. Never shell out to infer or scrape a token from the Vercel CLI.

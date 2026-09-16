@@ -61,552 +61,11 @@ class VectorizeDeadline {
   }
 }
 
-// src/vectorize/command.ts
-import { AsyncLocalStorage } from "async_hooks";
+// src/vectorize/pixels.ts
 import { constants } from "fs";
-import {
-  lstat,
-  mkdtemp,
-  open,
-  rmdir,
-  unlink
-} from "fs/promises";
-import { join } from "path";
-
-// src/process-environment.ts
-var gatewayCredentialNames = new Set([
-  "AI_GATEWAY_API_KEY",
-  "VERCEL_OIDC_TOKEN"
-]);
-function nonGatewayChildEnvironment(source = process.env) {
-  const environment = { ...source };
-  for (const name of Object.keys(environment)) {
-    if (gatewayCredentialNames.has(name.toLocaleUpperCase("en-US"))) {
-      delete environment[name];
-    }
-  }
-  return environment;
-}
-
-// src/vectorize/command.ts
-var MAX_COMMAND_OUTPUT_BYTES = 64 * 1024;
-var PRIMARY_OUTPUT_READ_BYTES = 64 * 1024;
-var PRIMARY_OUTPUT_POLL_MS = 2;
-var PRIMARY_OUTPUT_EXIT_EMPTY_POLLS = 2;
-var TERMINATION_GRACE_MS = 50;
-var HARD_KILL_WAIT_MS = 500;
-var MAX_INHERITED_FILE_DESCRIPTORS = 16;
-var timeoutMarker = Symbol("bounded-command-timeout");
-var noCommandFailure = Symbol("no-command-failure");
-var activePosixProcessGroups = new Set;
-var workerTerminationForwardingInstalled = false;
-var inheritedCommandFileDescriptors = new AsyncLocalStorage;
-function normalizedInheritedFileDescriptors(value) {
-  const descriptors = value ?? [];
-  if (descriptors.length > MAX_INHERITED_FILE_DESCRIPTORS || descriptors.some((descriptor, index) => !Number.isSafeInteger(descriptor) || descriptor < 0 || descriptor > 2147483647 || descriptors.indexOf(descriptor) !== index)) {
-    throw new VectorizeError("invalid_input", "Inherited vectorizer descriptors must be unique bounded integers.");
-  }
-  return Object.freeze([...descriptors]);
-}
-async function withInheritedCommandFileDescriptors(descriptors, callback) {
-  const normalized = normalizedInheritedFileDescriptors(descriptors);
-  return await inheritedCommandFileDescriptors.run(normalized, async () => await callback());
-}
-function forwardVectorizeWorkerTermination() {
-  if (process.platform === "win32" || workerTerminationForwardingInstalled) {
-    return;
-  }
-  workerTerminationForwardingInstalled = true;
-  const signals = [
-    ["SIGHUP", 129],
-    ["SIGINT", 130],
-    ["SIGTERM", 143]
-  ];
-  for (const [signal, exitCode] of signals) {
-    process.once(signal, () => {
-      for (const pid of activePosixProcessGroups) {
-        safelyKillPosixProcessGroupByPid(pid, "SIGKILL");
-      }
-      process.exit(exitCode);
-    });
-  }
-}
-async function runBoundedCommand(command, timeoutMs, failureCode, options = {}) {
-  return runBoundedCommandInternal(command, timeoutMs, failureCode, options);
-}
-async function runBoundedPathOutputCommand(commandForOutput, timeoutMs, failureCode, options) {
-  if (process.platform === "win32") {
-    throw new VectorizeError("tool_platform", "Bounded pathname output is unavailable on Windows.", { platform: process.platform });
-  }
-  assertPositiveLimit(options.maxOutputBytes, "The command primary-output limit must be positive.");
-  if (timeoutMs < 1) {
-    throw new VectorizeError("timeout", "VTracer exceeded the conversion time limit.");
-  }
-  const startedAt = performance.now();
-  let anchorHandle;
-  let directoryHandle;
-  let outputDirectory;
-  let readerHandle;
-  let result;
-  let failure = noCommandFailure;
-  try {
-    outputDirectory = await mkdtemp(join(options.temporaryRoot, "slopcamera-command-output-"));
-    directoryHandle = await open(outputDirectory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    await assertOpenedPrivateDirectory(outputDirectory, directoryHandle);
-    const outputPath = join(outputDirectory, "output.svg");
-    await createPrivateFifo(outputPath, remainingCommandTime(startedAt, timeoutMs), failureCode);
-    anchorHandle = await open(outputPath, constants.O_RDWR | constants.O_NONBLOCK | constants.O_NOFOLLOW);
-    readerHandle = await open(outputPath, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
-    await assertOpenedPrivateFifo(outputPath, anchorHandle, readerHandle);
-    await directoryHandle.chmod(320);
-    const commandResult = await runBoundedCommandInternal(commandForOutput(outputPath), remainingCommandTime(startedAt, timeoutMs), failureCode, options, {
-      handle: readerHandle,
-      maximumBytes: options.maxOutputBytes
-    });
-    if (commandResult.primaryOutput === undefined) {
-      throw new VectorizeError(failureCode, "VTracer did not expose its bounded primary output.");
-    }
-    result = {
-      output: commandResult.primaryOutput,
-      stderr: commandResult.stderr,
-      stdout: commandResult.stdout
-    };
-  } catch (error) {
-    failure = error instanceof VectorizeError ? error : executionError(failureCode, error);
-  }
-  const cleanupError = await removePrimaryOutputEndpoint(outputDirectory, outputDirectory === undefined ? undefined : join(outputDirectory, "output.svg"), readerHandle, anchorHandle, directoryHandle);
-  if (failure !== noCommandFailure) {
-    if (cleanupError === undefined)
-      throw failure;
-    throw new VectorizeError(failure instanceof VectorizeError ? failure.code : failureCode, `${failure instanceof Error ? failure.message : String(failure)} The temporary primary-output endpoint also could not be removed.`, {
-      ...failure instanceof VectorizeError ? failure.details : {},
-      cleanup: String(cleanupError)
-    }, { cause: failure instanceof Error ? failure : undefined });
-  }
-  if (cleanupError !== undefined) {
-    throw new VectorizeError(failureCode, "The temporary primary-output endpoint could not be removed.", { cleanup: String(cleanupError) }, { cause: cleanupError instanceof Error ? cleanupError : undefined });
-  }
-  if (result === undefined) {
-    throw new VectorizeError(failureCode, "The bounded command completed without a result.");
-  }
-  return result;
-}
-async function runBoundedCommandInternal(command, timeoutMs, failureCode, options, primaryOutput) {
-  if (command.length === 0) {
-    throw new VectorizeError("invalid_input", "A bounded command requires a command.");
-  }
-  if (timeoutMs < 1) {
-    throw new VectorizeError("timeout", "VTracer exceeded the conversion time limit.");
-  }
-  const maxStdoutBytes = options.maxStdoutBytes ?? MAX_COMMAND_OUTPUT_BYTES;
-  assertPositiveLimit(maxStdoutBytes, "The command stdout limit must be positive.");
-  const inheritedDescriptors = normalizedInheritedFileDescriptors(options.inheritedFileDescriptors ?? inheritedCommandFileDescriptors.getStore());
-  let child;
-  const ownsProcessGroup = process.platform !== "win32";
-  try {
-    child = Bun.spawn([...command], {
-      detached: ownsProcessGroup,
-      env: nonGatewayChildEnvironment(),
-      stdio: [
-        options.stdin ?? "ignore",
-        "pipe",
-        "pipe",
-        ...inheritedDescriptors
-      ],
-      windowsHide: true
-    });
-  } catch (error) {
-    throw executionError(failureCode, error);
-  }
-  if (process.platform !== "win32") {
-    activePosixProcessGroups.add(child.pid);
-  }
-  const streamAbort = new AbortController;
-  let childHasExited = false;
-  const childExitTask = child.exited.then((exitCode) => {
-    childHasExited = true;
-    if (ownsProcessGroup && process.platform !== "win32") {
-      safelyKillPosixProcessGroup(child, "SIGKILL");
-    }
-    return exitCode;
-  });
-  const stdoutTask = readBoundedText(child.stdout, maxStdoutBytes, streamAbort.signal, "VTracer emitted too much primary output.");
-  const stderrTask = readBoundedText(child.stderr, MAX_COMMAND_OUTPUT_BYTES, streamAbort.signal, "VTracer emitted too much diagnostic output.");
-  const primaryOutputTask = primaryOutput === undefined ? Promise.resolve(undefined) : readBoundedFifo(primaryOutput.handle, primaryOutput.maximumBytes, streamAbort.signal, () => childHasExited);
-  const executionTask = Promise.all([
-    childExitTask,
-    stdoutTask,
-    stderrTask,
-    primaryOutputTask
-  ]).then(([exitCode, stdout, stderr, boundedPrimaryOutput]) => {
-    if (exitCode !== 0) {
-      throw new VectorizeError(failureCode, [
-        `Command failed (${exitCode}): ${command[0] ?? "unknown"}`,
-        stderr.trim()
-      ].filter(Boolean).join(`
-`), { exitCode });
-    }
-    return boundedPrimaryOutput === undefined ? { stderr, stdout } : { primaryOutput: boundedPrimaryOutput, stderr, stdout };
-  });
-  let timer;
-  const timeoutTask = new Promise((_resolve, reject) => {
-    timer = setTimeout(() => reject(timeoutMarker), timeoutMs);
-  });
-  try {
-    return await Promise.race([executionTask, timeoutTask]);
-  } catch (error) {
-    let cleanupError;
-    try {
-      await terminateAndWait(child, ownsProcessGroup);
-    } catch (caught) {
-      cleanupError = caught;
-    } finally {
-      streamAbort.abort();
-      await settlesWithin(Promise.allSettled([stdoutTask, stderrTask, primaryOutputTask]), HARD_KILL_WAIT_MS);
-    }
-    if (error === timeoutMarker) {
-      throw new VectorizeError("timeout", cleanupError === undefined ? "VTracer exceeded the conversion time limit." : "VTracer exceeded the conversion time limit and did not terminate cleanly.", cleanupError === undefined ? {} : { cleanup: String(cleanupError) });
-    }
-    if (error instanceof VectorizeError)
-      throw error;
-    if (cleanupError instanceof VectorizeError)
-      throw cleanupError;
-    throw executionError(failureCode, error);
-  } finally {
-    if (timer !== undefined)
-      clearTimeout(timer);
-    activePosixProcessGroups.delete(child.pid);
-  }
-}
-function assertPositiveLimit(value, message) {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new VectorizeError("invalid_input", message);
-  }
-}
-function remainingCommandTime(startedAt, timeoutMs) {
-  return Math.floor(timeoutMs - (performance.now() - startedAt));
-}
-async function createPrivateFifo(path, timeoutMs, failureCode) {
-  await runBoundedCommandInternal(["mkfifo", "-m", "600", path], timeoutMs, failureCode, {});
-}
-async function assertOpenedPrivateDirectory(path, directory) {
-  const [pathMetadata, openedMetadata] = await Promise.all([
-    lstat(path),
-    directory.stat()
-  ]);
-  if (!pathMetadata.isDirectory() || !openedMetadata.isDirectory() || pathMetadata.dev !== openedMetadata.dev || pathMetadata.ino !== openedMetadata.ino) {
-    throw new VectorizeError("trace_failed", "The bounded primary-output directory changed during setup.");
-  }
-}
-async function assertOpenedPrivateFifo(path, anchor, reader) {
-  const [pathMetadata, anchorMetadata, readerMetadata] = await Promise.all([
-    lstat(path),
-    anchor.stat(),
-    reader.stat()
-  ]);
-  if (!pathMetadata.isFIFO() || !anchorMetadata.isFIFO() || !readerMetadata.isFIFO() || pathMetadata.dev !== anchorMetadata.dev || pathMetadata.ino !== anchorMetadata.ino || anchorMetadata.dev !== readerMetadata.dev || anchorMetadata.ino !== readerMetadata.ino) {
-    throw new VectorizeError("trace_failed", "The bounded primary-output endpoint changed during setup.");
-  }
-}
-async function removePrimaryOutputEndpoint(directoryPath, path, reader, anchor, directoryHandle) {
-  let cleanupError;
-  if (directoryPath !== undefined && directoryHandle === undefined) {
-    try {
-      await rmdir(directoryPath);
-    } catch (error) {
-      cleanupError ??= error;
-    }
-  }
-  if (directoryPath !== undefined && directoryHandle !== undefined) {
-    await directoryHandle.chmod(448).catch((error) => {
-      cleanupError ??= error;
-    });
-    try {
-      const [pathDirectoryMetadata, openedDirectoryMetadata] = await Promise.all([
-        lstat(directoryPath),
-        directoryHandle.stat()
-      ]);
-      if (!pathDirectoryMetadata.isDirectory() || !openedDirectoryMetadata.isDirectory() || pathDirectoryMetadata.dev !== openedDirectoryMetadata.dev || pathDirectoryMetadata.ino !== openedDirectoryMetadata.ino) {
-        throw new VectorizeError("trace_failed", "The bounded primary-output directory changed before cleanup.");
-      }
-      if (path !== undefined && cleanupError === undefined) {
-        const pathMetadata = await lstat(path).catch((error) => {
-          if (isFileSystemError(error, "ENOENT"))
-            return;
-          throw error;
-        });
-        const openedMetadata = await (reader ?? anchor)?.stat();
-        if (pathMetadata === undefined && openedMetadata !== undefined) {
-          throw new VectorizeError("trace_failed", "The bounded primary-output endpoint disappeared before cleanup.");
-        }
-        if (pathMetadata !== undefined) {
-          if (!pathMetadata.isFIFO() || openedMetadata !== undefined && (pathMetadata.dev !== openedMetadata.dev || pathMetadata.ino !== openedMetadata.ino)) {
-            throw new VectorizeError("trace_failed", "The bounded primary-output endpoint changed before cleanup.");
-          }
-          await unlink(path);
-        }
-      }
-      if (cleanupError === undefined)
-        await rmdir(directoryPath);
-    } catch (error) {
-      cleanupError ??= error;
-    }
-  }
-  const closes = await Promise.allSettled([
-    reader?.close(),
-    anchor?.close(),
-    directoryHandle?.close()
-  ]);
-  cleanupError ??= closes.find((result) => result.status === "rejected")?.reason;
-  return cleanupError;
-}
-async function terminateAndWait(child, ownsProcessGroup) {
-  if (process.platform === "win32") {
-    await killWindowsProcessTree(child.pid);
-  } else if (!ownsProcessGroup) {
-    safelyKillChild(child, "SIGTERM");
-    await delay(TERMINATION_GRACE_MS);
-    safelyKillChild(child, "SIGKILL");
-  } else {
-    safelyKillPosixProcessGroup(child, "SIGTERM");
-    await delay(TERMINATION_GRACE_MS);
-    safelyKillPosixProcessGroup(child, "SIGKILL");
-  }
-  if (await settlesWithin(child.exited, HARD_KILL_WAIT_MS))
-    return;
-  throw new VectorizeError("trace_failed", "VTracer did not exit after forced termination.");
-}
-function safelyKillChild(child, signal) {
-  try {
-    child.kill(signal);
-  } catch {}
-}
-function safelyKillPosixProcessGroup(child, signal) {
-  if (!safelyKillPosixProcessGroupByPid(child.pid, signal)) {
-    try {
-      child.kill(signal);
-    } catch {}
-  }
-}
-function safelyKillPosixProcessGroupByPid(pid, signal) {
-  try {
-    process.kill(-pid, signal);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function killWindowsProcessTree(pid) {
-  let killer;
-  try {
-    killer = Bun.spawn(["taskkill.exe", "/PID", String(pid), "/T", "/F"], {
-      detached: false,
-      env: nonGatewayChildEnvironment(),
-      stderr: "pipe",
-      stdin: "ignore",
-      stdout: "pipe",
-      windowsHide: true
-    });
-  } catch {
-    return;
-  }
-  const drain = Promise.all([
-    readBoundedText(killer.stdout, MAX_COMMAND_OUTPUT_BYTES, AbortSignal.timeout(HARD_KILL_WAIT_MS), "Process-tree cleanup emitted too much output."),
-    readBoundedText(killer.stderr, MAX_COMMAND_OUTPUT_BYTES, AbortSignal.timeout(HARD_KILL_WAIT_MS), "Process-tree cleanup emitted too much output.")
-  ]);
-  if (!await settlesWithin(Promise.all([killer.exited, drain]), HARD_KILL_WAIT_MS)) {
-    try {
-      killer.kill("SIGKILL");
-    } catch {}
-  }
-}
-async function settlesWithin(promise, durationMs) {
-  return new Promise((resolve) => {
-    let finished = false;
-    const timer = setTimeout(() => finish(false), durationMs);
-    promise.then(() => finish(true), () => finish(true));
-    function finish(settled) {
-      if (finished)
-        return;
-      finished = true;
-      clearTimeout(timer);
-      resolve(settled);
-    }
-  });
-}
-async function readBoundedText(stream, maximumBytes, signal, limitMessage) {
-  const reader = stream.getReader();
-  const chunks = [];
-  let bytes = 0;
-  const cancel = () => {
-    reader.cancel().catch(() => {
-      return;
-    });
-  };
-  signal.addEventListener("abort", cancel, { once: true });
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done)
-        break;
-      bytes += value.byteLength;
-      if (bytes > maximumBytes) {
-        await reader.cancel();
-        throw new VectorizeError("output_limit", limitMessage, {
-          bytes,
-          maximumBytes
-        });
-      }
-      chunks.push(value);
-    }
-    return Buffer.concat(chunks, bytes).toString("utf8");
-  } finally {
-    signal.removeEventListener("abort", cancel);
-    reader.releaseLock();
-  }
-}
-async function readBoundedFifo(handle, maximumBytes, signal, childHasExited) {
-  const buffer = Buffer.allocUnsafe(Math.min(PRIMARY_OUTPUT_READ_BYTES, maximumBytes + 1));
-  const chunks = [];
-  let bytes = 0;
-  let emptyPollsAfterExit = 0;
-  while (!signal.aborted) {
-    const maximumRead = Math.min(buffer.byteLength, maximumBytes - bytes + 1);
-    try {
-      const { bytesRead } = await handle.read(buffer, 0, maximumRead, null);
-      if (bytesRead > 0) {
-        emptyPollsAfterExit = 0;
-        bytes += bytesRead;
-        if (bytes > maximumBytes) {
-          throw new VectorizeError("output_limit", "VTracer emitted too much primary output.", { bytes, maximumBytes });
-        }
-        chunks.push(Uint8Array.from(buffer.subarray(0, bytesRead)));
-        continue;
-      }
-    } catch (error) {
-      if (!isWouldBlockError(error))
-        throw error;
-    }
-    if (childHasExited()) {
-      emptyPollsAfterExit += 1;
-      if (emptyPollsAfterExit >= PRIMARY_OUTPUT_EXIT_EMPTY_POLLS)
-        break;
-    } else {
-      emptyPollsAfterExit = 0;
-    }
-    await delay(PRIMARY_OUTPUT_POLL_MS);
-  }
-  return Buffer.concat(chunks, bytes).toString("utf8");
-}
-function isWouldBlockError(error) {
-  return isFileSystemError(error) && ["EAGAIN", "EINTR", "EWOULDBLOCK"].includes(String(error.code));
-}
-function isFileSystemError(error, code) {
-  return error instanceof Error && "code" in error && (code === undefined || error.code === code);
-}
-function delay(durationMs) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, durationMs);
-  });
-}
-function executionError(failureCode, cause) {
-  return new VectorizeError(failureCode, "VTracer could not be executed.", {}, { cause: cause instanceof Error ? cause : new Error(String(cause)) });
-}
-
-// src/vectorize/tool.ts
-import { createHash as createHash2, randomUUID } from "crypto";
-import { constants as constants2 } from "fs";
-import {
-  chmod,
-  mkdir,
-  open as open2,
-  realpath,
-  rename,
-  rm,
-  writeFile
-} from "fs/promises";
-import { homedir } from "os";
-import { dirname, join as join2, resolve } from "path";
-
-// src/vectorize/archive.ts
-import { gunzipSync, inflateRawSync } from "zlib";
-var MAX_BINARY_BYTES = 8 * 1024 * 1024;
-function extractVTracerArchive(archive, format) {
-  return format === "tar.gz" ? extractTarEntry(gunzipSync(archive, { maxOutputLength: MAX_BINARY_BYTES }), "vtracer") : extractZipEntry(archive, "vtracer.exe");
-}
-function extractTarEntry(tar, expectedName) {
-  for (let offset = 0;offset + 512 <= tar.length; ) {
-    const header = tar.subarray(offset, offset + 512);
-    if (header.every((byte) => byte === 0))
-      break;
-    const name = readNullTerminatedAscii(header.subarray(0, 100));
-    const prefix = readNullTerminatedAscii(header.subarray(345, 500));
-    const fullName = prefix === "" ? name : `${prefix}/${name}`;
-    const sizeText = readNullTerminatedAscii(header.subarray(124, 136)).trim();
-    if (!/^[0-7]+$/u.test(sizeText)) {
-      throw new VectorizeError("tool_integrity", "VTracer tar contains an invalid size.");
-    }
-    const size = Number.parseInt(sizeText, 8);
-    if (!Number.isSafeInteger(size) || size < 0 || size > MAX_BINARY_BYTES) {
-      throw new VectorizeError("tool_integrity", "VTracer tar entry exceeds its size limit.");
-    }
-    const contentStart = offset + 512;
-    const contentEnd = contentStart + size;
-    if (contentEnd > tar.length) {
-      throw new VectorizeError("tool_integrity", "VTracer tar entry is truncated.");
-    }
-    if (fullName === expectedName || fullName.endsWith(`/${expectedName}`)) {
-      return Uint8Array.from(tar.subarray(contentStart, contentEnd));
-    }
-    offset = contentStart + Math.ceil(size / 512) * 512;
-  }
-  throw new VectorizeError("tool_integrity", `VTracer archive omitted ${expectedName}.`);
-}
-function extractZipEntry(zip, expectedName) {
-  const bytes = Buffer.from(zip);
-  let offset = 0;
-  while (offset + 30 <= bytes.length) {
-    const signature = bytes.readUInt32LE(offset);
-    if (signature !== 67324752)
-      break;
-    const flags = bytes.readUInt16LE(offset + 6);
-    const compression = bytes.readUInt16LE(offset + 8);
-    const compressedSize = bytes.readUInt32LE(offset + 18);
-    const uncompressedSize = bytes.readUInt32LE(offset + 22);
-    const nameLength = bytes.readUInt16LE(offset + 26);
-    const extraLength = bytes.readUInt16LE(offset + 28);
-    if ((flags & 1) !== 0 || (flags & 8) !== 0) {
-      throw new VectorizeError("tool_integrity", "VTracer zip uses encryption or an unsupported data descriptor.");
-    }
-    if (uncompressedSize > MAX_BINARY_BYTES) {
-      throw new VectorizeError("tool_integrity", "VTracer zip entry exceeds its size limit.");
-    }
-    const nameStart = offset + 30;
-    const dataStart = nameStart + nameLength + extraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) {
-      throw new VectorizeError("tool_integrity", "VTracer zip entry is truncated.");
-    }
-    const name = bytes.subarray(nameStart, nameStart + nameLength).toString("utf8");
-    if (name === expectedName || name.endsWith(`/${expectedName}`)) {
-      const compressed = bytes.subarray(dataStart, dataEnd);
-      const extracted = compression === 0 ? Buffer.from(compressed) : compression === 8 ? inflateRawSync(compressed, { maxOutputLength: MAX_BINARY_BYTES }) : undefined;
-      if (extracted === undefined) {
-        throw new VectorizeError("tool_integrity", `VTracer zip uses unsupported compression method ${compression}.`);
-      }
-      if (extracted.length !== uncompressedSize) {
-        throw new VectorizeError("tool_integrity", "VTracer zip size does not match its header.");
-      }
-      return Uint8Array.from(extracted);
-    }
-    offset = dataEnd;
-  }
-  throw new VectorizeError("tool_integrity", `VTracer archive omitted ${expectedName}.`);
-}
-function readNullTerminatedAscii(bytes) {
-  const end = bytes.indexOf(0);
-  return Buffer.from(end === -1 ? bytes : bytes.subarray(0, end)).toString("ascii");
-}
+import { open, realpath } from "fs/promises";
+import { resolve } from "path";
+import sharp from "sharp";
 
 // src/vectorize/metrics.ts
 import { createHash } from "crypto";
@@ -876,6 +335,739 @@ function colorBelongsToPrimary(rgb, model) {
   return oklabDistance(srgbToOklab(rgb), model.primary) <= model.cutoff;
 }
 
+// src/vectorize/pixels.ts
+var allowedFormats = new Set(["avif", "gif", "heif", "jpeg", "png", "tiff", "webp"]);
+var METRIC_MAX_EDGE = 512;
+var VECTORIZE_SHARP_CONCURRENCY = 1;
+function configureVectorizeSharpConcurrency() {
+  const actual = sharp.concurrency(VECTORIZE_SHARP_CONCURRENCY);
+  if (actual !== VECTORIZE_SHARP_CONCURRENCY) {
+    throw new VectorizeError("trace_failed", "The vectorization worker could not bind its Sharp CPU budget.");
+  }
+}
+async function loadRaster(input, limits, deadline) {
+  deadline.assert("input read");
+  const bytes = await readInputBytes(input, limits.maxInputBytes, deadline);
+  deadline.assert("input metadata");
+  try {
+    const metadata = await sharp(bytes, {
+      failOn: "error",
+      limitInputPixels: limits.maxDecodedPixels,
+      sequentialRead: true
+    }).metadata();
+    const format = metadata.format;
+    if (format === undefined || !allowedFormats.has(format)) {
+      throw new VectorizeError("invalid_input", `Expected a supported raster image, received ${format ?? "an unknown format"}.`);
+    }
+    if ((metadata.pages ?? 1) !== 1) {
+      throw new VectorizeError("invalid_input", "Animated and multipage raster inputs are rejected.");
+    }
+    if (metadata.width === undefined || metadata.height === undefined || metadata.width < 1 || metadata.height < 1) {
+      throw new VectorizeError("invalid_input", "Raster dimensions are missing or invalid.");
+    }
+    assertDimensions(metadata.width, metadata.height, limits);
+    const decoded = await sharp(bytes, {
+      failOn: "error",
+      limitInputPixels: limits.maxDecodedPixels,
+      sequentialRead: true
+    }).rotate().ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { channels, height, width } = decoded.info;
+    if (channels !== 4) {
+      throw new VectorizeError("invalid_input", "Raster decoding did not produce RGBA pixels.");
+    }
+    assertDimensions(width, height, limits);
+    const pixels = Uint8Array.from(decoded.data);
+    if (!containsVisiblePixel(pixels)) {
+      throw new VectorizeError("invalid_input", "A fully transparent image cannot be vectorized.");
+    }
+    deadline.assert("raster decode");
+    const scoreScale = Math.min(1, METRIC_MAX_EDGE / Math.max(width, height));
+    const scoreWidth = Math.max(1, Math.round(width * scoreScale));
+    const scoreHeight = Math.max(1, Math.round(height * scoreScale));
+    const scorePixels = scoreWidth === width && scoreHeight === height ? pixels : Uint8Array.from(await sharp(pixels, { raw: { channels: 4, height, width } }).resize(scoreWidth, scoreHeight, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer());
+    deadline.assert("metric sample");
+    return {
+      bytes,
+      format,
+      height,
+      inputBytes: bytes.byteLength,
+      pixels,
+      scoreHeight,
+      scorePixels,
+      scoreWidth,
+      sourceSha256: sha256(bytes),
+      width
+    };
+  } catch (error) {
+    if (error instanceof VectorizeError)
+      throw error;
+    throw new VectorizeError("invalid_input", "Raster input could not be decoded safely.", {}, {
+      cause: error
+    });
+  }
+}
+async function readInputBytes(input, maximumBytes, deadline) {
+  if (typeof input === "string") {
+    return readRegularInput(resolve(input), maximumBytes, deadline);
+  }
+  const view = input instanceof ArrayBuffer ? new Uint8Array(input) : input;
+  if (view.byteLength === 0) {
+    throw new VectorizeError("invalid_input", "Raster input is empty.");
+  }
+  if (view.byteLength > maximumBytes) {
+    throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes: view.byteLength, maximumBytes });
+  }
+  deadline.assert("input read");
+  const bytes = Uint8Array.from(view);
+  deadline.assert("input read");
+  return bytes;
+}
+async function readRegularInput(path, maximumBytes, deadline) {
+  let handle;
+  try {
+    deadline.assert("input read");
+    const targetPath = await realpath(path);
+    deadline.assert("input read");
+    handle = await open(targetPath, boundedReadFlags());
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) {
+      throw new VectorizeError("invalid_input", `Raster input is not a file: ${path}`);
+    }
+    if (metadata.size < 1) {
+      throw new VectorizeError("invalid_input", "Raster input is empty.");
+    }
+    if (metadata.size > maximumBytes) {
+      throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes: metadata.size, maximumBytes });
+    }
+    const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, maximumBytes + 1));
+    const chunks = [];
+    let bytes = 0;
+    while (true) {
+      deadline.assert("input read");
+      const maximumRead = Math.min(chunk.byteLength, maximumBytes - bytes + 1);
+      const { bytesRead } = await handle.read(chunk, 0, maximumRead, null);
+      if (bytesRead === 0)
+        break;
+      bytes += bytesRead;
+      if (bytes > maximumBytes) {
+        throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes, maximumBytes });
+      }
+      chunks.push(Buffer.from(chunk.subarray(0, bytesRead)));
+    }
+    if (bytes === 0) {
+      throw new VectorizeError("invalid_input", "Raster input is empty.");
+    }
+    deadline.assert("input read");
+    return Buffer.concat(chunks, bytes);
+  } catch (error) {
+    if (error instanceof VectorizeError)
+      throw error;
+    throw new VectorizeError("invalid_input", "Raster input could not be read safely.", {}, { cause: error });
+  } finally {
+    await handle?.close().catch(() => {
+      return;
+    });
+  }
+}
+function assertDimensions(width, height, limits) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > limits.maxDimension || height > limits.maxDimension || width * height > limits.maxDecodedPixels) {
+    throw new VectorizeError("input_limit", `Raster dimensions must fit ${limits.maxDimension}px and ${limits.maxDecodedPixels} decoded pixels.`, { height, width });
+  }
+}
+function containsVisiblePixel(rgba) {
+  for (let index = 3;index < rgba.length; index += 4) {
+    if (rgba[index] > 0)
+      return true;
+  }
+  return false;
+}
+function boundedReadFlags() {
+  if (process.platform === "win32")
+    return constants.O_RDONLY;
+  return constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW;
+}
+async function encodeTracePng(pixels, width, height) {
+  return Uint8Array.from(await sharp(pixels, { raw: { channels: 4, height, width } }).png({ adaptiveFiltering: false, compressionLevel: 9, palette: false }).toBuffer());
+}
+async function renderSvgRgba(svg, width, height, maxDecodedPixels) {
+  try {
+    return Uint8Array.from(await sharp(Buffer.from(svg), {
+      density: 72,
+      failOn: "error",
+      limitInputPixels: maxDecodedPixels
+    }).resize(width, height, { fit: "fill" }).ensureAlpha().raw().toBuffer());
+  } catch (error) {
+    throw new VectorizeError("trace_failed", "Canonical SVG could not be rendered for quality measurement.", {}, { cause: error });
+  }
+}
+function sharpProvenance() {
+  const sharpVersions = normalizedPixelToolchain(sharp.versions);
+  const sharpVersion = sharpVersions.sharp;
+  const vipsVersion = sharpVersions.vips;
+  if (sharpVersion === undefined || vipsVersion === undefined) {
+    throw new VectorizeError("tool_version", "Sharp must report its own and libvips version metadata.");
+  }
+  return {
+    sharp: sharpVersion,
+    sharpVersions,
+    vips: vipsVersion
+  };
+}
+function normalizedPixelToolchain(versions) {
+  const entries = Object.entries(versions).filter((entry) => entry[1] !== undefined).sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length === 0 || entries.some(([name, version]) => name.length === 0 || version.length === 0)) {
+    throw new VectorizeError("tool_version", "Pixel toolchain versions must be nonempty strings.");
+  }
+  return Object.freeze(Object.fromEntries(entries));
+}
+
+// src/vectorize/command.ts
+import { AsyncLocalStorage } from "async_hooks";
+import { constants as constants2 } from "fs";
+import {
+  lstat,
+  mkdtemp,
+  open as open2,
+  rmdir,
+  unlink
+} from "fs/promises";
+import { join } from "path";
+
+// src/process-environment.ts
+var gatewayCredentialNames = new Set([
+  "AI_GATEWAY_API_KEY",
+  "VERCEL_OIDC_TOKEN"
+]);
+function nonGatewayChildEnvironment(source = process.env) {
+  const environment = { ...source };
+  for (const name of Object.keys(environment)) {
+    if (gatewayCredentialNames.has(name.toLocaleUpperCase("en-US"))) {
+      delete environment[name];
+    }
+  }
+  return environment;
+}
+
+// src/vectorize/command.ts
+var MAX_COMMAND_OUTPUT_BYTES = 64 * 1024;
+var PRIMARY_OUTPUT_READ_BYTES = 64 * 1024;
+var PRIMARY_OUTPUT_POLL_MS = 2;
+var PRIMARY_OUTPUT_EXIT_EMPTY_POLLS = 2;
+var TERMINATION_GRACE_MS = 50;
+var HARD_KILL_WAIT_MS = 500;
+var MAX_INHERITED_FILE_DESCRIPTORS = 16;
+var timeoutMarker = Symbol("bounded-command-timeout");
+var noCommandFailure = Symbol("no-command-failure");
+var activePosixProcessGroups = new Set;
+var workerTerminationForwardingInstalled = false;
+var inheritedCommandFileDescriptors = new AsyncLocalStorage;
+function normalizedInheritedFileDescriptors(value) {
+  const descriptors = value ?? [];
+  if (descriptors.length > MAX_INHERITED_FILE_DESCRIPTORS || descriptors.some((descriptor, index) => !Number.isSafeInteger(descriptor) || descriptor < 0 || descriptor > 2147483647 || descriptors.indexOf(descriptor) !== index)) {
+    throw new VectorizeError("invalid_input", "Inherited vectorizer descriptors must be unique bounded integers.");
+  }
+  return Object.freeze([...descriptors]);
+}
+async function withInheritedCommandFileDescriptors(descriptors, callback) {
+  const normalized = normalizedInheritedFileDescriptors(descriptors);
+  return await inheritedCommandFileDescriptors.run(normalized, async () => await callback());
+}
+function forwardVectorizeWorkerTermination() {
+  if (process.platform === "win32" || workerTerminationForwardingInstalled) {
+    return;
+  }
+  workerTerminationForwardingInstalled = true;
+  const signals = [
+    ["SIGHUP", 129],
+    ["SIGINT", 130],
+    ["SIGTERM", 143]
+  ];
+  for (const [signal, exitCode] of signals) {
+    process.once(signal, () => {
+      for (const pid of activePosixProcessGroups) {
+        safelyKillPosixProcessGroupByPid(pid, "SIGKILL");
+      }
+      process.exit(exitCode);
+    });
+  }
+}
+async function runBoundedCommand(command, timeoutMs, failureCode, options = {}) {
+  return runBoundedCommandInternal(command, timeoutMs, failureCode, options);
+}
+async function runBoundedPathOutputCommand(commandForOutput, timeoutMs, failureCode, options) {
+  if (process.platform === "win32") {
+    throw new VectorizeError("tool_platform", "Bounded pathname output is unavailable on Windows.", { platform: process.platform });
+  }
+  assertPositiveLimit(options.maxOutputBytes, "The command primary-output limit must be positive.");
+  if (timeoutMs < 1) {
+    throw new VectorizeError("timeout", "VTracer exceeded the conversion time limit.");
+  }
+  const startedAt = performance.now();
+  let anchorHandle;
+  let directoryHandle;
+  let outputDirectory;
+  let readerHandle;
+  let result;
+  let failure = noCommandFailure;
+  try {
+    outputDirectory = await mkdtemp(join(options.temporaryRoot, "slopcamera-command-output-"));
+    directoryHandle = await open2(outputDirectory, constants2.O_RDONLY | constants2.O_DIRECTORY | constants2.O_NOFOLLOW);
+    await assertOpenedPrivateDirectory(outputDirectory, directoryHandle);
+    const outputPath = join(outputDirectory, "output.svg");
+    await createPrivateFifo(outputPath, remainingCommandTime(startedAt, timeoutMs), failureCode);
+    anchorHandle = await open2(outputPath, constants2.O_RDWR | constants2.O_NONBLOCK | constants2.O_NOFOLLOW);
+    readerHandle = await open2(outputPath, constants2.O_RDONLY | constants2.O_NONBLOCK | constants2.O_NOFOLLOW);
+    await assertOpenedPrivateFifo(outputPath, anchorHandle, readerHandle);
+    await directoryHandle.chmod(320);
+    const commandResult = await runBoundedCommandInternal(commandForOutput(outputPath), remainingCommandTime(startedAt, timeoutMs), failureCode, options, {
+      handle: readerHandle,
+      maximumBytes: options.maxOutputBytes
+    });
+    if (commandResult.primaryOutput === undefined) {
+      throw new VectorizeError(failureCode, "VTracer did not expose its bounded primary output.");
+    }
+    result = {
+      output: commandResult.primaryOutput,
+      stderr: commandResult.stderr,
+      stdout: commandResult.stdout
+    };
+  } catch (error) {
+    failure = error instanceof VectorizeError ? error : executionError(failureCode, error);
+  }
+  const cleanupError = await removePrimaryOutputEndpoint(outputDirectory, outputDirectory === undefined ? undefined : join(outputDirectory, "output.svg"), readerHandle, anchorHandle, directoryHandle);
+  if (failure !== noCommandFailure) {
+    if (cleanupError === undefined)
+      throw failure;
+    throw new VectorizeError(failure instanceof VectorizeError ? failure.code : failureCode, `${failure instanceof Error ? failure.message : String(failure)} The temporary primary-output endpoint also could not be removed.`, {
+      ...failure instanceof VectorizeError ? failure.details : {},
+      cleanup: String(cleanupError)
+    }, { cause: failure instanceof Error ? failure : undefined });
+  }
+  if (cleanupError !== undefined) {
+    throw new VectorizeError(failureCode, "The temporary primary-output endpoint could not be removed.", { cleanup: String(cleanupError) }, { cause: cleanupError instanceof Error ? cleanupError : undefined });
+  }
+  if (result === undefined) {
+    throw new VectorizeError(failureCode, "The bounded command completed without a result.");
+  }
+  return result;
+}
+async function runBoundedCommandInternal(command, timeoutMs, failureCode, options, primaryOutput) {
+  if (command.length === 0) {
+    throw new VectorizeError("invalid_input", "A bounded command requires a command.");
+  }
+  if (timeoutMs < 1) {
+    throw new VectorizeError("timeout", "VTracer exceeded the conversion time limit.");
+  }
+  const maxStdoutBytes = options.maxStdoutBytes ?? MAX_COMMAND_OUTPUT_BYTES;
+  assertPositiveLimit(maxStdoutBytes, "The command stdout limit must be positive.");
+  const inheritedDescriptors = normalizedInheritedFileDescriptors(options.inheritedFileDescriptors ?? inheritedCommandFileDescriptors.getStore());
+  let child;
+  const ownsProcessGroup = process.platform !== "win32";
+  try {
+    child = Bun.spawn([...command], {
+      detached: ownsProcessGroup,
+      env: nonGatewayChildEnvironment(),
+      stdio: [
+        options.stdin ?? "ignore",
+        "pipe",
+        "pipe",
+        ...inheritedDescriptors
+      ],
+      windowsHide: true
+    });
+  } catch (error) {
+    throw executionError(failureCode, error);
+  }
+  if (process.platform !== "win32") {
+    activePosixProcessGroups.add(child.pid);
+  }
+  const streamAbort = new AbortController;
+  let childHasExited = false;
+  const childExitTask = child.exited.then((exitCode) => {
+    childHasExited = true;
+    if (ownsProcessGroup && process.platform !== "win32") {
+      safelyKillPosixProcessGroup(child, "SIGKILL");
+    }
+    return exitCode;
+  });
+  const stdoutTask = readBoundedText(child.stdout, maxStdoutBytes, streamAbort.signal, "VTracer emitted too much primary output.");
+  const stderrTask = readBoundedText(child.stderr, MAX_COMMAND_OUTPUT_BYTES, streamAbort.signal, "VTracer emitted too much diagnostic output.");
+  const primaryOutputTask = primaryOutput === undefined ? Promise.resolve(undefined) : readBoundedFifo(primaryOutput.handle, primaryOutput.maximumBytes, streamAbort.signal, () => childHasExited);
+  const executionTask = Promise.all([
+    childExitTask,
+    stdoutTask,
+    stderrTask,
+    primaryOutputTask
+  ]).then(([exitCode, stdout, stderr, boundedPrimaryOutput]) => {
+    if (exitCode !== 0) {
+      throw new VectorizeError(failureCode, [
+        `Command failed (${exitCode}): ${command[0] ?? "unknown"}`,
+        stderr.trim()
+      ].filter(Boolean).join(`
+`), { exitCode });
+    }
+    return boundedPrimaryOutput === undefined ? { stderr, stdout } : { primaryOutput: boundedPrimaryOutput, stderr, stdout };
+  });
+  let timer;
+  const timeoutTask = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(timeoutMarker), timeoutMs);
+  });
+  try {
+    return await Promise.race([executionTask, timeoutTask]);
+  } catch (error) {
+    let cleanupError;
+    try {
+      await terminateAndWait(child, ownsProcessGroup);
+    } catch (caught) {
+      cleanupError = caught;
+    } finally {
+      streamAbort.abort();
+      await settlesWithin(Promise.allSettled([stdoutTask, stderrTask, primaryOutputTask]), HARD_KILL_WAIT_MS);
+    }
+    if (error === timeoutMarker) {
+      throw new VectorizeError("timeout", cleanupError === undefined ? "VTracer exceeded the conversion time limit." : "VTracer exceeded the conversion time limit and did not terminate cleanly.", cleanupError === undefined ? {} : { cleanup: String(cleanupError) });
+    }
+    if (error instanceof VectorizeError)
+      throw error;
+    if (cleanupError instanceof VectorizeError)
+      throw cleanupError;
+    throw executionError(failureCode, error);
+  } finally {
+    if (timer !== undefined)
+      clearTimeout(timer);
+    activePosixProcessGroups.delete(child.pid);
+  }
+}
+function assertPositiveLimit(value, message) {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new VectorizeError("invalid_input", message);
+  }
+}
+function remainingCommandTime(startedAt, timeoutMs) {
+  return Math.floor(timeoutMs - (performance.now() - startedAt));
+}
+async function createPrivateFifo(path, timeoutMs, failureCode) {
+  await runBoundedCommandInternal(["mkfifo", "-m", "600", path], timeoutMs, failureCode, {});
+}
+async function assertOpenedPrivateDirectory(path, directory) {
+  const [pathMetadata, openedMetadata] = await Promise.all([
+    lstat(path),
+    directory.stat()
+  ]);
+  if (!pathMetadata.isDirectory() || !openedMetadata.isDirectory() || pathMetadata.dev !== openedMetadata.dev || pathMetadata.ino !== openedMetadata.ino) {
+    throw new VectorizeError("trace_failed", "The bounded primary-output directory changed during setup.");
+  }
+}
+async function assertOpenedPrivateFifo(path, anchor, reader) {
+  const [pathMetadata, anchorMetadata, readerMetadata] = await Promise.all([
+    lstat(path),
+    anchor.stat(),
+    reader.stat()
+  ]);
+  if (!pathMetadata.isFIFO() || !anchorMetadata.isFIFO() || !readerMetadata.isFIFO() || pathMetadata.dev !== anchorMetadata.dev || pathMetadata.ino !== anchorMetadata.ino || anchorMetadata.dev !== readerMetadata.dev || anchorMetadata.ino !== readerMetadata.ino) {
+    throw new VectorizeError("trace_failed", "The bounded primary-output endpoint changed during setup.");
+  }
+}
+async function removePrimaryOutputEndpoint(directoryPath, path, reader, anchor, directoryHandle) {
+  let cleanupError;
+  if (directoryPath !== undefined && directoryHandle === undefined) {
+    try {
+      await rmdir(directoryPath);
+    } catch (error) {
+      cleanupError ??= error;
+    }
+  }
+  if (directoryPath !== undefined && directoryHandle !== undefined) {
+    await directoryHandle.chmod(448).catch((error) => {
+      cleanupError ??= error;
+    });
+    try {
+      const [pathDirectoryMetadata, openedDirectoryMetadata] = await Promise.all([
+        lstat(directoryPath),
+        directoryHandle.stat()
+      ]);
+      if (!pathDirectoryMetadata.isDirectory() || !openedDirectoryMetadata.isDirectory() || pathDirectoryMetadata.dev !== openedDirectoryMetadata.dev || pathDirectoryMetadata.ino !== openedDirectoryMetadata.ino) {
+        throw new VectorizeError("trace_failed", "The bounded primary-output directory changed before cleanup.");
+      }
+      if (path !== undefined && cleanupError === undefined) {
+        const pathMetadata = await lstat(path).catch((error) => {
+          if (isFileSystemError(error, "ENOENT"))
+            return;
+          throw error;
+        });
+        const openedMetadata = await (reader ?? anchor)?.stat();
+        if (pathMetadata === undefined && openedMetadata !== undefined) {
+          throw new VectorizeError("trace_failed", "The bounded primary-output endpoint disappeared before cleanup.");
+        }
+        if (pathMetadata !== undefined) {
+          if (!pathMetadata.isFIFO() || openedMetadata !== undefined && (pathMetadata.dev !== openedMetadata.dev || pathMetadata.ino !== openedMetadata.ino)) {
+            throw new VectorizeError("trace_failed", "The bounded primary-output endpoint changed before cleanup.");
+          }
+          await unlink(path);
+        }
+      }
+      if (cleanupError === undefined)
+        await rmdir(directoryPath);
+    } catch (error) {
+      cleanupError ??= error;
+    }
+  }
+  const closes = await Promise.allSettled([
+    reader?.close(),
+    anchor?.close(),
+    directoryHandle?.close()
+  ]);
+  cleanupError ??= closes.find((result) => result.status === "rejected")?.reason;
+  return cleanupError;
+}
+async function terminateAndWait(child, ownsProcessGroup) {
+  if (process.platform === "win32") {
+    await killWindowsProcessTree(child.pid);
+  } else if (!ownsProcessGroup) {
+    safelyKillChild(child, "SIGTERM");
+    await delay(TERMINATION_GRACE_MS);
+    safelyKillChild(child, "SIGKILL");
+  } else {
+    safelyKillPosixProcessGroup(child, "SIGTERM");
+    await delay(TERMINATION_GRACE_MS);
+    safelyKillPosixProcessGroup(child, "SIGKILL");
+  }
+  if (await settlesWithin(child.exited, HARD_KILL_WAIT_MS))
+    return;
+  throw new VectorizeError("trace_failed", "VTracer did not exit after forced termination.");
+}
+function safelyKillChild(child, signal) {
+  try {
+    child.kill(signal);
+  } catch {}
+}
+function safelyKillPosixProcessGroup(child, signal) {
+  if (!safelyKillPosixProcessGroupByPid(child.pid, signal)) {
+    try {
+      child.kill(signal);
+    } catch {}
+  }
+}
+function safelyKillPosixProcessGroupByPid(pid, signal) {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function killWindowsProcessTree(pid) {
+  let killer;
+  try {
+    killer = Bun.spawn(["taskkill.exe", "/PID", String(pid), "/T", "/F"], {
+      detached: false,
+      env: nonGatewayChildEnvironment(),
+      stderr: "pipe",
+      stdin: "ignore",
+      stdout: "pipe",
+      windowsHide: true
+    });
+  } catch {
+    return;
+  }
+  const drain = Promise.all([
+    readBoundedText(killer.stdout, MAX_COMMAND_OUTPUT_BYTES, AbortSignal.timeout(HARD_KILL_WAIT_MS), "Process-tree cleanup emitted too much output."),
+    readBoundedText(killer.stderr, MAX_COMMAND_OUTPUT_BYTES, AbortSignal.timeout(HARD_KILL_WAIT_MS), "Process-tree cleanup emitted too much output.")
+  ]);
+  if (!await settlesWithin(Promise.all([killer.exited, drain]), HARD_KILL_WAIT_MS)) {
+    try {
+      killer.kill("SIGKILL");
+    } catch {}
+  }
+}
+async function settlesWithin(promise, durationMs) {
+  return new Promise((resolve2) => {
+    let finished = false;
+    const timer = setTimeout(() => finish(false), durationMs);
+    promise.then(() => finish(true), () => finish(true));
+    function finish(settled) {
+      if (finished)
+        return;
+      finished = true;
+      clearTimeout(timer);
+      resolve2(settled);
+    }
+  });
+}
+async function readBoundedText(stream, maximumBytes, signal, limitMessage) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let bytes = 0;
+  const cancel = () => {
+    reader.cancel().catch(() => {
+      return;
+    });
+  };
+  signal.addEventListener("abort", cancel, { once: true });
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done)
+        break;
+      bytes += value.byteLength;
+      if (bytes > maximumBytes) {
+        await reader.cancel();
+        throw new VectorizeError("output_limit", limitMessage, {
+          bytes,
+          maximumBytes
+        });
+      }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks, bytes).toString("utf8");
+  } finally {
+    signal.removeEventListener("abort", cancel);
+    reader.releaseLock();
+  }
+}
+async function readBoundedFifo(handle, maximumBytes, signal, childHasExited) {
+  const buffer = Buffer.allocUnsafe(Math.min(PRIMARY_OUTPUT_READ_BYTES, maximumBytes + 1));
+  const chunks = [];
+  let bytes = 0;
+  let emptyPollsAfterExit = 0;
+  while (!signal.aborted) {
+    const maximumRead = Math.min(buffer.byteLength, maximumBytes - bytes + 1);
+    try {
+      const { bytesRead } = await handle.read(buffer, 0, maximumRead, null);
+      if (bytesRead > 0) {
+        emptyPollsAfterExit = 0;
+        bytes += bytesRead;
+        if (bytes > maximumBytes) {
+          throw new VectorizeError("output_limit", "VTracer emitted too much primary output.", { bytes, maximumBytes });
+        }
+        chunks.push(Uint8Array.from(buffer.subarray(0, bytesRead)));
+        continue;
+      }
+    } catch (error) {
+      if (!isWouldBlockError(error))
+        throw error;
+    }
+    if (childHasExited()) {
+      emptyPollsAfterExit += 1;
+      if (emptyPollsAfterExit >= PRIMARY_OUTPUT_EXIT_EMPTY_POLLS)
+        break;
+    } else {
+      emptyPollsAfterExit = 0;
+    }
+    await delay(PRIMARY_OUTPUT_POLL_MS);
+  }
+  return Buffer.concat(chunks, bytes).toString("utf8");
+}
+function isWouldBlockError(error) {
+  return isFileSystemError(error) && ["EAGAIN", "EINTR", "EWOULDBLOCK"].includes(String(error.code));
+}
+function isFileSystemError(error, code) {
+  return error instanceof Error && "code" in error && (code === undefined || error.code === code);
+}
+function delay(durationMs) {
+  return new Promise((resolve2) => {
+    setTimeout(resolve2, durationMs);
+  });
+}
+function executionError(failureCode, cause) {
+  return new VectorizeError(failureCode, "VTracer could not be executed.", {}, { cause: cause instanceof Error ? cause : new Error(String(cause)) });
+}
+
+// src/vectorize/tool.ts
+import { createHash as createHash2, randomUUID } from "crypto";
+import { constants as constants3 } from "fs";
+import {
+  chmod,
+  mkdir,
+  open as open3,
+  realpath as realpath2,
+  rename,
+  rm,
+  writeFile
+} from "fs/promises";
+import { homedir } from "os";
+import { dirname, join as join2, resolve as resolve2 } from "path";
+
+// src/vectorize/archive.ts
+import { gunzipSync, inflateRawSync } from "zlib";
+var MAX_BINARY_BYTES = 8 * 1024 * 1024;
+function extractVTracerArchive(archive, format) {
+  return format === "tar.gz" ? extractTarEntry(gunzipSync(archive, { maxOutputLength: MAX_BINARY_BYTES }), "vtracer") : extractZipEntry(archive, "vtracer.exe");
+}
+function extractTarEntry(tar, expectedName) {
+  for (let offset = 0;offset + 512 <= tar.length; ) {
+    const header = tar.subarray(offset, offset + 512);
+    if (header.every((byte) => byte === 0))
+      break;
+    const name = readNullTerminatedAscii(header.subarray(0, 100));
+    const prefix = readNullTerminatedAscii(header.subarray(345, 500));
+    const fullName = prefix === "" ? name : `${prefix}/${name}`;
+    const sizeText = readNullTerminatedAscii(header.subarray(124, 136)).trim();
+    if (!/^[0-7]+$/u.test(sizeText)) {
+      throw new VectorizeError("tool_integrity", "VTracer tar contains an invalid size.");
+    }
+    const size = Number.parseInt(sizeText, 8);
+    if (!Number.isSafeInteger(size) || size < 0 || size > MAX_BINARY_BYTES) {
+      throw new VectorizeError("tool_integrity", "VTracer tar entry exceeds its size limit.");
+    }
+    const contentStart = offset + 512;
+    const contentEnd = contentStart + size;
+    if (contentEnd > tar.length) {
+      throw new VectorizeError("tool_integrity", "VTracer tar entry is truncated.");
+    }
+    if (fullName === expectedName || fullName.endsWith(`/${expectedName}`)) {
+      return Uint8Array.from(tar.subarray(contentStart, contentEnd));
+    }
+    offset = contentStart + Math.ceil(size / 512) * 512;
+  }
+  throw new VectorizeError("tool_integrity", `VTracer archive omitted ${expectedName}.`);
+}
+function extractZipEntry(zip, expectedName) {
+  const bytes = Buffer.from(zip);
+  let offset = 0;
+  while (offset + 30 <= bytes.length) {
+    const signature = bytes.readUInt32LE(offset);
+    if (signature !== 67324752)
+      break;
+    const flags = bytes.readUInt16LE(offset + 6);
+    const compression = bytes.readUInt16LE(offset + 8);
+    const compressedSize = bytes.readUInt32LE(offset + 18);
+    const uncompressedSize = bytes.readUInt32LE(offset + 22);
+    const nameLength = bytes.readUInt16LE(offset + 26);
+    const extraLength = bytes.readUInt16LE(offset + 28);
+    if ((flags & 1) !== 0 || (flags & 8) !== 0) {
+      throw new VectorizeError("tool_integrity", "VTracer zip uses encryption or an unsupported data descriptor.");
+    }
+    if (uncompressedSize > MAX_BINARY_BYTES) {
+      throw new VectorizeError("tool_integrity", "VTracer zip entry exceeds its size limit.");
+    }
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + compressedSize;
+    if (dataEnd > bytes.length) {
+      throw new VectorizeError("tool_integrity", "VTracer zip entry is truncated.");
+    }
+    const name = bytes.subarray(nameStart, nameStart + nameLength).toString("utf8");
+    if (name === expectedName || name.endsWith(`/${expectedName}`)) {
+      const compressed = bytes.subarray(dataStart, dataEnd);
+      const extracted = compression === 0 ? Buffer.from(compressed) : compression === 8 ? inflateRawSync(compressed, { maxOutputLength: MAX_BINARY_BYTES }) : undefined;
+      if (extracted === undefined) {
+        throw new VectorizeError("tool_integrity", `VTracer zip uses unsupported compression method ${compression}.`);
+      }
+      if (extracted.length !== uncompressedSize) {
+        throw new VectorizeError("tool_integrity", "VTracer zip size does not match its header.");
+      }
+      return Uint8Array.from(extracted);
+    }
+    offset = dataEnd;
+  }
+  throw new VectorizeError("tool_integrity", `VTracer archive omitted ${expectedName}.`);
+}
+function readNullTerminatedAscii(bytes) {
+  const end = bytes.indexOf(0);
+  return Buffer.from(end === -1 ? bytes : bytes.subarray(0, end)).toString("ascii");
+}
+
 // src/vectorize/tool.ts
 var VTRACER_VERSION = "0.6.4";
 var frozenRelease = (release) => Object.freeze(release);
@@ -920,14 +1112,14 @@ function renamedEnvironmentValue(canonical) {
 async function ensureVTracer(deadline, privateDirectory, cacheDirectory) {
   const override = renamedEnvironmentValue("SLOPCAMERA_VTRACER_PATH");
   if (override !== undefined) {
-    return copyAndInspectVTracer(resolve(override), resolve(privateDirectory), "override", deadline);
+    return copyAndInspectVTracer(resolve2(override), resolve2(privateDirectory), "override", deadline);
   }
   const key = `${process.platform}-${process.arch}`;
   const release = vtracerReleases[key];
   if (release === undefined) {
     throw new VectorizeError("tool_platform", `VTracer is not pinned for ${process.platform}/${process.arch}.`, { arch: process.arch, platform: process.platform });
   }
-  const cacheRoot = resolve(cacheDirectory ?? defaultCacheDirectory());
+  const cacheRoot = resolve2(cacheDirectory ?? defaultCacheDirectory());
   const suffix = process.platform === "win32" ? ".exe" : "";
   const toolPath = join2(cacheRoot, "tools", `vtracer-${VTRACER_VERSION}-${process.platform}-${process.arch}${suffix}`);
   const cachedHash = await hashCachedTool(toolPath, deadline);
@@ -935,7 +1127,7 @@ async function ensureVTracer(deadline, privateDirectory, cacheDirectory) {
     await removeInvalidCachedTool(toolPath);
     await installOfficialVTracer(toolPath, release, deadline);
   }
-  return copyAndInspectVTracer(toolPath, resolve(privateDirectory), "official-release", deadline, release.binarySha256);
+  return copyAndInspectVTracer(toolPath, resolve2(privateDirectory), "official-release", deadline, release.binarySha256);
 }
 function defaultCacheDirectory() {
   const explicit = renamedEnvironmentValue("SLOPCAMERA_CACHE_DIR");
@@ -1002,12 +1194,12 @@ async function copyAndInspectVTracer(sourcePath, privateDirectory, source, deadl
   let targetHandle;
   let copiedSha256;
   try {
-    const resolvedSourcePath = await realpath(sourcePath);
+    const resolvedSourcePath = await realpath2(sourcePath);
     deadline.assert("VTracer private copy");
-    sourceHandle = await open2(resolvedSourcePath, boundedReadFlags());
+    sourceHandle = await open3(resolvedSourcePath, boundedReadFlags2());
     const metadata = await sourceHandle.stat();
     assertBoundedRegularTool(metadata, sourcePath);
-    targetHandle = await open2(privatePath, "wx", 320);
+    targetHandle = await open3(privatePath, "wx", 320);
     copiedSha256 = await copyAndHash(sourceHandle, targetHandle, MAX_TOOL_BYTES, deadline);
     await targetHandle.sync();
     deadline.assert("VTracer private copy");
@@ -1080,9 +1272,9 @@ async function hashRegularFile(path, maximumBytes, deadline, failureCode) {
   let handle;
   try {
     deadline.assert("VTracer hash");
-    const resolvedPath = await realpath(path);
+    const resolvedPath = await realpath2(path);
     deadline.assert("VTracer hash");
-    handle = await open2(resolvedPath, boundedReadFlags());
+    handle = await open3(resolvedPath, boundedReadFlags2());
     const metadata = await handle.stat();
     if (!metadata.isFile() || metadata.size < 1 || metadata.size > maximumBytes) {
       throw new VectorizeError(failureCode, "VTracer must be a non-empty regular file within its size limit.", { bytes: metadata.size, maximumBytes });
@@ -1191,200 +1383,10 @@ async function downloadBounded(url, deadline, maximumBytes) {
 function isFileSystemError2(error, code) {
   return error instanceof Error && "code" in error && error.code === code;
 }
-function boundedReadFlags() {
-  if (process.platform === "win32")
-    return constants2.O_RDONLY;
-  return constants2.O_RDONLY | constants2.O_NONBLOCK | constants2.O_NOFOLLOW;
-}
-
-// src/vectorize/pixels.ts
-import { constants as constants3 } from "fs";
-import { open as open3, realpath as realpath2 } from "fs/promises";
-import { resolve as resolve2 } from "path";
-import sharp from "sharp";
-var allowedFormats = new Set(["avif", "gif", "heif", "jpeg", "png", "tiff", "webp"]);
-var METRIC_MAX_EDGE = 512;
-var VECTORIZE_SHARP_CONCURRENCY = 1;
-function configureVectorizeSharpConcurrency() {
-  const actual = sharp.concurrency(VECTORIZE_SHARP_CONCURRENCY);
-  if (actual !== VECTORIZE_SHARP_CONCURRENCY) {
-    throw new VectorizeError("trace_failed", "The vectorization worker could not bind its Sharp CPU budget.");
-  }
-}
-async function loadRaster(input, limits, deadline) {
-  deadline.assert("input read");
-  const bytes = await readInputBytes(input, limits.maxInputBytes, deadline);
-  deadline.assert("input metadata");
-  try {
-    const metadata = await sharp(bytes, {
-      failOn: "error",
-      limitInputPixels: limits.maxDecodedPixels,
-      sequentialRead: true
-    }).metadata();
-    const format = metadata.format;
-    if (format === undefined || !allowedFormats.has(format)) {
-      throw new VectorizeError("invalid_input", `Expected a supported raster image, received ${format ?? "an unknown format"}.`);
-    }
-    if ((metadata.pages ?? 1) !== 1) {
-      throw new VectorizeError("invalid_input", "Animated and multipage raster inputs are rejected.");
-    }
-    if (metadata.width === undefined || metadata.height === undefined || metadata.width < 1 || metadata.height < 1) {
-      throw new VectorizeError("invalid_input", "Raster dimensions are missing or invalid.");
-    }
-    assertDimensions(metadata.width, metadata.height, limits);
-    const decoded = await sharp(bytes, {
-      failOn: "error",
-      limitInputPixels: limits.maxDecodedPixels,
-      sequentialRead: true
-    }).rotate().ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const { channels, height, width } = decoded.info;
-    if (channels !== 4) {
-      throw new VectorizeError("invalid_input", "Raster decoding did not produce RGBA pixels.");
-    }
-    assertDimensions(width, height, limits);
-    const pixels = Uint8Array.from(decoded.data);
-    if (!containsVisiblePixel(pixels)) {
-      throw new VectorizeError("invalid_input", "A fully transparent image cannot be vectorized.");
-    }
-    deadline.assert("raster decode");
-    const scoreScale = Math.min(1, METRIC_MAX_EDGE / Math.max(width, height));
-    const scoreWidth = Math.max(1, Math.round(width * scoreScale));
-    const scoreHeight = Math.max(1, Math.round(height * scoreScale));
-    const scorePixels = scoreWidth === width && scoreHeight === height ? pixels : Uint8Array.from(await sharp(pixels, { raw: { channels: 4, height, width } }).resize(scoreWidth, scoreHeight, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer());
-    deadline.assert("metric sample");
-    return {
-      bytes,
-      format,
-      height,
-      inputBytes: bytes.byteLength,
-      pixels,
-      scoreHeight,
-      scorePixels,
-      scoreWidth,
-      sourceSha256: sha256(bytes),
-      width
-    };
-  } catch (error) {
-    if (error instanceof VectorizeError)
-      throw error;
-    throw new VectorizeError("invalid_input", "Raster input could not be decoded safely.", {}, {
-      cause: error
-    });
-  }
-}
-async function readInputBytes(input, maximumBytes, deadline) {
-  if (typeof input === "string") {
-    return readRegularInput(resolve2(input), maximumBytes, deadline);
-  }
-  const view = input instanceof ArrayBuffer ? new Uint8Array(input) : input;
-  if (view.byteLength === 0) {
-    throw new VectorizeError("invalid_input", "Raster input is empty.");
-  }
-  if (view.byteLength > maximumBytes) {
-    throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes: view.byteLength, maximumBytes });
-  }
-  deadline.assert("input read");
-  const bytes = Uint8Array.from(view);
-  deadline.assert("input read");
-  return bytes;
-}
-async function readRegularInput(path, maximumBytes, deadline) {
-  let handle;
-  try {
-    deadline.assert("input read");
-    const targetPath = await realpath2(path);
-    deadline.assert("input read");
-    handle = await open3(targetPath, boundedReadFlags2());
-    const metadata = await handle.stat();
-    if (!metadata.isFile()) {
-      throw new VectorizeError("invalid_input", `Raster input is not a file: ${path}`);
-    }
-    if (metadata.size < 1) {
-      throw new VectorizeError("invalid_input", "Raster input is empty.");
-    }
-    if (metadata.size > maximumBytes) {
-      throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes: metadata.size, maximumBytes });
-    }
-    const chunk = Buffer.allocUnsafe(Math.min(64 * 1024, maximumBytes + 1));
-    const chunks = [];
-    let bytes = 0;
-    while (true) {
-      deadline.assert("input read");
-      const maximumRead = Math.min(chunk.byteLength, maximumBytes - bytes + 1);
-      const { bytesRead } = await handle.read(chunk, 0, maximumRead, null);
-      if (bytesRead === 0)
-        break;
-      bytes += bytesRead;
-      if (bytes > maximumBytes) {
-        throw new VectorizeError("input_limit", `Raster input exceeds the ${maximumBytes}-byte limit.`, { bytes, maximumBytes });
-      }
-      chunks.push(Buffer.from(chunk.subarray(0, bytesRead)));
-    }
-    if (bytes === 0) {
-      throw new VectorizeError("invalid_input", "Raster input is empty.");
-    }
-    deadline.assert("input read");
-    return Buffer.concat(chunks, bytes);
-  } catch (error) {
-    if (error instanceof VectorizeError)
-      throw error;
-    throw new VectorizeError("invalid_input", "Raster input could not be read safely.", {}, { cause: error });
-  } finally {
-    await handle?.close().catch(() => {
-      return;
-    });
-  }
-}
-function assertDimensions(width, height, limits) {
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > limits.maxDimension || height > limits.maxDimension || width * height > limits.maxDecodedPixels) {
-    throw new VectorizeError("input_limit", `Raster dimensions must fit ${limits.maxDimension}px and ${limits.maxDecodedPixels} decoded pixels.`, { height, width });
-  }
-}
-function containsVisiblePixel(rgba) {
-  for (let index = 3;index < rgba.length; index += 4) {
-    if (rgba[index] > 0)
-      return true;
-  }
-  return false;
-}
 function boundedReadFlags2() {
   if (process.platform === "win32")
     return constants3.O_RDONLY;
   return constants3.O_RDONLY | constants3.O_NONBLOCK | constants3.O_NOFOLLOW;
-}
-async function encodeTracePng(pixels, width, height) {
-  return Uint8Array.from(await sharp(pixels, { raw: { channels: 4, height, width } }).png({ adaptiveFiltering: false, compressionLevel: 9, palette: false }).toBuffer());
-}
-async function renderSvgRgba(svg, width, height, maxDecodedPixels) {
-  try {
-    return Uint8Array.from(await sharp(Buffer.from(svg), {
-      density: 72,
-      failOn: "error",
-      limitInputPixels: maxDecodedPixels
-    }).resize(width, height, { fit: "fill" }).ensureAlpha().raw().toBuffer());
-  } catch (error) {
-    throw new VectorizeError("trace_failed", "Canonical SVG could not be rendered for quality measurement.", {}, { cause: error });
-  }
-}
-function sharpProvenance() {
-  const sharpVersions = normalizedPixelToolchain(sharp.versions);
-  const sharpVersion = sharpVersions.sharp;
-  const vipsVersion = sharpVersions.vips;
-  if (sharpVersion === undefined || vipsVersion === undefined) {
-    throw new VectorizeError("tool_version", "Sharp must report its own and libvips version metadata.");
-  }
-  return {
-    sharp: sharpVersion,
-    sharpVersions,
-    vips: vipsVersion
-  };
-}
-function normalizedPixelToolchain(versions) {
-  const entries = Object.entries(versions).filter((entry) => entry[1] !== undefined).sort(([left], [right]) => left.localeCompare(right));
-  if (entries.length === 0 || entries.some(([name, version]) => name.length === 0 || version.length === 0)) {
-    throw new VectorizeError("tool_version", "Pixel toolchain versions must be nonempty strings.");
-  }
-  return Object.freeze(Object.fromEntries(entries));
 }
 
 // src/vectorize/worker-protocol.ts
@@ -2026,4 +2028,4 @@ async function writeSvgAtomically(path, svg) {
   return outputPath;
 }
 
-export { vectorizeProfileNames, VectorizeError, vectorizeHardLimits, vectorizeDefaultLimits, withInheritedCommandFileDescriptors, forwardVectorizeWorkerTermination, VTRACER_VERSION, vtracerReleases, configureVectorizeSharpConcurrency, VECTORIZE_WORKER_PROTOCOL, MAX_VECTORIZE_REQUEST_BYTES, MAX_VECTORIZE_RESPONSE_BYTES, vectorizeImage, vectorizeImageInProcess };
+export { vectorizeProfileNames, VectorizeError, vectorizeHardLimits, vectorizeDefaultLimits, resolveVectorizeLimits, VectorizeDeadline, parseHexColor, normalizedHexColor, configureVectorizeSharpConcurrency, loadRaster, encodeTracePng, withInheritedCommandFileDescriptors, forwardVectorizeWorkerTermination, VTRACER_VERSION, vtracerReleases, VECTORIZE_WORKER_PROTOCOL, MAX_VECTORIZE_REQUEST_BYTES, MAX_VECTORIZE_RESPONSE_BYTES, vectorizeImage, vectorizeImageInProcess };

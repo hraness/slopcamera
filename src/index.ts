@@ -9,6 +9,7 @@ import {
   generateSlopcameraImageFile,
   slopcameraGatewayCredentialStatus,
 } from "./generate.js"
+import { generateSlopcameraIcon } from "./icon.js"
 import { builtInIcons } from "./icons.js"
 import {
   resolveDiagramSource,
@@ -59,6 +60,7 @@ export const slopcameraApi = Object.freeze({
   DiagramValidationError,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  generateSlopcameraIcon,
   slopcameraGatewayCredentialStatus,
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
@@ -103,6 +105,7 @@ export {
   DiagramValidationError,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  generateSlopcameraIcon,
   slopcameraGatewayCredentialStatus,
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
@@ -139,6 +142,7 @@ export {
 export * from "./cloud-errors.js"
 export * from "./generate.js"
 export * from "./host-resources.js"
+export * from "./icon.js"
 export * from "./operations.js"
 export * from "./studio/index.js"
 export * from "./workflow.js"
