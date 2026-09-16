@@ -148,7 +148,10 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
       sheet.disabled = true; return sheet
     }, foundationCss)
     try {
-      await settle(page, scenario.direction)
+      // This negative control removes the font-face declarations too. Observe
+      // native paint after two frames; loaded-font settlement remains required
+      // both before removal and after the complete stylesheet is restored.
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
       assert.notDeepEqual(await measure(page, ["body", selector]), before, "Foundation removal must change real paint")
     } finally { await sheet.evaluate(sheet => { sheet.disabled = false }); await sheet.dispose() }
     await settle(page, scenario.direction)
