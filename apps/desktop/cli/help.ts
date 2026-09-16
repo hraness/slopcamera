@@ -28,7 +28,7 @@ Commands:
   media audio|color              Apply local non-destructive audio and video effects
   menubar [--background]         Run the prebuilt menu-bar companion
   menubar install|uninstall|status  Manage its per-user LaunchAgent
-  support [protocol --json|offer --json|shown <id>|dismiss|snooze|enable|status --json]
+  support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
                                  Optional support; no feature requires payment
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
@@ -475,10 +475,11 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
+  if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
   if (command === "html") return ["catalog", "scaffold", "render"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];

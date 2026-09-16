@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { runInNewContext } from "node:vm"
 import type { WebSocketRoute } from "playwright-core"
-import { assertShellFocusFragments, assertShellFocusUnchanged, assertShellNode, assertShellSkipReveal, assertShellSystemPaintChanged, compareShellElements, compareShellEvidence, compareShellFocusedSkip, denyShellWebSocket, observeShellFocus, parseShellCaseFailure, parseShellPhase, parseShellRequest, recordShellFocusedSkip,
+import { assertShellFocusFragments, assertShellFocusGeometry, assertShellFocusUnchanged, assertShellNode, assertShellSkipReveal, assertShellSystemPaintChanged, compareShellElements, compareShellEvidence, compareShellFocusedSkip, denyShellWebSocket, observeShellFocus, parseShellCaseFailure, parseShellPhase, parseShellRequest, recordShellFocusedSkip,
   resolvedShellTheme, settle, settleShellRestoredStyles, settleShellAppearancePaint, settleShellFocusState, settleShellSystemPaint, ShellPairFailure, settleShellPair, shellAppearanceSteps, shellCaseFailure, shellContextLifecycle, shellFocusFragments, shellOperationTracker, shellResource, siteShellBaselineRevision, siteShellBaselineTree, siteShellCases, siteShellHeaders, withShellCaseCleanup, withShellSettledNavigation,
   type ShellCase, type ShellElement, type ShellEvidence, type ShellRequest } from "./site-shell-browser-contract"
 
@@ -455,6 +455,40 @@ test("coalesced focused observation preserves the complete legacy target measure
       { rect: [20, 551.625, 49.078125, 21], owned: true },
     ])
   }
+})
+
+test("covered fragments carry a bounded hit-owner description beside the unchanged fragment evidence", () => {
+  for (const covered of [0, 1]) {
+    const fixture = focusObservationFixture(700, covered)
+    const observation = observeShellFocus(fixture.element, fixture.options)
+    // The fixture's foreign owner has no identity; the description stays finite.
+    expect(observation.obstructions).toEqual([{ fragment: covered, rect: observation.fragments[covered]!.rect, hit: { tag: "", id: "", slot: null, classes: [], ancestors: [] } }])
+    expect(() => assertShellFocusGeometry(observation.fragments, "coalesced")).not.toThrow()
+    expect(() => assertShellFocusFragments(observation.fragments, "coalesced", observation.obstructions)).toThrow("native hit owner")
+    expect(() => assertShellFocusFragments(observation.fragments, "coalesced")).toThrow(`fragment ${covered}`)
+  }
+  const owned = focusObservationFixture()
+  expect(observeShellFocus(owned.element, owned.options).obstructions).toEqual([])
+  // Real owners report semantic hooks only, never atomic compiler classes, up
+  // through every ancestor, so a comparison can recognise the fixed footer bar.
+  const node = (tagName: string, className: string | null, parentElement: unknown, id = "", slot: string | null = null) =>
+    ({ tagName, id, parentElement, getAttribute: (name: string) => name === "class" ? className : name === "data-slot" ? slot : null })
+  const body = node("BODY", null, null), footer = node("FOOTER", "hraness-site-footer x1ktp55a x8d9m59", body, "hraness-site-footer")
+  const inner = node("DIV", "hraness-site-footer__inner x9f619 x18o3ruo", footer), links = node("NAV", "hraness-site-footer__links x78zum5", inner)
+  const document = { activeElement: undefined as unknown, elementFromPoint: () => links }
+  const element = { ownerDocument: document, isConnected: true, matches: () => true, contains: () => false, getClientRects: () => [{ x: 28.8, y: 413.75, width: 168.1875, height: 21 }] }
+  document.activeElement = element
+  const observation = observeShellFocus(element as unknown as Element)
+  expect(observation.fragments).toEqual([{ rect: [28.8, 413.75, 168.1875, 21], owned: false }])
+  expect(observation.obstructions).toEqual([{ fragment: 0, rect: [28.8, 413.75, 168.1875, 21],
+    hit: { tag: "nav", id: "", slot: null, classes: ["hraness-site-footer__links"], ancestors: ["hraness-site-footer__inner", "hraness-site-footer", "body"] } }])
+  expect(() => assertShellFocusFragments(observation.fragments, "recovery", observation.obstructions)).toThrow("hraness-site-footer__inner")
+  const deep = node("SPAN", Array.from({ length: 12 }, (_, i) => `hook-${i}`).join(" "), Array.from({ length: 40 }, () => 0).reduce<unknown>((parent, _, i) => node("DIV", `level-${i}`, parent), null))
+  const deepDocument = { activeElement: undefined as unknown, elementFromPoint: () => deep }, deepElement = { ...element, ownerDocument: deepDocument }
+  deepDocument.activeElement = deepElement
+  const bounded = observeShellFocus(deepElement as unknown as Element)
+  expect(bounded.obstructions[0]!.hit!.classes).toHaveLength(8)
+  expect(bounded.obstructions[0]!.hit!.ancestors).toHaveLength(32)
 })
 
 test("coalesced observation rejects target or focus drift before taking paint evidence", () => {
@@ -1540,7 +1574,7 @@ function evidence(): ShellEvidence {
     ['[data-hraness-appearance-menu] [role="menuitemradio"] .hraness-appearance-icon', 3],
     ['[data-hraness-appearance-menu] [role="menuitemradio"] .hraness-appearance-icon svg', 3],
   ] as const
-  return { direction: "ltr", dom: "<main></main>", elements: [old],
+  return { direction: "ltr", dom: "<main></main>", elements: [old], obstructions: [],
     skip: { ...old, key: ".skip-link[0]", styles: { ...old.styles, position: "fixed" }, geometrySpace: "viewport", scrollY: 0, documentRect: old.rect },
     hover: [old], focus: [old], recovery: false,
     appearance: shellAppearanceSteps.map(step => ({ step: step.name, active: step.active,

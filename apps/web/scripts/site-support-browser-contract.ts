@@ -3,7 +3,7 @@ import { createHash } from "node:crypto"
 import type { Page } from "playwright-core"
 import { marketingBaselineProfile, marketingScope, parseMarketingRequest } from "./site-marketing-browser-contract"
 import { assertShellNode, compareShellElements, compareShellEvidence, measure, settle, shellRecord,
-  siteShellCases, siteShellDeadlineMs, type ShellCase, type ShellElement, type ShellEvidence } from "./site-shell-browser-contract"
+  siteShellCases, siteShellDeadlineMs, type ShellCase, type ShellElement, type ShellEvidence, type ShellKeyboardObstruction } from "./site-shell-browser-contract"
 import { assertCopyPorts, copyNegativeControls, copySteps, siteCopyCases, siteCopyDeadlineMs, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { supportBaselineProfile, supportCopyScope, supportFooterDigests, supportHref, supportScope } from "./site-support-profile"
@@ -13,6 +13,46 @@ export interface SupportRequest extends Omit<ReturnType<typeof parseMarketingReq
   readonly baselineProfile: typeof supportBaselineProfile
 }
 const keys = (value: Record<string, unknown>, names: readonly string[]) => assert.deepEqual(Object.keys(value).sort(), [...names].sort())
+/** Keyboard obstructions measured on the immutable baseline (clean 425066a,
+ * site-footer 0.11.2) in pinned Chrome 151, identically before this change on
+ * the current page: the shared footer bar is position: fixed (40.52px at
+ * 720px) over the bottom of the 450px reflow-equivalent viewport, and
+ * Chromium's sequential focus never scrolls a target that already sits inside
+ * the layout viewport. The current page keeps that band outside the
+ * scrollport's optimal viewing region (html scroll-padding-block-end), so it
+ * must show no obstruction at all. The baseline cannot change, so it must show
+ * exactly this inventory, each fragment owned by the fixed footer bar. */
+const reflowAskAi = [".slopcamera-ask-ai a[0]", ".slopcamera-ask-ai a[1]", ".slopcamera-ask-ai a[2]", ".slopcamera-ask-ai a[3]"] as const
+const reflowRecovery = [".route-state a[2]", ".route-state a[3]"] as const
+export const supportBaselineObstructions: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  "/-200pct-reflow-equivalent-light": reflowAskAi, "/-200pct-reflow-equivalent-dark": reflowAskAi,
+  "/404.html-200pct-reflow-equivalent-light": reflowRecovery, "/404.html-200pct-reflow-equivalent-dark": reflowRecovery,
+})
+export const supportFooterBarHook = "hraness-site-footer__inner"
+export const supportObstructionOwnedByFooterBar = (item: ShellKeyboardObstruction): boolean =>
+  item.hit !== null && (item.hit.classes.includes(supportFooterBarHook) || item.hit.ancestors.includes(supportFooterBarHook))
+export function parseSupportBaselineObstructions(value: unknown, scenario: string): ShellKeyboardObstruction[] {
+  assert.ok(Array.isArray(value) && value.length <= 128, `${scenario}: bounded baseline obstruction inventory`)
+  const items = value.map(raw => {
+    const item = shellRecord(raw); keys(item, ["key", "fragment", "rect", "hit"])
+    assert.ok(typeof item.key === "string" && item.key.length > 0 && item.key.length <= 128, `${scenario}: obstruction key`)
+    assert.ok(Number.isSafeInteger(item.fragment) && (item.fragment as number) >= 0 && (item.fragment as number) < 128, `${scenario}: obstruction fragment`)
+    assert.ok(Array.isArray(item.rect) && item.rect.length === 4 && item.rect.every(axis => typeof axis === "number" && Number.isFinite(axis))
+      && (item.rect[2] as number) > 0 && (item.rect[3] as number) > 0, `${scenario}: obstruction geometry`)
+    if (item.hit !== null) {
+      const hit = shellRecord(item.hit); keys(hit, ["tag", "id", "slot", "classes", "ancestors"])
+      assert.ok(typeof hit.tag === "string" && typeof hit.id === "string" && (hit.slot === null || typeof hit.slot === "string"), `${scenario}: hit owner identity`)
+      for (const list of [hit.classes, hit.ancestors]) assert.ok(Array.isArray(list) && list.length <= 32
+        && list.every(name => typeof name === "string" && name.length > 0 && name.length <= 128), `${scenario}: hit owner hooks`)
+    }
+    return item as unknown as ShellKeyboardObstruction
+  })
+  assert.deepEqual(items.map(item => item.key), supportBaselineObstructions[scenario] ?? [],
+    `${scenario}: baseline keyboard obstructions must equal the reviewed pre-existing fixed-footer inventory`)
+  for (const item of items) assert.ok(supportObstructionOwnedByFooterBar(item),
+    `${scenario}: baseline obstruction ${item.key} is not owned by the fixed footer bar: ${JSON.stringify(item.hit)}`)
+  return items
+}
 export const supportCases = (scope: SupportRequest["scope"]) => scope === supportScope ? siteShellCases : siteCopyCases
 export const supportDeadline = (scope: SupportRequest["scope"]) => scope === supportScope ? siteShellDeadlineMs : siteCopyDeadlineMs
 export function parseSupportRequest(value: unknown): SupportRequest {
@@ -45,11 +85,12 @@ export function parseSupportPhase(value: unknown, sequence: 0 | 1 | 2, request: 
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
         assertCopyPorts(observation.baseline as CopyEvidence["ports"], refinementInstallCommand)
       } else {
-        keys(observation, ["name", "footer", "visible", "keyboardFocus", "hitTarget", "foundationRestored"])
+        keys(observation, ["name", "footer", "visible", "keyboardFocus", "hitTarget", "foundationRestored", "baselineObstructions"])
         assert.deepEqual(observation.footer, supportFooterDigests)
         for (const key of ["visible", "keyboardFocus", "hitTarget"]) assert.equal(observation[key], true)
         const scenario = cases[index]!
         assert.equal(observation.foundationRestored, scenario.route === "/" && scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light")
+        parseSupportBaselineObstructions(observation.baselineObstructions, scenario.name)
       }
     })
   }
@@ -89,7 +130,13 @@ export async function supportDom(page: Page, current: boolean): Promise<string> 
   return value.body
 }
 const isFooter = (item: ShellElement) => item.key.startsWith("#hraness-site-footer[") || item.key.startsWith(".hraness-site-footer__")
-export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvidence, label: string): void {
+/** `label` is the scenario name; it selects the reviewed baseline inventory. */
+export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvidence, label: string): { readonly baselineObstructions: readonly ShellKeyboardObstruction[] } {
+  // Every keyboard target on the current page must own its painted fragments,
+  // including the four Ask-AI links and the recovery links that the fixed
+  // footer bar covers on the immutable baseline at 720 x 450.
+  assert.deepEqual(actual.obstructions, [], `${label}: current keyboard targets must be unobstructed: ${JSON.stringify(actual.obstructions).slice(0, 2_048)}`)
+  const baselineObstructions = parseSupportBaselineObstructions(baseline.obstructions, label)
   const currentFooter = actual.elements.find(item => item.key === "#hraness-site-footer[0]")!
   const oldFooter = baseline.elements.find(item => item.key === "#hraness-site-footer[0]")!
   assert.ok(currentFooter && oldFooter)
@@ -111,6 +158,7 @@ export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvi
   // copy, skip, open appearance, hover and focus stay completely paired.
   compareShellEvidence({ ...actual, elements: project(actual.elements), focus: actual.focus.filter(item => !isFooter(item)), hover: actual.hover.filter(item => !isFooter(item)) },
     { ...baseline, elements: baseline.elements.filter(item => !isFooter(item)), focus: baseline.focus.filter(item => !isFooter(item)), hover: baseline.hover.filter(item => !isFooter(item)) }, label)
+  return { baselineObstructions }
 }
 
 export async function observeSupportFooter(page: Page, scenario: ShellCase, foundationCss: string, negative: boolean) {
@@ -158,7 +206,7 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
     compareShellElements(await measure(page, ["body", selector]), before, "Exact foundation restoration")
     foundationRestored = true
   }
-  return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored }
+  return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
 }
 export function compareSupportCopy(current: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
   assert.equal(current.command, refinementInstallCommand); assert.equal(baseline.command, refinementInstallCommand)

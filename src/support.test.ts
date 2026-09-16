@@ -8,7 +8,7 @@ import { reportUsefulResult } from "./support-completion"
 async function fixture() {
   const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-support-")))
   const env = {
-    HOME: root, XDG_DATA_HOME: root, PATH: process.env.PATH ?? "/usr/bin:/bin",
+    HOME: root, XDG_STATE_HOME: root, PATH: process.env.PATH ?? "/usr/bin:/bin",
     HRANESS_SUPPORT_AUDIENCE: "agent", HRANESS_SUPPORT_EMAIL: "off", BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0",
   }
   return { root, env, close: () => rm(root, { recursive: true, force: true }) }
@@ -40,7 +40,7 @@ test("portable and complete standalone support protocols are read-only before pr
   } finally { await f.close() }
 })
 
-test("successful piped work exposes discovery without consuming an offer, and explicit off wins", async () => {
+test("successful piped work exposes discovery without consuming an offer", async () => {
   const f = await fixture()
   try {
     const first = await run(f.root, f.env, ["diagram", "init", "first.diagram.json"])
@@ -57,13 +57,32 @@ test("successful piped work exposes discovery without consuming an offer, and ex
     expect(parsed.invitation.actions.map((action: { kind: string }) => action.kind)).toEqual(["support"])
     const quiet = await run(f.root, f.env, ["support", "offer", "--json"])
     expect(JSON.parse(quiet.stdout).kind).toBe("quiet")
-    const off = { ...f.env, HRANESS_SUPPORT_AUDIENCE: "off" }
-    expect((await run(f.root, off, ["diagram", "init", "off.diagram.json"])).stderr).toBe("")
-    expect(JSON.parse((await run(f.root, off, ["support", "offer", "--json"])).stdout).kind).toBe("quiet")
+  } finally { await f.close() }
+})
+
+test("help, failures and explicit opt-outs stay quiet before any discovery throttle or state exists", async () => {
+  // Each check runs in a fresh root before any successful work, so the shared
+  // ten-minute discovery throttle and offer reservation cannot mask a leak.
+  const f = await fixture()
+  try {
     expect((await run(f.root, f.env, ["--help"])).stderr).toBe("")
-    const failure = await run(f.root, f.env, ["diagram", "init", "first.diagram.json"])
+    const failure = await run(f.root, f.env, ["diagram", "check", "missing.diagram.json"])
     expect(failure.code).not.toBe(0)
     expect(failure.stderr).not.toContain("hraness-support-discovery-v1")
+    // The shared support state lives under XDG_STATE_HOME/hraness; nothing may create it.
+    const supportState = async () => (await readdir(f.root)).filter(name => name === "hraness" || name === ".local")
+    expect(await supportState()).toEqual([])
+    for (const [name, off] of [["audience", { ...f.env, HRANESS_SUPPORT_AUDIENCE: "off" }], ["support", { ...f.env, HRANESS_SUPPORT: "off" }]] as const) {
+      const work = await run(f.root, off, ["diagram", "init", `${name}.diagram.json`])
+      expect(work.code).toBe(0)
+      expect(work.stdout).toBe(`Created ${join(f.root, `${name}.diagram.json`)}\n`)
+      expect(work.stderr).toBe("")
+      const offer = await run(f.root, off, ["support", "offer", "--json"])
+      expect(offer.stderr).toBe("")
+      expect(JSON.parse(offer.stdout)).toMatchObject({ kind: "quiet", reason: "environment" })
+    }
+    expect(await supportState()).toEqual([])
+    expect((await readdir(f.root)).filter(name => name.endsWith(".diagram.json")).sort()).toEqual(["audience.diagram.json", "support.diagram.json"])
   } finally { await f.close() }
 })
 

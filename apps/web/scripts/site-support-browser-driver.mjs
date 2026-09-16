@@ -78,8 +78,10 @@ async function main() {
         if (copy) observations.push(compareSupportCopy(evidence, old, scenario, negative))
         else {
           assert.ok(design !== undefined && typeof currentDom === "string" && typeof baselineDom === "string")
-          compareSupportEvidence({ ...evidence, dom: currentDom }, { ...old, dom: baselineDom }, scenario.name)
-          observations.push(design)
+          // The comparison requires an unobstructed current page and records the
+          // immutable baseline's reviewed fixed-footer obstructions in the receipt.
+          const { baselineObstructions } = compareSupportEvidence({ ...evidence, dom: currentDom }, { ...old, dom: baselineDom }, scenario.name)
+          observations.push({ ...design, baselineObstructions })
         }
         cases.push(scenario.name)
         if (negative) negativeControls.push(...(copy ? evidence.negativeControls : [`${scenario.route}-final-css`, ...(scenario.route === "/" ? ["/-foundation-css"] : [])]))
