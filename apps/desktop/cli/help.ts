@@ -149,14 +149,11 @@ Scene sources retain stable entities, cameras, asset manifests and animation cha
 Inspect reports editable controls and known bounds without decoding assets. Patch requires
 the exact expected scene digest in its patch document and writes a new source without
 overwriting either revision. Evaluate samples absolute time without launching a renderer.
-<<<<<<< HEAD
 Audit samples bounded geometry against one camera over time and reports deterministic
 frustum findings; --asset-bounds supplies decoded glTF/splat enclosures as JSON.
-=======
-Generate runs a trusted single-file TypeScript generator at authoring time, stamps retained
-output with derived entity identity, and records source, parameters, seed and runtime digests;
-it never reruns source during inspect, evaluate or render.
->>>>>>> 871ce9c (proto: scene generate — trusted authoring-time generator modules)
+Generate runs a trusted TypeScript generator at authoring time, stamps retained
+output with derived entity identity, and records source, closure, parameters, seed and
+runtime digests; it never reruns source during inspect, evaluate or render.
 Project operations use the exact full project ID and a versioned whole-project basis.
 Discover each request with slopcamera operations show spatial.project.<action> --json.
 Migration retains the frozen media/edit pair in V2 authority. Legacy project commands
