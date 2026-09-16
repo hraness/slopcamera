@@ -6,7 +6,7 @@ import { assertShellNode, compareShellElements, compareShellEvidence, measure, s
   siteShellCases, siteShellDeadlineMs, type ShellCase, type ShellElement, type ShellEvidence, type ShellKeyboardObstruction } from "./site-shell-browser-contract"
 import { assertCopyPorts, copyNegativeControls, copySteps, siteCopyCases, siteCopyDeadlineMs, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
-import { supportBaselineProfile, supportCopyScope, supportFooterDigests, supportHref, supportScope } from "./site-support-profile"
+import { supportBaselineInstallCommand, supportBaselineProfile, supportCopyScope, supportFooterDigests, supportHref, supportScope } from "./site-support-profile"
 
 export interface SupportRequest extends Omit<ReturnType<typeof parseMarketingRequest>, "scope" | "baselineProfile"> {
   readonly scope: typeof supportScope | typeof supportCopyScope
@@ -83,7 +83,7 @@ export function parseSupportPhase(value: unknown, sequence: 0 | 1 | 2, request: 
         assert.equal(observation.command, refinementInstallCommand); assert.deepEqual(observation.steps, copySteps)
         assert.equal(observation.elementsPerSample, refinementCopyElementKeys.length)
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
-        assertCopyPorts(observation.baseline as CopyEvidence["ports"], refinementInstallCommand)
+        assertCopyPorts(observation.baseline as CopyEvidence["ports"], supportBaselineInstallCommand)
       } else {
         keys(observation, ["name", "footer", "visible", "keyboardFocus", "hitTarget", "foundationRestored", "baselineObstructions"])
         assert.deepEqual(observation.footer, supportFooterDigests)
@@ -209,10 +209,10 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
 }
 export function compareSupportCopy(current: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
-  assert.equal(current.command, refinementInstallCommand); assert.equal(baseline.command, refinementInstallCommand)
+  assert.equal(current.command, refinementInstallCommand); assert.equal(baseline.command, supportBaselineInstallCommand)
   assert.deepEqual(current.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
   for (const side of [current, baseline]) {
-    assert.deepEqual(side.steps.map(step => step.name), copySteps); assertCopyPorts(side.ports, refinementInstallCommand)
+    assert.deepEqual(side.steps.map(step => step.name), copySteps); assertCopyPorts(side.ports, side === current ? refinementInstallCommand : supportBaselineInstallCommand)
     for (const step of side.steps) assert.deepEqual(step.elements.map(item => item.key), refinementCopyElementKeys)
   }
   for (const [index, step] of current.steps.entries()) compareShellElements(step.elements, baseline.steps[index]!.elements, `${scenario.name} ${step.name}`)

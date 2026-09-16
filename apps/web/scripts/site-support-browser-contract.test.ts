@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { parseSupportRequest, parseSupportPhase, parseSupportCaseFailure, supportCaseFailure, supportCases, supportDeadline, compareSupportEvidence,
   compareSupportCopy, supportBaselineObstructions, parseSupportBaselineObstructions, supportObstructionOwnedByFooterBar } from "./site-support-browser-contract"
-import { supportScope, supportCopyScope, supportBaselineProfile, supportBaselineRevision, supportBaselineTree, supportFooterDigests } from "./site-support-profile"
+import { supportScope, supportCopyScope, supportBaselineProfile, supportBaselineRevision, supportBaselineTree, supportFooterDigests, supportBaselineInstallCommand } from "./site-support-profile"
 import { assertSupportBaselineManifest } from "./verify-site-marketing"
 import { assertFooterKeyboardCoverage, shellAppearanceSteps, siteShellCases, siteShellDeadlineMs, type ShellElement, type ShellEvidence, type ShellKeyboardObstruction } from "./site-shell-browser-contract"
 import { copySteps, copyNegativeControls, siteCopyCases, siteCopyDeadlineMs, type CopyEvidence } from "./site-copy-browser-contract"
@@ -122,11 +122,12 @@ test("the current page must be unobstructed while the immutable baseline shows e
 const ports = (command: string): CopyEvidence["ports"] => ({ write: "success", fallback: "throw", writes: Array(5).fill(command), fallbacks: Array.from({ length: 3 }, () => ({ value: command, readonly: true, start: 0, end: command.length, focused: true, offscreen: true })), timers: [{ delay: 2500, started: 0, fired: 2500, cancelled: false }, { delay: 2500, started: 2501, fired: null, cancelled: true }, { delay: 2500, started: 2502, fired: null, cancelled: false }] })
 const copy = (): CopyEvidence => ({ command: refinementInstallCommand, negativeControls: [], ports: ports(refinementInstallCommand), steps: copySteps.map(name => ({ name, elements: refinementCopyElementKeys.map(key => element(key)) })) })
 test("copy compares both exact current commands, all states, paint, timer ports and negative controls", () => {
-  const baseline = copy(), current = { ...copy(), negativeControls: copyNegativeControls }, scenario = siteCopyCases[0]!
+  const baseline = { ...copy(), command: supportBaselineInstallCommand, ports: ports(supportBaselineInstallCommand) }, current = { ...copy(), negativeControls: copyNegativeControls }, scenario = siteCopyCases[0]!
   const observation = compareSupportCopy(current, baseline, scenario, true)
   expect(observation.elementsPerSample).toBe(18); expect(observation.steps).toHaveLength(10)
   const phase = { ...result(), scope: supportCopyScope, cases: siteCopyCases.map(item => item.name), comparison: "unchanged-current-copy-state-machine", negativeControls: copyNegativeControls, observations: siteCopyCases.map(item => ({ ...observation, name: item.name })) }
   expect(() => parseSupportPhase(phase, 2, request(supportCopyScope))).not.toThrow()
+  expect(() => compareSupportCopy(current, { ...baseline, command: refinementInstallCommand, ports: ports(refinementInstallCommand) }, scenario, true)).toThrow()
   for (const value of [{ ...current, command: "changed" }, { ...current, steps: current.steps.slice(1) }, { ...current, negativeControls: [] }, { ...current, ports: ports("changed") }, { ...current, steps: current.steps.map((step, i) => i === 0 ? { ...step, elements: step.elements.slice(1) } : step) }]) expect(() => compareSupportCopy(value, baseline, scenario, true)).toThrow()
   const changed = copy(); (changed.steps[0]!.elements[0]!.styles as Record<string, string>).color = "red"
   expect(() => compareSupportCopy({ ...changed, negativeControls: copyNegativeControls }, baseline, scenario, true)).toThrow()
