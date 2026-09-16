@@ -103,7 +103,7 @@ Usage:
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
   slopcamera doctor
-  slopcamera support [protocol --json|offer --json|shown <id>|dismiss|snooze|enable|status --json]
+  slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
