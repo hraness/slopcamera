@@ -149,7 +149,7 @@ describe("scene asset admit", () => {
       const document = SpatialAssetAdmissionV1Schema.parse(result.document);
       expect(document.manifest.assetId).toBe("asset_tree");
       expect(document.manifest.interpretation).toEqual({ kind: "gltf", format: "glb", metersPerUnit: 0.5, sourceUp: "z" });
-      expect(document.entity.geometry).toMatchObject({ kind: "asset", assetId: "asset_tree" });
+      expect(document.entity).toMatchObject({ kind: "mesh", geometry: { kind: "asset", assetId: "asset_tree" } });
       expect(document.bounds.modelSpace).toEqual({ min: [0, 0, 0], max: [2, 3, 0] });
       // Z-up sources rotate -90 degrees around X and scale into Y-up meters.
       expect(document.bounds.sceneSpace.min[0]).toBeCloseTo(0, 10);
