@@ -161,8 +161,8 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   const root = JSON.parse(await readFile(join(import.meta.dir, "../package.json"), "utf8"))
   const site = JSON.parse(await readFile(join(import.meta.dir, "../apps/web/package.json"), "utf8"))
   expect(root.scripts.check.split(" && ")).toEqual([
-    "bun run check:standalone", "bun run check:sdk", "bun run check:desktop",
-    "bun run check:web", "bun run check:standalone", "bun run test:package",
+    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:sdk",
+    "bun run check:desktop", "bun run check:web", "bun run check:standalone", "bun run test:package",
   ])
   expect(root.scripts["check:sdk"].split(" && ")).toEqual([
     "bun run typecheck:sdk", "bun run lint:sdk", "bun run build:sdk",
