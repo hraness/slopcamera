@@ -111,6 +111,20 @@ slopcamera scene patch product.scene.json --patch patch.json --output product-or
 
 A stale digest rejects the edit. The command requires a new output path, so both sources remain available. Patches also support transforms, cameras, animation channels, hierarchy changes, and explicitly declared generated-part overrides. Generated entities retain their generator/key correspondence; inspecting, seeking, and patching never rerun generator source. Replacing generator output is an explicit operation carrying new provenance.
 
+`slopcamera scene diff before.scene.json after.scene.json --json` reports the same structural difference a patch produces — added, removed, and changed entities, assets, cameras, and channels with the changed property names — without touching either file.
+
+## Admit a local glTF asset
+
+`scene asset admit` validates one local GLB 2.0 file against the closed profile and turns it into a scene-ready manifest:
+
+```sh
+slopcamera scene asset admit model.glb --source-root assets --output model.manifest.json --json
+```
+
+The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. Bounds from the facts manifest feed `scene audit --asset-bounds`, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
+
+The `@hraness/slopcamera/code` SDK also exports pure scene builders — camera poses from FOV and look-at, baked easing channels, grid/scatter layout, and placement relations — that return validated scene data for programmatic authoring. They are documented in the Slopcamera Agent Skill under scene building.
+
 ## Generate procedural output at authoring time
 
 `scene generate` executes a single-file TypeScript generator module — trusted current-user code, like an explicitly imported workflow module — and retains its output inside a scene source:
