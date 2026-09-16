@@ -26,6 +26,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |
+| Author a scene from code, generate procedural entities, or audit framing | [Scene building](references/scene-building.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |
 | Typed Bun SDK, built-in workflow, durable resume or MCP | [Workflows and SDK](references/workflows-sdk.md) |

@@ -3,7 +3,7 @@ type: plan
 title: Agentic scene authoring and verification
 description: Give coding agents a code-first path to author, generate, and verify Slopcamera spatial scenes — builders, asset admission, geometric audit, and the dormant generator contract — without changing the renderer or trust boundaries.
 area: spatial-scenes
-status: in-progress
+status: completed
 repository_scopes:
   - src/spatial-scene
   - apps/desktop/cli
@@ -223,7 +223,9 @@ under `slopcamera-worktrees/proto-*` for reference.
 
 ## Phase 6: Skill reference + docs
 
-- **Status:** Not started
+- **Status:** Implemented (`skills/slopcamera/references/scene-building.md`,
+  SKILL.md routing row, `directed-scenes.md` cross-link, `docs/spatial-scenes.md`
+  diff/admit/builders coverage)
 - **Depends on:** 1, 3, 5 (documents the shipped surfaces).
 - **Objective:** `skills/slopcamera/references/scene-building.md` teaches the
   allowlist and the create→audit→patch loop; `directed-scenes.md` and
@@ -326,3 +328,51 @@ under `slopcamera-worktrees/proto-*` for reference.
   reproduce on unmodified `main`, and every affected suite passes in
   isolation on this branch. Fresh CI on the PR is the arbiter per
   CONTRIBUTING.md.
+- 2026-09-16 — CI on PR #125 caught a stale generated-identity row the local
+  gate missed: the `apps/desktop/dist/cli` rebuild (`4cb8b9b`) landed after
+  the last local `check:standalone` run. Regenerated via
+  `check-standalone --update-legacy-identity-inventory` (`c6c698a`) —
+  generated paths accept new snapshots automatically; only source rows need
+  explicit reviewed edits. The gate's second `check:standalone` after
+  `check:desktop` is designed for exactly this; local runs never reached it
+  under the test timeouts.
+- 2026-09-16 — Merged current `main` (`bc54cf6`, cost-surface check +
+  release advertising) into the branch; `check:cost-surfaces` and
+  `check:standalone` re-verified, focused suites re-run (44 pass). Full PR CI
+  on the merged head green including `Required`; squash-merged as `311325d`.
+- 2026-09-16 — Phase 6 landed: `scene-building.md` skill reference (builder
+  allowlist, create→audit→patch loop, generator authoring rules, audit
+  limits, admit usage), SKILL.md routing row, `directed-scenes.md`
+  cross-link, and `docs/spatial-scenes.md` coverage of `scene diff`,
+  `scene asset admit`, and the SDK builders.
+
+## Result
+
+Delivered on `main` as `311325d` (PR #125) plus this finalization. Agents can
+now author scenes through pure contract-validated builders, admit local GLBs
+with persisted bounds, audit framing and visibility facts geometrically, diff
+scene structure, and run trusted generator modules whose output the existing
+`generators` contract retains — the create→verify→repair loop the assessment
+identified as missing, with renderer and trust boundaries unchanged.
+
+## Durable memory
+
+- `DeepReadonly<z.infer<…>>` over strict-object schema graphs is a
+  type-instantiation hazard: it re-walks embedded contract types on every
+  authored-source `code check`. Declare report shapes structurally and anchor
+  drift with a schema-parse-to-declared-type assignment at the boundary.
+- The legacy-identity inventory treats `dist/` paths as `generated`: their
+  rows regenerate through `--update-legacy-identity-inventory`, while source
+  rows still demand explicit reviewed edits. Any dist rebuild that changes
+  identity-bearing lines needs that regeneration in the same change.
+- Schema-strict discriminated unions (asset `interpretation`) resist additive
+  metadata; sibling content-addressed facts manifests preserve manifest
+  identity. This pattern should be reused for future derived-asset facts
+  (rendered audit output is the next candidate).
+- The deferred work — rendered-tier audit, schemaVersion 2 items
+  (instancing, spot light, shadows, emissive, extra GLB maps), MCP tools,
+  World API `semantics_metadata` consumption — stays deliberately cut pending
+  usage evidence; see "Deferred and open questions". No separate durable note
+  promoted: the reusable conclusions above live here with their evidence, and
+  the operating surfaces are documented in `docs/spatial-scenes.md` and the
+  skill.

@@ -2,7 +2,7 @@
 
 Use `slopcamera scene --help` to check that the installed CLI includes the directed-scene foundation. The initial renderer uses Three.js and supports explicit scene JSON, semantic edits, calibrated cameras, native media surfaces, contact sheets, and transparent video.
 
-Start with `slopcamera scene init scene.json --json`, then `slopcamera scene inspect scene.json --json`. Retain the original source. Use its stable entity IDs and exact `sceneSha256` in typed patches; save each edit with `--output` to a new file. Inspect `editableControls` before changing generated parts or imported materials. Do not replace named scene parts with opaque regenerated source merely to change one color or camera.
+To author a scene from code — builder helpers, procedural generator modules, glTF admission, or geometric audit — read [scene building](scene-building.md) first. Start interactive work with `slopcamera scene init scene.json --json`, then `slopcamera scene inspect scene.json --json`. Retain the original source. Use its stable entity IDs and exact `sceneSha256` in typed patches; save each edit with `--output` to a new file. Inspect `editableControls` before changing generated parts or imported materials. Do not replace named scene parts with opaque regenerated source merely to change one color or camera.
 
 Use `slopcamera scene plan scene.json --request request.json --json` before rendering. A frame request is:
 
