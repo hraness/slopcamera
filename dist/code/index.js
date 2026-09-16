@@ -1389,7 +1389,7 @@ function classifyViewOverlay(bounds, units, width, height) {
   const contained = minX >= 0 && minY >= 0 && maxX <= width && maxY <= height ? "full" : pixelFootprint > 0 ? "partial" : "outside";
   return { contained, pixelFootprint };
 }
-function defaultTimesUs(durationUs) {
+function spatialAuditDefaultTimesUs(durationUs) {
   const count = SPATIAL_AUDIT_LIMITS.defaultSamples;
   return Array.from({ length: count }, (_, index) => Math.round(index * durationUs / (count - 1)));
 }
@@ -1408,7 +1408,7 @@ function auditSpatialScene(sceneInput, options) {
       throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId}.`, "assetBounds");
     assetBounds[assetId] = Object.freeze({ min: Object.freeze([...bounds.min]), max: Object.freeze([...bounds.max]) });
   }
-  const timesUs = [...new Set(captured.timesUs ?? defaultTimesUs(scene.durationUs))].sort((a, b) => a - b);
+  const timesUs = [...new Set(captured.timesUs ?? spatialAuditDefaultTimesUs(scene.durationUs))].sort((a, b) => a - b);
   for (const timeUs of timesUs) {
     if (timeUs > scene.durationUs)
       throw new SpatialSceneError("invalid-data", "Audit sample time exceeds scene duration.", "timesUs");
@@ -1574,6 +1574,474 @@ function auditSpatialScene(sceneInput, options) {
   return deepFreezeJson(parsed);
 }
 
+// src/spatial-scene/audit-rendered.ts
+import { z as z4 } from "zod";
+var SPATIAL_RENDERED_AUDIT_LIMITS = Object.freeze({
+  samples: SPATIAL_AUDIT_LIMITS.samples,
+  findings: SPATIAL_AUDIT_LIMITS.findings,
+  entitySamples: SPATIAL_AUDIT_LIMITS.entitySamples,
+  reportBytes: SPATIAL_AUDIT_LIMITS.reportBytes,
+  selectionIds: 4096,
+  frameDimension: 8192,
+  framePixels: 33554432
+});
+var ENTITY_KINDS2 = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"];
+var ELIGIBILITY = ["renderable", "view-masked", "no-surface", "unsupported-kind"];
+var BOUNDS_UNKNOWN_REASONS2 = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
+var FINDING_KINDS2 = [
+  "never-rendered",
+  "unsupported-kind",
+  "occluded",
+  "unattributed-pixels",
+  "empty-render",
+  "bounds-unknown"
+];
+var SAMPLE_NOTES = ["out-of-range", "other-camera", "unlowered-expected"];
+var SpatialRenderedAuditCoverageSchema = z4.discriminatedUnion("kind", [
+  z4.strictObject({ kind: z4.literal("opaque") }),
+  z4.strictObject({ kind: z4.literal("alpha-threshold"), threshold: z4.number().finite().gt(0).max(1) })
+]);
+var SPATIAL_RENDERED_AUDIT_COVERAGE = Object.freeze({ kind: "alpha-threshold", threshold: 0.5 });
+var selectionIdSchema = z4.number().int().min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.selectionIds);
+var selectionKeyPattern = /^(?:0|[1-9]\d{0,3})$/u;
+var pixelCountSchema = z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels);
+var SpatialRenderedAuditObjectSchema = z4.strictObject({
+  entityId: SpatialEntityIdSchema,
+  selectionId: selectionIdSchema,
+  representation: z4.string().min(1).max(256),
+  placement: z4.enum(["world", "view"]),
+  assetManifestSha256: SpatialDigestSchema.optional()
+});
+var SpatialRenderedAuditFrameSchema = z4.strictObject({
+  timeUs: SpatialTimeUsSchema,
+  width: z4.number().int().min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension),
+  height: z4.number().int().min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension),
+  pngSha256: SpatialDigestSchema,
+  counts: z4.record(z4.string().regex(selectionKeyPattern), pixelCountSchema),
+  objects: z4.array(SpatialRenderedAuditObjectSchema).max(SPATIAL_SCENE_LIMITS.entities)
+}).superRefine((frame, context) => {
+  const pixels = frame.width * frame.height;
+  if (pixels > SPATIAL_RENDERED_AUDIT_LIMITS.framePixels) {
+    context.addIssue({ code: "custom", message: "Object-ID frame exceeds the pixel budget." });
+  }
+  let total = 0;
+  for (const [key2, count] of Object.entries(frame.counts)) {
+    const code = Number(key2);
+    if (!Number.isInteger(code) || code < 1 || code > SPATIAL_RENDERED_AUDIT_LIMITS.selectionIds) {
+      context.addIssue({ code: "custom", message: "Object-ID counts must key selection codes in [1,4096]." });
+    }
+    total += count;
+  }
+  if (total > pixels) {
+    context.addIssue({ code: "custom", message: "Object-ID counts exceed the frame pixel count." });
+  }
+  const entityIds = new Set, selectionIds = new Set;
+  for (const object of frame.objects) {
+    if (entityIds.has(object.entityId) || selectionIds.has(object.selectionId)) {
+      context.addIssue({ code: "custom", message: "Frame evidence must name each entity and selection code once." });
+    }
+    entityIds.add(object.entityId);
+    selectionIds.add(object.selectionId);
+  }
+});
+var SpatialRenderedAuditSampleSchema = z4.strictObject({
+  timeUs: SpatialTimeUsSchema,
+  expected: z4.boolean(),
+  lowered: z4.boolean(),
+  rendered: z4.boolean(),
+  pixels: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels),
+  framePercent: z4.number().finite().min(0).max(100),
+  geometricPixels: z4.number().finite().min(0).max(1000000000000000).optional(),
+  coverageRatio: z4.number().finite().min(0).max(1000000000000000).optional(),
+  note: z4.enum(SAMPLE_NOTES).optional()
+});
+var SpatialRenderedAuditEntitySchema = z4.strictObject({
+  entityId: SpatialEntityIdSchema,
+  name: z4.string().min(1).max(256),
+  kind: z4.enum(ENTITY_KINDS2),
+  placement: SpatialPlacementSchema,
+  eligibility: z4.enum(ELIGIBILITY),
+  selectionId: selectionIdSchema,
+  enclosure: z4.discriminatedUnion("status", [
+    z4.strictObject({ status: z4.literal("bounded") }),
+    z4.strictObject({ status: z4.literal("unknown"), reason: z4.enum(BOUNDS_UNKNOWN_REASONS2) })
+  ]),
+  samples: z4.array(SpatialRenderedAuditSampleSchema).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+  totals: z4.strictObject({
+    expected: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+    lowered: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+    rendered: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+    pixels: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels * SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+    maxPixels: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels),
+    maxFramePercent: z4.number().finite().min(0).max(100)
+  })
+});
+var SpatialRenderedAuditFrameReportSchema = z4.strictObject({
+  timeUs: SpatialTimeUsSchema,
+  pngSha256: SpatialDigestSchema,
+  renderedPixels: pixelCountSchema,
+  unattributedPixels: pixelCountSchema,
+  loweredEntities: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities)
+});
+var SpatialRenderedAuditFindingSchema = z4.strictObject({
+  severity: z4.enum(["info", "warning"]),
+  kind: z4.enum(FINDING_KINDS2),
+  entityId: SpatialEntityIdSchema.optional(),
+  timeUs: SpatialTimeUsSchema.optional(),
+  detail: z4.string().min(1).max(1024)
+});
+var SpatialRenderedAuditReportSchema = z4.strictObject({
+  kind: z4.literal("slopcamera.spatial-rendered-audit"),
+  schemaVersion: z4.literal(1),
+  sceneId: SpatialSceneIdSchema,
+  sceneSha256: SpatialDigestSchema,
+  cameraId: SpatialCameraIdSchema,
+  durationUs: SpatialTimeUsSchema,
+  timesUs: z4.array(SpatialTimeUsSchema).min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+  mode: z4.strictObject({ kind: z4.literal("object-id"), coverage: SpatialRenderedAuditCoverageSchema }),
+  frame: z4.strictObject({
+    width: z4.number().int().min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension),
+    height: z4.number().int().min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension),
+    pixels: pixelCountSchema
+  }),
+  summary: z4.strictObject({
+    entities: z4.strictObject({
+      total: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      renderable: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      viewMasked: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      noSurface: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      unsupported: z4.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities)
+    }),
+    entitiesNeverRendered: z4.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesUnsupported: z4.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesViewMasked: z4.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    renderedPixels: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels * SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+    unattributedPixels: z4.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels * SPATIAL_RENDERED_AUDIT_LIMITS.samples)
+  }),
+  entities: z4.array(SpatialRenderedAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+  frames: z4.array(SpatialRenderedAuditFrameReportSchema).min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
+  findings: z4.array(SpatialRenderedAuditFindingSchema).max(SPATIAL_RENDERED_AUDIT_LIMITS.findings),
+  omittedFindings: z4.number().int().min(0)
+});
+var SpatialRenderedAuditOptionsSchema = z4.strictObject({
+  cameraId: SpatialCameraIdSchema,
+  assetBounds: z4.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional(),
+  coverage: SpatialRenderedAuditCoverageSchema.optional()
+});
+function decodeObjectIdPixels(rgba, width, height) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension || height > SPATIAL_RENDERED_AUDIT_LIMITS.frameDimension || width * height > SPATIAL_RENDERED_AUDIT_LIMITS.framePixels) {
+    throw new RangeError("Object-ID frame dimensions exceed their bound.");
+  }
+  if (rgba.length !== width * height * 4) {
+    throw new RangeError("Object-ID pixels must be exactly width \xD7 height RGBA8.");
+  }
+  const counts = {};
+  for (let index = 0;index < rgba.length; index += 4) {
+    const red = rgba[index], green = rgba[index + 1], blue = rgba[index + 2], alpha = rgba[index + 3];
+    if (alpha === 0) {
+      if (red !== 0 || green !== 0 || blue !== 0) {
+        throw new RangeError("Object-ID no-hit pixels must be exactly [0,0,0,0].");
+      }
+      continue;
+    }
+    const code = red * 65536 + green * 256 + blue;
+    if (alpha !== 255 || code === 0 || code > SPATIAL_RENDERED_AUDIT_LIMITS.selectionIds) {
+      throw new RangeError("Object-ID pixels must be alpha-255 selection codes in [1,4096].");
+    }
+    counts[String(code)] = (counts[String(code)] ?? 0) + 1;
+  }
+  return counts;
+}
+var round32 = (value) => Math.round(value * 1000) / 1000;
+function eligibility(entity) {
+  if (entity.kind === "splat")
+    return "unsupported-kind";
+  if (entity.kind === "group" || entity.kind === "light")
+    return "no-surface";
+  if (entity.placement.kind === "view")
+    return "view-masked";
+  return "renderable";
+}
+function entityAssetId(entity) {
+  switch (entity.kind) {
+    case "mesh":
+      return entity.geometry.kind === "asset" ? entity.geometry.assetId : undefined;
+    case "image":
+    case "diagram":
+    case "video":
+      return entity.assetId;
+    case "text":
+      return entity.fontAssetId;
+    case "splat":
+      return entity.assetId;
+    default:
+      return;
+  }
+}
+var findingOrder2 = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
+function auditSpatialSceneRendered(sceneInput, framesInput, options) {
+  const scene = parseSpatialScene(sceneInput);
+  const captured = parseSpatialValue(SpatialRenderedAuditOptionsSchema, options, "rendered audit options");
+  const coverage = captured.coverage ?? SPATIAL_RENDERED_AUDIT_COVERAGE;
+  const cameraId = captured.cameraId;
+  if (!scene.cameras.some((camera2) => camera2.cameraId === cameraId)) {
+    throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId");
+  }
+  const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
+  for (const assetId of Object.keys(captured.assetBounds ?? {})) {
+    if (!assetIds.has(assetId))
+      throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId}.`, "assetBounds");
+  }
+  const frames = parseSpatialValue(z4.array(SpatialRenderedAuditFrameSchema).min(1).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples), framesInput, "rendered audit frames");
+  const timeSet = new Set(frames.map((frame) => frame.timeUs));
+  if (timeSet.size !== frames.length) {
+    throw new SpatialSceneError("invalid-data", "Rendered audit frames must have unique sample times.", "frames");
+  }
+  const timesUs = [...timeSet].sort((a, b) => a - b);
+  for (const timeUs of timesUs) {
+    if (timeUs > scene.durationUs)
+      throw new SpatialSceneError("invalid-data", "Rendered audit sample time exceeds scene duration.", "frames");
+  }
+  if (scene.entities.length * timesUs.length > SPATIAL_RENDERED_AUDIT_LIMITS.entitySamples) {
+    throw new SpatialSceneError("invalid-data", "Rendered audit entity-sample budget exceeded; pass fewer frames.", "frames");
+  }
+  const first = frames[0];
+  for (const frame of frames) {
+    if (frame.width !== first.width || frame.height !== first.height) {
+      throw new SpatialSceneError("invalid-data", "Rendered audit frames must share one calibrated dimension.", "frames");
+    }
+  }
+  const framePixels = first.width * first.height;
+  const entityIndex = new Map(scene.entities.map((entity, index) => [entity.entityId, index + 1]));
+  const manifestDigests = spatialAssetClosureDigests(scene.assets);
+  const frameDrafts = new Map;
+  for (const frame of frames) {
+    const attributed = new Map;
+    const lowered = new Map;
+    for (const object of frame.objects) {
+      const entity = scene.entities.find((candidate) => candidate.entityId === object.entityId);
+      if (entity === undefined) {
+        throw new SpatialSceneError("invalid-data", `Frame evidence names unknown entity ${object.entityId}.`, "frames");
+      }
+      if (object.selectionId !== entityIndex.get(object.entityId)) {
+        throw new SpatialSceneError("invalid-data", `Frame evidence selection id differs from the canonical index for ${object.entityId}.`, "frames");
+      }
+      if (object.assetManifestSha256 !== undefined) {
+        const assetId = entityAssetId(entity);
+        if (assetId === undefined || manifestDigests[assetId] !== object.assetManifestSha256) {
+          throw new SpatialSceneError("invalid-data", `Frame evidence asset digest does not match the declared manifest for ${object.entityId}.`, "frames");
+        }
+      }
+      lowered.set(object.entityId, object);
+      attributed.set(object.selectionId, 0);
+    }
+    let renderedPixels2 = 0, unattributedPixels2 = 0;
+    for (const [key2, count] of Object.entries(frame.counts)) {
+      const code = Number(key2);
+      if (!attributed.has(code)) {
+        unattributedPixels2 += count;
+        continue;
+      }
+      attributed.set(code, count);
+      renderedPixels2 += count;
+    }
+    frameDrafts.set(frame.timeUs, {
+      timeUs: frame.timeUs,
+      width: frame.width,
+      height: frame.height,
+      pngSha256: frame.pngSha256,
+      attributed,
+      lowered,
+      renderedPixels: renderedPixels2,
+      unattributedPixels: unattributedPixels2
+    });
+  }
+  const geometric = auditSpatialScene(scene, {
+    cameraId,
+    timesUs,
+    ...captured.assetBounds === undefined ? {} : { assetBounds: captured.assetBounds }
+  });
+  const geometricEntities = new Map(geometric.entities.map((entity) => [entity.entityId, entity]));
+  const geometricSamples = new Map(geometric.entities.map((entity) => [
+    entity.entityId,
+    new Map(entity.samples.map((sample) => [sample.timeUs, sample]))
+  ]));
+  const findings = [];
+  const entities = [];
+  const entitiesNeverRendered = [];
+  const entitiesUnsupported = [];
+  const entitiesViewMasked = [];
+  const eligibilityCounts = { renderable: 0, "view-masked": 0, "no-surface": 0, "unsupported-kind": 0 };
+  for (const entity of scene.entities) {
+    const entityEligibility = eligibility(entity);
+    eligibilityCounts[entityEligibility]++;
+    if (entityEligibility === "unsupported-kind")
+      entitiesUnsupported.push(entity.entityId);
+    if (entityEligibility === "view-masked")
+      entitiesViewMasked.push(entity.entityId);
+    const selectionId = entityIndex.get(entity.entityId);
+    const geometricEntity = geometricEntities.get(entity.entityId);
+    const geoSamples = geometricSamples.get(entity.entityId);
+    const samples = [];
+    for (const timeUs of timesUs) {
+      const frame = frameDrafts.get(timeUs);
+      const geo = geoSamples.get(timeUs);
+      const evidence = frame.lowered.get(entity.entityId);
+      const expected = (entityEligibility === "renderable" || entityEligibility === "view-masked") && geo.visible && geo.note !== "other-camera";
+      const lowered = evidence !== undefined;
+      const pixels = evidence !== undefined ? frame.attributed.get(selectionId) ?? 0 : 0;
+      const note = expected && !lowered ? "unlowered-expected" : geo.note;
+      samples.push({
+        timeUs,
+        expected,
+        lowered,
+        rendered: pixels > 0,
+        pixels,
+        framePercent: round32(pixels * 100 / framePixels),
+        ...geo.frustum === undefined ? {} : { geometricPixels: geo.frustum.pixelFootprint },
+        ...geo.frustum !== undefined && geo.frustum.pixelFootprint > 0 ? { coverageRatio: round32(pixels / geo.frustum.pixelFootprint) } : {},
+        ...note === undefined ? {} : { note }
+      });
+    }
+    const totals = {
+      expected: samples.filter((sample) => sample.expected).length,
+      lowered: samples.filter((sample) => sample.lowered).length,
+      rendered: samples.filter((sample) => sample.rendered).length,
+      pixels: samples.reduce((sum, sample) => sum + sample.pixels, 0),
+      maxPixels: samples.reduce((maximum, sample) => Math.max(maximum, sample.pixels), 0),
+      maxFramePercent: samples.reduce((maximum, sample) => Math.max(maximum, sample.framePercent), 0)
+    };
+    entities.push({
+      entityId: entity.entityId,
+      name: entity.name,
+      kind: entity.kind,
+      placement: entity.placement,
+      eligibility: entityEligibility,
+      selectionId,
+      enclosure: geometricEntity.enclosure,
+      samples,
+      totals
+    });
+    if (entityEligibility === "unsupported-kind") {
+      findings.push({
+        severity: "info",
+        kind: "unsupported-kind",
+        entityId: entity.entityId,
+        detail: "The object-ID pass rejects splat entities; retained collider evidence is approximate, never pixel truth."
+      });
+      continue;
+    }
+    if (entityEligibility === "no-surface")
+      continue;
+    if (entityEligibility === "view-masked" && entity.placement.kind === "view" && entity.placement.cameraId === cameraId && totals.lowered > 0) {
+      findings.push({
+        severity: "info",
+        kind: "unsupported-kind",
+        entityId: entity.entityId,
+        detail: "View surfaces draw after world content and write their own selection code; their pixels are attributed to the entity and can occlude world counts."
+      });
+    }
+    if (entity.visible && totals.rendered === 0) {
+      entitiesNeverRendered.push(entity.entityId);
+      const covered = samples.filter((sample) => sample.expected && (sample.geometricPixels ?? 0) > 0).length;
+      const maximum = samples.reduce((value, sample) => Math.max(value, sample.geometricPixels ?? 0), 0);
+      findings.push({
+        severity: totals.expected === 0 ? "info" : "warning",
+        kind: "never-rendered",
+        entityId: entity.entityId,
+        detail: totals.expected === 0 ? "Authored visible but effectively invisible at every sampled time; zero rendered pixels is consistent." : covered === 0 ? `Effectively visible at ${String(totals.expected)} sampled time${totals.expected === 1 ? "" : "s"} but its geometric estimate never covered the frame; zero pixels is consistent.` : `Zero pixels at every expected sample despite up to ${String(maximum)} px\xB2 of geometric coverage; fully occluded, masked, or below the coverage threshold.`
+      });
+    } else if (totals.rendered > 0) {
+      const occluded = samples.filter((sample) => sample.expected && (sample.geometricPixels ?? 0) > 0 && sample.pixels === 0).length;
+      if (occluded > 0) {
+        findings.push({
+          severity: "info",
+          kind: "occluded",
+          entityId: entity.entityId,
+          detail: `Zero rendered pixels at ${String(occluded)} of ${String(totals.expected)} expected samples despite positive geometric coverage; occluded, masked, or below the coverage threshold.`
+        });
+      }
+    }
+    if (geometricEntity.enclosure.status === "unknown" && totals.expected > 0 && geometricEntity.enclosure.reason !== "no-surface") {
+      findings.push({
+        severity: "info",
+        kind: "bounds-unknown",
+        entityId: entity.entityId,
+        detail: geometricEntity.enclosure.reason === "requires-asset-decoding" ? "Bounds require decoded asset data; supply assetBounds for a geometric footprint delta." : "Text bounds require font layout; the rendered footprint has no geometric delta."
+      });
+    }
+  }
+  const frameReports = timesUs.map((timeUs) => {
+    const frame = frameDrafts.get(timeUs);
+    return {
+      timeUs,
+      pngSha256: frame.pngSha256,
+      renderedPixels: frame.renderedPixels,
+      unattributedPixels: frame.unattributedPixels,
+      loweredEntities: frame.lowered.size
+    };
+  });
+  const renderedPixels = frameReports.reduce((sum, frame) => sum + frame.renderedPixels, 0);
+  const unattributedPixels = frameReports.reduce((sum, frame) => sum + frame.unattributedPixels, 0);
+  if (unattributedPixels > 0) {
+    const framesWithUnattributed = frameReports.filter((frame) => frame.unattributedPixels > 0).length;
+    findings.push({
+      severity: "warning",
+      kind: "unattributed-pixels",
+      detail: `${String(unattributedPixels)} pixel${unattributedPixels === 1 ? "" : "s"} across ${String(framesWithUnattributed)} frame${framesWithUnattributed === 1 ? "" : "s"} carried selection codes absent from attributable evidence.`
+    });
+  }
+  if (renderedPixels === 0) {
+    const expectedSamples = entities.reduce((sum, entity) => sum + entity.totals.expected, 0);
+    findings.push({
+      severity: "warning",
+      kind: "empty-render",
+      detail: `No attributed object-ID pixel appeared in any sampled frame (${String(expectedSamples)} expected entity-samples).`
+    });
+  }
+  const sortedFindings = sortSpatialBy(findings, findingOrder2);
+  const retainedFindings = sortedFindings.slice(0, SPATIAL_RENDERED_AUDIT_LIMITS.findings);
+  const report = {
+    kind: "slopcamera.spatial-rendered-audit",
+    schemaVersion: 1,
+    sceneId: scene.sceneId,
+    sceneSha256: spatialValueSha256(scene),
+    cameraId,
+    durationUs: scene.durationUs,
+    timesUs,
+    mode: { kind: "object-id", coverage },
+    frame: { width: first.width, height: first.height, pixels: framePixels },
+    summary: {
+      entities: {
+        total: scene.entities.length,
+        renderable: eligibilityCounts.renderable,
+        viewMasked: eligibilityCounts["view-masked"],
+        noSurface: eligibilityCounts["no-surface"],
+        unsupported: eligibilityCounts["unsupported-kind"]
+      },
+      entitiesNeverRendered: sortSpatialBy(entitiesNeverRendered, (id) => id),
+      entitiesUnsupported: sortSpatialBy(entitiesUnsupported, (id) => id),
+      entitiesViewMasked: sortSpatialBy(entitiesViewMasked, (id) => id),
+      renderedPixels,
+      unattributedPixels
+    },
+    entities,
+    frames: frameReports,
+    findings: retainedFindings,
+    omittedFindings: sortedFindings.length - retainedFindings.length
+  };
+  const parsed = SpatialRenderedAuditReportSchema.parse(report);
+  try {
+    createBoundedJsonValueSnapshot(parsed, SPATIAL_RENDERED_AUDIT_LIMITS.reportBytes, "rendered audit report", {
+      maximumDepth: SPATIAL_SCENE_LIMITS.sourceDepth + 8,
+      maximumValues: SPATIAL_SCENE_LIMITS.sourceValues + SPATIAL_RENDERED_AUDIT_LIMITS.entitySamples * 16
+    });
+  } catch (error) {
+    throw new SpatialSceneError("invalid-data", error instanceof Error ? error.message : "Rendered audit report exceeds its bounded size.", "rendered audit");
+  }
+  return deepFreezeJson(parsed);
+}
+
 // src/spatial-scene/time.ts
 function gcd(a, b) {
   while (b !== 0n) {
@@ -1691,14 +2159,14 @@ function createSpatialSceneStarter() {
 }
 
 // src/spatial-scene/build.ts
-import { z as z4 } from "zod";
+import { z as z5 } from "zod";
 var AXIS_INDEX = { x: 0, y: 1, z: 2 };
 var WORLD_UP = [0, 1, 0];
 var DEG = Math.PI / 180;
 var SCATTER_MAX_ATTEMPTS = 128;
-var scalarKeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: z4.number().finite().min(0).max(1) });
-var vec3KeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialVec3Schema });
-var quaternionKeySchema = z4.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialQuaternionSchema });
+var scalarKeySchema = z5.strictObject({ timeUs: SpatialTimeUsSchema, value: z5.number().finite().min(0).max(1) });
+var vec3KeySchema = z5.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialVec3Schema });
+var quaternionKeySchema = z5.strictObject({ timeUs: SpatialTimeUsSchema, value: SpatialQuaternionSchema });
 function finite(value, label) {
   if (!Number.isFinite(value))
     throw new RangeError(`${label} must be finite`);
@@ -1975,7 +2443,7 @@ function grid(input) {
     throw new RangeError("cellSize must be a scalar or [x, z] pair");
   const [sx, sz] = [finite(spacing[0], "cellSize[0]"), finite(spacing[1], "cellSize[1]")];
   const origin = input.origin === undefined ? [0, 0, 0] : vec32(input.origin, "origin");
-  return deepFreezeJson(parseSpatialValue(z4.array(SpatialVec3Schema), Array.from({ length: input.rows * input.columns }, (_, cell) => [origin[0] + cell % input.columns * sx, origin[1], origin[2] + Math.floor(cell / input.columns) * sz]), "grid"));
+  return deepFreezeJson(parseSpatialValue(z5.array(SpatialVec3Schema), Array.from({ length: input.rows * input.columns }, (_, cell) => [origin[0] + cell % input.columns * sx, origin[1], origin[2] + Math.floor(cell / input.columns) * sz]), "grid"));
 }
 function groundSnap(transformValue, halfHeight, floorY = 0) {
   finite(halfHeight, "halfHeight");
@@ -2020,16 +2488,16 @@ function scatter(input) {
     let done = false;
     for (let attempt = 0;attempt < SCATTER_MAX_ATTEMPTS && !done; attempt++) {
       const x = region.minX + random() * (region.maxX - region.minX);
-      const z5 = region.minZ + random() * (region.maxZ - region.minZ);
-      if (spacing === 0 || accepted.every(([px, , pz]) => (px - x) * (px - x) + (pz - z5) * (pz - z5) >= spacing * spacing)) {
-        accepted.push([x, 0, z5]);
+      const z6 = region.minZ + random() * (region.maxZ - region.minZ);
+      if (spacing === 0 || accepted.every(([px, , pz]) => (px - x) * (px - x) + (pz - z6) * (pz - z6) >= spacing * spacing)) {
+        accepted.push([x, 0, z6]);
         done = true;
       }
     }
     if (!done)
       throw new RangeError("scatter could not satisfy minSpacing within the region");
   }
-  return deepFreezeJson(parseSpatialValue(z4.array(SpatialVec3Schema), accepted, "scatter"));
+  return deepFreezeJson(parseSpatialValue(z5.array(SpatialVec3Schema), accepted, "scatter"));
 }
 function onTopOf(moverBounds, moverTransform, targetBounds, targetTransform) {
   const mover = transformBounds(composeTransform(transform(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
@@ -2124,15 +2592,15 @@ function frameFitPose(boundsInput, projectionInput, marginInput = 0.1) {
 }
 
 // src/spatial-scene/generate.ts
-import { z as z5 } from "zod";
+import { z as z6 } from "zod";
 var SPATIAL_GENERATOR_LIMITS = Object.freeze({
   moduleSourceBytes: 1048576,
   parametersBytes: 65536,
   parametersDepth: 16,
   parametersValues: 8192
 });
-var moduleResultSchema = z5.strictObject({
-  entities: z5.array(z5.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
+var moduleResultSchema = z6.strictObject({
+  entities: z6.array(z6.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
   editableKeys: SpatialGeneratorSchema.shape.editableKeys.optional()
 });
 function parseSpatialGeneratorParameters(input) {
@@ -2276,7 +2744,7 @@ function mergeSpatialGeneratorOutput(scene, generator, entities) {
 }
 
 // src/spatial-scene/gltf.ts
-import { z as z6 } from "zod";
+import { z as z7 } from "zod";
 var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
 var SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134217728,
@@ -2301,84 +2769,84 @@ var SPATIAL_GLB_LIMITS = Object.freeze({
   animationKeys: 4096,
   durationSeconds: 3600
 });
-var finite2 = z6.number().finite().min(-1e6).max(1e6);
-var index = z6.number().int().min(0).max(65535);
-var unit2 = z6.number().finite().min(0).max(1);
-var vec33 = z6.tuple([finite2, finite2, finite2]);
-var signedUnit = z6.number().finite().min(-1).max(1);
-var quaternion2 = z6.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
-var metadata = { name: z6.string().max(1024).optional(), extras: z6.unknown().optional(), extensions: z6.never().optional() };
-var byteOffset = z6.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
-var textureInfo = z6.strictObject({ ...metadata, index, texCoord: z6.literal(0).optional() });
-var samplerSchema = z6.strictObject({
+var finite2 = z7.number().finite().min(-1e6).max(1e6);
+var index = z7.number().int().min(0).max(65535);
+var unit2 = z7.number().finite().min(0).max(1);
+var vec33 = z7.tuple([finite2, finite2, finite2]);
+var signedUnit = z7.number().finite().min(-1).max(1);
+var quaternion2 = z7.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
+var metadata = { name: z7.string().max(1024).optional(), extras: z7.unknown().optional(), extensions: z7.never().optional() };
+var byteOffset = z7.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
+var textureInfo = z7.strictObject({ ...metadata, index, texCoord: z7.literal(0).optional() });
+var samplerSchema = z7.strictObject({
   ...metadata,
-  magFilter: z6.union([z6.literal(9728), z6.literal(9729)]).optional(),
-  minFilter: z6.union([z6.literal(9728), z6.literal(9729), z6.literal(9984), z6.literal(9985), z6.literal(9986), z6.literal(9987)]).optional(),
-  wrapS: z6.union([z6.literal(33071), z6.literal(33648), z6.literal(10497)]).default(10497),
-  wrapT: z6.union([z6.literal(33071), z6.literal(33648), z6.literal(10497)]).default(10497)
+  magFilter: z7.union([z7.literal(9728), z7.literal(9729)]).optional(),
+  minFilter: z7.union([z7.literal(9728), z7.literal(9729), z7.literal(9984), z7.literal(9985), z7.literal(9986), z7.literal(9987)]).optional(),
+  wrapS: z7.union([z7.literal(33071), z7.literal(33648), z7.literal(10497)]).default(10497),
+  wrapT: z7.union([z7.literal(33071), z7.literal(33648), z7.literal(10497)]).default(10497)
 });
-var nodeSchema = z6.strictObject({
+var nodeSchema = z7.strictObject({
   ...metadata,
-  children: z6.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
+  children: z7.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
   mesh: index.optional(),
   translation: vec33.optional(),
   rotation: quaternion2.optional(),
   scale: vec33.optional(),
-  matrix: z6.array(finite2).length(16).optional()
+  matrix: z7.array(finite2).length(16).optional()
 });
-var accessorSchema = z6.strictObject({
+var accessorSchema = z7.strictObject({
   ...metadata,
   bufferView: index,
   byteOffset: byteOffset.default(0),
-  componentType: z6.union([z6.literal(5121), z6.literal(5123), z6.literal(5125), z6.literal(5126)]),
-  normalized: z6.boolean().default(false),
-  count: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z6.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
-  min: z6.array(finite2).min(1).max(4).optional(),
-  max: z6.array(finite2).min(1).max(4).optional()
+  componentType: z7.union([z7.literal(5121), z7.literal(5123), z7.literal(5125), z7.literal(5126)]),
+  normalized: z7.boolean().default(false),
+  count: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
+  type: z7.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
+  min: z7.array(finite2).min(1).max(4).optional(),
+  max: z7.array(finite2).min(1).max(4).optional()
 });
-var gltfSchema = z6.strictObject({
+var gltfSchema = z7.strictObject({
   ...metadata,
-  asset: z6.strictObject({ version: z6.literal("2.0"), minVersion: z6.literal("2.0").optional(), generator: z6.string().max(1024).optional(), copyright: z6.string().max(4096).optional(), extras: z6.unknown().optional(), extensions: z6.never().optional() }),
-  extensionsUsed: z6.array(z6.never()).optional(),
-  extensionsRequired: z6.array(z6.never()).optional(),
-  buffers: z6.array(z6.strictObject({ ...metadata, byteLength: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
-  bufferViews: z6.array(z6.strictObject({ ...metadata, buffer: z6.literal(0), byteOffset: byteOffset.default(0), byteLength: z6.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z6.number().int().min(4).max(252).optional(), target: z6.union([z6.literal(34962), z6.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
-  accessors: z6.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
+  asset: z7.strictObject({ version: z7.literal("2.0"), minVersion: z7.literal("2.0").optional(), generator: z7.string().max(1024).optional(), copyright: z7.string().max(4096).optional(), extras: z7.unknown().optional(), extensions: z7.never().optional() }),
+  extensionsUsed: z7.array(z7.never()).optional(),
+  extensionsRequired: z7.array(z7.never()).optional(),
+  buffers: z7.array(z7.strictObject({ ...metadata, byteLength: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
+  bufferViews: z7.array(z7.strictObject({ ...metadata, buffer: z7.literal(0), byteOffset: byteOffset.default(0), byteLength: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z7.number().int().min(4).max(252).optional(), target: z7.union([z7.literal(34962), z7.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
+  accessors: z7.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
   scene: index.optional(),
-  scenes: z6.array(z6.strictObject({ ...metadata, nodes: z6.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
-  nodes: z6.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  meshes: z6.array(z6.strictObject({ ...metadata, primitives: z6.array(z6.strictObject({
+  scenes: z7.array(z7.strictObject({ ...metadata, nodes: z7.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
+  nodes: z7.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  meshes: z7.array(z7.strictObject({ ...metadata, primitives: z7.array(z7.strictObject({
     ...metadata,
-    attributes: z6.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
+    attributes: z7.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
     indices: index.optional(),
     material: index.optional(),
-    mode: z6.literal(4).default(4)
+    mode: z7.literal(4).default(4)
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
-  materials: z6.array(z6.strictObject({
+  materials: z7.array(z7.strictObject({
     ...metadata,
-    pbrMetallicRoughness: z6.strictObject({ ...metadata, baseColorFactor: z6.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
-    alphaMode: z6.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
+    pbrMetallicRoughness: z7.strictObject({ ...metadata, baseColorFactor: z7.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
+    alphaMode: z7.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
     alphaCutoff: unit2.default(0.5),
-    doubleSided: z6.boolean().default(false),
-    emissiveFactor: z6.tuple([z6.literal(0), z6.literal(0), z6.literal(0)]).optional()
+    doubleSided: z7.boolean().default(false),
+    emissiveFactor: z7.tuple([z7.literal(0), z7.literal(0), z7.literal(0)]).optional()
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
-  images: z6.array(z6.strictObject({ ...metadata, bufferView: index, mimeType: z6.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  textures: z6.array(z6.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  samplers: z6.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
-  animations: z6.array(z6.strictObject({
+  images: z7.array(z7.strictObject({ ...metadata, bufferView: index, mimeType: z7.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  textures: z7.array(z7.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  samplers: z7.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
+  animations: z7.array(z7.strictObject({
     ...metadata,
-    samplers: z6.array(z6.strictObject({ ...metadata, input: index, output: index, interpolation: z6.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z6.array(z6.strictObject({ ...metadata, sampler: index, target: z6.strictObject({ ...metadata, node: index, path: z6.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
+    samplers: z7.array(z7.strictObject({ ...metadata, input: index, output: index, interpolation: z7.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
+    channels: z7.array(z7.strictObject({ ...metadata, sampler: index, target: z7.strictObject({ ...metadata, node: index, path: z7.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips).default([])
 });
-var optionsSchema = z6.strictObject({
-  metersPerUnit: z6.number().finite().min(0.000001).max(1e6),
-  sourceUp: z6.enum(["x", "y", "z"]),
+var optionsSchema = z7.strictObject({
+  metersPerUnit: z7.number().finite().min(0.000001).max(1e6),
+  sourceUp: z7.enum(["x", "y", "z"]),
   nodeIndex: index.optional(),
-  materialMode: z6.enum(["source", "entity"]).default("entity"),
-  timeUs: z6.number().int().min(0).max(3600000000),
-  clip: z6.strictObject({ index, offsetUs: z6.number().int().min(0).max(3600000000), playback: z6.enum(["once", "loop", "freeze"]) }).optional()
+  materialMode: z7.enum(["source", "entity"]).default("entity"),
+  timeUs: z7.number().int().min(0).max(3600000000),
+  clip: z7.strictObject({ index, offsetUs: z7.number().int().min(0).max(3600000000), playback: z7.enum(["once", "loop", "freeze"]) }).optional()
 });
 function fail(message, path = "glb") {
   throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path);
@@ -2946,25 +3414,25 @@ function spatialGlbBounds(model) {
 }
 
 // src/spatial-scene/camera-track.ts
-import { z as z7 } from "zod";
+import { z as z8 } from "zod";
 var SPATIAL_CAMERA_TRACK_MAX_FRAMES = 2048;
-var clockSchema = z7.strictObject({
+var clockSchema = z8.strictObject({
   startUs: SpatialTimeUsSchema,
   frameRate: SpatialFrameRateSchema,
-  frameCount: z7.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
+  frameCount: z8.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
 });
-var rationalSchema = z7.strictObject({
-  numerator: z7.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
-  denominator: z7.string().regex(/^[1-9][0-9]{0,6}$/u)
+var rationalSchema = z8.strictObject({
+  numerator: z8.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
+  denominator: z8.string().regex(/^[1-9][0-9]{0,6}$/u)
 });
-var SpatialCameraTrackSchema = z7.strictObject({
-  kind: z7.literal("slopcamera.spatial-camera-track"),
-  schemaVersion: z7.literal(1),
+var SpatialCameraTrackSchema = z8.strictObject({
+  kind: z8.literal("slopcamera.spatial-camera-track"),
+  schemaVersion: z8.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   clock: clockSchema,
-  samples: z7.array(z7.strictObject({
-    frameIndex: z7.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
+  samples: z8.array(z8.strictObject({
+    frameIndex: z8.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
     timeUs: SpatialTimeUsSchema,
     exactTimeUs: rationalSchema,
     camera: SpatialCameraSchema
@@ -3054,6 +3522,7 @@ export {
   spatialGeneratorAttemptId,
   spatialFrameSample,
   spatialFrameCount,
+  spatialAuditDefaultTimesUs,
   spatialAssetManifestSha256,
   spatialAssetClosureDigests,
   sortSpatialBy,
@@ -3100,6 +3569,7 @@ export {
   deriveSpatialGeneratorSeed,
   defineWorkflow,
   definePortableWorkflowFragment,
+  decodeObjectIdPixels,
   createWorkflowGraphHash,
   createWorkflowCompilationHash,
   createSpatialSceneStarter,
@@ -3118,6 +3588,7 @@ export {
   buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  auditSpatialSceneRendered,
   auditSpatialScene,
   asSlopcameraCodeError,
   applySpatialScenePatch,
@@ -3140,6 +3611,15 @@ export {
   SpatialScenePatchV1Schema,
   SpatialSceneIdSchema,
   SpatialSceneError,
+  SpatialRenderedAuditSampleSchema,
+  SpatialRenderedAuditReportSchema,
+  SpatialRenderedAuditOptionsSchema,
+  SpatialRenderedAuditObjectSchema,
+  SpatialRenderedAuditFrameSchema,
+  SpatialRenderedAuditFrameReportSchema,
+  SpatialRenderedAuditFindingSchema,
+  SpatialRenderedAuditEntitySchema,
+  SpatialRenderedAuditCoverageSchema,
   SpatialQuaternionSchema,
   SpatialProjectionSchema,
   SpatialPoseSchema,
@@ -3191,6 +3671,8 @@ export {
   SlopcameraCodeError,
   SerializedRefV1Schema,
   SPATIAL_SCENE_LIMITS,
+  SPATIAL_RENDERED_AUDIT_LIMITS,
+  SPATIAL_RENDERED_AUDIT_COVERAGE,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
   SPATIAL_GENERATOR_LIMITS,

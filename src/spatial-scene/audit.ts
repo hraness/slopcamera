@@ -282,8 +282,8 @@ function classifyViewOverlay(
   return { contained, pixelFootprint }
 }
 
-/** Evenly spaced default samples over [0, durationUs], endpoints included. */
-function defaultTimesUs(durationUs: number): readonly number[] {
+/** Evenly spaced default samples over [0, durationUs], endpoints included. Shared by the rendered audit. */
+export function spatialAuditDefaultTimesUs(durationUs: number): readonly number[] {
   const count = SPATIAL_AUDIT_LIMITS.defaultSamples
   return Array.from({ length: count }, (_, index) => Math.round(index * durationUs / (count - 1)))
 }
@@ -327,7 +327,7 @@ export function auditSpatialScene(sceneInput: unknown, options: SpatialAuditOpti
     if (!assetIds.has(assetId)) throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId}.`, "assetBounds")
     assetBounds[assetId] = Object.freeze({ min: Object.freeze([...bounds.min]), max: Object.freeze([...bounds.max]) }) as Bounds
   }
-  const timesUs = [...new Set(captured.timesUs ?? defaultTimesUs(scene.durationUs))].sort((a, b) => a - b)
+  const timesUs = [...new Set(captured.timesUs ?? spatialAuditDefaultTimesUs(scene.durationUs))].sort((a, b) => a - b)
   for (const timeUs of timesUs) {
     if (timeUs > scene.durationUs) throw new SpatialSceneError("invalid-data", "Audit sample time exceeds scene duration.", "timesUs")
   }
