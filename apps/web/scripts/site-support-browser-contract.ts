@@ -208,6 +208,9 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   }
   return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
 }
+const collapseCommand = (value: string) => value.replace(/\s+/gu, " ").trim()
+export const projectSupportBaselineCommand = (element: ShellElement): ShellElement => ({ ...element,
+  text: element.text.replaceAll(collapseCommand(supportBaselineInstallCommand), collapseCommand(refinementInstallCommand)) })
 export function compareSupportCopy(current: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
   assert.equal(current.command, refinementInstallCommand); assert.equal(baseline.command, supportBaselineInstallCommand)
   assert.deepEqual(current.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
@@ -215,6 +218,9 @@ export function compareSupportCopy(current: CopyEvidence, baseline: CopyEvidence
     assert.deepEqual(side.steps.map(step => step.name), copySteps); assertCopyPorts(side.ports, side === current ? refinementInstallCommand : supportBaselineInstallCommand)
     for (const step of side.steps) assert.deepEqual(step.elements.map(item => item.key), refinementCopyElementKeys)
   }
-  for (const [index, step] of current.steps.entries()) compareShellElements(step.elements, baseline.steps[index]!.elements, `${scenario.name} ${step.name}`)
+  // The immutable baseline advertises the older verified archive, so its
+  // copied command text is projected onto the current exact command before
+  // pairing; both commands have the same length, so geometry stays paired.
+  for (const [index, step] of current.steps.entries()) compareShellElements(step.elements, baseline.steps[index]!.elements.map(projectSupportBaselineCommand), `${scenario.name} ${step.name}`)
   return { name: scenario.name, command: current.command, steps: copySteps, elementsPerSample: refinementCopyElementKeys.length, current: current.ports, baseline: baseline.ports }
 }

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { parseSupportRequest, parseSupportPhase, parseSupportCaseFailure, supportCaseFailure, supportCases, supportDeadline, compareSupportEvidence,
-  compareSupportCopy, supportBaselineObstructions, parseSupportBaselineObstructions, supportObstructionOwnedByFooterBar } from "./site-support-browser-contract"
+  compareSupportCopy, supportBaselineObstructions, parseSupportBaselineObstructions, supportObstructionOwnedByFooterBar, projectSupportBaselineCommand } from "./site-support-browser-contract"
 import { supportScope, supportCopyScope, supportBaselineProfile, supportBaselineRevision, supportBaselineTree, supportFooterDigests, supportBaselineInstallCommand } from "./site-support-profile"
 import { assertSupportBaselineManifest } from "./verify-site-marketing"
 import { assertFooterKeyboardCoverage, shellAppearanceSteps, siteShellCases, siteShellDeadlineMs, type ShellElement, type ShellEvidence, type ShellKeyboardObstruction } from "./site-shell-browser-contract"
@@ -129,6 +129,11 @@ test("copy compares both exact current commands, all states, paint, timer ports 
   expect(() => parseSupportPhase(phase, 2, request(supportCopyScope))).not.toThrow()
   expect(() => compareSupportCopy(current, { ...baseline, command: refinementInstallCommand, ports: ports(refinementInstallCommand) }, scenario, true)).toThrow()
   for (const value of [{ ...current, command: "changed" }, { ...current, steps: current.steps.slice(1) }, { ...current, negativeControls: [] }, { ...current, ports: ports("changed") }, { ...current, steps: current.steps.map((step, i) => i === 0 ? { ...step, elements: step.elements.slice(1) } : step) }]) expect(() => compareSupportCopy(value, baseline, scenario, true)).toThrow()
+  const collapse = (value: string) => value.replace(/\s+/gu, " ").trim()
+  const withCommand = (evidence: CopyEvidence, command: string): CopyEvidence => ({ ...evidence, steps: evidence.steps.map((step, i) => i === 0 ? { ...step, elements: step.elements.map((item, j) => j === 0 ? { ...item, text: `Install ${collapse(command)} then continue` } : item) } : step) })
+  expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, supportBaselineInstallCommand), scenario, true)).not.toThrow()
+  expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, "bun add --global other"), scenario, true)).toThrow()
+  expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: collapse(supportBaselineInstallCommand) }).text).toBe(collapse(refinementInstallCommand))
   const changed = copy(); (changed.steps[0]!.elements[0]!.styles as Record<string, string>).color = "red"
   expect(() => compareSupportCopy({ ...changed, negativeControls: copyNegativeControls }, baseline, scenario, true)).toThrow()
 })
