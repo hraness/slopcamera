@@ -301,9 +301,14 @@ export function assertCopyPorts(ports: CopyPorts, command: string): void {
 }
 
 export async function checkCopyCase(browser: Browser, payload: ShellPayload, scenario: ShellCase, negative: boolean,
-  profile?: typeof refinementCopyProfile, observeRefinement?: (page: Page, name: string, elements: readonly ShellElement[]) => Promise<void>): Promise<CopyEvidence> {
+  profile?: typeof refinementCopyProfile, observeRefinement?: (page: Page, name: string, elements: readonly ShellElement[]) => Promise<void>,
+  expectedCommand?: string): Promise<CopyEvidence> {
   assert.ok(observeRefinement === undefined || profile === refinementCopyProfile, "Additional copy design observations require the explicit refinement profile")
   assert.ok(profile === undefined || profile === refinementCopyProfile, "Unknown copy case profile")
+  // An immutable baseline may advertise an older verified archive than the
+  // current page; its exact expected command is supplied explicitly and only
+  // with the refinement design profile.
+  assert.ok(expectedCommand === undefined || (profile === refinementCopyProfile && expectedCommand.length > 0 && expectedCommand.length <= 512), "Explicit copy commands require the refinement profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, colorScheme: scenario.system,
     forcedColors: scenario.forced, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
   context.setDefaultTimeout(5_000)
@@ -344,7 +349,7 @@ export async function checkCopyCase(browser: Browser, payload: ShellPayload, sce
     await chooseAppearance(page, scenario.theme, scenario.system)
     await copyState(page, "idle", profile)
     const command = await page.locator("[data-copy-command-value]").innerText()
-    assert.equal(command, profile === undefined ? "bun apps/desktop/dist/cli/main.js skill install --target agents" : refinementInstallCommand)
+    assert.equal(command, expectedCommand ?? (profile === undefined ? "bun apps/desktop/dist/cli/main.js skill install --target agents" : refinementInstallCommand))
     assert.deepEqual(await page.evaluate(() => ({ width: innerWidth, forced: matchMedia("(forced-colors: active)").matches,
       theme: document.documentElement.dataset.theme })), { width: scenario.width, forced: scenario.forced === "active", theme: scenario.theme })
     const button = page.locator(buttonSelector), steps: { name: string; elements: ShellElement[] }[] = []

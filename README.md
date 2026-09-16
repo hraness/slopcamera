@@ -33,15 +33,14 @@ project database.
 
 ## Install Slopcamera
 
-The source tree prepares v3.2.8 with optional support in the CLI, agent skill, native menu, and public footer.
-The install below stays on the verified v3.2.6 release until publication completes.
+Slopcamera v3.2.8 adds optional support in the CLI, agent skill, native menu, and public footer.
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.2.6 release](https://github.com/hraness/slopcamera/releases/tag/v3.2.6)
+[Slopcamera v3.2.8 release](https://github.com/hraness/slopcamera/releases/tag/v3.2.8)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.2.6/hraness-slopcamera-3.2.6.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.2.8/hraness-slopcamera-3.2.8.tgz
 slopcamera skill install --target agents
 ```
 

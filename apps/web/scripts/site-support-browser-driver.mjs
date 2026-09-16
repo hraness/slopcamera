@@ -7,7 +7,7 @@ import { bounded, withPreviewCancellation } from "./preview-browser-contract"
 import { assertShellNode, checkShellCase, ShellPairFailure, settleShellPair } from "./site-shell-browser-contract"
 import { parseSupportRequest, parseSupportPhase, supportCases, supportDeadline, supportCaseFailure,
   supportDom, compareSupportEvidence, compareSupportCopy, observeSupportFooter } from "./site-support-browser-contract"
-import { supportScope, supportCopyScope } from "./site-support-profile"
+import { supportScope, supportCopyScope, supportBaselineInstallCommand } from "./site-support-profile"
 import { refinementCopyProfile } from "./site-refinement-profile"
 import { decodeWorkerJson, encodeWorkerJson, publishWorkerPhase, workerAttachmentMs, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
@@ -64,7 +64,7 @@ async function main() {
         const [evidence, old] = await cancellation.wait(() => {
           activePair = copy ? settleShellPair(
             () => checkCopyCase(browser, request.current, scenario, negative, refinementCopyProfile),
-            () => checkCopyCase(browser, request.baseline, scenario, false, refinementCopyProfile)) : settleShellPair(
+            () => checkCopyCase(browser, request.baseline, scenario, false, refinementCopyProfile, undefined, supportBaselineInstallCommand)) : settleShellPair(
             () => checkShellCase(browser, request.current, scenario, "current", negative, async page => {
               currentDom = await supportDom(page, true)
               design = await observeSupportFooter(page, scenario, `${request.current.origin}${request.current.stylesheets[0]}`, negative && scenario.route === "/")
