@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { sourceInstall } from "../apps/web/src/published-release";
+import { standaloneSupportFixtureScanText } from "./standalone-support-fixture";
 import {
   compareLegacyIdentityInventory,
   duplicateIdentityAlternatives,
@@ -102,7 +103,7 @@ const TEXT_EXTENSIONS = new Set([
 const CANONICAL_TEXT_SENTINELS = [
   {
     path: "src/version.ts",
-    values: ['export const SLOPCAMERA_VERSION = "3.2.7" as const'],
+    values: ['export const SLOPCAMERA_VERSION = "3.2.8" as const'],
   },
   {
     path: "src/operations.ts",
@@ -124,7 +125,7 @@ const CANONICAL_TEXT_SENTINELS = [
   {
     path: "apps/desktop/dist/cli/main.js",
     values: [
-      '"3.2.7"',
+      '"3.2.8"',
       '"slopcamera.diagram.check"',
       '"slopcamera.edit-plan"',
       '"slopcamera.video-project"',
@@ -276,7 +277,7 @@ for (const file of files) {
   const inventoryEligible = !generatedOutput || trackedPaths.has(rootRelative);
   if (!identityBoundaryFile && rootRelative !== "scripts/package-smoke.ts") {
     for (const rule of FORBIDDEN_SOURCE) {
-      if (rule.pattern.test(text)) {
+      if (rule.pattern.test(rule.label === "hosted account service" ? standaloneSupportFixtureScanText(rootRelative, text) : text)) {
         sourceProblems.push(`${rootRelative} contains ${rule.label}`);
       }
     }
@@ -388,8 +389,8 @@ if (
 const packageVersion = rootPackage.version;
 if (typeof packageVersion !== "string") {
   problems.push("package.json version must be a string");
-} else if (packageVersion !== "3.2.7") {
-  problems.push("package.json version must be 3.2.7 for this source candidate; it does not identify a published Slopcamera release");
+} else if (packageVersion !== "3.2.8") {
+  problems.push("package.json version must be 3.2.8 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
     [

@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "../../../src/support";
+
 import { parseCliArgs } from "./args";
 import { runCli } from "./commands";
 import { asCliError, CliError, EXIT_CODE } from "./errors";
@@ -26,6 +28,7 @@ export function isEmbeddedVectorizeWorkerInvocation(
 export async function main(
   argv: readonly string[] = process.argv.slice(2),
   portableDependencies: PortableSurfaceDependencies = {},
+  supportEnvironment?: Readonly<Record<string, string | undefined>>,
 ): Promise<number> {
   if (isEmbeddedVectorizeWorkerInvocation(argv)) {
     // The bundled headless supervisor preserves process isolation by spawning
@@ -34,6 +37,10 @@ export async function main(
     // the bounded stdin protocol inside the shipped artifact.
     await import("../../../src/vectorize/worker.ts");
     return typeof process.exitCode === "number" ? process.exitCode : 0;
+  }
+  if (argv[0] === "support") {
+    return await runProductSupportCommand(argv.slice(1),
+      supportEnvironment === undefined ? {} : { env: supportEnvironment });
   }
   const unifiedArgv = canonicalizeUnifiedCliArgs(argv);
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);
@@ -55,7 +62,8 @@ export async function main(
     process.on("SIGTERM", cancel);
     try {
       return await runCli(unifiedArgv, { io: processIo, paths,
-        runner: new BunProcessRunner(), abortSignal: controller.signal });
+        runner: new BunProcessRunner(), abortSignal: controller.signal,
+        ...(portableDependencies.onUsefulResult === undefined ? {} : { onUsefulResult: portableDependencies.onUsefulResult }) });
     } finally {
       process.off("SIGINT", cancel);
       process.off("SIGTERM", cancel);
@@ -65,14 +73,25 @@ export async function main(
     io: processIo,
     paths,
     runner: new BunProcessRunner(),
+    ...(portableDependencies.onUsefulResult === undefined ? {} : { onUsefulResult: portableDependencies.onUsefulResult }),
   });
 }
 
 export async function runMainEntrypoint(
   portableDependencies: PortableSurfaceDependencies = {},
+  standalone = false,
 ): Promise<void> {
   try {
-    process.exitCode = await main(process.argv.slice(2), portableDependencies);
+    const argv = process.argv.slice(2);
+    const env = standalone && !isEmbeddedVectorizeWorkerInvocation(argv)
+      ? standaloneSupportEnvironment() : undefined;
+    let usefulResult = false;
+    process.exitCode = await main(argv, env === undefined ? portableDependencies : {
+      ...portableDependencies, onUsefulResult: () => { usefulResult = true; },
+    }, env);
+    if (env !== undefined && usefulResult && process.exitCode === 0) {
+      await showProductSupportInvitation({ env });
+    }
   } catch (error) {
     const failure = asCliError(error);
     process.stderr.write(`slopcamera: ${failure.message}\n`);
@@ -81,5 +100,5 @@ export async function runMainEntrypoint(
 }
 
 if (import.meta.main) {
-  await runMainEntrypoint();
+  await runMainEntrypoint({}, true);
 }

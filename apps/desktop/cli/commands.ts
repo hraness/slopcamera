@@ -1,3 +1,4 @@
+import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
 import { createDirectingBlobSession } from "./directing-blob";
 import { assembleDirectingClips, extractDirectingEndpoint, importDirectingAnchor } from "./directing-media";
 import { executeDirectingCommand } from "./directing-service";
@@ -296,7 +297,7 @@ import {
   workflowRunStore,
 } from "./workflow-runs";
 
-export const SLOPCAMERA_VERSION = "3.2.7";
+export const SLOPCAMERA_VERSION = "3.2.8";
 
 // Legacy direct renders predate per-target output contracts. Keep them
 // bounded generously enough for long-form production while preventing one
@@ -305,6 +306,7 @@ const MAXIMUM_LEGACY_RECORDING_RENDER_OUTPUT_BYTES = 32 * 1024 * 1024 * 1024;
 const MAXIMUM_LEGACY_PROJECT_RENDER_OUTPUT_BYTES = 32 * 1024 * 1024 * 1024;
 
 export interface CliDependencies {
+  readonly onUsefulResult?: UsefulResultObserver;
   readonly abortSignal?: AbortSignal;
   readonly stateRoot?: string;
   readonly clock?: () => number;
@@ -6778,6 +6780,15 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
         await dispatch(admittedContext, command);
       });
     });
+    if (command.kind === "projects-create" || command.kind === "project-inspect"
+      || command.kind === "project-add" || command.kind === "inspect"
+      || command.kind === "project-edit" || command.kind === "project-camera-edit"
+      || command.kind === "project-metadata-edit" || command.kind === "project-overlay-edit"
+      || command.kind === "edit"
+      || command.kind === "render-run" && !command.dryRun
+      || command.kind === "project-render" && command.action === "run" && !command.dryRun) {
+      reportUsefulResult(dependencies.onUsefulResult);
+    }
     return 0;
   } catch (error) {
     const failure = asCliError(error);

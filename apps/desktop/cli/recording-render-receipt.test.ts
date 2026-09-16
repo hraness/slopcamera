@@ -127,14 +127,16 @@ test("replaces a stale custom-output receipt with verified output and immutable 
       stdout: value => { stdout += value; },
     };
 
+    let completedOutput: string | undefined;
     const exitCode = await runCli([
       "render", "run", "rec_example001",
       "--no-auto-inactivity",
       "--output", outputRelative,
       "--json",
-    ], { io, paths: fixture.paths, runner });
+    ], { io, paths: fixture.paths, runner, onUsefulResult: () => { completedOutput = stdout; } });
 
     expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: "" });
+    expect(completedOutput).toBe(stdout);
     const commandOutput = JSON.parse(stdout) as {
       readonly artifactPath: string;
       readonly output: { readonly bytes: number; readonly sha256: string };

@@ -42,6 +42,7 @@ async function runCli(
 ): Promise<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }> {
   const subprocess = Bun.spawn([process.execPath, join(import.meta.dir, "cli.ts"), ...args], {
     cwd,
+    env: { ...process.env, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -54,11 +55,11 @@ async function runCli(
 }
 
 describe("Slopcamera CLI", () => {
-  test("reports v3.2.7 and documents namespaced media surfaces", async () => {
+  test("reports v3.2.8 and documents namespaced media surfaces", async () => {
     const version = await runCli(["--version"], process.cwd())
     expect(version).toEqual({
       exitCode: 0,
-      stdout: "3.2.7\n",
+      stdout: "3.2.8\n",
       stderr: "",
     })
     const help = await runCli(["--help"], process.cwd())

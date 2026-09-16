@@ -366,7 +366,7 @@ function completeLanternComparison(chromePaint = "oklch(0.996677 0.00538764 none
     + '<details class="hraness-marketing-question hraness-material-disclosure"></details>'.repeat(9) + '</main>'
   const skip = { ...element(".skip-link[0]", { position: "fixed" }), geometrySpace: "viewport" as const,
     scrollY: 0, documentRect: [20, 100, 200, 100] }
-  const shared = { direction: "ltr" as const, recovery: true, skip,
+  const shared = { direction: "ltr" as const, recovery: true, skip, obstructions: [],
     focus: [headerAction(actionPaint, ".topbar a[5]")], hover: [headerAction(actionPaint)],
     appearance: shellAppearanceSteps.map(({ name, active }) => ({ step: name, active, elements: [element("appearance[0]")] })) }
   const unchanged = [element("#main[0]"), headerAction(actionPaint), element(".slopcamera-ask-ai[0]"), element("#hraness-site-footer[0]")]

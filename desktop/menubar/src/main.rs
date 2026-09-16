@@ -15,10 +15,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use desktop_foundation::outputs::OutputsSection;
+use desktop_foundation::browser::{BrowserOpener, BrowserStatus};
 use desktop_foundation::{
     AccessibilityMetadata, DispatchOutcome, Host, MenuItem, MenuModel, MenuNode, Options,
     RenderError, RgbaIcon,
 };
+
+const SUPPORT_URL: &str = "https://account.hraness.com/support?product=slopcamera&source=desktop#support";
 
 /// Camera status mark. macOS renders `MARK_TITLE` as native colored emoji
 /// text; icon-only trays use this pre-rendered 32px Twemoji bitmap
@@ -47,6 +50,7 @@ fn product_root() -> Option<PathBuf> {
 
 struct SlopcameraHost {
     outputs: OutputsSection,
+    browser: BrowserOpener,
 }
 
 impl Host for SlopcameraHost {
@@ -56,6 +60,11 @@ impl Host for SlopcameraHost {
             MenuNode::Separator,
         ];
         nodes.extend(self.outputs.nodes());
+        nodes.push(MenuNode::Separator);
+        nodes.push(MenuNode::item("product.support", "Support Slopcamera development (optional paid)…"));
+        if matches!(self.browser.status(), BrowserStatus::Failed(_)) {
+            nodes.push(MenuNode::disabled("Browser unavailable — use account.hraness.com"));
+        }
         nodes.push(MenuNode::Separator);
         nodes.push(MenuNode::interactive(
             MenuItem::action(desktop_foundation::QUIT_ACTION_ID, "Quit Slopcamera")
@@ -76,6 +85,9 @@ impl Host for SlopcameraHost {
     }
 
     fn dispatch_result(&self, id: &str) -> DispatchOutcome {
+        if id == "product.support" {
+            return if self.browser.open(SUPPORT_URL).is_ok() { DispatchOutcome::Accepted } else { DispatchOutcome::Rejected };
+        }
         if self.outputs.dispatch(id) {
             DispatchOutcome::Accepted
         } else {
@@ -124,7 +136,7 @@ fn main() {
     };
     let outputs = OutputsSection::new(root.join("outputs"));
     let _ = std::fs::create_dir_all(outputs.dir());
-    let host = Arc::new(SlopcameraHost { outputs });
+    let host = Arc::new(SlopcameraHost { outputs, browser: BrowserOpener::new() });
     let options = Options {
         refresh: Duration::from_secs(3),
         companion_window: false,
@@ -132,5 +144,26 @@ fn main() {
     if let Err(error) = desktop_foundation::run(tauri::generate_context!(), host, options, |b| b) {
         eprintln!("slopcamera-menubar: {error}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod invitation_tests {
+    use super::*;
+
+    #[test]
+    fn unavailable_outputs_offer_optional_support_without_a_newsletter_or_launch() {
+        let host = SlopcameraHost {
+            outputs: OutputsSection::new("/dev/null/absent-outputs"),
+            browser: BrowserOpener::new(),
+        };
+        let model = host.snapshot();
+        assert!(model.nodes.iter().any(|node| matches!(node,
+            MenuNode::Item { id: Some(id), enabled: true, .. } if id == "product.support")));
+        assert!(!model.nodes.iter().any(|node| matches!(node,
+            MenuNode::Item { id: Some(id), .. } if id == "product.updates")));
+        assert_eq!(host.browser.status(), BrowserStatus::Idle);
+        assert!(matches!(host.dispatch_result("unknown.action"), DispatchOutcome::Rejected));
+        assert_eq!(host.browser.status(), BrowserStatus::Idle);
     }
 }

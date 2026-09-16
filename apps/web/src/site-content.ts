@@ -102,7 +102,10 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   }
   const common: ReadonlyArray<readonly [string, string, number]> = [
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
-    ["{{HRANESS_SITE_FOOTER}}", renderHranessSiteFooter({ mailingList: { kind: "none" } }), 1],
+    ["{{HRANESS_SITE_FOOTER}}", renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
+      id: "slopcamera", name: "Slopcamera", updates: false,
+      valueProposition: "Support ongoing development of local visual tools for agents.",
+    } }), 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
   if (document === "404.html") return common

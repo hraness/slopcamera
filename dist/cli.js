@@ -6,7 +6,7 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-14fdv91w.js";
+} from "./index-7131pg1c.js";
 import {
   installSkill,
   pathExists
@@ -36,6 +36,58 @@ import {
 // src/cli.ts
 import { writeFile } from "fs/promises";
 import { resolve } from "path";
+
+// src/support-completion.ts
+function reportUsefulResult(observer) {
+  try {
+    if (observer !== undefined)
+      Promise.resolve(observer()).catch(() => {
+        return;
+      });
+  } catch {}
+}
+
+// src/support.ts
+import {
+  maybeShowSupportInvitation,
+  runSupportCommand
+} from "@hraness/support-foundation/node";
+var supportProfile = {
+  id: "slopcamera",
+  name: "Slopcamera",
+  valueProposition: "Support ongoing development of local visual tools for agents.",
+  updates: false
+};
+function standaloneSupportEnvironment() {
+  const env = { ...process.env };
+  process.env.HRANESS_SUPPORT_AUDIENCE = "off";
+  process.env.HRANESS_SUPPORT_EMAIL = "off";
+  return env;
+}
+async function runProductSupportCommand(args, options = {}) {
+  const result = await runSupportCommand(supportProfile, args, {
+    command: ["slopcamera"],
+    ...options,
+    gitEmail: false
+  });
+  if (result.stdout !== "")
+    process.stdout.write(result.stdout);
+  if (result.stderr !== "")
+    process.stderr.write(result.stderr);
+  return result.exitCode;
+}
+async function showProductSupportInvitation(options = {}) {
+  try {
+    await maybeShowSupportInvitation(supportProfile, {
+      usefulResult: true,
+      command: ["slopcamera"],
+      ...options,
+      gitEmail: false
+    });
+  } catch {}
+}
+
+// src/cli.ts
 var slopcameraCliVersion = SLOPCAMERA_VERSION;
 var help = `slopcamera ${slopcameraCliVersion}
 
@@ -51,6 +103,7 @@ Usage:
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
   slopcamera doctor
+  slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -73,6 +126,10 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- \u2026\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+Optional support: after useful work, agents can read slopcamera support protocol --json.
+Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
+No feature requires payment. Imported CLI/SDK calls and probes stay quiet.
 
 Code mode searches and executes a fixed semantic registry. Execute accepts
 typed JSON for one exact owned operation code; it never evaluates source text.
@@ -201,6 +258,10 @@ ${help}`);
   return args;
 }
 async function main(args, dependencies = {}) {
+  if (args[0] === "support") {
+    process.exitCode = await runProductSupportCommand(args.slice(1), dependencies.supportEnvironment === undefined ? {} : { env: dependencies.supportEnvironment });
+    return;
+  }
   const [command, ...rest] = canonicalArguments(args);
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
     console.log(help);
@@ -218,6 +279,7 @@ async function main(args, dependencies = {}) {
     await writeFile(filePath, `${JSON.stringify(starter, null, 2)}
 `);
     console.log(`Created ${filePath}`);
+    reportUsefulResult(dependencies.onUsefulResult);
     return;
   }
   if (command === "check") {
@@ -243,6 +305,7 @@ async function main(args, dependencies = {}) {
     }), hostAdmissionOptions(dependencies));
     console.log(artifactSummary(result.artifacts));
     printFindings(result.findings);
+    reportUsefulResult(dependencies.onUsefulResult);
     return;
   }
   if (command === "vectorize") {
@@ -273,6 +336,7 @@ async function main(args, dependencies = {}) {
     } else {
       (dependencies.log ?? console.log)(`Vectorized ${result.receipt.width}\xD7${result.receipt.height} with ` + `${result.receipt.profile}/${result.receipt.representation}: ${result.outputPath}`);
     }
+    reportUsefulResult(dependencies.onUsefulResult);
     return;
   }
   if (command === "generate") {
@@ -298,6 +362,7 @@ async function main(args, dependencies = {}) {
     } else {
       (dependencies.log ?? console.log)(`Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})`);
     }
+    reportUsefulResult(dependencies.onUsefulResult);
     return;
   }
   if (command === "code") {
@@ -336,6 +401,9 @@ async function main(args, dependencies = {}) {
         ...hostAdmissionOptions(dependencies)
       });
       (dependencies.log ?? console.log)(JSON.stringify({ operation, result }, null, 2));
+      if (operation === "slopcamera.diagram.render" || operation === "slopcamera.image.vectorize" || operation === "slopcamera.image.generate") {
+        reportUsefulResult(dependencies.onUsefulResult);
+      }
       return;
     }
     throw new Error("Use slopcamera code search [query] or slopcamera code execute <operation> --input <JSON>");
@@ -395,7 +463,13 @@ ${help}`);
 }
 if (import.meta.main) {
   try {
-    await main(process.argv.slice(2));
+    const env = standaloneSupportEnvironment();
+    let usefulResult = false;
+    await main(process.argv.slice(2), { supportEnvironment: env, onUsefulResult: () => {
+      usefulResult = true;
+    } });
+    if (usefulResult && (process.exitCode ?? 0) === 0)
+      await showProductSupportInvitation({ env });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

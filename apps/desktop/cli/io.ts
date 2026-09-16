@@ -1,3 +1,4 @@
+import { quietSupportChildEnvironment } from "../../../src/support-completion";
 import { CliError } from "./errors";
 
 export interface CliIo {
@@ -167,7 +168,7 @@ export class BunProcessRunner implements ProcessRunner {
       }
       const child = Bun.spawn([...argv], {
         ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-        env: environment,
+        env: quietSupportChildEnvironment(environment),
         stdio: [
           "ignore",
           "pipe",

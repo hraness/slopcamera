@@ -26,6 +26,8 @@ import type { HostResourceCoordinator } from "./host-resources.js"
 import { installSkill, type SkillScope, type SkillTarget } from "./skill-install.js"
 import { pathExists } from "./fs.js"
 import { SLOPCAMERA_VERSION } from "./version.js"
+import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
+import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
 
 export const slopcameraCliVersion = SLOPCAMERA_VERSION
 
@@ -43,6 +45,7 @@ Usage:
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
   slopcamera doctor
+  slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -65,6 +68,10 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- …\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+Optional support: after useful work, agents can read slopcamera support protocol --json.
+Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
+No feature requires payment. Imported CLI/SDK calls and probes stay quiet.
 
 Code mode searches and executes a fixed semantic registry. Execute accepts
 typed JSON for one exact owned operation code; it never evaluates source text.
@@ -181,6 +188,8 @@ const starter = {
 }
 
 export interface SlopcameraCliDependencies {
+  readonly onUsefulResult?: UsefulResultObserver
+  readonly supportEnvironment?: Readonly<Record<string, string | undefined>>
   readonly generate?: typeof generateSlopcameraImageFile
   readonly hostResourceCoordinator?: HostResourceCoordinator
   readonly log?: (value: string) => void
@@ -225,6 +234,11 @@ export async function main(
   args: readonly string[],
   dependencies: SlopcameraCliDependencies = {},
 ): Promise<void> {
+  if (args[0] === "support") {
+    process.exitCode = await runProductSupportCommand(args.slice(1),
+      dependencies.supportEnvironment === undefined ? {} : { env: dependencies.supportEnvironment })
+    return
+  }
   const [command, ...rest] = canonicalArguments(args)
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
     console.log(help)
@@ -241,6 +255,7 @@ export async function main(
     if (await pathExists(filePath)) throw new Error(`Refusing to overwrite existing file: ${filePath}`)
     await writeFile(filePath, `${JSON.stringify(starter, null, 2)}\n`)
     console.log(`Created ${filePath}`)
+    reportUsefulResult(dependencies.onUsefulResult)
     return
   }
 
@@ -282,6 +297,7 @@ export async function main(
     )
     console.log(artifactSummary(result.artifacts))
     printFindings(result.findings)
+    reportUsefulResult(dependencies.onUsefulResult)
     return
   }
 
@@ -330,6 +346,7 @@ export async function main(
           + `${result.receipt.profile}/${result.receipt.representation}: ${result.outputPath}`,
       )
     }
+    reportUsefulResult(dependencies.onUsefulResult)
     return
   }
 
@@ -370,6 +387,7 @@ export async function main(
         `Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})`,
       )
     }
+    reportUsefulResult(dependencies.onUsefulResult)
     return
   }
 
@@ -425,6 +443,9 @@ export async function main(
       ;(dependencies.log ?? console.log)(
         JSON.stringify({ operation, result }, null, 2),
       )
+      if (operation === "slopcamera.diagram.render" || operation === "slopcamera.image.vectorize" || operation === "slopcamera.image.generate") {
+        reportUsefulResult(dependencies.onUsefulResult)
+      }
       return
     }
     throw new Error(
@@ -499,7 +520,10 @@ export async function main(
 
 if (import.meta.main) {
   try {
-    await main(process.argv.slice(2))
+    const env = standaloneSupportEnvironment()
+    let usefulResult = false
+    await main(process.argv.slice(2), { supportEnvironment: env, onUsefulResult: () => { usefulResult = true } })
+    if (usefulResult && (process.exitCode ?? 0) === 0) await showProductSupportInvitation({ env })
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exitCode = 1

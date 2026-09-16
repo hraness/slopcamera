@@ -32,6 +32,7 @@ Use the Slopcamera release installation or a source build for the commands below
 | HTML profile locks | `slopcamera html catalog --json` |
 | Current-source HTML scene export | `slopcamera help html`, `slopcamera html render --input <scene.json> --dry-run --json` |
 | Version-matched packaged agent instructions | `slopcamera skill path` |
+| Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
 The portable `code search/execute` and MCP surface has four operations: diagram check, diagram render, image generation, and vectorization. The complete local host has a larger closed registry. Neither surface allows a caller to register arbitrary operations. See [SDK surfaces](sdk.md).
 

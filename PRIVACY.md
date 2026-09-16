@@ -26,6 +26,16 @@ ordinary media editing, and diagram rendering remain local. Slopcamera does
 not provide an account service and does not upload a project to a Slopcamera
 service.
 
+Optional support notices are local. After useful command-line work, the
+`slopcamera` executable can print a short discovery notice to stderr and, on
+request, an optional support offer that names the shared Hraness support page.
+Opening that page and any payment are explicit human choices in a browser. The notice preferences,
+throttles, and last presentation are stored only in local JSON files under
+`$XDG_STATE_HOME/hraness/support` (by default `~/.local/state/hraness/support`),
+shared with other Hraness tools for the same user. No email address, task
+output, or project data is collected or sent, and
+`HRANESS_SUPPORT_AUDIENCE=off` disables the notices.
+
 Use Slopcamera only on devices, accounts, displays, conversations, and media that you
 are entitled and permitted to capture or process. Obtain any consent required
 by law, contract, workplace policy, or platform rules. Do not use Slopcamera to

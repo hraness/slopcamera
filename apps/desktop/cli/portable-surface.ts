@@ -1,3 +1,5 @@
+import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
+
 import { constants } from "node:fs";
 import { mkdir, open } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -16,7 +18,10 @@ import { CliError } from "./errors";
 
 const HEADLESS_SLOPCAMERA_CLI_MODULE = "@hraness/slopcamera/cli";
 
-async function runHeadlessSlopcameraCli(argv: readonly string[]): Promise<void> {
+async function runHeadlessSlopcameraCli(
+  argv: readonly string[],
+  options?: Readonly<{ onUsefulResult?: UsefulResultObserver }>,
+): Promise<void> {
   // Keep this as a runtime package import so the headless CLI retains its own
   // package-relative skill and asset resolution inside an installed bundle.
   const module: unknown = await import(HEADLESS_SLOPCAMERA_CLI_MODULE);
@@ -28,13 +33,14 @@ async function runHeadlessSlopcameraCli(argv: readonly string[]): Promise<void> 
   ) {
     throw new CliError("unavailable", "The portable Slopcamera CLI is unavailable.");
   }
-  await module.main(argv);
+  await module.main(argv, options);
 }
 
 export interface PortableSurfaceDependencies {
+  readonly onUsefulResult?: UsefulResultObserver;
   readonly cwd?: () => string;
   readonly log?: (value: string) => void;
-  readonly runHeadless?: (argv: readonly string[]) => Promise<void>;
+  readonly runHeadless?: (argv: readonly string[], options?: Readonly<{ onUsefulResult?: UsefulResultObserver }>) => Promise<void>;
   readonly writeScaffold?: (path: string, html: string) => Promise<void>;
 }
 function optionValue(argv: readonly string[], name: string): string | undefined {
@@ -187,6 +193,7 @@ async function runHtmlScaffold(
     createHtmlOverlayScaffold(kind),
   );
   (dependencies.log ?? console.log)(`Created ${outputPath}`);
+  reportUsefulResult(dependencies.onUsefulResult);
   return 0;
 }
 
@@ -235,7 +242,8 @@ export async function runPortableSurface(
   const previousExitCode = process.exitCode;
   process.exitCode = undefined;
   try {
-    await (dependencies.runHeadless ?? runHeadlessSlopcameraCli)(argv);
+    await (dependencies.runHeadless ?? runHeadlessSlopcameraCli)(argv,
+      dependencies.onUsefulResult === undefined ? {} : { onUsefulResult: dependencies.onUsefulResult });
     return process.exitCode ?? 0;
   } finally {
     process.exitCode = previousExitCode;

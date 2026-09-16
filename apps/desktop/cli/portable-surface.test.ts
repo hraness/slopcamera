@@ -8,6 +8,25 @@ import {
 } from "./portable-surface";
 
 describe("unified portable Slopcamera CLI surface", () => {
+  test("notifies after scaffold output and transports only a content-free portable completion", async () => {
+    const events: string[] = [];
+    const onUsefulResult = () => { events.push("complete"); };
+    expect(await runPortableSurface(["html", "scaffold", "plain", "--output", "fixture.html"], {
+      cwd: () => "/fixture", writeScaffold: async () => { events.push("write"); },
+      log: () => { events.push("output"); }, onUsefulResult,
+    })).toBe(0);
+    expect(events).toEqual(["write", "output", "complete"]);
+    events.length = 0;
+    expect(await runPortableSurface(["diagram", "render", "fixture.diagram.json"], {
+      runHeadless: async (_argv, options) => { events.push("output"); await options?.onUsefulResult?.(); },
+      onUsefulResult,
+    })).toBe(0);
+    expect(events).toEqual(["output", "complete"]);
+    events.length = 0;
+    expect(await runPortableSurface(["html", "catalog", "--json"], { log: () => {}, onUsefulResult })).toBe(0);
+    expect(events).toEqual([]);
+  });
+
   test("delegates the complete headless diagram and explicit-file image grammar", async () => {
     const delegated: readonly string[][] = [];
     const runHeadless = (argv: readonly string[]): Promise<void> => {

@@ -216,6 +216,11 @@ export interface ShellEvidence {
   readonly skip: ShellFocusedSkip
   readonly recovery: boolean
   readonly appearance: readonly ShellAppearanceEvidence[]
+  /** Keyboard targets whose painted fragment centre was owned by another
+   * element. Historical profiles fail before recording one; the optional
+   * support profile records them so its comparison can require an unobstructed
+   * current page while naming the immutable baseline's pre-existing ones. */
+  readonly obstructions: readonly ShellKeyboardObstruction[]
 }
 export interface ShellAppearanceEvidence {
   readonly step: string
@@ -958,8 +963,25 @@ export interface ShellFocusFragment {
   readonly rect: readonly [number, number, number, number]
   readonly owned: boolean
 }
+/** The bounded identity of the element that owns a covered fragment's centre
+ * hit: tag, id, data-slot, its own non-atomic class hooks and every ancestor's
+ * hooks (or tag when an ancestor has none), outermost last. */
+export interface ShellHitOwner {
+  readonly tag: string
+  readonly id: string
+  readonly slot: string | null
+  readonly classes: readonly string[]
+  readonly ancestors: readonly string[]
+}
+export interface ShellFocusObstruction {
+  readonly fragment: number
+  readonly rect: readonly [number, number, number, number]
+  readonly hit: ShellHitOwner | null
+}
+export interface ShellKeyboardObstruction extends ShellFocusObstruction { readonly key: string }
 interface ShellFocusObservation {
   readonly fragments: ShellFocusFragment[]
+  readonly obstructions: ShellFocusObstruction[]
   readonly sample: { readonly viewport: readonly [number, number, number, number]; readonly measured: ShellElement } | null
 }
 /** One synchronous native observation after the existing paint settlement.
@@ -980,16 +1002,34 @@ export function observeShellFocus(element: Element, options: {
   }
   const rectangles = [...element.getClientRects()]
   if (rectangles.length === 0 || rectangles.length > 128) throw new Error("Invalid focused fragment count")
-  const fragments: ShellFocusFragment[] = []
+  const fragments: ShellFocusFragment[] = [], obstructions: ShellFocusObstruction[] = []
+  // Describe a foreign hit owner from the same synchronous observation. Atomic
+  // compiler classes carry no identity; keep the semantic hooks, bounded.
+  const hooks = (node: Element): string[] => {
+    const value = typeof node.getAttribute === "function" ? node.getAttribute("class") : null
+    return (value ?? "").split(/\s+/u).filter(name => name.length > 0 && !/^x[0-9a-z]+$/u.test(name)).slice(0, 8)
+  }
+  const describe = (node: Element | null): ShellHitOwner | null => {
+    if (node === null) return null
+    const ancestors: string[] = []
+    for (let owner = node.parentElement ?? null; owner !== null && ancestors.length < 32; owner = owner.parentElement ?? null) {
+      const names = hooks(owner)
+      ancestors.push(...(names.length > 0 ? names : [String(owner.tagName ?? "").toLowerCase()]))
+    }
+    return { tag: String(node.tagName ?? "").toLowerCase().slice(0, 32), id: String(node.id ?? "").slice(0, 64),
+      slot: typeof node.getAttribute === "function" ? node.getAttribute("data-slot") : null, classes: hooks(node), ancestors: ancestors.slice(0, 32) }
+  }
   for (const rect of rectangles) {
     const values = [rect.x, rect.y, rect.width, rect.height] as const
     if (!values.every(Number.isFinite) || rect.width < 0 || rect.height < 0) throw new Error("Invalid focused fragment geometry")
     if (rect.width === 0 || rect.height === 0) continue
     const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
-    fragments.push({ rect: values, owned: hit !== null && (element === hit || element.contains(hit)) })
+    const owned = hit !== null && (element === hit || element.contains(hit))
+    fragments.push({ rect: values, owned })
+    if (!owned) obstructions.push({ fragment: fragments.length - 1, rect: values, hit: describe(hit) })
   }
   if (fragments.length === 0) throw new Error("Native focused target has no painted fragments")
-  if (options === null) return { fragments, sample: null }
+  if (options === null) return { fragments, obstructions, sample: null }
   const view = document.defaultView
   if (view === null) throw new Error("Native focused target has no document window")
   const rect = element.getBoundingClientRect(), style = view.getComputedStyle(element)
@@ -997,7 +1037,7 @@ export function observeShellFocus(element: Element, options: {
   if (!viewport.every(Number.isFinite) || rect.width <= 0 || rect.height <= 0 || !Number.isFinite(view.scrollY)) {
     throw new Error("Invalid focused target viewport geometry")
   }
-  return { fragments, sample: { viewport, measured: {
+  return { fragments, obstructions, sample: { viewport, measured: {
     key: `${options.selector}[${options.index}]`, rect: [rect.x, rect.y + view.scrollY, rect.width, rect.height],
     styles: Object.fromEntries(options.properties.map(property => [property, style.getPropertyValue(property)])),
     text: element.textContent?.replace(/\s+/gu, " ").trim() ?? "",
@@ -1008,11 +1048,19 @@ export function observeShellFocus(element: Element, options: {
 export function shellFocusFragments(element: Element): ShellFocusFragment[] {
   return observeShellFocus(element).fragments
 }
-export function assertShellFocusFragments(fragments: readonly ShellFocusFragment[], key: string): void {
+export function assertShellFocusGeometry(fragments: readonly ShellFocusFragment[], key: string): void {
   assert.ok(fragments.length > 0 && fragments.length <= 128, `Native focused target has no bounded fragments: ${key}`)
-  for (const [index, fragment] of fragments.entries()) {
+  for (const fragment of fragments) {
     assert.ok(fragment.rect.length === 4 && fragment.rect.every(Number.isFinite) && fragment.rect[2] > 0 && fragment.rect[3] > 0)
-    assert.equal(fragment.owned, true, `Native focused target is covered: ${key} fragment ${index} ${JSON.stringify(fragment.rect)}`)
+  }
+}
+export function assertShellFocusFragments(fragments: readonly ShellFocusFragment[], key: string,
+  obstructions: readonly ShellFocusObstruction[] = []): void {
+  assertShellFocusGeometry(fragments, key)
+  for (const [index, fragment] of fragments.entries()) {
+    const owner = obstructions.find(item => item.fragment === index)
+    assert.equal(fragment.owned, true, `Native focused target is covered: ${key} fragment ${index} ${JSON.stringify(fragment.rect)}${
+      owner === undefined ? "" : `; native hit owner ${JSON.stringify(owner.hit)}`}`)
   }
 }
 
@@ -1112,10 +1160,17 @@ export function shellContextLifecycle(error: (message: string) => void) {
   }
 }
 
+/** The new profile binds current footer 0.11.2/0.12.1 (four social links).
+ * Historical migration/refinement profiles retain their five-link contract. */
+export function assertFooterKeyboardCoverage(focus: readonly ShellElement[], profile?: "marketing-refinement-v1" | "optional-support-v1"): void {
+  assert.ok(profile === undefined || profile === "marketing-refinement-v1" || profile === "optional-support-v1", "Unknown ordinary DOM profile")
+  assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__social-link[")).length,
+    profile === "optional-support-v1" ? 4 : 5, "Footer keyboard coverage incomplete")
+}
 export async function checkShellCase(browser: Browser, payload: ShellPayload, scenario: ShellCase,
   source: "current" | "baseline", negative: boolean,
-  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1"): Promise<ShellEvidence> {
-  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1", "Unknown ordinary DOM profile")
+  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1"): Promise<ShellEvidence> {
+  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1" || domProfile === "optional-support-v1", "Unknown ordinary DOM profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height },
     deviceScaleFactor: scenario.reflowEquivalent ? 2 : 1, colorScheme: scenario.system, forcedColors: scenario.forced,
     hasTouch: scenario.coarse, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
@@ -1262,7 +1317,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     // header action before recording hover/focus states independently.
     await chooseAppearance(page, scenario.theme, scenario.system)
     const appearance = await checkOpenAppearance(page, scenario)
-    const focus: ShellElement[] = [], hover: ShellElement[] = []
+    const focus: ShellElement[] = [], hover: ShellElement[] = [], obstructions: ShellKeyboardObstruction[] = []
     // Detailed native state comparisons at every declared breakpoint in both
     // explicit themes, plus System, forced colors, coarse pointer and reflow.
     for (const selector of ['.topbar nav[aria-label="Primary"] a', ".hraness-site-footer__social-link",
@@ -1305,7 +1360,14 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
       assert.ok(observation.sample !== null, "Focused target measurement missing")
       const { viewport, measured } = observation.sample
       assert.ok(viewport[1] >= -0.5 && viewport[1] + viewport[3] <= scenario.height + 0.5, `Focused target not reachable: ${key}`)
-      assertShellFocusFragments(observation.fragments, key)
+      if (domProfile === "optional-support-v1") {
+        // The optional-support comparison decides ownership for both trees: the
+        // current page must be unobstructed, while the immutable baseline's
+        // pre-existing fixed-footer obstructions are compared with a closed,
+        // reviewed inventory. Historical profiles keep the immediate assertion.
+        assertShellFocusGeometry(observation.fragments, key)
+        obstructions.push(...observation.obstructions.map(item => ({ key: measured.key, ...item })))
+      } else assertShellFocusFragments(observation.fragments, key, observation.obstructions)
       assert.ok(measured.styles["outline-style"] !== "none" && Number.parseFloat(measured.styles["outline-width"]!) > 0,
         `Visible focus outline missing: ${key}`)
       focus.push(measured)
@@ -1315,7 +1377,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     assert.equal(focus.filter(item => item.key.startsWith("[data-hraness-appearance-menu] button[")).length, 1,
       "Appearance keyboard coverage incomplete")
     assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__brand[")).length, 1)
-    assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__social-link[")).length, 5, "Footer keyboard coverage incomplete")
+    assertFooterKeyboardCoverage(focus, domProfile)
     if (scenario.route === "/") assert.equal(focus.filter(item => item.key.startsWith(".slopcamera-ask-ai a[")).length, 4)
     else assert.equal(focus.filter(item => item.key.startsWith(".route-state a[")).length, 5)
     await page.goto(`${payload.origin}${scenario.route}`, { waitUntil: "load" }); await settleCase()
@@ -1371,7 +1433,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     assert.equal(requests.size, 0, "Requests still active at evidence settlement")
     assert.deepEqual(errors, [], `${scenario.name}: pre-close browser error`)
     operations.seal()
-    return { direction, dom, elements, skip, hover, focus, recovery, appearance }
+    return { direction, dom, elements, skip, hover, focus, recovery, appearance, obstructions }
   }, async () => {
     lifecycle.beginContextClose()
     try {

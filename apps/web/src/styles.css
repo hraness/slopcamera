@@ -104,6 +104,14 @@ html[data-theme="dark"]:not([data-hraness-theme="paper"]) {
 html {
   background: var(--paper);
   scroll-behavior: smooth;
+  /* Keep focus and scroll targets above the shared fixed footer bar. */
+  scroll-padding-block-end: calc(1.75rem + 2 * clamp(0.25rem, 0.8vw, 0.375rem) + env(safe-area-inset-bottom, 0px) + 1px);
+}
+
+@media (pointer: coarse) {
+  html {
+    scroll-padding-block-end: calc(44px + 2 * clamp(0.25rem, 0.8vw, 0.375rem) + env(safe-area-inset-bottom, 0px) + 1px);
+  }
 }
 
 body {

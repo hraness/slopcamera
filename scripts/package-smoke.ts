@@ -256,7 +256,7 @@ async function run(
 ): Promise<void> {
   const child = Bun.spawn(command, {
     cwd,
-    env: environment,
+    env: { ...environment, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
     stderr: "inherit",
     stdout: "inherit",
   });
@@ -273,7 +273,7 @@ async function runOutput(
 ): Promise<string> {
   const child = Bun.spawn(command, {
     cwd,
-    env: environment,
+    env: { ...environment, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
     stderr: "inherit",
     stdout: "pipe",
   });
@@ -295,7 +295,7 @@ async function runFailure(
 ): Promise<void> {
   const child = Bun.spawn(command, {
     cwd,
-    env: environment,
+    env: { ...environment, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
     stderr: "pipe",
     stdout: "pipe",
   });
