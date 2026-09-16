@@ -29,6 +29,7 @@ async function run(
 ): Promise<string> {
   const subprocess = Bun.spawn([executable, ...argv], {
     cwd,
+    env: { ...process.env, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
     stderr: "pipe",
     stdout: "pipe",
   });

@@ -9,6 +9,15 @@ function outputBytes(value: string): number {
 }
 
 describe("BunProcessRunner", () => {
+  test("delegated tool children explicitly stay quiet even when caller overrides request invitations", async () => {
+    const result = await new BunProcessRunner().run([
+      bun, "-e", "process.stdout.write(JSON.stringify([process.env.HRANESS_SUPPORT_AUDIENCE, process.env.HRANESS_SUPPORT_EMAIL]))",
+    ], { env: { HRANESS_SUPPORT_AUDIENCE: "human", HRANESS_SUPPORT_EMAIL: "on" } });
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(["off", "off"]);
+    expect(result.stderr).toBe("");
+  });
+
   test("never forwards provider credentials to tool children", async () => {
     const environment = environmentWithoutGatewayCredentials({
       AI_GATEWAY_API_KEY: "secret-api-key",

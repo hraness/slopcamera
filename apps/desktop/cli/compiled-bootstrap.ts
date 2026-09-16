@@ -56,5 +56,5 @@ if (process.env[NATIVE_ROOT_ENV] === undefined) {
   await import("./native-media-runtime.macos");
   const { runMainEntrypoint } = await import("./main");
   const { main: runHeadlessSlopcameraCli } = await import("../../../src/cli");
-  await runMainEntrypoint({ runHeadless: runHeadlessSlopcameraCli });
+  await runMainEntrypoint({ runHeadless: runHeadlessSlopcameraCli }, true);
 }

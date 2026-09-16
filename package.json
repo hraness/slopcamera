@@ -1,6 +1,6 @@
 {
   "name": "@hraness/slopcamera",
-  "version": "3.2.7",
+  "version": "3.2.8",
   "description": "A local visual studio for coding agents: author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.",
   "license": "MIT",
   "type": "module",
@@ -227,7 +227,7 @@
     "check:release-workflows": "bun test ./scripts/release-workflow.test.ts ./scripts/github-release.test.ts",
     "check:schema": "bun run ./scripts/validate-schema.ts",
     "check:skill": "bun run ./scripts/validate-skill.ts",
-    "check:standalone": "bun run ./scripts/check-standalone.ts",
+    "check:standalone": "bun test ./scripts/standalone-support-fixture.test.ts && bun run ./scripts/check-standalone.ts",
     "test:vectorize:official": "bun run ./scripts/official-vectorizer-smoke.ts",
     "test:package": "bun run ./scripts/package-smoke.ts",
     "check:sdk": "bun run typecheck:sdk && bun run lint:sdk && bun run build:sdk && bun run test:sdk && bun run check:release-workflows && bun run check:schema && bun run check:skill",
@@ -242,6 +242,7 @@
     "check:effect": "bun run ./scripts/check-effect-policy.ts && bun test ./scripts/check-effect-architecture.test.ts"
   },
   "dependencies": {
+    "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
     "@noble/hashes": "2.2.0",
     "@paper-design/shaders": "0.0.77",

@@ -1,3 +1,4 @@
+import { supportHref } from "./scripts/site-support-profile"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
@@ -169,19 +170,19 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
 }
 
 function assertBuiltHtmlBudget(html: string): number {
-  // The six code blocks add 2,105 bytes over the admitted 55,043-byte baseline;
-  // all other document content shrinks by 125 bytes. Count the entire seal.
+  // The exact optional-support footer adds 604 bytes to the current 57,613-byte
+  // baseline. Preserve its 387-byte headroom and count the entire seal.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 58_000) throw new Error(`Built site HTML exceeds its 58,000-byte budget: ${bytes}`)
+  if (bytes >= 58_604) throw new Error(`Built site HTML exceeds its 58,604-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(57_999))).toBe(57_999)
-  expect(() => assertBuiltHtmlBudget("x".repeat(58_000)))
-    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58000")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(57_999)}é`))
-    .toThrow("Built site HTML exceeds its 58,000-byte budget: 58001")
+  expect(assertBuiltHtmlBudget("x".repeat(58_603))).toBe(58_603)
+  expect(() => assertBuiltHtmlBudget("x".repeat(58_604)))
+    .toThrow("Built site HTML exceeds its 58,604-byte budget: 58604")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(58_603)}é`))
+    .toThrow("Built site HTML exceeds its 58,604-byte budget: 58605")
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
@@ -1188,7 +1189,7 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.11.2",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.12.1",
       "@hraness/ui": "github:hraness/ui#v0.5.12",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
@@ -1215,7 +1216,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.8.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.11.2"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.12.1"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
@@ -1228,7 +1229,7 @@ describe("static Slopcamera site", () => {
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(58_000)
+    expect(emittedBytes).toBeLessThan(58_604)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1727,6 +1728,7 @@ describe("static Slopcamera site", () => {
     })
     const expectedHrefs = [
       HRANESS_HOME_URL,
+      supportHref.replaceAll("&", "&amp;"),
       "https://hraness.com/privacy",
       ...hranessSocialLinks.map(({ href }) => href),
     ]

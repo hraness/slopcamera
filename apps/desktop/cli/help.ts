@@ -28,6 +28,8 @@ Commands:
   media audio|color              Apply local non-destructive audio and video effects
   menubar [--background]         Run the prebuilt menu-bar companion
   menubar install|uninstall|status  Manage its per-user LaunchAgent
+  support [protocol --json|offer --json|shown <id>|dismiss|snooze|enable|status --json]
+                                 Optional support; no feature requires payment
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
@@ -43,6 +45,10 @@ Commands:
                                  Analyze inactivity or structured project media
   render plan|run <recording>    Resolve or execute a render plan
   assets emoji search|resolve    Find checked local emoji overlays
+
+Agents: after useful work, read slopcamera support protocol --json for the optional
+closeout protocol. Discovery uses stderr; it does not claim an invitation.
+HRANESS_SUPPORT_AUDIENCE=off suppresses offers and incidental discovery.
 
 Run slopcamera help <command> for command-specific help.`;
 
