@@ -13,6 +13,7 @@ export const OPERATION_KINDS = [
   "scene.evaluate",
   "scene.render",
   "scene.render-audit",
+  "scene.review",
   "slopcamera.studio.run",
   "spatial.project.snapshot",
   "spatial.project.migrate",

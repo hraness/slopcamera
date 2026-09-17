@@ -5,7 +5,8 @@ import { canonicalJson } from "../../../src/code/canonical-json";
 import { normalizeSpatialAuditAssetBounds } from "../../../src/spatial-scene/audit";
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
-import { SPATIAL_SCENE_LIMITS } from "../../../src/spatial-scene/contracts";
+import { SPATIAL_SCENE_LIMITS, SpatialCameraIdSchema } from "../../../src/spatial-scene/contracts";
+import { SPATIAL_REVIEW_LIMITS } from "../../../src/spatial-scene/review";
 import { parseSpatialScene, spatialSceneSha256 } from "../../../src/spatial-scene/index";
 import { diffSpatialScenes } from "../../../src/spatial-scene/patch";
 import type { ApplicationContext } from "../application/context";
@@ -59,12 +60,45 @@ function assertCameraTrackActive(signal: AbortSignal | undefined): void {
 
 export async function executeSpatialSceneCommand(application: ApplicationContext, command: SpatialSceneCommand, signal?: AbortSignal): Promise<unknown> {
   if (command.action === "generate") return executeSpatialGenerateCommand(application, command);
+  // Fail closed before touching the filesystem, renderer, or provider: review
+  // uploads the selected bounded rendered beauty frames to a vision model and
+  // requires --allow-cloud-upload on this exact invocation.
+  if (command.action === "review" && !command.allowCloudUpload) {
+    throw new CliError("authorization-required", "scene review uploads bounded rendered beauty frames to a vision model and requires --allow-cloud-upload on this invocation.", { command: "scene review" });
+  }
   if (command.action === "camera-track") assertCameraTrackActive(signal);
   const sourcePath = resolve(application.paths.repositoryRoot, command.path);
   if (command.action === "init") {
     const scene = createSpatialSceneStarter();
     await publishSpatialSource(sourcePath, scene);
     return { path: sourcePath, sceneSha256: spatialSceneSha256(scene) };
+  }
+  if (command.action === "review") {
+    const acknowledgedAt = application.clock.now().toISOString();
+    const authorizedApplication: ApplicationContext = {
+      ...application,
+      spatialReviewAuthorization: {
+        authorize: async request => (typeof request.sceneSha256 === "string" && /^[a-f0-9]{64}$/u.test(request.sceneSha256)
+          && SpatialCameraIdSchema.safeParse(request.cameraId).success
+          && Array.isArray(request.timesUs)
+          && request.timesUs.length >= 1
+          && request.timesUs.length <= SPATIAL_REVIEW_LIMITS.frames
+          && request.maximumFrames >= 1
+          && request.maximumFrames <= SPATIAL_REVIEW_LIMITS.frames
+          && request.maximumFrameBytes <= SPATIAL_REVIEW_LIMITS.pngBytes
+          && request.maximumUploadBytes <= SPATIAL_REVIEW_LIMITS.uploadBytes
+          ? { acknowledgedAt }
+          : undefined),
+      },
+    };
+    const result = await createApplicationOperationRegistry().execute({ application: authorizedApplication, abortSignal: signal ?? new AbortController().signal }, {
+      kind: "scene.review", version: 1,
+      input: {
+        source: { path: relative(application.paths.repositoryRoot, sourcePath) },
+        request: { cameraId: command.camera, ...(command.timesUs === undefined ? {} : { timesUs: [...command.timesUs] }) },
+      },
+    });
+    return result.output;
   }
   if (command.action === "render-audit") {
     const result = await createApplicationOperationRegistry().execute({ application, abortSignal: signal ?? new AbortController().signal }, {

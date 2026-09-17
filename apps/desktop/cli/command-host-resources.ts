@@ -192,7 +192,10 @@ export function commandHostResourceClaims(
         ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication"])
         : command.action === "render-audit"
           ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg"])
-          : claims(coordinator, ["cpu", "local-io"]);
+          : command.action === "review"
+            // Local render plus one bounded paid dispatch in a single claim.
+            ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "network", "paid-call"])
+            : claims(coordinator, ["cpu", "local-io"]);
     case "spatial-project":
       return command.action === "prepare-render"
         ? claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication", "project-render"])
