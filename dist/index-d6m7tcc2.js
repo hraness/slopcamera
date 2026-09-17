@@ -2594,7 +2594,7 @@ function galleryCandidateId(value) {
   return id;
 }
 function slug(value) {
-  const slugged = value.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "").slice(0, slopcameraGalleryLimits.idLength);
+  const slugged = value.toLowerCase().split(/[^a-z0-9]+/u).filter((part) => part.length > 0).join("-").slice(0, slopcameraGalleryLimits.idLength);
   return slugged.length === 0 ? "candidate" : slugged;
 }
 function galleryKind(value) {

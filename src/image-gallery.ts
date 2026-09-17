@@ -157,8 +157,9 @@ export function galleryCandidateId(value: unknown): string {
 function slug(value: string): string {
   const slugged = value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "-")
-    .replace(/^-+|-+$/gu, "")
+    .split(/[^a-z0-9]+/u)
+    .filter(part => part.length > 0)
+    .join("-")
     .slice(0, slopcameraGalleryLimits.idLength)
   return slugged.length === 0 ? "candidate" : slugged
 }
