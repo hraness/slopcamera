@@ -62,6 +62,20 @@ export function negotiateSiteRequest(request: Request): Response | undefined {
 
   const pathname = new URL(request.url).pathname
   if (!isNegotiableDocumentPath(pathname)) {
+    // A direct request for a published documentation markdown mirror serves
+    // the identical sealed file with the canonical document and alternate
+    // representation headers the negotiated response carries.
+    const docsMirror = pathname.endsWith(".md") ? docsPageForRequestPath(pathname) : null
+    if (docsMirror !== null && docsMarkdownUrl(docsMirror) === pathname) {
+      return new Response(null, {
+        headers: {
+          "Link": `<${docsCanonicalUrl(docsMirror)}>; rel="canonical", <${docsMarkdownUrl(docsMirror)}>; rel="alternate"; type="text/markdown"`,
+          "Vary": varyAcceptAndEncoding,
+          "x-middleware-rewrite": new URL(docsMarkdownUrl(docsMirror), request.url).href,
+        },
+        status: 200,
+      })
+    }
     return undefined
   }
 
