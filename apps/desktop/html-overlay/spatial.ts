@@ -15,6 +15,7 @@ import {
   type SpatialCamera,
   type SpatialEntity,
   type SpatialProjection,
+  type SpatialSpotLight,
 } from "../../../src/spatial-scene/contracts";
 import { cameraMathView, composeTransform, invertTransform, multiplyTransforms, type Mat4 } from "../../../src/spatial-scene/math";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
@@ -74,14 +75,20 @@ const primitiveSchema = z.strictObject({
   /** Host-resolved final material; omitted means the entity's material. */
   material: SpatialMaterialSchema.optional(),
   texture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  normalTexture: z.strictObject({ ...textureShape, scale: z.number().finite().optional(), flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  metallicRoughnessTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  occlusionTexture: z.strictObject({ ...textureShape, strength: z.number().finite().min(0).max(1).optional(), flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  emissiveTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
 }).superRefine((primitive, context) => {
   const vertices = primitive.positions.length / 3;
+  const hasTexture = primitive.texture !== undefined || primitive.normalTexture !== undefined || primitive.metallicRoughnessTexture !== undefined
+    || primitive.occlusionTexture !== undefined || primitive.emissiveTexture !== undefined;
   if (!Number.isInteger(vertices)
     || (primitive.indices === undefined ? vertices % 3 !== 0 : primitive.indices.length % 3 !== 0)
     || primitive.indices?.some(index => index >= vertices)
     || (primitive.normals !== undefined && primitive.normals.length !== primitive.positions.length)
     || (primitive.uvs !== undefined && primitive.uvs.length !== vertices * 2)
-    || (primitive.texture !== undefined && primitive.uvs === undefined)) {
+    || (hasTexture && primitive.uvs === undefined)) {
     context.addIssue({ code: "custom", message: "Prepared geometry must contain complete triangles, matching attributes, and in-range indices; textured geometry requires UVs." });
   }
   try { invertTransform(primitive.matrix); } catch {
@@ -250,9 +257,11 @@ type LoweredLight = Readonly<{
   kind: "light";
   entityId: string;
   matrix: Mat4;
-  light: "ambient" | "point" | "directional";
+  light: "ambient" | "point" | "directional" | "spot";
   color: string;
   intensity: number;
+  spot?: SpatialSpotLight;
+  shadow?: boolean;
 }>;
 /** Equirect sky surface: camera-following background and optional standard-material environment light. */
 type LoweredEnvironment = Readonly<{
@@ -464,7 +473,11 @@ export function createSpatialOverlayBatch(input: unknown) {
       if (entity.kind === "group") continue;
       if (entity.kind === "light") {
         if (entity.placement.kind !== "world") unsupported("view-light", "Lights require world placement.");
-        if (entry.visible) objects.push({ kind: "light", entityId: entity.entityId, matrix: entry.worldMatrix, light: entity.light, color: entity.color, intensity: entity.intensity });
+        if (entry.visible) objects.push({
+          kind: "light", entityId: entity.entityId, matrix: entry.worldMatrix, light: entity.light, color: entity.color, intensity: entity.intensity,
+          ...(entity.spot === undefined ? {} : { spot: entity.spot }),
+          ...(entity.shadow === undefined ? {} : { shadow: entity.shadow }),
+        });
         continue;
       }
       if (entity.kind === "environment") {

@@ -96,7 +96,12 @@ export function generatedSpatialEntityId(generatorId: string, key: string): stri
 }
 
 function normalizeEntity(entity: SpatialEntity): SpatialEntity {
-  if (entity.kind === "mesh") return { ...entity, material: { ...entity.material, color: entity.material.color.toLowerCase() } }
+  if (entity.kind === "mesh") {
+    const material = entity.material
+    const emissive = material.kind === "standard" && material.emissive !== undefined
+      ? { ...material.emissive, color: material.emissive.color.toLowerCase() } : undefined
+    return { ...entity, material: { ...material, color: material.color.toLowerCase(), ...(emissive === undefined ? {} : { emissive }) } }
+  }
   if (entity.kind === "text" || entity.kind === "light") return { ...entity, color: entity.color.toLowerCase() }
   return entity
 }

@@ -18,7 +18,7 @@ export const SpatialSceneInspectionOutputSchema = z.strictObject({
     entityId: SpatialEntityIdSchema, name: z.string(),
     kind: z.enum(["group", "mesh", "image", "diagram", "video", "text", "light", "splat"]),
     origin: SpatialOriginSchema, parentId: SpatialEntityIdSchema.nullable(), placement: SpatialPlacementSchema,
-    editableControls: z.array(z.enum(["color", "opacity", "transform"])),
+    editableControls: z.array(z.enum(["color", "opacity", "transform", "emissive", "instances", "castShadow", "receiveShadow", "spot", "shadow"])),
     animatedProperties: z.array(z.string()), assetIds: z.array(z.string()),
     bounds: z.discriminatedUnion("status", [
       z.strictObject({ status: z.literal("authored-enclosure"), coordinateDomain: SpatialPlacementSchema,

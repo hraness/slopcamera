@@ -117,7 +117,7 @@ describe("scene asset admit", () => {
       expect(document.factsManifest.interpretation).toEqual({ kind: "metadata", format: "json", schema: "slopcamera.spatial-asset-facts" });
       expect(document.factsManifest.dependencies).toEqual([document.manifest.assetId]);
       expect(document.facts.subject).toEqual(document.manifest.payload);
-      expect(document.facts.profile).toBe("slopcamera.glb-triangles-trs-pbr-basecolor-v1");
+      expect(document.facts.profile).toBe("slopcamera.glb-triangles-trs-pbr-fullmaps-v1");
       expect(document.facts.nodeCount).toBe(1);
       expect(document.facts.bounds).toEqual(document.bounds);
       expect(document.entity).toMatchObject({ kind: "mesh", name: "model", geometry: { kind: "asset", assetId: document.manifest.assetId } });

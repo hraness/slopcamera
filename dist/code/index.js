@@ -7,6 +7,7 @@ import {
   SPATIAL_AUDIT_LIMITS,
   SPATIAL_GLB_LIMITS,
   SPATIAL_GLB_PROFILE,
+  SPATIAL_GLB_PROFILE_V1,
   SPATIAL_SCENE_LIMITS,
   SpatialAnimationSchema,
   SpatialAssetAdmissionV1Schema,
@@ -14,6 +15,7 @@ import {
   SpatialAssetIdSchema,
   SpatialAssetInterpretationSchema,
   SpatialAssetManifestSchema,
+  SpatialAssetMaterialFactSchema,
   SpatialAuditBoundsSchema,
   SpatialAuditEntitySchema,
   SpatialAuditFindingSchema,
@@ -26,6 +28,7 @@ import {
   SpatialCameraSchema,
   SpatialChannelIdSchema,
   SpatialDigestSchema,
+  SpatialEmissiveSchema,
   SpatialEntityIdSchema,
   SpatialEntitySchema,
   SpatialFrameRateSchema,
@@ -50,6 +53,7 @@ import {
   SpatialSceneV1Schema,
   SpatialShotIdSchema,
   SpatialShotV1Schema,
+  SpatialSpotLightSchema,
   SpatialTimeUsSchema,
   SpatialTransformSchema,
   SpatialVec3Schema,
@@ -97,7 +101,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-rmsyybkf.js";
+} from "../index-6ew11hhb.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -212,7 +216,8 @@ var SpatialRenderedAuditObjectSchema = z.strictObject({
   selectionId: selectionIdSchema,
   representation: z.string().min(1).max(256),
   placement: z.enum(["world", "view"]),
-  assetManifestSha256: SpatialDigestSchema.optional()
+  assetManifestSha256: SpatialDigestSchema.optional(),
+  instances: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
 });
 var SpatialRenderedAuditFrameSchema = z.strictObject({
   timeUs: SpatialTimeUsSchema,
@@ -268,6 +273,7 @@ var SpatialRenderedAuditEntitySchema = z.strictObject({
     z.strictObject({ status: z.literal("bounded") }),
     z.strictObject({ status: z.literal("unknown"), reason: z.enum(BOUNDS_UNKNOWN_REASONS) })
   ]),
+  instances: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional(),
   samples: z.array(SpatialRenderedAuditSampleSchema).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
   totals: z.strictObject({
     expected: z.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
@@ -448,6 +454,10 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
       } else if (object.representation === SPATIAL_SPLAT_PROXY_REPRESENTATION) {
         throw new SpatialSceneError("invalid-data", `Frame evidence must not mark non-splat ${object.entityId} as a splat bounding-box proxy.`, "frames");
       }
+      const declaredInstances = entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : undefined;
+      if (object.instances !== declaredInstances) {
+        throw new SpatialSceneError("invalid-data", `Frame evidence instance count differs from the authored declaration for ${object.entityId}.`, "frames");
+      }
       lowered.set(object.entityId, object);
       attributed.set(object.selectionId, 0);
     }
@@ -539,6 +549,7 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
       eligibility: entityEligibility,
       selectionId,
       enclosure: geometricEntity.enclosure,
+      ...entity.kind === "mesh" && entity.instances !== undefined ? { instances: entity.instances.length } : {},
       samples,
       totals
     });
@@ -1614,7 +1625,7 @@ function mulberry32(seed) {
     return ((value ^ value >>> 14) >>> 0) / 4294967296;
   };
 }
-function scatter(input) {
+function scatterPositions(input) {
   if (!Number.isSafeInteger(input.seed) || input.seed < 0 || input.seed > 4294967295) {
     throw new RangeError("seed must be an integer within [0, 2^32 - 1]");
   }
@@ -1645,6 +1656,35 @@ function scatter(input) {
       throw new RangeError("scatter could not satisfy minSpacing within the region");
   }
   return deepFreezeJson(parseSpatialValue(z3.array(SpatialVec3Schema), accepted, "scatter"));
+}
+function scatter(input) {
+  const positions = scatterPositions(input);
+  if (input.instanced !== true) {
+    if (input.entity !== undefined)
+      throw new RangeError("entity applies only with instanced: true");
+    return positions;
+  }
+  const template = input.entity;
+  if (template === undefined)
+    throw new RangeError("instanced scatter requires an entity template");
+  if (positions.length === 0)
+    throw new RangeError("instanced scatter requires count >= 1");
+  const entity = template;
+  return deepFreezeJson(parseSpatialValue(SpatialEntitySchema, {
+    kind: "mesh",
+    entityId: entity.entityId,
+    name: entity.name,
+    parentId: entity.parentId ?? null,
+    transform: entity.transform ?? { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    placement: entity.placement ?? { kind: "world" },
+    origin: { kind: "authored" },
+    visible: entity.visible ?? true,
+    geometry: entity.geometry,
+    material: entity.material,
+    ...entity.castShadow === undefined ? {} : { castShadow: entity.castShadow },
+    ...entity.receiveShadow === undefined ? {} : { receiveShadow: entity.receiveShadow },
+    instances: positions.map(([x, , z4]) => ({ position: [x, 0, z4], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }))
+  }, "instanced scatter entity"));
 }
 function onTopOf(moverBounds, moverTransform, targetBounds, targetTransform) {
   const mover = transformBounds(composeTransform(transform2(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
@@ -2350,6 +2390,7 @@ export {
   SpatialVec3Schema,
   SpatialTransformSchema,
   SpatialTimeUsSchema,
+  SpatialSpotLightSchema,
   SpatialSolveRequestSchema,
   SpatialSolveRelationSchema,
   SpatialSolveGoalsFileSchema,
@@ -2400,6 +2441,7 @@ export {
   SpatialFrameRateSchema,
   SpatialEntitySchema,
   SpatialEntityIdSchema,
+  SpatialEmissiveSchema,
   SpatialDigestSchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
@@ -2413,6 +2455,7 @@ export {
   SpatialAuditFindingSchema,
   SpatialAuditEntitySchema,
   SpatialAuditBoundsSchema,
+  SpatialAssetMaterialFactSchema,
   SpatialAssetManifestSchema,
   SpatialAssetInterpretationSchema,
   SpatialAssetIdSchema,
@@ -2450,6 +2493,7 @@ export {
   SPATIAL_REVIEW_CATEGORIES,
   SPATIAL_RENDERED_AUDIT_LIMITS,
   SPATIAL_RENDERED_AUDIT_COVERAGE,
+  SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
   SPATIAL_GENERATOR_LIMITS,
