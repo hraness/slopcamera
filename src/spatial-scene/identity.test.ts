@@ -98,7 +98,7 @@ describe("bounded spatial identity", () => {
       assets: [{ ...fixtureAsset("asset_model"), interpretation: { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" } }],
       entities: [{ ...fixtureEntity(), geometry: { kind: "asset", assetId: "asset_model", materialMode: "source" } }],
     })
-    expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["transform"])
+    expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["transform", "instances", "castShadow", "receiveShadow"])
     const patch = (operations: unknown[]) => ({ kind: "slopcamera.spatial-scene-patch", schemaVersion: 1, expectedSceneSha256: spatialSceneSha256(scene), operations })
     for (const property of ["color", "opacity"] as const) {
       const override = property === "color" ? { entityId: "entity_box", property, value: "#ffffff" } : { entityId: "entity_box", property, value: 0.5 }
@@ -120,7 +120,7 @@ describe("bounded spatial identity", () => {
         assets: [{ ...fixtureAsset("asset_model"), interpretation: { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" } }],
         entities: [{ ...fixtureEntity(), geometry: { kind: "asset", assetId: "asset_model", ...(materialMode === undefined ? {} : { materialMode }) } }],
       })
-      expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["color", "opacity", "transform"])
+      expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["color", "opacity", "transform", "instances", "castShadow", "receiveShadow"])
       const changed = applySpatialScenePatch(scene, { kind: "slopcamera.spatial-scene-patch", schemaVersion: 1, expectedSceneSha256: spatialSceneSha256(scene), operations: [{ kind: "set-color", entityId: "entity_box", color: "#abcdef" }, { kind: "set-opacity", entityId: "entity_box", opacity: 0.5 }] }).scene.entities[0]!
       expect(changed.kind === "mesh" && changed.material).toMatchObject({ color: "#abcdef", opacity: 0.5 })
     }

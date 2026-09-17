@@ -5,6 +5,23 @@ import {
   pathExists
 } from "./index-7308egqr.js";
 import {
+  SPATIAL_AUDIT_LIMITS,
+  SPATIAL_SCENE_LIMITS,
+  SpatialDigestSchema,
+  SpatialPatchOperationSchema,
+  SpatialSceneError,
+  applySpatialScenePatch,
+  auditSpatialScene,
+  diffSpatialScenes,
+  evaluateSpatialScene,
+  inspectSpatialScene,
+  normalizeSpatialAuditAssetBounds,
+  parseSpatialScene,
+  parseSpatialValue,
+  spatialSceneSha256,
+  spatialValueSha256
+} from "./index-jh3n3d1v.js";
+import {
   SlopcameraCodeError,
   boundedCanonicalJsonSha256,
   canonicalJson,
@@ -16,7 +33,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-2sbvyv0f.js";
+} from "./index-801rvbm3.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -41,7 +58,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-6zc37y62.js";
+} from "./index-86nqx5mx.js";
 import {
   VectorizeError,
   vectorizeHardLimits,
@@ -54,6 +71,7 @@ import {
   slopcameraGatewayCredentialStatus
 } from "./index-vw5wjtsa.js";
 import {
+  HostResourceError,
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";
 
@@ -346,16 +364,16 @@ function isConfined(rootDirectory, target) {
   const fromRoot = relative(rootDirectory, target);
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute2(fromRoot);
 }
-async function readUtf8WithCap(filePath) {
+async function readUtf8WithCap(filePath, sourceLabel) {
   let handle;
   try {
     handle = await open(filePath, "r");
     const metadata = await handle.stat();
     if (!metadata.isFile()) {
-      throw new WorkspaceBoundaryError("SOURCE_NOT_FILE", "Diagram source must be a regular file.");
+      throw new WorkspaceBoundaryError("SOURCE_NOT_FILE", `${sourceLabel} must be a regular file.`);
     }
     if (metadata.size > mcpSourceByteLimit) {
-      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`);
+      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`);
     }
     const buffer = Buffer.allocUnsafe(mcpSourceByteLimit + 1);
     let bytesRead = 0;
@@ -366,21 +384,21 @@ async function readUtf8WithCap(filePath) {
       bytesRead += next.bytesRead;
     }
     if (bytesRead > mcpSourceByteLimit) {
-      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`);
+      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`);
     }
     try {
       return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, bytesRead));
     } catch {
-      throw new WorkspaceBoundaryError("SOURCE_ENCODING", "Diagram source must contain valid UTF-8.");
+      throw new WorkspaceBoundaryError("SOURCE_ENCODING", `${sourceLabel} must contain valid UTF-8.`);
     }
   } catch (error) {
     if (error instanceof WorkspaceBoundaryError)
       throw error;
     const code = filesystemCode(error);
     if (code === "ENOENT") {
-      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", "Diagram source does not exist.");
+      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", `${sourceLabel} does not exist.`);
     }
-    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Diagram source could not be read.");
+    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", `${sourceLabel} could not be read.`);
   } finally {
     await handle?.close();
   }
@@ -415,7 +433,7 @@ class WorkspaceBoundary {
     const fromRoot = relative(this.rootDirectory, absolutePath);
     return fromRoot === "" ? "." : fromRoot.split("\\").join("/");
   }
-  async readSource(value) {
+  async readSource(value, sourceLabel = "Diagram source") {
     const normalized = normalizeRelativePath(value, { allowRoot: false });
     const lexicalPath = resolve3(this.rootDirectory, normalized.native);
     this.assertConfined(lexicalPath);
@@ -424,15 +442,15 @@ class WorkspaceBoundary {
       canonicalPath = await realpath(lexicalPath);
     } catch (error) {
       if (filesystemCode(error) === "ENOENT") {
-        throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", "Diagram source does not exist.");
+        throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", `${sourceLabel} does not exist.`);
       }
-      throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Diagram source could not be resolved.");
+      throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", `${sourceLabel} could not be resolved.`);
     }
     this.assertConfined(canonicalPath);
     return {
       absolutePath: canonicalPath,
       relativePath: this.toRelativePath(canonicalPath),
-      text: await readUtf8WithCap(canonicalPath)
+      text: await readUtf8WithCap(canonicalPath, sourceLabel)
     };
   }
   async resolveInputFile(value, maximumBytes) {
@@ -525,6 +543,9 @@ var mcpMaximumRenderedPixels = 16777216;
 var mcpMaximumShapes = 64;
 var mcpMaximumEdges = 128;
 var mcpMaximumReturnedFindings = 40;
+var mcpMaximumReturnedEntities = 256;
+var mcpMaximumReturnedAuditSamples = 8192;
+var mcpMaximumReturnedDiffEntries = 1024;
 var defaultScale = 2;
 var maximumShapeIdsPerFinding = 12;
 var builtInConfig = Object.freeze({ icons: builtInIcons });
@@ -536,6 +557,26 @@ var findingSchema = {
     code: { type: "string" },
     message: { type: "string" },
     shapeIds: { type: "array", items: { type: "string" } }
+  }
+};
+var scenePathSchema = {
+  type: "string",
+  description: "Root-relative path to a spatial scene JSON source (1 MiB maximum)."
+};
+var sceneCameraIdSchema = {
+  type: "string",
+  maxLength: 128,
+  pattern: "^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+  description: "Identifier of a camera declared by the scene (camera_\u2026)."
+};
+var entityTruncationSummarySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["entityCount", "returnedEntityCount", "entitiesTruncated"],
+  properties: {
+    entityCount: { type: "integer", minimum: 0 },
+    returnedEntityCount: { type: "integer", minimum: 0 },
+    entitiesTruncated: { type: "boolean" }
   }
 };
 function deepFreeze(value) {
@@ -761,6 +802,244 @@ var slopcameraMcpTools = deepFreeze([
       idempotentHint: false,
       openWorldHint: true
     }
+  },
+  {
+    name: "check_scene",
+    title: "Check scene",
+    description: "Parse and validate one root-relative Slopcamera spatial scene JSON source without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "sceneId", "sceneSha256", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        sceneId: { type: "string" },
+        sceneSha256: { type: "string" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "durationUs",
+            "entityCount",
+            "cameraCount",
+            "assetCount",
+            "animationCount",
+            "generatorCount",
+            "overrideCount"
+          ],
+          properties: {
+            durationUs: { type: "integer", minimum: 0 },
+            entityCount: { type: "integer", minimum: 0 },
+            cameraCount: { type: "integer", minimum: 0 },
+            assetCount: { type: "integer", minimum: 0 },
+            animationCount: { type: "integer", minimum: 0 },
+            generatorCount: { type: "integer", minimum: 0 },
+            overrideCount: { type: "integer", minimum: 0 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Check scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "inspect_scene",
+    title: "Inspect scene",
+    description: "Snapshot one root-relative spatial scene's entities, editable controls, placements, assets, and generators without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "inspection", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        inspection: { type: "object" },
+        summary: entityTruncationSummarySchema
+      }
+    },
+    annotations: {
+      title: "Inspect scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "audit_scene",
+    title: "Audit scene",
+    description: "Sample one root-relative spatial scene against a camera and report per-entity geometric coverage, visibility findings, and bounds gaps. Optional asset_bounds accepts a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        times_us: {
+          type: "array",
+          items: {
+            type: "integer",
+            minimum: 0,
+            maximum: SPATIAL_SCENE_LIMITS.durationUs
+          },
+          minItems: 1,
+          maxItems: SPATIAL_AUDIT_LIMITS.samples,
+          description: "Optional sample times in microseconds. Defaults to evenly spaced coverage of the scene duration."
+        },
+        asset_bounds: {
+          description: "Optional decoded scene-space asset bounds: a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those documents."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "findingCount",
+            "returnedFindingCount",
+            "findingsTruncated",
+            "entityCount",
+            "returnedEntityCount",
+            "entitiesTruncated"
+          ],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            entityCount: { type: "integer", minimum: 0 },
+            returnedEntityCount: { type: "integer", minimum: 0 },
+            entitiesTruncated: { type: "boolean" }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Audit scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "diff_scenes",
+    title: "Diff scenes",
+    description: "Compare two root-relative spatial scene JSON sources and report added, removed, and changed collection entries without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "other"],
+      properties: {
+        path: scenePathSchema,
+        other: {
+          type: "string",
+          description: "Root-relative path to the second spatial scene JSON source (1 MiB maximum)."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "ok",
+        "source",
+        "other",
+        "sceneSha256",
+        "otherSha256",
+        "diff",
+        "summary"
+      ],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        other: { type: "string" },
+        sceneSha256: { type: "string" },
+        otherSha256: { type: "string" },
+        diff: { type: "array" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["entryCount", "returnedEntryCount", "diffTruncated"],
+          properties: {
+            entryCount: { type: "integer", minimum: 0 },
+            returnedEntryCount: { type: "integer", minimum: 0 },
+            diffTruncated: { type: "boolean" }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Diff scenes",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "evaluate_scene",
+    title: "Evaluate scene",
+    description: "Evaluate one root-relative spatial scene at one camera and integer microsecond time into an immutable snapshot without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id", "time_us"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        time_us: {
+          type: "integer",
+          minimum: 0,
+          maximum: SPATIAL_SCENE_LIMITS.durationUs,
+          description: "Evaluation time in integer microseconds."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "snapshot", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        snapshot: { type: "object" },
+        summary: entityTruncationSummarySchema
+      }
+    },
+    annotations: {
+      title: "Evaluate scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }
 ]);
 
@@ -850,6 +1129,73 @@ function parseExecuteArguments(value) {
     input: value.input
   };
 }
+var sceneCameraIdPattern = /^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u;
+function parseScenePath(value, label) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `${label} must be a non-empty root-relative string.`);
+  }
+  if (!value.toLowerCase().endsWith(".json")) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `${label} must end in .json.`);
+  }
+  return value;
+}
+function parseSceneCameraId(value) {
+  if (typeof value !== "string" || value.length > 128 || !sceneCameraIdPattern.test(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "camera_id must be a scene camera identifier (camera_ followed by letters, digits, _ or -).");
+  }
+  return value;
+}
+function parseSceneSourceArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path"]));
+  return { path: parseScenePath(value.path, "path") };
+}
+function parseAuditSceneArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "times_us", "asset_bounds"]));
+  let timesUs;
+  if (value.times_us !== undefined) {
+    if (!Array.isArray(value.times_us) || value.times_us.length === 0 || value.times_us.length > SPATIAL_AUDIT_LIMITS.samples || value.times_us.some((timeUs) => !Number.isSafeInteger(timeUs) || timeUs < 0 || timeUs > SPATIAL_SCENE_LIMITS.durationUs)) {
+      throw new ToolFailure("INVALID_ARGUMENTS", `times_us must be an array of 1\u2013${SPATIAL_AUDIT_LIMITS.samples} integer microsecond times within the scene duration bound.`);
+    }
+    timesUs = [...value.times_us];
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    ...timesUs === undefined ? {} : { timesUs },
+    ..."asset_bounds" in value ? { assetBounds: value.asset_bounds } : {}
+  };
+}
+function parseDiffScenesArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "other"]));
+  return {
+    path: parseScenePath(value.path, "path"),
+    other: parseScenePath(value.other, "other")
+  };
+}
+function parseEvaluateSceneArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "time_us"]));
+  const timeUs = value.time_us;
+  if (typeof timeUs !== "number" || !Number.isSafeInteger(timeUs) || timeUs < 0 || timeUs > SPATIAL_SCENE_LIMITS.durationUs) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `time_us must be an integer microsecond time from 0 through ${SPATIAL_SCENE_LIMITS.durationUs}.`);
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    timeUs
+  };
+}
 function assertBuiltInIcons(spec) {
   for (const shape of spec.shapes) {
     if ((shape.type === "rect" || shape.type === "ellipse") && shape.icon !== undefined && !Object.hasOwn(builtInIcons, shape.icon)) {
@@ -879,6 +1225,9 @@ function assertRenderLimits(spec, scale) {
   if (!Number.isFinite(pixels) || scaledWidth < 1 || scaledHeight < 1 || pixels > mcpMaximumRenderedPixels) {
     throw new ToolFailure("RENDER_LIMIT", `Scaled canvas must be at least 1 pixel on each axis and no more than ${mcpMaximumRenderedPixels.toLocaleString("en-US")} pixels total.`);
   }
+}
+function boundedSlice(items, maximum) {
+  return items.length > maximum ? items.slice(0, maximum) : items;
 }
 function publicFinding(finding) {
   return {
@@ -929,6 +1278,12 @@ function failureResult(error) {
     code = "INVALID_DIAGRAM";
     message = "Diagram source did not pass validation.";
     issues = safeIssues(error.issues);
+  } else if (error instanceof SlopcameraCodeError) {
+    code = error.code.toUpperCase().replace(/-/g, "_");
+    message = safeFragment(error.message, 320);
+  } else if (error instanceof HostResourceError) {
+    code = `HOST_RESOURCE_${error.code}`;
+    message = "Host-resource admission failed safely.";
   } else if (typeof error === "object" && error !== null && "issues" in error && Array.isArray(error.issues) && error.issues.every((issue) => typeof issue === "string")) {
     code = "INVALID_LAYOUT";
     message = "Diagram layout could not be resolved.";
@@ -977,6 +1332,24 @@ async function loadDiagram(boundary, path) {
   assertBuiltInIcons(spec);
   return { source, spec };
 }
+async function loadScene(boundary, path) {
+  const source = await boundary.readSource(path, "Scene source");
+  let parsed;
+  try {
+    parsed = JSON.parse(source.text);
+  } catch {
+    throw new ToolFailure("INVALID_JSON", "Scene source is not valid JSON.");
+  }
+  try {
+    return { source, scene: parseSpatialScene(parsed) };
+  } catch (error) {
+    if (error instanceof SpatialSceneError) {
+      const where = error.path === "scene" ? "" : ` at ${error.path}`;
+      throw new ToolFailure("INVALID_SCENE", `Scene source did not pass validation${where}: ${safeFragment(error.message, 240)}`);
+    }
+    throw error;
+  }
+}
 
 class SlopcameraMcpToolRuntime {
   boundary;
@@ -994,6 +1367,15 @@ class SlopcameraMcpToolRuntime {
   async withHostAdmission(operation, callback) {
     return await withSlopcameraOperationHostAdmission(operation, callback, {
       hostResourceCoordinator: this.hostResourceCoordinator
+    });
+  }
+  async withSceneAdmission(callback) {
+    return await this.hostResourceCoordinator.withLease([
+      { resource: "cpu", amount: 1 },
+      { resource: "local-io", amount: 1 }
+    ], async (lease) => {
+      await lease.assertOwned();
+      return await callback(lease);
     });
   }
   enqueueRender(operation) {
@@ -1023,6 +1405,26 @@ class SlopcameraMcpToolRuntime {
       if (name === "execute_slopcamera") {
         const options = parseExecuteArguments(argumentsValue);
         return await this.execute(options);
+      }
+      if (name === "check_scene") {
+        const options = parseSceneSourceArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.checkScene(options));
+      }
+      if (name === "inspect_scene") {
+        const options = parseSceneSourceArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.inspectScene(options));
+      }
+      if (name === "audit_scene") {
+        const options = parseAuditSceneArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.auditScene(options));
+      }
+      if (name === "diff_scenes") {
+        const options = parseDiffScenesArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.diffScenes(options));
+      }
+      if (name === "evaluate_scene") {
+        const options = parseEvaluateSceneArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.evaluateScene(options));
       }
       throw new ToolFailure("UNKNOWN_TOOL", "Requested tool is not available.");
     } catch (error) {
@@ -1175,6 +1577,115 @@ class SlopcameraMcpToolRuntime {
       summary
     });
   }
+  async checkScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const summary = {
+      durationUs: scene.durationUs,
+      entityCount: scene.entities.length,
+      cameraCount: scene.cameras.length,
+      assetCount: scene.assets.length,
+      animationCount: scene.animations.length,
+      generatorCount: scene.generators.length,
+      overrideCount: scene.overrides.length
+    };
+    return successResult(`Checked ${source.relativePath}: scene ${safeFragment(scene.sceneId, 128)} is valid (${summary.entityCount} entities, ${summary.cameraCount} cameras).`, {
+      ok: true,
+      source: source.relativePath,
+      sceneId: scene.sceneId,
+      sceneSha256: spatialValueSha256(scene),
+      summary
+    });
+  }
+  async inspectScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const inspection = inspectSpatialScene(scene);
+    const entities = boundedSlice(inspection.entities, mcpMaximumReturnedEntities);
+    const summary = {
+      entityCount: inspection.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < inspection.entities.length
+    };
+    return successResult(`Inspected ${source.relativePath}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      inspection: { ...inspection, entities },
+      summary
+    });
+  }
+  async auditScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const report = auditSpatialScene(scene, {
+      cameraId: options.cameraId,
+      ...options.timesUs === undefined ? {} : { timesUs: options.timesUs },
+      ...options.assetBounds === undefined ? {} : {
+        assetBounds: normalizeSpatialAuditAssetBounds(options.assetBounds)
+      }
+    });
+    let sampleBudget = mcpMaximumReturnedAuditSamples;
+    const entities = [];
+    for (const entity of report.entities) {
+      if (entities.length >= mcpMaximumReturnedEntities || entity.samples.length > sampleBudget) {
+        break;
+      }
+      sampleBudget -= entity.samples.length;
+      entities.push(entity);
+    }
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings);
+    const findingCount = report.findings.length + report.omittedFindings;
+    const summary = {
+      findingCount,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < findingCount,
+      entityCount: report.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < report.entities.length
+    };
+    return successResult(`Audited ${source.relativePath} under ${options.cameraId}: ${findingCount} finding${findingCount === 1 ? "" : "s"} across ${report.entities.length} entities and ${report.timesUs.length} samples${summary.findingsTruncated || summary.entitiesTruncated ? " (truncated)" : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      report: { ...report, entities, findings },
+      summary
+    });
+  }
+  async diffScenes(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const other = await loadScene(this.boundary, options.other);
+    const entries = diffSpatialScenes(scene, other.scene);
+    const diff = boundedSlice(entries, mcpMaximumReturnedDiffEntries);
+    const summary = {
+      entryCount: entries.length,
+      returnedEntryCount: diff.length,
+      diffTruncated: diff.length < entries.length
+    };
+    return successResult(`Diffed ${source.relativePath} against ${other.source.relativePath}: ${summary.entryCount} entr${summary.entryCount === 1 ? "y" : "ies"}${summary.diffTruncated ? `, first ${summary.returnedEntryCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      other: other.source.relativePath,
+      sceneSha256: spatialValueSha256(scene),
+      otherSha256: spatialValueSha256(other.scene),
+      diff,
+      summary
+    });
+  }
+  async evaluateScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const snapshot = evaluateSpatialScene(scene, {
+      timeUs: options.timeUs,
+      cameraId: options.cameraId
+    });
+    const entities = boundedSlice(snapshot.entities, mcpMaximumReturnedEntities);
+    const summary = {
+      entityCount: snapshot.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < snapshot.entities.length
+    };
+    return successResult(`Evaluated ${source.relativePath} at timeUs ${options.timeUs} under ${options.cameraId}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      snapshot: { ...snapshot, entities },
+      summary
+    });
+  }
 }
 
 // src/version.ts
@@ -1264,7 +1775,7 @@ class SlopcameraMcpSession {
           name: slopcameraMcpServerName,
           version: this.serverVersion
         },
-        instructions: "Use check_diagram/render_diagram or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated."
+        instructions: "Use check_diagram/render_diagram, the read-only scene tools (check_scene, inspect_scene, audit_scene, diff_scenes, evaluate_scene), or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated."
       });
     }
     if (this.state !== "ready") {
@@ -1331,7 +1842,7 @@ async function processLine(line, session, writeLine) {
     await emitResponse(writeLine, response);
 }
 async function runMcpServer(options = {}) {
-  const runtime = await SlopcameraMcpToolRuntime.create(options.rootDirectory ?? process.cwd(), options.generateDependencies);
+  const runtime = await SlopcameraMcpToolRuntime.create(options.rootDirectory ?? process.cwd(), options.generateDependencies, options.hostResourceCoordinator);
   const session = new SlopcameraMcpSession(runtime, options.serverVersion ?? SLOPCAMERA_VERSION);
   const writeLine = options.writeLine ?? defaultWriteLine;
   let buffered = Buffer.alloc(0);
@@ -1366,11 +1877,81 @@ async function runMcpServer(options = {}) {
     }
   }
 }
+// src/scene-gallery.ts
+import { z } from "zod";
+var slopcameraSceneGalleryLimits = Object.freeze({
+  variants: 16,
+  variantsBytes: 1024 * 1024,
+  idEdge: 64,
+  labelEdge: 256,
+  summaryEdge: 256
+});
+var variantId = z.string().min(1).max(slopcameraSceneGalleryLimits.idEdge).regex(/^[a-z0-9][a-z0-9-]*$/u, "Variant ids are lowercase slugs like dusk or golden-hour-2.");
+var SceneVariantPatchSchema = z.strictObject({
+  kind: z.literal("slopcamera.spatial-scene-patch"),
+  schemaVersion: z.literal(1),
+  expectedSceneSha256: SpatialDigestSchema.optional(),
+  operations: z.array(SpatialPatchOperationSchema).min(1).max(SPATIAL_SCENE_LIMITS.patchOperations)
+});
+var SceneGalleryVariantSchema = z.strictObject({
+  id: variantId,
+  label: z.string().min(1).max(slopcameraSceneGalleryLimits.labelEdge).optional(),
+  patch: SceneVariantPatchSchema
+});
+var SlopcameraSceneVariantsSchema = z.strictObject({
+  kind: z.literal("slopcamera.scene-variants"),
+  schemaVersion: z.literal(1),
+  variants: z.array(SceneGalleryVariantSchema).min(1).max(slopcameraSceneGalleryLimits.variants)
+});
+function summarizeSceneVariantPatch(operations) {
+  const parts = operations.map((operation) => {
+    const target = ("entityId" in operation ? operation.entityId : undefined) ?? ("camera" in operation ? operation.camera.cameraId : undefined) ?? ("channel" in operation ? operation.channel.channelId : undefined) ?? ("asset" in operation ? operation.asset.assetId : undefined) ?? ("generator" in operation ? operation.generator.generatorId : undefined) ?? ("entity" in operation ? operation.entity.entityId : undefined) ?? ("override" in operation ? operation.override.entityId : undefined);
+    return target === undefined ? operation.kind : `${operation.kind} ${target}`;
+  });
+  const summary = parts.join("; ");
+  return summary.length <= slopcameraSceneGalleryLimits.summaryEdge ? summary : `${summary.slice(0, slopcameraSceneGalleryLimits.summaryEdge - 1)}\u2026`;
+}
+function parseSlopcameraSceneVariants(input) {
+  const value = createBoundedJsonValueSnapshot(input, slopcameraSceneGalleryLimits.variantsBytes, "scene variants").value;
+  const document = parseSpatialValue(SlopcameraSceneVariantsSchema, value, "scene variants");
+  const ids = new Set;
+  for (const variant of document.variants) {
+    if (ids.has(variant.id)) {
+      throw new SpatialSceneError("invalid-data", `Duplicate scene variant id ${variant.id}.`, "variants");
+    }
+    ids.add(variant.id);
+  }
+  return document.variants;
+}
+function planSlopcameraSceneGallery(input) {
+  const scene = parseSpatialScene(input.scene);
+  const baseSceneSha256 = spatialSceneSha256(scene);
+  const specs = parseSlopcameraSceneVariants(input.variants);
+  const variants = specs.map((spec, offset) => {
+    const expected = spec.patch.expectedSceneSha256 ?? baseSceneSha256;
+    if (expected !== baseSceneSha256) {
+      throw new SpatialSceneError("conflict", `Variant ${spec.id} was authored against a different scene revision.`, "variants");
+    }
+    const patch = { ...spec.patch, expectedSceneSha256: expected };
+    const result = applySpatialScenePatch(scene, patch);
+    return {
+      diff: result.diff,
+      id: spec.id,
+      index: offset + 1,
+      label: spec.label ?? spec.id,
+      patchSha256: spatialValueSha256(patch),
+      prompt: summarizeSceneVariantPatch(patch.operations),
+      scene: result.scene,
+      sceneSha256: result.sceneSha256
+    };
+  });
+  return { baseSceneSha256, scene, variants };
+}
 // src/studio/contracts.ts
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 
 // src/studio/shared.ts
-import { z } from "zod";
+import { z as z2 } from "zod";
 var STUDIO_LIMITS = Object.freeze({
   documentBytes: 32 * 1024 * 1024,
   documentDepth: 32,
@@ -1390,7 +1971,7 @@ var STUDIO_LIMITS = Object.freeze({
   parameterValues: 20000
 });
 function studioDocument(schema, name) {
-  return z.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.documentBytes, name, { maximumDepth: STUDIO_LIMITS.documentDepth, maximumValues: STUDIO_LIMITS.documentValues }).value, schema);
+  return z2.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.documentBytes, name, { maximumDepth: STUDIO_LIMITS.documentDepth, maximumValues: STUDIO_LIMITS.documentValues }).value, schema);
 }
 function parseStudioValue(schema, input) {
   try {
@@ -1398,7 +1979,7 @@ function parseStudioValue(schema, input) {
   } catch (error) {
     if (error instanceof SlopcameraCodeError)
       throw error;
-    throw new SlopcameraCodeError("invalid-data", error instanceof z.ZodError ? error.issues[0]?.message ?? "Invalid studio document." : "Invalid studio document.");
+    throw new SlopcameraCodeError("invalid-data", error instanceof z2.ZodError ? error.issues[0]?.message ?? "Invalid studio document." : "Invalid studio document.");
   }
 }
 function studioHash(domain, value) {
@@ -1423,18 +2004,18 @@ function assertDistinctPaths(paths) {
 }
 
 // src/studio/contracts.ts
-var StudioDigestSchema = z2.string().regex(/^[a-f0-9]{64}$/u);
-var StudioEngineSchema = z2.enum(["blender", "manim", "cadquery"]);
-var StudioPathSchema = z2.string().min(1).max(1024).refine((path) => path.normalize("NFC") === path && !path.startsWith("/") && !/[\\:\u0000-\u001f\u007f]/u.test(path) && path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[. ]$/u.test(part)), "Studio paths must be normalized, contained POSIX-relative names.");
-var identifier = z2.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u);
-var stableId = z2.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/u);
-var sourceFile = z2.strictObject({ path: StudioPathSchema, sha256: StudioDigestSchema, bytes: z2.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes) });
-var sourceBundleShape = z2.strictObject({
-  kind: z2.literal("slopcamera.studio-source-bundle"),
-  schemaVersion: z2.literal(1),
+var StudioDigestSchema = z3.string().regex(/^[a-f0-9]{64}$/u);
+var StudioEngineSchema = z3.enum(["blender", "manim", "cadquery"]);
+var StudioPathSchema = z3.string().min(1).max(1024).refine((path) => path.normalize("NFC") === path && !path.startsWith("/") && !/[\\:\u0000-\u001f\u007f]/u.test(path) && path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[. ]$/u.test(part)), "Studio paths must be normalized, contained POSIX-relative names.");
+var identifier = z3.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u);
+var stableId = z3.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/u);
+var sourceFile = z3.strictObject({ path: StudioPathSchema, sha256: StudioDigestSchema, bytes: z3.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes) });
+var sourceBundleShape = z3.strictObject({
+  kind: z3.literal("slopcamera.studio-source-bundle"),
+  schemaVersion: z3.literal(1),
   engine: StudioEngineSchema,
-  entrypoint: z2.discriminatedUnion("kind", [z2.strictObject({ kind: z2.literal("python"), path: StudioPathSchema.refine((path) => path.endsWith(".py")) }), z2.strictObject({ kind: z2.literal("blend"), path: StudioPathSchema.refine((path) => path.endsWith(".blend")) })]),
-  files: z2.array(sourceFile).min(1).max(STUDIO_LIMITS.sourceFiles)
+  entrypoint: z3.discriminatedUnion("kind", [z3.strictObject({ kind: z3.literal("python"), path: StudioPathSchema.refine((path) => path.endsWith(".py")) }), z3.strictObject({ kind: z3.literal("blend"), path: StudioPathSchema.refine((path) => path.endsWith(".blend")) })]),
+  files: z3.array(sourceFile).min(1).max(STUDIO_LIMITS.sourceFiles)
 }).superRefine((value, context) => {
   const issue = (message) => context.addIssue({ code: "custom", message });
   try {
@@ -1452,17 +2033,17 @@ var sourceBundleShape = z2.strictObject({
 var sourceBundle = sourceBundleShape.transform((value) => ({ ...value, files: [...value.files].sort((a, b) => studioCompare(a.path, b.path)) })).pipe(sourceBundleShape);
 var StudioSourceBundleSchema = studioDocument(sourceBundle, "studio source bundle");
 var parseStudioSourceBundle = (input) => parseStudioValue(StudioSourceBundleSchema, input);
-var StudioSourceSpaceSchema = z2.strictObject({ units: z2.enum(["meters", "millimeters", "centimeters"]), upAxis: z2.enum(["x", "y", "z"]), handedness: z2.enum(["right", "left"]) });
-var StudioOutputRoleSchema = z2.enum(["native-source", "model", "beauty", "auxiliary", "simulation-cache", "audio"]);
-var StudioOutputFormatSchema = z2.enum(["py", "blend", "usd", "usda", "usdc", "glb", "step", "png", "exr", "mp4", "mov", "webm", "wav", "flac", "mp3", "cache"]);
-var raster = z2.strictObject({
-  kind: z2.literal("raster"),
-  colorSpace: z2.enum(["srgb", "linear-rec709", "data", "unspecified"]),
-  alpha: z2.enum(["opaque", "straight", "premultiplied", "none"]),
-  dataType: z2.enum(["uint8", "uint16", "float16", "float32"]),
-  channels: z2.array(z2.string().regex(/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u)).min(1).max(32),
-  semantic: z2.enum(["color", "depth", "normal", "object-id", "mask", "custom"]),
-  unit: z2.enum(["unitless", "meters", "millimeters", "centimeters"])
+var StudioSourceSpaceSchema = z3.strictObject({ units: z3.enum(["meters", "millimeters", "centimeters"]), upAxis: z3.enum(["x", "y", "z"]), handedness: z3.enum(["right", "left"]) });
+var StudioOutputRoleSchema = z3.enum(["native-source", "model", "beauty", "auxiliary", "simulation-cache", "audio"]);
+var StudioOutputFormatSchema = z3.enum(["py", "blend", "usd", "usda", "usdc", "glb", "step", "png", "exr", "mp4", "mov", "webm", "wav", "flac", "mp3", "cache"]);
+var raster = z3.strictObject({
+  kind: z3.literal("raster"),
+  colorSpace: z3.enum(["srgb", "linear-rec709", "data", "unspecified"]),
+  alpha: z3.enum(["opaque", "straight", "premultiplied", "none"]),
+  dataType: z3.enum(["uint8", "uint16", "float16", "float32"]),
+  channels: z3.array(z3.string().regex(/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u)).min(1).max(32),
+  semantic: z3.enum(["color", "depth", "normal", "object-id", "mask", "custom"]),
+  unit: z3.enum(["unitless", "meters", "millimeters", "centimeters"])
 }).superRefine((value, context) => {
   if (new Set(value.channels).size !== value.channels.length)
     context.addIssue({ code: "custom", message: "Raster channels must be unique." });
@@ -1473,15 +2054,15 @@ var raster = z2.strictObject({
   if (value.semantic !== "depth" && value.unit !== "unitless")
     context.addIssue({ code: "custom", message: "Only depth passes declare distance units." });
 });
-var StudioOutputInterpretationSchema = z2.discriminatedUnion("kind", [
+var StudioOutputInterpretationSchema = z3.discriminatedUnion("kind", [
   raster,
-  z2.strictObject({ kind: z2.literal("model"), sourceSpace: StudioSourceSpaceSchema }),
-  z2.strictObject({ kind: z2.literal("native-source") }),
-  z2.strictObject({ kind: z2.literal("cache"), semantics: z2.literal("opaque-native") }),
-  z2.strictObject({ kind: z2.literal("audio"), sampleRate: z2.number().int().min(8000).max(384000), channels: z2.number().int().min(1).max(32) })
+  z3.strictObject({ kind: z3.literal("model"), sourceSpace: StudioSourceSpaceSchema }),
+  z3.strictObject({ kind: z3.literal("native-source") }),
+  z3.strictObject({ kind: z3.literal("cache"), semantics: z3.literal("opaque-native") }),
+  z3.strictObject({ kind: z3.literal("audio"), sampleRate: z3.number().int().min(8000).max(384000), channels: z3.number().int().min(1).max(32) })
 ]);
 var outputCommon = { id: stableId, role: StudioOutputRoleSchema, format: StudioOutputFormatSchema, interpretation: StudioOutputInterpretationSchema };
-var pattern = z2.string().max(1024).refine((value) => value.split("%06d").length === 2 && !value.replace("%06d", "").includes("%") && StudioPathSchema.safeParse(value.replace("%06d", "000000")).success, "Sequence paths require exactly one %06d placeholder in a safe relative path.");
+var pattern = z3.string().max(1024).refine((value) => value.split("%06d").length === 2 && !value.replace("%06d", "").includes("%") && StudioPathSchema.safeParse(value.replace("%06d", "000000")).success, "Sequence paths require exactly one %06d placeholder in a safe relative path.");
 function compatibleOutput(value) {
   if (value.role === "native-source")
     return ["py", "blend"].includes(value.format) && value.interpretation.kind === "native-source";
@@ -1493,10 +2074,10 @@ function compatibleOutput(value) {
     return ["wav", "flac", "mp3"].includes(value.format) && value.interpretation.kind === "audio";
   return ["png", "exr", "mp4", "mov", "webm"].includes(value.format) && value.interpretation.kind === "raster" && (value.role !== "beauty" || value.interpretation.semantic === "color");
 }
-var StudioOutputSpecSchema = z2.discriminatedUnion("kind", [
-  z2.strictObject({ ...outputCommon, kind: z2.literal("file"), path: StudioPathSchema }),
-  z2.strictObject({ ...outputCommon, kind: z2.literal("sequence"), pathPattern: pattern }),
-  z2.strictObject({ ...outputCommon, kind: z2.literal("directory"), path: StudioPathSchema })
+var StudioOutputSpecSchema = z3.discriminatedUnion("kind", [
+  z3.strictObject({ ...outputCommon, kind: z3.literal("file"), path: StudioPathSchema }),
+  z3.strictObject({ ...outputCommon, kind: z3.literal("sequence"), pathPattern: pattern }),
+  z3.strictObject({ ...outputCommon, kind: z3.literal("directory"), path: StudioPathSchema })
 ]).superRefine((value, context) => {
   const issue = (message) => context.addIssue({ code: "custom", message });
   if (!compatibleOutput(value))
@@ -1517,7 +2098,7 @@ var StudioOutputSpecSchema = z2.discriminatedUnion("kind", [
       issue("The admitted EXR profile declares floating point sample data.");
   }
 });
-var frameRateShape = z2.strictObject({ numerator: z2.number().int().min(1).max(1e6), denominator: z2.number().int().min(1).max(1e6) }).refine((value) => value.numerator / value.denominator <= 240, "Studio cadence exceeds 240 fps.");
+var frameRateShape = z3.strictObject({ numerator: z3.number().int().min(1).max(1e6), denominator: z3.number().int().min(1).max(1e6) }).refine((value) => value.numerator / value.denominator <= 240, "Studio cadence exceeds 240 fps.");
 var frameRate = frameRateShape.transform((value) => {
   let { numerator: a, denominator: b } = value;
   while (b !== 0) {
@@ -1527,31 +2108,31 @@ var frameRate = frameRateShape.transform((value) => {
   }
   return { numerator: value.numerator / a, denominator: value.denominator / a };
 }).pipe(frameRateShape);
-var StudioRenderSchema = z2.strictObject({
-  width: z2.number().int().min(1).max(STUDIO_LIMITS.dimension),
-  height: z2.number().int().min(1).max(STUDIO_LIMITS.dimension),
+var StudioRenderSchema = z3.strictObject({
+  width: z3.number().int().min(1).max(STUDIO_LIMITS.dimension),
+  height: z3.number().int().min(1).max(STUDIO_LIMITS.dimension),
   frameRate,
-  startFrame: z2.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1),
-  endFrameExclusive: z2.number().int().positive().max(STUDIO_LIMITS.frameIndexExclusive)
+  startFrame: z3.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1),
+  endFrameExclusive: z3.number().int().positive().max(STUDIO_LIMITS.frameIndexExclusive)
 }).refine((value) => value.endFrameExclusive > value.startFrame && value.endFrameExclusive - value.startFrame <= STUDIO_LIMITS.frames && value.width * value.height <= STUDIO_LIMITS.pixels, "Render requires a bounded, nonempty half-open frame interval and pixel area.");
-var StudioEngineOptionsSchema = z2.discriminatedUnion("engine", [
-  z2.strictObject({ engine: z2.literal("blender"), renderer: z2.enum(["cycles", "eevee"]), device: z2.enum(["cpu", "gpu"]), samples: z2.number().int().min(1).max(4096), transparent: z2.boolean(), viewTransform: z2.enum(["AgX", "Standard"]), denoise: z2.boolean(), seed: z2.number().int().min(0).max(4294967295) }),
-  z2.strictObject({ engine: z2.literal("manim"), scene: identifier, renderer: z2.literal("cairo"), transparent: z2.boolean() }),
-  z2.strictObject({ engine: z2.literal("cadquery"), exportVariable: identifier, tolerance: z2.number().finite().positive().max(1), angularTolerance: z2.number().finite().positive().max(Math.PI) })
+var StudioEngineOptionsSchema = z3.discriminatedUnion("engine", [
+  z3.strictObject({ engine: z3.literal("blender"), renderer: z3.enum(["cycles", "eevee"]), device: z3.enum(["cpu", "gpu"]), samples: z3.number().int().min(1).max(4096), transparent: z3.boolean(), viewTransform: z3.enum(["AgX", "Standard"]), denoise: z3.boolean(), seed: z3.number().int().min(0).max(4294967295) }),
+  z3.strictObject({ engine: z3.literal("manim"), scene: identifier, renderer: z3.literal("cairo"), transparent: z3.boolean() }),
+  z3.strictObject({ engine: z3.literal("cadquery"), exportVariable: identifier, tolerance: z3.number().finite().positive().max(1), angularTolerance: z3.number().finite().positive().max(Math.PI) })
 ]);
-var parameters = z2.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.parameterBytes, "studio parameters", { maximumDepth: STUDIO_LIMITS.parameterDepth, maximumValues: STUDIO_LIMITS.parameterValues }).value, z2.record(z2.string(), z2.unknown()));
-var StudioExecutionProfileSchema = z2.strictObject({ trust: z2.literal("trusted-current-user"), isolation: z2.literal("none"), hermetic: z2.literal(false) });
-var jobShape = z2.strictObject({
-  kind: z2.literal("slopcamera.studio-job"),
-  schemaVersion: z2.literal(1),
-  jobId: z2.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+var parameters = z3.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.parameterBytes, "studio parameters", { maximumDepth: STUDIO_LIMITS.parameterDepth, maximumValues: STUDIO_LIMITS.parameterValues }).value, z3.record(z3.string(), z3.unknown()));
+var StudioExecutionProfileSchema = z3.strictObject({ trust: z3.literal("trusted-current-user"), isolation: z3.literal("none"), hermetic: z3.literal(false) });
+var jobShape = z3.strictObject({
+  kind: z3.literal("slopcamera.studio-job"),
+  schemaVersion: z3.literal(1),
+  jobId: z3.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
   bundleSha256: StudioDigestSchema,
-  stage: z2.enum(["build", "bake", "render"]),
+  stage: z3.enum(["build", "bake", "render"]),
   parameters,
   engine: StudioEngineOptionsSchema,
   render: StudioRenderSchema.optional(),
-  outputs: z2.array(StudioOutputSpecSchema).min(1).max(STUDIO_LIMITS.outputSpecifications),
-  limits: z2.strictObject({ timeoutSeconds: z2.number().int().min(1).max(STUDIO_LIMITS.timeoutSeconds), maximumOutputBytes: z2.number().int().safe().min(1).max(STUDIO_LIMITS.outputBytes), maximumOutputFiles: z2.number().int().min(1).max(STUDIO_LIMITS.outputFiles) }),
+  outputs: z3.array(StudioOutputSpecSchema).min(1).max(STUDIO_LIMITS.outputSpecifications),
+  limits: z3.strictObject({ timeoutSeconds: z3.number().int().min(1).max(STUDIO_LIMITS.timeoutSeconds), maximumOutputBytes: z3.number().int().safe().min(1).max(STUDIO_LIMITS.outputBytes), maximumOutputFiles: z3.number().int().min(1).max(STUDIO_LIMITS.outputFiles) }),
   execution: StudioExecutionProfileSchema
 }).superRefine((value, context) => {
   if (value.render === undefined && (value.stage === "render" && value.engine.engine !== "cadquery" || value.outputs.some((output) => output.kind === "sequence" || output.interpretation.kind === "raster")))
@@ -1565,32 +2146,32 @@ var jobShape = z2.strictObject({
 var job = jobShape.transform((value) => ({ ...value, outputs: [...value.outputs].sort((a, b) => studioCompare(a.id, b.id)) })).pipe(jobShape);
 var StudioJobSchema = studioDocument(job, "studio job");
 var parseStudioJob = (input) => parseStudioValue(StudioJobSchema, input);
-var StudioCapabilityNameSchema = z2.enum(["python-authoring", "blend-authoring", "build", "bake", "render", "gpu-render", "image-sequence", "beauty-video", "model-export", "auxiliary-passes", "native-cache", "audio-output"]);
-var capability = z2.strictObject({ name: StudioCapabilityNameSchema, support: z2.enum(["available", "unavailable", "unverified"]), evidence: z2.enum(["probe", "qualification"]), receiptSha256: StudioDigestSchema.optional() }).refine((value) => value.evidence !== "qualification" || value.receiptSha256 !== undefined, "Qualification evidence requires a retained receipt digest.");
-var runtimeShape = z2.strictObject({
-  kind: z2.literal("slopcamera.studio-runtime"),
-  schemaVersion: z2.literal(1),
+var StudioCapabilityNameSchema = z3.enum(["python-authoring", "blend-authoring", "build", "bake", "render", "gpu-render", "image-sequence", "beauty-video", "model-export", "auxiliary-passes", "native-cache", "audio-output"]);
+var capability = z3.strictObject({ name: StudioCapabilityNameSchema, support: z3.enum(["available", "unavailable", "unverified"]), evidence: z3.enum(["probe", "qualification"]), receiptSha256: StudioDigestSchema.optional() }).refine((value) => value.evidence !== "qualification" || value.receiptSha256 !== undefined, "Qualification evidence requires a retained receipt digest.");
+var runtimeShape = z3.strictObject({
+  kind: z3.literal("slopcamera.studio-runtime"),
+  schemaVersion: z3.literal(1),
   engine: StudioEngineSchema,
-  tool: z2.strictObject({ name: z2.string().min(1).max(128), version: z2.string().min(1).max(512), executableSha256: StudioDigestSchema }),
+  tool: z3.strictObject({ name: z3.string().min(1).max(128), version: z3.string().min(1).max(512), executableSha256: StudioDigestSchema }),
   driverSha256: StudioDigestSchema,
-  environment: z2.strictObject({ fingerprintSha256: StudioDigestSchema, evidence: z2.literal("observed-package-environment"), hermetic: z2.literal(false) }),
-  capabilities: z2.array(capability).max(12)
+  environment: z3.strictObject({ fingerprintSha256: StudioDigestSchema, evidence: z3.literal("observed-package-environment"), hermetic: z3.literal(false) }),
+  capabilities: z3.array(capability).max(12)
 }).refine((value) => new Set(value.capabilities.map((item) => item.name)).size === value.capabilities.length, "Runtime capability names must be unique.");
 var runtime = runtimeShape.transform((value) => ({ ...value, capabilities: [...value.capabilities].sort((a, b) => studioCompare(a.name, b.name)) })).pipe(runtimeShape);
 var StudioRuntimeIdentitySchema = studioDocument(runtime, "studio runtime identity");
 var parseStudioRuntimeIdentity = (input) => parseStudioValue(StudioRuntimeIdentitySchema, input);
-var StudioOutputArtifactSchema = z2.strictObject({
+var StudioOutputArtifactSchema = z3.strictObject({
   outputId: stableId,
   path: StudioPathSchema,
   sha256: StudioDigestSchema,
-  bytes: z2.number().int().safe().positive().max(STUDIO_LIMITS.outputBytes),
+  bytes: z3.number().int().safe().positive().max(STUDIO_LIMITS.outputBytes),
   role: StudioOutputRoleSchema,
   format: StudioOutputFormatSchema,
-  frame: z2.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1).optional()
+  frame: z3.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1).optional()
 });
 
 // src/studio/plan.ts
-import { z as z3 } from "zod";
+import { z as z4 } from "zod";
 var studioSourceBundleSha256 = (input) => studioHash("slopcamera.studio-source-bundle/v1", parseStudioSourceBundle(input));
 var studioJobSha256 = (input) => studioHash("slopcamera.studio-job/v1", parseStudioJob(input));
 var studioRuntimeSha256 = (input) => studioHash("slopcamera.studio-runtime/v1", parseStudioRuntimeIdentity(input));
@@ -1666,9 +2247,9 @@ function derivePlan(input) {
   };
   return { ...body, planSha256: studioHash("slopcamera.studio-plan/v1", body) };
 }
-var plan = z3.strictObject({
-  kind: z3.literal("slopcamera.studio-plan"),
-  schemaVersion: z3.literal(1),
+var plan = z4.strictObject({
+  kind: z4.literal("slopcamera.studio-plan"),
+  schemaVersion: z4.literal(1),
   bundle: StudioSourceBundleSchema,
   job: StudioJobSchema,
   runtime: StudioRuntimeIdentitySchema.optional(),
@@ -1676,12 +2257,12 @@ var plan = z3.strictObject({
   bundleSha256: StudioDigestSchema,
   jobSha256: StudioDigestSchema,
   planSha256: StudioDigestSchema,
-  sourceBytes: z3.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes),
-  frameCount: z3.number().int().nonnegative().max(STUDIO_LIMITS.frames),
-  outputCount: z3.strictObject({ minimum: z3.number().int().positive().max(STUDIO_LIMITS.outputFiles), maximum: z3.number().int().positive().max(STUDIO_LIMITS.outputFiles) }),
-  requiredCapabilities: z3.array(StudioCapabilityNameSchema).min(1).max(12),
-  capabilityChecks: z3.array(z3.strictObject({ name: StudioCapabilityNameSchema, support: z3.enum(["available", "unavailable", "unverified", "unbound"]) })).min(1).max(12),
-  readiness: z3.enum(["runtime-unbound", "capability-unavailable", "capability-unverified", "authorization-required"])
+  sourceBytes: z4.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes),
+  frameCount: z4.number().int().nonnegative().max(STUDIO_LIMITS.frames),
+  outputCount: z4.strictObject({ minimum: z4.number().int().positive().max(STUDIO_LIMITS.outputFiles), maximum: z4.number().int().positive().max(STUDIO_LIMITS.outputFiles) }),
+  requiredCapabilities: z4.array(StudioCapabilityNameSchema).min(1).max(12),
+  capabilityChecks: z4.array(z4.strictObject({ name: StudioCapabilityNameSchema, support: z4.enum(["available", "unavailable", "unverified", "unbound"]) })).min(1).max(12),
+  readiness: z4.enum(["runtime-unbound", "capability-unavailable", "capability-unverified", "authorization-required"])
 }).superRefine((value, context) => {
   try {
     const derived = derivePlan({ bundle: value.bundle, job: value.job, ...value.runtime === undefined ? {} : { runtime: value.runtime } });
@@ -1694,28 +2275,28 @@ var plan = z3.strictObject({
 var StudioPlanSchema = studioDocument(plan, "studio plan");
 var parseStudioPlan = (input) => parseStudioValue(StudioPlanSchema, input);
 function planStudioJob(input) {
-  const captured = parseStudioValue(studioDocument(z3.strictObject({ bundle: StudioSourceBundleSchema, job: StudioJobSchema, runtime: StudioRuntimeIdentitySchema.optional() }), "studio planning input"), input);
+  const captured = parseStudioValue(studioDocument(z4.strictObject({ bundle: StudioSourceBundleSchema, job: StudioJobSchema, runtime: StudioRuntimeIdentitySchema.optional() }), "studio planning input"), input);
   return parseStudioPlan(derivePlan(captured));
 }
-var failure2 = z3.strictObject({ code: z3.enum(["subprocess", "cancelled", "deadline", "validation", "custody", "publication", "unavailable"]), message: z3.string().min(1).max(2048) });
+var failure2 = z4.strictObject({ code: z4.enum(["subprocess", "cancelled", "deadline", "validation", "custody", "publication", "unavailable"]), message: z4.string().min(1).max(2048) });
 var receiptCommon = {
-  kind: z3.literal("slopcamera.studio-receipt"),
-  schemaVersion: z3.literal(1),
-  jobId: z3.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
-  attemptId: z3.string().regex(/^attempt_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+  kind: z4.literal("slopcamera.studio-receipt"),
+  schemaVersion: z4.literal(1),
+  jobId: z4.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+  attemptId: z4.string().regex(/^attempt_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
   planSha256: StudioDigestSchema,
   bundleSha256: StudioDigestSchema,
   jobSha256: StudioDigestSchema,
   runtime: StudioRuntimeIdentitySchema,
   runtimeSha256: StudioDigestSchema,
-  startedAt: z3.iso.datetime({ offset: true }),
-  finishedAt: z3.iso.datetime({ offset: true }),
-  outputs: z3.array(StudioOutputArtifactSchema).max(STUDIO_LIMITS.outputFiles)
+  startedAt: z4.iso.datetime({ offset: true }),
+  finishedAt: z4.iso.datetime({ offset: true }),
+  outputs: z4.array(StudioOutputArtifactSchema).max(STUDIO_LIMITS.outputFiles)
 };
-var receiptShape = z3.discriminatedUnion("state", [
-  z3.strictObject({ ...receiptCommon, state: z3.literal("succeeded"), custody: z3.literal("closed"), exitCode: z3.literal(0) }),
-  z3.strictObject({ ...receiptCommon, state: z3.literal("failed"), custody: z3.literal("closed"), exitCode: z3.number().int().min(-255).max(255).nullable(), failure: failure2 }),
-  z3.strictObject({ ...receiptCommon, state: z3.literal("unknown-custody"), custody: z3.literal("unknown"), exitCode: z3.number().int().min(-255).max(255).nullable(), failure: failure2 })
+var receiptShape = z4.discriminatedUnion("state", [
+  z4.strictObject({ ...receiptCommon, state: z4.literal("succeeded"), custody: z4.literal("closed"), exitCode: z4.literal(0) }),
+  z4.strictObject({ ...receiptCommon, state: z4.literal("failed"), custody: z4.literal("closed"), exitCode: z4.number().int().min(-255).max(255).nullable(), failure: failure2 }),
+  z4.strictObject({ ...receiptCommon, state: z4.literal("unknown-custody"), custody: z4.literal("unknown"), exitCode: z4.number().int().min(-255).max(255).nullable(), failure: failure2 })
 ]).superRefine((value, context) => {
   if (studioRuntimeSha256(value.runtime) !== value.runtimeSha256)
     context.addIssue({ code: "custom", message: "Receipt runtime digest differs from its evidence." });
@@ -1733,7 +2314,7 @@ var receipt = receiptShape.transform((value) => ({ ...value, outputs: [...value.
 var StudioReceiptSchema = studioDocument(receipt, "studio receipt");
 var parseStudioReceipt = (input) => parseStudioValue(StudioReceiptSchema, input);
 function validateStudioReceipt(input) {
-  const captured = parseStudioValue(studioDocument(z3.strictObject({ plan: StudioPlanSchema, receipt: StudioReceiptSchema }), "studio receipt validation input"), input);
+  const captured = parseStudioValue(studioDocument(z4.strictObject({ plan: StudioPlanSchema, receipt: StudioReceiptSchema }), "studio receipt validation input"), input);
   const { plan: plan2, receipt: receipt2 } = captured;
   studioRequire(receipt2.jobId === plan2.job.jobId && receipt2.planSha256 === plan2.planSha256 && receipt2.jobSha256 === plan2.jobSha256 && receipt2.bundleSha256 === plan2.bundleSha256, "Receipt identity differs from the exact planned job.");
   studioRequire(plan2.runtime !== undefined && receipt2.runtimeSha256 === plan2.runtimeSha256 && canonicalJson(receipt2.runtime) === canonicalJson(plan2.runtime), "Execution receipt requires the exact planned runtime binding.");
@@ -1836,4 +2417,4 @@ var slopcameraApi = Object.freeze({
   executeSlopcameraOperation
 });
 var diagramApi = slopcameraApi;
-export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };
+export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, slopcameraSceneGalleryLimits, SlopcameraSceneVariantsSchema, summarizeSceneVariantPatch, parseSlopcameraSceneVariants, planSlopcameraSceneGallery, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };

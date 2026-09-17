@@ -4,7 +4,7 @@ import {
   isSlopcameraOperationCode,
   parseSlopcameraOperationInput,
   slopcameraOperationHostResourceClaims
-} from "./index-6zc37y62.js";
+} from "./index-86nqx5mx.js";
 import {
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";

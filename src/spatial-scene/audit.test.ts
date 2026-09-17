@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { auditSpatialScene, SpatialAuditReportSchema } from "./audit.js"
+import { auditSpatialScene, normalizeSpatialAuditAssetBounds, SpatialAuditReportSchema } from "./audit.js"
 import { createSpatialSceneStarter } from "./authoring.js"
+import { SpatialSceneError } from "./identity.js"
+import type { Bounds } from "./math.js"
 import { fixtureAsset, fixtureCamera, fixtureEntity, fixtureScene, fixtureTransform } from "./test-fixture.js"
 
 const auditStarter = () => auditSpatialScene(createSpatialSceneStarter(), { cameraId: "camera_hero" })
@@ -14,6 +16,7 @@ describe("geometric scene audit", () => {
     expect(report.summary.entities).toEqual({
       total: 4, bounded: 2, unknownBounds: 2,
       byKind: { group: 0, mesh: 2, image: 0, diagram: 0, video: 0, text: 0, light: 2, splat: 0, environment: 0 },
+      instances: 0,
     })
     expect(report.summary.animations).toEqual({ channels: 1, targets: 1, properties: { position: 0, rotation: 1, scale: 0, opacity: 0 } })
     expect(report.summary.cameras).toEqual(["camera_hero"])
@@ -151,5 +154,67 @@ describe("geometric scene audit", () => {
     expect(hidden.findings.map(item => item.kind)).toEqual(["empty-scene-region", "never-visible"])
     expect(hidden.findings[1]).toMatchObject({ severity: "info", entityId: "entity_box" })
     expect(hidden.summary.entitiesNeverVisible).toEqual(["entity_box"])
+  })
+})
+
+describe("normalizeSpatialAuditAssetBounds", () => {
+  const manifest = fixtureAsset("asset_model")
+  const facts = {
+    kind: "slopcamera.spatial-asset-facts", schemaVersion: 1,
+    subject: manifest.payload,
+    subjectManifestSha256: "b".repeat(64),
+    profile: "slopcamera.glb-triangles-trs-pbr-basecolor-v1",
+    nodeCount: 1, clipDurationsSeconds: [],
+    bounds: {
+      modelSpace: { min: [-1, -1, -1], max: [1, 1, 1] },
+      sceneSpace: { min: [-2, -2, -2], max: [2, 2, 2] },
+    },
+  } as const
+  const entity = { ...fixtureEntity("entity_model"), geometry: { kind: "asset" as const, assetId: "asset_model" } }
+  const admission = {
+    kind: "slopcamera.spatial-asset-admission", schemaVersion: 1,
+    manifest, factsManifest: fixtureAsset("asset_facts"), facts,
+    bounds: facts.bounds, entity,
+    artifacts: {
+      payload: { path: "assets/model.glb", sha256: "a".repeat(64), bytes: 100, disposition: "created" as const },
+      facts: { path: "assets/model-facts.json", sha256: "c".repeat(64), bytes: 200, disposition: "created" as const },
+    },
+    operations: [
+      { kind: "add-asset", asset: manifest },
+      { kind: "add-entity", entity },
+    ],
+  }
+  const sceneBounds: Bounds = { min: [-2, -2, -2], max: [2, 2, 2] }
+
+  test("accepts a raw bounds map, a facts pair, an admission document, and arrays", () => {
+    expect(normalizeSpatialAuditAssetBounds({ asset_model: sceneBounds }))
+      .toEqual({ asset_model: sceneBounds })
+    expect(normalizeSpatialAuditAssetBounds({ manifest, facts }))
+      .toEqual({ asset_model: sceneBounds })
+    expect(normalizeSpatialAuditAssetBounds(admission))
+      .toEqual({ asset_model: sceneBounds })
+    expect(normalizeSpatialAuditAssetBounds([admission, { asset_model: sceneBounds }, { manifest, facts }]))
+      .toEqual({ asset_model: sceneBounds })
+  })
+
+  test("rejects conflicts, mismatched subjects, assetId-less facts, and other shapes", () => {
+    expect(() => normalizeSpatialAuditAssetBounds([
+      { asset_model: sceneBounds },
+      { asset_model: { min: [-9, -9, -9], max: [9, 9, 9] } },
+    ])).toThrow(/conflicting scene-space bounds for asset_model/u)
+    expect(() => normalizeSpatialAuditAssetBounds({
+      manifest,
+      facts: { ...facts, subject: { ...facts.subject, bytes: 101 } },
+    })).toThrow(/do not describe the manifest payload/u)
+    expect(() => normalizeSpatialAuditAssetBounds(facts)).toThrow(/carries no assetId/u)
+    for (const value of [42, "bounds", { min: [0, 0, 0], max: [1, 1, 1] }, { kind: "slopcamera.spatial-audit" }]) {
+      expect(() => normalizeSpatialAuditAssetBounds(value)).toThrow(/Asset bounds input accepts/u)
+    }
+    const truncated = () => normalizeSpatialAuditAssetBounds({ kind: "slopcamera.spatial-asset-admission" })
+    expect(truncated).toThrow(SpatialSceneError)
+    expect(truncated).toThrow(expect.objectContaining({ code: "invalid-data" }))
+    // A map whose values fail the bounds schema also falls to the catchall.
+    expect(() => normalizeSpatialAuditAssetBounds({ asset_model: { min: [2, 0, 0], max: [1, 1, 1] } }))
+      .toThrow(/Asset bounds input accepts/u)
   })
 })

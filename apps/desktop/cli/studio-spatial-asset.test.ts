@@ -105,7 +105,7 @@ describe("Studio spatial asset admission", () => {
     const f = await fixture("model");
     expect((await admitStudioSpatialAsset(f.input)).asset.interpretation).toEqual({ kind: "gltf", format: "glb", metersPerUnit: 0.001, sourceUp: "z" });
     const invalid = await fixture("model", { unsupportedGlb: true });
-    await expect(admitStudioSpatialAsset(invalid.input)).rejects.toThrow("outside slopcamera.glb-triangles-trs-pbr-basecolor-v1");
+    await expect(admitStudioSpatialAsset(invalid.input)).rejects.toThrow("outside slopcamera.glb-triangles-trs-pbr-fullmaps-v1");
     expect(invalid.calls()).toBe(0);
   });
   test("explicit contradictory PNG gamma rejects while the conventional sRGB tag remains supported", async () => {

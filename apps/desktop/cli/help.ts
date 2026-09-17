@@ -10,7 +10,7 @@ Usage: slopcamera <command> [options]
 Commands:
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|camera-track|generate|plan|render
+  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -129,6 +129,8 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene evaluate <scene.json> --camera <camera-id> --time-us <integer> [--json]
   slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds-or-admission.json>] [--json]
   slopcamera scene render-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--json]
+  slopcamera scene solve <scene.json> --goals <goals.json> [--output <patch.json>] [--asset-bounds <bounds-or-admission.json>] [--json]
+  slopcamera scene review <scene.json> --camera <camera-id> [--times-us <csv>] --allow-cloud-upload [--json]
   slopcamera scene camera-track <scene.json> --request <sampling.json> --output <new-track.json> [--json]
   slopcamera scene generate --module <generator.ts> --generator-id <id>
         [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]
@@ -159,6 +161,18 @@ admission documents, {manifest, facts} pairs, or arrays of those.
 Render-audit renders the real object-ID pass in the bound browser runtime and counts
 per-entity pixels at each sampled time, reporting splats and camera-bound view masks
 honestly as unsupported or non-attributable rather than estimating them.
+Solve turns declarative relation goals (onTopOf, nextTo, facing, align, at, groundSnap)
+into concrete transforms and a ready-to-apply patch document. Goals name scene entities;
+relations may target entities, cameras, or caller-supplied base entries, and goal targets
+see each other's solved transforms in dependency order. The emitted patch carries a
+placeholder expectedSceneSha256 — copy the digest from scene inspect before scene patch.
+Goal entities must be authored, unparented, world-placed, and free of transform
+overrides or transform channels; asset-derived bounds come from --asset-bounds.
+Review renders up to four bounded beauty frames locally, uploads only those exact
+frames to a vision-capable Gateway language model after explicit --allow-cloud-upload,
+and returns a structured advisory report. It makes exactly one Gateway call, records
+frame digests, model and attempt identity, and rubric version, and never modifies or
+auto-applies scene changes. The report is model-generated and unverified.
 Generate runs a trusted TypeScript generator at authoring time, stamps retained
 output with derived entity identity, and records source, closure, parameters, seed and
 runtime digests; it never reruns source during inspect, evaluate or render.
@@ -186,7 +200,7 @@ operations separately publish equivalent derivatives by content hash for workflo
   slopcamera image gallery <subject> --output-dir <directory> [--model <model>]
         [--kind <image|texture|skybox|backdrop|sprite>] [--count <n>]
         [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
-        [--cell <n>] [--json]
+        [--cell <n>] [--tile|--no-tile] [--json]
   slopcamera image icon <subject> --output <file.svg> [--model <model>]
         [--ink <#rgb>] [--rounds <1-4>] [--critique-model <model>]
         [--keep-raster] [--json]
@@ -201,7 +215,8 @@ Icon combines a style-locked Gateway raster, local ink extraction and VTracer tr
 canonical isometric line-art SVG; --rounds above 1 adds a vision-model critique that revises the
 prompt between attempts. Gallery fans one subject out to bounded parallel candidates — driven by
 variation axes or an explicit candidate list — keeps every candidate with its provenance, and
-composes a labelled contact sheet plus receipt for agent review. It never replaces existing
+composes a labelled contact sheet plus receipt for agent review. Texture cells repeat the
+candidate 2×2 so seams are inspectable (--tile/--no-tile overrides). It never replaces existing
 outputs and never promotes a candidate into authored source; review the sheet and select
 explicitly.`,
   html: `Usage:
@@ -295,7 +310,10 @@ run journal.`,
   slopcamera ai image gallery <subject> --model <id> --output-dir <directory>
         [--kind <image|texture|skybox|backdrop|sprite>] [--count <n>]
         [--vary <axis[=v1,v2][;axis...]>] [--candidates <json-file>]
-        [--cell <n>] [--timeout <time>] [--json]
+        [--cell <n>] [--tile|--no-tile] [--preview probe]
+        [--timeout <time>] [--json]
+  slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory>
+        [--camera <camera-id>] [--time-us <integer>] [--cell <n>] [--json]
   slopcamera ai video generate --model <id> [--prompt <text> | --prompt-file <path>]
         [--image <path-or-https-url>] [--frame first=<path-or-https-url>]
         [--frame last=<path-or-https-url>]
@@ -341,7 +359,20 @@ ai image gallery runs one tracked paid job per candidate with bounded parallelis
 labelled contact sheet and receipt into --output-dir. Each candidate keeps its durable artifact,
 prompt, digest, and job record so an agent can review the sheet once and promote a chosen candidate
 explicitly; generated bytes never replace authored source. --vary takes automatic variation axes,
---candidates takes an explicit JSON list, and the two are mutually exclusive.
+--candidates takes an explicit JSON list, and the two are mutually exclusive. Texture cells render
+as a 2×2 tile repeat so seams are visible at a glance; --no-tile keeps a flat cell and --tile opts
+other kinds in. --preview probe renders each settled candidate inside the fixed probe scene —
+textures applied to lit geometry, skyboxes as the environment, backdrops as a scene surface — so the
+sheet shows rendered stills. The receipt keeps the generated candidate path/digest and the rendered
+cellImage path/digest as separate fields; promotion always targets the candidate, never the still.
+
+ai scene gallery reads an authored scene plus a bounded variants file of typed scene patches, then
+renders each derived scene through the qualified scene renderer and composes the beauty stills into
+the same labelled contact sheet. Every variant is published as a new scene document under
+--output-dir/variants/<id>/ with its asset payloads staged alongside, so the derived scene is
+inspectable and re-renderable; the authored scene is never modified. The receipt keeps the base
+scene digest, each patch digest, each derived scene digest, and each rendered still digest so an
+agent can review once and promote a chosen variant explicitly.
 
 Reference media and transcription audio never upload implicitly. The appropriate explicit
 --allow-cloud-* acknowledgement is required after local files pass type and byte bounds. Image

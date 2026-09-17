@@ -6,13 +6,14 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-z316ncct.js";
+} from "./index-68xfvjqk.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
+import"./index-jh3n3d1v.js";
 import"./index-8txs6fkn.js";
-import"./index-2sbvyv0f.js";
+import"./index-801rvbm3.js";
 import {
   executeSlopcameraOperation,
   generateSlopcameraIcon,
@@ -25,7 +26,7 @@ import {
   slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-6zc37y62.js";
+} from "./index-86nqx5mx.js";
 import {
   vectorizeImage
 } from "./index-9ajx7fzb.js";
@@ -503,7 +504,7 @@ Usage:
     [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
-    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--json]
+    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -893,9 +894,12 @@ async function main(args, dependencies = {}) {
   }
   if (command === "gallery") {
     const parsed = parseArguments(rest, new Set(["model", "output-dir", "kind", "count", "vary", "candidates", "cell", "timeout-ms"]));
-    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json");
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "tile" && flag !== "no-tile");
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown gallery option: --${unknownFlags[0]}`);
+    }
+    if (parsed.flags.has("tile") && parsed.flags.has("no-tile")) {
+      throw new Error("--tile and --no-tile are mutually exclusive");
     }
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image gallery accepts exactly one subject");
@@ -931,7 +935,8 @@ async function main(args, dependencies = {}) {
       ...vary === undefined ? {} : { vary },
       ...candidates === undefined ? {} : { candidates },
       ...cell === undefined ? {} : { cellEdge: cell },
-      ...timeoutMs === undefined ? {} : { timeoutMs }
+      ...timeoutMs === undefined ? {} : { timeoutMs },
+      ...parsed.flags.has("tile") ? { tiled: true } : parsed.flags.has("no-tile") ? { tiled: false } : {}
     }), hostAdmissionOptions(dependencies));
     if (parsed.flags.has("json")) {
       (dependencies.log ?? console.log)(JSON.stringify(result, null, 2));
@@ -1004,7 +1009,7 @@ receipt ${result.receiptPath}`);
     console.log(`Bun ${process.versions.bun ?? "not detected"}`);
     console.log("Headless diagram SVG/PNG/tldraw renderer ready");
     console.log(process.platform === "win32" ? "Local raster-to-SVG vectorizer unavailable on Windows (fails closed with tool_platform)" : "Local raster-to-SVG vectorizer ready without authentication (VTracer downloads on first use)");
-    console.log("Root-relative MCP check/render server ready (trusted local workspace)");
+    console.log("Root-relative MCP check/render/scene server ready (trusted local workspace)");
     const gateway = slopcameraGatewayCredentialStatus();
     console.log(gateway.available ? `Vercel AI Gateway ready via ${gateway.source}` : "Vercel AI Gateway requires AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN");
     return;

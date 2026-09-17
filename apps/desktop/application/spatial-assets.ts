@@ -508,12 +508,18 @@ export async function withPreparedSpatialAssets<Result>(
             images.set(image.resourceName, await publishRaster(await raster(image.bytes, image.opaque), image.resourceName));
           }
           const used = new Set<string>();
+          const textureSlots = ["texture", "normalTexture", "metallicRoughnessTexture", "occlusionTexture", "emissiveTexture"] as const;
           const primitives = geometry.primitives.map(primitive => {
-            if (primitive.texture === undefined) return primitive;
-            const image = images.get(primitive.texture.resource.name);
-            if (image === undefined) throw new RangeError("Geometry texture has no exact prepared image bytes.");
-            used.add(primitive.texture.resource.name);
-            return { ...primitive, texture: { ...primitive.texture, ...image } };
+            const resolved: Record<string, unknown> = { ...primitive };
+            for (const slot of textureSlots) {
+              const texture = primitive[slot];
+              if (texture === undefined) continue;
+              const image = images.get(texture.resource.name);
+              if (image === undefined) throw new RangeError("Geometry texture has no exact prepared image bytes.");
+              used.add(texture.resource.name);
+              resolved[slot] = { ...texture, ...image };
+            }
+            return resolved;
           });
           if (used.size !== images.size) throw new RangeError("Geometry preparer returned unused image bytes.");
           const resolved = PreparedSpatialAssetSchema.parse({ ...geometry, primitives });
@@ -528,20 +534,30 @@ export async function withPreparedSpatialAssets<Result>(
             ...(entity.geometry.materialMode === undefined ? {} : { materialMode: entity.geometry.materialMode }),
             ...(entity.geometry.clip === undefined ? {} : { clip: entity.geometry.clip }),
           });
+          const publishTexture = async (reference: { readonly imageIndex: number; readonly sampler: unknown } | undefined, opaque: boolean) => {
+            if (reference === undefined) return undefined;
+            const image = geometry.images.find(image => image.imageIndex === reference.imageIndex);
+            if (image === undefined) throw new RangeError("GLB texture image is missing.");
+            return { ...await publishRaster(await raster(image.bytes, opaque)), flipY: false, sampler: reference.sampler };
+          };
           const primitives: unknown[] = [];
           for (const primitive of geometry.primitives) {
             const { bounds: _bounds, material: sourceMaterial, ...base } = primitive;
-            let texture: unknown;
-            if (sourceMaterial?.baseColorTexture !== undefined) {
-              const source = sourceMaterial.baseColorTexture, image = geometry.images.find(image => image.imageIndex === source.imageIndex);
-              if (image === undefined) throw new RangeError("GLB texture image is missing.");
-              texture = { ...await publishRaster(await raster(image.bytes, sourceMaterial.alphaMode === "OPAQUE")), flipY: false, sampler: source.sampler };
-            }
+            const texture = await publishTexture(sourceMaterial?.baseColorTexture, sourceMaterial?.alphaMode === "OPAQUE");
+            const metallicRoughnessTexture = await publishTexture(sourceMaterial?.metallicRoughnessTexture, false);
+            const normalTexture = await publishTexture(sourceMaterial?.normalTexture, false);
+            const occlusionTexture = await publishTexture(sourceMaterial?.occlusionTexture, false);
+            const emissiveTexture = await publishTexture(sourceMaterial?.emissiveTexture, false);
             primitives.push({ ...base,
               ...(sourceMaterial === undefined ? {} : { material: { kind: "standard", color: "#ffffff", opacity: sourceMaterial.alphaMode === "OPAQUE" ? 1 : sourceMaterial.baseColorLinear[3], metalness: sourceMaterial.metalness, roughness: sourceMaterial.roughness },
                 linearColor: sourceMaterial.baseColorLinear.slice(0, 3), doubleSided: sourceMaterial.doubleSided, alphaMode: sourceMaterial.alphaMode,
                 ...(sourceMaterial.alphaMode === "MASK" ? { alphaCutoff: sourceMaterial.alphaCutoff } : {}) }),
               ...(texture === undefined ? {} : { texture }),
+              ...(metallicRoughnessTexture === undefined ? {} : { metallicRoughnessTexture }),
+              ...(normalTexture === undefined ? {} : { normalTexture, ...(sourceMaterial?.normalTexture?.scale === undefined ? {} : { normalScale: sourceMaterial.normalTexture.scale }) }),
+              ...(occlusionTexture === undefined ? {} : { occlusionTexture, ...(sourceMaterial?.occlusionTexture?.strength === undefined ? {} : { occlusionStrength: sourceMaterial.occlusionTexture.strength }) }),
+              ...(emissiveTexture === undefined ? {} : { emissiveTexture }),
+              ...(sourceMaterial?.emissiveLinear === undefined ? {} : { emissiveLinear: sourceMaterial.emissiveLinear }),
             });
           }
           const resolved = PreparedSpatialAssetSchema.parse({ kind: "geometry", assetId, entityId: entity.entityId,

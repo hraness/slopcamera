@@ -3,7 +3,7 @@ type: plan
 title: Generative image galleries — parallel visual candidates for agent review
 description: Make bounded parallel visual candidate generation an ergonomic, recommended step — texture maps, skyboxes, backdrops, sprites, and design alternatives — with a labelled contact sheet, per-candidate provenance, durable tracked jobs on the desktop lane, and explicit promotion that never silently replaces authored source.
 area: generative-media
-status: in-progress
+status: completed
 repository_scopes:
   - src
   - apps/desktop/cli
@@ -128,3 +128,34 @@ candidate-review loop a first-class primitive:
 - Video/audio candidate galleries — the composition seam is image-only.
 - `scene review`-style promotion helpers; promotion stays a manual typed
   patch in this version.
+- Rendered review cells and scene-variant galleries — promoted to
+  `[[plans/rendered-review-galleries]]`.
+
+## Result
+
+Merged via PR #137 (squash `3770672`, 2026-09-17). All CI jobs green on the
+integration candidate and on post-merge `main`, including `Required`, the
+`Verify committed CLI output` byte-identical bundle gate, and CodeQL after a
+slug-regex rewrite removed two polynomial-regex alerts. Delivered:
+
+- `src/image-gallery.ts` portable planner/compositor (`image gallery`,
+  `slopcamera.image.gallery`, MCP) with bounded candidates, `--vary` axes,
+  `--candidates` files, labelled contact sheet, and provenance receipt.
+- `slopcamera ai image gallery` — one durable tracked Gateway job per
+  candidate at concurrency 4, secret-free job metadata, no-replace before
+  paid dispatch, failed candidates retained as rows and cells.
+- Scene contract: `material.map`, `environment` entity, `set-material` op,
+  rendered in the Three runtime; material/environment audit coverage.
+- Agent ergonomics: `skills/slopcamera/references/image-galleries.md` plus
+  cross-links from SKILL.md, gateway-media, directed-scenes, and public
+  docs.
+
+## Durable memory
+
+- Candidate review loop and promotion contract →
+  `skills/slopcamera/references/image-galleries.md` (maintained agent
+  reference) and `docs/how-to/generate-media.md` (public guide).
+- Composition seam contract (`path`/`sha256`/`job` on resolved candidates)
+  is now owned by the checked code in `src/image-gallery.ts` and exercised
+  by `src/image-gallery.test.ts`.
+- Follow-up scope is owned by `[[plans/rendered-review-galleries]]`.

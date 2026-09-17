@@ -3,8 +3,15 @@ import { createBoundedJsonValueSnapshot, deepFreezeJson } from "../code/json-sna
 import { SpatialSceneError } from "./identity.js"
 import { composeTransform, invertTransform, multiplyTransforms, normalizeQuaternion, slerpQuaternion, transformPoint, type Bounds, type Mat4, type Quaternion, type Vec3 } from "./math.js"
 
-/** Deliberately closed GLB 2.0 profile. It is not a general glTF loader. */
-export const SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-basecolor-v1"
+/**
+ * Deliberately closed GLB 2.0 profile. It is not a general glTF loader.
+ * The profile admits metallic-roughness PBR with base-color, metallic-roughness
+ * (ORM layout), normal, occlusion and emissive textures plus emissive factors,
+ * all on TEXCOORD_0 with embedded PNG/JPEG images only.
+ */
+export const SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-fullmaps-v1"
+/** Facts documents admitted before the texture-map extension remain valid under the new profile. */
+export const SPATIAL_GLB_PROFILE_V1 = "slopcamera.glb-triangles-trs-pbr-basecolor-v1"
 export const SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134_217_728, jsonBytes: 2_097_152, jsonValues: 200_000, jsonDepth: 32,
   nodes: 4096, meshes: 256, primitives: 256, verticesPerPrimitive: 65_536,
@@ -23,6 +30,8 @@ const quaternion = z.tuple([signedUnit, signedUnit, signedUnit, signedUnit])
 const metadata = { name: z.string().max(1024).optional(), extras: z.unknown().optional(), extensions: z.never().optional() }
 const byteOffset = z.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes)
 const textureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional() })
+const normalTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), scale: finite.optional() })
+const occlusionTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), strength: unit.optional() })
 const samplerSchema = z.strictObject({
   ...metadata, magFilter: z.union([z.literal(9728), z.literal(9729)]).optional(),
   minFilter: z.union([z.literal(9728), z.literal(9729), z.literal(9984), z.literal(9985), z.literal(9986), z.literal(9987)]).optional(),
@@ -54,9 +63,12 @@ const gltfSchema = z.strictObject({
     indices: index.optional(), material: index.optional(), mode: z.literal(4).default(4),
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
   materials: z.array(z.strictObject({
-    ...metadata, pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional() }).optional(),
+    ...metadata, pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
+    normalTexture: normalTextureInfo.optional(),
+    occlusionTexture: occlusionTextureInfo.optional(),
+    emissiveTexture: textureInfo.optional(),
     alphaMode: z.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"), alphaCutoff: unit.default(0.5), doubleSided: z.boolean().default(false),
-    emissiveFactor: z.tuple([z.literal(0), z.literal(0), z.literal(0)]).optional(),
+    emissiveFactor: z.tuple([unit, unit, unit]).optional(),
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
   images: z.array(z.strictObject({ ...metadata, bufferView: index, mimeType: z.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
   textures: z.array(z.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
@@ -76,6 +88,11 @@ export interface SpatialGlbSampler {
   readonly magFilter?: 9728 | 9729
   readonly minFilter?: 9728 | 9729 | 9984 | 9985 | 9986 | 9987
 }
+/** A resolved texture reference: the image the sampled texel data comes from. */
+export interface SpatialGlbTextureRef {
+  readonly imageIndex: number
+  readonly sampler: SpatialGlbSampler
+}
 export interface SpatialGlbMaterial {
   readonly baseColorLinear: readonly [number, number, number, number]
   readonly metalness: number
@@ -83,7 +100,23 @@ export interface SpatialGlbMaterial {
   readonly alphaMode: "OPAQUE" | "MASK" | "BLEND"
   readonly alphaCutoff: number
   readonly doubleSided: boolean
-  readonly baseColorTexture?: { readonly imageIndex: number; readonly sampler: SpatialGlbSampler }
+  readonly baseColorTexture?: SpatialGlbTextureRef
+  /** ORM layout: occlusion/metalness/roughness in R/G/B, per glTF 2.0. */
+  readonly metallicRoughnessTexture?: SpatialGlbTextureRef
+  readonly normalTexture?: SpatialGlbTextureRef & { readonly scale?: number }
+  readonly occlusionTexture?: SpatialGlbTextureRef & { readonly strength?: number }
+  readonly emissiveTexture?: SpatialGlbTextureRef
+  /** Declared emissiveFactor, linear RGB in [0,1]. */
+  readonly emissiveLinear?: readonly [number, number, number]
+}
+/** One row of the material fact table published into asset facts. */
+export interface SpatialGlbMaterialFact {
+  readonly name?: string
+  readonly alphaMode: "OPAQUE" | "MASK" | "BLEND"
+  readonly doubleSided: boolean
+  /** Declared texture slots, in fixed baseColor→emissive order. */
+  readonly maps: readonly ("baseColor" | "metallicRoughness" | "normal" | "occlusion" | "emissive")[]
+  readonly emissiveLinear?: readonly [number, number, number]
 }
 export interface SpatialGlbPrimitive {
   readonly positions: readonly number[]
@@ -215,6 +248,7 @@ interface ModelState {
   readonly document: Gltf
   readonly accessors: readonly DecodedAccessor[]
   readonly meshPrimitives: readonly (readonly PrimitiveData[])[]
+  readonly materialFacts: readonly SpatialGlbMaterialFact[]
   readonly images: readonly SpatialGlbImage[]
   readonly parents: readonly (number | null)[]
   readonly order: readonly number[]
@@ -289,19 +323,51 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
     at(document.images, texture.source, "textures.source")
     if (texture.sampler !== undefined) at(document.samplers, texture.sampler, "textures.sampler")
   }
+  const textureRef = (info: { readonly index: number } | undefined, path: string): SpatialGlbTextureRef | undefined => {
+    if (info === undefined) return undefined
+    const texture = at(document.textures, info.index, path)
+    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) }
+  }
   return deepFreezeJson(document.materials.map(material => {
     const pbr = material.pbrMetallicRoughness
-    const texture = pbr?.baseColorTexture === undefined ? undefined : at(document.textures, pbr.baseColorTexture.index, "baseColorTexture")
+    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture")
+    const metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture")
+    const normal = textureRef(material.normalTexture, "normalTexture")
+    const occlusion = textureRef(material.occlusionTexture, "occlusionTexture")
+    const emissive = textureRef(material.emissiveTexture, "emissiveTexture")
     return {
       baseColorLinear: pbr?.baseColorFactor ?? [1, 1, 1, 1] as const, metalness: pbr?.metallicFactor ?? 1, roughness: pbr?.roughnessFactor ?? 1,
       alphaMode: material.alphaMode, alphaCutoff: material.alphaCutoff, doubleSided: material.doubleSided,
-      ...(texture === undefined ? {} : { baseColorTexture: { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) } }),
+      ...(baseColor === undefined ? {} : { baseColorTexture: baseColor }),
+      ...(metallicRoughness === undefined ? {} : { metallicRoughnessTexture: metallicRoughness }),
+      ...(normal === undefined ? {} : { normalTexture: { ...normal, ...(material.normalTexture!.scale === undefined ? {} : { scale: material.normalTexture!.scale }) } }),
+      ...(occlusion === undefined ? {} : { occlusionTexture: { ...occlusion, ...(material.occlusionTexture!.strength === undefined ? {} : { strength: material.occlusionTexture!.strength }) } }),
+      ...(emissive === undefined ? {} : { emissiveTexture: emissive }),
+      ...(material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor }),
     }
   }))
 }
 
-function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[]): readonly (readonly PrimitiveData[])[] {
-  const sources = materials(document)
+/** Document-level material facts: every declared material, referenced or not. */
+function materialFacts(document: Gltf, sources: readonly SpatialGlbMaterial[]): readonly SpatialGlbMaterialFact[] {
+  return deepFreezeJson(document.materials.map((material, index) => {
+    const resolved = sources[index]!
+    const maps = [
+      resolved.baseColorTexture === undefined ? undefined : "baseColor" as const,
+      resolved.metallicRoughnessTexture === undefined ? undefined : "metallicRoughness" as const,
+      resolved.normalTexture === undefined ? undefined : "normal" as const,
+      resolved.occlusionTexture === undefined ? undefined : "occlusion" as const,
+      resolved.emissiveTexture === undefined ? undefined : "emissive" as const,
+    ].filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+    return {
+      ...(material.name === undefined ? {} : { name: material.name }),
+      alphaMode: resolved.alphaMode, doubleSided: resolved.doubleSided, maps,
+      ...(resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear }),
+    }
+  }))
+}
+
+function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[], sources: readonly SpatialGlbMaterial[]): readonly (readonly PrimitiveData[])[] {
   const defaultMaterial: SpatialGlbMaterial = { baseColorLinear: [1, 1, 1, 1], metalness: 1, roughness: 1, alphaMode: "OPAQUE", alphaCutoff: 0.5, doubleSided: false }
   let primitiveCount = 0, triangles = 0
   return deepFreezeJson(document.meshes.map((mesh, meshIndex) => mesh.primitives.map((primitive, primitiveIndex) => {
@@ -335,7 +401,9 @@ function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[]): read
     triangles += vertices / 3
     if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Source triangle budget exceeded.", path)
     const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path)
-    if (material.baseColorTexture && uvs === undefined) fail("Base-color textures require TEXCOORD_0.", path)
+    if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some(texture => texture !== undefined)) {
+      fail("Material textures require TEXCOORD_0.", path)
+    }
     return { positions: positions.values, ...(normals === undefined ? {} : { normals: normals.values }), ...(uvs === undefined ? {} : { uvs: uvs.values }), ...(indices === undefined ? {} : { indices: indices.values }), material }
   })))
 }
@@ -419,12 +487,15 @@ export class SpatialGlbModel {
   readonly profile = SPATIAL_GLB_PROFILE
   readonly nodeCount: number
   readonly clipDurationsSeconds: readonly number[]
+  /** Fact table over every declared material; the host publishes it into asset facts. */
+  readonly materialFacts: readonly SpatialGlbMaterialFact[]
   readonly #state: ModelState
 
   private constructor(state: ModelState) {
     this.#state = state
     this.nodeCount = state.document.nodes.length
     this.clipDurationsSeconds = state.clipDurations
+    this.materialFacts = state.materialFacts
     Object.freeze(this)
   }
 
@@ -446,7 +517,8 @@ export class SpatialGlbModel {
     if (binary.subarray(payloadLength).some(byte => byte !== 0)) fail("BIN padding must contain zero bytes.")
     validateViewRoles(document)
     const accessors = readAccessors(document, binary)
-    const meshPrimitives = readMeshes(document, accessors)
+    const sources = materials(document)
+    const meshPrimitives = readMeshes(document, accessors, sources)
     const graph = hierarchy(document)
     const clipDurations = animationDurations(document, accessors)
     let totalImageBytes = 0, totalPixels = 0
@@ -461,7 +533,7 @@ export class SpatialGlbModel {
       if (totalPixels > SPATIAL_GLB_LIMITS.imagePixels) fail("Embedded decoded image pixel budget exceeded.")
       return Object.freeze({ imageIndex, mimeType: image.mimeType, ...dimensions, bytes: imageBytes })
     })
-    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, images: Object.freeze(images), ...graph, clipDurations })
+    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations })
   }
 
   evaluate(input: SpatialGlbEvaluateOptions): SpatialGlbGeometry {
@@ -524,7 +596,11 @@ export class SpatialGlbModel {
         if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Instanced triangle budget exceeded.")
         const bounds = vertexBounds(primitive.positions, primitive.indices, matrix)
         const { material, ...geometry } = primitive
-        if (options.materialMode === "source" && material.baseColorTexture) imageIds.add(material.baseColorTexture.imageIndex)
+        if (options.materialMode === "source") {
+          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+            if (texture !== undefined) imageIds.add(texture.imageIndex)
+          }
+        }
         primitives.push({ ...geometry, matrix, bounds, sourceNodeIndex, sourcePrimitiveIndex, ...(options.materialMode === "source" ? { material } : {}) })
       }
     }

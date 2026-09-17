@@ -84,6 +84,20 @@ describe("Slopcamera CLI", () => {
     expect(help.stdout).not.toContain("slopcamera auth")
   })
 
+  test("rejects image gallery when --tile and --no-tile are both set", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-cli-gallery-"))
+    try {
+      const result = await runCli(
+        ["image", "gallery", "basalt", "--output-dir", root, "--tile", "--no-tile"],
+        root,
+      )
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain("mutually exclusive")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test("initializes diagrams against the version-one schema in the v3 release", async () => {
     const root = await mkdtemp(join(tmpdir(), "slopcamera-cli-init-"))
     try {

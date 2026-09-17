@@ -86,6 +86,8 @@ export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" 
   | { readonly action: "evaluate"; readonly path: string; readonly camera: string; readonly timeUs: number }
   | { readonly action: "audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly assetBounds?: string }
   | { readonly action: "render-audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[] }
+  | { readonly action: "solve"; readonly path: string; readonly goals: string; readonly output?: string; readonly assetBounds?: string }
+  | { readonly action: "review"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly allowCloudUpload: boolean }
   | { readonly action: "camera-track"; readonly path: string; readonly request: string; readonly output: string }
   | { readonly action: "plan" | "render"; readonly path: string; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
   | { readonly action: "generate"; readonly module: string; readonly generatorId: string; readonly parameters?: string; readonly seed?: number; readonly into?: string; readonly output: string }
@@ -217,9 +219,20 @@ export type CliCommand =
       readonly kind: "ai-image-gallery";
       readonly model: string;
       readonly outputDir: string;
+      readonly preview: "probe" | undefined;
       readonly subject: string;
+      readonly tiled: boolean | undefined;
       readonly timeout: string;
       readonly vary: string | undefined;
+    } & JsonOption)
+  | ({
+      readonly camera: string | undefined;
+      readonly cell: number | undefined;
+      readonly kind: "ai-scene-gallery";
+      readonly outputDir: string;
+      readonly scene: string;
+      readonly timeUs: number | undefined;
+      readonly variants: string;
     } & JsonOption)
   | ({
       readonly allowCloudUpload: boolean;
@@ -1007,7 +1020,10 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
     "--count": "value",
     "--kind": "value",
     "--model": "value",
+    "--no-tile": "flag",
     "--output-dir": "value",
+    "--preview": "value",
+    "--tile": "flag",
     "--timeout": "value",
     "--vary": "value",
   });
@@ -1050,6 +1066,19 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
   if (candidatesFile !== undefined && (vary !== undefined || count !== undefined)) {
     fail("--candidates is mutually exclusive with --vary and --count.");
   }
+  const tile = optionFlag(parsed, "--tile");
+  const noTile = optionFlag(parsed, "--no-tile");
+  if (tile && noTile) fail("--tile and --no-tile are mutually exclusive.");
+  const preview = optionString(parsed, "--preview");
+  if (preview !== undefined && preview !== "probe") {
+    fail("--preview must be probe.");
+  }
+  if (
+    preview === "probe"
+    && !["texture", "skybox", "backdrop"].includes(galleryKind ?? "image")
+  ) {
+    fail("--preview probe requires --kind texture, skybox, or backdrop.");
+  }
   return {
     candidatesFile,
     cell,
@@ -1059,9 +1088,66 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
     kind: "ai-image-gallery",
     model,
     outputDir,
+    preview: preview as "probe" | undefined,
     subject: subject!,
+    tiled: tile ? true : noTile ? false : undefined,
     timeout: optionString(parsed, "--timeout") ?? "10m",
     vary,
+  };
+}
+
+function parseAiScene(argv: readonly string[]): CliCommand {
+  if (argv[0] !== "gallery") {
+    fail("Usage: slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory> [options]");
+  }
+  const parsed = parseOptions(argv.slice(1), {
+    ...JSON_SPEC,
+    "--camera": "value",
+    "--cell": "value",
+    "--output-dir": "value",
+    "--time-us": "value",
+    "--variants": "value",
+  });
+  const [scene] = exactPositionals(
+    parsed,
+    1,
+    "slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory> [options]",
+  );
+  const variants = optionString(parsed, "--variants");
+  if (variants === undefined) fail("--variants is required.");
+  const outputDir = optionString(parsed, "--output-dir");
+  if (outputDir === undefined || outputDir.trim() === "") {
+    fail("--output-dir is required.");
+  }
+  const timeUsText = optionString(parsed, "--time-us");
+  let timeUs: number | undefined;
+  if (timeUsText !== undefined) {
+    if (!/^\d+$/u.test(timeUsText) || !Number.isSafeInteger(Number(timeUsText))) {
+      fail("--time-us must be a nonnegative integer microsecond time.");
+    }
+    timeUs = Number(timeUsText);
+  }
+  const cell = optionalStrictInteger(optionString(parsed, "--cell"), "--cell");
+  if (
+    cell !== undefined
+    && (
+      cell < slopcameraGalleryLimits.cellEdgeMin
+      || cell > slopcameraGalleryLimits.cellEdgeMax
+    )
+  ) {
+    fail(
+      `--cell must be between ${slopcameraGalleryLimits.cellEdgeMin} and ${slopcameraGalleryLimits.cellEdgeMax}.`,
+    );
+  }
+  return {
+    camera: optionString(parsed, "--camera"),
+    cell,
+    json: optionFlag(parsed, "--json"),
+    kind: "ai-scene-gallery",
+    outputDir,
+    scene: scene!,
+    timeUs,
+    variants,
   };
 }
 
@@ -1227,11 +1313,12 @@ function parseAi(argv: readonly string[]): CliCommand {
     case "models": return parseAiModels(argv.slice(1));
     case "provider-options": return parseAiProviderOptions(argv.slice(1));
     case "image": return parseAiImage(argv.slice(1));
+    case "scene": return parseAiScene(argv.slice(1));
     case "video": return parseAiVideo(argv.slice(1));
     case "speech": return parseAiSpeech(argv.slice(1));
     case "transcribe": return parseAiTranscribe(argv.slice(1));
     case undefined:
-    default: fail("Usage: slopcamera ai <models|provider-options|image|video|speech|transcribe> [options]");
+    default: fail("Usage: slopcamera ai <models|provider-options|image|scene|video|speech|transcribe> [options]");
   }
 }
 
@@ -3197,6 +3284,28 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     }
     return { kind: "spatial-scene", action, path: path!, camera, ...(timesUs === undefined ? {} : { timesUs }), json: optionFlag(parsed, "--json") };
   }
+  if (action === "solve") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--goals": "value", "--output": "value", "--asset-bounds": "value" });
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene solve <scene.json> --goals <goals.json> [--output <patch.json>] [--asset-bounds <bounds-or-admission.json>] [--json]");
+    const goals = optionString(parsed, "--goals"), output = optionString(parsed, "--output"), assetBounds = optionString(parsed, "--asset-bounds");
+    if (goals === undefined) fail("scene solve requires --goals.");
+    return { kind: "spatial-scene", action, path: path!, goals, ...(output === undefined ? {} : { output }), ...(assetBounds === undefined ? {} : { assetBounds }), json: optionFlag(parsed, "--json") };
+  }
+  if (action === "review") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--camera": "value", "--times-us": "value", "--allow-cloud-upload": "flag" });
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene review <scene.json> --camera <camera-id> [--times-us <csv>] --allow-cloud-upload [--json]");
+    const camera = optionString(parsed, "--camera"), times = optionString(parsed, "--times-us");
+    if (camera === undefined) fail("scene review requires --camera.");
+    let timesUs: number[] | undefined;
+    if (times !== undefined) {
+      if (!/^\d+(,\d+)*$/u.test(times)) return fail("scene review --times-us must be a comma-separated list of nonnegative integers.");
+      timesUs = times.split(",").map(Number);
+      if (timesUs.length > 4) return fail("scene review --times-us is bounded to 4 samples.");
+      if (timesUs.some(value => !Number.isSafeInteger(value))) return fail("scene review --times-us values must be safe integers.");
+      if (new Set(timesUs).size !== timesUs.length) return fail("scene review --times-us values must be unique.");
+    }
+    return { kind: "spatial-scene", action, path: path!, camera, ...(timesUs === undefined ? {} : { timesUs }), allowCloudUpload: optionFlag(parsed, "--allow-cloud-upload"), json: optionFlag(parsed, "--json") };
+  }
   if (action === "plan" || action === "render") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--request": "value", "--assets": "value", "--profile": "value" });
     const [path] = exactPositionals(parsed, 1, `slopcamera scene ${action} <scene.json> --request <request.json> [--assets <bindings.json>]`);
@@ -3215,7 +3324,7 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const parameters = optionString(parsed, "--parameters"), into = optionString(parsed, "--into");
     return { kind: "spatial-scene", action, module: modulePath, generatorId, output, ...(parameters === undefined ? {} : { parameters }), ...(seed === undefined ? {} : { seed }), ...(into === undefined ? {} : { into }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|render-audit|camera-track|generate|plan|render|asset|project|world> ...");
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|asset|project|world> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

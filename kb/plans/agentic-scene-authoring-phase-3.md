@@ -125,7 +125,7 @@ same way phase 2 did — each later PR merges `origin/main` and regenerates
 
 ## Phase 2: MCP scene tools
 
-- **Status:** Not started
+- **Status:** Merged-ready — PR pending
 - **Depends on:** none
 - **Objective:** `slopcamera mcp` gains dedicated scene tools for the pure
   operations — agents can check, inspect, audit, diff, and evaluate scenes
@@ -354,3 +354,16 @@ same way phase 2 did — each later PR merges `origin/main` and regenerates
   *and* `bun run build:desktop:cli` (apps/desktop/dist/cli/main.js), then the
   identity-inventory rehash. The solver lane initially rebuilt only the
   desktop bundle and CI caught `dist/code/index.js` drift.
+
+|- **Phase 2 (MCP scene tools):** `check_scene`, `inspect_scene`, `audit_scene`,
+  `diff_scenes`, and `evaluate_scene` added to `src/mcp/tools.ts` as dedicated
+  read-only tools over root-relative scene JSON. `audit_scene` reuses the same
+  `normalizeSpatialAuditAssetBounds` path as the desktop CLI by moving the
+  admission/facts schemas into portable `src/spatial-scene/asset-admission.ts`
+  and re-exporting from `apps/desktop/contracts/spatial-asset.ts`. All tools
+  are `readOnlyHint`, bound output counts, and reject workspace escapes,
+  oversized scenes, and malformed input with typed `ToolFailure` codes. The
+  public `slopcameraOperationCodes` registry remains unchanged. Validation:
+  `bun test src/mcp/tools.test.ts src/mcp/server.test.ts
+  src/spatial-scene/audit.test.ts` green after merging `origin/main` and
+  rebuilding `dist/` + `apps/desktop/dist/cli/` + identity inventory.

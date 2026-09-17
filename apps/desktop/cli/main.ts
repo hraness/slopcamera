@@ -57,7 +57,7 @@ export async function main(
   }
   const paths = await resolveRepositoryPaths(processIo.cwd(), processIo.env);
   if (earlyCommand.kind === "html-render" || earlyCommand.kind === "spatial-world" || earlyCommand.kind === "spatial-asset" || earlyCommand.kind === "directing" || earlyCommand.kind === "studio"
-    || earlyCommand.kind === "spatial-scene" && (earlyCommand.action === "camera-track" || earlyCommand.action === "render-audit")) {
+    || earlyCommand.kind === "spatial-scene" && (earlyCommand.action === "camera-track" || earlyCommand.action === "render-audit" || earlyCommand.action === "review")) {
     const controller = new AbortController();
     const cancel = () => controller.abort(new CliError("cancelled", "Command interrupted."));
     process.on("SIGINT", cancel);
