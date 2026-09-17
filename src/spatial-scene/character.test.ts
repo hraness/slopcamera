@@ -98,7 +98,8 @@ describe("evaluateHumanoidAttachmentMatrix", () => {
   test("returns the joint world matrix composed with source-rest and authored local offsets", () => {
     const restOffset = { position: [0, 4, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } as const
     const source = coreMapping()
-    const mapping = { ...source, bones: source.bones.map((bone, index) => index === 5 ? { ...bone, restOffset } : bone) }
+    const leftHandIndex = source.bones.findIndex((bone) => bone.canonicalName === "leftHand")
+    const mapping = { ...source, bones: source.bones.map((bone, index) => index === leftHandIndex ? { ...bone, restOffset } : bone) }
     const attachment = {
       kind: "slopcamera.spatial-humanoid-attachment",
       schemaVersion: 1,
@@ -114,7 +115,7 @@ describe("evaluateHumanoidAttachmentMatrix", () => {
     expect(result).toEqual(multiplyTransforms(world, multiplyTransforms(composeTransform(restOffset), composeTransform(offset))))
     expect(calls.length).toBe(1)
     const call = calls[0]!
-    expect(call.nodeIndex).toBe(6)
+    expect(call.nodeIndex).toBe(leftHandIndex + 1)
     expect(call.options).toBe(options)
   })
 
@@ -163,7 +164,8 @@ describe("evaluateHumanoidAttachmentMatrix", () => {
   test("rejects a mapped source node that is not a rig joint", () => {
     const mapping = { ...coreMapping() }
     const bones = mapping.bones.slice()
-    bones[5] = { canonicalName: "leftHand", sourceNodeIndex: 200, restOffset: identity }
+    const leftHandIndex = bones.findIndex((bone) => bone.canonicalName === "leftHand")
+    bones[leftHandIndex] = { canonicalName: "leftHand", sourceNodeIndex: 200, restOffset: identity }
     mapping.bones = bones
     const attachment = {
       kind: "slopcamera.spatial-humanoid-attachment",
