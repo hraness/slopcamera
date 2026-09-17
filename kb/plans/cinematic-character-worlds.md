@@ -66,7 +66,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 0: Reconcile active scene phase 3
 
-- **Status:** In progress
+- **Status:** Done
 - **Depends on:** none
 - **Objective:** Establish one current `main` foundation containing or explicitly superseding every prerequisite already owned by `agentic-scene-authoring-phase-3`.
 - **Scope:** `kb/plans/agentic-scene-authoring-phase-3.md`, its open PR/worktrees, and integration-only conflict resolution.
@@ -83,7 +83,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 1: Rigged GLB admission and character contract
 
-- **Status:** Not started
+- **Status:** In progress
 - **Depends on:** Phase 0
 - **Objective:** Admit, inspect, evaluate, and render bounded skinned meshes, skeletons, clips, and morph targets without weakening the closed GLB profile.
 - **Scope:** `src/spatial-scene/gltf.ts`, `contracts.ts`, `identity.ts`, `evaluate.ts`, `audit.ts`; desktop spatial asset facts/preparation and Three.js spatial lowering; colocated tests.
@@ -277,3 +277,5 @@ Parallel architecture spikes established four implementation boundaries:
 ## Implementation log
 
 - 2026-09-17 — Parallel read-only spikes mapped character rigging, cinematic direction, PBR/effects, and parametric construction/physics. The plan adopted closed additive contracts, deterministic baked solvers, content-addressed cinema sidecars, and beauty-only post-processing. No implementation files changed during the spikes.
+- 2026-09-17 — Phase 0 reconciliation: merged #145 (MCP scene tools, `aadae121`), #147 (bounded consented vision critique, `7022bb51`), #134 (relation solver, `48d4536f`), #146 (contract-v1 extensions, `f7206a15`), and #144 (splat ID proxies/provider metadata/leftovers, `44048552`); closed no-diff perf bookmark #143. Every exact-head product lane and `Required` passed. Merge-forwards resolved generated-bundle conflicts by regeneration and preserved both splat proxy coverage and contract-v2 instance evidence. The work found and fixed a recurring inventory failure class where `--update-legacy-identity-inventory` skips freshly built chunks that are not yet git-tracked: stage generated chunks, update inventory, stage inventory, then verify.
+- 2026-09-17 — Phase 1 began in `p1-rigged` from `44048552`. Commit `c456032` adds an explicit bounded rigged-GLB profile; skin, inverse-bind, morph and clip parsing; deterministic morph-then-skin evaluation; exact rig admission facts; a strict canonical humanoid mapping and named attachment contract; and prepared-geometry binding shared by beauty, object-ID and axial-depth passes. CPU-baked mesh-local deformation intentionally replaces the planned live `THREE.SkinnedMesh` lowering so every pass consumes byte-identical deformed geometry and no browser-side rig state exists. Two independent reviews found and fixed strict-facts rejection, orphan skin attributes, duplicate joints, inconsistent weights, morph topology, matrix-space double transforms, static normal-space drift, accessor validation and unreachable/skeleton-root hierarchy gaps. Validation: 81 focused tests, SDK and desktop typechecks, focused ESLint, 455 SDK tests, 1,748 desktop tests with 25 expected skips, rebuilt SDK/desktop bundles, and standalone verification. Commit created; current-head PR/CI and browser qualification remain before Phase 1 is marked done.
