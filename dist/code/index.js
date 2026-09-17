@@ -25,6 +25,7 @@ import {
   SpatialAuditSampleSchema,
   SpatialBoundsSchema,
   SpatialCameraIdSchema,
+  SpatialCameraLensSchema,
   SpatialCameraSchema,
   SpatialChannelIdSchema,
   SpatialDigestSchema,
@@ -101,7 +102,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-6ew11hhb.js";
+} from "../index-a75mqcyz.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -2263,6 +2264,205 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     })
   });
 }
+
+// src/spatial-scene/camera-rig.ts
+import { z as z7 } from "zod";
+var scalar = z7.number().finite().min(-1e6).max(1e6);
+var positive = z7.number().finite().positive().max(1e6);
+var target = z7.strictObject({ entityId: SpatialEntityIdSchema.optional(), position: SpatialVec3Schema, radiusM: positive });
+var timing = { startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema };
+var base = { cameraId: SpatialCameraIdSchema, ...timing, easing: z7.enum(["linear", "smoothstep", "smootherstep"]).optional() };
+var shake = z7.strictObject({ seed: z7.number().int().min(0).max(4294967295), amplitudeM: z7.number().finite().min(0).max(10), frequencyHz: z7.number().finite().min(0.01).max(100), layers: z7.number().int().min(1).max(8) });
+var SpatialCameraRigSchema = z7.discriminatedUnion("kind", [
+  z7.strictObject({ ...base, kind: z7.literal("dolly"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
+  z7.strictObject({ ...base, kind: z7.literal("crane"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
+  z7.strictObject({ ...base, kind: z7.literal("orbit"), center: SpatialVec3Schema, radiusM: positive, startAngleRad: scalar, endAngleRad: scalar, heightM: scalar, target }),
+  z7.strictObject({ ...base, kind: z7.literal("rail"), points: z7.array(SpatialVec3Schema).min(2).max(64), target }),
+  z7.strictObject({ ...base, kind: z7.literal("handheld"), pose: SpatialPoseSchema, target, shake }),
+  z7.strictObject({ ...base, kind: z7.literal("chase"), target, offset: SpatialVec3Schema, fromTarget: SpatialVec3Schema.optional(), toTarget: SpatialVec3Schema.optional(), shake: shake.optional() }),
+  z7.strictObject({ ...base, kind: z7.literal("tripod"), pose: SpatialPoseSchema, target }),
+  z7.strictObject({ ...base, kind: z7.literal("target-tracking"), from: SpatialVec3Schema, to: SpatialVec3Schema, target, targetEnd: SpatialVec3Schema.optional() })
+]).refine((value) => value.endUs > value.startUs, "Camera rig duration must be nonempty.");
+var SpatialRackFocusSchema = z7.strictObject({ startDistanceM: positive, endDistanceM: positive });
+var compileSchema = z7.strictObject({ camera: SpatialCameraSchema, rig: SpatialCameraRigSchema, frameRate: SpatialFrameRateSchema, frameCount: z7.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES), rackFocus: SpatialRackFocusSchema.optional() });
+var mix = (a, b, t) => a + (b - a) * t;
+var vec = (a, b, t) => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
+function eased(t, kind) {
+  return kind === "smoothstep" ? t * t * (3 - 2 * t) : kind === "smootherstep" ? t * t * t * (t * (t * 6 - 15) + 10) : t;
+}
+function hash(seed, n) {
+  let x = (seed ^ Math.imul(n + 1, 2654435761)) >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 2146121005);
+  x ^= x >>> 15;
+  return (x >>> 0) / 4294967296 * 2 - 1;
+}
+function shakeAt(spec, seconds2) {
+  if (!spec)
+    return [0, 0, 0];
+  const out = [0, 0, 0];
+  for (let layer = 0;layer < spec.layers; layer++)
+    for (let axis = 0;axis < 3; axis++)
+      out[axis] = out[axis] + Math.sin(seconds2 * spec.frequencyHz * (layer + 1) * Math.PI * 2 + hash(spec.seed, layer * 3 + axis) * Math.PI) * spec.amplitudeM / (spec.layers * (layer + 1));
+  return out;
+}
+var normalize = (v) => {
+  const n = Math.hypot(...v);
+  return [v[0] / n, v[1] / n, v[2] / n];
+};
+var cross2 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+function quaternionFromBasis2(x, y, z8) {
+  const m00 = x[0], m01 = y[0], m02 = z8[0], m10 = x[1], m11 = y[1], m12 = z8[1], m20 = x[2], m21 = y[2], m22 = z8[2], trace = m00 + m11 + m22;
+  let q;
+  if (trace > 0) {
+    const s = 2 * Math.sqrt(trace + 1);
+    q = [(m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, s / 4];
+  } else if (m00 > m11 && m00 > m22) {
+    const s = 2 * Math.sqrt(1 + m00 - m11 - m22);
+    q = [s / 4, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s];
+  } else if (m11 > m22) {
+    const s = 2 * Math.sqrt(1 + m11 - m00 - m22);
+    q = [(m01 + m10) / s, s / 4, (m12 + m21) / s, (m02 - m20) / s];
+  } else {
+    const s = 2 * Math.sqrt(1 + m22 - m00 - m11);
+    q = [(m02 + m20) / s, (m12 + m21) / s, s / 4, (m10 - m01) / s];
+  }
+  const n = Math.hypot(...q);
+  return q.map((v) => v / n);
+}
+function lookAt(position, targetPosition) {
+  const forward = [targetPosition[0] - position[0], targetPosition[1] - position[1], targetPosition[2] - position[2]];
+  if (Math.hypot(...forward) < 0.000000001)
+    throw new SpatialSceneError("invalid-data", "Camera and look-at target must not coincide.");
+  const f = normalize(forward), up = Math.abs(f[1]) > 0.999999 ? [0, 0, 1] : [0, 1, 0], right = normalize(cross2(f, up)), correctedUp = cross2(right, f);
+  return quaternionFromBasis2(right, correctedUp, [-f[0], -f[1], -f[2]]);
+}
+function pointOnRail(points, t) {
+  const lengths = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1], p[2] - points[i][2])), total = lengths.reduce((a, b) => a + b, 0);
+  if (total === 0)
+    return [...points[0]];
+  let distance = t * total, index = 0;
+  while (index < lengths.length - 1 && distance > lengths[index]) {
+    distance -= lengths[index];
+    index++;
+  }
+  return vec(points[index], points[index + 1], lengths[index] === 0 ? 0 : distance / lengths[index]);
+}
+function sampleRig(rig, t) {
+  const u = eased(t, rig.easing);
+  let position, aim = [...rig.target.position];
+  if (rig.kind === "orbit")
+    position = [rig.center[0] + Math.sin(mix(rig.startAngleRad, rig.endAngleRad, u)) * rig.radiusM, rig.center[1] + rig.heightM, rig.center[2] + Math.cos(mix(rig.startAngleRad, rig.endAngleRad, u)) * rig.radiusM];
+  else if (rig.kind === "rail")
+    position = pointOnRail(rig.points, u);
+  else if (rig.kind === "handheld" || rig.kind === "tripod")
+    position = [...rig.pose.position];
+  else if (rig.kind === "chase") {
+    aim = vec(rig.fromTarget ?? rig.target.position, rig.toTarget ?? rig.target.position, u);
+    position = [aim[0] + rig.offset[0], aim[1] + rig.offset[1], aim[2] + rig.offset[2]];
+  } else
+    position = vec(rig.from, rig.to, u);
+  if (rig.kind === "target-tracking" && rig.targetEnd)
+    aim = vec(rig.target.position, rig.targetEnd, u);
+  const s = shakeAt(rig.kind === "handheld" || rig.kind === "chase" ? rig.shake : undefined, (rig.endUs - rig.startUs) * t / 1e6);
+  return { position: [position[0] + s[0], position[1] + s[1], position[2] + s[2]], target: aim };
+}
+function compileSpatialCameraRig(input) {
+  const value = parseSpatialValue(compileSchema, input, "camera rig compilation"), rate = reduceSpatialFrameRate(value.frameRate), duration2 = value.rig.endUs - value.rig.startUs;
+  if (value.camera.cameraId !== value.rig.cameraId)
+    throw new SpatialSceneError("conflict", "Rig and camera identities differ.");
+  if (spatialFrameCount(duration2, rate) !== value.frameCount)
+    throw new SpatialSceneError("invalid-data", "frameCount must exactly cover the rig's half-open duration at frameRate.");
+  const clock = { startUs: value.rig.startUs, frameRate: rate, frameCount: value.frameCount };
+  const samples = Array.from({ length: value.frameCount }, (_, frameIndex) => {
+    const relative = spatialFrameSample(frameIndex, duration2, rate), t = Number(relative.exactTimeUs.numerator) / Number(relative.exactTimeUs.denominator) / duration2, sampled = sampleRig(value.rig, t), denominator = BigInt(relative.exactTimeUs.denominator);
+    const lens = value.rackFocus ? { ...value.camera.lens ?? { focalLengthMm: 50, sensorWidthMm: 36 }, focusDistanceM: mix(value.rackFocus.startDistanceM, value.rackFocus.endDistanceM, eased(t, value.rig.easing)) } : value.camera.lens;
+    return { frameIndex, timeUs: value.rig.startUs + relative.timeUs, exactTimeUs: { numerator: String(BigInt(value.rig.startUs) * denominator + BigInt(relative.exactTimeUs.numerator)), denominator: String(denominator) }, camera: { ...value.camera, pose: { position: sampled.position, rotation: lookAt(sampled.position, sampled.target) }, ...lens === undefined ? {} : { lens } } };
+  });
+  return parseSpatialCameraTrack({ kind: "slopcamera.spatial-camera-track", schemaVersion: 1, sceneSha256: spatialValueSha256({ domain: "slopcamera.camera-rig.v1", camera: value.camera, rig: value.rig, frameRate: rate, frameCount: value.frameCount, rackFocus: value.rackFocus ?? null }), cameraId: value.camera.cameraId, clock, samples });
+}
+var framingTolerance = z7.number().finite().min(0).max(0.5).default(0.05);
+var SpatialFramingGoalSchema = z7.discriminatedUnion("kind", [
+  z7.strictObject({ kind: z7.literal("close-up"), targets: z7.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("medium"), targets: z7.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("wide"), targets: z7.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("two-shot"), targets: z7.array(target).length(2), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("over-shoulder"), targets: z7.array(target).min(2).max(3), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("screen-position"), targets: z7.array(target).length(1), position: z7.tuple([z7.number().finite().min(0).max(1), z7.number().finite().min(0).max(1)]), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("headroom"), targets: z7.array(target).length(1), headroom: z7.number().finite().min(0).max(0.5), tolerance: framingTolerance }),
+  z7.strictObject({ kind: z7.literal("rule-of-thirds"), targets: z7.array(target).length(1), quadrant: z7.enum(["upper-left", "upper-right", "lower-left", "lower-right"]), tolerance: framingTolerance })
+]);
+function solveSpatialFraming(cameraInput, goalInput) {
+  const camera = parseSpatialValue(SpatialCameraSchema, cameraInput, "framing camera"), goal = parseSpatialValue(SpatialFramingGoalSchema, goalInput, "framing goal"), ids = goal.targets.flatMap((x) => x.entityId ? [x.entityId] : []);
+  if (ids.length !== goal.targets.length)
+    return deepFreezeJson({ satisfied: false, report: { code: "missing-bounds", goal: goal.kind, entityIds: ids, detail: "Every framing target requires supplied known bounds and identity." } });
+  if (camera.projection.kind !== "perspective")
+    return deepFreezeJson({ satisfied: false, report: { code: "impossible", goal: goal.kind, entityIds: ids, detail: "Semantic framing requires a perspective camera." } });
+  const p = camera.projection, min = goal.targets.reduce((a, x) => [Math.min(a[0], x.position[0] - x.radiusM), Math.min(a[1], x.position[1] - x.radiusM), Math.min(a[2], x.position[2] - x.radiusM)], [Infinity, Infinity, Infinity]), max = goal.targets.reduce((a, x) => [Math.max(a[0], x.position[0] + x.radiusM), Math.max(a[1], x.position[1] + x.radiusM), Math.max(a[2], x.position[2] + x.radiusM)], [-Infinity, -Infinity, -Infinity]), center = vec(min, max, 0.5), halfW = (max[0] - min[0]) / 2, halfH = (max[1] - min[1]) / 2, depthRadius = (max[2] - min[2]) / 2;
+  const fill = goal.kind === "close-up" ? 0.8 : goal.kind === "medium" ? 0.55 : goal.kind === "wide" ? 0.3 : goal.kind === "over-shoulder" ? 0.7 : 0.6;
+  const depth = Math.max(halfW * p.fx / (p.width * fill / 2), halfH * p.fy / (p.height * fill / 2), p.near + depthRadius + 0.000001);
+  if (depth + depthRadius >= p.far)
+    return deepFreezeJson({ satisfied: false, report: { code: "impossible", goal: goal.kind, entityIds: ids, detail: "Target bounds cannot fit inside the camera clipping range." } });
+  let desiredX = 0.5, desiredY = 0.5;
+  if (goal.kind === "screen-position")
+    [desiredX, desiredY] = goal.position;
+  else if (goal.kind === "rule-of-thirds") {
+    desiredX = goal.quadrant.endsWith("left") ? 1 / 3 : 2 / 3;
+    desiredY = goal.quadrant.startsWith("upper") ? 1 / 3 : 2 / 3;
+  } else if (goal.kind === "headroom")
+    desiredY = goal.headroom + halfH * p.fy / depth / p.height;
+  const centerPixelX = desiredX * p.width, centerPixelY = desiredY * p.height, localCenter = [(centerPixelX - p.cx) * depth / p.fx, -(centerPixelY - p.cy) * depth / p.fy, -depth];
+  const q = camera.pose.rotation, [qx, qy, qz, qw] = q, [lx, ly, lz] = localCenter, tx = 2 * (qy * lz - qz * ly), ty = 2 * (qz * lx - qx * lz), tz = 2 * (qx * ly - qy * lx), worldOffset = [lx + qw * tx + (qy * tz - qz * ty), ly + qw * ty + (qz * tx - qx * tz), lz + qw * tz + (qx * ty - qy * tx)], position = [center[0] - worldOffset[0], center[1] - worldOffset[1], center[2] - worldOffset[2]], solved = { ...camera, pose: { position, rotation: q } };
+  const actual = worldToCamera([center[0] - position[0], center[1] - position[1], center[2] - position[2]], q), actualDepth = -actual[2], projectedX = p.cx + actual[0] * p.fx / actualDepth, projectedY = p.cy - actual[1] * p.fy / actualDepth, deviation = Math.hypot(projectedX / p.width - desiredX, projectedY / p.height - desiredY);
+  return deviation <= goal.tolerance + 0.000000000001 ? deepFreezeJson({ satisfied: true, camera: solved }) : deepFreezeJson({ satisfied: false, report: { code: "unsatisfied", goal: goal.kind, entityIds: ids, detail: "Calibrated framing exceeds the declared normalized-screen tolerance.", deviation } });
+}
+var auditOptions = z7.strictObject({ subjects: z7.array(target).max(128).default([]), collisionBounds: z7.array(target).max(128).default([]), cameraCollisionRadiusM: z7.number().finite().min(0).max(100).default(0), maxAcceleration: z7.number().finite().positive().max(1e6).default(50), maxAngularVelocity: z7.number().finite().positive().max(1e5).default(4), maxFramingDeviation: z7.number().finite().min(0).max(1).default(0.1), maxFocusErrorM: z7.number().finite().positive().max(1e6).default(0.5) });
+function worldToCamera(delta, q) {
+  const [x, y, z8, w] = q, tx = 2 * (-y * delta[2] + z8 * delta[1]), ty = 2 * (-z8 * delta[0] + x * delta[2]), tz = 2 * (-x * delta[1] + y * delta[0]);
+  return [delta[0] + w * tx + (-y * tz + z8 * ty), delta[1] + w * ty + (-z8 * tx + x * tz), delta[2] + w * tz + (-x * ty + y * tx)];
+}
+function auditSpatialCameraTrack(trackInput, optionsInput) {
+  const track = parseSpatialCameraTrack(trackInput), options = parseSpatialValue(auditOptions, optionsInput, "camera audit options"), findings = [];
+  const add = (sample, finding) => findings.push({ cameraId: track.cameraId, frameIndex: sample.frameIndex, timeUs: sample.timeUs, ...finding });
+  for (let i = 0;i < track.samples.length; i++) {
+    const s = track.samples[i], p = s.camera.pose.position, proj = s.camera.projection;
+    for (const subject of options.subjects) {
+      const delta = [subject.position[0] - p[0], subject.position[1] - p[1], subject.position[2] - p[2]], local = worldToCamera(delta, s.camera.pose.rotation), depth = -local[2], nearEdge = depth - subject.radiusM, farEdge = depth + subject.radiusM;
+      if (nearEdge < proj.near || farEdge > proj.far)
+        add(s, { kind: "clipping", entityId: subject.entityId, measured: depth, limit: nearEdge < proj.near ? proj.near : proj.far });
+      const focus = s.camera.lens?.focusDistanceM;
+      if (focus !== undefined && Math.abs(focus - depth) > options.maxFocusErrorM)
+        add(s, { kind: "focus-error", entityId: subject.entityId, measured: Math.abs(focus - depth), limit: options.maxFocusErrorM });
+      const lateral = Math.hypot(local[0], local[1]), deviation = depth <= 0 ? 1 : Math.atan2(lateral, depth) / Math.PI;
+      if (deviation > options.maxFramingDeviation)
+        add(s, { kind: "framing-deviation", entityId: subject.entityId, measured: deviation, limit: options.maxFramingDeviation });
+    }
+    for (const bound of options.collisionBounds) {
+      const d = Math.hypot(bound.position[0] - p[0], bound.position[1] - p[1], bound.position[2] - p[2]), limit = bound.radiusM + options.cameraCollisionRadiusM;
+      if (d < limit)
+        add(s, { kind: "collision", entityId: bound.entityId, measured: d, limit });
+    }
+    if (i >= 2) {
+      const a = track.samples[i - 2], b = track.samples[i - 1], dt = (s.timeUs - b.timeUs) / 1e6, dt0 = (b.timeUs - a.timeUs) / 1e6;
+      if (dt > 0 && dt0 > 0) {
+        const acceleration = Math.hypot(...[0, 1, 2].map((k) => (p[k] - b.camera.pose.position[k]) / dt - (b.camera.pose.position[k] - a.camera.pose.position[k]) / dt0)) / ((dt + dt0) / 2);
+        if (acceleration > options.maxAcceleration)
+          add(s, { kind: "acceleration", measured: acceleration, limit: options.maxAcceleration });
+      }
+    }
+    if (i > 0) {
+      const b = track.samples[i - 1], seconds2 = (s.timeUs - b.timeUs) / 1e6;
+      if (seconds2 > 0) {
+        const raw = s.camera.pose.rotation.reduce((sum, v, k) => sum + v * b.camera.pose.rotation[k], 0), dot = Math.min(1, Math.max(-1, Math.abs(raw))), velocity = 2 * Math.acos(dot) / seconds2;
+        if (velocity > options.maxAngularVelocity)
+          add(s, { kind: "angular-velocity", measured: velocity, limit: options.maxAngularVelocity });
+      }
+    }
+  }
+  const kindOrder = { clipping: 0, collision: 1, acceleration: 2, "framing-deviation": 3, "focus-error": 4, "angular-velocity": 5 };
+  findings.sort((a, b) => a.frameIndex - b.frameIndex || kindOrder[a.kind] - kindOrder[b.kind] || (a.entityId ?? "").localeCompare(b.entityId ?? ""));
+  return deepFreezeJson(findings);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -2300,6 +2500,7 @@ export {
   spatialAssetClosureDigests,
   sortSpatialBy,
   solveSpatialRelations,
+  solveSpatialFraming,
   slopcameraCodeErrorMessage,
   slerpQuaternion,
   sha256Hex,
@@ -2361,6 +2562,7 @@ export {
   createGraphHash,
   composeTransform,
   compileWorkflowGraph2 as compileWorkflowGraph,
+  compileSpatialCameraRig,
   column,
   canonicalJsonSha256,
   canonicalJson,
@@ -2375,6 +2577,7 @@ export {
   auditSpatialSceneRendered,
   auditSpatialSceneInContext,
   auditSpatialScene,
+  auditSpatialCameraTrack,
   asSlopcameraCodeError,
   applySpatialScenePatch,
   applySpatialEntityOverride,
@@ -2423,6 +2626,7 @@ export {
   SpatialRenderedAuditFindingSchema,
   SpatialRenderedAuditEntitySchema,
   SpatialRenderedAuditCoverageSchema,
+  SpatialRackFocusSchema,
   SpatialQuaternionSchema,
   SpatialPublishedArtifactSchema,
   SpatialProjectionSchema,
@@ -2438,6 +2642,7 @@ export {
   SpatialGeometrySchema,
   SpatialGeneratorSchema,
   SpatialGeneratorIdSchema,
+  SpatialFramingGoalSchema,
   SpatialFrameRateSchema,
   SpatialEntitySchema,
   SpatialEntityIdSchema,
@@ -2446,6 +2651,8 @@ export {
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
+  SpatialCameraRigSchema,
+  SpatialCameraLensSchema,
   SpatialCameraIdSchema,
   SpatialBoundsSchema,
   SpatialAuditSampleSchema,

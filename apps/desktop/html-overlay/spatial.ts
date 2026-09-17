@@ -335,6 +335,9 @@ function calibratedCamera(camera: SpatialCamera) {
     near: camera.projection.near,
     far: camera.projection.far,
     kind: camera.projection.kind,
+    // Physical values are carried to the renderer payload for deterministic
+    // cinematic consumers; calibrated projection remains authoritative.
+    ...(camera.lens === undefined ? {} : { lens: camera.lens }),
   };
 }
 
@@ -784,6 +787,8 @@ function makeMaterial(object,frame,track){
 function makeCamera(data){
   const camera=data.kind==="perspective"?new THREE.PerspectiveCamera():new THREE.OrthographicCamera();camera.matrixAutoUpdate=false;camera.matrix.fromArray(data.cameraToWorld);
   camera.projectionMatrix.fromArray(data.projection);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  // Preserve physical metadata for renderer effects without recomputing the authoritative calibrated projection.
+  if(data.lens){camera.filmGauge=data.lens.sensorWidthMm;camera.focus=data.lens.focusDistanceM??10;camera.userData.slopcameraLens=Object.freeze({...data.lens});}
   camera.updateMatrixWorld(true);return camera;
 }
 SlopcameraOverlay.onFrame(({frame:index})=>{
