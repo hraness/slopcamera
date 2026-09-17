@@ -1,5 +1,6 @@
 import { rename, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
+import { SlopcameraCodeError } from "../code/errors.js"
 import { SlopcameraCloudError } from "../cloud-errors.js"
 import {
   generateSlopcameraImageFile,
@@ -21,11 +22,30 @@ import {
 } from "../operations.js"
 import {
   createDefaultHostResourceCoordinator,
+  HostResourceError,
   type HostResourceCoordinator,
   type HostResourceLease,
 } from "../host-resources.js"
 import { DiagramValidationError, parseDiagramSpec } from "../parse.js"
 import { renderPng, renderSvg } from "../render.js"
+import {
+  auditSpatialScene,
+  normalizeSpatialAuditAssetBounds,
+  SPATIAL_AUDIT_LIMITS,
+  type SpatialAuditEntity,
+} from "../spatial-scene/audit.js"
+import {
+  SPATIAL_SCENE_LIMITS,
+  type SpatialSceneV1,
+} from "../spatial-scene/contracts.js"
+import { evaluateSpatialScene } from "../spatial-scene/evaluate.js"
+import {
+  parseSpatialScene,
+  SpatialSceneError,
+  spatialValueSha256,
+} from "../spatial-scene/identity.js"
+import { inspectSpatialScene } from "../spatial-scene/inspect.js"
+import { diffSpatialScenes } from "../spatial-scene/patch.js"
 import { serializeTldr } from "../tldr.js"
 import type {
   DiagramConfig,
@@ -53,6 +73,9 @@ export const mcpMaximumRenderedPixels = 16_777_216
 export const mcpMaximumShapes = 64
 export const mcpMaximumEdges = 128
 export const mcpMaximumReturnedFindings = 40
+export const mcpMaximumReturnedEntities = 256
+export const mcpMaximumReturnedAuditSamples = 8_192
+export const mcpMaximumReturnedDiffEntries = 1_024
 
 const defaultScale = 2
 const maximumShapeIdsPerFinding = 12
@@ -66,6 +89,30 @@ const findingSchema = {
     code: { type: "string" },
     message: { type: "string" },
     shapeIds: { type: "array", items: { type: "string" } },
+  },
+} as const
+
+const scenePathSchema = {
+  type: "string",
+  description:
+    "Root-relative path to a spatial scene JSON source (1 MiB maximum).",
+} as const
+
+const sceneCameraIdSchema = {
+  type: "string",
+  maxLength: 128,
+  pattern: "^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+  description: "Identifier of a camera declared by the scene (camera_…).",
+} as const
+
+const entityTruncationSummarySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["entityCount", "returnedEntityCount", "entitiesTruncated"],
+  properties: {
+    entityCount: { type: "integer", minimum: 0 },
+    returnedEntityCount: { type: "integer", minimum: 0 },
+    entitiesTruncated: { type: "boolean" },
   },
 } as const
 
@@ -299,6 +346,252 @@ export const slopcameraMcpTools: readonly McpToolDefinition[] = deepFreeze([
       openWorldHint: true,
     },
   },
+  {
+    name: "check_scene",
+    title: "Check scene",
+    description:
+      "Parse and validate one root-relative Slopcamera spatial scene JSON source without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "sceneId", "sceneSha256", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        sceneId: { type: "string" },
+        sceneSha256: { type: "string" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "durationUs",
+            "entityCount",
+            "cameraCount",
+            "assetCount",
+            "animationCount",
+            "generatorCount",
+            "overrideCount",
+          ],
+          properties: {
+            durationUs: { type: "integer", minimum: 0 },
+            entityCount: { type: "integer", minimum: 0 },
+            cameraCount: { type: "integer", minimum: 0 },
+            assetCount: { type: "integer", minimum: 0 },
+            animationCount: { type: "integer", minimum: 0 },
+            generatorCount: { type: "integer", minimum: 0 },
+            overrideCount: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    annotations: {
+      title: "Check scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "inspect_scene",
+    title: "Inspect scene",
+    description:
+      "Snapshot one root-relative spatial scene's entities, editable controls, placements, assets, and generators without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "inspection", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        inspection: { type: "object" },
+        summary: entityTruncationSummarySchema,
+      },
+    },
+    annotations: {
+      title: "Inspect scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "audit_scene",
+    title: "Audit scene",
+    description:
+      "Sample one root-relative spatial scene against a camera and report per-entity geometric coverage, visibility findings, and bounds gaps. Optional asset_bounds accepts a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        times_us: {
+          type: "array",
+          items: {
+            type: "integer",
+            minimum: 0,
+            maximum: SPATIAL_SCENE_LIMITS.durationUs,
+          },
+          minItems: 1,
+          maxItems: SPATIAL_AUDIT_LIMITS.samples,
+          description:
+            "Optional sample times in microseconds. Defaults to evenly spaced coverage of the scene duration.",
+        },
+        asset_bounds: {
+          description:
+            "Optional decoded scene-space asset bounds: a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those documents.",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "findingCount",
+            "returnedFindingCount",
+            "findingsTruncated",
+            "entityCount",
+            "returnedEntityCount",
+            "entitiesTruncated",
+          ],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            entityCount: { type: "integer", minimum: 0 },
+            returnedEntityCount: { type: "integer", minimum: 0 },
+            entitiesTruncated: { type: "boolean" },
+          },
+        },
+      },
+    },
+    annotations: {
+      title: "Audit scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "diff_scenes",
+    title: "Diff scenes",
+    description:
+      "Compare two root-relative spatial scene JSON sources and report added, removed, and changed collection entries without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "other"],
+      properties: {
+        path: scenePathSchema,
+        other: {
+          type: "string",
+          description:
+            "Root-relative path to the second spatial scene JSON source (1 MiB maximum).",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "ok",
+        "source",
+        "other",
+        "sceneSha256",
+        "otherSha256",
+        "diff",
+        "summary",
+      ],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        other: { type: "string" },
+        sceneSha256: { type: "string" },
+        otherSha256: { type: "string" },
+        diff: { type: "array" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["entryCount", "returnedEntryCount", "diffTruncated"],
+          properties: {
+            entryCount: { type: "integer", minimum: 0 },
+            returnedEntryCount: { type: "integer", minimum: 0 },
+            diffTruncated: { type: "boolean" },
+          },
+        },
+      },
+    },
+    annotations: {
+      title: "Diff scenes",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "evaluate_scene",
+    title: "Evaluate scene",
+    description:
+      "Evaluate one root-relative spatial scene at one camera and integer microsecond time into an immutable snapshot without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id", "time_us"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        time_us: {
+          type: "integer",
+          minimum: 0,
+          maximum: SPATIAL_SCENE_LIMITS.durationUs,
+          description: "Evaluation time in integer microseconds.",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "snapshot", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        snapshot: { type: "object" },
+        summary: entityTruncationSummarySchema,
+      },
+    },
+    annotations: {
+      title: "Evaluate scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
 ])
 
 class ToolFailure extends Error {
@@ -330,6 +623,30 @@ interface ParsedSearchArguments {
 interface ParsedExecuteArguments {
   readonly operation: SlopcameraOperationCode
   readonly input: unknown
+}
+
+interface ParsedSceneSourceArguments {
+  readonly path: string
+}
+
+interface ParsedAuditSceneArguments extends ParsedSceneSourceArguments {
+  readonly cameraId: string
+  readonly timesUs?: readonly number[]
+  readonly assetBounds?: unknown
+}
+
+interface ParsedDiffScenesArguments extends ParsedSceneSourceArguments {
+  readonly other: string
+}
+
+interface ParsedEvaluateSceneArguments extends ParsedSceneSourceArguments {
+  readonly cameraId: string
+  readonly timeUs: number
+}
+
+interface LoadedScene {
+  readonly source: WorkspaceSource
+  readonly scene: SpatialSceneV1
 }
 
 interface LoadedDiagram {
@@ -476,6 +793,113 @@ function parseExecuteArguments(value: unknown): ParsedExecuteArguments {
   }
 }
 
+const sceneCameraIdPattern = /^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u
+
+function parseScenePath(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ToolFailure(
+      "INVALID_ARGUMENTS",
+      `${label} must be a non-empty root-relative string.`,
+    )
+  }
+  if (!value.toLowerCase().endsWith(".json")) {
+    throw new ToolFailure(
+      "INVALID_ARGUMENTS",
+      `${label} must end in .json.`,
+    )
+  }
+  return value
+}
+
+function parseSceneCameraId(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length > 128 ||
+    !sceneCameraIdPattern.test(value)
+  ) {
+    throw new ToolFailure(
+      "INVALID_ARGUMENTS",
+      "camera_id must be a scene camera identifier (camera_ followed by letters, digits, _ or -).",
+    )
+  }
+  return value
+}
+
+function parseSceneSourceArguments(value: unknown): ParsedSceneSourceArguments {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  rejectUnknownKeys(value, new Set(["path"]))
+  return { path: parseScenePath(value.path, "path") }
+}
+
+function parseAuditSceneArguments(value: unknown): ParsedAuditSceneArguments {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "times_us", "asset_bounds"]))
+  let timesUs: readonly number[] | undefined
+  if (value.times_us !== undefined) {
+    if (
+      !Array.isArray(value.times_us) ||
+      value.times_us.length === 0 ||
+      value.times_us.length > SPATIAL_AUDIT_LIMITS.samples ||
+      value.times_us.some((timeUs) => (
+        !Number.isSafeInteger(timeUs) ||
+        (timeUs as number) < 0 ||
+        (timeUs as number) > SPATIAL_SCENE_LIMITS.durationUs
+      ))
+    ) {
+      throw new ToolFailure(
+        "INVALID_ARGUMENTS",
+        `times_us must be an array of 1–${SPATIAL_AUDIT_LIMITS.samples} integer microsecond times within the scene duration bound.`,
+      )
+    }
+    timesUs = [...value.times_us] as number[]
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    ...(timesUs === undefined ? {} : { timesUs }),
+    ...("asset_bounds" in value ? { assetBounds: value.asset_bounds } : {}),
+  }
+}
+
+function parseDiffScenesArguments(value: unknown): ParsedDiffScenesArguments {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  rejectUnknownKeys(value, new Set(["path", "other"]))
+  return {
+    path: parseScenePath(value.path, "path"),
+    other: parseScenePath(value.other, "other"),
+  }
+}
+
+function parseEvaluateSceneArguments(value: unknown): ParsedEvaluateSceneArguments {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "time_us"]))
+  const timeUs = value.time_us
+  if (
+    typeof timeUs !== "number" ||
+    !Number.isSafeInteger(timeUs) ||
+    timeUs < 0 ||
+    timeUs > SPATIAL_SCENE_LIMITS.durationUs
+  ) {
+    throw new ToolFailure(
+      "INVALID_ARGUMENTS",
+      `time_us must be an integer microsecond time from 0 through ${SPATIAL_SCENE_LIMITS.durationUs}.`,
+    )
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    timeUs,
+  }
+}
+
 function assertBuiltInIcons(spec: DiagramSpec): void {
   for (const shape of spec.shapes) {
     if (
@@ -528,6 +952,10 @@ function assertRenderLimits(spec: DiagramSpec, scale: number): void {
       `Scaled canvas must be at least 1 pixel on each axis and no more than ${mcpMaximumRenderedPixels.toLocaleString("en-US")} pixels total.`,
     )
   }
+}
+
+function boundedSlice<T>(items: readonly T[], maximum: number): readonly T[] {
+  return items.length > maximum ? items.slice(0, maximum) : items
 }
 
 function publicFinding(finding: LintFinding): LintFinding {
@@ -603,6 +1031,12 @@ function failureResult(error: unknown): McpToolResult {
     code = "INVALID_DIAGRAM"
     message = "Diagram source did not pass validation."
     issues = safeIssues(error.issues)
+  } else if (error instanceof SlopcameraCodeError) {
+    code = error.code.toUpperCase().replace(/-/g, "_")
+    message = safeFragment(error.message, 320)
+  } else if (error instanceof HostResourceError) {
+    code = `HOST_RESOURCE_${error.code}`
+    message = "Host-resource admission failed safely."
   } else if (
     typeof error === "object" &&
     error !== null &&
@@ -680,6 +1114,31 @@ async function loadDiagram(
   return { source, spec }
 }
 
+async function loadScene(
+  boundary: WorkspaceBoundary,
+  path: string,
+): Promise<LoadedScene> {
+  const source = await boundary.readSource(path, "Scene source")
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(source.text)
+  } catch {
+    throw new ToolFailure("INVALID_JSON", "Scene source is not valid JSON.")
+  }
+  try {
+    return { source, scene: parseSpatialScene(parsed) }
+  } catch (error) {
+    if (error instanceof SpatialSceneError) {
+      const where = error.path === "scene" ? "" : ` at ${error.path}`
+      throw new ToolFailure(
+        "INVALID_SCENE",
+        `Scene source did not pass validation${where}: ${safeFragment(error.message, 240)}`,
+      )
+    }
+    throw error
+  }
+}
+
 export class SlopcameraMcpToolRuntime {
   readonly boundary: WorkspaceBoundary
   readonly generateDependencies: SlopcameraGenerateDependencies
@@ -715,6 +1174,25 @@ export class SlopcameraMcpToolRuntime {
     return await withSlopcameraOperationHostAdmission(operation, callback, {
       hostResourceCoordinator: this.hostResourceCoordinator,
     })
+  }
+
+  /**
+   * Scene tools are dedicated read-only surface, not registry operations, so
+   * they claim the diagram-check claim shape (cpu + local-io) directly.
+   */
+  private async withSceneAdmission<T>(
+    callback: (lease: HostResourceLease) => T | Promise<T>,
+  ): Promise<T> {
+    return await this.hostResourceCoordinator.withLease(
+      [
+        { resource: "cpu", amount: 1 },
+        { resource: "local-io", amount: 1 },
+      ],
+      async (lease) => {
+        await lease.assertOwned()
+        return await callback(lease)
+      },
+    )
   }
 
   private enqueueRender<T>(operation: () => Promise<T>): Promise<T> {
@@ -758,6 +1236,36 @@ export class SlopcameraMcpToolRuntime {
       if (name === "execute_slopcamera") {
         const options = parseExecuteArguments(argumentsValue)
         return await this.execute(options)
+      }
+      if (name === "check_scene") {
+        const options = parseSceneSourceArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.checkScene(options),
+        )
+      }
+      if (name === "inspect_scene") {
+        const options = parseSceneSourceArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.inspectScene(options),
+        )
+      }
+      if (name === "audit_scene") {
+        const options = parseAuditSceneArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.auditScene(options),
+        )
+      }
+      if (name === "diff_scenes") {
+        const options = parseDiffScenesArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.diffScenes(options),
+        )
+      }
+      if (name === "evaluate_scene") {
+        const options = parseEvaluateSceneArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.evaluateScene(options),
+        )
       }
       throw new ToolFailure("UNKNOWN_TOOL", "Requested tool is not available.")
     } catch (error) {
@@ -959,5 +1467,160 @@ export class SlopcameraMcpToolRuntime {
       artifacts,
       summary,
     })
+  }
+
+  private async checkScene(
+    options: ParsedSceneSourceArguments,
+  ): Promise<McpToolResult> {
+    const { source, scene } = await loadScene(this.boundary, options.path)
+    const summary = {
+      durationUs: scene.durationUs,
+      entityCount: scene.entities.length,
+      cameraCount: scene.cameras.length,
+      assetCount: scene.assets.length,
+      animationCount: scene.animations.length,
+      generatorCount: scene.generators.length,
+      overrideCount: scene.overrides.length,
+    }
+    return successResult(
+      `Checked ${source.relativePath}: scene ${safeFragment(scene.sceneId, 128)} is valid (${summary.entityCount} entities, ${summary.cameraCount} cameras).`,
+      {
+        ok: true,
+        source: source.relativePath,
+        sceneId: scene.sceneId,
+        sceneSha256: spatialValueSha256(scene),
+        summary,
+      },
+    )
+  }
+
+  private async inspectScene(
+    options: ParsedSceneSourceArguments,
+  ): Promise<McpToolResult> {
+    const { source, scene } = await loadScene(this.boundary, options.path)
+    const inspection = inspectSpatialScene(scene)
+    const entities = boundedSlice(
+      inspection.entities,
+      mcpMaximumReturnedEntities,
+    )
+    const summary = {
+      entityCount: inspection.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < inspection.entities.length,
+    }
+    return successResult(
+      `Inspected ${source.relativePath}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`,
+      {
+        ok: true,
+        source: source.relativePath,
+        inspection: { ...inspection, entities },
+        summary,
+      },
+    )
+  }
+
+  private async auditScene(
+    options: ParsedAuditSceneArguments,
+  ): Promise<McpToolResult> {
+    const { source, scene } = await loadScene(this.boundary, options.path)
+    const report = auditSpatialScene(scene, {
+      cameraId: options.cameraId,
+      ...(options.timesUs === undefined ? {} : { timesUs: options.timesUs }),
+      ...(options.assetBounds === undefined
+        ? {}
+        : {
+            assetBounds: normalizeSpatialAuditAssetBounds(options.assetBounds),
+          }),
+    })
+    // Report rows are capped by count and by cumulative samples so one result
+    // stays bounded even at the portable entitySamples limit.
+    let sampleBudget = mcpMaximumReturnedAuditSamples
+    const entities: SpatialAuditEntity[] = []
+    for (const entity of report.entities) {
+      if (
+        entities.length >= mcpMaximumReturnedEntities ||
+        entity.samples.length > sampleBudget
+      ) {
+        break
+      }
+      sampleBudget -= entity.samples.length
+      entities.push(entity)
+    }
+    const findings = boundedSlice(
+      report.findings,
+      mcpMaximumReturnedFindings,
+    )
+    const findingCount = report.findings.length + report.omittedFindings
+    const summary = {
+      findingCount,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < findingCount,
+      entityCount: report.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < report.entities.length,
+    }
+    return successResult(
+      `Audited ${source.relativePath} under ${options.cameraId}: ${findingCount} finding${findingCount === 1 ? "" : "s"} across ${report.entities.length} entities and ${report.timesUs.length} samples${summary.findingsTruncated || summary.entitiesTruncated ? " (truncated)" : ""}.`,
+      {
+        ok: true,
+        source: source.relativePath,
+        report: { ...report, entities, findings },
+        summary,
+      },
+    )
+  }
+
+  private async diffScenes(
+    options: ParsedDiffScenesArguments,
+  ): Promise<McpToolResult> {
+    const { source, scene } = await loadScene(this.boundary, options.path)
+    const other = await loadScene(this.boundary, options.other)
+    const entries = diffSpatialScenes(scene, other.scene)
+    const diff = boundedSlice(entries, mcpMaximumReturnedDiffEntries)
+    const summary = {
+      entryCount: entries.length,
+      returnedEntryCount: diff.length,
+      diffTruncated: diff.length < entries.length,
+    }
+    return successResult(
+      `Diffed ${source.relativePath} against ${other.source.relativePath}: ${summary.entryCount} entr${summary.entryCount === 1 ? "y" : "ies"}${summary.diffTruncated ? `, first ${summary.returnedEntryCount} returned in structured content` : ""}.`,
+      {
+        ok: true,
+        source: source.relativePath,
+        other: other.source.relativePath,
+        sceneSha256: spatialValueSha256(scene),
+        otherSha256: spatialValueSha256(other.scene),
+        diff,
+        summary,
+      },
+    )
+  }
+
+  private async evaluateScene(
+    options: ParsedEvaluateSceneArguments,
+  ): Promise<McpToolResult> {
+    const { source, scene } = await loadScene(this.boundary, options.path)
+    const snapshot = evaluateSpatialScene(scene, {
+      timeUs: options.timeUs,
+      cameraId: options.cameraId,
+    })
+    const entities = boundedSlice(
+      snapshot.entities,
+      mcpMaximumReturnedEntities,
+    )
+    const summary = {
+      entityCount: snapshot.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < snapshot.entities.length,
+    }
+    return successResult(
+      `Evaluated ${source.relativePath} at timeUs ${options.timeUs} under ${options.cameraId}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`,
+      {
+        ok: true,
+        source: source.relativePath,
+        snapshot: { ...snapshot, entities },
+        summary,
+      },
+    )
   }
 }

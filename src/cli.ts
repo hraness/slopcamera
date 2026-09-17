@@ -568,7 +568,7 @@ export async function main(
         ? "Local raster-to-SVG vectorizer unavailable on Windows (fails closed with tool_platform)"
         : "Local raster-to-SVG vectorizer ready without authentication (VTracer downloads on first use)",
     )
-    console.log("Root-relative MCP check/render server ready (trusted local workspace)")
+    console.log("Root-relative MCP check/render/scene server ready (trusted local workspace)")
     const gateway = slopcameraGatewayCredentialStatus()
     console.log(
       gateway.available

@@ -49,11 +49,12 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-av1dvk2n.js";
+} from "./index-w0eks13n.js";
 import {
   bundledSkillPath,
   installSkill
 } from "./index-7308egqr.js";
+import"./index-e8b8t3j5.js";
 import"./index-8txs6fkn.js";
 import {
   SlopcameraWorkflowError,

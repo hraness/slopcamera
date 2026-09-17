@@ -171,6 +171,6 @@ Effect approval and native source authorization have different scopes. `runs app
 
 ## MCP and canvas interchange
 
-`slopcamera mcp` offers compatibility diagram tools and the bounded portable semantic registry. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. The CLI supports larger checked diagrams and trusted workspace configuration.
+`slopcamera mcp` offers compatibility diagram tools, read-only spatial scene tools, and the bounded portable semantic registry. `check_scene`, `inspect_scene`, `audit_scene`, `diff_scenes`, and `evaluate_scene` wrap the pure scene parse, inspect, audit, diff, and evaluate operations over root-relative scene JSON. Paths are root-relative, configuration is inert, diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings, and scene tools cap returned entities, samples, and diff entries. The CLI supports larger checked diagrams and trusted workspace configuration.
 
 Generated `.tldr` is editable interchange for browser-based canvas tooling. Slopcamera does not install or launch a diagram editor or application bundle, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.

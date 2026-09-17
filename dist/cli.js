@@ -6,11 +6,12 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-av1dvk2n.js";
+} from "./index-w0eks13n.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
+import"./index-e8b8t3j5.js";
 import"./index-8txs6fkn.js";
 import"./index-gwq5jc3q.js";
 import {
@@ -482,7 +483,7 @@ async function main(args, dependencies = {}) {
     console.log(`Bun ${process.versions.bun ?? "not detected"}`);
     console.log("Headless diagram SVG/PNG/tldraw renderer ready");
     console.log(process.platform === "win32" ? "Local raster-to-SVG vectorizer unavailable on Windows (fails closed with tool_platform)" : "Local raster-to-SVG vectorizer ready without authentication (VTracer downloads on first use)");
-    console.log("Root-relative MCP check/render server ready (trusted local workspace)");
+    console.log("Root-relative MCP check/render/scene server ready (trusted local workspace)");
     const gateway = slopcameraGatewayCredentialStatus();
     console.log(gateway.available ? `Vercel AI Gateway ready via ${gateway.source}` : "Vercel AI Gateway requires AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN");
     return;

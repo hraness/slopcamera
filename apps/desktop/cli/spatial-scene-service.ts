@@ -1,19 +1,16 @@
 import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
-import { z } from "zod";
 import { canonicalJson } from "../../../src/code/canonical-json";
-import { SpatialAuditBoundsSchema } from "../../../src/spatial-scene/audit";
+import { normalizeSpatialAuditAssetBounds } from "../../../src/spatial-scene/audit";
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
-import { SPATIAL_SCENE_LIMITS, SpatialAssetIdSchema, SpatialAssetManifestSchema, type SpatialAssetManifest } from "../../../src/spatial-scene/contracts";
-import { parseSpatialScene, parseSpatialValue, spatialSceneSha256 } from "../../../src/spatial-scene/index";
-import type { Bounds } from "../../../src/spatial-scene/math";
+import { SPATIAL_SCENE_LIMITS } from "../../../src/spatial-scene/contracts";
+import { parseSpatialScene, spatialSceneSha256 } from "../../../src/spatial-scene/index";
 import { diffSpatialScenes } from "../../../src/spatial-scene/patch";
 import type { ApplicationContext } from "../application/context";
 import { createApplicationOperationRegistry } from "../application/default-registry";
 import { planSpatialRender } from "../application/spatial-render";
-import { SpatialAssetAdmissionV1Schema, SpatialAssetFactsV1Schema, type SpatialAssetFactsV1 } from "../contracts/spatial-asset";
 import { createNodeBundleFileSystem } from "../core/storage";
 import type { SpatialCliExecutionProfile, SpatialSceneCommand } from "./args";
 import { CliError } from "./errors";
@@ -54,54 +51,6 @@ export function bindSpatialCliExecutionProfile(request: unknown, executionProfil
   if (typeof request !== "object" || request === null || Array.isArray(request)) throw new CliError("invalid-data", "A spatial render request must be a JSON object.");
   if ("executionProfile" in request && request.executionProfile !== executionProfile) throw new CliError("conflict", "--profile differs from the execution profile retained in the request.");
   return { ...request, executionProfile };
-}
-
-const SpatialAuditAssetBoundsMapSchema = z.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema);
-/** A facts payload carries no assetId; the subject manifest supplies it. */
-const SpatialAuditAssetFactsPairSchema = z.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema });
-
-function auditSubjectBounds(manifest: SpatialAssetManifest, facts: SpatialAssetFactsV1): Record<string, unknown> {
-  if (facts.subject.sha256 !== manifest.payload.sha256 || facts.subject.bytes !== manifest.payload.bytes) {
-    throw new CliError("invalid-data", `Asset facts for ${manifest.assetId} do not describe the manifest payload.`);
-  }
-  return { [manifest.assetId]: facts.bounds.sceneSpace };
-}
-
-/** One document contributes assetId → scene-space bounds; model-space bounds never substitute. */
-function auditBoundsRecord(document: unknown): Record<string, unknown> {
-  if (typeof document === "object" && document !== null && !Array.isArray(document)) {
-    const kind = (document as { readonly kind?: unknown }).kind;
-    if (kind === "slopcamera.spatial-asset-admission") {
-      const admission = parseSpatialValue(SpatialAssetAdmissionV1Schema, document, "asset admission");
-      return auditSubjectBounds(admission.manifest, admission.facts);
-    }
-    if (kind === "slopcamera.spatial-asset-facts") {
-      throw new CliError("invalid-data", "A slopcamera.spatial-asset-facts payload carries no assetId; pass its slopcamera.spatial-asset-admission document or a {manifest, facts} pair.");
-    }
-    const pair = SpatialAuditAssetFactsPairSchema.safeParse(document);
-    if (pair.success) return auditSubjectBounds(pair.data.manifest, pair.data.facts);
-    if (SpatialAuditAssetBoundsMapSchema.safeParse(document).success) return document as Record<string, unknown>;
-  }
-  throw new CliError("invalid-data", "--asset-bounds accepts a Record<assetId, {min, max}> bounds map, a slopcamera.spatial-asset-admission document, a {manifest, facts} pair, or an array of those documents.");
-}
-
-/**
- * `--asset-bounds` accepts the raw bounds map or documents produced by
- * `scene asset admit`; each contributes scene-space bounds keyed by the
- * subject assetId. Identical repeats dedupe; differing bounds conflict.
- */
-export function normalizeSpatialAuditAssetBounds(input: unknown): Record<string, Bounds> {
-  const merged: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-  for (const document of Array.isArray(input) ? input : [input]) {
-    for (const [assetId, bounds] of Object.entries(auditBoundsRecord(document))) {
-      const existing = merged[assetId];
-      if (existing !== undefined && canonicalJson(existing) !== canonicalJson(bounds)) {
-        throw new CliError("conflict", `--asset-bounds supplies conflicting scene-space bounds for ${assetId}.`);
-      }
-      merged[assetId] = bounds;
-    }
-  }
-  return parseSpatialValue(SpatialAuditAssetBoundsMapSchema, merged, "asset bounds");
 }
 
 function assertCameraTrackActive(signal: AbortSignal | undefined): void {

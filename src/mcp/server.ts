@@ -144,7 +144,7 @@ class SlopcameraMcpSession {
           version: this.serverVersion,
         },
         instructions:
-          "Use check_diagram/render_diagram or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated.",
+          "Use check_diagram/render_diagram, the read-only scene tools (check_scene, inspect_scene, audit_scene, diff_scenes, evaluate_scene), or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated.",
       })
     }
 
@@ -232,6 +232,7 @@ export async function runMcpServer(
   const runtime = await SlopcameraMcpToolRuntime.create(
     options.rootDirectory ?? process.cwd(),
     options.generateDependencies,
+    options.hostResourceCoordinator,
   )
   const session = new SlopcameraMcpSession(
     runtime,
