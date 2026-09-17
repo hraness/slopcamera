@@ -187,6 +187,7 @@ import {
 import { resolveAnimatedPlaybackWindow } from "./overlay-playback";
 import { analyzeProjectScenes } from "./scene-analysis-service";
 import type { SceneDescriptionProvider } from "@hraness/slopcamera/scene";
+import type { SpatialReviewProvider } from "../../../src/spatial-scene/review";
 import { parseCliTime } from "./time";
 import {
   DEFAULT_FACE_ANALYSIS_CONFIG,
@@ -215,6 +216,10 @@ import {
   createGatewaySceneProvider,
   type GatewaySceneProviderOptions,
 } from "./gateway-scene-provider";
+import {
+  createGatewaySpatialReviewProvider,
+  type GatewaySpatialReviewProviderOptions,
+} from "./gateway-review-provider";
 import {
   GatewayMediaCatalogError,
   createFileGatewayMediaCatalogSnapshotStore,
@@ -320,6 +325,7 @@ export interface CliDependencies {
   readonly paths?: RepositoryPaths;
   readonly runner?: ProcessRunner;
   readonly sceneProviderFactory?: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
+  readonly spatialReviewProviderFactory?: (options: GatewaySpatialReviewProviderOptions) => SpatialReviewProvider;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly version?: string;
 }
@@ -346,6 +352,7 @@ interface CommandContext {
   readonly paths: RepositoryPaths;
   readonly runner: ProcessRunner;
   readonly sceneProviderFactory: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
+  readonly spatialReviewProviderFactory: (options: GatewaySpatialReviewProviderOptions) => SpatialReviewProvider;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly version: string;
 }
@@ -568,6 +575,13 @@ function applicationContext(
     machineStateRoot: context.stateRoot,
     paths: context.paths,
     runner: context.runner,
+    // The review provider is inert until scene.review reaches its consent gate;
+    // the credential loader runs only inside the single paid dispatch.
+    spatialReviewProvider: context.spatialReviewProviderFactory({
+      credential: () => loadGatewayCredential(context.io.env),
+      fetch: context.fetch,
+      transport: context.gatewayCatalogTransport,
+    }),
   };
   return {
     ...application,
@@ -6773,6 +6787,8 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
       runner,
       sceneProviderFactory: dependencies.sceneProviderFactory
         ?? (options => createGatewaySceneProvider(options)),
+      spatialReviewProviderFactory: dependencies.spatialReviewProviderFactory
+        ?? (options => createGatewaySpatialReviewProvider(options)),
       sleep: dependencies.sleep ?? (async milliseconds => await Bun.sleep(milliseconds)),
       version: dependencies.version ?? SLOPCAMERA_VERSION,
     };
