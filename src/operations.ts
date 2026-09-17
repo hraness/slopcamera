@@ -21,6 +21,13 @@ import {
   type SlopcameraIconReceipt,
 } from "./icon.js"
 import {
+  generateSlopcameraImageGallery,
+  slopcameraGalleryAxes,
+  slopcameraGalleryKinds,
+  slopcameraGalleryLimits,
+  type SlopcameraGalleryReceipt,
+} from "./image-gallery.js"
+import {
   vectorizeImage,
   type VectorizeReceipt,
 } from "./vectorize/index.js"
@@ -37,6 +44,7 @@ export const slopcameraOperationCodes = [
   "slopcamera.image.vectorize",
   "slopcamera.image.generate",
   "slopcamera.image.icon",
+  "slopcamera.image.gallery",
 ] as const
 
 export type SlopcameraOperationCode = (typeof slopcameraOperationCodes)[number]
@@ -263,6 +271,108 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
         retry: "never",
       },
     },
+    {
+      code: "slopcamera.image.gallery",
+      title: "Generate image gallery",
+      description:
+        "Generate several bounded Vercel AI Gateway image candidates in parallel and compose a labelled contact sheet with per-candidate provenance for explicit review and selection.",
+      execution: "gateway",
+      authentication: "environment",
+      destructive: true,
+      idempotent: false,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["subject", "outputDir"],
+        properties: {
+          subject: {
+            type: "string",
+            minLength: 1,
+            maxLength: slopcameraGalleryLimits.subjectBytes,
+          },
+          outputDir: pathSchema,
+          kind: { type: "string", enum: [...slopcameraGalleryKinds] },
+          model: modelSchema,
+          count: {
+            type: "integer",
+            minimum: 1,
+            maximum: slopcameraGalleryLimits.candidates,
+          },
+          vary: {
+            type: "array",
+            maxItems: slopcameraGalleryAxes.length,
+            items: {
+              anyOf: [
+                { type: "string", enum: [...slopcameraGalleryAxes] },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["axis"],
+                  properties: {
+                    axis: { type: "string", enum: [...slopcameraGalleryAxes] },
+                    values: {
+                      type: "array",
+                      minItems: 1,
+                      maxItems: slopcameraGalleryLimits.candidates,
+                      items: {
+                        type: "string",
+                        minLength: 1,
+                        maxLength: slopcameraGalleryLimits.variantBytes,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          candidates: {
+            type: "array",
+            minItems: 1,
+            maxItems: slopcameraGalleryLimits.candidates,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["id"],
+              properties: {
+                id: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: slopcameraGalleryLimits.idLength,
+                },
+                prompt: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: slopcameraGalleryLimits.candidatePromptBytes,
+                },
+                variant: {
+                  type: "string",
+                  minLength: 1,
+                  maxLength: slopcameraGalleryLimits.variantBytes,
+                },
+              },
+            },
+          },
+          cellEdge: {
+            type: "integer",
+            minimum: slopcameraGalleryLimits.cellEdgeMin,
+            maximum: slopcameraGalleryLimits.cellEdgeMax,
+          },
+          timeoutMs: { type: "integer", minimum: 1_000, maximum: 30 * 60_000 },
+        },
+      },
+      resources: [
+        { resource: "cpu", amount: 1 },
+        { resource: "local-io", amount: 1 },
+        { resource: "network", amount: 1 },
+        { resource: "paid-call", amount: 1 },
+      ],
+      transport: {
+        method: "POST",
+        authority: "https://ai-gateway.vercel.sh/v4/ai",
+        authorization: "bearer",
+        retry: "never",
+      },
+    },
   ] satisfies readonly SlopcameraOperationDescriptor[])
 
 export interface CheckSlopcameraOperationInput {
@@ -298,12 +408,25 @@ export interface IconSlopcameraOperationInput {
   readonly keepRaster?: boolean
 }
 
+export interface GallerySlopcameraOperationInput {
+  readonly subject: string
+  readonly outputDir: string
+  readonly kind?: string
+  readonly model?: SlopcameraImageModel
+  readonly count?: number
+  readonly vary?: readonly unknown[]
+  readonly candidates?: readonly unknown[]
+  readonly cellEdge?: number
+  readonly timeoutMs?: number
+}
+
 export interface SlopcameraOperationInputMap {
   readonly "slopcamera.diagram.check": CheckSlopcameraOperationInput
   readonly "slopcamera.diagram.render": RenderSlopcameraOperationInput
   readonly "slopcamera.image.vectorize": VectorizeSlopcameraOperationInput
   readonly "slopcamera.image.generate": GenerateSlopcameraOperationInput
   readonly "slopcamera.image.icon": IconSlopcameraOperationInput
+  readonly "slopcamera.image.gallery": GallerySlopcameraOperationInput
 }
 
 export interface SlopcameraOperationResultMap {
@@ -322,6 +445,7 @@ export interface SlopcameraOperationResultMap {
   }
   readonly "slopcamera.image.generate": GeneratedSlopcameraImageFile
   readonly "slopcamera.image.icon": SlopcameraIconReceipt
+  readonly "slopcamera.image.gallery": SlopcameraGalleryReceipt
 }
 
 function operationFailure(message: string): never {
@@ -543,6 +667,109 @@ function parseIcon(value: unknown): IconSlopcameraOperationInput {
   }
 }
 
+function parseGallery(value: unknown): GallerySlopcameraOperationInput {
+  const input = record(value, [
+    "subject",
+    "outputDir",
+    "kind",
+    "model",
+    "count",
+    "vary",
+    "candidates",
+    "cellEdge",
+    "timeoutMs",
+  ])
+  if (
+    typeof input.subject !== "string" ||
+    input.subject.trim().length < 1 ||
+    /[\u0000-\u001f\u007f]/u.test(input.subject) ||
+    Buffer.byteLength(input.subject, "utf8") > slopcameraGalleryLimits.subjectBytes
+  ) {
+    operationFailure(
+      `subject must be non-empty and no more than ${slopcameraGalleryLimits.subjectBytes} UTF-8 bytes.`,
+    )
+  }
+  if (
+    input.kind !== undefined &&
+    (typeof input.kind !== "string" || !slopcameraGalleryKinds.includes(input.kind as never))
+  ) {
+    operationFailure(`kind must be one of: ${slopcameraGalleryKinds.join(", ")}.`)
+  }
+  if (
+    input.model !== undefined &&
+    (typeof input.model !== "string" ||
+      input.model.length > 256 ||
+      !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(input.model))
+  ) {
+    operationFailure("model must be a bounded Vercel AI Gateway provider/model id.")
+  }
+  if (
+    input.count !== undefined &&
+    (!Number.isInteger(input.count) ||
+      (input.count as number) < 1 ||
+      (input.count as number) > slopcameraGalleryLimits.candidates)
+  ) {
+    operationFailure(`count must be an integer from 1 through ${slopcameraGalleryLimits.candidates}.`)
+  }
+  if (
+    input.vary !== undefined &&
+    (!Array.isArray(input.vary) || input.vary.length < 1 || input.vary.length > slopcameraGalleryAxes.length)
+  ) {
+    operationFailure(`vary must be a list of at most ${slopcameraGalleryAxes.length} axes.`)
+  }
+  if (
+    input.candidates !== undefined &&
+    (!Array.isArray(input.candidates) ||
+      input.candidates.length < 1 ||
+      input.candidates.length > slopcameraGalleryLimits.candidates)
+  ) {
+    operationFailure(`candidates must contain 1 through ${slopcameraGalleryLimits.candidates} entries.`)
+  }
+  if (
+    input.vary !== undefined &&
+    input.candidates !== undefined
+  ) {
+    operationFailure("vary and candidates are mutually exclusive.")
+  }
+  if (
+    input.count !== undefined &&
+    input.candidates !== undefined
+  ) {
+    operationFailure("count and candidates are mutually exclusive.")
+  }
+  const cellEdge = input.cellEdge
+  if (
+    cellEdge !== undefined &&
+    (!Number.isInteger(cellEdge) ||
+      (cellEdge as number) < slopcameraGalleryLimits.cellEdgeMin ||
+      (cellEdge as number) > slopcameraGalleryLimits.cellEdgeMax)
+  ) {
+    operationFailure(
+      `cellEdge must be an integer from ${slopcameraGalleryLimits.cellEdgeMin} through ${slopcameraGalleryLimits.cellEdgeMax}.`,
+    )
+  }
+  const timeoutMs = input.timeoutMs
+  if (
+    timeoutMs !== undefined &&
+    (!Number.isInteger(timeoutMs) ||
+      (timeoutMs as number) < 1_000 ||
+      (timeoutMs as number) > 30 * 60_000)
+  ) {
+    operationFailure("timeoutMs must be an integer from 1000 through 1800000.")
+  }
+  return {
+    subject: input.subject as string,
+    outputDir: pathValue(input.outputDir, "outputDir"),
+    ...(input.kind === undefined ? {} : { kind: input.kind as string }),
+    ...(input.model === undefined ? {} : { model: input.model as SlopcameraImageModel }),
+    ...(input.count === undefined ? {} : { count: input.count as number }),
+    ...(input.vary === undefined ? {} : { vary: input.vary as readonly unknown[] }),
+    ...(input.candidates === undefined ? {} : { candidates: input.candidates as readonly unknown[] }),
+    ...(cellEdge === undefined ? {} : { cellEdge: cellEdge as number }),
+    ...(timeoutMs === undefined ? {} : { timeoutMs: timeoutMs as number }),
+  }
+}
+
 export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>(
   code: C,
   input: unknown,
@@ -558,6 +785,8 @@ export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>
       return parseGenerate(input) as SlopcameraOperationInputMap[C]
     case "slopcamera.image.icon":
       return parseIcon(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.image.gallery":
+      return parseGallery(input) as SlopcameraOperationInputMap[C]
     default:
       throw new SlopcameraOperationError(
         "INVALID_OPERATION",
@@ -856,6 +1085,18 @@ async function executeSlopcameraOperationUncoordinated<
                 inheritedFileDescriptors:
                   dependencies.inheritedFileDescriptors,
               }),
+        },
+        dependencies,
+      )) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.image.gallery": {
+      const options = input as GallerySlopcameraOperationInput
+      return (await generateSlopcameraImageGallery(
+        {
+          ...options,
+          ...(dependencies.signal === undefined
+            ? {}
+            : { signal: dependencies.signal }),
         },
         dependencies,
       )) as SlopcameraOperationResultMap[C]
