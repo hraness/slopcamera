@@ -26,6 +26,16 @@ ordinary media editing, and diagram rendering remain local. Slopcamera does
 not provide an account service and does not upload a project to a Slopcamera
 service.
 
+The opt-in hosted route (`slopcamera image generate --hosted`) sends the
+prompt and the requested model to a gateway operated by Hraness, which
+forwards them to Vercel AI Gateway and meters the request through prepaid
+Hraness credits. The request carries the device's credits token; the gateway
+holds and settles a charge against that token and keeps no prompt, image, or
+token. The token and any pending payment link are stored locally under
+`$XDG_STATE_HOME/hraness/credits` (by default `~/.local/state/hraness/credits`)
+and never appear in command output. Payment happens on the credits service's
+hosted page in a browser; Slopcamera never handles card details.
+
 Optional support notices are local. After useful command-line work, the
 `slopcamera` executable can print a short discovery notice to stderr and, on
 request, an optional support offer that names the shared Hraness support page.

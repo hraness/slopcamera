@@ -26,6 +26,7 @@ These pages describe Slopcamera from current source. [Install that source](how-t
 ## Look up a contract
 
 - [Capabilities, versions, and platforms](reference/capabilities.md): current Slopcamera capabilities, historical Atet versions, and supported runtime boundaries.
+- [Hosted generation and credits](reference/credits.md): the opt-in `--hosted` image route, the `slopcamera credits` commands, and the payment handoff.
 - [SDK surfaces](reference/sdk.md): portable and local imports, operation projections, and execution contracts.
 - [CLI help](reference/capabilities.md#discover-the-installed-contract): exact grammar and JSON schemas from the installed host.
 

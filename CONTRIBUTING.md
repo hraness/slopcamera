@@ -20,10 +20,11 @@ Run the relevant focused local checks while iterating:
 ```sh
 bun run check:sdk
 bun run check:desktop
+bun run check:gateway
 bun run check:web
 ```
 
-After the tree converges, independently review the complete diff and its impact. Fresh complete CI may own the final source aggregate when Plan, Slopcamera standalone boundary, Slopcamera SDK, Slopcamera local runtime, Slopcamera site, Slopcamera packed consumer, Slopcamera macOS shell and Required all succeed. Required alone accepts routed skips; a skipped, missing, failed, cancelled or incomplete job does not qualify as complete CI. Bind the receipt to the exact PR head, the current authoritative `refs/heads/main`, the checked integration tree, and the CI run, attempt and Required job. Recheck those identities before merging; a stale PR base field is not current-main evidence.
+After the tree converges, independently review the complete diff and its impact. Fresh complete CI may own the final source aggregate when Plan, Slopcamera standalone boundary, Slopcamera SDK, Slopcamera local runtime, Slopcamera hosted gateway, Slopcamera site, Slopcamera packed consumer, Slopcamera macOS shell and Required all succeed. Required alone accepts routed skips; a skipped, missing, failed, cancelled or incomplete job does not qualify as complete CI. Bind the receipt to the exact PR head, the current authoritative `refs/heads/main`, the checked integration tree, and the CI run, attempt and Required job. Recheck those identities before merging; a stale PR base field is not current-main evidence.
 
 The CI coverage contract in `scripts/release-workflow.test.ts` preserves the full source phases, their order within each job, post-build standalone scans, committed-output cleanliness, pinned browser verification and macOS acceptance. Independent jobs build disjoint outputs; the package job installs the committed SDK and CLI bytes whose reproduction the build jobs verify. Review workflow, command, test-discovery, deadline, platform or coverage changes against the prior required coverage. Editing coverage assertions cannot itself certify a reduction.
 
@@ -33,7 +34,7 @@ Parser, layout, operation, protocol, configuration, or scheduler changes need de
 
 Keep the portable declarative graph SDK canonical in `src/code/`. The complete local host extends that fixed model under `apps/desktop/`; it does not maintain a competing graph contract. Public local-host entrypoints use `@hraness/slopcamera/local/*`.
 
-Generation uses Vercel AI Gateway directly. Do not add an account service, session store, custom OAuth flow, hosted proxy, billing dependency, or browser credential field. Tests must use inert credentials and controlled transports.
+Direct generation uses Vercel AI Gateway with the caller's credential and stays the default. The only hosted proxy is the opt-in credits-metered gateway in `apps/gateway`, reached through `slopcamera image generate --hosted`; do not add an account service, session store, custom OAuth flow, or browser credential field, and keep credits wording to dollars and packs where one credit is one cent. Tests must use inert credentials and controlled transports, and never reach the credits service or the gateway.
 
 Do not loosen byte, path, pixel, frame, duration, process, fidelity, download, or resource-admission limits to make a fixture pass. Explain and test any deliberate limit change.
 

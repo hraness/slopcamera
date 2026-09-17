@@ -52,6 +52,35 @@ Temporary signed GET access expires after 15 minutes. Slopcamera deletes exact
 reference objects after confirmed completion or a proven undispatched failure;
 ambiguous requests retain their objects and cleanup receipt for recovery.
 
+## Hosted generation gateway
+
+`apps/gateway` deploys as its own Vercel project, separate from the site:
+
+- Vercel project: `slopcamera-gateway`.
+- Root directory: `apps/gateway`, with source files outside the root
+  directory included (the route imports `src/generate.ts` from the repository
+  root).
+- Framework preset: Other. Install command
+  `cd ../.. && bun install --frozen-lockfile --ignore-scripts`; no build
+  command, and `public` (holding only a crawl-disallowing `robots.txt`) as
+  the output directory so no source file is served. The one function is
+  `api/v1/generate.ts`, `POST /v1/generate`, on the default Node.js runtime
+  with `maxDuration` 300.
+- Production branch: `main`. The gateway keeps no durable Preview
+  environment; a pull request Preview must not receive Production variables.
+- Production environment variables, all required:
+  `SLOPCAMERA_CREDITS_SERVICE_ORIGIN` (`https://credits.hraness.com`),
+  `SLOPCAMERA_CREDITS_PRODUCT_KEY` (the `cr_prod_…` key the credits service
+  issued for the `slopcamera` product), and `AI_GATEWAY_API_KEY` (the
+  operator's Vercel AI Gateway key). Until all three are set the route
+  answers `503 service_unconfigured` and charges nothing.
+- Domain: the CLI pins `https://gateway.slopcamera.com`; bind that Production
+  domain to this project before the hosted route is advertised.
+
+The gateway keeps no store, table, or blob; `costs.json` registers the route
+as a served, ephemeral surface. Audit it with the same reads as the site
+project, and never print variable values.
+
 ## Provider audit
 
 Audit before changing the project, domains, Git connection, or environment

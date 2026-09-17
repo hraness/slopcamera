@@ -70,4 +70,6 @@ For several shots, accepted takes, endpoint continuity and one retained budget, 
 
 For one explicitly named output file, the portable lane is `slopcamera image generate '<prompt>' --output image.webp`. That lane has its own bounded model contract and does not expose the full content-addressed `ai` grammar. Vectorization is a separate local operation and requires no Gateway credential.
 
+Without a Gateway credential, add `--hosted` to that portable lane to generate through a gateway Hraness operates and pay with prepaid credits held by this device; `slopcamera credits topup` creates the payment link and `slopcamera credits wait` stores the device token after payment. The [credits reference](../reference/credits.md) covers the commands, the exit code, and the handoff an agent follows.
+
 For a scalable isometric line-art icon, `slopcamera image icon '<subject>' --output icon.svg` chains the two: one style-locked Gateway raster is normalized to canonical ink-on-transparent pixels, traced by the local vectorizer, and — unless `--rounds 1` — scored by a vision model whose prompt fix drives the next attempt. The SVG is ink-only with a transparent background; `--ink` recolors the strokes and `--keep-raster` retains the intermediate line-art PNG.

@@ -4,6 +4,7 @@
 - `src/` – portable declarative and imperative workflow SDKs, host-resource admission, diagrams, direct Vercel AI Gateway generation, local vectorization, semantic operations, MCP, and canvas integration.
 - `apps/desktop/` – the canonical `slopcamera` CLI, complete local media host, durable scheduler, HTML and Three.js overlays, and the local Vision analysis helper.
 - `apps/web/` – the static `slopcamera.com` site, with a local browser bundle and a production-only anonymous pageview boundary but no API, account, or credential surface.
+- `apps/gateway/` – the separately deployed `slopcamera-gateway` Vercel project: one `POST /v1/generate` route that meters opt-in hosted image generation through Hraness credits with the operator's Gateway key. It is not part of `apps/web`.
 - `packages/scene/` – the shared local scene-analysis contract.
 - `src/code/` – portable declarative graph authoring, the closed public capability projection, compilation, planning, and execution contracts.
 - `src/spatial-scene/` – portable editable scene contracts, stable identity, semantic patches, calibrated evaluation, and bounded GLB parsing.
@@ -15,7 +16,7 @@
 - `examples/` – checked diagram, configuration, and executable imperative and declarative Bun workflow examples.
 - `scripts/` – schema, skill, package, release, and official-vectorizer verification.
 - `dist/` and `apps/desktop/dist/cli/` – committed Bun-targeted entrypoints consumed by package and Git installs.
-- `.github/workflows/` – routed SDK, local-host, static-site, macOS-native, official VTracer, and immutable release checks.
+- `.github/workflows/` – routed SDK, local-host, hosted-gateway, static-site, macOS-native, official VTracer, and immutable release checks.
 - `docs/` – the documentation entry point, first-result tutorials, creative task guides, capability and SDK reference, architecture explanations, and provider/release runbooks.
 - `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, and `NOTICE.md` – public documentation, policy, and terms.
 - `WRITING.md` and `STYLE.md` – internal and public prose contracts.
@@ -35,8 +36,9 @@
 - Freeze shared interfaces before parallel lanes begin. Give one integration owner manifests, lockfiles, generated registries, and other convergence files, then let consumers upgrade immutable releases independently.
 - Keep mandatory edit-time rules in the closest `AGENTS.md`, current procedures in `docs/`, executable contracts in types, schemas, and tests, and rationale, evidence, synthesis, and plans in `kb/`. KB lanes run `bun run kb:check:lane`; the integrator performs one refresh and `bun run kb:check`.
 - Keep `@hraness/slopcamera` at the repository root. The root package owns both the portable SDK and canonical `slopcamera` binary built from `apps/desktop/cli/main.ts`.
-- Keep canonical commands namespaced as `slopcamera diagram init|check|render`, `slopcamera image generate|vectorize|icon`, and the `code`, `mcp`, `canvas`, `skill`, and `doctor` surfaces.
+- Keep canonical commands namespaced as `slopcamera diagram init|check|render`, `slopcamera image generate|vectorize|icon`, and the `code`, `mcp`, `canvas`, `skill`, `credits`, and `doctor` surfaces.
 - Keep local vectorization authentication-free and network-silent. Gateway generation reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`, never persists credentials, pins the Gateway origin, bounds responses, and sets `maxRetries: 0`.
+- Hosted generation is opt-in only: `slopcamera image generate --hosted` or `SLOPCAMERA_GENERATION_MODE=hosted` sends the same bounded request to the pinned Hraness-operated gateway with the stored credits device token in `x-hraness-credits-subject` and reads no Gateway credential; without either, the direct path is unchanged. The gateway authenticates a request by placing a credits hold, admits only the CLI's model allowlist, settles from the reported or list-price cost, releases on failure, and answers a shortfall with `402 credits_required` carrying the service's payment payload. `slopcamera credits …` delegates to `@hraness/credits-foundation`, a credits shortfall prints one `hraness-credits-required-v1` line and exits with the existing `authorization-required` code 10, and product prose describes credits as dollars where one credit is one cent, never take rates, margins, or provider costs.
 - Keep `/artifacts/`, `.env`, and `.env.*` ignored. Recordings, imported media, private project metadata, Gateway tokens, and provider options must never enter Git or a package artifact.
 - Treat `vercel env run -- <command>` as the ergonomic local Vercel path. Never shell out to infer or scrape a token from the Vercel CLI.
 - Treat Production as Slopcamera's only durable Vercel environment. Do not create a custom environment, persistent Preview domain, or provider-authoritative Preview branch. Pull requests may use Vercel's built-in disposable Preview target, without production-only variables or another durable backend. Follow [the Vercel runbook](docs/vercel.md) and audit provider identity before changing this seam.

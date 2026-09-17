@@ -1,6 +1,7 @@
 # Contents
 
 - Canonical root modules – Slopcamera CLI, imperative workflow, diagram, canvas, artifact, direct Gateway generation, operation, MCP, and desktop-integration contracts.
+- `credits.ts` and `hosted-generate.ts` – the `slopcamera credits` protocol over `@hraness/credits-foundation`, the `hraness-credits-required-v1` handoff, and the opt-in hosted generation client for the Hraness gateway.
 - `icon.ts` – the isometric line-art icon pipeline: style-locked Gateway raster, local ink extraction, VTracer trace, and bounded vision-model critique rounds.
 - `code/` – canonical portable declarative graph authoring, closed public capability projection, compiler, plan, and execution contracts.
 - `vectorize/` – bounded local raster decoding, VTracer supervision, SVG sanitization, measurement, provenance, and worker isolation.
@@ -17,5 +18,6 @@
 - Parse every foreign value from `unknown`; bound source bytes, collections, dimensions, subprocess work, responses, and outputs before expensive or privileged work begins.
 - Treat diagram and authored composition inputs as authoritative; make rendered SVG, PNG, tldraw, and vector derivatives reproducible and replaceable.
 - Keep local vectorization authentication-free and network-silent. Send generation directly to the fixed Vercel AI Gateway origin using environment-only credentials, bounded responses, and `maxRetries: 0`.
-- Do not add a hosted Slopcamera API, product account, OAuth flow, credential persistence, or legacy Graphics runtime surface.
+- Keep the hosted route opt-in: `hosted-generate.ts` runs only for `--hosted` or `SLOPCAMERA_GENERATION_MODE=hosted`, sends the direct lane's request shape to the pinned gateway origin with the stored credits device token in `x-hraness-credits-subject`, reads no Gateway credential, bounds the response, admits only the direct lane's model allowlist, and turns a `402` into the credits-required handoff without writing a file.
+- Do not add a product account, OAuth flow, credential persistence, or legacy Graphics runtime surface. The only hosted surface is the credits-metered gateway in `apps/gateway`; the device credits token lives in the shared `hraness/credits` state owned by `@hraness/credits-foundation`, never in this package, and never in output.
 - Pair parsing and compatibility changes with examples and property laws, then run the package `check` gate and clean standalone export.

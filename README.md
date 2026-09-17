@@ -189,6 +189,15 @@ See [Generate media](docs/how-to/generate-media.md), [Direct short generated cli
 and [Gateway configuration](docs/vercel.md). Generation uses caller-owned access;
 uploading local references requires the matching explicit acknowledgement.
 
+Without your own Gateway access, `slopcamera image generate '<prompt>' --output image.webp --hosted`
+generates one image through a gateway that Hraness operates and pays with
+prepaid credits held by your device. One credit is one cent; `slopcamera credits topup`
+creates the payment link, the hosted pay page lists the packs and the bonus
+credits each adds, and `slopcamera credits wait` stores the device token after
+payment. When credits are needed the command prints the
+`hraness-credits-required-v1` handoff and exits 10 without charging. Nothing
+changes without `--hosted`. See [Hosted generation and credits](docs/reference/credits.md).
+
 ### Edit footage and deliver finished videos
 
 Import existing footage or recording bundles. Remove pauses and filler words,
@@ -262,7 +271,9 @@ declarative graphs, approvals, and resuming work.
 There is no Slopcamera account, hosted project database, or browser generation service.
 Ordinary editing and rendering remain local. Gateway generation and selected
 cloud analysis use credentials from the local process and request explicit
-acknowledgement before uploading named media. This website never accepts a
+acknowledgement before uploading named media. The opt-in `--hosted` image route
+sends only the prompt and model to the Hraness gateway with your device's
+credits token and reads no Gateway credential. This website never accepts a
 Gateway credential. Native Python requires separate authorization. Custom Bun
 workflow modules execute when loaded, including during check and plan; review
 their source first. Both have the current user's access, including potential

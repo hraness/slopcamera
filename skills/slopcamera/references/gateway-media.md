@@ -3,6 +3,9 @@
 Use this workflow when the user asks Slopcamera to generate an image, video, spoken
 audio, or transcript. The Slopcamera process uses the caller's Vercel AI Gateway
 credential. It has no Slopcamera account, credential store, or hosted project.
+When the person has no Gateway credential, the portable
+`slopcamera image generate '<prompt>' --output <file> --hosted` lane can pay
+with prepaid credits instead; see [credits](credits.md).
 
 ## Start with the intended role
 
