@@ -3,8 +3,8 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-ayspp776.js";
-import"./index-shtrpj4s.js";
+} from "./index-rx5qv31d.js";
+import"./index-n4n19hs5.js";
 import"./index-9ajx7fzb.js";
 import"./index-231ernwj.js";
 import"./index-sh6xbav6.js";

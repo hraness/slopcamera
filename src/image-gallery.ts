@@ -3,6 +3,7 @@ import { link, mkdir, rm, writeFile } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 import sharp from "sharp"
 import { SlopcameraCloudError } from "./cloud-errors.js"
+import type { SpatialSceneDiffEntry } from "./spatial-scene/patch.js"
 import {
   generateSlopcameraImage,
   slopcameraImageModels,
@@ -535,16 +536,39 @@ export interface SlopcameraGalleryCandidateReceipt {
   readonly job?: string
   /** The cell repeats the candidate 2×2 so tile seams are reviewable. */
   readonly tiled?: boolean
+  /**
+   * Rendered review evidence composited into the cell, distinct from the
+   * generated candidate identified by `path`/`sha256`. Promotion must always
+   * target the candidate artifact, never this render.
+   */
+  readonly cellImage?: {
+    readonly path?: string
+    readonly sha256: string
+    readonly bytes: number
+    readonly mediaType: string
+  }
+  /**
+   * Scene-variant provenance: the typed patch applied to the base scene and
+   * the derived scene identity. Present only on `slopcamera.scene-gallery`
+   * receipts, where `path`/`sha256` identify the derived scene document.
+   */
+  readonly scene?: {
+    readonly patchSha256: string
+    readonly sceneSha256: string
+    readonly diff: readonly SpatialSceneDiffEntry[]
+  }
   readonly cell?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 }
 
 export interface SlopcameraGalleryReceipt {
-  readonly kind: "slopcamera.image-gallery"
+  readonly kind: "slopcamera.image-gallery" | "slopcamera.scene-gallery"
   readonly schemaVersion: 1
   readonly subject: string
-  readonly galleryKind: SlopcameraGalleryKind
+  readonly galleryKind: SlopcameraGalleryKind | "scene"
   readonly model: string
-  readonly provider: "vercel-ai-gateway"
+  readonly provider: "vercel-ai-gateway" | "local"
+  /** Present on `slopcamera.scene-gallery` receipts: the authored base scene. */
+  readonly baseSceneSha256?: string
   readonly cell: { readonly width: number; readonly height: number; readonly labelHeight: number }
   readonly axes: readonly { readonly axis: SlopcameraGalleryAxis; readonly values: readonly string[] }[]
   readonly candidates: readonly SlopcameraGalleryCandidateReceipt[]
@@ -582,6 +606,28 @@ export interface SlopcameraGalleryResolvedCandidate {
   readonly job?: string
   readonly path?: string
   readonly sha256?: string
+  /**
+   * A rendered review image (for example a probe-scene still) shown in the
+   * cell instead of the raw candidate. `path`/`sha256` identify the durable
+   * render artifact; the candidate's own `path`/`sha256` still record the
+   * generated source bytes so promotion never picks the review render.
+   */
+  readonly cellImage?: {
+    readonly bytes: Uint8Array
+    readonly mediaType: string
+    readonly path?: string
+    readonly sha256?: string
+  }
+  /**
+   * Scene-variant provenance carried into the receipt row. When set the
+   * candidate artifact is the derived scene document (`mediaType`
+   * `application/json`) and `cellImage` is its rendered beauty still.
+   */
+  readonly scene?: {
+    readonly patchSha256: string
+    readonly sceneSha256: string
+    readonly diff: readonly SpatialSceneDiffEntry[]
+  }
 }
 
 async function generateCandidate(
@@ -708,6 +754,16 @@ export async function generateSlopcameraImageGallery(
 }
 
 /**
+ * Receipt identity for producers that compose the same labelled contact sheet
+ * without the Gateway image lane — currently `slopcamera ai scene gallery`,
+ * whose candidates are derived scene documents rather than generated images.
+ */
+export interface SlopcameraSceneGalleryReceiptSpec {
+  readonly kind: "slopcamera.scene-gallery"
+  readonly baseSceneSha256: string
+}
+
+/**
  * Compose settled candidates into the labelled contact sheet and receipt.
  * Hosts that publish candidates through their own durable artifact lane set
  * `path`/`sha256`/`job` per candidate; candidates without `path` are published
@@ -720,6 +776,7 @@ export async function composeSlopcameraImageGallery(input: {
   readonly model: string
   readonly outputDir: string
   readonly plan: SlopcameraGalleryPlan
+  readonly receipt?: SlopcameraSceneGalleryReceiptSpec
 }): Promise<SlopcameraGalleryReceipt> {
   const outputDir = galleryOutputDir(input.outputDir)
   const model = galleryModel(input.model)
@@ -776,24 +833,62 @@ export async function composeSlopcameraImageGallery(input: {
       if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
         invalidArgument("A pre-published gallery candidate digest does not match its bytes.")
       }
-      const source = sharp(candidate.bytes, {
-        limitInputPixels: slopcameraGalleryLimits.candidatePixels,
-        failOn: "warning",
-      })
-      const metadata = await source.metadata()
-      if (
-        metadata.width === undefined || metadata.height === undefined ||
-        metadata.width > slopcameraGalleryLimits.candidateEdge ||
-        metadata.height > slopcameraGalleryLimits.candidateEdge ||
-        metadata.width * metadata.height > slopcameraGalleryLimits.candidatePixels
-      ) {
-        invalidArgument("A generated candidate exceeds its raster bounds.")
+      let cellSource: ReturnType<typeof sharp>
+      let cellReceipt: SlopcameraGalleryCandidateReceipt["cellImage"]
+      if (candidate.cellImage !== undefined) {
+        const cellSha256 = createHash("sha256").update(candidate.cellImage.bytes).digest("hex")
+        if (
+          candidate.cellImage.sha256 !== undefined
+          && candidate.cellImage.sha256 !== cellSha256
+        ) {
+          invalidArgument("A gallery cell image digest does not match its bytes.")
+        }
+        const cellCandidate = sharp(candidate.cellImage.bytes, {
+          limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+          failOn: "warning",
+        })
+        const cellMetadata = await cellCandidate.metadata()
+        if (
+          cellMetadata.width === undefined || cellMetadata.height === undefined
+          || cellMetadata.width > slopcameraGalleryLimits.candidateEdge
+          || cellMetadata.height > slopcameraGalleryLimits.candidateEdge
+          || cellMetadata.width * cellMetadata.height > slopcameraGalleryLimits.candidatePixels
+        ) {
+          invalidArgument("A gallery cell image exceeds its raster bounds.")
+        }
+        cellSource = cellCandidate
+        cellReceipt = {
+          sha256: cellSha256,
+          bytes: candidate.cellImage.bytes.byteLength,
+          mediaType: candidate.cellImage.mediaType,
+          ...(candidate.cellImage.path === undefined
+            ? {}
+            : { path: candidate.cellImage.path }),
+        }
+      } else {
+        // Without a rendered cell the candidate itself is rasterized, so it
+        // must be a bounded image. Non-raster candidates (derived scene
+        // documents) are only admitted when a rendered cell image exists.
+        const source = sharp(candidate.bytes, {
+          limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+          failOn: "warning",
+        })
+        const metadata = await source.metadata()
+        if (
+          metadata.width === undefined || metadata.height === undefined ||
+          metadata.width > slopcameraGalleryLimits.candidateEdge ||
+          metadata.height > slopcameraGalleryLimits.candidateEdge ||
+          metadata.width * metadata.height > slopcameraGalleryLimits.candidatePixels
+        ) {
+          invalidArgument("A generated candidate exceeds its raster bounds.")
+        }
+        cellSource = source
       }
-      const resized = await source
+      const resized = await cellSource
         .resize(cellWidth, cellHeight, { fit: "cover" })
         .png()
         .toBuffer()
-      const cellImage = plan.tiled
+      const cellImage = plan.tiled && candidate.cellImage === undefined
         ? await (async () => {
           const tile = await sharp(resized)
             .resize(Math.ceil(cellWidth / 2), Math.ceil(cellHeight / 2), { fit: "fill" })
@@ -830,10 +925,41 @@ export async function composeSlopcameraImageGallery(input: {
         ...(candidate.requestId === undefined ? {} : { requestId: candidate.requestId }),
         ...(candidate.warnings === undefined ? {} : { warnings: candidate.warnings }),
         ...(candidate.job === undefined ? {} : { job: candidate.job }),
-        ...(plan.tiled ? { tiled: true } : {}),
+        ...(plan.tiled && candidate.cellImage === undefined ? { tiled: true } : {}),
+        ...(cellReceipt === undefined ? {} : { cellImage: cellReceipt }),
+        ...(candidate.scene === undefined ? {} : { scene: candidate.scene }),
         cell: { x, y, width: cellWidth, height: cellBodyHeight },
       })
     } else {
+      const hasRetainedArtifact = candidate.bytes !== undefined
+        || candidate.mediaType !== undefined
+        || candidate.path !== undefined
+        || candidate.sha256 !== undefined
+      let retainedArtifact: {
+        readonly bytes: number
+        readonly mediaType: string
+        readonly path: string
+        readonly sha256: string
+      } | undefined
+      if (hasRetainedArtifact) {
+        if (
+          candidate.bytes === undefined
+          || candidate.mediaType === undefined
+          || candidate.path === undefined
+        ) {
+          invalidArgument("A failed gallery candidate artifact requires bytes, media type, and path.")
+        }
+        const sha256 = createHash("sha256").update(candidate.bytes).digest("hex")
+        if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
+          invalidArgument("A failed gallery candidate artifact digest does not match its bytes.")
+        }
+        retainedArtifact = {
+          bytes: candidate.bytes.byteLength,
+          mediaType: candidate.mediaType,
+          path: candidate.path,
+          sha256,
+        }
+      }
       const blank = Buffer.alloc(cellWidth * cellHeight * 4)
       for (let pixel = 0; pixel < cellWidth * cellHeight; pixel++) {
         const index = pixel * 4
@@ -855,8 +981,12 @@ export async function composeSlopcameraImageGallery(input: {
         label: candidate.label,
         prompt: candidate.prompt,
         status: "failed",
+        ...retainedArtifact,
+        ...(candidate.requestId === undefined ? {} : { requestId: candidate.requestId }),
+        ...(candidate.warnings === undefined ? {} : { warnings: candidate.warnings }),
         ...(candidate.error === undefined ? {} : { error: candidate.error }),
         ...(candidate.job === undefined ? {} : { job: candidate.job }),
+        ...(candidate.scene === undefined ? {} : { scene: candidate.scene }),
         cell: { x, y, width: cellWidth, height: cellBodyHeight },
       })
     }
@@ -880,12 +1010,15 @@ export async function composeSlopcameraImageGallery(input: {
   const failed = generated.filter(candidate => candidate.status === "failed").length
   const receiptPath = join(outputDir, "receipt.json")
   const receipt: SlopcameraGalleryReceipt = {
-    kind: "slopcamera.image-gallery",
+    kind: input.receipt?.kind ?? "slopcamera.image-gallery",
     schemaVersion: 1,
     subject: plan.subject,
-    galleryKind: plan.kind,
+    galleryKind: input.receipt === undefined ? plan.kind : "scene",
     model,
-    provider: "vercel-ai-gateway",
+    provider: input.receipt === undefined ? "vercel-ai-gateway" : "local",
+    ...(input.receipt === undefined
+      ? {}
+      : { baseSceneSha256: input.receipt.baseSceneSha256 }),
     cell: { width: cellWidth, height: cellHeight, labelHeight },
     axes: plan.axes,
     candidates: receiptCandidates,

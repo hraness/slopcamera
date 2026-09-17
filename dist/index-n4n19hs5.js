@@ -3004,16 +3004,41 @@ async function composeSlopcameraImageGallery(input) {
       if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
         invalidArgument2("A pre-published gallery candidate digest does not match its bytes.");
       }
-      const source = sharp(candidate.bytes, {
-        limitInputPixels: slopcameraGalleryLimits.candidatePixels,
-        failOn: "warning"
-      });
-      const metadata = await source.metadata();
-      if (metadata.width === undefined || metadata.height === undefined || metadata.width > slopcameraGalleryLimits.candidateEdge || metadata.height > slopcameraGalleryLimits.candidateEdge || metadata.width * metadata.height > slopcameraGalleryLimits.candidatePixels) {
-        invalidArgument2("A generated candidate exceeds its raster bounds.");
+      let cellSource;
+      let cellReceipt;
+      if (candidate.cellImage !== undefined) {
+        const cellSha256 = createHash2("sha256").update(candidate.cellImage.bytes).digest("hex");
+        if (candidate.cellImage.sha256 !== undefined && candidate.cellImage.sha256 !== cellSha256) {
+          invalidArgument2("A gallery cell image digest does not match its bytes.");
+        }
+        const cellCandidate = sharp(candidate.cellImage.bytes, {
+          limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+          failOn: "warning"
+        });
+        const cellMetadata = await cellCandidate.metadata();
+        if (cellMetadata.width === undefined || cellMetadata.height === undefined || cellMetadata.width > slopcameraGalleryLimits.candidateEdge || cellMetadata.height > slopcameraGalleryLimits.candidateEdge || cellMetadata.width * cellMetadata.height > slopcameraGalleryLimits.candidatePixels) {
+          invalidArgument2("A gallery cell image exceeds its raster bounds.");
+        }
+        cellSource = cellCandidate;
+        cellReceipt = {
+          sha256: cellSha256,
+          bytes: candidate.cellImage.bytes.byteLength,
+          mediaType: candidate.cellImage.mediaType,
+          ...candidate.cellImage.path === undefined ? {} : { path: candidate.cellImage.path }
+        };
+      } else {
+        const source = sharp(candidate.bytes, {
+          limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+          failOn: "warning"
+        });
+        const metadata = await source.metadata();
+        if (metadata.width === undefined || metadata.height === undefined || metadata.width > slopcameraGalleryLimits.candidateEdge || metadata.height > slopcameraGalleryLimits.candidateEdge || metadata.width * metadata.height > slopcameraGalleryLimits.candidatePixels) {
+          invalidArgument2("A generated candidate exceeds its raster bounds.");
+        }
+        cellSource = source;
       }
-      const resized = await source.resize(cellWidth, cellHeight, { fit: "cover" }).png().toBuffer();
-      const cellImage = plan.tiled ? await (async () => {
+      const resized = await cellSource.resize(cellWidth, cellHeight, { fit: "cover" }).png().toBuffer();
+      const cellImage = plan.tiled && candidate.cellImage === undefined ? await (async () => {
         const tile = await sharp(resized).resize(Math.ceil(cellWidth / 2), Math.ceil(cellHeight / 2), { fit: "fill" }).png().toBuffer();
         const positions = [0, Math.floor(cellWidth / 2)];
         const rows2 = [0, Math.floor(cellHeight / 2)];
@@ -3040,10 +3065,29 @@ async function composeSlopcameraImageGallery(input) {
         ...candidate.requestId === undefined ? {} : { requestId: candidate.requestId },
         ...candidate.warnings === undefined ? {} : { warnings: candidate.warnings },
         ...candidate.job === undefined ? {} : { job: candidate.job },
-        ...plan.tiled ? { tiled: true } : {},
+        ...plan.tiled && candidate.cellImage === undefined ? { tiled: true } : {},
+        ...cellReceipt === undefined ? {} : { cellImage: cellReceipt },
+        ...candidate.scene === undefined ? {} : { scene: candidate.scene },
         cell: { x, y, width: cellWidth, height: cellBodyHeight }
       });
     } else {
+      const hasRetainedArtifact = candidate.bytes !== undefined || candidate.mediaType !== undefined || candidate.path !== undefined || candidate.sha256 !== undefined;
+      let retainedArtifact;
+      if (hasRetainedArtifact) {
+        if (candidate.bytes === undefined || candidate.mediaType === undefined || candidate.path === undefined) {
+          invalidArgument2("A failed gallery candidate artifact requires bytes, media type, and path.");
+        }
+        const sha256 = createHash2("sha256").update(candidate.bytes).digest("hex");
+        if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
+          invalidArgument2("A failed gallery candidate artifact digest does not match its bytes.");
+        }
+        retainedArtifact = {
+          bytes: candidate.bytes.byteLength,
+          mediaType: candidate.mediaType,
+          path: candidate.path,
+          sha256
+        };
+      }
       const blank = Buffer.alloc(cellWidth * cellHeight * 4);
       for (let pixel = 0;pixel < cellWidth * cellHeight; pixel++) {
         const index = pixel * 4;
@@ -3065,8 +3109,12 @@ async function composeSlopcameraImageGallery(input) {
         label: candidate.label,
         prompt: candidate.prompt,
         status: "failed",
+        ...retainedArtifact,
+        ...candidate.requestId === undefined ? {} : { requestId: candidate.requestId },
+        ...candidate.warnings === undefined ? {} : { warnings: candidate.warnings },
         ...candidate.error === undefined ? {} : { error: candidate.error },
         ...candidate.job === undefined ? {} : { job: candidate.job },
+        ...candidate.scene === undefined ? {} : { scene: candidate.scene },
         cell: { x, y, width: cellWidth, height: cellBodyHeight }
       });
     }
@@ -3085,12 +3133,13 @@ async function composeSlopcameraImageGallery(input) {
   const failed = generated.filter((candidate) => candidate.status === "failed").length;
   const receiptPath = join(outputDir, "receipt.json");
   const receipt = {
-    kind: "slopcamera.image-gallery",
+    kind: input.receipt?.kind ?? "slopcamera.image-gallery",
     schemaVersion: 1,
     subject: plan.subject,
-    galleryKind: plan.kind,
+    galleryKind: input.receipt === undefined ? plan.kind : "scene",
     model,
-    provider: "vercel-ai-gateway",
+    provider: input.receipt === undefined ? "vercel-ai-gateway" : "local",
+    ...input.receipt === undefined ? {} : { baseSceneSha256: input.receipt.baseSceneSha256 },
     cell: { width: cellWidth, height: cellHeight, labelHeight },
     axes: plan.axes,
     candidates: receiptCandidates,

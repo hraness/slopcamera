@@ -217,23 +217,23 @@ describe("gallery generation", () => {
   })
 })
 
-describe("gallery tiled cells", () => {
-  async function splitPng(): Promise<Uint8Array> {
-    const pixels = Buffer.alloc(64 * 64 * 4)
-    for (let y = 0; y < 64; y += 1) {
-      for (let x = 0; x < 64; x += 1) {
-        const index = (y * 64 + x) * 4
-        pixels[index] = x < 32 ? 255 : 0
-        pixels[index + 1] = 0
-        pixels[index + 2] = x < 32 ? 0 : 255
-        pixels[index + 3] = 255
-      }
+async function splitPng(): Promise<Uint8Array> {
+  const pixels = Buffer.alloc(64 * 64 * 4)
+  for (let y = 0; y < 64; y += 1) {
+    for (let x = 0; x < 64; x += 1) {
+      const index = (y * 64 + x) * 4
+      pixels[index] = x < 32 ? 255 : 0
+      pixels[index + 1] = 0
+      pixels[index + 2] = x < 32 ? 0 : 255
+      pixels[index + 3] = 255
     }
-    return new Uint8Array(await sharp(pixels, {
-      raw: { width: 64, height: 64, channels: 4 },
-    }).png().toBuffer())
   }
+  return new Uint8Array(await sharp(pixels, {
+    raw: { width: 64, height: 64, channels: 4 },
+  }).png().toBuffer())
+}
 
+describe("gallery tiled cells", () => {
   test("texture plans default to tiled cells that expose seams", async () => {
     const dir = await mkdtemp(join(tmpdir(), "slopcamera-gallery-"))
     try {
@@ -340,6 +340,12 @@ describe("gallery composition seam", () => {
       const sha256 = Buffer.from(
         await crypto.subtle.digest("SHA-256", bytes),
       ).toString("hex")
+      const failedBytes = new TextEncoder().encode('{"kind":"derived-scene"}\n')
+      const failedPath = join(durable, "failed.scene.json")
+      await Bun.write(failedPath, failedBytes)
+      const failedSha256 = Buffer.from(
+        await crypto.subtle.digest("SHA-256", failedBytes),
+      ).toString("hex")
       const receipt = await composeSlopcameraImageGallery({
         candidates: [
           {
@@ -355,12 +361,16 @@ describe("gallery composition seam", () => {
             status: "generated",
           },
           {
+            bytes: failedBytes,
             error: "provider down",
             id: "lost",
             index: 2,
             job: join(durable, "job-2.json"),
             label: "lost",
+            mediaType: "application/json",
+            path: failedPath,
             prompt: plan.candidates[1]!.prompt,
+            sha256: failedSha256,
             status: "failed",
           },
         ],
@@ -378,6 +388,12 @@ describe("gallery composition seam", () => {
       await expect(readFile(join(dir, "candidate-01-kept.png"))).rejects.toThrow()
       expect(receipt.candidates[1]!.job).toBe(join(durable, "job-2.json"))
       expect(receipt.candidates[1]!.error).toBe("provider down")
+      expect(receipt.candidates[1]!).toMatchObject({
+        bytes: failedBytes.byteLength,
+        mediaType: "application/json",
+        path: failedPath,
+        sha256: failedSha256,
+      })
     } finally {
       await rm(dir, { recursive: true, force: true })
       await rm(durable, { recursive: true, force: true })
@@ -405,6 +421,96 @@ describe("gallery composition seam", () => {
         outputDir: dir,
         plan,
       })).rejects.toThrow(/digest does not match/u)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("composites a rendered cell image while keeping the candidate artifact distinct", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "slopcamera-gallery-"))
+    const durable = await mkdtemp(join(tmpdir(), "slopcamera-gallery-durable-"))
+    try {
+      // A texture plan would normally tile; a rendered cell image wins instead.
+      const plan = planSlopcameraGallery({ subject: "basalt", kind: "texture", count: 1 })
+      const candidateBytes = await fakePng(1)
+      const stillBytes = await splitPng()
+      const stillPath = join(durable, "still.png")
+      await Bun.write(stillPath, stillBytes)
+      const stillSha256 = Buffer.from(
+        await crypto.subtle.digest("SHA-256", stillBytes),
+      ).toString("hex")
+      const receipt = await composeSlopcameraImageGallery({
+        candidates: [{
+          bytes: candidateBytes,
+          cellImage: {
+            bytes: stillBytes,
+            mediaType: "image/png",
+            path: stillPath,
+            sha256: stillSha256,
+          },
+          id: "probed",
+          index: 1,
+          label: "probed",
+          mediaType: "image/png",
+          prompt: plan.candidates[0]!.prompt,
+          status: "generated",
+        }],
+        cellEdge: 64,
+        model: "openai/gpt-image-1.5",
+        outputDir: dir,
+        plan,
+      })
+      const row = receipt.candidates[0]!
+      // The candidate artifact and the rendered still stay separate.
+      expect(row.sha256).not.toBe(stillSha256)
+      expect(row.cellImage).toMatchObject({
+        bytes: stillBytes.byteLength,
+        mediaType: "image/png",
+        path: stillPath,
+        sha256: stillSha256,
+      })
+      // The cell shows the rendered still, untiled: half red, half blue.
+      expect(row.tiled).toBeUndefined()
+      const { data } = await sharp(receipt.gallery.path)
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+      const pixelRow = 28 + 10
+      const at = (x: number) => {
+        const index = (pixelRow * 64 + x) * 4
+        return [data[index]!, data[index + 1]!, data[index + 2]!]
+      }
+      expect(at(8)).toEqual([255, 0, 0])
+      expect(at(56)).toEqual([0, 0, 255])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+      await rm(durable, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects a rendered cell image whose digest does not match its bytes", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "slopcamera-gallery-"))
+    try {
+      const plan = planSlopcameraGallery({ subject: "basalt", count: 1 })
+      await expect(composeSlopcameraImageGallery({
+        candidates: [{
+          bytes: await fakePng(1),
+          cellImage: {
+            bytes: await fakePng(2),
+            mediaType: "image/png",
+            sha256: "0".repeat(64),
+          },
+          id: "bad-still",
+          index: 1,
+          label: "bad-still",
+          mediaType: "image/png",
+          prompt: plan.candidates[0]!.prompt,
+          status: "generated",
+        }],
+        cellEdge: 64,
+        model: "openai/gpt-image-1.5",
+        outputDir: dir,
+        plan,
+      })).rejects.toThrow(/cell image digest does not match/u)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

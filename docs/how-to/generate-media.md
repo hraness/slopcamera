@@ -54,7 +54,18 @@ Each candidate runs as its own tracked paid job (bounded parallelism, zero clien
 
 Choose candidates with `--count` (repeated generations of the same contract), `--vary 'style;lighting=golden hour,night'` (a cartesian product over `style`, `palette`, `material`, `lighting`, `mood`, `detail`), or `--candidates <file.json>` (an explicit `[{id, prompt|variant}]` list). `--kind` selects the prompt contract — `texture` tiles, `skybox` is a 2:1 equirectangular panorama, `backdrop` is a 16:9 plate, `sprite` isolates one subject.
 
+Texture cells composite as a 2×2 tiled repeat so seams are visible in the sheet (`--no-tile` keeps a flat cell; `--tile` opts other kinds in). On the durable lane, `--preview probe` renders each settled `texture`, `skybox`, or `backdrop` candidate inside a fixed probe scene — on lit geometry, as the environment, or behind a lit subject — so the sheet shows applied evidence rather than flat pixels:
+
+```sh
+slopcamera ai image gallery 'weathered copper panel' \
+  --model <image-model-id> --kind texture --preview probe --output-dir review/copper --json
+```
+
+The receipt keeps the generated candidate `path`/`sha256` and the rendered `cellImage` `path`/`sha256` as separate fields; a failed render keeps the flat candidate with a warning. Promotion always targets the candidate artifact, never the review still.
+
 Inspect the sheet, then promote the chosen candidate explicitly: point the consuming command at its retained path, or declare it as a scene image asset and apply it with a `scene patch` (`set-material` `map` for textures, an `environment` entity for a skybox). Gallery output never overwrites existing files and never edits authored source implicitly.
+
+To compare bounded whole-scene variants rather than loose images, `slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory>` applies typed scene patches (materials, transforms, colors, assets, cameras) to an authored scene, renders each derived scene through the qualified renderer, and composites the beauty stills into the same labelled sheet — with no paid calls. The receipt records the base scene digest, per-variant patch and derived scene digests, and the render receipt per row; see [spatial scenes](../spatial-scenes.md).
 
 The portable `slopcamera image gallery '<subject>' --output-dir <directory>` lane composes the same sheet without the durable job records; it defaults to the utility image model like `image generate`.
 

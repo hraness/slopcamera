@@ -3,7 +3,7 @@ type: plan
 title: Rendered review galleries — applied-material cells, seam checks, and scene-variant contact sheets
 description: Upgrade the gallery review loop from flat generated pixels to rendered evidence — textures shown applied to probe geometry with a tiled seam check, skyboxes shown lighting a probe scene, and whole-scene variants composited as rendered stills — while preserving per-candidate durable provenance and explicit promotion.
 area: generative-media
-status: in-progress
+status: completed
 repository_scopes:
   - src
   - src/spatial-scene
@@ -141,7 +141,24 @@ rendered cells need no new composition machinery.
 
 ### Phase 2 — Probe-scene rendered cells
 
-- **Status:** Not started
+- **Status:** Completed — `src/spatial-scene/probe.ts` builds the fixed
+  checked-in probe scene per mode (texture → `material.map` on lit subject +
+  four adjacent wall tiles exposing seams, skybox → `environment` entity
+  lighting a reflective sphere, backdrop → scene surface); `cellImage` on the
+  resolved-candidate contract and receipt row keeps the rendered still
+  distinct from the generated candidate; `attachGalleryProbePreview` in
+  `commands.ts` validates candidate bytes, writes `probe-scene.json` beside
+  the durable artifact, renders one beauty frame through `scene.render`, and
+  verifies still bytes + SHA-256 before composition. Render-phase
+  host-resource claims (`cpu`/`local-io`/`browser`/`output-publication`) are
+  acquired per settled candidate so paid provider waits never pin render
+  capacity; a failed render keeps the flat candidate with a warning.
+  `--preview probe` rejects `image`/`sprite`. Validated by
+  `src/spatial-scene/probe.test.ts` (5 tests), `src/image-gallery.test.ts`
+  composition-seam cases, and `gateway-commands.test.ts` probe rows (rendered
+  still vs candidate provenance, failure fallback, kind rejection). No
+  real-credential end-to-end run yet — environment lacks
+  `AI_GATEWAY_API_KEY`; the seam is fixture-verified.
 - **Depends on:** Phase 1 (shares the compositor).
 - **Objective:** `ai image gallery --kind texture|skybox --preview probe`
   composites rendered stills — each candidate applied to the probe scene —
@@ -171,7 +188,30 @@ rendered cells need no new composition machinery.
 
 ### Phase 3 — Scene-variant galleries
 
-- **Status:** Not started
+- **Status:** Completed — `src/scene-gallery.ts` parses a bounded
+  `slopcamera.scene-variants` document (≤16 variants, typed
+  `slopcamera.spatial-scene-patch` ops, `expectedSceneSha256` optional) and
+  applies every patch up front with per-variant patch/derived-scene digests
+  and diffs. `handleAiSceneGallery` + `dispatchSceneVariant` publish each
+  derived scene at `variants/<id>/scene.json` under the output directory,
+  stage every declared asset payload beneath the variant directory
+  (inherited payloads resolve beside the authored scene; variant-authored
+  `add-asset`/`replace-asset` payloads resolve beside the variants file;
+  digests verified before copying) so derived scenes are standalone
+  re-renderable, pass that complete staged closure as explicit
+  repository-relative `scene.render` asset bindings, bind the expected derived
+  `sceneSha256`, then render beauty stills through `scene.render` (or the
+  `renderGalleryScene` test seam) under `mapBounded` concurrency. The
+  compositor accepts a `receipt` descriptor
+  (`kind: "slopcamera.scene-gallery"`, `provider: "local"`,
+  `baseSceneSha256`); rows carry the derived scene as the candidate artifact
+  and the still as `cellImage`, failures stay in the sheet. Command claims
+  `cpu`/`local-io`/`browser`/`ffmpeg`/`output-publication` (variants may
+  carry video assets); no network or paid work. Validated by
+  `src/scene-gallery.test.ts` (8 tests) and three `gateway-commands.test.ts`
+  cases asserting byte-identical authored scene, staged payload resolution
+  inside the render seam, per-row digests, failure retention, and
+  no-replace/camera rejection before any render.
 - **Depends on:** Phase 2 (reuses its render-per-candidate wiring and
   `cellImage` contract).
 - **Objective:** `slopcamera ai scene gallery <scene.json>` composites one
@@ -205,11 +245,34 @@ rendered cells need no new composition machinery.
   `apps/desktop/cli/gateway-commands.test.ts`, new variant tests) plus
   `bun run check:standalone` after any inventory-bearing change and
   `bun run check` before handoff.
-- One real-credential `ai image gallery --preview probe` run as end-to-end
-  evidence that rendered cells, digests, and job records line up.
+- Live qualification target, when a paid call is separately authorized: one
+  real-credential `ai image gallery --preview probe` run proving provider
+  output, rendered cells, digests, and job records line up.
 - Generated bundles: `bun run build:sdk` when `src/` changes;
   `bun run build:desktop:cli` when the desktop CLI changes — rebuild from a
   clean tree (see risks).
+
+Final evidence:
+
+- `bun test src/scene-gallery.test.ts src/image-gallery.test.ts
+  src/spatial-scene/probe.test.ts apps/desktop/cli/gateway-commands.test.ts
+  apps/desktop/cli/args.test.ts`: 80 pass, 0 fail (the ignored checked-out
+  content-footer worktree duplicates some unchanged tests).
+- SDK and desktop TypeScript checks passed; ESLint passed on every touched
+  source and test file.
+- SDK and desktop bundles rebuilt without the unrelated `html-scene.ts`
+  working-tree change; `bun scripts/check-standalone.ts` passed and the legacy
+  identity inventory was refreshed.
+- `bun run check` passed end to end after a frozen install corrected local
+  `@hraness/design-kit` dependency drift; an isolated temporary HOME avoided
+  unrelated machine-global host-resource holders without changing source or
+  production configuration.
+- `kb percolate plans/rendered-review-galleries --root kb`, `kb refresh
+  --root kb`, and `kb check --root kb` passed; the seven reported contextual
+  orphans are existing intentional plan leaves.
+- No paid live Gateway call was made. Probe rendering is qualified through the
+  injected render seam and the repository's real `scene.render` contract;
+  live provider behavior remains explicitly unclaimed.
 
 ## Risks and recovery
 
@@ -225,3 +288,35 @@ rendered cells need no new composition machinery.
   is deliberate; the schema must name fields unambiguously (`path` =
   generated candidate, `cellImage.path` = rendered cell) so promotion picks
   the generated artifact, never the review render.
+
+## Result
+
+All three phases were implemented on `feat/rendered-galleries` for
+current-head review: texture galleries default to deterministic 2×2 seam
+cells; durable texture, skybox, and backdrop galleries can render fixed
+probe-scene cells; and `slopcamera ai scene gallery` applies bounded typed
+variants, stages and binds their exact asset closures, renders beauty stills
+with bounded concurrency, and writes a labelled local gallery receipt.
+Candidate artifacts, derived scenes, render stills, scene identities, and
+failures remain distinct and digest-bound. No path overwrites the authored
+source, no gallery promotes a candidate automatically, and render failure
+rows retain any derived scene that was already published.
+
+Final review corrected four cross-phase issues before closeout: texture probe
+seams now use four adjacent mapped planes rather than one clamped stretched
+map; probe and variant renders bind the expected scene digest; variant renders
+receive explicit exact asset bindings in addition to standalone staged
+payloads; and failed variant rows retain derived-scene artifact fields. Input,
+asset, render, and receipt paths are repository-contained and physical.
+
+## Durable memory
+
+Current operating guidance is owned by `docs/how-to/generate-media.md`,
+`docs/spatial-scenes.md`, and
+`skills/slopcamera/references/image-galleries.md`; the skill index recommends
+that workflow for image and whole-scene alternatives. The reusable contract is
+simple: `path`/`sha256` identify the candidate or derived scene,
+`cellImage.path`/`sha256` identify review pixels, and explicit promotion always
+targets the selected candidate or typed patch—not the rendered cell. No
+additional maintained KB concept was needed; this completed plan preserves the
+design rationale, execution evidence, and live-qualification proof limit.
