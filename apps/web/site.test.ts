@@ -240,20 +240,20 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
 }
 
 function assertBuiltHtmlBudget(html: string): number {
-  // The in-flow content footer candidate measures 59,677 sealed bytes. Keep a
-  // 323-byte headroom under the reviewed 60,000-byte ceiling and count the
-  // entire seal.
+  // The in-flow content footer plus the eight decorative topic icons measure
+  // 60,938 sealed bytes. Keep a 322-byte headroom under the reviewed
+  // 61,260-byte ceiling and count the entire seal.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 60_000) throw new Error(`Built site HTML exceeds its 60,000-byte budget: ${bytes}`)
+  if (bytes >= 61_260) throw new Error(`Built site HTML exceeds its 61,260-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(59_999))).toBe(59_999)
-  expect(() => assertBuiltHtmlBudget("x".repeat(60_000)))
-    .toThrow("Built site HTML exceeds its 60,000-byte budget: 60000")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(59_999)}é`))
-    .toThrow("Built site HTML exceeds its 60,000-byte budget: 60001")
+  expect(assertBuiltHtmlBudget("x".repeat(61_259))).toBe(61_259)
+  expect(() => assertBuiltHtmlBudget("x".repeat(61_260)))
+    .toThrow("Built site HTML exceeds its 61,260-byte budget: 61260")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(61_259)}é`))
+    .toThrow("Built site HTML exceeds its 61,260-byte budget: 61261")
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
@@ -1343,7 +1343,7 @@ describe("static Slopcamera site", () => {
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(60_000)
+    expect(emittedBytes).toBeLessThan(61_260)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1570,6 +1570,7 @@ describe("static Slopcamera site", () => {
       "docs",
       "graphs",
       "icon.png",
+      "icons",
       "index.html",
       "index.md",
       "lantern-material",
@@ -1648,6 +1649,9 @@ describe("static Slopcamera site", () => {
     expect(robotsTxt).toContain("Sitemap: https://slopcamera.com/sitemap.xml")
     expect(sitemap).not.toContain("xmlns:image")
     expect(sitemap).toBe(renderSitemapXml())
+    for (const optional of ["<lastmod>", "<changefreq>", "<priority>"]) {
+      expect(sitemap).not.toContain(optional)
+    }
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
     expect(llmsTxt).toContain("> Slopcamera is a local visual studio for coding agents.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
@@ -2006,10 +2010,25 @@ describe("static Slopcamera site", () => {
     }))
     expect(docsNotFound?.status).toBe(404)
     expect(docsNotFound?.headers.get("x-robots-tag")).toBe("noindex")
-    // Direct .md and .html requests bypass negotiation and serve statically.
-    expect(negotiateSiteRequest(new Request("https://slopcamera.com/docs/index.md", {
-      headers: { Accept: "text/markdown" },
-    }))).toBeUndefined()
+    // A direct request for a published .md mirror serves the identical sealed
+    // file with the canonical and alternate headers the negotiated response
+    // carries. Unregistered .md paths still bypass to the static origin.
+    for (const path of ["/docs/index.md", "/docs/tutorials/claude-code.md"]) {
+      const mirrorPage = docsPageForRequestPath(path)
+      expect(mirrorPage).not.toBeNull()
+      const direct = negotiateSiteRequest(new Request(`https://slopcamera.com${path}`))
+      expect(direct?.status).toBe(200)
+      expect(direct?.headers.get("x-middleware-rewrite"))
+        .toBe(`https://slopcamera.com${docsMarkdownUrl(mirrorPage!)}`)
+      expect(direct?.headers.get("link"))
+        .toBe(`<${docsCanonicalUrl(mirrorPage!)}>; rel="canonical", <${docsMarkdownUrl(mirrorPage!)}>; rel="alternate"; type="text/markdown"`)
+      expect(direct?.headers.get("vary")).toBe("Accept, Accept-Encoding")
+    }
+    for (const path of ["/index.md", "/docs.md", "/docs/not-a-page.md", "/sitemap.md"]) {
+      expect(negotiateSiteRequest(new Request(`https://slopcamera.com${path}`, {
+        headers: { Accept: "text/markdown" },
+      }))).toBeUndefined()
+    }
 
     const markdownNotFound = negotiateSiteRequest(new Request("https://slopcamera.com/this-path-does-not-exist", {
       headers: { Accept: "text/markdown" },
