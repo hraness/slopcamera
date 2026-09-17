@@ -78,7 +78,10 @@ export function spatialGeneratorAttemptId(options: {
 }
 
 function generatedAssetReference(entity: SpatialEntity): string | undefined {
-  if (entity.kind === "mesh" && entity.geometry.kind === "asset") return entity.geometry.assetId
+  if (entity.kind === "mesh") {
+    if (entity.geometry.kind === "asset") return entity.geometry.assetId
+    return entity.material.map
+  }
   if (entity.kind === "text") return entity.fontAssetId
   return "assetId" in entity ? entity.assetId : undefined
 }

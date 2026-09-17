@@ -21,7 +21,7 @@ import {
 } from "./icon.js"
 import {
   generateSlopcameraImageGallery,
-  slopcameraGalleryAxes,
+  parseSlopcameraGalleryVary,
   slopcameraGalleryKinds,
   slopcameraGalleryLimits,
   type SlopcameraGalleryAxisSpec,
@@ -177,28 +177,7 @@ function parseDuotone(value: string | undefined): readonly [string, string] | un
 
 function parseGalleryVary(value: string | undefined): readonly SlopcameraGalleryAxisSpec[] | undefined {
   if (value === undefined) return undefined
-  const specs: SlopcameraGalleryAxisSpec[] = []
-  for (const part of value.split(";")) {
-    const trimmed = part.trim()
-    if (trimmed === "") continue
-    const [axis, values] = trimmed.split("=", 2)
-    if (!slopcameraGalleryAxes.includes(axis!.trim() as never)) {
-      throw new Error(`--vary axis must be one of: ${slopcameraGalleryAxes.join(", ")}`)
-    }
-    if (values === undefined) {
-      specs.push({ axis: axis!.trim() as SlopcameraGalleryAxisSpec["axis"] })
-      continue
-    }
-    const list = values.split(",").map((item) => item.trim()).filter((item) => item.length > 0)
-    if (list.length === 0 || list.length > slopcameraGalleryLimits.candidates) {
-      throw new Error("--vary values must be a non-empty bounded comma-separated list")
-    }
-    specs.push({ axis: axis!.trim() as SlopcameraGalleryAxisSpec["axis"], values: list })
-  }
-  if (specs.length === 0) {
-    throw new Error("--vary requires at least one axis, e.g. --vary 'style; palette=warm,cool'")
-  }
-  return specs
+  return parseSlopcameraGalleryVary(value)
 }
 
 async function readGalleryCandidates(path: string): Promise<unknown> {

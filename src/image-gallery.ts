@@ -179,7 +179,7 @@ export interface SlopcameraGalleryPlanInput {
   readonly kind?: SlopcameraGalleryKind
   readonly count?: number
   readonly vary?: readonly (SlopcameraGalleryAxisSpec | SlopcameraGalleryAxis | unknown)[]
-  readonly candidates?: readonly SlopcameraGalleryExplicitCandidate[]
+  readonly candidates?: readonly (SlopcameraGalleryExplicitCandidate | unknown)[]
 }
 
 export interface SlopcameraGalleryCandidate {
@@ -347,6 +347,40 @@ export function planSlopcameraGallery(input: SlopcameraGalleryPlanInput): Slopca
   }
 }
 
+/**
+ * Parse the shared `--vary` CLI grammar: `axis[=v1,v2][;axis2...]`. Both the
+ * portable and desktop command surfaces accept the same spelling.
+ */
+export function parseSlopcameraGalleryVary(
+  value: string,
+): SlopcameraGalleryAxisSpec[] {
+  const specs: SlopcameraGalleryAxisSpec[] = []
+  for (const part of value.split(";")) {
+    const trimmed = part.trim()
+    if (trimmed === "") continue
+    const [axis, values] = trimmed.split("=", 2)
+    if (!slopcameraGalleryAxes.includes(axis!.trim() as SlopcameraGalleryAxis)) {
+      invalidArgument(`vary axis must be one of: ${slopcameraGalleryAxes.join(", ")}.`)
+    }
+    if (values === undefined) {
+      specs.push({ axis: axis!.trim() as SlopcameraGalleryAxis })
+      continue
+    }
+    const list = values
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+    if (list.length === 0 || list.length > slopcameraGalleryLimits.candidates) {
+      invalidArgument("vary values must be a non-empty bounded comma-separated list.")
+    }
+    specs.push({ axis: axis!.trim() as SlopcameraGalleryAxis, values: list })
+  }
+  if (specs.length === 0) {
+    invalidArgument("vary requires at least one axis, e.g. 'style; palette=warm,cool'.")
+  }
+  return specs
+}
+
 /* Deterministic 5×7 bitmap label font. Gallery labels must render identically
  * on every host, so text is drawn pixel-by-pixel rather than through a
  * platform font stack. */
@@ -489,6 +523,8 @@ export interface SlopcameraGalleryCandidateReceipt {
   readonly requestId?: string
   readonly warnings?: readonly string[]
   readonly error?: string
+  /** Durable provenance record for the candidate, when the host keeps one. */
+  readonly job?: string
   readonly cell?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 }
 
@@ -515,7 +551,14 @@ export interface SlopcameraGalleryReceipt {
   readonly clientMaxRetries: 0
 }
 
-interface GeneratedCandidate {
+/**
+ * One settled candidate outcome. `path` and `sha256` are set when the caller
+ * already published the bytes durably (for example through a tracked Gateway
+ * artifact job); otherwise the composition step publishes `bytes` into the
+ * gallery output directory itself. `job` optionally names the durable
+ * provenance record an agent can inspect before promoting the candidate.
+ */
+export interface SlopcameraGalleryResolvedCandidate {
   readonly index: number
   readonly id: string
   readonly label: string
@@ -526,6 +569,9 @@ interface GeneratedCandidate {
   readonly requestId?: string
   readonly warnings?: readonly string[]
   readonly error?: string
+  readonly job?: string
+  readonly path?: string
+  readonly sha256?: string
 }
 
 async function generateCandidate(
@@ -533,7 +579,7 @@ async function generateCandidate(
   model: string,
   input: SlopcameraGalleryInput,
   dependencies: SlopcameraGalleryDependencies,
-): Promise<GeneratedCandidate> {
+): Promise<SlopcameraGalleryResolvedCandidate> {
   const generate = dependencies.generate ?? generateSlopcameraImage
   try {
     const generated: GeneratedSlopcameraImage = await generate(
@@ -588,33 +634,53 @@ async function mapBounded<In, Out>(
   return results
 }
 
+function galleryModel(value: unknown): string {
+  const model = value ?? slopcameraImageModels[1]
+  if (
+    typeof model !== "string" ||
+    model.length > 256 ||
+    !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)
+  ) {
+    invalidArgument("model must be a bounded Vercel AI Gateway provider/model id.")
+  }
+  return model
+}
+
+function galleryCellEdge(value: unknown): number {
+  const cellEdge = value ?? slopcameraGalleryLimits.cellEdgeDefault
+  if (
+    typeof cellEdge !== "number" ||
+    !Number.isInteger(cellEdge) ||
+    cellEdge < slopcameraGalleryLimits.cellEdgeMin ||
+    cellEdge > slopcameraGalleryLimits.cellEdgeMax
+  ) {
+    invalidArgument(`cellEdge must be an integer from ${String(slopcameraGalleryLimits.cellEdgeMin)} through ${String(slopcameraGalleryLimits.cellEdgeMax)}.`)
+  }
+  return cellEdge
+}
+
+function galleryOutputDir(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length < 1 ||
+    value.length > 4_096 ||
+    value.includes("\0")
+  ) {
+    invalidArgument("outputDir must be a non-empty bounded local directory path.")
+  }
+  return resolve(value)
+}
+
 export async function generateSlopcameraImageGallery(
   rawInput: unknown,
   dependencies: SlopcameraGalleryDependencies = {},
 ): Promise<SlopcameraGalleryReceipt> {
   if (!isRecord(rawInput)) invalidArgument("Gallery input must be an object.")
   const input = rawInput as unknown as SlopcameraGalleryInput
-  if (
-    typeof input.outputDir !== "string" ||
-    input.outputDir.length < 1 ||
-    input.outputDir.length > 4_096 ||
-    input.outputDir.includes("\0")
-  ) {
-    invalidArgument("outputDir must be a non-empty bounded local directory path.")
-  }
-  const model = input.model ?? slopcameraImageModels[1]
-  if (
-    model.length > 256 ||
-    !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)
-  ) {
-    invalidArgument("model must be a bounded Vercel AI Gateway provider/model id.")
-  }
-  const cellEdge = input.cellEdge ?? slopcameraGalleryLimits.cellEdgeDefault
-  if (!Number.isInteger(cellEdge) || cellEdge < slopcameraGalleryLimits.cellEdgeMin || cellEdge > slopcameraGalleryLimits.cellEdgeMax) {
-    invalidArgument(`cellEdge must be an integer from ${String(slopcameraGalleryLimits.cellEdgeMin)} through ${String(slopcameraGalleryLimits.cellEdgeMax)}.`)
-  }
+  const outputDir = galleryOutputDir(input.outputDir)
+  const model = galleryModel(input.model)
+  const cellEdge = galleryCellEdge(input.cellEdge)
   const plan = planSlopcameraGallery(input)
-  const outputDir = resolve(input.outputDir)
   await mkdir(outputDir, { recursive: true })
 
   const generated = await mapBounded(
@@ -622,6 +688,38 @@ export async function generateSlopcameraImageGallery(
     slopcameraGalleryLimits.concurrency,
     async candidate => await generateCandidate(candidate, model, input, dependencies),
   )
+  return await composeSlopcameraImageGallery({
+    candidates: generated,
+    cellEdge,
+    model,
+    outputDir,
+    plan,
+  })
+}
+
+/**
+ * Compose settled candidates into the labelled contact sheet and receipt.
+ * Hosts that publish candidates through their own durable artifact lane set
+ * `path`/`sha256`/`job` per candidate; candidates without `path` are published
+ * into `outputDir` by this seam. Either way every candidate row keeps its
+ * prompt, digest, and provenance so review and promotion stay explicit.
+ */
+export async function composeSlopcameraImageGallery(input: {
+  readonly candidates: readonly SlopcameraGalleryResolvedCandidate[]
+  readonly cellEdge?: number
+  readonly model: string
+  readonly outputDir: string
+  readonly plan: SlopcameraGalleryPlan
+}): Promise<SlopcameraGalleryReceipt> {
+  const outputDir = galleryOutputDir(input.outputDir)
+  const model = galleryModel(input.model)
+  const cellEdge = galleryCellEdge(input.cellEdge)
+  const { plan } = input
+  if (!isRecord(plan) || !Array.isArray(plan.candidates) || plan.candidates.length === 0) {
+    invalidArgument("plan must be a non-empty gallery plan from planSlopcameraGallery.")
+  }
+  const generated = input.candidates
+  await mkdir(outputDir, { recursive: true })
 
   const labelHeight = slopcameraGalleryLimits.labelHeight
   const cellWidth = cellEdge
@@ -653,11 +751,21 @@ export async function generateSlopcameraImageGallery(
       left: x,
       top: y,
     })
-    if (candidate.status === "generated" && candidate.bytes !== undefined) {
-      const fileName = `candidate-${String(candidate.index).padStart(2, "0")}-${slug(candidate.id)}.${mediaExtension(candidate.mediaType!)}`
-      const path = join(outputDir, fileName)
-      await atomicPublish(path, candidate.bytes)
+    if (candidate.status === "generated") {
+      if (candidate.bytes === undefined || candidate.mediaType === undefined) {
+        invalidArgument("A generated gallery candidate requires its bytes and media type.")
+      }
+      const path = candidate.path ?? join(
+        outputDir,
+        `candidate-${String(candidate.index).padStart(2, "0")}-${slug(candidate.id)}.${mediaExtension(candidate.mediaType)}`,
+      )
+      if (candidate.path === undefined) {
+        await atomicPublish(path, candidate.bytes)
+      }
       const sha256 = createHash("sha256").update(candidate.bytes).digest("hex")
+      if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
+        invalidArgument("A pre-published gallery candidate digest does not match its bytes.")
+      }
       const source = sharp(candidate.bytes, {
         limitInputPixels: slopcameraGalleryLimits.candidatePixels,
         failOn: "warning",
@@ -685,9 +793,10 @@ export async function generateSlopcameraImageGallery(
         path,
         sha256,
         bytes: candidate.bytes.byteLength,
-        ...(candidate.mediaType === undefined ? {} : { mediaType: candidate.mediaType }),
+        mediaType: candidate.mediaType,
         ...(candidate.requestId === undefined ? {} : { requestId: candidate.requestId }),
         ...(candidate.warnings === undefined ? {} : { warnings: candidate.warnings }),
+        ...(candidate.job === undefined ? {} : { job: candidate.job }),
         cell: { x, y, width: cellWidth, height: cellBodyHeight },
       })
     } else {
@@ -713,6 +822,7 @@ export async function generateSlopcameraImageGallery(
         prompt: candidate.prompt,
         status: "failed",
         ...(candidate.error === undefined ? {} : { error: candidate.error }),
+        ...(candidate.job === undefined ? {} : { job: candidate.job }),
         cell: { x, y, width: cellWidth, height: cellBodyHeight },
       })
     }

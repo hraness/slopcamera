@@ -27,7 +27,7 @@ export const SPATIAL_AUDIT_LIMITS = Object.freeze({
   reportBytes: 33_554_432,
 })
 
-const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"] as const
+const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"] as const
 const BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"] as const
 const CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"] as const
 const FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"] as const
@@ -88,7 +88,7 @@ export const SpatialAuditFindingSchema = z.strictObject({
 const entityKindCounts = z.strictObject({
   group: z.number().int().min(0), mesh: z.number().int().min(0), image: z.number().int().min(0),
   diagram: z.number().int().min(0), video: z.number().int().min(0), text: z.number().int().min(0),
-  light: z.number().int().min(0), splat: z.number().int().min(0),
+  light: z.number().int().min(0), splat: z.number().int().min(0), environment: z.number().int().min(0),
 })
 export const SpatialAuditReportSchema = z.strictObject({
   kind: z.literal("slopcamera.spatial-audit"),

@@ -1,4 +1,15 @@
 import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
+import { SlopcameraCloudError } from "../../../src/cloud-errors";
+import {
+  composeSlopcameraImageGallery,
+  parseSlopcameraGalleryVary,
+  planSlopcameraGallery,
+  slopcameraGalleryLimits,
+  type SlopcameraGalleryCandidate,
+  type SlopcameraGalleryKind,
+  type SlopcameraGalleryPlan,
+  type SlopcameraGalleryResolvedCandidate,
+} from "../../../src/image-gallery";
 import { createDirectingBlobSession } from "./directing-blob";
 import { assembleDirectingClips, extractDirectingEndpoint, importDirectingAnchor } from "./directing-media";
 import { executeDirectingCommand } from "./directing-service";
@@ -8,7 +19,7 @@ import { executeSpatialSceneCommand } from "./spatial-scene-service";
 import { executeSpatialProjectCommand } from "./spatial-project-service";
 import { executeSpatialWorldCommand } from "./spatial-world-service";
 import { constants } from "node:fs";
-import { link, lstat, open, realpath, rm } from "node:fs/promises";
+import { link, lstat, mkdir, open, realpath, rm } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   createDefaultHostResourceCoordinator,
@@ -4458,6 +4469,20 @@ function gatewayCliError(error: unknown): CliError {
   if (error instanceof GatewayProviderOptionsError) {
     return new CliError("usage", error.message);
   }
+  if (error instanceof SlopcameraCloudError) {
+    return new CliError(
+      error.code === "INVALID_ARGUMENT"
+        ? "usage"
+        : error.code === "OUTPUT_WRITE_FAILED"
+          ? "conflict"
+          : error.code === "AUTHENTICATION_REQUIRED"
+            ? "authorization-required"
+            : error.code === "GENERATION_INVALID_RESPONSE"
+              ? "invalid-data"
+              : "unavailable",
+      error.message,
+    );
+  }
   return asCliError(error);
 }
 
@@ -5109,6 +5134,217 @@ async function handleAiImageGenerate(
       command.json,
       summary,
       () => gatewayArtifactHuman(summary),
+    );
+  });
+}
+
+async function dispatchGalleryCandidate(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-image-gallery" }>,
+  plan: SlopcameraGalleryPlan,
+  candidate: SlopcameraGalleryCandidate,
+  timeoutMs: number,
+): Promise<SlopcameraGalleryResolvedCandidate> {
+  const tracker = await createGatewayJobTracker(context, {
+    model: command.model,
+    operation: "image.generate",
+    request: {
+      candidate: {
+        id: candidate.id,
+        index: candidate.index,
+        label: candidate.label,
+      },
+      count: 1,
+      galleryKind: plan.kind,
+      promptCharacters: candidate.prompt.length,
+      promptSha256: sha256Hex(candidate.prompt),
+      subjectSha256: sha256Hex(plan.subject),
+    },
+  });
+  const settled = (
+    partial: Omit<SlopcameraGalleryResolvedCandidate, "id" | "index" | "job" | "label" | "prompt">,
+  ): SlopcameraGalleryResolvedCandidate => ({
+    id: candidate.id,
+    index: candidate.index,
+    job: tracker.path,
+    label: candidate.label,
+    prompt: candidate.prompt,
+    ...partial,
+  });
+  try {
+    const bundle = await executeTrackedGatewayOperation(
+      context,
+      tracker,
+      async service => await service.generateImage(
+        {
+          consent: gatewayConsent(context),
+          model: command.model,
+          prompt: candidate.prompt,
+        },
+        {
+          ...(context.abortSignal === undefined
+            ? {}
+            : { signal: context.abortSignal }),
+          timeoutMs,
+        },
+      ),
+      result => result,
+    );
+    const output = bundle.outputs[0];
+    if (output === undefined) {
+      return settled({
+        error: "The Gateway image job completed without an image output.",
+        status: "failed",
+      });
+    }
+    const bytes = await readBoundedPhysicalBytes(
+      output.path,
+      CLI_GATEWAY_IMAGE_INPUT_BYTES,
+    );
+    return settled({
+      bytes,
+      mediaType: output.mediaType,
+      path: output.path,
+      ...(bundle.receipt.routing.generationId === undefined
+        ? {}
+        : { requestId: bundle.receipt.routing.generationId }),
+      sha256: output.sha256,
+      status: "generated",
+      ...(bundle.receipt.warnings.length === 0
+        ? {}
+        : { warnings: bundle.receipt.warnings }),
+    });
+  } catch (error) {
+    // A settled paid job stays a gallery row: the receipt keeps the failure
+    // and the durable job path so review never depends on provider success.
+    return settled({
+      error: gatewayCliError(error).message,
+      status: "failed",
+    });
+  }
+}
+
+async function handleAiImageGallery(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-image-gallery" }>,
+): Promise<void> {
+  await withGatewayErrors(async () => {
+    const timeoutMs = gatewayTimeoutMs(command.timeout);
+    const vary = command.vary === undefined
+      ? undefined
+      : parseSlopcameraGalleryVary(command.vary);
+    let explicitCandidates: readonly unknown[] | undefined;
+    if (command.candidatesFile !== undefined) {
+      const text = await readGatewayTextFile(
+        context.io.cwd(),
+        command.candidatesFile,
+        64 * 1024,
+      );
+      let parsedCandidates: unknown;
+      try {
+        parsedCandidates = JSON.parse(text) as unknown;
+      } catch {
+        throw new CliError(
+          "usage",
+          "--candidates must be valid JSON.",
+        );
+      }
+      if (!Array.isArray(parsedCandidates)) {
+        throw new CliError(
+          "usage",
+          "--candidates must be a JSON array of {id, prompt|variant} entries.",
+        );
+      }
+      explicitCandidates = parsedCandidates;
+    }
+    const plan = planSlopcameraGallery({
+      ...(explicitCandidates === undefined
+        ? {}
+        : { candidates: explicitCandidates }),
+      ...(command.count === undefined ? {} : { count: command.count }),
+      ...(command.galleryKind === undefined
+        ? {}
+        : { kind: command.galleryKind as SlopcameraGalleryKind }),
+      subject: command.subject,
+      ...(vary === undefined ? {} : { vary }),
+    });
+    const outputDir = resolve(context.io.cwd(), command.outputDir);
+    await mkdir(outputDir, { recursive: true });
+    for (const name of ["gallery.png", "receipt.json"] as const) {
+      const existing = await lstat(join(outputDir, name)).then(
+        () => true,
+        () => false,
+      );
+      if (existing) {
+        throw new CliError(
+          "conflict",
+          `Gallery outputs are never replaced; ${name} already exists in ${command.outputDir}.`,
+        );
+      }
+    }
+    const resolved = await mapBounded(
+      plan.candidates,
+      slopcameraGalleryLimits.concurrency,
+      async candidate => await dispatchGalleryCandidate(
+        context,
+        command,
+        plan,
+        candidate,
+        timeoutMs,
+      ),
+    );
+    const receipt = await composeSlopcameraImageGallery({
+      candidates: resolved,
+      ...(command.cell === undefined ? {} : { cellEdge: command.cell }),
+      model: command.model,
+      outputDir,
+      plan,
+    });
+    const summary = {
+      candidates: receipt.candidates.map(candidate => ({
+        id: candidate.id,
+        index: candidate.index,
+        ...(candidate.job === undefined
+          ? {}
+          : { job: displayPath(context.paths.repositoryRoot, candidate.job) }),
+        ...(candidate.path === undefined
+          ? {}
+          : { path: displayPath(context.paths.repositoryRoot, candidate.path) }),
+        ...(candidate.sha256 === undefined ? {} : { sha256: candidate.sha256 }),
+        status: candidate.status,
+        ...(candidate.error === undefined ? {} : { error: candidate.error }),
+      })),
+      counts: receipt.counts,
+      gallery: {
+        bytes: receipt.gallery.bytes,
+        height: receipt.gallery.height,
+        path: displayPath(context.paths.repositoryRoot, receipt.gallery.path),
+        sha256: receipt.gallery.sha256,
+        width: receipt.gallery.width,
+      },
+      kind: receipt.galleryKind,
+      model: receipt.model,
+      receiptPath: displayPath(
+        context.paths.repositoryRoot,
+        receipt.receiptPath,
+      ),
+      subject: receipt.subject,
+    };
+    writeValue(
+      context.io,
+      command.json,
+      summary,
+      () => [
+        `image.gallery ${receipt.counts.generated}/${receipt.counts.requested} candidates generated (${receipt.model})`,
+        ...receipt.candidates.map(candidate => (
+          `#${String(candidate.index)} ${candidate.id}\t${candidate.status}`
+          + (candidate.job === undefined
+            ? ""
+            : `\tjob ${displayPath(context.paths.repositoryRoot, candidate.job)}`)
+        )),
+        `gallery ${summary.gallery.path}`,
+        `receipt ${summary.receiptPath}`,
+      ].join("\n"),
     );
   });
 }
@@ -6298,6 +6534,7 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "ai-models-list": await handleAiModelsList(context, command); return;
     case "ai-models-show": await handleAiModelsShow(context, command); return;
     case "ai-image-generate": await handleAiImageGenerate(context, command); return;
+    case "ai-image-gallery": await handleAiImageGallery(context, command); return;
     case "ai-video-generate": await handleAiVideoGenerate(context, command); return;
     case "ai-speech-generate": await handleAiSpeechGenerate(context, command); return;
     case "ai-transcribe": await handleAiTranscribe(context, command); return;
@@ -6592,6 +6829,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "diagram-render":
     case "image-vectorize": return { kind: "workspace-private" };
     case "ai-image-generate":
+    case "ai-image-gallery":
     case "ai-video-generate":
     case "ai-speech-generate":
     case "ai-transcribe": return undefined;

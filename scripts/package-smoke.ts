@@ -41,11 +41,11 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Native studio archive: 429 files, 4,001,095 packed and 10,680,817 unpacked bytes.
+// Native studio archive: 460 files, 4,175,980 packed and 11,374,530 unpacked bytes.
 // Keep bounded headroom aligned with the independent release artifact readers.
-const maximumPackedFiles = 460;
+const maximumPackedFiles = 500;
 const maximumPackedBytes = 4_300_000;
-const maximumUnpackedBytes = 11_300_000;
+const maximumUnpackedBytes = 11_800_000;
 const packedHtmlExamplePaths = [
   "examples/html/music-video.html",
   "examples/html/music-video.json",

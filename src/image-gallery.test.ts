@@ -4,8 +4,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import sharp from "sharp"
 import {
+  composeSlopcameraImageGallery,
   galleryPromptFor,
   generateSlopcameraImageGallery,
+  parseSlopcameraGalleryVary,
   planSlopcameraGallery,
   slopcameraGalleryLimits,
 } from "./image-gallery.ts"
@@ -209,6 +211,101 @@ describe("gallery generation", () => {
         counts: { failed: number }
       }
       expect(persisted.counts.failed).toBe(2)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("gallery vary grammar", () => {
+  test("parses axes with optional value lists", () => {
+    expect(parseSlopcameraGalleryVary("style; palette=warm,cool")).toEqual([
+      { axis: "style" },
+      { axis: "palette", values: ["warm", "cool"] },
+    ])
+    expect(() => parseSlopcameraGalleryVary("not-an-axis")).toThrow(/vary axis/u)
+    expect(() => parseSlopcameraGalleryVary("style=")).toThrow(/values/u)
+    expect(() => parseSlopcameraGalleryVary("  ")).toThrow(/at least one axis/u)
+  })
+})
+
+describe("gallery composition seam", () => {
+  test("keeps pre-published candidate paths, digests, and job references", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "slopcamera-gallery-"))
+    const durable = await mkdtemp(join(tmpdir(), "slopcamera-gallery-durable-"))
+    try {
+      const plan = planSlopcameraGallery({ subject: "basalt", kind: "texture", count: 2 })
+      const bytes = await fakePng(1)
+      const durablePath = join(durable, "candidate.png")
+      await Bun.write(durablePath, bytes)
+      const sha256 = Buffer.from(
+        await crypto.subtle.digest("SHA-256", bytes),
+      ).toString("hex")
+      const receipt = await composeSlopcameraImageGallery({
+        candidates: [
+          {
+            bytes,
+            id: "kept",
+            index: 1,
+            job: join(durable, "job.json"),
+            label: "kept",
+            mediaType: "image/png",
+            path: durablePath,
+            prompt: plan.candidates[0]!.prompt,
+            sha256,
+            status: "generated",
+          },
+          {
+            error: "provider down",
+            id: "lost",
+            index: 2,
+            job: join(durable, "job-2.json"),
+            label: "lost",
+            prompt: plan.candidates[1]!.prompt,
+            status: "failed",
+          },
+        ],
+        cellEdge: 64,
+        model: "openai/gpt-image-1.5",
+        outputDir: dir,
+        plan,
+      })
+      expect(receipt.counts).toEqual({ requested: 2, generated: 1, failed: 1 })
+      const kept = receipt.candidates[0]!
+      expect(kept.path).toBe(durablePath)
+      expect(kept.sha256).toBe(sha256)
+      expect(kept.job).toBe(join(durable, "job.json"))
+      // The pre-published file is referenced, never copied into outputDir.
+      await expect(readFile(join(dir, "candidate-01-kept.png"))).rejects.toThrow()
+      expect(receipt.candidates[1]!.job).toBe(join(durable, "job-2.json"))
+      expect(receipt.candidates[1]!.error).toBe("provider down")
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+      await rm(durable, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects a pre-published digest that does not match the bytes", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "slopcamera-gallery-"))
+    try {
+      const plan = planSlopcameraGallery({ subject: "basalt", count: 1 })
+      await expect(composeSlopcameraImageGallery({
+        candidates: [{
+          bytes: await fakePng(1),
+          id: "mismatch",
+          index: 1,
+          label: "mismatch",
+          mediaType: "image/png",
+          path: join(dir, "elsewhere.png"),
+          prompt: plan.candidates[0]!.prompt,
+          sha256: "0".repeat(64),
+          status: "generated",
+        }],
+        cellEdge: 64,
+        model: "openai/gpt-image-1.5",
+        outputDir: dir,
+        plan,
+      })).rejects.toThrow(/digest does not match/u)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
