@@ -1317,7 +1317,7 @@ var SpatialAuditReportSchema = z3.strictObject({
   findings: z3.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
   omittedFindings: z3.number().int().min(0)
 });
-function auditLocalBounds(entity, assetBounds) {
+function spatialEntityLocalBounds(entity, assetBounds) {
   const supplied = (assetId) => assetBounds[assetId] === undefined ? { status: "unknown", reason: "requires-asset-decoding" } : { status: "bounded", bounds: assetBounds[assetId] };
   let half;
   if (entity.kind === "mesh") {
@@ -1416,7 +1416,7 @@ function auditSpatialScene(sceneInput, options) {
   if (scene.entities.length * timesUs.length > SPATIAL_AUDIT_LIMITS.entitySamples) {
     throw new SpatialSceneError("invalid-data", "Audit entity-sample budget exceeded; pass fewer timesUs samples.", "timesUs");
   }
-  const enclosures = new Map(scene.entities.map((entity) => [entity.entityId, auditLocalBounds(entity, assetBounds)]));
+  const enclosures = new Map(scene.entities.map((entity) => [entity.entityId, spatialEntityLocalBounds(entity, assetBounds)]));
   const samplesByEntity = new Map(scene.entities.map((entity) => [entity.entityId, []]));
   for (const timeUs of timesUs) {
     const snapshot = evaluateSpatialScene(scene, { timeUs, cameraId });
@@ -2591,16 +2591,265 @@ function frameFitPose(boundsInput, projectionInput, marginInput = 0.1) {
   ], [0, 0, 0, 1]);
 }
 
-// src/spatial-scene/generate.ts
+// src/spatial-scene/solve.ts
 import { z as z6 } from "zod";
+var SPATIAL_SOLVE_LIMITS = Object.freeze({
+  goals: 64,
+  relationsPerGoal: 8,
+  bases: 1024
+});
+var SPATIAL_SOLVE_PENDING_SCENE_SHA256 = "0".repeat(64);
+
+class SpatialSolveError extends Error {
+  code;
+  path;
+  constructor(code, message, path = "solve") {
+    super(message);
+    this.name = "SpatialSolveError";
+    this.code = code;
+    this.path = path;
+  }
+}
+var SpatialSolveEntityKeySchema = SpatialEntityIdSchema;
+var SpatialSolveAnchorKeySchema = z6.string().min(1).max(128).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u, "Solve keys start alphanumeric and may contain _ or -.");
+var axisSchema = z6.enum(["x", "y", "z"]);
+var boundedNumber = z6.number().finite().min(-1e6).max(1e6);
+var positiveDimension2 = z6.number().finite().min(0.000001).max(1e6);
+var scaleTuple = z6.tuple([positiveDimension2, positiveDimension2, positiveDimension2]);
+var SpatialSolveBoundsSchema = z6.strictObject({ min: SpatialVec3Schema, max: SpatialVec3Schema }).refine((bounds2) => bounds2.min.every((value, index) => value <= bounds2.max[index]), "Bounds min must not exceed max.");
+var SpatialSolveRelationSchema = z6.discriminatedUnion("kind", [
+  z6.strictObject({ kind: z6.literal("onTopOf"), target: SpatialSolveAnchorKeySchema }),
+  z6.strictObject({
+    kind: z6.literal("nextTo"),
+    target: SpatialSolveAnchorKeySchema,
+    axis: axisSchema.optional(),
+    side: z6.enum(["before", "after"]).optional(),
+    gap: boundedNumber.optional()
+  }),
+  z6.strictObject({ kind: z6.literal("facing"), target: SpatialSolveAnchorKeySchema, up: SpatialVec3Schema.optional() }),
+  z6.strictObject({
+    kind: z6.literal("align"),
+    target: SpatialSolveAnchorKeySchema,
+    axis: axisSchema,
+    edge: z6.enum(["min", "center", "max"]).optional()
+  }),
+  z6.strictObject({
+    kind: z6.literal("at"),
+    position: SpatialVec3Schema.optional(),
+    rotation: SpatialQuaternionSchema.optional(),
+    scale: scaleTuple.optional()
+  }).refine((relation) => relation.position !== undefined || relation.rotation !== undefined || relation.scale !== undefined, "An at relation sets at least one of position, rotation, or scale."),
+  z6.strictObject({ kind: z6.literal("groundSnap"), floorY: boundedNumber.optional() })
+]);
+var SpatialSolveGoalSchema = z6.strictObject({
+  entityKey: SpatialSolveEntityKeySchema,
+  relations: z6.array(SpatialSolveRelationSchema).min(1).max(SPATIAL_SOLVE_LIMITS.relationsPerGoal)
+});
+var SpatialSolveBaseSchema = z6.strictObject({
+  transform: SpatialTransformSchema,
+  bounds: SpatialSolveBoundsSchema.optional()
+});
+var SpatialSolveRequestSchema = z6.strictObject({
+  goals: z6.array(SpatialSolveGoalSchema).min(1).max(SPATIAL_SOLVE_LIMITS.goals),
+  bases: z6.record(SpatialSolveAnchorKeySchema, SpatialSolveBaseSchema)
+});
+var SpatialSolveBasePatchSchema = z6.strictObject({
+  transform: SpatialTransformSchema.optional(),
+  bounds: SpatialSolveBoundsSchema.optional()
+});
+var SpatialSolveGoalsFileSchema = z6.strictObject({
+  goals: z6.array(SpatialSolveGoalSchema).min(1).max(SPATIAL_SOLVE_LIMITS.goals),
+  bases: z6.record(SpatialSolveAnchorKeySchema, SpatialSolveBasePatchSchema).optional()
+});
+function parseSolveRequest(input) {
+  let parsed;
+  try {
+    parsed = parseSpatialValue(SpatialSolveRequestSchema, input, "solve request");
+  } catch (error) {
+    if (error instanceof SpatialSceneError)
+      throw new SpatialSolveError("invalid-data", error.message, error.path);
+    throw error;
+  }
+  if (Object.keys(parsed.bases).length > SPATIAL_SOLVE_LIMITS.bases) {
+    throw new SpatialSolveError("invalid-data", `Solve bases are bounded to ${SPATIAL_SOLVE_LIMITS.bases} entries.`, "bases");
+  }
+  const request = parsed;
+  return request;
+}
+function orderGoals(goals, dependencies) {
+  const remaining = new Map(goals.map((goal) => [goal.entityKey, goal]));
+  const ordered = [];
+  for (;; ) {
+    const ready = goals.find((goal) => {
+      if (!remaining.has(goal.entityKey))
+        return false;
+      for (const dependency of dependencies.get(goal.entityKey))
+        if (remaining.has(dependency))
+          return false;
+      return true;
+    });
+    if (ready === undefined)
+      break;
+    remaining.delete(ready.entityKey);
+    ordered.push(ready);
+  }
+  if (remaining.size === 0)
+    return ordered;
+  const stack2 = [];
+  const seen = new Set;
+  let current = goals.find((goal) => remaining.has(goal.entityKey)).entityKey;
+  while (current !== undefined && remaining.has(current) && !seen.has(current)) {
+    seen.add(current);
+    stack2.push(current);
+    current = [...dependencies.get(current)].find((dependency) => remaining.has(dependency));
+  }
+  const from = current === undefined ? 0 : stack2.indexOf(current);
+  const cycle = stack2.slice(from === -1 ? 0 : from);
+  if (current !== undefined)
+    cycle.push(current);
+  throw new SpatialSolveError("relation-cycle", `Relation goals form a cycle: ${cycle.join(" \u2192 ")}.`, "goals");
+}
+function requireState(states, key2, path) {
+  const state = states.get(key2);
+  if (state === undefined) {
+    throw new SpatialSolveError("unknown-entity", `Relation target ${key2} has no base and is not a solve goal.`, path);
+  }
+  return state;
+}
+function requireBounds(state, key2, kind, path) {
+  if (state.bounds === undefined) {
+    throw new SpatialSolveError("bounds-unknown", `Entity ${key2} has no bounds; ${kind} needs local bounds on every participant.`, path);
+  }
+  return state.bounds;
+}
+function emitTransform2(transform2, path) {
+  try {
+    return parseSpatialValue(SpatialTransformSchema, {
+      position: [...transform2.position],
+      rotation: [...transform2.rotation],
+      scale: [...transform2.scale]
+    }, "solved transform");
+  } catch (error) {
+    if (error instanceof SpatialSceneError)
+      throw new SpatialSolveError("relation-failed", error.message, path);
+    throw error;
+  }
+}
+function applyRelation(relation, entityKey, mover, states, path) {
+  try {
+    switch (relation.kind) {
+      case "onTopOf": {
+        const target = requireState(states, relation.target, path);
+        return onTopOf(requireBounds(mover, entityKey, relation.kind, path), mover.transform, requireBounds(target, relation.target, relation.kind, path), target.transform);
+      }
+      case "nextTo": {
+        const target = requireState(states, relation.target, path);
+        return nextTo(requireBounds(mover, entityKey, relation.kind, path), mover.transform, requireBounds(target, relation.target, relation.kind, path), target.transform, {
+          ...relation.axis === undefined ? {} : { axis: relation.axis },
+          ...relation.side === undefined ? {} : { side: relation.side },
+          ...relation.gap === undefined ? {} : { gap: relation.gap }
+        });
+      }
+      case "facing": {
+        const target = requireState(states, relation.target, path);
+        return facing(mover.transform, target.transform.position, relation.up ?? [0, 1, 0]);
+      }
+      case "align": {
+        const target = requireState(states, relation.target, path);
+        const moverBounds = requireBounds(mover, entityKey, relation.kind, path);
+        const targetBounds = requireBounds(target, relation.target, relation.kind, path);
+        const entries = [
+          { entityId: entityKey, transform: mover.transform, bounds: moverBounds },
+          { entityId: relation.target, transform: target.transform, bounds: targetBounds }
+        ];
+        const [moved2, anchorMoved] = align(entries, relation.axis, relation.edge ?? "center");
+        const correction = target.transform.position.map((value, index) => value - anchorMoved.position[index]);
+        return emitTransform2({
+          position: moved2.position.map((value, index) => value + correction[index]),
+          rotation: moved2.rotation,
+          scale: moved2.scale
+        }, path);
+      }
+      case "at":
+        return emitTransform2({
+          position: relation.position ?? mover.transform.position,
+          rotation: relation.rotation ?? mover.transform.rotation,
+          scale: relation.scale ?? mover.transform.scale
+        }, path);
+      case "groundSnap": {
+        const bounds2 = requireBounds(mover, entityKey, relation.kind, path);
+        const world = transformBounds(composeTransform(mover.transform), bounds2);
+        return groundSnap(mover.transform, mover.transform.position[1] - world.min[1], relation.floorY ?? 0);
+      }
+    }
+  } catch (error) {
+    if (error instanceof SpatialSolveError)
+      throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new SpatialSolveError("relation-failed", `${relation.kind} failed: ${message}`, path);
+  }
+}
+function solveSpatialRelations(input) {
+  const request = parseSolveRequest(input);
+  const goalKeys = new Set;
+  for (const [index, goal] of request.goals.entries()) {
+    if (goalKeys.has(goal.entityKey)) {
+      throw new SpatialSolveError("duplicate-goal", `Duplicate solve goal for ${goal.entityKey}.`, `goals[${index}]`);
+    }
+    goalKeys.add(goal.entityKey);
+  }
+  const states = new Map;
+  for (const [key2, base] of Object.entries(request.bases)) {
+    states.set(key2, { transform: base.transform, bounds: base.bounds });
+  }
+  const dependencies = new Map;
+  for (const [index, goal] of request.goals.entries()) {
+    if (!states.has(goal.entityKey)) {
+      throw new SpatialSolveError("unknown-entity", `Goal entity ${goal.entityKey} has no base transform; add bases.${goal.entityKey}.`, `goals[${index}]`);
+    }
+    const required = new Set;
+    for (const [relationIndex, relation] of goal.relations.entries()) {
+      if (!("target" in relation))
+        continue;
+      const path = `goals[${index}].relations[${relationIndex}].target`;
+      if (!states.has(relation.target) && !goalKeys.has(relation.target)) {
+        throw new SpatialSolveError("unknown-entity", `Relation target ${relation.target} has no base and is not a solve goal.`, path);
+      }
+      if (goalKeys.has(relation.target))
+        required.add(relation.target);
+    }
+    dependencies.set(goal.entityKey, required);
+  }
+  for (const goal of orderGoals(request.goals, dependencies)) {
+    const state = states.get(goal.entityKey);
+    const index = request.goals.indexOf(goal);
+    for (const [relationIndex, relation] of goal.relations.entries()) {
+      state.transform = applyRelation(relation, goal.entityKey, state, states, `goals[${index}].relations[${relationIndex}]`);
+    }
+  }
+  const transforms = {};
+  for (const goal of request.goals) {
+    transforms[goal.entityKey] = emitTransform2(states.get(goal.entityKey).transform, `transforms.${goal.entityKey}`);
+  }
+  const patch = parseSpatialValue(SpatialScenePatchV1Schema, {
+    kind: "slopcamera.spatial-scene-patch",
+    schemaVersion: 1,
+    expectedSceneSha256: SPATIAL_SOLVE_PENDING_SCENE_SHA256,
+    operations: request.goals.map((goal) => ({ kind: "set-transform", entityId: goal.entityKey, transform: transforms[goal.entityKey] }))
+  }, "solve patch");
+  return deepFreezeJson({ transforms, patch });
+}
+
+// src/spatial-scene/generate.ts
+import { z as z7 } from "zod";
 var SPATIAL_GENERATOR_LIMITS = Object.freeze({
   moduleSourceBytes: 1048576,
   parametersBytes: 65536,
   parametersDepth: 16,
   parametersValues: 8192
 });
-var moduleResultSchema = z6.strictObject({
-  entities: z6.array(z6.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
+var moduleResultSchema = z7.strictObject({
+  entities: z7.array(z7.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
   editableKeys: SpatialGeneratorSchema.shape.editableKeys.optional()
 });
 function parseSpatialGeneratorParameters(input) {
@@ -2744,7 +2993,7 @@ function mergeSpatialGeneratorOutput(scene, generator, entities) {
 }
 
 // src/spatial-scene/gltf.ts
-import { z as z7 } from "zod";
+import { z as z8 } from "zod";
 var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
 var SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134217728,
@@ -2769,84 +3018,84 @@ var SPATIAL_GLB_LIMITS = Object.freeze({
   animationKeys: 4096,
   durationSeconds: 3600
 });
-var finite2 = z7.number().finite().min(-1e6).max(1e6);
-var index = z7.number().int().min(0).max(65535);
-var unit2 = z7.number().finite().min(0).max(1);
-var vec33 = z7.tuple([finite2, finite2, finite2]);
-var signedUnit = z7.number().finite().min(-1).max(1);
-var quaternion2 = z7.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
-var metadata = { name: z7.string().max(1024).optional(), extras: z7.unknown().optional(), extensions: z7.never().optional() };
-var byteOffset = z7.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
-var textureInfo = z7.strictObject({ ...metadata, index, texCoord: z7.literal(0).optional() });
-var samplerSchema = z7.strictObject({
+var finite2 = z8.number().finite().min(-1e6).max(1e6);
+var index = z8.number().int().min(0).max(65535);
+var unit2 = z8.number().finite().min(0).max(1);
+var vec33 = z8.tuple([finite2, finite2, finite2]);
+var signedUnit = z8.number().finite().min(-1).max(1);
+var quaternion2 = z8.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
+var metadata = { name: z8.string().max(1024).optional(), extras: z8.unknown().optional(), extensions: z8.never().optional() };
+var byteOffset = z8.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
+var textureInfo = z8.strictObject({ ...metadata, index, texCoord: z8.literal(0).optional() });
+var samplerSchema = z8.strictObject({
   ...metadata,
-  magFilter: z7.union([z7.literal(9728), z7.literal(9729)]).optional(),
-  minFilter: z7.union([z7.literal(9728), z7.literal(9729), z7.literal(9984), z7.literal(9985), z7.literal(9986), z7.literal(9987)]).optional(),
-  wrapS: z7.union([z7.literal(33071), z7.literal(33648), z7.literal(10497)]).default(10497),
-  wrapT: z7.union([z7.literal(33071), z7.literal(33648), z7.literal(10497)]).default(10497)
+  magFilter: z8.union([z8.literal(9728), z8.literal(9729)]).optional(),
+  minFilter: z8.union([z8.literal(9728), z8.literal(9729), z8.literal(9984), z8.literal(9985), z8.literal(9986), z8.literal(9987)]).optional(),
+  wrapS: z8.union([z8.literal(33071), z8.literal(33648), z8.literal(10497)]).default(10497),
+  wrapT: z8.union([z8.literal(33071), z8.literal(33648), z8.literal(10497)]).default(10497)
 });
-var nodeSchema = z7.strictObject({
+var nodeSchema = z8.strictObject({
   ...metadata,
-  children: z7.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
+  children: z8.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
   mesh: index.optional(),
   translation: vec33.optional(),
   rotation: quaternion2.optional(),
   scale: vec33.optional(),
-  matrix: z7.array(finite2).length(16).optional()
+  matrix: z8.array(finite2).length(16).optional()
 });
-var accessorSchema = z7.strictObject({
+var accessorSchema = z8.strictObject({
   ...metadata,
   bufferView: index,
   byteOffset: byteOffset.default(0),
-  componentType: z7.union([z7.literal(5121), z7.literal(5123), z7.literal(5125), z7.literal(5126)]),
-  normalized: z7.boolean().default(false),
-  count: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z7.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
-  min: z7.array(finite2).min(1).max(4).optional(),
-  max: z7.array(finite2).min(1).max(4).optional()
+  componentType: z8.union([z8.literal(5121), z8.literal(5123), z8.literal(5125), z8.literal(5126)]),
+  normalized: z8.boolean().default(false),
+  count: z8.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
+  type: z8.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
+  min: z8.array(finite2).min(1).max(4).optional(),
+  max: z8.array(finite2).min(1).max(4).optional()
 });
-var gltfSchema = z7.strictObject({
+var gltfSchema = z8.strictObject({
   ...metadata,
-  asset: z7.strictObject({ version: z7.literal("2.0"), minVersion: z7.literal("2.0").optional(), generator: z7.string().max(1024).optional(), copyright: z7.string().max(4096).optional(), extras: z7.unknown().optional(), extensions: z7.never().optional() }),
-  extensionsUsed: z7.array(z7.never()).optional(),
-  extensionsRequired: z7.array(z7.never()).optional(),
-  buffers: z7.array(z7.strictObject({ ...metadata, byteLength: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
-  bufferViews: z7.array(z7.strictObject({ ...metadata, buffer: z7.literal(0), byteOffset: byteOffset.default(0), byteLength: z7.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z7.number().int().min(4).max(252).optional(), target: z7.union([z7.literal(34962), z7.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
-  accessors: z7.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
+  asset: z8.strictObject({ version: z8.literal("2.0"), minVersion: z8.literal("2.0").optional(), generator: z8.string().max(1024).optional(), copyright: z8.string().max(4096).optional(), extras: z8.unknown().optional(), extensions: z8.never().optional() }),
+  extensionsUsed: z8.array(z8.never()).optional(),
+  extensionsRequired: z8.array(z8.never()).optional(),
+  buffers: z8.array(z8.strictObject({ ...metadata, byteLength: z8.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
+  bufferViews: z8.array(z8.strictObject({ ...metadata, buffer: z8.literal(0), byteOffset: byteOffset.default(0), byteLength: z8.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z8.number().int().min(4).max(252).optional(), target: z8.union([z8.literal(34962), z8.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
+  accessors: z8.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
   scene: index.optional(),
-  scenes: z7.array(z7.strictObject({ ...metadata, nodes: z7.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
-  nodes: z7.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  meshes: z7.array(z7.strictObject({ ...metadata, primitives: z7.array(z7.strictObject({
+  scenes: z8.array(z8.strictObject({ ...metadata, nodes: z8.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
+  nodes: z8.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  meshes: z8.array(z8.strictObject({ ...metadata, primitives: z8.array(z8.strictObject({
     ...metadata,
-    attributes: z7.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
+    attributes: z8.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
     indices: index.optional(),
     material: index.optional(),
-    mode: z7.literal(4).default(4)
+    mode: z8.literal(4).default(4)
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
-  materials: z7.array(z7.strictObject({
+  materials: z8.array(z8.strictObject({
     ...metadata,
-    pbrMetallicRoughness: z7.strictObject({ ...metadata, baseColorFactor: z7.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
-    alphaMode: z7.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
+    pbrMetallicRoughness: z8.strictObject({ ...metadata, baseColorFactor: z8.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
+    alphaMode: z8.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
     alphaCutoff: unit2.default(0.5),
-    doubleSided: z7.boolean().default(false),
-    emissiveFactor: z7.tuple([z7.literal(0), z7.literal(0), z7.literal(0)]).optional()
+    doubleSided: z8.boolean().default(false),
+    emissiveFactor: z8.tuple([z8.literal(0), z8.literal(0), z8.literal(0)]).optional()
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
-  images: z7.array(z7.strictObject({ ...metadata, bufferView: index, mimeType: z7.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  textures: z7.array(z7.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  samplers: z7.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
-  animations: z7.array(z7.strictObject({
+  images: z8.array(z8.strictObject({ ...metadata, bufferView: index, mimeType: z8.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  textures: z8.array(z8.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  samplers: z8.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
+  animations: z8.array(z8.strictObject({
     ...metadata,
-    samplers: z7.array(z7.strictObject({ ...metadata, input: index, output: index, interpolation: z7.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z7.array(z7.strictObject({ ...metadata, sampler: index, target: z7.strictObject({ ...metadata, node: index, path: z7.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
+    samplers: z8.array(z8.strictObject({ ...metadata, input: index, output: index, interpolation: z8.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
+    channels: z8.array(z8.strictObject({ ...metadata, sampler: index, target: z8.strictObject({ ...metadata, node: index, path: z8.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips).default([])
 });
-var optionsSchema = z7.strictObject({
-  metersPerUnit: z7.number().finite().min(0.000001).max(1e6),
-  sourceUp: z7.enum(["x", "y", "z"]),
+var optionsSchema = z8.strictObject({
+  metersPerUnit: z8.number().finite().min(0.000001).max(1e6),
+  sourceUp: z8.enum(["x", "y", "z"]),
   nodeIndex: index.optional(),
-  materialMode: z7.enum(["source", "entity"]).default("entity"),
-  timeUs: z7.number().int().min(0).max(3600000000),
-  clip: z7.strictObject({ index, offsetUs: z7.number().int().min(0).max(3600000000), playback: z7.enum(["once", "loop", "freeze"]) }).optional()
+  materialMode: z8.enum(["source", "entity"]).default("entity"),
+  timeUs: z8.number().int().min(0).max(3600000000),
+  clip: z8.strictObject({ index, offsetUs: z8.number().int().min(0).max(3600000000), playback: z8.enum(["once", "loop", "freeze"]) }).optional()
 });
 function fail(message, path = "glb") {
   throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path);
@@ -3414,25 +3663,25 @@ function spatialGlbBounds(model) {
 }
 
 // src/spatial-scene/camera-track.ts
-import { z as z8 } from "zod";
+import { z as z9 } from "zod";
 var SPATIAL_CAMERA_TRACK_MAX_FRAMES = 2048;
-var clockSchema = z8.strictObject({
+var clockSchema = z9.strictObject({
   startUs: SpatialTimeUsSchema,
   frameRate: SpatialFrameRateSchema,
-  frameCount: z8.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
+  frameCount: z9.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
 });
-var rationalSchema = z8.strictObject({
-  numerator: z8.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
-  denominator: z8.string().regex(/^[1-9][0-9]{0,6}$/u)
+var rationalSchema = z9.strictObject({
+  numerator: z9.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
+  denominator: z9.string().regex(/^[1-9][0-9]{0,6}$/u)
 });
-var SpatialCameraTrackSchema = z8.strictObject({
-  kind: z8.literal("slopcamera.spatial-camera-track"),
-  schemaVersion: z8.literal(1),
+var SpatialCameraTrackSchema = z9.strictObject({
+  kind: z9.literal("slopcamera.spatial-camera-track"),
+  schemaVersion: z9.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   clock: clockSchema,
-  samples: z8.array(z8.strictObject({
-    frameIndex: z8.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
+  samples: z9.array(z9.strictObject({
+    frameIndex: z9.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
     timeUs: SpatialTimeUsSchema,
     exactTimeUs: rationalSchema,
     camera: SpatialCameraSchema
@@ -3522,10 +3771,12 @@ export {
   spatialGeneratorAttemptId,
   spatialFrameSample,
   spatialFrameCount,
+  spatialEntityLocalBounds,
   spatialAuditDefaultTimesUs,
   spatialAssetManifestSha256,
   spatialAssetClosureDigests,
   sortSpatialBy,
+  solveSpatialRelations,
   slopcameraCodeErrorMessage,
   slerpQuaternion,
   sha256Hex,
@@ -3605,6 +3856,16 @@ export {
   SpatialVec3Schema,
   SpatialTransformSchema,
   SpatialTimeUsSchema,
+  SpatialSolveRequestSchema,
+  SpatialSolveRelationSchema,
+  SpatialSolveGoalsFileSchema,
+  SpatialSolveGoalSchema,
+  SpatialSolveError,
+  SpatialSolveEntityKeySchema,
+  SpatialSolveBoundsSchema,
+  SpatialSolveBaseSchema,
+  SpatialSolveBasePatchSchema,
+  SpatialSolveAnchorKeySchema,
   SpatialShotV1Schema,
   SpatialShotIdSchema,
   SpatialSceneV1Schema,
@@ -3670,6 +3931,8 @@ export {
   SlopcameraDiagramCheckInputSchema,
   SlopcameraCodeError,
   SerializedRefV1Schema,
+  SPATIAL_SOLVE_PENDING_SCENE_SHA256,
+  SPATIAL_SOLVE_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SPATIAL_RENDERED_AUDIT_LIMITS,
   SPATIAL_RENDERED_AUDIT_COVERAGE,
