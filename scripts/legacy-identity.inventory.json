@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "65578e99b41994dde4d2d78ba9f6968b4d1aab62fb5356762f7f04953f7c86c2",
+    "identityLinesSha256": "9ba1635a9368a6808f063c18875e907296894c8b14f533753054a170d98d6095",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1617,15 +1617,6 @@
     "categories": [
       "legacy-redirect",
       "serialized-reader"
-    ]
-  },
-  {
-    "identityLineCount": 142,
-    "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
-    "occurrenceCount": 237,
-    "path": "dist/index-19159rvn.js",
-    "categories": [
-      "generated"
     ]
   },
   {
