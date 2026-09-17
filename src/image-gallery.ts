@@ -181,6 +181,7 @@ export interface SlopcameraGalleryPlanInput {
   readonly count?: number
   readonly vary?: readonly (SlopcameraGalleryAxisSpec | SlopcameraGalleryAxis | unknown)[]
   readonly candidates?: readonly (SlopcameraGalleryExplicitCandidate | unknown)[]
+  readonly tiled?: boolean
 }
 
 export interface SlopcameraGalleryCandidate {
@@ -196,6 +197,7 @@ export interface SlopcameraGalleryPlan {
   readonly aspect: readonly [number, number]
   readonly axes: readonly { readonly axis: SlopcameraGalleryAxis; readonly values: readonly string[] }[]
   readonly candidates: readonly SlopcameraGalleryCandidate[]
+  readonly tiled: boolean
 }
 
 function galleryKind(value: unknown): SlopcameraGalleryKind {
@@ -294,6 +296,10 @@ export function planSlopcameraGallery(input: SlopcameraGalleryPlanInput): Slopca
   if (count !== undefined && (!Number.isInteger(count) || count < 1 || count > slopcameraGalleryLimits.candidates)) {
     invalidArgument(`count must be an integer from 1 through ${slopcameraGalleryLimits.candidates}.`)
   }
+  const tiled = input.tiled
+  if (tiled !== undefined && typeof tiled !== "boolean") {
+    invalidArgument("tiled must be a boolean when set.")
+  }
 
   const axes = vary.map(spec => ({
     axis: spec.axis,
@@ -345,6 +351,7 @@ export function planSlopcameraGallery(input: SlopcameraGalleryPlanInput): Slopca
     aspect,
     axes,
     candidates: prompts.map((candidate, index) => ({ index: index + 1, ...candidate })),
+    tiled: tiled ?? kind === "texture",
   }
 }
 
@@ -526,6 +533,8 @@ export interface SlopcameraGalleryCandidateReceipt {
   readonly error?: string
   /** Durable provenance record for the candidate, when the host keeps one. */
   readonly job?: string
+  /** The cell repeats the candidate 2×2 so tile seams are reviewable. */
+  readonly tiled?: boolean
   readonly cell?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 }
 
@@ -784,7 +793,30 @@ export async function composeSlopcameraImageGallery(input: {
         .resize(cellWidth, cellHeight, { fit: "cover" })
         .png()
         .toBuffer()
-      overlays.push({ input: resized, left: x, top: y + labelHeight })
+      const cellImage = plan.tiled
+        ? await (async () => {
+          const tile = await sharp(resized)
+            .resize(Math.ceil(cellWidth / 2), Math.ceil(cellHeight / 2), { fit: "fill" })
+            .png()
+            .toBuffer()
+          const positions = [0, Math.floor(cellWidth / 2)]
+          const rows = [0, Math.floor(cellHeight / 2)]
+          return sharp({
+            create: {
+              width: cellWidth,
+              height: cellHeight,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          })
+            .composite(rows.flatMap(top =>
+              positions.map(left => ({ input: tile, left, top })),
+            ))
+            .png()
+            .toBuffer()
+        })()
+        : resized
+      overlays.push({ input: cellImage, left: x, top: y + labelHeight })
       receiptCandidates.push({
         index: candidate.index,
         id: candidate.id,
@@ -798,6 +830,7 @@ export async function composeSlopcameraImageGallery(input: {
         ...(candidate.requestId === undefined ? {} : { requestId: candidate.requestId }),
         ...(candidate.warnings === undefined ? {} : { warnings: candidate.warnings }),
         ...(candidate.job === undefined ? {} : { job: candidate.job }),
+        ...(plan.tiled ? { tiled: true } : {}),
         cell: { x, y, width: cellWidth, height: cellBodyHeight },
       })
     } else {

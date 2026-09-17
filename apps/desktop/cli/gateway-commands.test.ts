@@ -1972,4 +1972,65 @@ describe("Gateway CLI commands", () => {
       await rm(fixture.root, { force: true, recursive: true });
     }
   });
+
+  test("ai image gallery rejects --tile with --no-tile", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      const conflict = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "conflicting tile flags",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--tile",
+        "--no-tile",
+      ]);
+      expect(conflict).toMatchObject({
+        exitCode: EXIT_CODE.usage,
+        stdout: "",
+      });
+      expect(conflict.stderr).toContain("mutually exclusive");
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  test("ai image gallery tiles texture cells by default", async () => {
+    const sdk = new GalleryGatewaySdk(1);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "weathered copper",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "1",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      const summary = parseJsonRecord(result.stdout);
+      const [candidate] = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidate!.tiled).toBe(true);
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const [row] = requiredArray(receipt, "candidates").map(asRecord);
+      expect(row!.tiled).toBe(true);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
 });

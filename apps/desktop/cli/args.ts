@@ -218,6 +218,7 @@ export type CliCommand =
       readonly model: string;
       readonly outputDir: string;
       readonly subject: string;
+      readonly tiled: boolean | undefined;
       readonly timeout: string;
       readonly vary: string | undefined;
     } & JsonOption)
@@ -1007,7 +1008,9 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
     "--count": "value",
     "--kind": "value",
     "--model": "value",
+    "--no-tile": "flag",
     "--output-dir": "value",
+    "--tile": "flag",
     "--timeout": "value",
     "--vary": "value",
   });
@@ -1050,6 +1053,9 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
   if (candidatesFile !== undefined && (vary !== undefined || count !== undefined)) {
     fail("--candidates is mutually exclusive with --vary and --count.");
   }
+  const tile = optionFlag(parsed, "--tile");
+  const noTile = optionFlag(parsed, "--no-tile");
+  if (tile && noTile) fail("--tile and --no-tile are mutually exclusive.");
   return {
     candidatesFile,
     cell,
@@ -1060,6 +1066,7 @@ function parseAiImageGallery(argv: readonly string[]): CliCommand {
     model,
     outputDir,
     subject: subject!,
+    tiled: tile ? true : noTile ? false : undefined,
     timeout: optionString(parsed, "--timeout") ?? "10m",
     vary,
   };

@@ -16,7 +16,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-sg902fta.js";
+} from "./index-ayspp776.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -41,7 +41,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-shtrpj4s.js";
 import {
   VectorizeError,
   vectorizeHardLimits,

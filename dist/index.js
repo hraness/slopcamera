@@ -49,7 +49,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-xzdmyxhv.js";
+} from "./index-701s1axp.js";
 import {
   bundledSkillPath,
   installSkill
@@ -59,7 +59,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-sg902fta.js";
+} from "./index-ayspp776.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -104,7 +104,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-shtrpj4s.js";
 import {
   VTRACER_VERSION,
   VectorizeError,

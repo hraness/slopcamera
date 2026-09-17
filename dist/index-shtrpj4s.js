@@ -2680,6 +2680,10 @@ function planSlopcameraGallery(input) {
   if (count !== undefined && (!Number.isInteger(count) || count < 1 || count > slopcameraGalleryLimits.candidates)) {
     invalidArgument2(`count must be an integer from 1 through ${slopcameraGalleryLimits.candidates}.`);
   }
+  const tiled = input.tiled;
+  if (tiled !== undefined && typeof tiled !== "boolean") {
+    invalidArgument2("tiled must be a boolean when set.");
+  }
   const axes = vary.map((spec) => ({
     axis: spec.axis,
     values: spec.values ?? axisValues(kind, spec.axis).slice(0, slopcameraGalleryLimits.candidates)
@@ -2730,7 +2734,8 @@ function planSlopcameraGallery(input) {
     kind,
     aspect,
     axes,
-    candidates: prompts.map((candidate, index) => ({ index: index + 1, ...candidate }))
+    candidates: prompts.map((candidate, index) => ({ index: index + 1, ...candidate })),
+    tiled: tiled ?? kind === "texture"
   };
 }
 function parseSlopcameraGalleryVary(value) {
@@ -3008,7 +3013,20 @@ async function composeSlopcameraImageGallery(input) {
         invalidArgument2("A generated candidate exceeds its raster bounds.");
       }
       const resized = await source.resize(cellWidth, cellHeight, { fit: "cover" }).png().toBuffer();
-      overlays.push({ input: resized, left: x, top: y + labelHeight });
+      const cellImage = plan.tiled ? await (async () => {
+        const tile = await sharp(resized).resize(Math.ceil(cellWidth / 2), Math.ceil(cellHeight / 2), { fit: "fill" }).png().toBuffer();
+        const positions = [0, Math.floor(cellWidth / 2)];
+        const rows2 = [0, Math.floor(cellHeight / 2)];
+        return sharp({
+          create: {
+            width: cellWidth,
+            height: cellHeight,
+            channels: 4,
+            background: { r: 0, g: 0, b: 0, alpha: 0 }
+          }
+        }).composite(rows2.flatMap((top) => positions.map((left) => ({ input: tile, left, top })))).png().toBuffer();
+      })() : resized;
+      overlays.push({ input: cellImage, left: x, top: y + labelHeight });
       receiptCandidates.push({
         index: candidate.index,
         id: candidate.id,
@@ -3022,6 +3040,7 @@ async function composeSlopcameraImageGallery(input) {
         ...candidate.requestId === undefined ? {} : { requestId: candidate.requestId },
         ...candidate.warnings === undefined ? {} : { warnings: candidate.warnings },
         ...candidate.job === undefined ? {} : { job: candidate.job },
+        ...plan.tiled ? { tiled: true } : {},
         cell: { x, y, width: cellWidth, height: cellBodyHeight }
       });
     } else {
@@ -3380,6 +3399,7 @@ var slopcameraOperationRegistry = deepFreeze([
           minimum: slopcameraGalleryLimits.cellEdgeMin,
           maximum: slopcameraGalleryLimits.cellEdgeMax
         },
+        tiled: { type: "boolean" },
         timeoutMs: { type: "integer", minimum: 1000, maximum: 30 * 60000 }
       }
     },
@@ -3538,6 +3558,7 @@ function parseGallery(value) {
     "vary",
     "candidates",
     "cellEdge",
+    "tiled",
     "timeoutMs"
   ]);
   if (typeof input.subject !== "string" || input.subject.trim().length < 1 || /[\u0000-\u001f\u007f]/u.test(input.subject) || Buffer.byteLength(input.subject, "utf8") > slopcameraGalleryLimits.subjectBytes) {
@@ -3572,6 +3593,9 @@ function parseGallery(value) {
   if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30 * 60000)) {
     operationFailure("timeoutMs must be an integer from 1000 through 1800000.");
   }
+  if (input.tiled !== undefined && typeof input.tiled !== "boolean") {
+    operationFailure("tiled must be a boolean when set.");
+  }
   return {
     subject: input.subject,
     outputDir: pathValue(input.outputDir, "outputDir"),
@@ -3581,6 +3605,7 @@ function parseGallery(value) {
     ...input.vary === undefined ? {} : { vary: input.vary },
     ...input.candidates === undefined ? {} : { candidates: input.candidates },
     ...cellEdge === undefined ? {} : { cellEdge },
+    ...input.tiled === undefined ? {} : { tiled: input.tiled },
     ...timeoutMs === undefined ? {} : { timeoutMs }
   };
 }

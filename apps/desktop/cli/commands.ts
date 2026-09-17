@@ -5266,6 +5266,7 @@ async function handleAiImageGallery(
         ? {}
         : { kind: command.galleryKind as SlopcameraGalleryKind }),
       subject: command.subject,
+      ...(command.tiled === undefined ? {} : { tiled: command.tiled }),
       ...(vary === undefined ? {} : { vary }),
     });
     const outputDir = resolve(context.io.cwd(), command.outputDir);
@@ -5312,6 +5313,7 @@ async function handleAiImageGallery(
           : { path: displayPath(context.paths.repositoryRoot, candidate.path) }),
         ...(candidate.sha256 === undefined ? {} : { sha256: candidate.sha256 }),
         status: candidate.status,
+        ...(candidate.tiled === undefined ? {} : { tiled: candidate.tiled }),
         ...(candidate.error === undefined ? {} : { error: candidate.error }),
       })),
       counts: receipt.counts,

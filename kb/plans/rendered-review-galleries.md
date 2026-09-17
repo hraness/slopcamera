@@ -3,7 +3,7 @@ type: plan
 title: Rendered review galleries — applied-material cells, seam checks, and scene-variant contact sheets
 description: Upgrade the gallery review loop from flat generated pixels to rendered evidence — textures shown applied to probe geometry with a tiled seam check, skyboxes shown lighting a probe scene, and whole-scene variants composited as rendered stills — while preserving per-candidate durable provenance and explicit promotion.
 area: generative-media
-status: proposed
+status: in-progress
 repository_scopes:
   - src
   - src/spatial-scene
@@ -112,7 +112,15 @@ rendered cells need no new composition machinery.
 
 ### Phase 1 — Tiled-seam cells
 
-- **Status:** Not started
+- **Status:** Completed — deterministic 2×2 cell repeat in the compositor
+  (sharp `tile: true` offsets the grid by half a tile, so four explicit
+  placements are composited instead); `tiled` on plan input/plan/candidate
+  receipt rows, default on for `texture`, `--tile|--no-tile` on both the
+  portable and `ai image gallery` surfaces, `tiled` on the
+  `slopcamera.image.gallery` operation input. Validated by
+  `src/image-gallery.test.ts` (pixel-level seam assertions),
+  `src/cli.test.ts` (flag mutual exclusion), and
+  `apps/desktop/cli/gateway-commands.test.ts` (receipt + summary flag).
 - **Depends on:** none
 - **Objective:** `texture` (and opt-in `backdrop`) cells show a 2×2 tiled
   repeat so seam artifacts are visible in the sheet.

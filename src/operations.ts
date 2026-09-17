@@ -357,6 +357,7 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
             minimum: slopcameraGalleryLimits.cellEdgeMin,
             maximum: slopcameraGalleryLimits.cellEdgeMax,
           },
+          tiled: { type: "boolean" },
           timeoutMs: { type: "integer", minimum: 1_000, maximum: 30 * 60_000 },
         },
       },
@@ -417,6 +418,7 @@ export interface GallerySlopcameraOperationInput {
   readonly vary?: readonly unknown[]
   readonly candidates?: readonly unknown[]
   readonly cellEdge?: number
+  readonly tiled?: boolean
   readonly timeoutMs?: number
 }
 
@@ -677,6 +679,7 @@ function parseGallery(value: unknown): GallerySlopcameraOperationInput {
     "vary",
     "candidates",
     "cellEdge",
+    "tiled",
     "timeoutMs",
   ])
   if (
@@ -757,6 +760,9 @@ function parseGallery(value: unknown): GallerySlopcameraOperationInput {
   ) {
     operationFailure("timeoutMs must be an integer from 1000 through 1800000.")
   }
+  if (input.tiled !== undefined && typeof input.tiled !== "boolean") {
+    operationFailure("tiled must be a boolean when set.")
+  }
   return {
     subject: input.subject as string,
     outputDir: pathValue(input.outputDir, "outputDir"),
@@ -766,6 +772,7 @@ function parseGallery(value: unknown): GallerySlopcameraOperationInput {
     ...(input.vary === undefined ? {} : { vary: input.vary as readonly unknown[] }),
     ...(input.candidates === undefined ? {} : { candidates: input.candidates as readonly unknown[] }),
     ...(cellEdge === undefined ? {} : { cellEdge: cellEdge as number }),
+    ...(input.tiled === undefined ? {} : { tiled: input.tiled as boolean }),
     ...(timeoutMs === undefined ? {} : { timeoutMs: timeoutMs as number }),
   }
 }
