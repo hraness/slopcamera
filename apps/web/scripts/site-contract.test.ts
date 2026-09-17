@@ -37,8 +37,8 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.8.0" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.13.0" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.9.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.14.0" },
     { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.12" },
   ]
   const complete = {

@@ -13,7 +13,7 @@ const request = (scope: typeof supportScope | typeof supportCopyScope = supportS
 const barHit = { tag: "div", id: "", slot: null, classes: ["hraness-site-footer__inner"], ancestors: ["hraness-site-footer", "body"] } as const
 const obstruction = (key: string, hit: ShellKeyboardObstruction["hit"] = barHit): ShellKeyboardObstruction => ({ key, fragment: 0, rect: [150.890625, 394.28125, 96.109375, 30], hit })
 const baselineInventory = (name: string) => (supportBaselineObstructions[name] ?? []).map(key => obstruction(key))
-const result = () => ({ schemaVersion: 1, token: request().token, scope: supportScope, baselineProfile: supportBaselineProfile, sequence: 2, kind: "result", node: "24.18.1", playwright: "1.62.0", browser: "151.0.0.0", cases: siteShellCases.map(item => item.name), comparison: "unchanged-page-with-exact-optional-support-footer", closed: true, negativeControls: ["/-final-css", "/-foundation-css", "/404.html-final-css"], observations: siteShellCases.map(s => ({ name: s.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored: s.route === "/" && s.width === 1440 && s.theme === "system" && s.system === "light", baselineObstructions: baselineInventory(s.name) })) })
+const result = () => ({ schemaVersion: 1, token: request().token, scope: supportScope, baselineProfile: supportBaselineProfile, sequence: 2, kind: "result", node: "24.18.1", playwright: "1.62.0", browser: "151.0.0.0", cases: siteShellCases.map(item => item.name), comparison: "unchanged-page-with-exact-optional-support-footer", closed: true, negativeControls: ["/-final-css", "/-foundation-css", "/404.html-final-css"], observations: siteShellCases.map(s => ({ name: s.name, footer: supportFooterDigests, contentFooterHeight: 64, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored: s.route === "/" && s.width === 1440 && s.theme === "system" && s.system === "light", baselineObstructions: baselineInventory(s.name) })) })
 
 test("support acceptance retains complete matrices, deadlines and a distinct closed identity", () => {
   expect(supportCases(supportScope)).toBe(siteShellCases); expect(siteShellCases).toHaveLength(76)
@@ -66,7 +66,7 @@ const evidence = (delta: number): ShellEvidence => {
   const appearance = selectors.flatMap((selector, index) => Array.from({ length: index < 4 ? 1 : 3 }, (_, i) => element(`${selector}[${i}]`)))
   const skip = { ...element(".skip-link[0]"), styles: { ...element(".skip-link[0]").styles, position: "fixed" }, geometrySpace: "viewport" as const, scrollY: 0, documentRect: [0, 0, 400, 20] }
   return { direction: "ltr", dom: "exact-outside-footer", recovery: false, elements: [
-    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "Support" : ""}Accept cookies` },
+    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "Slopcamera Docs GitHub Install Slopcamera by Hraness" : ""}Accept cookies` },
     { ...element("#hraness-site-footer[0]", 100 + delta), rect: [0, 900, 400, 100 + delta] }, element("#main[0]")],
     focus: [element(".topbar[0]")], hover: [element(".topbar[0]")], skip, obstructions: [],
     appearance: shellAppearanceSteps.map(step => ({ step: step.name, active: step.active, elements: appearance })) }
@@ -88,6 +88,18 @@ test("only measured footer growth can project body height; all other page observ
   ]
   for (const mutate of mutations) expect(() => compareSupportEvidence(mutate(structuredClone(current)), baseline, "negative")).toThrow()
   expect(() => compareSupportEvidence(evidence(129), baseline, "unbounded")).toThrow()
+  // The content footer's measured height shifts the shared footer's origin by
+  // exactly that amount and grows the body by the same delta.
+  const shifted = structuredClone(current)
+  shifted.elements[0]!.rect[3] = 1000 + 64
+  shifted.elements[0]!.styles.height = "1064px"
+  shifted.elements[1]!.rect = [0, 940, 400, 124]
+  expect(() => compareSupportEvidence(shifted, baseline, "shifted", 40)).not.toThrow()
+  expect(() => compareSupportEvidence(shifted, baseline, "shifted", 39)).toThrow()
+  expect(() => compareSupportEvidence(current, baseline, "unmarked", 40)).toThrow()
+  const unexpected = structuredClone(current)
+  unexpected.elements[0]!.text = "RetainedSlopcamera Docs GitHub Install Slopcamera by HranessUnexpectedAccept cookies"
+  expect(() => compareSupportEvidence(unexpected, baseline, "unexpected body text")).toThrow()
 })
 test("the current page must be unobstructed while the immutable baseline shows exactly the reviewed fixed-footer obstructions", () => {
   const reflowAskAi = [".slopcamera-ask-ai a[0]", ".slopcamera-ask-ai a[1]", ".slopcamera-ask-ai a[2]", ".slopcamera-ask-ai a[3]"], recovery = [".route-state a[2]", ".route-state a[3]"]
