@@ -59,6 +59,30 @@ export function renderHighlightedCode(value: string, language: SyntaxLanguage): 
   return `<code class="${highlighted.className}" data-language="${highlighted.language}">${highlighted.html}</code>`
 }
 
+// The authored Slopcamera camera mark (apps/web/src/icon.svg, byte-identical to
+// apps/desktop/assets/brand-emoji/slopcamera.com.svg), normalized for inlining:
+// the labelled link owns the accessible name, so the vector stays decorative and
+// its gradient id is namespaced against other inline SVGs on the page.
+const SLOPCAMERA_MARK_SVG = `<svg aria-hidden="true" focusable="false" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="slopcamera-footer-lens" x1="14" y1="16" x2="50" y2="50" gradientUnits="userSpaceOnUse"><stop stop-color="#fff3c2"/><stop offset=".55" stop-color="#f6b94a"/><stop offset="1" stop-color="#e97835"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#090a12"/><path d="M12 24h10l4-6h12l4 6h10v27H12Z" fill="#16162a" stroke="url(#slopcamera-footer-lens)" stroke-linejoin="round" stroke-width="2.4"/><circle cx="32" cy="36" r="10" fill="none" stroke="url(#slopcamera-footer-lens)" stroke-width="3"/><circle cx="32" cy="36" r="5" fill="#f6b94a"/><circle cx="47" cy="29" r="1.7" fill="#fff3c2"/></svg>`
+
+/** The in-flow product content footer shared by every ordinary document. It
+ * lands immediately before the canonical Hraness network footer, reuses the
+ * header's own destinations, and carries the authored camera mark rather than
+ * an emoji. Presentation comes from design-kit's `hraness-marketing-footer`
+ * grammar; product links and disclosures stay outside the shared footer. */
+function renderSiteContentFooter(): string {
+  return `<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
+      <div class="hraness-marketing-footer__inner">
+        <a aria-label="Slopcamera home" class="hraness-marketing-footer__brand" href="/">${SLOPCAMERA_MARK_SVG}<span class="hraness-marketing-footer__name">Slopcamera</span></a>
+        <nav aria-label="Footer navigation" class="hraness-marketing-footer__nav">
+          <a href="/docs">Docs</a>
+          <a href="https://github.com/hraness/slopcamera">GitHub</a>
+          <a href="/#install">Install Slopcamera</a>
+        </nav>
+      </div>
+    </footer>`
+}
+
 type CopyCommandOptions = Readonly<{
   alternateCommand: string
   command: string
@@ -102,10 +126,10 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   }
   const common: ReadonlyArray<readonly [string, string, number]> = [
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
-    ["{{HRANESS_SITE_FOOTER}}", renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
+    ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
       id: "slopcamera", name: "Slopcamera", updates: false,
       valueProposition: "Support ongoing development of local visual tools for agents.",
-    } }), 1],
+    } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
   if (document === "404.html") return common

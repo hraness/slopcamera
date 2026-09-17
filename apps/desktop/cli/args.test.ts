@@ -412,3 +412,53 @@ test("project render rejects dimensions that libx264 yuv420p cannot encode", () 
     "project", "render", "run", "project_example001", "--width", "321", "--height", "241",
   ])).toThrow(/even positive integer/u);
 });
+
+test("ai scene gallery parses its bounded render options", () => {
+  expect(parseCliArgs([
+    "ai", "scene", "gallery", "scene.json",
+    "--variants", "v.json", "--output-dir", "review",
+  ])).toMatchObject({
+    kind: "ai-scene-gallery",
+    scene: "scene.json",
+    variants: "v.json",
+    outputDir: "review",
+  });
+  expect(parseCliArgs([
+    "ai", "scene", "gallery", "scene.json",
+    "--variants", "v.json", "--output-dir", "review",
+    "--camera", "camera_main", "--time-us", "250000", "--cell", "640",
+  ])).toMatchObject({
+    camera: "camera_main",
+    cell: 640,
+    timeUs: 250000,
+  });
+  expect(() => parseCliArgs([
+    "ai", "scene", "gallery", "scene.json", "--output-dir", "review",
+  ])).toThrow(/--variants/u);
+  expect(() => parseCliArgs([
+    "ai", "scene", "gallery", "scene.json",
+    "--variants", "v.json", "--output-dir", "review", "--time-us", "-5",
+  ])).toThrow(/--time-us/u);
+});
+
+test("ai image gallery parses --preview probe only for scene-bound kinds", () => {
+  expect(parseCliArgs([
+    "ai", "image", "gallery", "basalt", "--model", "bfl/flux",
+    "--output-dir", "review", "--kind", "texture", "--preview", "probe",
+  ])).toMatchObject({ kind: "ai-image-gallery", preview: "probe" });
+  expect(parseCliArgs([
+    "ai", "image", "gallery", "basalt", "--model", "bfl/flux",
+    "--output-dir", "review", "--kind", "texture",
+  ])).toMatchObject({ kind: "ai-image-gallery", preview: undefined });
+  for (const argv of [
+    ["--preview", "flat"],
+    ["--preview", "probe"],
+    ["--kind", "image", "--preview", "probe"],
+    ["--kind", "sprite", "--preview", "probe"],
+  ]) {
+    expect(() => parseCliArgs([
+      "ai", "image", "gallery", "basalt", "--model", "bfl/flux",
+      "--output-dir", "review", ...argv,
+    ])).toThrow(/--preview/u);
+  }
+});

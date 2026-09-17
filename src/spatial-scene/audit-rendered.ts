@@ -28,7 +28,7 @@ export const SPATIAL_RENDERED_AUDIT_LIMITS = Object.freeze({
   framePixels: 33_554_432,
 })
 
-const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"] as const
+const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"] as const
 const ELIGIBILITY = ["renderable", "view-masked", "no-surface", "unsupported-kind"] as const
 const BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"] as const
 const FINDING_KINDS = [
@@ -329,7 +329,7 @@ const round3 = (value: number): number => Math.round(value * 1_000) / 1_000
 
 function eligibility(entity: SpatialEntity): (typeof ELIGIBILITY)[number] {
   if (entity.kind === "splat") return "unsupported-kind"
-  if (entity.kind === "group" || entity.kind === "light") return "no-surface"
+  if (entity.kind === "group" || entity.kind === "light" || entity.kind === "environment") return "no-surface"
   if (entity.placement.kind === "view") return "view-masked"
   return "renderable"
 }
@@ -337,8 +337,8 @@ function eligibility(entity: SpatialEntity): (typeof ELIGIBILITY)[number] {
 /** The manifest-bearing asset an entity's lowered representation binds, if any. */
 function entityAssetId(entity: SpatialEntity): string | undefined {
   switch (entity.kind) {
-    case "mesh": return entity.geometry.kind === "asset" ? entity.geometry.assetId : undefined
-    case "image": case "diagram": case "video": return entity.assetId
+    case "mesh": return entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.material.map
+    case "image": case "diagram": case "video": case "environment": return entity.assetId
     case "text": return entity.fontAssetId
     case "splat": return entity.assetId
     default: return undefined

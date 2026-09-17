@@ -471,3 +471,6 @@ h3 {
   --hraness-marketing-inverse: var(--night);
   --hraness-marketing-inverse-ink: var(--night-ink);
 }
+
+/* Decorative topic icons (agent-generated line art, public/icons/). */
+.slopcamera-topic-icon { display: block; width: 88px; height: 88px; margin: 0 0 18px; }

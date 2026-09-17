@@ -15,8 +15,8 @@ export const siteSha256 = (value: string | Uint8Array): string => createHash("sh
 const foundationRoot = "graphs/site-foundation/"
 const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
-  { name: "@hraness/design-kit", version: "0.8.0" },
-  { name: "@hraness/site-footer", version: "0.13.0" },
+  { name: "@hraness/design-kit", version: "0.9.0" },
+  { name: "@hraness/site-footer", version: "0.14.0" },
   { name: "@hraness/ui", version: "0.5.12" },
 ] as const
 
