@@ -102,7 +102,7 @@ function isConfined(rootDirectory: string, target: string): boolean {
   return fromRoot === "" || (!fromRoot.startsWith("..") && !isAbsolute(fromRoot))
 }
 
-async function readUtf8WithCap(filePath: string): Promise<string> {
+async function readUtf8WithCap(filePath: string, sourceLabel: string): Promise<string> {
   let handle
   try {
     handle = await open(filePath, "r")
@@ -110,13 +110,13 @@ async function readUtf8WithCap(filePath: string): Promise<string> {
     if (!metadata.isFile()) {
       throw new WorkspaceBoundaryError(
         "SOURCE_NOT_FILE",
-        "Diagram source must be a regular file.",
+        `${sourceLabel} must be a regular file.`,
       )
     }
     if (metadata.size > mcpSourceByteLimit) {
       throw new WorkspaceBoundaryError(
         "SOURCE_TOO_LARGE",
-        `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`,
+        `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`,
       )
     }
 
@@ -135,7 +135,7 @@ async function readUtf8WithCap(filePath: string): Promise<string> {
     if (bytesRead > mcpSourceByteLimit) {
       throw new WorkspaceBoundaryError(
         "SOURCE_TOO_LARGE",
-        `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`,
+        `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`,
       )
     }
     try {
@@ -145,16 +145,16 @@ async function readUtf8WithCap(filePath: string): Promise<string> {
     } catch {
       throw new WorkspaceBoundaryError(
         "SOURCE_ENCODING",
-        "Diagram source must contain valid UTF-8.",
+        `${sourceLabel} must contain valid UTF-8.`,
       )
     }
   } catch (error) {
     if (error instanceof WorkspaceBoundaryError) throw error
     const code = filesystemCode(error)
     if (code === "ENOENT") {
-      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", "Diagram source does not exist.")
+      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", `${sourceLabel} does not exist.`)
     }
-    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Diagram source could not be read.")
+    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", `${sourceLabel} could not be read.`)
   } finally {
     await handle?.close()
   }
@@ -202,7 +202,7 @@ export class WorkspaceBoundary {
     return fromRoot === "" ? "." : fromRoot.split("\\").join("/")
   }
 
-  async readSource(value: string): Promise<WorkspaceSource> {
+  async readSource(value: string, sourceLabel = "Diagram source"): Promise<WorkspaceSource> {
     const normalized = normalizeRelativePath(value, { allowRoot: false })
     const lexicalPath = resolve(this.rootDirectory, normalized.native)
     this.assertConfined(lexicalPath)
@@ -214,19 +214,19 @@ export class WorkspaceBoundary {
       if (filesystemCode(error) === "ENOENT") {
         throw new WorkspaceBoundaryError(
           "SOURCE_NOT_FOUND",
-          "Diagram source does not exist.",
+          `${sourceLabel} does not exist.`,
         )
       }
       throw new WorkspaceBoundaryError(
         "FILESYSTEM_ERROR",
-        "Diagram source could not be resolved.",
+        `${sourceLabel} could not be resolved.`,
       )
     }
     this.assertConfined(canonicalPath)
     return {
       absolutePath: canonicalPath,
       relativePath: this.toRelativePath(canonicalPath),
-      text: await readUtf8WithCap(canonicalPath),
+      text: await readUtf8WithCap(canonicalPath, sourceLabel),
     }
   }
 
