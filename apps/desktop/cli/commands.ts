@@ -1,14 +1,48 @@
 import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
+import { SlopcameraCloudError } from "../../../src/cloud-errors";
+import {
+  composeSlopcameraImageGallery,
+  parseSlopcameraGalleryVary,
+  planSlopcameraGallery,
+  slopcameraGalleryLimits,
+  type SlopcameraGalleryCandidate,
+  type SlopcameraGalleryKind,
+  type SlopcameraGalleryPlan,
+  type SlopcameraGalleryResolvedCandidate,
+} from "../../../src/image-gallery";
+import {
+  galleryProbeRenderRequest,
+  galleryProbeScene,
+  type SlopcameraGalleryProbeMode,
+} from "../../../src/spatial-scene/probe";
+import {
+  planSlopcameraSceneGallery,
+  slopcameraSceneGalleryLimits,
+  type SlopcameraSceneGalleryVariant,
+} from "../../../src/scene-gallery";
+import {
+  parseSpatialScene,
+  spatialSceneSha256,
+} from "../../../src/spatial-scene/identity";
+import {
+  SPATIAL_SCENE_LIMITS,
+  type SpatialSceneV1,
+} from "../../../src/spatial-scene/contracts";
 import { createDirectingBlobSession } from "./directing-blob";
 import { assembleDirectingClips, extractDirectingEndpoint, importDirectingAnchor } from "./directing-media";
 import { executeDirectingCommand } from "./directing-service";
 import { createHash, randomUUID } from "node:crypto";
+import sharp from "sharp";
 import { executeSpatialAssetCommand } from "./spatial-asset-service";
-import { executeSpatialSceneCommand } from "./spatial-scene-service";
+import {
+  executeSpatialSceneCommand,
+  publishSpatialSource,
+  readSpatialJson,
+} from "./spatial-scene-service";
 import { executeSpatialProjectCommand } from "./spatial-project-service";
 import { executeSpatialWorldCommand } from "./spatial-world-service";
 import { constants } from "node:fs";
-import { link, lstat, open, realpath, rm } from "node:fs/promises";
+import { link, lstat, mkdir, open, realpath, rm } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   createDefaultHostResourceCoordinator,
@@ -322,6 +356,33 @@ export interface CliDependencies {
   readonly sceneProviderFactory?: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly version?: string;
+  /**
+   * Test/review seam for gallery scene renders (`ai image gallery
+   * --preview probe` and `ai scene gallery`): renders one bounded scene
+   * source into a still. The production default runs the real
+   * `scene.render` operation.
+   */
+  readonly renderGalleryScene?: (input: {
+    readonly application: ApplicationContext;
+    readonly assets?: readonly {
+      readonly assetId: string;
+      readonly artifact: {
+        readonly bytes: number;
+        readonly path: string;
+        readonly sha256: string;
+      };
+    }[];
+    readonly request?: unknown;
+    readonly sceneSha256?: string;
+    readonly source: { readonly path: string };
+  }) => Promise<{
+    readonly artifact: {
+      readonly bytes: number;
+      readonly path: string;
+      readonly sha256: string;
+    };
+    readonly receipt?: { readonly path: string };
+  }>;
 }
 
 interface CommandContext {
@@ -348,6 +409,7 @@ interface CommandContext {
   readonly sceneProviderFactory: (options: GatewaySceneProviderOptions) => SceneDescriptionProvider;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly version: string;
+  readonly renderGalleryScene?: CliDependencies["renderGalleryScene"];
 }
 
 function contextWithHostResourceLease(
@@ -4458,6 +4520,20 @@ function gatewayCliError(error: unknown): CliError {
   if (error instanceof GatewayProviderOptionsError) {
     return new CliError("usage", error.message);
   }
+  if (error instanceof SlopcameraCloudError) {
+    return new CliError(
+      error.code === "INVALID_ARGUMENT"
+        ? "usage"
+        : error.code === "OUTPUT_WRITE_FAILED"
+          ? "conflict"
+          : error.code === "AUTHENTICATION_REQUIRED"
+            ? "authorization-required"
+            : error.code === "GENERATION_INVALID_RESPONSE"
+              ? "invalid-data"
+              : "unavailable",
+      error.message,
+    );
+  }
   return asCliError(error);
 }
 
@@ -5109,6 +5185,819 @@ async function handleAiImageGenerate(
       command.json,
       summary,
       () => gatewayArtifactHuman(summary),
+    );
+  });
+}
+
+async function dispatchGalleryCandidate(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-image-gallery" }>,
+  plan: SlopcameraGalleryPlan,
+  candidate: SlopcameraGalleryCandidate,
+  timeoutMs: number,
+): Promise<SlopcameraGalleryResolvedCandidate> {
+  const tracker = await createGatewayJobTracker(context, {
+    model: command.model,
+    operation: "image.generate",
+    request: {
+      candidate: {
+        id: candidate.id,
+        index: candidate.index,
+        label: candidate.label,
+      },
+      count: 1,
+      galleryKind: plan.kind,
+      promptCharacters: candidate.prompt.length,
+      promptSha256: sha256Hex(candidate.prompt),
+      subjectSha256: sha256Hex(plan.subject),
+    },
+  });
+  const settled = (
+    partial: Omit<SlopcameraGalleryResolvedCandidate, "id" | "index" | "job" | "label" | "prompt">,
+  ): SlopcameraGalleryResolvedCandidate => ({
+    id: candidate.id,
+    index: candidate.index,
+    job: tracker.path,
+    label: candidate.label,
+    prompt: candidate.prompt,
+    ...partial,
+  });
+  try {
+    const bundle = await executeTrackedGatewayOperation(
+      context,
+      tracker,
+      async service => await service.generateImage(
+        {
+          consent: gatewayConsent(context),
+          model: command.model,
+          prompt: candidate.prompt,
+        },
+        {
+          ...(context.abortSignal === undefined
+            ? {}
+            : { signal: context.abortSignal }),
+          timeoutMs,
+        },
+      ),
+      result => result,
+    );
+    const output = bundle.outputs[0];
+    if (output === undefined) {
+      return settled({
+        error: "The Gateway image job completed without an image output.",
+        status: "failed",
+      });
+    }
+    const bytes = await readBoundedPhysicalBytes(
+      output.path,
+      CLI_GATEWAY_IMAGE_INPUT_BYTES,
+    );
+    const generated = settled({
+      bytes,
+      mediaType: output.mediaType,
+      path: output.path,
+      ...(bundle.receipt.routing.generationId === undefined
+        ? {}
+        : { requestId: bundle.receipt.routing.generationId }),
+      sha256: output.sha256,
+      status: "generated",
+      ...(bundle.receipt.warnings.length === 0
+        ? {}
+        : { warnings: bundle.receipt.warnings }),
+    });
+    if (command.preview === "probe") {
+      return await attachGalleryProbePreview(context, plan, generated);
+    }
+    return generated;
+  } catch (error) {
+    // A settled paid job stays a gallery row: the receipt keeps the failure
+    // and the durable job path so review never depends on provider success.
+    return settled({
+      error: gatewayCliError(error).message,
+      status: "failed",
+    });
+  }
+}
+
+const GALLERY_PROBE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
+
+/**
+ * Renders one settled candidate inside the fixed probe scene and returns the
+ * candidate row with a distinct `cellImage` render artifact. A render failure
+ * keeps the flat candidate cell and records the failure as a warning — the
+ * paid candidate bytes stay reviewable and promotable.
+ */
+async function attachGalleryProbePreview(
+  context: CommandContext,
+  plan: SlopcameraGalleryPlan,
+  resolved: SlopcameraGalleryResolvedCandidate,
+): Promise<SlopcameraGalleryResolvedCandidate> {
+  const probeFailed = (message: string): SlopcameraGalleryResolvedCandidate => ({
+    ...resolved,
+    warnings: [...(resolved.warnings ?? []), `Probe preview failed: ${message}`],
+  });
+  try {
+    if (
+      resolved.bytes === undefined
+      || resolved.mediaType === undefined
+      || resolved.path === undefined
+      || resolved.sha256 === undefined
+    ) {
+      return probeFailed("the candidate artifact lacks published bytes.");
+    }
+    if (!GALLERY_PROBE_MIME_TYPES.has(resolved.mediaType)) {
+      return probeFailed(`candidate media type ${resolved.mediaType} cannot be a scene asset.`);
+    }
+    const [repositoryRoot, candidatePath] = await Promise.all([
+      realpath(context.paths.repositoryRoot),
+      realpath(resolved.path),
+    ]);
+    if (!isWithin(repositoryRoot, candidatePath)) {
+      return probeFailed("the candidate artifact escapes the repository root.");
+    }
+    if (
+      createHash("sha256").update(resolved.bytes).digest("hex")
+      !== resolved.sha256
+    ) {
+      return probeFailed("the candidate bytes do not match their published artifact digest.");
+    }
+    const metadata = await sharp(resolved.bytes, {
+      failOn: "warning",
+      limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+    }).metadata();
+    if (metadata.width === undefined || metadata.height === undefined) {
+      return probeFailed("the candidate image did not expose its dimensions.");
+    }
+    const mode = plan.kind as SlopcameraGalleryProbeMode;
+    const scene = galleryProbeScene(mode, {
+      assetId: "asset_candidate",
+      dependencies: [],
+      interpretation: {
+        alpha: metadata.hasAlpha === true ? "straight" : "opaque",
+        colorSpace: "srgb",
+        height: metadata.height,
+        kind: "image",
+        mimeType: resolved.mediaType as "image/png" | "image/jpeg" | "image/svg+xml",
+        width: metadata.width,
+      },
+      payload: {
+        bytes: resolved.bytes.byteLength,
+        path: basename(candidatePath),
+        sha256: resolved.sha256,
+      },
+      provenance: {
+        description: `Gallery candidate ${resolved.id} probe preview.`,
+        source: "generated",
+      },
+    });
+    const scenePath = join(dirname(candidatePath), "probe-scene.json");
+    const handle = await open(
+      scenePath,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
+      0o600,
+    );
+    try {
+      await handle.writeFile(`${canonicalJson(scene)}\n`);
+    } finally {
+      await handle.close();
+    }
+    const source = { path: relative(repositoryRoot, scenePath) };
+    // The render phase admits its own local/browser vector per settled
+    // candidate; paid provider waits never hold render capacity.
+    const renderClaims = physicalHostResourceClaims(
+      [
+        { amount: 1, resource: "cpu" },
+        { amount: 1, resource: "local-io" },
+        { amount: 1, resource: "browser" },
+        { amount: 1, resource: "output-publication" },
+      ],
+      context.hostResourceCoordinator,
+    );
+    const rendered = await withHostResourceClaims(
+      context,
+      missingHostResourceClaims(
+        context.hostResourceLease?.claims ?? [],
+        renderClaims,
+      ),
+      async admitted => {
+        const input = {
+          request: galleryProbeRenderRequest(),
+          sceneSha256: spatialSceneSha256(scene),
+          source,
+        };
+        if (context.renderGalleryScene !== undefined) {
+          return await context.renderGalleryScene({
+            ...input,
+            application: applicationContext(admitted),
+          });
+        }
+        const registry = createApplicationOperationRegistry({
+          toolVersion: context.version,
+        });
+        const result = await registry.execute(
+          {
+            abortSignal: context.abortSignal ?? new AbortController().signal,
+            application: applicationContext(admitted),
+          },
+          {
+            input,
+            kind: "scene.render",
+            version: 1,
+          },
+        );
+        const output = result.output as {
+          readonly artifact: {
+            readonly bytes: number;
+            readonly path: string;
+            readonly sha256: string;
+          };
+        };
+        return { artifact: output.artifact };
+      },
+      context.abortSignal,
+    );
+    const stillPath = resolve(context.paths.repositoryRoot, rendered.artifact.path);
+    if (!isWithin(context.paths.repositoryRoot, stillPath)) {
+      return probeFailed("the rendered still escapes the repository root.");
+    }
+    const stillBytes = await readBoundedPhysicalBytes(
+      stillPath,
+      CLI_GATEWAY_IMAGE_INPUT_BYTES,
+    );
+    if (
+      stillBytes.byteLength !== rendered.artifact.bytes
+      || createHash("sha256").update(stillBytes).digest("hex") !== rendered.artifact.sha256
+    ) {
+      return probeFailed("the rendered still does not match its published artifact digest.");
+    }
+    return {
+      ...resolved,
+      cellImage: {
+        bytes: stillBytes,
+        mediaType: "image/png",
+        path: stillPath,
+        sha256: rendered.artifact.sha256,
+      },
+    };
+  } catch (error) {
+    return probeFailed(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * Renders one derived variant scene into a beauty still through the qualified
+ * `scene.render` operation (or the test seam) and returns the resolved gallery
+ * candidate. A render or write failure stays in the sheet as a failed row
+ * carrying the variant's patch provenance.
+ */
+async function dispatchSceneVariant(
+  context: CommandContext,
+  baseScene: SpatialSceneV1,
+  variant: SlopcameraSceneGalleryVariant,
+  request: {
+    readonly cameraId: string;
+    readonly mode: { readonly kind: "beauty" };
+    readonly selection: { readonly kind: "frame"; readonly timeUs: number };
+  },
+  derivedPath: string,
+  bases: {
+    readonly repositoryRoot: string;
+    readonly scene: string;
+    readonly variants: string;
+  },
+): Promise<SlopcameraGalleryResolvedCandidate> {
+  const base = {
+    id: variant.id,
+    index: variant.index,
+    label: variant.label,
+    prompt: variant.prompt,
+    scene: {
+      diff: variant.diff,
+      patchSha256: variant.patchSha256,
+      sceneSha256: variant.sceneSha256,
+    },
+  };
+  let derivedArtifact: {
+    readonly bytes: Uint8Array;
+    readonly mediaType: "application/json";
+    readonly path: string;
+    readonly sha256: string;
+  } | undefined;
+  let renderReceiptPath: string | undefined;
+  try {
+    const variantDirectory = dirname(derivedPath);
+    await mkdir(variantDirectory, { mode: 0o700, recursive: true });
+    // Stage every declared payload beneath the variant directory so the
+    // derived manifest's contained relative paths resolve for this render
+    // and for a standalone re-render after promotion. Inherited payloads
+    // resolve beside the authored scene; variant-authored payloads resolve
+    // beside the variants file.
+    const baseAssets = new Map(
+      baseScene.assets.map(asset => [asset.assetId, asset]),
+    );
+    const staged = new Map<string, string>();
+    const assets: {
+      readonly assetId: string;
+      readonly artifact: {
+        readonly bytes: number;
+        readonly path: string;
+        readonly sha256: string;
+      };
+    }[] = [];
+    for (const asset of variant.scene.assets) {
+      const inherited = baseAssets.get(asset.assetId);
+      const unchanged = inherited !== undefined
+        && inherited.payload.sha256 === asset.payload.sha256
+        && inherited.payload.bytes === asset.payload.bytes
+        && inherited.payload.path === asset.payload.path;
+      const sourcePath = resolve(
+        unchanged ? bases.scene : bases.variants,
+        asset.payload.path,
+      );
+      const target = join(variantDirectory, asset.payload.path);
+      const binding = [
+        sourcePath,
+        String(asset.payload.bytes),
+        asset.payload.sha256,
+      ].join("\u0000");
+      const assetBinding = {
+        assetId: asset.assetId,
+        artifact: {
+          bytes: asset.payload.bytes,
+          path: relative(context.paths.repositoryRoot, target),
+          sha256: asset.payload.sha256,
+        },
+      };
+      const previous = staged.get(target);
+      if (previous !== undefined) {
+        if (previous !== binding) {
+          throw new CliError(
+            "conflict",
+            `Variant ${variant.id} binds two payloads at ${asset.payload.path}.`,
+          );
+        }
+        assets.push(assetBinding);
+        continue;
+      }
+      const physicalSourcePath = await realpath(sourcePath);
+      if (
+        physicalSourcePath !== sourcePath
+        || !isWithin(bases.repositoryRoot, physicalSourcePath)
+      ) {
+        throw new CliError(
+          "unsafe-path",
+          `Asset payload ${asset.payload.path} must be a physical file inside the repository.`,
+        );
+      }
+      const payload = await readBoundedPhysicalBytes(
+        sourcePath,
+        asset.payload.bytes,
+      );
+      if (
+        payload.byteLength !== asset.payload.bytes
+        || createHash("sha256").update(payload).digest("hex")
+          !== asset.payload.sha256
+      ) {
+        throw new CliError(
+          "invalid-data",
+          `Asset ${asset.assetId} payload does not match its manifest.`,
+        );
+      }
+      await mkdir(dirname(target), { mode: 0o700, recursive: true });
+      const handle = await open(
+        target,
+        constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+          | (constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+      try {
+        await handle.writeFile(payload);
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      staged.set(target, binding);
+      assets.push(assetBinding);
+    }
+    // The derived scene is a new no-replace document beside the sheet; the
+    // authored source scene is never touched.
+    await publishSpatialSource(derivedPath, variant.scene);
+    const sceneBytes = await readBoundedPhysicalBytes(
+      derivedPath,
+      SPATIAL_SCENE_LIMITS.sourceBytes,
+    );
+    derivedArtifact = {
+      bytes: sceneBytes,
+      mediaType: "application/json",
+      path: derivedPath,
+      sha256: createHash("sha256").update(sceneBytes).digest("hex"),
+    };
+    const source = {
+      path: relative(context.paths.repositoryRoot, derivedPath),
+    };
+    const rendered = context.renderGalleryScene === undefined
+      ? await (async () => {
+        const registry = createApplicationOperationRegistry({
+          toolVersion: context.version,
+        });
+        const result = await registry.execute(
+          {
+            abortSignal: context.abortSignal ?? new AbortController().signal,
+            application: applicationContext(context),
+          },
+          {
+            input: {
+              assets,
+              request,
+              sceneSha256: variant.sceneSha256,
+              source,
+            },
+            kind: "scene.render",
+            version: 1,
+          },
+        );
+        return result.output as {
+          readonly artifact: {
+            readonly bytes: number;
+            readonly path: string;
+            readonly sha256: string;
+          };
+          readonly receipt: { readonly path: string };
+        };
+      })()
+      : await context.renderGalleryScene({
+        application: applicationContext(context),
+        assets,
+        request,
+        sceneSha256: variant.sceneSha256,
+        source,
+      });
+    if (rendered.receipt !== undefined) {
+      const receiptPath = resolve(
+        context.paths.repositoryRoot,
+        rendered.receipt.path,
+      );
+      if (!isWithin(context.paths.repositoryRoot, receiptPath)) {
+        throw new CliError(
+          "unsafe-path",
+          "A render receipt escapes the repository root.",
+        );
+      }
+      renderReceiptPath = receiptPath;
+    }
+    const stillPath = resolve(
+      context.paths.repositoryRoot,
+      rendered.artifact.path,
+    );
+    if (!isWithin(context.paths.repositoryRoot, stillPath)) {
+      throw new CliError(
+        "unsafe-path",
+        "A rendered variant still escapes the repository root.",
+      );
+    }
+    const stillBytes = await readBoundedPhysicalBytes(
+      stillPath,
+      CLI_GATEWAY_IMAGE_INPUT_BYTES,
+    );
+    if (
+      stillBytes.byteLength !== rendered.artifact.bytes
+      || createHash("sha256").update(stillBytes).digest("hex")
+        !== rendered.artifact.sha256
+    ) {
+      throw new CliError(
+        "conflict",
+        "A rendered variant still does not match its published artifact digest.",
+      );
+    }
+    return {
+      ...base,
+      ...derivedArtifact,
+      cellImage: {
+        bytes: stillBytes,
+        mediaType: "image/png",
+        path: stillPath,
+        sha256: rendered.artifact.sha256,
+      },
+      ...(renderReceiptPath === undefined ? {} : { job: renderReceiptPath }),
+      status: "generated",
+    };
+  } catch (error) {
+    return {
+      ...base,
+      ...derivedArtifact,
+      ...(renderReceiptPath === undefined ? {} : { job: renderReceiptPath }),
+      error: error instanceof Error ? error.message : String(error),
+      status: "failed",
+    };
+  }
+}
+
+async function handleAiSceneGallery(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-scene-gallery" }>,
+): Promise<void> {
+  const scenePath = resolve(context.paths.repositoryRoot, command.scene);
+  const variantsPath = resolve(context.paths.repositoryRoot, command.variants);
+  const [repositoryRoot, physicalScenePath, physicalVariantsPath] = await Promise.all([
+    realpath(context.paths.repositoryRoot),
+    realpath(scenePath),
+    realpath(variantsPath),
+  ]);
+  if (
+    physicalScenePath !== resolve(
+      repositoryRoot,
+      relative(context.paths.repositoryRoot, scenePath),
+    )
+    || physicalVariantsPath !== resolve(
+      repositoryRoot,
+      relative(context.paths.repositoryRoot, variantsPath),
+    )
+    || !isWithin(repositoryRoot, physicalScenePath)
+    || !isWithin(repositoryRoot, physicalVariantsPath)
+  ) {
+    throw new CliError(
+      "unsafe-path",
+      "Scene gallery inputs must be physical files inside the repository.",
+    );
+  }
+  const scene = parseSpatialScene(await readSpatialJson(scenePath));
+  const variantsValue = await readSpatialJson(
+    variantsPath,
+    slopcameraSceneGalleryLimits.variantsBytes,
+  );
+  // Every variant patch is validated and applied before the first render.
+  const gallery = planSlopcameraSceneGallery({
+    scene,
+    variants: variantsValue,
+  });
+  const cameraId = command.camera ?? gallery.scene.cameras[0]?.cameraId;
+  if (cameraId === undefined) {
+    throw new CliError(
+      "invalid-data",
+      "The scene declares no camera to render from.",
+    );
+  }
+  if (
+    !gallery.scene.cameras.some(camera => camera.cameraId === cameraId)
+  ) {
+    throw new CliError(
+      "invalid-data",
+      `--camera ${cameraId} is not a scene camera.`,
+    );
+  }
+  const timeUs = command.timeUs ?? 0;
+  const outputDir = await resolveSafePath(
+    context.paths.repositoryRoot,
+    command.outputDir,
+  );
+  await mkdir(outputDir, { mode: 0o700, recursive: true });
+  for (const name of ["gallery.png", "receipt.json", "variants"] as const) {
+    const existing = await lstat(join(outputDir, name)).then(
+      () => true,
+      () => false,
+    );
+    if (existing) {
+      throw new CliError(
+        "conflict",
+        `Gallery outputs are never replaced; ${name} already exists in ${command.outputDir}.`,
+      );
+    }
+  }
+  const renderRequest = {
+    cameraId,
+    mode: { kind: "beauty" as const },
+    selection: { kind: "frame" as const, timeUs },
+  };
+  const bases = {
+    repositoryRoot,
+    scene: dirname(physicalScenePath),
+    variants: dirname(physicalVariantsPath),
+  };
+  const resolved = await mapBounded(
+    gallery.variants,
+    slopcameraGalleryLimits.concurrency,
+    async variant =>
+      await dispatchSceneVariant(
+        context,
+        gallery.scene,
+        variant,
+        renderRequest,
+        join(outputDir, "variants", variant.id, "scene.json"),
+        bases,
+      ),
+  );
+  const plan: SlopcameraGalleryPlan = {
+    aspect: [16, 9],
+    axes: [],
+    candidates: gallery.variants.map(variant => ({
+      id: variant.id,
+      index: variant.index,
+      label: variant.label,
+      prompt: variant.prompt,
+    })),
+    kind: "image",
+    subject: gallery.scene.sceneId,
+    tiled: false,
+  };
+  const receipt = await composeSlopcameraImageGallery({
+    candidates: resolved,
+    ...(command.cell === undefined ? {} : { cellEdge: command.cell }),
+    model: "local/scene-render",
+    outputDir,
+    plan,
+    receipt: {
+      baseSceneSha256: gallery.baseSceneSha256,
+      kind: "slopcamera.scene-gallery",
+    },
+  });
+  const summary = {
+    baseSceneSha256: gallery.baseSceneSha256,
+    gallery: displayPath(context.paths.repositoryRoot, receipt.gallery.path),
+    kind: receipt.kind,
+    receipt: displayPath(context.paths.repositoryRoot, receipt.receiptPath),
+    variants: receipt.candidates.map(candidate => ({
+      id: candidate.id,
+      index: candidate.index,
+      ...(candidate.cellImage === undefined
+        ? {}
+        : {
+          cellImage: {
+            ...(candidate.cellImage.path === undefined
+              ? {}
+              : {
+                path: displayPath(
+                  context.paths.repositoryRoot,
+                  candidate.cellImage.path,
+                ),
+              }),
+            sha256: candidate.cellImage.sha256,
+          },
+        }),
+      ...(candidate.job === undefined
+        ? {}
+        : { job: displayPath(context.paths.repositoryRoot, candidate.job) }),
+      ...(candidate.path === undefined
+        ? {}
+        : { path: displayPath(context.paths.repositoryRoot, candidate.path) }),
+      ...(candidate.scene === undefined ? {} : { scene: candidate.scene }),
+      status: candidate.status,
+    })),
+  };
+  writeValue(
+    context.io,
+    command.json,
+    summary,
+    () =>
+      [
+        `scene.gallery ${receipt.counts.generated}/${receipt.counts.requested} variants rendered`,
+        ...receipt.candidates.map(candidate => (
+          `#${String(candidate.index)} ${candidate.id}\t${candidate.status}`
+          + (candidate.cellImage?.path === undefined
+            ? ""
+            : `\tstill ${displayPath(context.paths.repositoryRoot, candidate.cellImage.path)}`)
+        )),
+      ].join("\n"),
+  );
+}
+
+async function handleAiImageGallery(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-image-gallery" }>,
+): Promise<void> {
+  await withGatewayErrors(async () => {
+    const timeoutMs = gatewayTimeoutMs(command.timeout);
+    const vary = command.vary === undefined
+      ? undefined
+      : parseSlopcameraGalleryVary(command.vary);
+    let explicitCandidates: readonly unknown[] | undefined;
+    if (command.candidatesFile !== undefined) {
+      const text = await readGatewayTextFile(
+        context.io.cwd(),
+        command.candidatesFile,
+        64 * 1024,
+      );
+      let parsedCandidates: unknown;
+      try {
+        parsedCandidates = JSON.parse(text) as unknown;
+      } catch {
+        throw new CliError(
+          "usage",
+          "--candidates must be valid JSON.",
+        );
+      }
+      if (!Array.isArray(parsedCandidates)) {
+        throw new CliError(
+          "usage",
+          "--candidates must be a JSON array of {id, prompt|variant} entries.",
+        );
+      }
+      explicitCandidates = parsedCandidates;
+    }
+    const plan = planSlopcameraGallery({
+      ...(explicitCandidates === undefined
+        ? {}
+        : { candidates: explicitCandidates }),
+      ...(command.count === undefined ? {} : { count: command.count }),
+      ...(command.galleryKind === undefined
+        ? {}
+        : { kind: command.galleryKind as SlopcameraGalleryKind }),
+      subject: command.subject,
+      ...(command.tiled === undefined ? {} : { tiled: command.tiled }),
+      ...(vary === undefined ? {} : { vary }),
+    });
+    const outputDir = resolve(context.io.cwd(), command.outputDir);
+    await mkdir(outputDir, { recursive: true });
+    for (const name of ["gallery.png", "receipt.json"] as const) {
+      const existing = await lstat(join(outputDir, name)).then(
+        () => true,
+        () => false,
+      );
+      if (existing) {
+        throw new CliError(
+          "conflict",
+          `Gallery outputs are never replaced; ${name} already exists in ${command.outputDir}.`,
+        );
+      }
+    }
+    const resolved = await mapBounded(
+      plan.candidates,
+      slopcameraGalleryLimits.concurrency,
+      async candidate => await dispatchGalleryCandidate(
+        context,
+        command,
+        plan,
+        candidate,
+        timeoutMs,
+      ),
+    );
+    const receipt = await composeSlopcameraImageGallery({
+      candidates: resolved,
+      ...(command.cell === undefined ? {} : { cellEdge: command.cell }),
+      model: command.model,
+      outputDir,
+      plan,
+    });
+    const summary = {
+      candidates: receipt.candidates.map(candidate => ({
+        id: candidate.id,
+        index: candidate.index,
+        ...(candidate.job === undefined
+          ? {}
+          : { job: displayPath(context.paths.repositoryRoot, candidate.job) }),
+        ...(candidate.path === undefined
+          ? {}
+          : { path: displayPath(context.paths.repositoryRoot, candidate.path) }),
+        ...(candidate.sha256 === undefined ? {} : { sha256: candidate.sha256 }),
+        status: candidate.status,
+        ...(candidate.tiled === undefined ? {} : { tiled: candidate.tiled }),
+        ...(candidate.cellImage === undefined
+          ? {}
+          : {
+            cellImage: {
+              ...(candidate.cellImage.path === undefined
+                ? {}
+                : {
+                  path: displayPath(
+                    context.paths.repositoryRoot,
+                    candidate.cellImage.path,
+                  ),
+                }),
+              sha256: candidate.cellImage.sha256,
+            },
+          }),
+        ...(candidate.error === undefined ? {} : { error: candidate.error }),
+      })),
+      counts: receipt.counts,
+      gallery: {
+        bytes: receipt.gallery.bytes,
+        height: receipt.gallery.height,
+        path: displayPath(context.paths.repositoryRoot, receipt.gallery.path),
+        sha256: receipt.gallery.sha256,
+        width: receipt.gallery.width,
+      },
+      kind: receipt.galleryKind,
+      model: receipt.model,
+      receiptPath: displayPath(
+        context.paths.repositoryRoot,
+        receipt.receiptPath,
+      ),
+      subject: receipt.subject,
+    };
+    writeValue(
+      context.io,
+      command.json,
+      summary,
+      () => [
+        `image.gallery ${receipt.counts.generated}/${receipt.counts.requested} candidates generated (${receipt.model})`,
+        ...receipt.candidates.map(candidate => (
+          `#${String(candidate.index)} ${candidate.id}\t${candidate.status}`
+          + (candidate.job === undefined
+            ? ""
+            : `\tjob ${displayPath(context.paths.repositoryRoot, candidate.job)}`)
+        )),
+        `gallery ${summary.gallery.path}`,
+        `receipt ${summary.receiptPath}`,
+      ].join("\n"),
     );
   });
 }
@@ -6298,6 +7187,8 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "ai-models-list": await handleAiModelsList(context, command); return;
     case "ai-models-show": await handleAiModelsShow(context, command); return;
     case "ai-image-generate": await handleAiImageGenerate(context, command); return;
+    case "ai-image-gallery": await handleAiImageGallery(context, command); return;
+    case "ai-scene-gallery": await handleAiSceneGallery(context, command); return;
     case "ai-video-generate": await handleAiVideoGenerate(context, command); return;
     case "ai-speech-generate": await handleAiSpeechGenerate(context, command); return;
     case "ai-transcribe": await handleAiTranscribe(context, command); return;
@@ -6592,6 +7483,8 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "diagram-render":
     case "image-vectorize": return { kind: "workspace-private" };
     case "ai-image-generate":
+    case "ai-image-gallery":
+    case "ai-scene-gallery":
     case "ai-video-generate":
     case "ai-speech-generate":
     case "ai-transcribe": return undefined;
@@ -6775,6 +7668,9 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
         ?? (options => createGatewaySceneProvider(options)),
       sleep: dependencies.sleep ?? (async milliseconds => await Bun.sleep(milliseconds)),
       version: dependencies.version ?? SLOPCAMERA_VERSION,
+      ...(dependencies.renderGalleryScene === undefined
+        ? {}
+        : { renderGalleryScene: dependencies.renderGalleryScene }),
     };
     const mutationTarget = await resolveMutationTarget(paths, stateRoot, command);
     await withCommandHostResources(context, command, async admittedContext => {

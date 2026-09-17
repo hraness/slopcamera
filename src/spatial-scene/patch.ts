@@ -82,6 +82,13 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
         addressedGeometry.add(operation.entityId)
         break
       }
+      case "set-material": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "mesh") throw new SpatialSceneError("conflict", "Material replacement requires an authored mesh entity.")
+        if (entity.geometry.kind === "asset" && entity.geometry.materialMode === "source") throw new SpatialSceneError("conflict", "Source-material meshes consume source materials only; the entity material is inert.")
+        entities.set(operation.entityId, { ...entity, material: operation.material })
+        break
+      }
       case "rename-entity": entities.set(operation.entityId, { ...authored(operation.entityId), name: operation.name }); break
       case "reparent-entity": entities.set(operation.entityId, { ...authored(operation.entityId), parentId: operation.parentId }); break
       case "set-transform": entities.set(operation.entityId, { ...authored(operation.entityId), transform: operation.transform }); break
@@ -121,14 +128,16 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
   const beforeAssets = new Map(original.assets.map(asset => [asset.assetId, asset]))
   const oldClosure = spatialAssetClosureDigests(original.assets), newClosure = spatialAssetClosureDigests(scene.assets)
   for (const entity of scene.entities) {
-    const assetId = entity.kind === "mesh" && entity.geometry.kind === "asset" ? entity.geometry.assetId
-      : entity.kind === "text" ? entity.fontAssetId : "assetId" in entity ? entity.assetId : undefined
-    if (assetId === undefined) continue
-    if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
-      throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.")
+    const referenced: string[] = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId]
+      : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
+    if (entity.kind === "mesh" && entity.material.map !== undefined) referenced.push(entity.material.map)
+    for (const assetId of referenced) {
+      if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
+        throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.")
+      }
     }
     if (entity.kind === "mesh" && entity.geometry.kind === "asset" && (entity.geometry.nodeIndex !== undefined || entity.geometry.clip !== undefined)
-      && beforeAssets.has(assetId) && beforeAssets.get(assetId)!.payload.sha256 !== assets.get(assetId)!.payload.sha256
+      && beforeAssets.has(entity.geometry.assetId) && beforeAssets.get(entity.geometry.assetId)!.payload.sha256 !== assets.get(entity.geometry.assetId)!.payload.sha256
       && !addressedGeometry.has(entity.entityId) && !(entity.origin.kind === "generated" && replacedGenerators.has(entity.origin.generatorId))) {
       throw new SpatialSceneError("conflict", "Replacing addressed GLB bytes requires explicit set-mesh-geometry with the new local node/clip addresses; internal correspondence is not inferred.")
     }

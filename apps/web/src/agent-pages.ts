@@ -141,9 +141,9 @@ Editing and rendering stay local. Gateway generation and selected cloud analysis
 
 No. The website explains and installs the local system. Media work runs through local tools; MCP exposes only its documented subset.
 
-## Built by Ben Guo
+## Built by Hraness
 
-Slopcamera is built by Ben Guo, a musician and builder, formerly a founder and engineering leader at companies including Venmo and Stripe, now building from Puerto Rico.
+Hraness is an advanced software research organization dedicated to advancing the frontier of machine intelligence.
 
 [hraness.com](https://hraness.com) · [@hraness](https://x.com/hraness) · [GitHub](https://github.com/hraness/slopcamera)
 

@@ -1,6 +1,10 @@
 import { CliError } from "./errors";
 import { MAX_EVENT_QUERY_LIMIT } from "./query-limits";
 import { STUDIO_TEMPLATES, type StudioTemplate } from "./studio-template-names";
+import {
+  slopcameraGalleryKinds,
+  slopcameraGalleryLimits,
+} from "../../../src/image-gallery";
 
 export type OverlayKind = "image" | "svg" | "gif" | "video" | "emoji";
 export type ZoomTargetKind = "rect" | "point" | "cursor" | "window" | "focused-input";
@@ -205,6 +209,29 @@ export type CliCommand =
       readonly stopSequences: readonly string[];
       readonly temperature: number | undefined;
       readonly timeout: string;
+    } & JsonOption)
+  | ({
+      readonly candidatesFile: string | undefined;
+      readonly cell: number | undefined;
+      readonly count: number | undefined;
+      readonly galleryKind: string | undefined;
+      readonly kind: "ai-image-gallery";
+      readonly model: string;
+      readonly outputDir: string;
+      readonly preview: "probe" | undefined;
+      readonly subject: string;
+      readonly tiled: boolean | undefined;
+      readonly timeout: string;
+      readonly vary: string | undefined;
+    } & JsonOption)
+  | ({
+      readonly camera: string | undefined;
+      readonly cell: number | undefined;
+      readonly kind: "ai-scene-gallery";
+      readonly outputDir: string;
+      readonly scene: string;
+      readonly timeUs: number | undefined;
+      readonly variants: string;
     } & JsonOption)
   | ({
       readonly allowCloudUpload: boolean;
@@ -923,7 +950,10 @@ function parseAiProviderOptions(argv: readonly string[]): CliCommand {
 }
 
 function parseAiImage(argv: readonly string[]): CliCommand {
-  if (argv[0] !== "generate") fail("Usage: slopcamera ai image generate --model <id> [options]");
+  if (argv[0] === "gallery") return parseAiImageGallery(argv.slice(1));
+  if (argv[0] !== "generate") {
+    fail("Usage: slopcamera ai image <generate|gallery> --model <id> [options]");
+  }
   const parsed = parseOptions(argv.slice(1), {
     ...JSON_SPEC,
     "--allow-cloud-upload": "flag",
@@ -978,6 +1008,145 @@ function parseAiImage(argv: readonly string[]): CliCommand {
     stopSequences: optionStrings(parsed, "--stop"),
     temperature: optionalBoundedNumber(optionString(parsed, "--temperature"), "--temperature", 0, 100),
     timeout: optionString(parsed, "--timeout") ?? "10m",
+  };
+}
+
+function parseAiImageGallery(argv: readonly string[]): CliCommand {
+  const parsed = parseOptions(argv, {
+    ...JSON_SPEC,
+    "--candidates": "value",
+    "--cell": "value",
+    "--count": "value",
+    "--kind": "value",
+    "--model": "value",
+    "--no-tile": "flag",
+    "--output-dir": "value",
+    "--preview": "value",
+    "--tile": "flag",
+    "--timeout": "value",
+    "--vary": "value",
+  });
+  const [subject] = exactPositionals(
+    parsed,
+    1,
+    "slopcamera ai image gallery <subject> --model <id> --output-dir <directory> [options]",
+  );
+  const model = optionString(parsed, "--model");
+  if (model === undefined) fail("--model is required.");
+  const outputDir = optionString(parsed, "--output-dir");
+  if (outputDir === undefined || outputDir.trim() === "") {
+    fail("--output-dir is required.");
+  }
+  const galleryKind = optionString(parsed, "--kind");
+  if (
+    galleryKind !== undefined
+    && !(slopcameraGalleryKinds as readonly string[]).includes(galleryKind)
+  ) {
+    fail(`--kind must be one of: ${slopcameraGalleryKinds.join(", ")}.`);
+  }
+  const count = optionalStrictInteger(optionString(parsed, "--count"), "--count");
+  if (count !== undefined && count > slopcameraGalleryLimits.candidates) {
+    fail(`--count must be at most ${slopcameraGalleryLimits.candidates}.`);
+  }
+  const cell = optionalStrictInteger(optionString(parsed, "--cell"), "--cell");
+  if (
+    cell !== undefined
+    && (
+      cell < slopcameraGalleryLimits.cellEdgeMin
+      || cell > slopcameraGalleryLimits.cellEdgeMax
+    )
+  ) {
+    fail(
+      `--cell must be between ${slopcameraGalleryLimits.cellEdgeMin} and ${slopcameraGalleryLimits.cellEdgeMax}.`,
+    );
+  }
+  const candidatesFile = optionString(parsed, "--candidates");
+  const vary = optionString(parsed, "--vary");
+  if (candidatesFile !== undefined && (vary !== undefined || count !== undefined)) {
+    fail("--candidates is mutually exclusive with --vary and --count.");
+  }
+  const tile = optionFlag(parsed, "--tile");
+  const noTile = optionFlag(parsed, "--no-tile");
+  if (tile && noTile) fail("--tile and --no-tile are mutually exclusive.");
+  const preview = optionString(parsed, "--preview");
+  if (preview !== undefined && preview !== "probe") {
+    fail("--preview must be probe.");
+  }
+  if (
+    preview === "probe"
+    && !["texture", "skybox", "backdrop"].includes(galleryKind ?? "image")
+  ) {
+    fail("--preview probe requires --kind texture, skybox, or backdrop.");
+  }
+  return {
+    candidatesFile,
+    cell,
+    count,
+    galleryKind,
+    json: optionFlag(parsed, "--json"),
+    kind: "ai-image-gallery",
+    model,
+    outputDir,
+    preview: preview as "probe" | undefined,
+    subject: subject!,
+    tiled: tile ? true : noTile ? false : undefined,
+    timeout: optionString(parsed, "--timeout") ?? "10m",
+    vary,
+  };
+}
+
+function parseAiScene(argv: readonly string[]): CliCommand {
+  if (argv[0] !== "gallery") {
+    fail("Usage: slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory> [options]");
+  }
+  const parsed = parseOptions(argv.slice(1), {
+    ...JSON_SPEC,
+    "--camera": "value",
+    "--cell": "value",
+    "--output-dir": "value",
+    "--time-us": "value",
+    "--variants": "value",
+  });
+  const [scene] = exactPositionals(
+    parsed,
+    1,
+    "slopcamera ai scene gallery <scene.json> --variants <file.json> --output-dir <directory> [options]",
+  );
+  const variants = optionString(parsed, "--variants");
+  if (variants === undefined) fail("--variants is required.");
+  const outputDir = optionString(parsed, "--output-dir");
+  if (outputDir === undefined || outputDir.trim() === "") {
+    fail("--output-dir is required.");
+  }
+  const timeUsText = optionString(parsed, "--time-us");
+  let timeUs: number | undefined;
+  if (timeUsText !== undefined) {
+    if (!/^\d+$/u.test(timeUsText) || !Number.isSafeInteger(Number(timeUsText))) {
+      fail("--time-us must be a nonnegative integer microsecond time.");
+    }
+    timeUs = Number(timeUsText);
+  }
+  const cell = optionalStrictInteger(optionString(parsed, "--cell"), "--cell");
+  if (
+    cell !== undefined
+    && (
+      cell < slopcameraGalleryLimits.cellEdgeMin
+      || cell > slopcameraGalleryLimits.cellEdgeMax
+    )
+  ) {
+    fail(
+      `--cell must be between ${slopcameraGalleryLimits.cellEdgeMin} and ${slopcameraGalleryLimits.cellEdgeMax}.`,
+    );
+  }
+  return {
+    camera: optionString(parsed, "--camera"),
+    cell,
+    json: optionFlag(parsed, "--json"),
+    kind: "ai-scene-gallery",
+    outputDir,
+    scene: scene!,
+    timeUs,
+    variants,
   };
 }
 
@@ -1143,11 +1312,12 @@ function parseAi(argv: readonly string[]): CliCommand {
     case "models": return parseAiModels(argv.slice(1));
     case "provider-options": return parseAiProviderOptions(argv.slice(1));
     case "image": return parseAiImage(argv.slice(1));
+    case "scene": return parseAiScene(argv.slice(1));
     case "video": return parseAiVideo(argv.slice(1));
     case "speech": return parseAiSpeech(argv.slice(1));
     case "transcribe": return parseAiTranscribe(argv.slice(1));
     case undefined:
-    default: fail("Usage: slopcamera ai <models|provider-options|image|video|speech|transcribe> [options]");
+    default: fail("Usage: slopcamera ai <models|provider-options|image|scene|video|speech|transcribe> [options]");
   }
 }
 
