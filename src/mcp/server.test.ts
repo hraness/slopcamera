@@ -2,7 +2,24 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import type { HostResourceCoordinator } from "../host-resources.ts"
+import { createSpatialSceneStarter } from "../spatial-scene/authoring.ts"
 import { runMcpServer } from "./server.ts"
+
+/** Hermetic admission: machine-global contention belongs to host-resource tests. */
+const testCoordinator: HostResourceCoordinator = {
+  profile: { id: "slopcamera.mcp-server-test/v1", capacities: [] },
+  scope: "process",
+  async withLease(claims, callback) {
+    return await callback({
+      claims,
+      inheritedFileDescriptor: -1,
+      profile: { id: "slopcamera.mcp-server-test/v1", capacities: [] },
+      ticket: "1",
+      assertOwned: () => Promise.resolve(),
+    })
+  },
+}
 
 async function runSession(
   rootDirectory: string,
@@ -20,6 +37,7 @@ async function runSession(
     writeLine: (line) => {
       output.push(line)
     },
+    hostResourceCoordinator: testCoordinator,
   })
   return output.map((line) => JSON.parse(line) as Readonly<Record<string, unknown>>)
 }
@@ -58,6 +76,10 @@ describe("Slopcamera MCP stdio server", () => {
           edges: [{ id: "one-two", from: "one", to: "two" }],
         }),
       )
+      await writeFile(
+        join(root, "scene.json"),
+        JSON.stringify(createSpatialSceneStarter()),
+      )
       const responses = await runSession(root, [
         initialize,
         initialized,
@@ -93,9 +115,18 @@ describe("Slopcamera MCP stdio server", () => {
             },
           },
         },
+        {
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: {
+            name: "check_scene",
+            arguments: { path: "scene.json" },
+          },
+        },
       ])
 
-      expect(responses).toHaveLength(6)
+      expect(responses).toHaveLength(7)
       expect(responses[0]?.result).toMatchObject({
         protocolVersion: "2025-11-25",
         capabilities: { tools: { listChanged: false } },
@@ -109,6 +140,11 @@ describe("Slopcamera MCP stdio server", () => {
         "render_diagram",
         "search_slopcamera",
         "execute_slopcamera",
+        "check_scene",
+        "inspect_scene",
+        "audit_scene",
+        "diff_scenes",
+        "evaluate_scene",
       ])
       expect(listed.tools[0]?.annotations).toMatchObject({
         readOnlyHint: true,
@@ -122,6 +158,12 @@ describe("Slopcamera MCP stdio server", () => {
         idempotentHint: false,
         openWorldHint: true,
       })
+      for (const tool of listed.tools.slice(4)) {
+        expect(tool.annotations).toMatchObject({
+          readOnlyHint: true,
+          destructiveHint: false,
+        })
+      }
       expect(responses[3]?.result).toMatchObject({
         structuredContent: {
           ok: true,
@@ -146,6 +188,14 @@ describe("Slopcamera MCP stdio server", () => {
             ok: true,
             source: "flow.diagram.json",
           },
+        },
+      })
+      expect(responses[6]?.result).toMatchObject({
+        structuredContent: {
+          ok: true,
+          source: "scene.json",
+          sceneId: "scene_starter",
+          summary: { entityCount: 4, cameraCount: 1 },
         },
       })
     } finally {

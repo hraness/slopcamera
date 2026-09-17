@@ -1,4 +1,5 @@
 export * from "./contracts.js"
+export * from "./asset-admission.js"
 export * from "./identity.js"
 export * from "./patch.js"
 export * from "./inspect.js"
