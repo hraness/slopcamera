@@ -142,6 +142,7 @@ export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("cylinder"), radius: positiveDimension, height: positiveDimension }),
   z.strictObject({ kind: z.literal("asset"), assetId: SpatialAssetIdSchema, nodeIndex: z.number().int().min(0).max(65_535).optional(), materialMode: z.enum(["entity", "source"]).optional(),
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
+    morphWeights: z.array(unit).max(16).optional(), // bound matches gltf.ts morphTargetsPerPrimitive
   }),
 ])
 /**
