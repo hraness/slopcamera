@@ -529,7 +529,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
   if (command === "operations") return ["list", "show"];
   if (command === "diagram") return ["check", "render"];
-  if (command === "image") return ["vectorize", "icon"];
+  if (command === "image") return ["vectorize", "generate", "gallery", "icon"];
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
