@@ -24,6 +24,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
 | Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
+| Review alternative textures, skyboxes, backdrops or design candidates | [Image galleries](references/image-galleries.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |
 | Author a scene from code, generate procedural entities, or audit framing | [Scene building](references/scene-building.md) |

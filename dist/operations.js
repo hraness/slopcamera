@@ -10,7 +10,7 @@ import {
   slopcameraOperationHostResourceClaims,
   slopcameraOperationRegistry,
   withSlopcameraOperationHostAdmission
-} from "./index-rqcqb1h8.js";
+} from "./index-d6m7tcc2.js";
 import"./index-9ajx7fzb.js";
 import"./index-231ernwj.js";
 import"./index-sh6xbav6.js";

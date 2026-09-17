@@ -109,6 +109,12 @@ Never automatically retry an interrupted or failed paid generation. Slopcamera u
 zero client retries because an ambiguous request may still have been charged.
 Report the failure receipt and reconcile the exact attempt. A deliberate new paid command needs authority within the user’s budget; do not infer that an ambiguous failure was free.
 
+When the request leaves alternatives open — texture maps, skyboxes,
+backdrops, sprites, or competing design directions — prefer `slopcamera ai
+image gallery`, which runs one tracked job per candidate and composes a
+labelled contact sheet for one review pass. [Image galleries](image-galleries.md)
+covers the candidate grammar, receipt, and explicit promotion steps.
+
 ## Finish the task
 
 Report:
@@ -123,7 +129,7 @@ Report:
 
 Use [directing video](directing-video.md) for budgeted takes, accepted predecessor frames and local recovery. URL-only models can use its explicit private Blob path; do not paste short-lived signed URLs into CLI arguments or project files. Blob charges and authority are separate from Gateway.
 
-The small portable `slopcamera image generate '<prompt>' --output image.webp` command defaults to `recraft/recraft-v4.1-utility` and admits PNG/JPEG/WebP output. It is distinct from the local `ai` catalog workflow. Preserve literal prompts when requested, keep its output inside the intended workspace and never automatically retry a failed paid call.
+The small portable `slopcamera image generate '<prompt>' --output image.webp` command defaults to `recraft/recraft-v4.1-utility` and admits PNG/JPEG/WebP output. It is distinct from the local `ai` catalog workflow. Preserve literal prompts when requested, keep its output inside the intended workspace and never automatically retry a failed paid call. Its sibling `slopcamera image gallery '<subject>' --output-dir <directory>` shares that bounded model contract and composes several candidates into one review sheet; see [image galleries](image-galleries.md).
 
 For isometric line-art SVG icons, `slopcamera image icon '<subject>' --output icon.svg` is the canned pipeline: one style-locked Gateway raster is normalized to canonical ink-on-transparent pixels and traced locally. `--rounds 2` (the default) adds a vision-model critique that revises the prompt between attempts; `--rounds 1` is a single paid generation with no critique call. `--ink` overrides the stroke color and `--keep-raster` retains the normalized line-art PNG beside the SVG.
 

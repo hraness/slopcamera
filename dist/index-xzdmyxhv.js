@@ -16,7 +16,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-gwq5jc3q.js";
+} from "./index-sg902fta.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -24,6 +24,7 @@ import {
   builtInIcons,
   executeSlopcameraOperation,
   generateSlopcameraIcon,
+  generateSlopcameraImageGallery,
   lintDiagram,
   parseDiagramSource,
   parseDiagramSpec,
@@ -40,7 +41,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-rqcqb1h8.js";
+} from "./index-d6m7tcc2.js";
 import {
   VectorizeError,
   vectorizeHardLimits,
@@ -1076,6 +1077,21 @@ class SlopcameraMcpToolRuntime {
         });
       }));
     }
+    if (options.operation === "slopcamera.image.gallery") {
+      const input = parseSlopcameraOperationInput(options.operation, options.input);
+      return await this.withHostAdmission(options.operation, async () => {
+        const output = await this.boundary.prepareOutputDirectory(input.outputDir);
+        const receipt = await generateSlopcameraImageGallery({ ...input, outputDir: output.absolutePath }, this.generateDependencies);
+        return successResult(`Executed ${options.operation}: ${receipt.counts.generated}/${receipt.counts.requested} candidates in ${output.relativePath}.`, {
+          ok: true,
+          operation: options.operation,
+          result: {
+            ...receipt,
+            outputDir: output.relativePath
+          }
+        });
+      });
+    }
     return await this.withHostAdmission(options.operation, async () => {
       const input = parseSlopcameraOperationInput(options.operation, options.input);
       const output = await this.boundary.prepareOutputFile(input.outputPath);
@@ -1785,6 +1801,7 @@ var slopcameraApi = Object.freeze({
   DiagramValidationError,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  generateSlopcameraImageGallery,
   generateSlopcameraIcon,
   slopcameraGatewayCredentialStatus,
   slopcameraMcpProtocolVersion,

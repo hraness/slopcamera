@@ -21,6 +21,8 @@ export type Perspective = View & Readonly<{ kind: "perspective"; fx: number; fy:
 export type Orthographic = View & Readonly<{ kind: "orthographic"; left: number; right: number; bottom: number; top: number }>;
 export type Projection = Perspective | Orthographic;
 export type Camera = Readonly<{ projection: Projection; cameraToWorld: Mat4 }>;
+/** A validated camera plus its world-to-camera inverse, shared by batch projections. */
+export type PreparedCameraView = Camera & Readonly<{ worldToCamera: Mat4 }>;
 export type ProjectedPoint = Readonly<{ pixel: Vec2; depthMeters: number; insideImage: boolean; insideClip: boolean }>;
 export type Ray = Readonly<{ origin: Vec3; direction: Vec3; nearDistanceMeters: number; farDistanceMeters: number }>;
 export type Bounds = Readonly<{ min: Vec3; max: Vec3 }>;
@@ -205,23 +207,38 @@ function camera(camera: Camera): void {
 }
 
 /**
+ * Validates a camera once and precomputes its world-to-camera inverse so batch
+ * projections through `projectPreparedPoint` share both. The rigid, handed
+ * camera composeTransform produces always inverts cleanly, so callers observe
+ * the same failures `projectPoint` raised per point.
+ */
+export function prepareCameraView(view: Camera): PreparedCameraView {
+  camera(view);
+  return Object.freeze({ ...view, worldToCamera: invertTransform(view.cameraToWorld) });
+}
+
+/**
  * Returns null on/behind the camera plane. Positive-depth offscreen or clipped
  * points remain projectable, with separate flags. Image bounds are half-open;
  * near/far depth boundaries are inclusive. No rasterization epsilon is implied.
  */
-export function projectPoint(view: Camera, worldPoint: Vec3): ProjectedPoint | null {
-  camera(view);
+export function projectPreparedPoint(prepared: PreparedCameraView, worldPoint: Vec3): ProjectedPoint | null {
   values(worldPoint, 3, "world point");
-  const local = apply(invertTransform(view.cameraToWorld), worldPoint, true);
+  const local = apply(prepared.worldToCamera, worldPoint, true);
   const depthMeters = -local[2];
   if (depthMeters <= 0) return null;
-  const p = view.projection;
+  const p = prepared.projection;
   const pixel = p.kind === "perspective"
     ? vec2(p.fx*local[0]/depthMeters+p.cx, p.cy-p.fy*local[1]/depthMeters)
     : vec2((local[0]-p.left)/(p.right-p.left)*p.width, (p.top-local[1])/(p.top-p.bottom)*p.height);
   return Object.freeze({ pixel, depthMeters,
     insideImage: pixel[0] >= 0 && pixel[0] < p.width && pixel[1] >= 0 && pixel[1] < p.height,
     insideClip: depthMeters >= p.near && depthMeters <= p.far });
+}
+
+/** Single-point convenience over `prepareCameraView` + `projectPreparedPoint`. */
+export function projectPoint(view: Camera, worldPoint: Vec3): ProjectedPoint | null {
+  return projectPreparedPoint(prepareCameraView(view), worldPoint);
 }
 
 /** Pixel and depth may lie outside image/clip bounds; depth must remain positive. */

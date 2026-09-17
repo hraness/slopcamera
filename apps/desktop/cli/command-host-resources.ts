@@ -205,12 +205,15 @@ export function commandHostResourceClaims(
         ? claims(coordinator, ["cpu", "local-io"])
         : [];
     case "ai-image-generate":
+    case "ai-image-gallery":
     case "ai-transcribe":
     case "ai-video-generate":
     case "ai-speech-generate":
       // Local media inspection acquires its complete CPU/FFmpeg/I/O vector
       // only while validating bytes. Paid provider waits must not pin render
       // capacity across agents for their potentially long network lifetime.
+      // A gallery command is one admitted paid batch; it bounds its own
+      // in-flight candidate concurrency internally.
       return claims(coordinator, ["network", "paid-call"]);
     case "ai-models-list":
     case "ai-models-show":
