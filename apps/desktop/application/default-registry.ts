@@ -48,6 +48,7 @@ import {
   spatialAuditOperationDefinition,
   spatialRenderOperationDefinition,
   spatialRenderedAuditOperationDefinition,
+  spatialReviewOperationDefinition,
   studioRunOperationDefinition,
   spatialProjectSnapshotOperationDefinition,
   spatialProjectMigrateOperationDefinition,
@@ -80,6 +81,7 @@ export function createApplicationOperationRegistry(
   registry.register(spatialAuditOperationDefinition);
   registry.register(spatialRenderOperationDefinition);
   registry.register(spatialRenderedAuditOperationDefinition);
+  registry.register(spatialReviewOperationDefinition);
   registry.register(studioRunOperationDefinition);
   registry.register(spatialProjectSnapshotOperationDefinition);
   registry.register(spatialProjectMigrateOperationDefinition);

@@ -27,5 +27,6 @@ export * from "./spatial-scene";
 export * from "./spatial-project";
 export * from "./spatial-render";
 export * from "./spatial-rendered-audit";
+export * from "./spatial-review";
 
 export * from "./studio";
