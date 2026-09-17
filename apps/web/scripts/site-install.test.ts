@@ -176,7 +176,7 @@ describe("install/copy compiled ownership (pure, process-free)", () => {
     expect(css.split(editorialInstall)).toHaveLength(2)
     expect(css.replace(editorialInstall, "")).not.toMatch(/\.copy-command|\.cli-install|\.install-commands|\.panel-label|\.install-note|\.panel-note/u)
     expect(css).toContain(".quiet-note,\n.trust-links")
-    expect(css).toContain(":where(.trust-links, .origin-note, .hraness-marketing-question__answer, .hraness-marketing-maker__links) a")
+    expect(css).toContain(":where(.trust-links, .origin-note, .hraness-marketing-question__answer) a")
     expect(css).toContain("outline: 2px solid var(--focus)")
     expect(css).toContain("outline-offset: 3px")
     expect(css).toContain(".hraness-marketing-page")

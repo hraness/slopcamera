@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { deepFreezeJson } from "../code/json-snapshot.js"
 import { SpatialCameraIdSchema, SpatialCameraSchema, SpatialDigestSchema, SpatialFrameRateSchema, SpatialTimeUsSchema } from "./contracts.js"
-import { evaluateSpatialScene } from "./evaluate.js"
+import { createSpatialEvaluationContext, evaluateSpatialSceneInContext } from "./evaluate.js"
 import { parseSpatialScene, parseSpatialValue, SpatialSceneError, spatialValueSha256 } from "./identity.js"
 import { reduceSpatialFrameRate, spatialFrameSample } from "./time.js"
 
@@ -73,11 +73,13 @@ export function sampleSpatialCameraTrack(sceneInput: unknown, optionsInput: unkn
   // scene once, then evaluate only this closed subset at each absolute time.
   const cameraScene = { ...scene, cameras: [camera], entities: [], assets: [], generators: [], overrides: [],
     animations: scene.animations.filter(channel => channel.targetId === cameraId) }
+  // One context for the closed camera subset; every frame reuses its indexes.
+  const cameraContext = createSpatialEvaluationContext(cameraScene)
   return parseSpatialCameraTrack({ kind: "slopcamera.spatial-camera-track", schemaVersion: 1,
     sceneSha256: spatialValueSha256(scene), cameraId, clock,
     samples: Array.from({ length: clock.frameCount }, (_, frameIndex) => {
       const sample = absoluteSample(frameIndex, clock)
-      return { ...sample, camera: evaluateSpatialScene(cameraScene, { cameraId, timeUs: sample.timeUs }).camera }
+      return { ...sample, camera: evaluateSpatialSceneInContext(cameraContext, { cameraId, timeUs: sample.timeUs }).camera }
     }),
   })
 }
