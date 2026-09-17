@@ -18,6 +18,8 @@ import {
 } from "../../../src/spatial-scene/contracts";
 import { cameraMathView, composeTransform, invertTransform, multiplyTransforms, type Mat4 } from "../../../src/spatial-scene/math";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
+import { SpatialAuditBoundsSchema } from "../../../src/spatial-scene/audit";
+import { SPATIAL_SPLAT_PROXY_REPRESENTATION } from "../../../src/spatial-scene/audit-rendered";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import {
   HtmlOverlayAuthoringInputSchema,
@@ -89,7 +91,9 @@ const primitiveSchema = z.strictObject({
 
 export const PreparedSpatialAssetSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("splat"), assetId: SpatialAssetIdSchema, entityId: SpatialEntityIdSchema, assetManifestSha256: SpatialDigestSchema,
-    resource: HtmlOverlayDeclaredResourceSchema, facts: SpatialSpzFactsSchema }),
+    resource: HtmlOverlayDeclaredResourceSchema, facts: SpatialSpzFactsSchema,
+    /** Entity-local axis-aligned enclosure decoded from the SPZ position section; the object-ID proxy derives from it. */
+    bounds: SpatialAuditBoundsSchema }),
   z.strictObject({
     kind: z.literal("raster"),
     assetId: SpatialAssetIdSchema,
@@ -159,6 +163,18 @@ export function spatialGeometryContentSha256(entity: Extract<SpatialEntity, { ki
 }
 export function spatialVideoRasterContentSha256(entity: Extract<SpatialEntity, { kind: "video" }>): string {
   return canonicalJsonSha256({ domain: "slopcamera.spatial-video-binding.v1", assetId: entity.assetId, sourceOffsetUs: entity.sourceOffsetUs, playback: entity.playback });
+}
+
+/**
+ * The content normalization every splat representation applies: the declared
+ * `sourceUp`→Y rotation plus the uniform `metersPerUnit` scale, ahead of the
+ * entity's own transform. Beauty rendering and proxy bounds share this map.
+ */
+export function spatialSplatContentTransform(interpretation: { readonly metersPerUnit: number; readonly sourceUp: "x" | "y" | "z" }): Mat4 {
+  const rotation = interpretation.sourceUp === "x" ? [0, 0, Math.SQRT1_2, Math.SQRT1_2] as const
+    : interpretation.sourceUp === "z" ? [-Math.SQRT1_2, 0, 0, Math.SQRT1_2] as const : [0, 0, 0, 1] as const;
+  const unit = interpretation.metersPerUnit;
+  return composeTransform({ position: [0, 0, 0], rotation, scale: [unit, unit, unit] });
 }
 
 export class SpatialOverlayCapabilityError extends Error {
@@ -319,6 +335,7 @@ export function createSpatialOverlayBatch(input: unknown) {
   const prepared = new Map<string, PreparedSpatialAsset>();
   const geometries = new Map<string, PreparedGeometry>();
   const splats = new Map<string, PreparedSplat>();
+  const splatResources = new Map<string, HtmlOverlayDeclaredResource>();
   const resources = new Map<string, HtmlOverlayDeclaredResource>();
   const textures = new Map<string, { readonly width: number; readonly height: number; readonly alpha: "straight" | "opaque" }>();
   const usedPrepared = new Set<string>();
@@ -356,9 +373,15 @@ export function createSpatialOverlayBatch(input: unknown) {
     if (asset.kind === "splat") {
       const expected = spatialSpzAllocationBounds(asset.facts.splats, asset.resource.bytes, asset.facts.decompressedBytes);
       if (asset.resource.mediaType !== "application/octet-stream" || asset.resource.bytes < 18 || expected.gpuBytesBound !== asset.facts.gpuBytesBound || expected.hostBytesBound !== asset.facts.hostBytesBound) throw new RangeError("Prepared SPZ allocation or binary resource evidence is invalid.");
-      const previous = resources.get(asset.resource.name);
-      if (previous !== undefined && canonicalJson(previous) !== canonicalJson(asset.resource)) throw new RangeError("Splat resource names must identify exact immutable bytes.");
-      splats.set(key, asset); resources.set(asset.resource.name, asset.resource);
+      const previous = splatResources.get(asset.resource.name);
+      const declared = resources.get(asset.resource.name);
+      if ((previous !== undefined && canonicalJson(previous) !== canonicalJson(asset.resource))
+        || (declared !== undefined && canonicalJson(declared) !== canonicalJson(asset.resource))) throw new RangeError("Splat resource names must identify exact immutable bytes.");
+      splatResources.set(asset.resource.name, asset.resource);
+      splats.set(key, asset);
+      // Object-ID lowers only the bounding-box proxy: the SPZ payload is never
+      // declared, served, decoded, or allocated for that mode.
+      if (request.mode.kind === "beauty") resources.set(asset.resource.name, asset.resource);
     }
   }
   const frameEvidence: Array<{
@@ -394,18 +417,38 @@ export function createSpatialOverlayBatch(input: unknown) {
       ids.add(entity.entityId); selections.add(entry.selectionId);
       invertTransform(entry.worldMatrix);
       if (entity.kind === "splat") {
-        if (request.executionProfile !== "three-spark-webgl2-hardware-v1") unsupported("splat-profile", "Splat rendering requires the explicit Three/Spark hardware profile.");
-        if (request.mode.kind !== "beauty") unsupported("splat-aov", "Splat object-ID and axial-depth are unsupported; retained colliders are approximate evidence, not pixel truth.");
-        if (entity.placement.kind !== "world" || snapshot.camera.projection.kind !== "perspective") unsupported("splat-camera", "The initial Spark profile requires world placement and a perspective camera.");
-        const key = `${entity.assetId}:${entity.entityId}:splat`, preparedSplat = bindAsset(entity.assetId, key), manifest = manifests.get(entity.assetId)!;
+        const key = `${entity.assetId}:${entity.entityId}:splat`;
+        if (request.mode.kind === "beauty") {
+          if (request.executionProfile !== "three-spark-webgl2-hardware-v1") unsupported("splat-profile", "Splat rendering requires the explicit Three/Spark hardware profile.");
+          if (entity.placement.kind !== "world" || snapshot.camera.projection.kind !== "perspective") unsupported("splat-camera", "The initial Spark profile requires world placement and a perspective camera.");
+          const preparedSplat = bindAsset(entity.assetId, key), manifest = manifests.get(entity.assetId)!;
+          if (preparedSplat.kind !== "splat" || manifest.interpretation.kind !== "splat" || manifest.interpretation.format !== "spz" || preparedSplat.resource.sha256 !== manifest.payload.sha256 || preparedSplat.resource.bytes !== manifest.payload.bytes) throw new RangeError("Splat resource does not match the exact source payload.");
+          const m = entry.worldMatrix, lengths = [Math.hypot(m[0]!, m[1]!, m[2]!), Math.hypot(m[4]!, m[5]!, m[6]!), Math.hypot(m[8]!, m[9]!, m[10]!)];
+          if (Math.max(...lengths) - Math.min(...lengths) > Math.max(...lengths) * 1e-6) unsupported("splat-transform", "The initial Spark profile requires uniform world scale.");
+          for (const [left, right] of [[0, 4], [0, 8], [4, 8]] as const) if (Math.abs(m[left]! * m[right]! + m[left + 1]! * m[right + 1]! + m[left + 2]! * m[right + 2]!) > lengths[0]! ** 2 * 1e-6) unsupported("splat-transform", "The initial Spark profile does not accept sheared world transforms.");
+          if (entry.visible) objects.push({ kind: "splat", entityId: entity.entityId, key, matrix: multiplyTransforms(entry.worldMatrix, spatialSplatContentTransform(manifest.interpretation)) });
+          evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation: "spz-static-radiance; authored-wrapper-id; no-depth-or-object-id", placement: "world", assetManifestSha256: preparedSplat.assetManifestSha256 });
+          continue;
+        }
+        if (request.mode.kind !== "object-id") unsupported("splat-aov", "Splat axial-depth is unsupported; retained colliders are approximate evidence, not pixel truth.");
+        // Object-ID lowers the splat's bounding-box proxy under its normal
+        // selection code — approximate coverage, never splat pixel truth. The
+        // box derives from the prepared decoded-position bounds, so a splat
+        // without trusted bounds has no representation to bind.
+        const preparedSplat = bindAsset(entity.assetId, key), manifest = manifests.get(entity.assetId)!;
         if (preparedSplat.kind !== "splat" || manifest.interpretation.kind !== "splat" || manifest.interpretation.format !== "spz" || preparedSplat.resource.sha256 !== manifest.payload.sha256 || preparedSplat.resource.bytes !== manifest.payload.bytes) throw new RangeError("Splat resource does not match the exact source payload.");
-        const m = entry.worldMatrix, lengths = [Math.hypot(m[0]!, m[1]!, m[2]!), Math.hypot(m[4]!, m[5]!, m[6]!), Math.hypot(m[8]!, m[9]!, m[10]!)];
-        if (Math.max(...lengths) - Math.min(...lengths) > Math.max(...lengths) * 1e-6) unsupported("splat-transform", "The initial Spark profile requires uniform world scale.");
-        for (const [left, right] of [[0, 4], [0, 8], [4, 8]] as const) if (Math.abs(m[left]! * m[right]! + m[left + 1]! * m[right + 1]! + m[left + 2]! * m[right + 2]!) > lengths[0]! ** 2 * 1e-6) unsupported("splat-transform", "The initial Spark profile does not accept sheared world transforms.");
-        const rotation = manifest.interpretation.sourceUp === "x" ? [0, 0, Math.SQRT1_2, Math.SQRT1_2] as const : manifest.interpretation.sourceUp === "z" ? [-Math.SQRT1_2, 0, 0, Math.SQRT1_2] as const : [0, 0, 0, 1] as const;
-        const unit = manifest.interpretation.metersPerUnit;
-        if (entry.visible) objects.push({ kind: "splat", entityId: entity.entityId, key, matrix: multiplyTransforms(entry.worldMatrix, composeTransform({ position: [0, 0, 0], rotation, scale: [unit, unit, unit] })) });
-        evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation: "spz-static-radiance; authored-wrapper-id; no-depth-or-object-id", placement: "world", assetManifestSha256: preparedSplat.assetManifestSha256 });
+        if (entry.visible && entity.placement.kind === "world") {
+          const bounds = preparedSplat.bounds;
+          const center: [number, number, number] = [(bounds.min[0] + bounds.max[0]) / 2, (bounds.min[1] + bounds.max[1]) / 2, (bounds.min[2] + bounds.max[2]) / 2];
+          const size: [number, number, number] = [bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1], bounds.max[2] - bounds.min[2]];
+          const material: Material = { kind: "unlit", color: "#ffffff", opacity: 1 };
+          assertCoverage(request.mode, material, undefined);
+          objects.push({ kind: "mesh", entityId: entity.entityId, selectionId: entry.selectionId,
+            matrix: multiplyTransforms(entry.worldMatrix, composeTransform({ position: center, rotation: [0, 0, 0, 1], scale: [1, 1, 1] })),
+            placement: entity.placement, geometry: { kind: "box", size }, material,
+            uvScale: [1, 1], uvOffset: [0, 0], surfaceScale: [1, 1], flipViewUv: false, doubleSided: true, alphaCutoff: 0 });
+          evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION, placement: "world", assetManifestSha256: preparedSplat.assetManifestSha256 });
+        }
         continue;
       }
       if (entity.kind === "group") continue;
@@ -488,7 +531,9 @@ export function createSpatialOverlayBatch(input: unknown) {
         ...(assetManifestSha256 === undefined ? {} : { assetManifestSha256 }) });
     }
     const meshes = objects.filter((object): object is LoweredMesh => object.kind === "mesh");
-    if (splats.size > 0 && meshes.some(mesh => mesh.placement.kind === "world" && (mesh.material.opacity < 1 || mesh.alphaMode === "BLEND" || mesh.textureAlpha === "straight" && mesh.alphaCutoff === 0))) unsupported("splat-transparency", "The initial world profile supports opaque 3D meshes and view overlays; interleaved transparent mesh/splat sorting is not qualified.");
+    // Transparency sorting is a Spark beauty-pipeline constraint; object-ID
+    // proxies draw as ordinary opaque-coded meshes and never invoke it.
+    if (request.mode.kind === "beauty" && splats.size > 0 && meshes.some(mesh => mesh.placement.kind === "world" && (mesh.material.opacity < 1 || mesh.alphaMode === "BLEND" || mesh.textureAlpha === "straight" && mesh.alphaCutoff === 0))) unsupported("splat-transparency", "The initial world profile supports opaque 3D meshes and view overlays; interleaved transparent mesh/splat sorting is not qualified.");
     const triangles = meshes.reduce((sum, mesh) => sum + geometryTriangleCount(mesh, geometries), 0);
     if (meshes.length > SPATIAL_OVERLAY_LIMITS.drawCallsPerFrame || triangles > SPATIAL_OVERLAY_LIMITS.trianglesPerFrame) {
       throw new RangeError("Spatial overlay exceeds its per-frame draw-call or triangle budget.");
@@ -519,7 +564,9 @@ export function createSpatialOverlayBatch(input: unknown) {
   // 32 B/pixel conservatively covers the RGBA16F/depth beauty target and the
   // default RGBA8/depth canvas plus renderer framebuffer slack. Driver/process
   // and platform compositor overhead remain outside this allocation accounting.
-  if (splats.size > 0 && (totalSplats > SPATIAL_SPLAT_LIMITS.splats || [...splats.values()].reduce((sum, asset) => sum + asset.facts.gpuBytesBound, width * height * 32) > SPATIAL_SPLAT_LIMITS.gpuBytes || [...splats.values()].reduce((sum, asset) => sum + asset.facts.hostBytesBound, 0) > SPATIAL_SPLAT_LIMITS.hostBytes)) throw new RangeError("Prepared world exceeds its aggregate splat/GPU/host allocation bounds.");
+  // The bound guards Spark's beauty allocations only — object-ID proxies never
+  // load or allocate splat payloads.
+  if (request.mode.kind === "beauty" && splats.size > 0 && (totalSplats > SPATIAL_SPLAT_LIMITS.splats || [...splats.values()].reduce((sum, asset) => sum + asset.facts.gpuBytesBound, width * height * 32) > SPATIAL_SPLAT_LIMITS.gpuBytes || [...splats.values()].reduce((sum, asset) => sum + asset.facts.hostBytesBound, 0) > SPATIAL_SPLAT_LIMITS.hostBytes)) throw new RangeError("Prepared world exceeds its aggregate splat/GPU/host allocation bounds.");
   const sparkProfile = request.executionProfile === "three-spark-webgl2-hardware-v1";
   if (sparkProfile && request.mode.kind !== "beauty") unsupported("splat-aov", "The initial Spark profile renders beauty only.");
   const libraries = sparkProfile ? ["@sparkjsdev/spark", "three", "three/addons/postprocessing/Pass.js"] as const : ["three"] as const;

@@ -5,13 +5,36 @@ import fc from "fast-check";
 import { inspectSpatialSpz } from "./spatial-spz";
 import { originalSpz } from "./spatial-world-fixture.testing";
 
+function writePosition(raw: Uint8Array, index: number, x: number, y: number, z: number) {
+  for (const [axis, value] of [x, y, z].entries()) {
+    const offset = 16 + index * 9 + axis * 3;
+    raw[offset] = value & 0xff; raw[offset + 1] = (value >> 8) & 0xff; raw[offset + 2] = (value >> 16) & 0xff;
+  }
+}
 describe("bounded SPZ admission", () => {
   test("admits exact supported attribute layouts across counts and SH degrees", async () => {
     await fc.assert(fc.asyncProperty(fc.constantFrom(2 as const, 3 as const), fc.integer({ min: 1, max: 32 }), fc.integer({ min: 0, max: 3 }), async (version, count, sh) => {
-      const input = originalSpz(version, count, sh), facts = await inspectSpatialSpz(input.compressed, new AbortController().signal);
+      const input = originalSpz(version, count, sh), { facts, modelBounds } = await inspectSpatialSpz(input.compressed, new AbortController().signal);
       expect(facts).toMatchObject({ version, splats: count, shDegree: sh, decompressedBytes: input.raw.length });
       expect(facts.gpuBytesBound).toBeGreaterThan(count * 204);
+      // Zero-filled fixture positions collapse to the origin at any fixed-point scale.
+      expect(modelBounds).toEqual({ min: [0, 0, 0], max: [0, 0, 0] });
+      expect(Object.isFrozen(modelBounds)).toBe(true);
     }), { numRuns: 32 });
+  });
+  test("decodes signed int24 positions into scaled model-space bounds", async () => {
+    const fixture = originalSpz(3, 2, 0); // fractionalBits = 12 → scale 4096
+    writePosition(fixture.raw, 0, 4096, -4096, 8192);   // (1, -1, 2)
+    writePosition(fixture.raw, 1, -8192, 0, 4096);      // (-2, 0, 1)
+    const { modelBounds } = await inspectSpatialSpz(gzipSync(fixture.raw), new AbortController().signal);
+    expect(modelBounds).toEqual({ min: [-2, -1, 1], max: [1, 0, 2] });
+  });
+  test("honours the advertised fixed-point scale and the int24 extremes", async () => {
+    const fixture = originalSpz(3, 2, 0); fixture.raw[13] = 0; // raw integers, scale 1
+    writePosition(fixture.raw, 0, 0x7fffff, -0x800000, 1); // +max, -max, +1
+    writePosition(fixture.raw, 1, -1, 2, 0x7fffff);
+    const { modelBounds } = await inspectSpatialSpz(gzipSync(fixture.raw), new AbortController().signal);
+    expect(modelBounds).toEqual({ min: [-1, -8_388_608, 1], max: [8_388_607, 2, 8_388_607] });
   });
   test("rejects unknown format, advertised count, extensions, and unsafe quantization before full inflate", async () => {
     for (const mutate of [(v: DataView) => v.setUint32(4, 4, true), (v: DataView) => v.setUint32(8, 500_001, true), (v: DataView) => v.setUint8(12, 4), (v: DataView) => v.setUint8(13, 25), (v: DataView) => v.setUint8(14, 128), (v: DataView) => v.setUint8(15, 1)]) {

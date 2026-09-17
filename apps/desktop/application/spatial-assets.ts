@@ -16,13 +16,16 @@ import {
 } from "../../../src/spatial-scene/contracts";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
 import { evaluateSpatialGlb, parseSpatialGlb, type SpatialGlbModel } from "../../../src/spatial-scene/gltf";
+import { transformBounds } from "../../../src/spatial-scene/math";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { SpatialWorldImportManifestSchema, SPATIAL_SPLAT_LIMITS } from "../contracts/spatial-world";
+import { SpatialAssetFactsV1Schema } from "../contracts/spatial-asset";
 import { inspectSpatialSpz } from "./spatial-spz";
+import { extractWorldProviderMetadata } from "./spatial-world-metadata";
 import { WorldLabsProvenanceSchema } from "./spatial-world-provenance";
 import {
   PreparedSpatialAssetSchema, SPATIAL_OVERLAY_LIMITS, SpatialOverlayCapabilityError, spatialTextRasterContentSha256,
-  spatialGeometryContentSha256, spatialVideoRasterContentSha256,
+  spatialGeometryContentSha256, spatialSplatContentTransform, spatialVideoRasterContentSha256,
   type PreparedSpatialAsset,
 } from "../html-overlay/spatial";
 import type { ApplicationProcessRunner } from "./context";
@@ -426,9 +429,18 @@ export async function withPreparedSpatialAssets<Result>(
           if (bytes.byteLength > SPATIAL_SPLAT_LIMITS.metadataBytes) throw new RangeError("Retained metadata exceeds its byte bound.");
           const captured = createBoundedJsonSnapshot(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)), SPATIAL_SPLAT_LIMITS.metadataBytes, "Retained world metadata", { maximumDepth: 24, maximumValues: 32_768 });
           const metadata = captured.value as Record<string, unknown>;
-          if (metadata.kind !== manifest.interpretation.schema || metadata.schemaVersion !== 1) throw new RangeError("Retained metadata does not match its declared schema.");
-          if (manifest.interpretation.schema === "slopcamera.spatial-world-import") SpatialWorldImportManifestSchema.parse(metadata);
-          else WorldLabsProvenanceSchema.parse(metadata);
+          const schema = manifest.interpretation.schema;
+          if (schema === "slopcamera.provider-metadata") {
+            // Raw provider bytes are retained verbatim — no slopcamera
+            // envelope to match. A recognized semantics_metadata shape proves
+            // the declaration; unknown keys stay tolerated and ignored.
+            extractWorldProviderMetadata(metadata);
+          } else {
+            if (metadata.kind !== schema || metadata.schemaVersion !== 1) throw new RangeError("Retained metadata does not match its declared schema.");
+            if (schema === "slopcamera.spatial-world-import") SpatialWorldImportManifestSchema.parse(metadata);
+            else if (schema === "slopcamera.spatial-asset-facts") SpatialAssetFactsV1Schema.parse(metadata);
+            else WorldLabsProvenanceSchema.parse(metadata);
+          }
         }
         const record = { manifest, manifestSha256: closures[manifest.assetId]!, bytes };
         verified.set(manifest.assetId, record);
@@ -450,14 +462,18 @@ export async function withPreparedSpatialAssets<Result>(
         if (interpretation.kind !== "splat" || interpretation.format !== "spz") capability("splat-format", "The qualified world profile accepts gzip SPZ v2/v3 only.");
         const key = `${assetId}:${entity.entityId}:splat`;
         if (preparedAssets.has(key)) continue;
-        const facts = await inspectSpatialSpz(asset.bytes, signal);
+        const { facts, modelBounds } = await inspectSpatialSpz(asset.bytes, signal);
+        // Entity-local enclosure: the same sourceUp→Y rotation and uniform
+        // metersPerUnit scale the renderer applies ahead of the entity
+        // transform, so the object-ID proxy and the geometric audit agree.
+        const bounds = transformBounds(spatialSplatContentTransform(interpretation), modelBounds);
         const name = `splat-${asset.manifestSha256.slice(0, 40)}`;
         const resource = { name, sha256: asset.manifest.payload.sha256, bytes: asset.bytes.byteLength, mediaType: "application/octet-stream", urlPath: `${name}.spz` };
         if (!resources.has(name)) {
           if (resources.size >= 64 || outputBytes + asset.bytes.byteLength > SPATIAL_ASSET_PREPARATION_LIMITS.outputBytes) throw new RangeError("Prepared splat resources exceed their byte budget.");
           resources.set(name, { ...resource, absolutePath: paths.get(assetId)! }); outputBytes += asset.bytes.byteLength;
         }
-        preparedAssets.set(key, PreparedSpatialAssetSchema.parse({ kind: "splat", assetId, entityId: entity.entityId, assetManifestSha256: asset.manifestSha256, resource, facts }));
+        preparedAssets.set(key, PreparedSpatialAssetSchema.parse({ kind: "splat", assetId, entityId: entity.entityId, assetManifestSha256: asset.manifestSha256, resource, facts, bounds }));
         profiles.add("slopcamera.spz-v2-v3-spark-2.1.0-full-resolution-v1");
         continue;
       }
