@@ -1,8 +1,10 @@
 import type { HostResourceLease } from "@hraness/slopcamera/host-resources";
 
+import type { SpatialReviewProvider } from "../../../src/spatial-scene/review";
 import type { ApplicationStudioAuthorization, ApplicationStudioPort } from "./studio-port";
 import type { ApplicationGatewayPort } from "./gateway-port";
 import type { HtmlOverlayRenderer } from "./html-overlay-renderer";
+import type { ApplicationSpatialReviewAuthorization } from "./spatial-review";
 
 export interface ApplicationPaths {
   readonly artifactRoot: string;
@@ -79,6 +81,10 @@ export interface ApplicationContext {
   readonly gatewayPort?: ApplicationGatewayPort;
   readonly studioPort?: ApplicationStudioPort;
   readonly studioAuthorization?: ApplicationStudioAuthorization;
+  /** Bounded beauty-frame critique seam; absent means scene.review fails closed. */
+  readonly spatialReviewProvider?: SpatialReviewProvider;
+  /** Invocation-scoped cloud-upload consent envelope for scene.review. */
+  readonly spatialReviewAuthorization?: ApplicationSpatialReviewAuthorization;
   readonly hostResourceLease?: ApplicationHostResourceLease;
   readonly htmlOverlayRenderer?: HtmlOverlayRenderer;
   /** Per-user host state shared by repository worktrees for mutation leases. */
