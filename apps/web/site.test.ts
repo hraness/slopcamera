@@ -242,18 +242,20 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
 
 function assertBuiltHtmlBudget(html: string): number {
   // The exact optional-support footer adds 604 bytes to the current 57,613-byte
-  // baseline. Preserve its 387-byte headroom and count the entire seal.
+  // baseline. The eight decorative topic icons add 1,336 bytes on top of the
+  // 58,217-byte support baseline. Preserve the 387-byte headroom and count the
+  // entire seal.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 58_604) throw new Error(`Built site HTML exceeds its 58,604-byte budget: ${bytes}`)
+  if (bytes >= 59_940) throw new Error(`Built site HTML exceeds its 59,940-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(58_603))).toBe(58_603)
-  expect(() => assertBuiltHtmlBudget("x".repeat(58_604)))
-    .toThrow("Built site HTML exceeds its 58,604-byte budget: 58604")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(58_603)}é`))
-    .toThrow("Built site HTML exceeds its 58,604-byte budget: 58605")
+  expect(assertBuiltHtmlBudget("x".repeat(59_939))).toBe(59_939)
+  expect(() => assertBuiltHtmlBudget("x".repeat(59_940)))
+    .toThrow("Built site HTML exceeds its 59,940-byte budget: 59940")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(59_939)}é`))
+    .toThrow("Built site HTML exceeds its 59,940-byte budget: 59941")
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
@@ -1343,7 +1345,7 @@ describe("static Slopcamera site", () => {
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(58_604)
+    expect(emittedBytes).toBeLessThan(59_940)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1570,6 +1572,7 @@ describe("static Slopcamera site", () => {
       "docs",
       "graphs",
       "icon.png",
+      "icons",
       "index.html",
       "index.md",
       "lantern-material",
