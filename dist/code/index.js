@@ -8,6 +8,7 @@ import {
   SPATIAL_GLB_LIMITS,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
+  SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_SCENE_LIMITS,
   SpatialAnimationSchema,
   SpatialAssetAdmissionV1Schema,
@@ -101,7 +102,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-6ew11hhb.js";
+} from "../index-g6dg6bwa.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -2263,6 +2264,156 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     })
   });
 }
+
+// src/spatial-scene/character.ts
+import { z as z7 } from "zod";
+var HUMANOID_BONE_NAMES = [
+  "hips",
+  "spine",
+  "chest",
+  "upperChest",
+  "neck",
+  "head",
+  "leftEye",
+  "rightEye",
+  "jaw",
+  "leftShoulder",
+  "leftUpperArm",
+  "leftLowerArm",
+  "leftHand",
+  "leftUpperLeg",
+  "leftLowerLeg",
+  "leftFoot",
+  "leftToes",
+  "rightShoulder",
+  "rightUpperArm",
+  "rightLowerArm",
+  "rightHand",
+  "rightUpperLeg",
+  "rightLowerLeg",
+  "rightFoot",
+  "rightToes",
+  "leftThumbProximal",
+  "leftThumbIntermediate",
+  "leftThumbDistal",
+  "leftIndexProximal",
+  "leftIndexIntermediate",
+  "leftIndexDistal",
+  "leftMiddleProximal",
+  "leftMiddleIntermediate",
+  "leftMiddleDistal",
+  "leftRingProximal",
+  "leftRingIntermediate",
+  "leftRingDistal",
+  "leftLittleProximal",
+  "leftLittleIntermediate",
+  "leftLittleDistal",
+  "rightThumbProximal",
+  "rightThumbIntermediate",
+  "rightThumbDistal",
+  "rightIndexProximal",
+  "rightIndexIntermediate",
+  "rightIndexDistal",
+  "rightMiddleProximal",
+  "rightMiddleIntermediate",
+  "rightMiddleDistal",
+  "rightRingProximal",
+  "rightRingIntermediate",
+  "rightRingDistal",
+  "rightLittleProximal",
+  "rightLittleIntermediate",
+  "rightLittleDistal"
+];
+var CORE_HUMANOID_BONE_NAMES = [
+  "hips",
+  "spine",
+  "head",
+  "leftUpperArm",
+  "leftLowerArm",
+  "leftHand",
+  "rightUpperArm",
+  "rightLowerArm",
+  "rightHand",
+  "leftUpperLeg",
+  "leftLowerLeg",
+  "leftFoot",
+  "rightUpperLeg",
+  "rightLowerLeg",
+  "rightFoot"
+];
+var humanoidBoneName = z7.enum(HUMANOID_BONE_NAMES);
+var humanoidBoneMappingSchema = z7.strictObject({
+  canonicalName: humanoidBoneName,
+  sourceNodeIndex: z7.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
+  restOffset: SpatialTransformSchema
+});
+var SpatialHumanoidMappingSchema = z7.strictObject({
+  kind: z7.literal("slopcamera.spatial-humanoid-mapping"),
+  schemaVersion: z7.literal(1),
+  sourceAssetSha256: SpatialDigestSchema,
+  sourceProfile: z7.literal(SPATIAL_GLB_RIGGED_PROFILE),
+  bones: z7.array(humanoidBoneMappingSchema).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin)
+}).superRefine((mapping, context) => {
+  const names = new Set;
+  const nodes = new Set;
+  for (const [index, bone] of mapping.bones.entries()) {
+    if (names.has(bone.canonicalName)) {
+      context.addIssue({ code: "custom", path: ["bones", index, "canonicalName"], message: "Canonical bone name must be unique." });
+    } else {
+      names.add(bone.canonicalName);
+    }
+    if (nodes.has(bone.sourceNodeIndex)) {
+      context.addIssue({ code: "custom", path: ["bones", index, "sourceNodeIndex"], message: "Source node index must be unique." });
+    } else {
+      nodes.add(bone.sourceNodeIndex);
+    }
+  }
+  for (const name of CORE_HUMANOID_BONE_NAMES) {
+    if (!names.has(name)) {
+      context.addIssue({ code: "custom", path: ["bones"], message: `Core bone ${name} is required.` });
+    }
+  }
+});
+var SpatialHumanoidAttachmentSchema = z7.strictObject({
+  kind: z7.literal("slopcamera.spatial-humanoid-attachment"),
+  schemaVersion: z7.literal(1),
+  name: z7.string().min(1).max(256),
+  mapping: SpatialHumanoidMappingSchema,
+  bone: humanoidBoneName,
+  localOffset: SpatialTransformSchema
+});
+function parseHumanoidMapping(input) {
+  const value = parseSpatialValue(SpatialHumanoidMappingSchema, input, "humanoid mapping");
+  return deepFreezeJson(value);
+}
+function parseHumanoidAttachment(input) {
+  const value = parseSpatialValue(SpatialHumanoidAttachmentSchema, input, "humanoid attachment");
+  return deepFreezeJson(value);
+}
+function evaluateHumanoidAttachmentMatrix(attachment, model, options, sourceAssetSha256) {
+  if (attachment.mapping.sourceAssetSha256 !== sourceAssetSha256) {
+    throw new SpatialSceneError("invalid-data", "Stale source asset digest.", "character");
+  }
+  if (attachment.mapping.sourceProfile !== model.profile || model.rigFacts === undefined) {
+    throw new SpatialSceneError("invalid-data", "Source profile does not match or model is not rigged.", "character");
+  }
+  const joints = new Set;
+  for (const skin of model.rigFacts.skins) {
+    for (const node of skin.jointNodeIndices) {
+      joints.add(node);
+    }
+  }
+  const boneByName = new Map(attachment.mapping.bones.map((bone) => [bone.canonicalName, bone]));
+  const mapped = boneByName.get(attachment.bone);
+  if (mapped === undefined) {
+    throw new SpatialSceneError("not-found", `Canonical bone ${attachment.bone} is not mapped.`, "character");
+  }
+  if (!joints.has(mapped.sourceNodeIndex)) {
+    throw new SpatialSceneError("invalid-data", `Source node ${mapped.sourceNodeIndex} is not a rig joint.`, "character");
+  }
+  const world = model.jointWorldMatrix(options, mapped.sourceNodeIndex);
+  return multiplyTransforms(world, multiplyTransforms(composeTransform(mapped.restOffset), composeTransform(attachment.localOffset)));
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -2321,6 +2472,8 @@ export {
   parseSpatialGlb,
   parseSpatialGeneratorParameters,
   parseSpatialCameraTrack,
+  parseHumanoidMapping,
+  parseHumanoidAttachment,
   orbitKeys,
   onTopOf,
   normalizeSpatialAuditAssetBounds,
@@ -2343,6 +2496,7 @@ export {
   evaluateSpatialSceneInContext,
   evaluateSpatialScene,
   evaluateSpatialGlb,
+  evaluateHumanoidAttachmentMatrix,
   easeKeys,
   easeChannel,
   distribute,
@@ -2434,6 +2588,8 @@ export {
   SpatialOriginSchema,
   SpatialMatrixSchema,
   SpatialMaterialSchema,
+  SpatialHumanoidMappingSchema,
+  SpatialHumanoidAttachmentSchema,
   SpatialGlbModel,
   SpatialGeometrySchema,
   SpatialGeneratorSchema,
@@ -2493,6 +2649,7 @@ export {
   SPATIAL_REVIEW_CATEGORIES,
   SPATIAL_RENDERED_AUDIT_LIMITS,
   SPATIAL_RENDERED_AUDIT_COVERAGE,
+  SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
@@ -2517,11 +2674,13 @@ export {
   MAX_ABS_COMPONENT,
   JsonValueSchema,
   IDENTITY_MATRIX,
+  HUMANOID_BONE_NAMES,
   GraphCompilerLimitsSchema,
   GRAPH_ABI,
   EvaluatedSpatialSceneSchema,
   DEFAULT_GRAPH_COMPILER_LIMITS,
   CompiledWorkflowGraphSchema,
+  CORE_HUMANOID_BONE_NAMES,
   AuthoredWorkflowGraphV1Schema,
   AuthoredGraphNodeV1Schema
 };

@@ -143,7 +143,8 @@ var SpatialGeometrySchema = z.discriminatedUnion("kind", [
     assetId: SpatialAssetIdSchema,
     nodeIndex: z.number().int().min(0).max(65535).optional(),
     materialMode: z.enum(["entity", "source"]).optional(),
-    clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional()
+    clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
+    morphWeights: z.array(unit).max(16).optional()
   })
 ]);
 var SpatialSpotLightSchema = z.strictObject({
@@ -870,6 +871,7 @@ function cameraMathView(camera2) {
 import { z as z2 } from "zod";
 var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-fullmaps-v1";
 var SPATIAL_GLB_PROFILE_V1 = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
+var SPATIAL_GLB_RIGGED_PROFILE = "slopcamera.glb-rigged-morph-skin-v1";
 var SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134217728,
   jsonBytes: 2097152,
@@ -891,7 +893,11 @@ var SPATIAL_GLB_LIMITS = Object.freeze({
   clips: 256,
   channels: 4096,
   animationKeys: 4096,
-  durationSeconds: 3600
+  durationSeconds: 3600,
+  skins: 64,
+  jointsPerSkin: 256,
+  morphTargetsPerPrimitive: 16,
+  morphTargetDeltas: 2000000
 });
 var finite = z2.number().finite().min(-1e6).max(1e6);
 var index = z2.number().int().min(0).max(65535);
@@ -915,6 +921,7 @@ var nodeSchema = z2.strictObject({
   ...metadata,
   children: z2.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
   mesh: index.optional(),
+  skin: index.optional(),
   translation: vec32.optional(),
   rotation: quaternion.optional(),
   scale: vec32.optional(),
@@ -927,7 +934,7 @@ var accessorSchema = z2.strictObject({
   componentType: z2.union([z2.literal(5121), z2.literal(5123), z2.literal(5125), z2.literal(5126)]),
   normalized: z2.boolean().default(false),
   count: z2.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z2.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]),
+  type: z2.enum(["SCALAR", "VEC2", "VEC3", "VEC4", "MAT4"]),
   min: z2.array(finite).min(1).max(4).optional(),
   max: z2.array(finite).min(1).max(4).optional()
 });
@@ -944,11 +951,13 @@ var gltfSchema = z2.strictObject({
   nodes: z2.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
   meshes: z2.array(z2.strictObject({ ...metadata, primitives: z2.array(z2.strictObject({
     ...metadata,
-    attributes: z2.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
+    attributes: z2.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional(), JOINTS_0: index.optional(), WEIGHTS_0: index.optional() }),
     indices: index.optional(),
     material: index.optional(),
-    mode: z2.literal(4).default(4)
-  })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
+    mode: z2.literal(4).default(4),
+    targets: z2.array(z2.strictObject({ ...metadata, POSITION: index.optional(), NORMAL: index.optional() })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
+  })).min(1).max(SPATIAL_GLB_LIMITS.primitives), weights: z2.array(unit2).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional() })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
+  skins: z2.array(z2.strictObject({ ...metadata, inverseBindMatrices: index, joints: z2.array(index).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin), skeleton: index.optional() })).max(SPATIAL_GLB_LIMITS.skins).optional(),
   materials: z2.array(z2.strictObject({
     ...metadata,
     pbrMetallicRoughness: z2.strictObject({ ...metadata, baseColorFactor: z2.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
@@ -966,7 +975,7 @@ var gltfSchema = z2.strictObject({
   animations: z2.array(z2.strictObject({
     ...metadata,
     samplers: z2.array(z2.strictObject({ ...metadata, input: index, output: index, interpolation: z2.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z2.array(z2.strictObject({ ...metadata, sampler: index, target: z2.strictObject({ ...metadata, node: index, path: z2.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
+    channels: z2.array(z2.strictObject({ ...metadata, sampler: index, target: z2.strictObject({ ...metadata, node: index, path: z2.enum(["translation", "rotation", "scale", "weights"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips).default([])
 });
 var optionsSchema = z2.strictObject({
@@ -975,7 +984,8 @@ var optionsSchema = z2.strictObject({
   nodeIndex: index.optional(),
   materialMode: z2.enum(["source", "entity"]).default("entity"),
   timeUs: z2.number().int().min(0).max(3600000000),
-  clip: z2.strictObject({ index, offsetUs: z2.number().int().min(0).max(3600000000), playback: z2.enum(["once", "loop", "freeze"]) }).optional()
+  clip: z2.strictObject({ index, offsetUs: z2.number().int().min(0).max(3600000000), playback: z2.enum(["once", "loop", "freeze"]) }).optional(),
+  morphWeights: z2.array(unit2).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
 });
 function fail(message, path = "glb") {
   throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path);
@@ -1103,7 +1113,7 @@ function readAccessors(document, binary) {
     const path = `accessors.${index2}`;
     const view = at(document.bufferViews, accessor.bufferView, path);
     const bytes = accessor.componentType === 5121 ? 1 : accessor.componentType === 5123 ? 2 : 4;
-    const components = accessor.type === "SCALAR" ? 1 : Number(accessor.type.slice(3));
+    const components = accessor.type === "SCALAR" ? 1 : accessor.type === "MAT4" ? 16 : Number(accessor.type.slice(3));
     const stride = view.byteStride ?? components * bytes;
     if (accessor.byteOffset % bytes !== 0 || (view.byteOffset + accessor.byteOffset) % bytes !== 0 || stride < components * bytes || stride % bytes !== 0)
       fail("Accessor alignment or stride is invalid.", path);
@@ -1157,7 +1167,17 @@ function validateViewRoles(document) {
           accessor(index2, "vertex");
       if (primitive.indices !== undefined)
         accessor(primitive.indices, "index");
+      if (primitive.targets !== undefined)
+        for (const target of primitive.targets) {
+          if (target.POSITION !== undefined)
+            accessor(target.POSITION, "vertex");
+          if (target.NORMAL !== undefined)
+            accessor(target.NORMAL, "vertex");
+        }
     }
+  if (document.skins !== undefined)
+    for (const skin of document.skins)
+      accessor(skin.inverseBindMatrices, "skin");
   for (const clip of document.animations)
     for (const sampler of clip.samplers) {
       accessor(sampler.input, "animation");
@@ -1233,57 +1253,238 @@ function materialFacts(document, sources) {
 }
 function readMeshes(document, accessors, sources) {
   const defaultMaterial = { baseColorLinear: [1, 1, 1, 1], metalness: 1, roughness: 1, alphaMode: "OPAQUE", alphaCutoff: 0.5, doubleSided: false };
-  let primitiveCount = 0, triangles = 0;
-  return deepFreezeJson(document.meshes.map((mesh, meshIndex) => mesh.primitives.map((primitive, primitiveIndex) => {
-    const path = `meshes.${meshIndex}.primitives.${primitiveIndex}`;
-    if (++primitiveCount > SPATIAL_GLB_LIMITS.primitives)
-      fail("Source primitive count exceeds this profile.", path);
-    const positions = at(accessors, primitive.attributes.POSITION, path);
-    const normals = primitive.attributes.NORMAL === undefined ? undefined : at(accessors, primitive.attributes.NORMAL, path);
-    const uvs = primitive.attributes.TEXCOORD_0 === undefined ? undefined : at(accessors, primitive.attributes.TEXCOORD_0, path);
-    const indices = primitive.indices === undefined ? undefined : at(accessors, primitive.indices, path);
-    if (positions.source.type !== "VEC3" || positions.source.componentType !== 5126 || positions.source.normalized || positions.source.min === undefined || positions.source.max === undefined || positions.source.count > SPATIAL_GLB_LIMITS.verticesPerPrimitive)
-      fail("POSITION requires bounded float32 VEC3 with declared min/max.", path);
-    for (const attribute of [positions, normals, uvs])
-      if (attribute !== undefined) {
+  let primitiveCount = 0, triangles = 0, morphTargetDeltaCount = 0;
+  return deepFreezeJson(document.meshes.map((mesh, meshIndex) => {
+    const targetCount = primitiveTargetCount(mesh, meshIndex);
+    if (mesh.weights !== undefined && mesh.weights.length !== targetCount)
+      fail("Mesh weights count must match its morph target count.", `meshes.${meshIndex}.weights`);
+    const weights = mesh.weights ?? (targetCount > 0 ? Object.freeze(new Array(targetCount).fill(0)) : Object.freeze([]));
+    return mesh.primitives.map((primitive, primitiveIndex) => {
+      const path = `meshes.${meshIndex}.primitives.${primitiveIndex}`;
+      if (++primitiveCount > SPATIAL_GLB_LIMITS.primitives)
+        fail("Source primitive count exceeds this profile.", path);
+      if (primitive.targets !== undefined && primitive.targets.length !== targetCount)
+        fail("Every primitive in a mesh must declare the same number of morph targets.", path);
+      const positions = at(accessors, primitive.attributes.POSITION, path);
+      const normals = primitive.attributes.NORMAL === undefined ? undefined : at(accessors, primitive.attributes.NORMAL, path);
+      const uvs = primitive.attributes.TEXCOORD_0 === undefined ? undefined : at(accessors, primitive.attributes.TEXCOORD_0, path);
+      const jointsAttr = primitive.attributes.JOINTS_0 === undefined ? undefined : at(accessors, primitive.attributes.JOINTS_0, path);
+      const weightsAttr = primitive.attributes.WEIGHTS_0 === undefined ? undefined : at(accessors, primitive.attributes.WEIGHTS_0, path);
+      const indices = primitive.indices === undefined ? undefined : at(accessors, primitive.indices, path);
+      if (positions.source.type !== "VEC3" || positions.source.componentType !== 5126 || positions.source.normalized || positions.source.min === undefined || positions.source.max === undefined || positions.source.count > SPATIAL_GLB_LIMITS.verticesPerPrimitive)
+        fail("POSITION requires bounded float32 VEC3 with declared min/max.", path);
+      for (const attribute of [positions, normals, uvs])
+        if (attribute !== undefined) {
+          const view = document.bufferViews[attribute.source.bufferView];
+          if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || view.target !== undefined && view.target !== 34962)
+            fail("Vertex attributes require four-byte alignment and ARRAY_BUFFER target.", path);
+          const componentBytes = attribute.source.componentType === 5121 ? 1 : attribute.source.componentType === 5123 ? 2 : 4;
+          if ((view.byteStride ?? attribute.components * componentBytes) % 4 !== 0)
+            fail("Every vertex attribute element must remain four-byte aligned.", path);
+          if (attribute.source.count !== positions.source.count || attribute.values.some((value) => Math.abs(value) > 1e6))
+            fail("Vertex attributes require matching counts and bounded coordinates.", path);
+        }
+      if (normals) {
+        if (normals.source.type !== "VEC3" || normals.source.componentType !== 5126 || normals.source.normalized)
+          fail("NORMAL requires float32 VEC3.", path);
+        for (let i = 0;i < normals.values.length; i += 3)
+          if (Math.abs(Math.hypot(...normals.values.slice(i, i + 3)) - 1) > 0.0001)
+            fail("Normals must be unit vectors.", path);
+      }
+      if (uvs && (uvs.source.type !== "VEC2" || uvs.source.componentType !== 5126 && !([5121, 5123].includes(uvs.source.componentType) && uvs.source.normalized)))
+        fail("TEXCOORD_0 requires float32 or normalized unsigned byte/short VEC2.", path);
+      for (const attribute of [jointsAttr, weightsAttr]) {
+        if (attribute === undefined)
+          continue;
         const view = document.bufferViews[attribute.source.bufferView];
         if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || view.target !== undefined && view.target !== 34962)
-          fail("Vertex attributes require four-byte alignment and ARRAY_BUFFER target.", path);
+          fail("Skinning attributes require four-byte alignment and ARRAY_BUFFER target.", path);
         const componentBytes = attribute.source.componentType === 5121 ? 1 : attribute.source.componentType === 5123 ? 2 : 4;
         if ((view.byteStride ?? attribute.components * componentBytes) % 4 !== 0)
-          fail("Every vertex attribute element must remain four-byte aligned.", path);
+          fail("Skinning attribute elements must remain four-byte aligned.", path);
         if (attribute.source.count !== positions.source.count || attribute.values.some((value) => Math.abs(value) > 1e6))
-          fail("Vertex attributes require matching counts and bounded coordinates.", path);
+          fail("Skinning attributes require matching counts and bounded values.", path);
       }
-    if (normals) {
-      if (normals.source.type !== "VEC3" || normals.source.componentType !== 5126 || normals.source.normalized)
-        fail("NORMAL requires float32 VEC3.", path);
-      for (let i = 0;i < normals.values.length; i += 3)
-        if (Math.abs(Math.hypot(...normals.values.slice(i, i + 3)) - 1) > 0.0001)
-          fail("Normals must be unit vectors.", path);
+      let jointIndices;
+      let jointWeights;
+      if (jointsAttr !== undefined !== (weightsAttr !== undefined))
+        fail("JOINTS_0 and WEIGHTS_0 must appear together.", path);
+      if (jointsAttr !== undefined) {
+        if (jointsAttr.source.type !== "VEC4" || ![5121, 5123].includes(jointsAttr.source.componentType) || jointsAttr.source.normalized || jointsAttr.source.count !== positions.source.count)
+          fail("JOINTS_0 requires unsigned byte/short VEC4 matching POSITION count.", path);
+        if (weightsAttr.source.type !== "VEC4" || weightsAttr.source.count !== positions.source.count)
+          fail("WEIGHTS_0 requires VEC4 matching POSITION count.", path);
+        const normalized = weightsAttr.source.normalized;
+        const weightComponent = weightsAttr.source.componentType;
+        if (!(weightComponent === 5126 || (weightComponent === 5121 || weightComponent === 5123) && normalized))
+          fail("WEIGHTS_0 requires float32 or normalized unsigned byte/short.", path);
+        jointIndices = Object.freeze(jointsAttr.values.map((value) => {
+          const joint = Math.round(value);
+          if (joint < 0 || joint >= SPATIAL_GLB_LIMITS.jointsPerSkin || !Number.isFinite(joint) || Math.abs(joint - value) > 0.000001)
+            fail("JOINTS_0 index must be an integer in skin joint range.", path);
+          return joint;
+        }));
+        const normalizedWeights = [];
+        for (let vertex = 0;vertex < weightsAttr.source.count; vertex++) {
+          const values2 = weightsAttr.values.slice(vertex * 4, vertex * 4 + 4);
+          const sum = values2.reduce((total, value) => total + value, 0);
+          if (values2.some((value) => value < 0 || value > 1) || Math.abs(sum - 1) > 0.0001)
+            fail("Vertex skinning weights must be in [0,1] and sum to one.", path);
+          normalizedWeights.push(...values2.map((value) => value / sum));
+        }
+        jointWeights = Object.freeze(normalizedWeights);
+      }
+      if (indices) {
+        const view = document.bufferViews[indices.source.bufferView];
+        if (indices.source.type !== "SCALAR" || ![5121, 5123, 5125].includes(indices.source.componentType) || indices.source.normalized || view.byteStride !== undefined || view.target !== undefined && view.target !== 34963)
+          fail("Triangle indices require tightly packed unsigned scalar storage.", path);
+        const restart = indices.source.componentType === 5121 ? 255 : indices.source.componentType === 5123 ? 65535 : 4294967295;
+        if (indices.values.some((value) => value >= positions.source.count || value === restart))
+          fail("Triangle index is out of range or reserved for primitive restart.", path);
+      }
+      const vertices = indices?.values.length ?? positions.source.count;
+      if (vertices % 3 !== 0)
+        fail("TRIANGLES require complete index or vertex triples.", path);
+      triangles += vertices / 3;
+      if (triangles > SPATIAL_GLB_LIMITS.triangles)
+        fail("Source triangle budget exceeded.", path);
+      const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path);
+      if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some((texture) => texture !== undefined)) {
+        fail("Material textures require TEXCOORD_0.", path);
+      }
+      const morphTargets = [];
+      if (primitive.targets !== undefined)
+        for (const [targetIndex, target] of primitive.targets.entries()) {
+          const targetPath = `${path}.targets.${targetIndex}`;
+          const positionDeltas = target.POSITION === undefined ? undefined : at(accessors, target.POSITION, targetPath);
+          const normalDeltas = target.NORMAL === undefined ? undefined : at(accessors, target.NORMAL, targetPath);
+          if (positionDeltas === undefined && normalDeltas === undefined)
+            fail("Morph target must declare POSITION or NORMAL deltas.", targetPath);
+          if (positionDeltas !== undefined) {
+            if (positionDeltas.source.type !== "VEC3" || positionDeltas.source.componentType !== 5126 || positionDeltas.source.normalized || positionDeltas.source.count !== positions.source.count)
+              fail("Morph POSITION deltas require float32 VEC3 matching POSITION count.", targetPath);
+            morphTargetDeltaCount += positionDeltas.values.length;
+          }
+          if (normalDeltas !== undefined) {
+            if (normalDeltas.source.type !== "VEC3" || normalDeltas.source.componentType !== 5126 || normalDeltas.source.normalized || normalDeltas.source.count !== positions.source.count)
+              fail("Morph NORMAL deltas require float32 VEC3 matching POSITION count.", targetPath);
+            morphTargetDeltaCount += normalDeltas.values.length;
+          }
+          for (const attribute of [positionDeltas, normalDeltas]) {
+            if (attribute === undefined)
+              continue;
+            const view = document.bufferViews[attribute.source.bufferView];
+            if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || view.target !== undefined && view.target !== 34962)
+              fail("Morph target attributes require four-byte alignment and ARRAY_BUFFER target.", targetPath);
+            if ((view.byteStride ?? attribute.components * 4) % 4 !== 0)
+              fail("Morph target attribute elements must remain four-byte aligned.", targetPath);
+            if (attribute.values.some((value) => Math.abs(value) > 1e6))
+              fail("Morph target deltas must be bounded finite values.", targetPath);
+          }
+          if (morphTargetDeltaCount > SPATIAL_GLB_LIMITS.morphTargetDeltas)
+            fail("Morph target delta budget exceeded.", targetPath);
+          morphTargets.push(Object.freeze({ ...positionDeltas === undefined ? {} : { positionDeltas: positionDeltas.values }, ...normalDeltas === undefined ? {} : { normalDeltas: normalDeltas.values } }));
+        }
+      return Object.freeze({
+        positions: positions.values,
+        ...normals === undefined ? {} : { normals: normals.values },
+        ...uvs === undefined ? {} : { uvs: uvs.values },
+        ...indices === undefined ? {} : { indices: indices.values },
+        ...jointIndices === undefined ? {} : { jointIndices, jointWeights },
+        material,
+        morphTargets: Object.freeze(morphTargets),
+        weights
+      });
+    });
+  }));
+}
+function primitiveTargetCount(mesh, meshIndex) {
+  const count = mesh.primitives[0]?.targets?.length ?? 0;
+  for (const [primitiveIndex, primitive] of mesh.primitives.entries()) {
+    if ((primitive.targets?.length ?? 0) !== count)
+      fail("Every primitive in a mesh must declare the same number of morph targets.", `meshes.${meshIndex}.primitives.${primitiveIndex}`);
+  }
+  return count;
+}
+function readSkins(document, accessors) {
+  if (document.skins === undefined)
+    return Object.freeze([]);
+  return Object.freeze(document.skins.map((skin, skinIndex) => {
+    const path = `skins.${skinIndex}`;
+    const inverseBindMatrices = at(accessors, skin.inverseBindMatrices, path);
+    if (inverseBindMatrices.source.type !== "MAT4" || inverseBindMatrices.source.componentType !== 5126 || inverseBindMatrices.source.normalized || inverseBindMatrices.source.count !== skin.joints.length)
+      fail("Inverse bind matrices require a float32 MAT4 accessor with one matrix per joint.", path);
+    const view = document.bufferViews[inverseBindMatrices.source.bufferView];
+    if (view.byteStride !== undefined || view.target !== undefined)
+      fail("Skin inverse bind matrices must be tightly packed without a GPU buffer target.", path);
+    for (let index2 = 0;index2 < skin.joints.length; index2++) {
+      const matrix2 = inverseBindMatrices.values.slice(index2 * 16, (index2 + 1) * 16);
+      safeMatrix(matrix2, `${path}.inverseBindMatrices[${index2}]`);
     }
-    if (uvs && (uvs.source.type !== "VEC2" || uvs.source.componentType !== 5126 && !([5121, 5123].includes(uvs.source.componentType) && uvs.source.normalized)))
-      fail("TEXCOORD_0 requires float32 or normalized unsigned byte/short VEC2.", path);
-    if (indices) {
-      const view = document.bufferViews[indices.source.bufferView];
-      if (indices.source.type !== "SCALAR" || ![5121, 5123, 5125].includes(indices.source.componentType) || indices.source.normalized || view.byteStride !== undefined || view.target !== undefined && view.target !== 34963)
-        fail("Triangle indices require tightly packed unsigned scalar storage.", path);
-      const restart = indices.source.componentType === 5121 ? 255 : indices.source.componentType === 5123 ? 65535 : 4294967295;
-      if (indices.values.some((value) => value >= positions.source.count || value === restart))
-        fail("Triangle index is out of range or reserved for primitive restart.", path);
+    if (new Set(skin.joints).size !== skin.joints.length)
+      fail("Skin joints must be unique.", `${path}.joints`);
+    for (const joint of skin.joints)
+      at(document.nodes, joint, `${path}.joints`);
+    if (skin.skeleton !== undefined)
+      at(document.nodes, skin.skeleton, `${path}.skeleton`);
+    const matrixIndexByJointNode = new Map;
+    for (const [matrixIndex, jointNode] of skin.joints.entries())
+      matrixIndexByJointNode.set(jointNode, matrixIndex);
+    return Object.freeze({ joints: Object.freeze([...skin.joints]), inverseBindMatrices: Object.freeze([...inverseBindMatrices.values]), sourceAccessorIndex: skin.inverseBindMatrices, matrixIndexByJointNode: Object.freeze(matrixIndexByJointNode) });
+  }));
+}
+function rigFacts(document, skins, clipDurations) {
+  const skinSources = document.skins;
+  const morphTargets = [];
+  for (const [meshIndex, mesh] of document.meshes.entries()) {
+    const meshFacts = [];
+    const targetNames = meshTargetNames(mesh, meshIndex);
+    for (const primitive of mesh.primitives) {
+      const primitiveFacts = [];
+      if (primitive.targets !== undefined)
+        for (const [targetIndex, target] of primitive.targets.entries()) {
+          primitiveFacts.push({ name: targetNames[targetIndex] ?? `target${targetIndex}`, hasPosition: target.POSITION !== undefined, hasNormal: target.NORMAL !== undefined });
+        }
+      meshFacts.push(primitiveFacts);
     }
-    const vertices = indices?.values.length ?? positions.source.count;
-    if (vertices % 3 !== 0)
-      fail("TRIANGLES require complete index or vertex triples.", path);
-    triangles += vertices / 3;
-    if (triangles > SPATIAL_GLB_LIMITS.triangles)
-      fail("Source triangle budget exceeded.", path);
-    const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path);
-    if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some((texture) => texture !== undefined)) {
-      fail("Material textures require TEXCOORD_0.", path);
-    }
-    return { positions: positions.values, ...normals === undefined ? {} : { normals: normals.values }, ...uvs === undefined ? {} : { uvs: uvs.values }, ...indices === undefined ? {} : { indices: indices.values }, material };
-  })));
+    morphTargets.push(meshFacts);
+  }
+  return deepFreezeJson({
+    profile: SPATIAL_GLB_RIGGED_PROFILE,
+    skins: skins.map((skin, index2) => ({ ...skinSources[index2].name === undefined ? {} : { name: skinSources[index2].name }, jointNodeIndices: skin.joints, inverseBindMatricesAccessor: skin.sourceAccessorIndex })),
+    morphTargets,
+    clips: document.animations.map((clip, index2) => ({ ...clip.name === undefined ? {} : { name: clip.name }, durationSeconds: clipDurations[index2], channels: clip.channels.map((channel) => ({ nodeIndex: channel.target.node, path: channel.target.path })) }))
+  });
+}
+function meshTargetNames(mesh, _meshIndex) {
+  const extras = mesh.extras;
+  const list = extras !== null && typeof extras === "object" && "targetNames" in extras && Array.isArray(extras.targetNames) ? extras.targetNames : undefined;
+  if (list === undefined)
+    return [];
+  return Object.freeze(list.map((value, index2) => typeof value === "string" && value.length > 0 ? value : `target${index2}`));
+}
+function detectRigProfile(document) {
+  if (document.skins !== undefined && document.skins.length > 0)
+    return true;
+  if (document.nodes.some((node) => node.skin !== undefined))
+    return true;
+  if (document.meshes.some((mesh) => mesh.weights !== undefined || mesh.primitives.some((primitive) => primitive.targets !== undefined && primitive.targets.length > 0 || primitive.attributes.JOINTS_0 !== undefined || primitive.attributes.WEIGHTS_0 !== undefined)))
+    return true;
+  if (document.animations.some((clip) => clip.channels.some((channel) => channel.target.path === "weights")))
+    return true;
+  return false;
+}
+function rejectStaticRigFields(document, hasRig) {
+  if (hasRig)
+    return;
+  if (document.skins !== undefined)
+    fail("Static GLB profile does not support skins.", "skins");
+  if (document.nodes.some((node) => node.skin !== undefined))
+    fail("Static GLB profile does not support skinned nodes.", "nodes");
+  if (document.meshes.some((mesh) => mesh.weights !== undefined || mesh.primitives.some((primitive) => primitive.targets !== undefined || primitive.attributes.JOINTS_0 !== undefined || primitive.attributes.WEIGHTS_0 !== undefined)))
+    fail("Static GLB profile does not support morph targets or skinning attributes.", "meshes");
+  if (document.animations.some((clip) => clip.channels.some((channel) => channel.target.path === "weights")))
+    fail("Static GLB profile does not support weights animation.", "animations");
 }
 function hierarchy(document) {
   const parents = document.nodes.map(() => null);
@@ -1291,6 +1492,15 @@ function hierarchy(document) {
     nodeTransform(node, `nodes.${index2}`);
     if (node.mesh !== undefined)
       at(document.meshes, node.mesh, `nodes.${index2}.mesh`);
+    if (node.skin !== undefined) {
+      if (node.mesh === undefined)
+        fail("Skin reference requires a mesh on the same node.", `nodes.${index2}.skin`);
+      if (document.skins === undefined)
+        fail("Skin reference requires a declared skins array.", `nodes.${index2}.skin`);
+      const skin = at(document.skins, node.skin, `nodes.${index2}.skin`);
+      for (const joint of skin.joints)
+        at(document.nodes, joint, `skins.${node.skin}.joints`);
+    }
     const seen2 = new Set;
     for (const child of node.children) {
       at(document.nodes, child, `nodes.${index2}.children`);
@@ -1332,6 +1542,49 @@ function hierarchy(document) {
   }
   return { parents: Object.freeze(parents), order: Object.freeze(order), reachable };
 }
+function validateSkinHierarchy(document, parents, reachable) {
+  for (const [skinIndex, skin] of (document.skins ?? []).entries()) {
+    for (const joint of skin.joints) {
+      if (!reachable.has(joint))
+        fail("Every skin joint must belong to the selected default scene.", `skins.${skinIndex}.joints`);
+      if (skin.skeleton === undefined)
+        continue;
+      let current = joint;
+      while (current !== null && current !== skin.skeleton)
+        current = parents[current];
+      if (current === null)
+        fail("The declared skeleton must be an ancestor of every skin joint.", `skins.${skinIndex}.skeleton`);
+    }
+  }
+}
+function validateSkinBindings(document, meshPrimitives, skins) {
+  if (detectRigProfile(document) && skins.length === 0)
+    fail("The rigged GLB profile requires at least one declared skin.", "skins");
+  for (const [nodeIndex, node] of document.nodes.entries()) {
+    if (node.mesh === undefined) {
+      if (node.skin !== undefined)
+        fail("A skinned node must reference a mesh.", `nodes.${nodeIndex}.skin`);
+      continue;
+    }
+    const mesh = meshPrimitives[node.mesh];
+    if (node.skin === undefined) {
+      if (mesh.some((primitive) => primitive.jointIndices !== undefined))
+        fail("Skinning attributes require an explicit skin on every mesh instance.", `nodes.${nodeIndex}.mesh`);
+      continue;
+    }
+    const skin = skins[node.skin];
+    if (skin === undefined)
+      fail("Skinned node references a missing skin.", `nodes.${nodeIndex}.skin`);
+    for (const [primitiveIndex, primitive] of mesh.entries()) {
+      const path = `nodes.${nodeIndex}.mesh.primitives.${primitiveIndex}`;
+      if (primitive.jointIndices === undefined || primitive.jointWeights === undefined)
+        fail("Skinned mesh primitives must declare JOINTS_0 and WEIGHTS_0.", path);
+      for (const joint of primitive.jointIndices)
+        if (joint < 0 || joint >= skin.joints.length)
+          fail("JOINTS_0 index exceeds the skin joint count.", path);
+    }
+  }
+}
 function animationDurations(document, accessors) {
   let totalChannels = 0;
   return Object.freeze(document.animations.map((clip, clipIndex) => {
@@ -1343,8 +1596,8 @@ function animationDurations(document, accessors) {
       const input = at(accessors, sampler.input, "animation input"), output = at(accessors, sampler.output, "animation output");
       if (input.source.type !== "SCALAR" || input.source.componentType !== 5126 || input.source.normalized || input.source.count > SPATIAL_GLB_LIMITS.animationKeys || input.source.min === undefined || input.source.max === undefined)
         fail("Animation input requires bounded float32 scalar seconds with min/max.");
-      if (output.source.componentType !== 5126 || output.source.normalized || output.source.count !== input.source.count)
-        fail("Animation output must be float32 with matching key count.");
+      if (output.source.componentType !== 5126 || output.source.normalized)
+        fail("Animation output must be float32.");
       for (const accessor of [input, output]) {
         const view = document.bufferViews[accessor.source.bufferView];
         if (view.byteStride !== undefined || view.target !== undefined)
@@ -1368,18 +1621,29 @@ function animationDurations(document, accessors) {
         fail("Animation has multiple writers for one node property.", `animations.${clipIndex}`);
       writers.add(key2);
       const sampler = at(clip.samplers, channel.sampler, "animation sampler");
-      const output = accessors[sampler.output];
-      if (output.source.type !== (channel.target.path === "rotation" ? "VEC4" : "VEC3"))
-        fail("Animation output arity does not match its target property.");
-      if (channel.target.path === "rotation")
-        for (let i = 0;i < output.values.length; i += 4)
-          normalizedRotation(output.values.slice(i, i + 4), "animation rotation");
-      else if (output.values.some((value) => Math.abs(value) > 1e6 || channel.target.path === "scale" && value === 0))
-        fail("Animation transform values are unbounded or singular.");
-      if (channel.target.path === "scale" && sampler.interpolation === "LINEAR") {
-        for (let i = 3;i < output.values.length; i++)
-          if (Math.sign(output.values[i]) !== Math.sign(output.values[i - 3]))
-            fail("Linear scale animation crosses a singular transform.");
+      const input = accessors[sampler.input], output = accessors[sampler.output];
+      if (channel.target.path === "weights") {
+        const meshIndex = node.mesh ?? fail("Weights animation requires a mesh node target.", `animations.${clipIndex}.channels`);
+        const targetCount = primitiveTargetCount(document.meshes[meshIndex], meshIndex);
+        if (targetCount === 0)
+          fail("Weights animation requires morph targets.", `animations.${clipIndex}.channels`);
+        if (output.source.type !== "SCALAR" || output.source.count !== input.source.count * targetCount)
+          fail("Weights animation output must be scalar with input.count * morphTargetCount values.", `animations.${clipIndex}.channels`);
+        if (output.values.some((value) => value < 0 || value > 1 || !Number.isFinite(value)))
+          fail("Morph weights must be unit values.", `animations.${clipIndex}.channels`);
+      } else {
+        if (output.source.type !== (channel.target.path === "rotation" ? "VEC4" : "VEC3") || output.source.count !== input.source.count)
+          fail("Animation output arity does not match its target property.");
+        if (channel.target.path === "rotation")
+          for (let i = 0;i < output.values.length; i += 4)
+            normalizedRotation(output.values.slice(i, i + 4), "animation rotation");
+        else if (output.values.some((value) => Math.abs(value) > 1e6 || channel.target.path === "scale" && value === 0))
+          fail("Animation transform values are unbounded or singular.");
+        if (channel.target.path === "scale" && sampler.interpolation === "LINEAR") {
+          for (let i = 3;i < output.values.length; i++)
+            if (Math.sign(output.values[i]) !== Math.sign(output.values[i - 3]))
+              fail("Linear scale animation crosses a singular transform.");
+        }
       }
     }
     return duration;
@@ -1387,16 +1651,19 @@ function animationDurations(document, accessors) {
 }
 
 class SpatialGlbModel {
-  profile = SPATIAL_GLB_PROFILE;
+  profile;
   nodeCount;
   clipDurationsSeconds;
   materialFacts;
+  rigFacts;
   #state;
   constructor(state) {
     this.#state = state;
+    this.profile = state.profile;
     this.nodeCount = state.document.nodes.length;
     this.clipDurationsSeconds = state.clipDurations;
     this.materialFacts = state.materialFacts;
+    this.rigFacts = state.rigFacts;
     Object.freeze(this);
   }
   static parse(input) {
@@ -1425,11 +1692,16 @@ class SpatialGlbModel {
     const binary = bytes.subarray(binHeader + 8);
     if (binary.subarray(payloadLength).some((byte) => byte !== 0))
       fail("BIN padding must contain zero bytes.");
+    const hasRig = detectRigProfile(document);
+    rejectStaticRigFields(document, hasRig);
     validateViewRoles(document);
     const accessors = readAccessors(document, binary);
     const sources = materials(document);
     const meshPrimitives = readMeshes(document, accessors, sources);
+    const skins = readSkins(document, accessors);
+    validateSkinBindings(document, meshPrimitives, skins);
     const graph = hierarchy(document);
+    validateSkinHierarchy(document, graph.parents, graph.reachable);
     const clipDurations = animationDurations(document, accessors);
     let totalImageBytes = 0, totalPixels = 0;
     const images = document.images.map((image, imageIndex) => {
@@ -1446,7 +1718,9 @@ class SpatialGlbModel {
         fail("Embedded decoded image pixel budget exceeded.");
       return Object.freeze({ imageIndex, mimeType: image.mimeType, ...dimensions2, bytes: imageBytes });
     });
-    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations });
+    const profile = hasRig ? SPATIAL_GLB_RIGGED_PROFILE : SPATIAL_GLB_PROFILE;
+    const rigFactsValue = hasRig ? rigFacts(document, skins, clipDurations) : undefined;
+    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations, profile, skins, rigFacts: rigFactsValue });
   }
   evaluate(input) {
     const options = schemaValue(optionsSchema, input, "glb evaluation");
@@ -1455,6 +1729,7 @@ class SpatialGlbModel {
       fail("Selected node is absent from the default scene.", "nodeIndex");
     let sourceTimeSeconds = null;
     const animated = new Map;
+    const animatedWeights = new Map;
     if (options.clip !== undefined) {
       const clip = at(document.animations, options.clip.index, "clip.index");
       const duration = state.clipDurations[options.clip.index];
@@ -1465,6 +1740,115 @@ class SpatialGlbModel {
         fail("Once clip playback exceeds its duration.");
       sourceTimeSeconds = options.clip.playback === "loop" ? duration === 0 ? 0 : requested % duration : Math.min(requested, duration);
       for (const channel of clip.channels) {
+        const sampler = clip.samplers[channel.sampler], times = state.accessors[sampler.input].values, output = state.accessors[sampler.output];
+        let lower = 0, upper = times.length - 1;
+        if (sourceTimeSeconds <= times[0])
+          upper = 0;
+        else if (sourceTimeSeconds >= times[upper])
+          lower = upper;
+        else
+          while (upper - lower > 1) {
+            const middle = Math.floor((lower + upper) / 2);
+            if (times[middle] <= sourceTimeSeconds)
+              lower = middle;
+            else
+              upper = middle;
+          }
+        const left = output.values.slice(lower * output.components, (lower + 1) * output.components);
+        let value = left;
+        if (sampler.interpolation === "LINEAR" && upper !== lower) {
+          const right = output.values.slice(upper * output.components, (upper + 1) * output.components);
+          const t = (sourceTimeSeconds - times[lower]) / (times[upper] - times[lower]);
+          value = channel.target.path === "rotation" ? slerpQuaternion(left, right, t) : left.map((part, index2) => part + (right[index2] - part) * t);
+        }
+        if (channel.target.path === "weights") {
+          animatedWeights.set(channel.target.node, Object.freeze(value.map((value2) => Math.max(0, Math.min(1, value2)))));
+        } else {
+          const pose = animated.get(channel.target.node) ?? {};
+          if (channel.target.path === "rotation")
+            pose.rotation = normalizedRotation(value, "evaluated clip rotation");
+          else
+            pose[channel.target.path] = value;
+          animated.set(channel.target.node, pose);
+        }
+      }
+    }
+    const rotation = options.sourceUp === "x" ? [0, 0, Math.SQRT1_2, Math.SQRT1_2] : options.sourceUp === "z" ? [-Math.SQRT1_2, 0, 0, Math.SQRT1_2] : [0, 0, 0, 1];
+    const conversion = composeTransform({ position: [0, 0, 0], rotation, scale: [options.metersPerUnit, options.metersPerUnit, options.metersPerUnit] });
+    const matrices = new Map;
+    for (const index2 of state.order) {
+      const node = document.nodes[index2], overrides = animated.get(index2);
+      const local = overrides ? nodeTransform({ ...node, ...overrides }, `nodes.${index2}`) : nodeTransform(node, `nodes.${index2}`);
+      const parent = state.parents[index2];
+      matrices.set(index2, multiplyTransforms(parent === null ? conversion : matrices.get(parent), local));
+    }
+    const selected = new Set;
+    if (options.nodeIndex === undefined)
+      for (const index2 of state.reachable)
+        selected.add(index2);
+    else {
+      const pending = [options.nodeIndex];
+      while (pending.length) {
+        const index2 = pending.pop();
+        selected.add(index2);
+        pending.push(...document.nodes[index2].children);
+      }
+    }
+    const primitives = [], imageIds = new Set;
+    let triangles = 0;
+    for (const sourceNodeIndex of [...selected].sort((a, b) => a - b)) {
+      const node = document.nodes[sourceNodeIndex];
+      if (node.mesh === undefined)
+        continue;
+      const nodeWorld = safeMatrix(matrices.get(sourceNodeIndex), `nodes.${sourceNodeIndex}`);
+      for (const [sourcePrimitiveIndex, primitive] of state.meshPrimitives[node.mesh].entries()) {
+        if (primitives.length >= SPATIAL_GLB_LIMITS.primitives)
+          fail("Instanced primitive budget exceeded.");
+        triangles += (primitive.indices?.length ?? primitive.positions.length / 3) / 3;
+        if (triangles > SPATIAL_GLB_LIMITS.triangles)
+          fail("Instanced triangle budget exceeded.");
+        const morphWeights = options.morphWeights ?? animatedWeights.get(sourceNodeIndex) ?? primitive.weights;
+        const skin = node.skin !== undefined ? state.skins[node.skin] : undefined;
+        const deformed = deformPrimitive(primitive, morphWeights, skin, nodeWorld, matrices);
+        const { material, positions: _positions, normals: _normals, morphTargets: _morphTargets, weights: _weights, jointIndices: _jointIndices, jointWeights: _jointWeights, ...geometry } = primitive;
+        if (options.materialMode === "source") {
+          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+            if (texture !== undefined)
+              imageIds.add(texture.imageIndex);
+          }
+        }
+        primitives.push(Object.freeze({ ...geometry, positions: deformed.positions, ...deformed.normals === undefined ? {} : { normals: deformed.normals }, matrix: nodeWorld, bounds: deformed.bounds, sourceNodeIndex, sourcePrimitiveIndex, ...options.materialMode === "source" ? { material } : {} }));
+      }
+    }
+    if (primitives.length === 0)
+      fail("Selected scene or subtree contains no triangle geometry.");
+    const bounds = combineBounds(primitives.map((primitive) => primitive.bounds));
+    const images = [...imageIds].sort((a, b) => a - b).map((index2) => {
+      const image = state.images[index2];
+      return Object.freeze({ ...image, bytes: image.bytes.slice() });
+    });
+    const profile = state.profile;
+    return Object.freeze({ profile, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds, sourceTimeSeconds });
+  }
+  jointWorldMatrix(input, jointNodeIndex) {
+    const options = schemaValue(optionsSchema, input, "glb evaluation");
+    if (jointNodeIndex < 0 || jointNodeIndex >= this.nodeCount)
+      fail("Joint node index is out of range.", "jointNodeIndex");
+    const state = this.#state, document = state.document;
+    const animated = new Map;
+    let sourceTimeSeconds = null;
+    if (options.clip !== undefined) {
+      const clip = at(document.animations, options.clip.index, "clip.index");
+      const duration = state.clipDurations[options.clip.index];
+      const requested = (options.timeUs + options.clip.offsetUs) / 1e6;
+      if (options.clip.offsetUs / 1e6 > duration)
+        fail("Clip source offset exceeds its duration.");
+      if (options.clip.playback === "once" && requested > duration)
+        fail("Once clip playback exceeds its duration.");
+      sourceTimeSeconds = options.clip.playback === "loop" ? duration === 0 ? 0 : requested % duration : Math.min(requested, duration);
+      for (const channel of clip.channels) {
+        if (channel.target.path === "weights")
+          continue;
         const sampler = clip.samplers[channel.sampler], times = state.accessors[sampler.input].values, output = state.accessors[sampler.output];
         let lower = 0, upper = times.length - 1;
         if (sourceTimeSeconds <= times[0])
@@ -1503,53 +1887,75 @@ class SpatialGlbModel {
       const parent = state.parents[index2];
       matrices.set(index2, multiplyTransforms(parent === null ? conversion : matrices.get(parent), local));
     }
-    const selected = new Set;
-    if (options.nodeIndex === undefined)
-      for (const index2 of state.reachable)
-        selected.add(index2);
-    else {
-      const pending = [options.nodeIndex];
-      while (pending.length) {
-        const index2 = pending.pop();
-        selected.add(index2);
-        pending.push(...document.nodes[index2].children);
-      }
-    }
-    const primitives = [], imageIds = new Set;
-    let triangles = 0;
-    for (const sourceNodeIndex of [...selected].sort((a, b) => a - b)) {
-      const node = document.nodes[sourceNodeIndex];
-      if (node.mesh === undefined)
-        continue;
-      const matrix2 = safeMatrix(matrices.get(sourceNodeIndex), `nodes.${sourceNodeIndex}`);
-      for (const [sourcePrimitiveIndex, primitive] of state.meshPrimitives[node.mesh].entries()) {
-        if (primitives.length >= SPATIAL_GLB_LIMITS.primitives)
-          fail("Instanced primitive budget exceeded.");
-        triangles += (primitive.indices?.length ?? primitive.positions.length / 3) / 3;
-        if (triangles > SPATIAL_GLB_LIMITS.triangles)
-          fail("Instanced triangle budget exceeded.");
-        const bounds2 = vertexBounds(primitive.positions, primitive.indices, matrix2);
-        const { material, ...geometry } = primitive;
-        if (options.materialMode === "source") {
-          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
-            if (texture !== undefined)
-              imageIds.add(texture.imageIndex);
-          }
-        }
-        primitives.push({ ...geometry, matrix: matrix2, bounds: bounds2, sourceNodeIndex, sourcePrimitiveIndex, ...options.materialMode === "source" ? { material } : {} });
-      }
-    }
-    if (primitives.length === 0)
-      fail("Selected scene or subtree contains no triangle geometry.");
-    const bounds = combineBounds(primitives.map((primitive) => primitive.bounds));
-    const images = [...imageIds].sort((a, b) => a - b).map((index2) => {
-      const image = state.images[index2];
-      return Object.freeze({ ...image, bytes: image.bytes.slice() });
-    });
-    return Object.freeze({ profile: SPATIAL_GLB_PROFILE, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds, sourceTimeSeconds });
+    return safeMatrix(matrices.get(jointNodeIndex), "jointWorldMatrix");
   }
 }
-function vertexBounds(positions, indices, matrix2) {
+function combineBounds(bounds) {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (const bound of bounds)
+    for (let axis = 0;axis < 3; axis++) {
+      min[axis] = Math.min(min[axis], bound.min[axis]);
+      max[axis] = Math.max(max[axis], bound.max[axis]);
+    }
+  return deepFreezeJson({ min, max });
+}
+function deformPrimitive(primitive, morphWeights, skin, nodeWorld, nodeMatrices) {
+  const positions = applyMorphWeights(primitive.positions, primitive.morphTargets.map((target) => target.positionDeltas), morphWeights);
+  let normals;
+  if (primitive.normals !== undefined) {
+    const morphed = applyMorphWeights(primitive.normals, primitive.morphTargets.map((target) => target.normalDeltas), morphWeights);
+    normals = normalizeVectors(morphed);
+  }
+  if (skin === undefined) {
+    const bounds2 = transformVertexBounds(positions, primitive.indices, nodeWorld);
+    return normals === undefined ? { positions, bounds: bounds2 } : { positions, normals, bounds: bounds2 };
+  }
+  const deformedPositions = [], deformedNormals = [];
+  const hasNormals = normals !== undefined, meshInverse = invertTransform(nodeWorld);
+  for (let vertex = 0;vertex < positions.length / 3; vertex++) {
+    const skinMatrix = computeSkinMatrix(vertex, primitive, skin, nodeMatrices, meshInverse);
+    const position = transformPoint(skinMatrix, [positions[vertex * 3], positions[vertex * 3 + 1], positions[vertex * 3 + 2]]);
+    deformedPositions.push(position[0], position[1], position[2]);
+    if (hasNormals) {
+      const n = transformNormal(skinMatrix, [normals[vertex * 3], normals[vertex * 3 + 1], normals[vertex * 3 + 2]]);
+      const len = Math.hypot(n[0], n[1], n[2]);
+      deformedNormals.push(len === 0 ? 0 : n[0] / len, len === 0 ? 0 : n[1] / len, len === 0 ? 0 : n[2] / len);
+    }
+  }
+  const frozenPositions = Object.freeze(deformedPositions), bounds = transformVertexBounds(frozenPositions, primitive.indices, nodeWorld);
+  return hasNormals ? { positions: frozenPositions, normals: Object.freeze(deformedNormals), bounds } : { positions: frozenPositions, bounds };
+}
+function applyMorphWeights(base, deltas, weights) {
+  if (deltas.length === 0 || weights.length === 0)
+    return base;
+  const out = base.slice();
+  for (let target = 0;target < deltas.length; target++) {
+    const weight = weights[target] ?? 0;
+    if (weight === 0 || deltas[target] === undefined)
+      continue;
+    const delta = deltas[target];
+    for (let index2 = 0;index2 < out.length; index2++)
+      out[index2] = out[index2] + weight * (delta[index2] ?? 0);
+  }
+  return Object.freeze(out);
+}
+function normalizeVectors(values2) {
+  const out = [];
+  for (let index2 = 0;index2 < values2.length; index2 += 3) {
+    const len = Math.hypot(values2[index2], values2[index2 + 1], values2[index2 + 2]);
+    out.push(len === 0 ? 0 : values2[index2] / len, len === 0 ? 0 : values2[index2 + 1] / len, len === 0 ? 0 : values2[index2 + 2] / len);
+  }
+  return Object.freeze(out);
+}
+function transformNormal(matrix2, normal) {
+  const inverse = invertTransform(matrix2);
+  return [
+    inverse[0] * normal[0] + inverse[1] * normal[1] + inverse[2] * normal[2],
+    inverse[4] * normal[0] + inverse[5] * normal[1] + inverse[6] * normal[2],
+    inverse[8] * normal[0] + inverse[9] * normal[1] + inverse[10] * normal[2]
+  ];
+}
+function transformVertexBounds(positions, indices, matrix2) {
   const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
   const count = indices?.length ?? positions.length / 3;
   for (let index2 = 0;index2 < count; index2++) {
@@ -1562,14 +1968,28 @@ function vertexBounds(positions, indices, matrix2) {
   }
   return deepFreezeJson({ min: low, max: high });
 }
-function combineBounds(bounds) {
-  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-  for (const bound of bounds)
-    for (let axis = 0;axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], bound.min[axis]);
-      max[axis] = Math.max(max[axis], bound.max[axis]);
-    }
-  return deepFreezeJson({ min, max });
+function computeSkinMatrix(vertex, primitive, skin, nodeMatrices, meshInverse) {
+  const jointIndices = primitive.jointIndices;
+  const jointWeights = primitive.jointWeights;
+  const entries = new Array(16).fill(0);
+  for (let influence = 0;influence < 4; influence++) {
+    const weight = jointWeights[vertex * 4 + influence];
+    if (weight === 0)
+      continue;
+    const jointNode = skin.joints[jointIndices[vertex * 4 + influence]];
+    const jointWorld = nodeMatrices.get(jointNode);
+    if (jointWorld === undefined)
+      fail(`Joint node ${jointNode} missing from hierarchy.`, "skin");
+    const matrixIndex = skin.matrixIndexByJointNode.get(jointNode);
+    if (matrixIndex === undefined)
+      fail(`Joint node ${jointNode} is not in skin joints.`, "skin");
+    const inverseBindMatrix = skin.inverseBindMatrices.slice(matrixIndex * 16, matrixIndex * 16 + 16);
+    const jointMatrix = multiplyTransforms(meshInverse, multiplyTransforms(jointWorld, inverseBindMatrix));
+    for (let entry = 0;entry < 16; entry++)
+      entries[entry] = entries[entry] + weight * jointMatrix[entry];
+  }
+  entries[15] = 1;
+  return Object.freeze(entries);
 }
 function parseSpatialGlb(bytes) {
   return SpatialGlbModel.parse(bytes);
@@ -1596,16 +2016,41 @@ var SpatialAssetMaterialFactSchema = z3.strictObject({
   maps: z3.array(z3.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive"])).max(5),
   emissiveLinear: z3.tuple([factsUnit, factsUnit, factsUnit]).optional()
 });
+var SpatialAssetRigFactsSchema = z3.strictObject({
+  profile: z3.literal(SPATIAL_GLB_RIGGED_PROFILE),
+  skins: z3.array(z3.strictObject({
+    name: z3.string().max(1024).optional(),
+    jointNodeIndices: z3.array(z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
+    inverseBindMatricesAccessor: z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1)
+  })).min(1).max(SPATIAL_GLB_LIMITS.skins),
+  morphTargets: z3.array(z3.array(z3.array(z3.strictObject({
+    name: z3.string().min(1).max(1024),
+    hasPosition: z3.boolean(),
+    hasNormal: z3.boolean()
+  })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive)).max(SPATIAL_GLB_LIMITS.primitives)).max(SPATIAL_GLB_LIMITS.meshes),
+  clips: z3.array(z3.strictObject({
+    name: z3.string().max(1024).optional(),
+    durationSeconds: z3.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
+    channels: z3.array(z3.strictObject({
+      nodeIndex: z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
+      path: z3.enum(["translation", "rotation", "scale", "weights"])
+    })).max(SPATIAL_GLB_LIMITS.channels)
+  })).max(SPATIAL_GLB_LIMITS.clips)
+});
 var SpatialAssetFactsV1Schema = z3.strictObject({
   kind: z3.literal("slopcamera.spatial-asset-facts"),
   schemaVersion: z3.literal(1),
   subject: SpatialPayloadSchema,
   subjectManifestSha256: SpatialDigestSchema,
-  profile: z3.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1]),
+  profile: z3.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE]),
   nodeCount: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
   clipDurationsSeconds: z3.array(z3.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
   bounds: z3.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
-  materials: z3.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional()
+  materials: z3.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
+  rig: SpatialAssetRigFactsSchema.optional()
+}).superRefine((facts, context) => {
+  if (facts.profile === SPATIAL_GLB_RIGGED_PROFILE !== (facts.rig !== undefined))
+    context.addIssue({ code: "custom", path: ["rig"], message: "Rig facts must be present exactly for the rigged GLB profile." });
 });
 var SpatialPublishedArtifactSchema = z3.strictObject({
   path: z3.string().min(1).max(1024),
@@ -2531,4 +2976,4 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
-export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
+export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };

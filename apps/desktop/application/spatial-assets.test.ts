@@ -8,6 +8,7 @@ import sharp from "sharp";
 
 import { EvaluatedSpatialSceneSchema, type SpatialAssetManifest, type SpatialEntity } from "../../../src/spatial-scene/contracts";
 import { composeTransform } from "../../../src/spatial-scene/math";
+import { createOriginalRiggedGlbFixture } from "../html-overlay/rigged-glb.testing";
 import { createSpatialOverlayBatch } from "../html-overlay/spatial";
 import type { ApplicationProcessRunner } from "./context";
 import { inertSpatialSvg, spatialOpenTypeFont, spatialVideoTimeUs, withPreparedSpatialAssets } from "./spatial-assets";
@@ -198,6 +199,26 @@ describe("qualified GLB host integration", () => {
         expect(prepared.receipt.outputBytes).toBe(prepared.resources.reduce((sum, item) => sum + item.bytes, 0));
         const batch = createSpatialOverlayBatch({ snapshots: [frame, { ...frame, timeUs: 500_000 }], preparedAssets: prepared.preparedAssets, frameRate: { numerator: 24, denominator: 1 }, mode: { kind: "beauty" } });
         expect(batch.authoring.resources).toEqual(prepared.resources.map(({ absolutePath: _path, ...resource }) => resource).sort((left, right) => left.name.localeCompare(right.name)));
+      });
+    });
+  });
+
+  test("rigged geometry uses one deformed prepared mesh in beauty and diagnostic passes", async () => {
+    await workspace(async (assetRoot, workspaceParent) => {
+      const bytes = createOriginalRiggedGlbFixture().bytes;
+      await writeFile(join(assetRoot, "character.glb"), bytes);
+      const asset: SpatialAssetManifest = { assetId: "asset_character", payload: { path: "character.glb", bytes: bytes.length, sha256: sha(bytes) }, interpretation: { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" }, dependencies: [], provenance: { source: "authored", description: "Original rigged ribbon" } };
+      const entity: SpatialEntity = { ...surface, kind: "mesh", geometry: { kind: "asset", assetId: "asset_character", materialMode: "entity" }, material: { kind: "standard", color: "#ffffff", opacity: 1, roughness: 1, metalness: 0 } };
+      const frame = snapshot([asset], entity);
+      await withPreparedSpatialAssets({ assetRoot, workspaceParent, snapshots: [frame] }, { runner }, new AbortController().signal, async prepared => {
+        expect(prepared.preparedAssets).toHaveLength(1);
+        const geometry = prepared.preparedAssets[0];
+        if (geometry?.kind !== "geometry") throw new Error("Expected rigged prepared geometry");
+        expect(geometry.primitives[0]?.positions).toEqual([-0.25, 0, 0, 0.25, 0, 0, -0.25, 2, 0, 0.25, 2, 0]);
+        const modes = [{ kind: "beauty" } as const, { kind: "object-id", coverage: { kind: "opaque" } } as const, { kind: "axial-depth", coverage: { kind: "opaque" } } as const];
+        const batches = modes.map(mode => createSpatialOverlayBatch({ snapshots: [frame], preparedAssets: prepared.preparedAssets, frameRate: { numerator: 24, denominator: 1 }, mode }));
+        expect(batches.map(batch => batch.metadata.frames[0]?.objects[0]?.representation)).toEqual(["prepared-static-triangle-mesh", "prepared-static-triangle-mesh", "prepared-static-triangle-mesh"]);
+        expect(new Set(batches.map(batch => batch.authoring.resources[0]?.sha256)).size).toBe(1);
       });
     });
   });

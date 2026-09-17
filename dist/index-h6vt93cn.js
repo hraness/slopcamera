@@ -20,7 +20,7 @@ import {
   parseSpatialValue,
   spatialSceneSha256,
   spatialValueSha256
-} from "./index-6ew11hhb.js";
+} from "./index-g6dg6bwa.js";
 import {
   SlopcameraCodeError,
   boundedCanonicalJsonSha256,

@@ -6,9 +6,11 @@ import { join } from "node:path";
 
 import { applySpatialScenePatch } from "../../../src/spatial-scene/patch";
 import { spatialSceneSha256 } from "../../../src/spatial-scene/identity";
+import { SPATIAL_GLB_RIGGED_PROFILE } from "../../../src/spatial-scene/gltf";
 import { fixtureScene } from "../../../src/spatial-scene/test-fixture";
 import { operationApplicationContext } from "../application/operations/test-support";
 import { SpatialAssetAdmissionV1Schema } from "../contracts/spatial-asset";
+import { createOriginalRiggedGlbFixture } from "../html-overlay/rigged-glb.testing";
 import { parseCliArgs } from "./args";
 import type { CliIo } from "./io";
 import { createCliTestRunner } from "./run-cli-test-helper";
@@ -136,6 +138,24 @@ describe("scene asset admit", () => {
       });
       expect(patched.scene.assets.map(asset => asset.assetId)).toEqual([document.manifest.assetId, document.factsManifest.assetId]);
       expect(patched.scene.entities.map(entity => entity.entityId)).toContain(document.entity.entityId);
+    } finally { await cleanup(); }
+  });
+
+  test("admits a bounded rigged GLB and publishes exact skeleton facts", async () => {
+    const { root, cleanup } = await workspace("rigged");
+    try {
+      const fixture = createOriginalRiggedGlbFixture();
+      await writeFile(join(root, "character.glb"), fixture.bytes);
+      const output: string[] = [], errors: string[] = [];
+      expect(await runCli(["scene", "asset", "admit", "character.glb", "--output", "character.json", "--json"], dependencies(root, testIo(root, output, errors)))).toBe(0);
+      expect(errors).toEqual([]);
+      const result = JSON.parse(output.at(-1)!) as { document: unknown };
+      const document = SpatialAssetAdmissionV1Schema.parse(result.document);
+      expect(document.facts.profile).toBe(SPATIAL_GLB_RIGGED_PROFILE);
+      expect(document.facts.rig?.profile).toBe(SPATIAL_GLB_RIGGED_PROFILE);
+      expect(document.facts.rig?.skins).toEqual([{ name: "ribbon-skeleton", jointNodeIndices: [1, 2], inverseBindMatricesAccessor: 5 }]);
+      expect(document.facts.rig?.morphTargets).toEqual([[[]]]);
+      expect(document.facts.rig?.clips).toEqual([]);
     } finally { await cleanup(); }
   });
 
