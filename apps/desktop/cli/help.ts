@@ -10,7 +10,7 @@ Usage: slopcamera <command> [options]
 Commands:
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|camera-track|generate|plan|render
+  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -128,6 +128,7 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene audit <scene.json> --camera <camera-id> [--times-us <csv>] [--asset-bounds <bounds-or-admission.json>] [--json]
   slopcamera scene render-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--json]
   slopcamera scene solve <scene.json> --goals <goals.json> [--output <patch.json>] [--asset-bounds <bounds-or-admission.json>] [--json]
+  slopcamera scene review <scene.json> --camera <camera-id> [--times-us <csv>] --allow-cloud-upload [--json]
   slopcamera scene camera-track <scene.json> --request <sampling.json> --output <new-track.json> [--json]
   slopcamera scene generate --module <generator.ts> --generator-id <id>
         [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]
@@ -165,6 +166,11 @@ see each other's solved transforms in dependency order. The emitted patch carrie
 placeholder expectedSceneSha256 — copy the digest from scene inspect before scene patch.
 Goal entities must be authored, unparented, world-placed, and free of transform
 overrides or transform channels; asset-derived bounds come from --asset-bounds.
+Review renders up to four bounded beauty frames locally, uploads only those exact
+frames to a vision-capable Gateway language model after explicit --allow-cloud-upload,
+and returns a structured advisory report. It makes exactly one Gateway call, records
+frame digests, model and attempt identity, and rubric version, and never modifies or
+auto-applies scene changes. The report is model-generated and unverified.
 Generate runs a trusted TypeScript generator at authoring time, stamps retained
 output with derived entity identity, and records source, closure, parameters, seed and
 runtime digests; it never reruns source during inspect, evaluate or render.
