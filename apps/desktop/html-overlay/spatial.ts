@@ -254,6 +254,16 @@ type LoweredLight = Readonly<{
   color: string;
   intensity: number;
 }>;
+/** Equirect sky surface: camera-following background and optional standard-material environment light. */
+type LoweredEnvironment = Readonly<{
+  kind: "environment";
+  entityId: string;
+  textureName: string;
+  /** Effective world rotation in XYZW; environment entities are unparented so the authored rotation is world-space. */
+  rotation: readonly [number, number, number, number];
+  intensity: number;
+  role: "background" | "environment" | "both";
+}>;
 
 function unsupported(capability: string, message: string): never {
   throw new SpatialOverlayCapabilityError(capability, message);
@@ -398,7 +408,7 @@ export function createSpatialOverlayBatch(input: unknown) {
     if (manifests.size !== snapshot.assets.length) throw new RangeError("Snapshot asset IDs must be unique.");
     const ids = new Set<string>();
     const selections = new Set<number>();
-    const objects: (LoweredMesh | LoweredLight | LoweredSplat)[] = [];
+    const objects: (LoweredMesh | LoweredLight | LoweredSplat | LoweredEnvironment)[] = [];
     const evidence: Array<{ entityId: string; selectionId: number; representation: string; placement: "world" | "view"; assetManifestSha256?: string }> = [];
     const bindAsset = (assetId: string, key: string): PreparedSpatialAsset => {
       const manifest = manifests.get(assetId);
@@ -457,6 +467,19 @@ export function createSpatialOverlayBatch(input: unknown) {
         if (entry.visible) objects.push({ kind: "light", entityId: entity.entityId, matrix: entry.worldMatrix, light: entity.light, color: entity.color, intensity: entity.intensity });
         continue;
       }
+      if (entity.kind === "environment") {
+        // The equirect raster is bound for every frame even when hidden: the
+        // prepared batch and auxiliary passes must see identical bindings.
+        const key = `${entity.assetId}:${entity.entityId}:static`;
+        const asset = bindAsset(entity.assetId, key);
+        if (asset.kind !== "raster" || manifests.get(entity.assetId)!.interpretation.kind !== "image") {
+          unsupported("prepared-environment-kind", "Environment entities require a prepared image raster.");
+        }
+        bindTexture(asset);
+        if (entry.visible) objects.push({ kind: "environment", entityId: entity.entityId, textureName: asset.resource.name,
+          rotation: entity.transform.rotation, intensity: entity.intensity, role: entity.role });
+        continue;
+      }
       // Capability checks include invisible/off-camera entities, so changing
       // visibility or cameras cannot discover an unplanned loader during render.
       const base = { kind: "mesh" as const, entityId: entity.entityId, selectionId: entry.selectionId, matrix: entry.worldMatrix, placement: entity.placement };
@@ -496,9 +519,21 @@ export function createSpatialOverlayBatch(input: unknown) {
                   ...(primitive.texture.sampler === undefined ? {} : { sampler: primitive.texture.sampler }) } }) };
           });
         } else {
-          assertCoverage(request.mode, entity.material, undefined);
-          representation = `primitive-${entity.geometry.kind}`;
-          meshes = [{ ...base, ...unitFit, geometry: entity.geometry, material: entity.material }];
+          let mapRaster: PreparedRaster | undefined;
+          if (entity.material.map !== undefined) {
+            const key = `${entity.material.map}:${entity.entityId}:static`;
+            const asset = bindAsset(entity.material.map, key);
+            if (asset.kind !== "raster" || manifests.get(entity.material.map)!.interpretation.kind !== "image") {
+              unsupported("prepared-material-map", "Material maps require a prepared image raster.");
+            }
+            bindTexture(asset);
+            mapRaster = asset;
+            assetManifestSha256 = asset.assetManifestSha256;
+          }
+          assertCoverage(request.mode, entity.material, mapRaster);
+          representation = `primitive-${entity.geometry.kind}${mapRaster === undefined ? "" : "-textured"}`;
+          meshes = [{ ...base, ...unitFit, geometry: entity.geometry, material: entity.material,
+            ...(mapRaster === undefined ? {} : { textureName: mapRaster.resource.name, textureAlpha: mapRaster.alpha }) }];
         }
       } else {
         const assetId = entity.kind === "text" ? entity.fontAssetId : entity.assetId;
@@ -529,6 +564,9 @@ export function createSpatialOverlayBatch(input: unknown) {
       objects.push(...meshes);
       evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation, placement: entity.placement.kind,
         ...(assetManifestSha256 === undefined ? {} : { assetManifestSha256 }) });
+    }
+    if (objects.reduce((count, object) => count + (object.kind === "environment" ? 1 : 0), 0) > 1) {
+      throw new RangeError("A frame may show at most one visible environment entity; gate alternates through authored visibility.");
     }
     const meshes = objects.filter((object): object is LoweredMesh => object.kind === "mesh");
     // Transparency sorting is a Spark beauty-pipeline constraint; object-ID
@@ -742,6 +780,14 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
   try{
     const world=new THREE.Scene();const view=new THREE.Scene();const camera=makeCamera(frame.camera);
     const viewCamera=new THREE.OrthographicCamera(0,SlopcameraOverlay.width,0,SlopcameraOverlay.height,0.01,2000002);viewCamera.position.z=1000001;viewCamera.updateMatrixWorld(true);
+    const environment=frame.objects.find(object=>object.kind==="environment");
+    if(environment!==undefined&&input.mode.kind==="beauty"){
+      const equirect=track(textures.get(environment.textureName).clone());
+      equirect.mapping=THREE.EquirectangularReflectionMapping;equirect.needsUpdate=true;
+      const skyRotation=new THREE.Quaternion(...environment.rotation);
+      if(environment.role!=="environment"){world.background=equirect;world.backgroundRotation.setFromQuaternion(skyRotation);world.backgroundIntensity=environment.intensity;}
+      if(environment.role!=="background"){world.environment=equirect;world.environmentRotation.setFromQuaternion(skyRotation);world.environmentIntensity=environment.intensity;}
+    }
     for(const object of frame.objects){
       if(object.kind==="light"){
         const light=object.light==="ambient"?new THREE.AmbientLight(object.color,object.intensity):object.light==="point"?new THREE.PointLight(object.color,object.intensity):new THREE.DirectionalLight(object.color,object.intensity);
@@ -749,6 +795,7 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
         if(object.light==="directional"){const target=new THREE.Object3D();target.position.set(0,0,-1).applyMatrix4(light.matrix);world.add(target);light.target=target;}
         continue;
       }
+      if(object.kind==="environment")continue;
       const mesh=new THREE.Mesh(makeGeometry(object,track),makeMaterial(object,frame,track));mesh.name=object.entityId;
       mesh.matrixAutoUpdate=false;mesh.matrix.fromArray(object.matrix);
       if(object.geometry.kind==="prepared")mesh.matrix.multiply(new THREE.Matrix4().fromArray(input.geometry[object.geometry.key][object.geometry.primitive].matrix));

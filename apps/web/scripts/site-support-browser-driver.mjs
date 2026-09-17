@@ -80,7 +80,7 @@ async function main() {
           assert.ok(design !== undefined && typeof currentDom === "string" && typeof baselineDom === "string")
           // The comparison requires an unobstructed current page and records the
           // immutable baseline's reviewed fixed-footer obstructions in the receipt.
-          const { baselineObstructions } = compareSupportEvidence({ ...evidence, dom: currentDom }, { ...old, dom: baselineDom }, scenario.name)
+          const { baselineObstructions } = compareSupportEvidence({ ...evidence, dom: currentDom }, { ...old, dom: baselineDom }, scenario.name, design.contentFooterHeight)
           observations.push({ ...design, baselineObstructions })
         }
         cases.push(scenario.name)

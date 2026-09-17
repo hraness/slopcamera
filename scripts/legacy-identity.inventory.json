@@ -1258,8 +1258,8 @@
     ]
   },
   {
-    "identityLineCount": 83,
-    "identityLinesSha256": "09fe36ee0ef29cbde23d97c62d754e5d27a1403f63c72504678ad36ee3873b53",
+    "identityLineCount": 84,
+    "identityLinesSha256": "8cb37d274383bda4233bcd2ccabc3cb3e9a03084454d670cf2036c00573bacd0",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1629,15 +1629,6 @@
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "d3194f74bce8707ee2e6e33730495249349f0e5254818d9e25a94ca1d79537a3",
-    "occurrenceCount": 237,
-    "path": "dist/index-av1dvk2n.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 64,
     "identityLinesSha256": "333f1376a805025708d9d75537a9d11d644d800ff22bdfe1b21c96894b692a49",
     "occurrenceCount": 64,
@@ -1909,7 +1900,7 @@
   },
   {
     "identityLineCount": 18,
-    "identityLinesSha256": "70b543f43bd2a05400b52471a2695c183947f5a4351fa9e1e833b7a3f535a393",
+    "identityLinesSha256": "f452c334681be99da07cd97c08a207492efd68260943246dd9e72eab583a4b07",
     "occurrenceCount": 18,
     "path": "scripts/package-smoke.ts",
     "categories": [
