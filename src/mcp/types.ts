@@ -1,4 +1,5 @@
 import type { SlopcameraGenerateDependencies } from "../generate.js"
+import type { HostResourceCoordinator } from "../host-resources.js"
 
 export type JsonRpcId = string | number
 export type JsonRpcResponseId = JsonRpcId | null
@@ -37,6 +38,11 @@ export interface McpToolDefinition {
     | "render_diagram"
     | "search_slopcamera"
     | "execute_slopcamera"
+    | "check_scene"
+    | "inspect_scene"
+    | "audit_scene"
+    | "diff_scenes"
+    | "evaluate_scene"
   readonly title: string
   readonly description: string
   readonly inputSchema: Readonly<Record<string, unknown>>
@@ -68,4 +74,9 @@ export interface McpServerOptions {
   readonly serverVersion?: string
   /** Injectable Gateway runtime, environment, and fixed-origin fetch seams. */
   readonly generateDependencies?: SlopcameraGenerateDependencies
+  /**
+   * Injectable host-resource admission coordinator. Defaults to the
+   * machine-global coordinator; tests inject a process-local stand-in.
+   */
+  readonly hostResourceCoordinator?: HostResourceCoordinator
 }

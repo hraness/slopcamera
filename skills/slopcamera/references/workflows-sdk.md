@@ -32,9 +32,9 @@ Keep run IDs, errors and receipts after failure. A missing journal does not prov
 
 ## Use the portable MCP surface narrowly
 
-When connected, use `check_diagram` and `render_diagram` for compatibility calls, or `search_slopcamera` and `execute_slopcamera` with one exact returned operation and typed JSON. No tool rewrites source.
+When connected, use `check_diagram` and `render_diagram` for compatibility calls, `check_scene`/`inspect_scene`/`audit_scene`/`diff_scenes`/`evaluate_scene` for read-only spatial scene work, or `search_slopcamera` and `execute_slopcamera` with one exact returned operation and typed JSON. No tool rewrites source.
 
-- Use root-relative paths. A diagram must end in `.diagram.json`.
+- Use root-relative paths. A diagram must end in `.diagram.json`; a scene must end in `.json`.
 - Diagram render replaces the five documented exports, never its source.
 - MCP bounds diagrams to 64 shapes and 128 edges and reports at most 40 findings. Use the CLI for larger checked sources.
 - MCP uses built-in themes/icons and never executes workspace configuration; trusted custom config belongs to the CLI.

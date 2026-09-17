@@ -5,16 +5,22 @@ import {
   pathExists
 } from "./index-7308egqr.js";
 import {
+  SPATIAL_AUDIT_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SpatialDigestSchema,
   SpatialPatchOperationSchema,
   SpatialSceneError,
   applySpatialScenePatch,
+  auditSpatialScene,
+  diffSpatialScenes,
+  evaluateSpatialScene,
+  inspectSpatialScene,
+  normalizeSpatialAuditAssetBounds,
   parseSpatialScene,
   parseSpatialValue,
   spatialSceneSha256,
   spatialValueSha256
-} from "./index-hqbjn0xr.js";
+} from "./index-fbgatzns.js";
 import {
   SlopcameraCodeError,
   boundedCanonicalJsonSha256,
@@ -65,6 +71,7 @@ import {
   slopcameraGatewayCredentialStatus
 } from "./index-231ernwj.js";
 import {
+  HostResourceError,
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";
 
@@ -357,16 +364,16 @@ function isConfined(rootDirectory, target) {
   const fromRoot = relative(rootDirectory, target);
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute2(fromRoot);
 }
-async function readUtf8WithCap(filePath) {
+async function readUtf8WithCap(filePath, sourceLabel) {
   let handle;
   try {
     handle = await open(filePath, "r");
     const metadata = await handle.stat();
     if (!metadata.isFile()) {
-      throw new WorkspaceBoundaryError("SOURCE_NOT_FILE", "Diagram source must be a regular file.");
+      throw new WorkspaceBoundaryError("SOURCE_NOT_FILE", `${sourceLabel} must be a regular file.`);
     }
     if (metadata.size > mcpSourceByteLimit) {
-      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`);
+      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`);
     }
     const buffer = Buffer.allocUnsafe(mcpSourceByteLimit + 1);
     let bytesRead = 0;
@@ -377,21 +384,21 @@ async function readUtf8WithCap(filePath) {
       bytesRead += next.bytesRead;
     }
     if (bytesRead > mcpSourceByteLimit) {
-      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `Diagram source exceeds the ${mcpSourceByteLimit}-byte limit.`);
+      throw new WorkspaceBoundaryError("SOURCE_TOO_LARGE", `${sourceLabel} exceeds the ${mcpSourceByteLimit}-byte limit.`);
     }
     try {
       return new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, bytesRead));
     } catch {
-      throw new WorkspaceBoundaryError("SOURCE_ENCODING", "Diagram source must contain valid UTF-8.");
+      throw new WorkspaceBoundaryError("SOURCE_ENCODING", `${sourceLabel} must contain valid UTF-8.`);
     }
   } catch (error) {
     if (error instanceof WorkspaceBoundaryError)
       throw error;
     const code = filesystemCode(error);
     if (code === "ENOENT") {
-      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", "Diagram source does not exist.");
+      throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", `${sourceLabel} does not exist.`);
     }
-    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Diagram source could not be read.");
+    throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", `${sourceLabel} could not be read.`);
   } finally {
     await handle?.close();
   }
@@ -426,7 +433,7 @@ class WorkspaceBoundary {
     const fromRoot = relative(this.rootDirectory, absolutePath);
     return fromRoot === "" ? "." : fromRoot.split("\\").join("/");
   }
-  async readSource(value) {
+  async readSource(value, sourceLabel = "Diagram source") {
     const normalized = normalizeRelativePath(value, { allowRoot: false });
     const lexicalPath = resolve3(this.rootDirectory, normalized.native);
     this.assertConfined(lexicalPath);
@@ -435,15 +442,15 @@ class WorkspaceBoundary {
       canonicalPath = await realpath(lexicalPath);
     } catch (error) {
       if (filesystemCode(error) === "ENOENT") {
-        throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", "Diagram source does not exist.");
+        throw new WorkspaceBoundaryError("SOURCE_NOT_FOUND", `${sourceLabel} does not exist.`);
       }
-      throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", "Diagram source could not be resolved.");
+      throw new WorkspaceBoundaryError("FILESYSTEM_ERROR", `${sourceLabel} could not be resolved.`);
     }
     this.assertConfined(canonicalPath);
     return {
       absolutePath: canonicalPath,
       relativePath: this.toRelativePath(canonicalPath),
-      text: await readUtf8WithCap(canonicalPath)
+      text: await readUtf8WithCap(canonicalPath, sourceLabel)
     };
   }
   async resolveInputFile(value, maximumBytes) {
@@ -536,6 +543,9 @@ var mcpMaximumRenderedPixels = 16777216;
 var mcpMaximumShapes = 64;
 var mcpMaximumEdges = 128;
 var mcpMaximumReturnedFindings = 40;
+var mcpMaximumReturnedEntities = 256;
+var mcpMaximumReturnedAuditSamples = 8192;
+var mcpMaximumReturnedDiffEntries = 1024;
 var defaultScale = 2;
 var maximumShapeIdsPerFinding = 12;
 var builtInConfig = Object.freeze({ icons: builtInIcons });
@@ -547,6 +557,26 @@ var findingSchema = {
     code: { type: "string" },
     message: { type: "string" },
     shapeIds: { type: "array", items: { type: "string" } }
+  }
+};
+var scenePathSchema = {
+  type: "string",
+  description: "Root-relative path to a spatial scene JSON source (1 MiB maximum)."
+};
+var sceneCameraIdSchema = {
+  type: "string",
+  maxLength: 128,
+  pattern: "^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+  description: "Identifier of a camera declared by the scene (camera_\u2026)."
+};
+var entityTruncationSummarySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["entityCount", "returnedEntityCount", "entitiesTruncated"],
+  properties: {
+    entityCount: { type: "integer", minimum: 0 },
+    returnedEntityCount: { type: "integer", minimum: 0 },
+    entitiesTruncated: { type: "boolean" }
   }
 };
 function deepFreeze(value) {
@@ -772,6 +802,244 @@ var slopcameraMcpTools = deepFreeze([
       idempotentHint: false,
       openWorldHint: true
     }
+  },
+  {
+    name: "check_scene",
+    title: "Check scene",
+    description: "Parse and validate one root-relative Slopcamera spatial scene JSON source without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "sceneId", "sceneSha256", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        sceneId: { type: "string" },
+        sceneSha256: { type: "string" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "durationUs",
+            "entityCount",
+            "cameraCount",
+            "assetCount",
+            "animationCount",
+            "generatorCount",
+            "overrideCount"
+          ],
+          properties: {
+            durationUs: { type: "integer", minimum: 0 },
+            entityCount: { type: "integer", minimum: 0 },
+            cameraCount: { type: "integer", minimum: 0 },
+            assetCount: { type: "integer", minimum: 0 },
+            animationCount: { type: "integer", minimum: 0 },
+            generatorCount: { type: "integer", minimum: 0 },
+            overrideCount: { type: "integer", minimum: 0 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Check scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "inspect_scene",
+    title: "Inspect scene",
+    description: "Snapshot one root-relative spatial scene's entities, editable controls, placements, assets, and generators without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: { path: scenePathSchema }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "inspection", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        inspection: { type: "object" },
+        summary: entityTruncationSummarySchema
+      }
+    },
+    annotations: {
+      title: "Inspect scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "audit_scene",
+    title: "Audit scene",
+    description: "Sample one root-relative spatial scene against a camera and report per-entity geometric coverage, visibility findings, and bounds gaps. Optional asset_bounds accepts a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        times_us: {
+          type: "array",
+          items: {
+            type: "integer",
+            minimum: 0,
+            maximum: SPATIAL_SCENE_LIMITS.durationUs
+          },
+          minItems: 1,
+          maxItems: SPATIAL_AUDIT_LIMITS.samples,
+          description: "Optional sample times in microseconds. Defaults to evenly spaced coverage of the scene duration."
+        },
+        asset_bounds: {
+          description: "Optional decoded scene-space asset bounds: a Record<assetId,{min,max}> map, a slopcamera.spatial-asset-admission document, a {manifest,facts} pair, or an array of those documents."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "findingCount",
+            "returnedFindingCount",
+            "findingsTruncated",
+            "entityCount",
+            "returnedEntityCount",
+            "entitiesTruncated"
+          ],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            entityCount: { type: "integer", minimum: 0 },
+            returnedEntityCount: { type: "integer", minimum: 0 },
+            entitiesTruncated: { type: "boolean" }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Audit scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "diff_scenes",
+    title: "Diff scenes",
+    description: "Compare two root-relative spatial scene JSON sources and report added, removed, and changed collection entries without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "other"],
+      properties: {
+        path: scenePathSchema,
+        other: {
+          type: "string",
+          description: "Root-relative path to the second spatial scene JSON source (1 MiB maximum)."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "ok",
+        "source",
+        "other",
+        "sceneSha256",
+        "otherSha256",
+        "diff",
+        "summary"
+      ],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        other: { type: "string" },
+        sceneSha256: { type: "string" },
+        otherSha256: { type: "string" },
+        diff: { type: "array" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["entryCount", "returnedEntryCount", "diffTruncated"],
+          properties: {
+            entryCount: { type: "integer", minimum: 0 },
+            returnedEntryCount: { type: "integer", minimum: 0 },
+            diffTruncated: { type: "boolean" }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Diff scenes",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "evaluate_scene",
+    title: "Evaluate scene",
+    description: "Evaluate one root-relative spatial scene at one camera and integer microsecond time into an immutable snapshot without changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id", "time_us"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        time_us: {
+          type: "integer",
+          minimum: 0,
+          maximum: SPATIAL_SCENE_LIMITS.durationUs,
+          description: "Evaluation time in integer microseconds."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "snapshot", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        snapshot: { type: "object" },
+        summary: entityTruncationSummarySchema
+      }
+    },
+    annotations: {
+      title: "Evaluate scene",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }
 ]);
 
@@ -861,6 +1129,73 @@ function parseExecuteArguments(value) {
     input: value.input
   };
 }
+var sceneCameraIdPattern = /^camera_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u;
+function parseScenePath(value, label) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `${label} must be a non-empty root-relative string.`);
+  }
+  if (!value.toLowerCase().endsWith(".json")) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `${label} must end in .json.`);
+  }
+  return value;
+}
+function parseSceneCameraId(value) {
+  if (typeof value !== "string" || value.length > 128 || !sceneCameraIdPattern.test(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "camera_id must be a scene camera identifier (camera_ followed by letters, digits, _ or -).");
+  }
+  return value;
+}
+function parseSceneSourceArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path"]));
+  return { path: parseScenePath(value.path, "path") };
+}
+function parseAuditSceneArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "times_us", "asset_bounds"]));
+  let timesUs;
+  if (value.times_us !== undefined) {
+    if (!Array.isArray(value.times_us) || value.times_us.length === 0 || value.times_us.length > SPATIAL_AUDIT_LIMITS.samples || value.times_us.some((timeUs) => !Number.isSafeInteger(timeUs) || timeUs < 0 || timeUs > SPATIAL_SCENE_LIMITS.durationUs)) {
+      throw new ToolFailure("INVALID_ARGUMENTS", `times_us must be an array of 1\u2013${SPATIAL_AUDIT_LIMITS.samples} integer microsecond times within the scene duration bound.`);
+    }
+    timesUs = [...value.times_us];
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    ...timesUs === undefined ? {} : { timesUs },
+    ..."asset_bounds" in value ? { assetBounds: value.asset_bounds } : {}
+  };
+}
+function parseDiffScenesArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "other"]));
+  return {
+    path: parseScenePath(value.path, "path"),
+    other: parseScenePath(value.other, "other")
+  };
+}
+function parseEvaluateSceneArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "time_us"]));
+  const timeUs = value.time_us;
+  if (typeof timeUs !== "number" || !Number.isSafeInteger(timeUs) || timeUs < 0 || timeUs > SPATIAL_SCENE_LIMITS.durationUs) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `time_us must be an integer microsecond time from 0 through ${SPATIAL_SCENE_LIMITS.durationUs}.`);
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    timeUs
+  };
+}
 function assertBuiltInIcons(spec) {
   for (const shape of spec.shapes) {
     if ((shape.type === "rect" || shape.type === "ellipse") && shape.icon !== undefined && !Object.hasOwn(builtInIcons, shape.icon)) {
@@ -890,6 +1225,9 @@ function assertRenderLimits(spec, scale) {
   if (!Number.isFinite(pixels) || scaledWidth < 1 || scaledHeight < 1 || pixels > mcpMaximumRenderedPixels) {
     throw new ToolFailure("RENDER_LIMIT", `Scaled canvas must be at least 1 pixel on each axis and no more than ${mcpMaximumRenderedPixels.toLocaleString("en-US")} pixels total.`);
   }
+}
+function boundedSlice(items, maximum) {
+  return items.length > maximum ? items.slice(0, maximum) : items;
 }
 function publicFinding(finding) {
   return {
@@ -940,6 +1278,12 @@ function failureResult(error) {
     code = "INVALID_DIAGRAM";
     message = "Diagram source did not pass validation.";
     issues = safeIssues(error.issues);
+  } else if (error instanceof SlopcameraCodeError) {
+    code = error.code.toUpperCase().replace(/-/g, "_");
+    message = safeFragment(error.message, 320);
+  } else if (error instanceof HostResourceError) {
+    code = `HOST_RESOURCE_${error.code}`;
+    message = "Host-resource admission failed safely.";
   } else if (typeof error === "object" && error !== null && "issues" in error && Array.isArray(error.issues) && error.issues.every((issue) => typeof issue === "string")) {
     code = "INVALID_LAYOUT";
     message = "Diagram layout could not be resolved.";
@@ -988,6 +1332,24 @@ async function loadDiagram(boundary, path) {
   assertBuiltInIcons(spec);
   return { source, spec };
 }
+async function loadScene(boundary, path) {
+  const source = await boundary.readSource(path, "Scene source");
+  let parsed;
+  try {
+    parsed = JSON.parse(source.text);
+  } catch {
+    throw new ToolFailure("INVALID_JSON", "Scene source is not valid JSON.");
+  }
+  try {
+    return { source, scene: parseSpatialScene(parsed) };
+  } catch (error) {
+    if (error instanceof SpatialSceneError) {
+      const where = error.path === "scene" ? "" : ` at ${error.path}`;
+      throw new ToolFailure("INVALID_SCENE", `Scene source did not pass validation${where}: ${safeFragment(error.message, 240)}`);
+    }
+    throw error;
+  }
+}
 
 class SlopcameraMcpToolRuntime {
   boundary;
@@ -1005,6 +1367,15 @@ class SlopcameraMcpToolRuntime {
   async withHostAdmission(operation, callback) {
     return await withSlopcameraOperationHostAdmission(operation, callback, {
       hostResourceCoordinator: this.hostResourceCoordinator
+    });
+  }
+  async withSceneAdmission(callback) {
+    return await this.hostResourceCoordinator.withLease([
+      { resource: "cpu", amount: 1 },
+      { resource: "local-io", amount: 1 }
+    ], async (lease) => {
+      await lease.assertOwned();
+      return await callback(lease);
     });
   }
   enqueueRender(operation) {
@@ -1034,6 +1405,26 @@ class SlopcameraMcpToolRuntime {
       if (name === "execute_slopcamera") {
         const options = parseExecuteArguments(argumentsValue);
         return await this.execute(options);
+      }
+      if (name === "check_scene") {
+        const options = parseSceneSourceArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.checkScene(options));
+      }
+      if (name === "inspect_scene") {
+        const options = parseSceneSourceArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.inspectScene(options));
+      }
+      if (name === "audit_scene") {
+        const options = parseAuditSceneArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.auditScene(options));
+      }
+      if (name === "diff_scenes") {
+        const options = parseDiffScenesArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.diffScenes(options));
+      }
+      if (name === "evaluate_scene") {
+        const options = parseEvaluateSceneArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.evaluateScene(options));
       }
       throw new ToolFailure("UNKNOWN_TOOL", "Requested tool is not available.");
     } catch (error) {
@@ -1186,6 +1577,115 @@ class SlopcameraMcpToolRuntime {
       summary
     });
   }
+  async checkScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const summary = {
+      durationUs: scene.durationUs,
+      entityCount: scene.entities.length,
+      cameraCount: scene.cameras.length,
+      assetCount: scene.assets.length,
+      animationCount: scene.animations.length,
+      generatorCount: scene.generators.length,
+      overrideCount: scene.overrides.length
+    };
+    return successResult(`Checked ${source.relativePath}: scene ${safeFragment(scene.sceneId, 128)} is valid (${summary.entityCount} entities, ${summary.cameraCount} cameras).`, {
+      ok: true,
+      source: source.relativePath,
+      sceneId: scene.sceneId,
+      sceneSha256: spatialValueSha256(scene),
+      summary
+    });
+  }
+  async inspectScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const inspection = inspectSpatialScene(scene);
+    const entities = boundedSlice(inspection.entities, mcpMaximumReturnedEntities);
+    const summary = {
+      entityCount: inspection.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < inspection.entities.length
+    };
+    return successResult(`Inspected ${source.relativePath}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      inspection: { ...inspection, entities },
+      summary
+    });
+  }
+  async auditScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const report = auditSpatialScene(scene, {
+      cameraId: options.cameraId,
+      ...options.timesUs === undefined ? {} : { timesUs: options.timesUs },
+      ...options.assetBounds === undefined ? {} : {
+        assetBounds: normalizeSpatialAuditAssetBounds(options.assetBounds)
+      }
+    });
+    let sampleBudget = mcpMaximumReturnedAuditSamples;
+    const entities = [];
+    for (const entity of report.entities) {
+      if (entities.length >= mcpMaximumReturnedEntities || entity.samples.length > sampleBudget) {
+        break;
+      }
+      sampleBudget -= entity.samples.length;
+      entities.push(entity);
+    }
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings);
+    const findingCount = report.findings.length + report.omittedFindings;
+    const summary = {
+      findingCount,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < findingCount,
+      entityCount: report.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < report.entities.length
+    };
+    return successResult(`Audited ${source.relativePath} under ${options.cameraId}: ${findingCount} finding${findingCount === 1 ? "" : "s"} across ${report.entities.length} entities and ${report.timesUs.length} samples${summary.findingsTruncated || summary.entitiesTruncated ? " (truncated)" : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      report: { ...report, entities, findings },
+      summary
+    });
+  }
+  async diffScenes(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const other = await loadScene(this.boundary, options.other);
+    const entries = diffSpatialScenes(scene, other.scene);
+    const diff = boundedSlice(entries, mcpMaximumReturnedDiffEntries);
+    const summary = {
+      entryCount: entries.length,
+      returnedEntryCount: diff.length,
+      diffTruncated: diff.length < entries.length
+    };
+    return successResult(`Diffed ${source.relativePath} against ${other.source.relativePath}: ${summary.entryCount} entr${summary.entryCount === 1 ? "y" : "ies"}${summary.diffTruncated ? `, first ${summary.returnedEntryCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      other: other.source.relativePath,
+      sceneSha256: spatialValueSha256(scene),
+      otherSha256: spatialValueSha256(other.scene),
+      diff,
+      summary
+    });
+  }
+  async evaluateScene(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const snapshot = evaluateSpatialScene(scene, {
+      timeUs: options.timeUs,
+      cameraId: options.cameraId
+    });
+    const entities = boundedSlice(snapshot.entities, mcpMaximumReturnedEntities);
+    const summary = {
+      entityCount: snapshot.entities.length,
+      returnedEntityCount: entities.length,
+      entitiesTruncated: entities.length < snapshot.entities.length
+    };
+    return successResult(`Evaluated ${source.relativePath} at timeUs ${options.timeUs} under ${options.cameraId}: ${summary.entityCount} entities${summary.entitiesTruncated ? `, first ${summary.returnedEntityCount} returned in structured content` : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      snapshot: { ...snapshot, entities },
+      summary
+    });
+  }
 }
 
 // src/version.ts
@@ -1275,7 +1775,7 @@ class SlopcameraMcpSession {
           name: slopcameraMcpServerName,
           version: this.serverVersion
         },
-        instructions: "Use check_diagram/render_diagram or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated."
+        instructions: "Use check_diagram/render_diagram, the read-only scene tools (check_scene, inspect_scene, audit_scene, diff_scenes, evaluate_scene), or search_slopcamera followed by execute_slopcamera with an exact registry code and typed JSON. Local paths are root-relative; source code is never accepted or evaluated."
       });
     }
     if (this.state !== "ready") {
@@ -1342,7 +1842,7 @@ async function processLine(line, session, writeLine) {
     await emitResponse(writeLine, response);
 }
 async function runMcpServer(options = {}) {
-  const runtime = await SlopcameraMcpToolRuntime.create(options.rootDirectory ?? process.cwd(), options.generateDependencies);
+  const runtime = await SlopcameraMcpToolRuntime.create(options.rootDirectory ?? process.cwd(), options.generateDependencies, options.hostResourceCoordinator);
   const session = new SlopcameraMcpSession(runtime, options.serverVersion ?? SLOPCAMERA_VERSION);
   const writeLine = options.writeLine ?? defaultWriteLine;
   let buffered = Buffer.alloc(0);
