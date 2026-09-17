@@ -227,6 +227,7 @@ async function checkPackage(path: string): Promise<string[]> {
 
 const packageFiles = [
   join(ROOT, "package.json"),
+  join(ROOT, "apps/gateway/package.json"),
   join(ROOT, "apps/web/package.json"),
   join(ROOT, "packages/scene/package.json"),
 ];

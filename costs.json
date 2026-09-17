@@ -7,6 +7,12 @@
       "owner": "apps/web/src/analytics.ts",
       "maxBytesPerEvent": 512,
       "note": "cookieless canonical-production-only"
+    },
+    "route:/v1/generate": {
+      "kind": "served",
+      "retention": "ephemeral",
+      "owner": "apps/gateway/api/v1/generate.ts",
+      "note": "hosted image generation; holds and settles Hraness credits per request, stores nothing"
     }
   },
   "exempt": []

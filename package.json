@@ -22,6 +22,7 @@
   },
   "workspaces": {
     "packages": [
+      "apps/gateway",
       "apps/web",
       "packages/*"
     ],
@@ -204,11 +205,14 @@
     "typecheck": "bun run typecheck:sdk && bun run typecheck:desktop",
     "typecheck:sdk": "tsc --noEmit -p tsconfig.json",
     "typecheck:desktop": "tsc --noEmit -p apps/desktop/tsconfig.json",
+    "typecheck:gateway": "tsc --noEmit -p apps/gateway/tsconfig.json",
     "lint": "bun run lint:sdk && bun run lint:desktop",
     "lint:sdk": "eslint src packages/scene scripts",
+    "lint:gateway": "eslint apps/gateway",
     "lint:desktop": "eslint apps/desktop/contracts apps/desktop/core apps/desktop/application apps/desktop/code apps/desktop/workflows apps/desktop/html-overlay apps/desktop/cli apps/desktop/qualification apps/desktop/analysis apps/desktop/studio",
     "test": "bun run test:sdk && bun run test:desktop && bun run --cwd apps/web test",
     "test:sdk": "bun test ./src ./packages/scene",
+    "test:gateway": "bun test ./apps/gateway/src",
     "test:desktop": "bun test ./apps/desktop/contracts ./apps/desktop/core ./apps/desktop/application ./apps/desktop/code ./apps/desktop/workflows ./apps/desktop/html-overlay ./apps/desktop/cli ./apps/desktop/analysis ./apps/desktop/studio",
     "build:desktop:analysis:macos": "bun run ./apps/desktop/analysis/build.ts",
     "build:cli:macos": "bun run ./apps/desktop/cli/build-compiled.ts",
@@ -233,16 +237,18 @@
     "check:sdk": "bun run typecheck:sdk && bun run lint:sdk && bun run build:sdk && bun run test:sdk && bun run check:release-workflows && bun run check:schema && bun run check:skill",
     "check:desktop": "bun run check:effect && bun run typecheck:desktop && bun run lint:desktop && bun run test:desktop && bun run build:desktop",
     "check:web": "bun run --cwd apps/web check",
+    "check:gateway": "bun run typecheck:gateway && bun run lint:gateway && bun run test:gateway",
     "kb:refresh": "bunx --bun github:hraness/kb#v0.15.2 refresh --root kb",
     "kb:check:lane": "bunx --bun github:hraness/kb#v0.15.2 check --root kb --no-catalog",
     "kb:check": "bunx --bun github:hraness/kb#v0.15.2 check --root kb && bunx --bun github:hraness/kb#v0.15.2 agents check --root kb --repo .",
     "kb:catalog": "bunx --bun github:hraness/kb#v0.15.2 catalog --root kb",
     "check:cost-surfaces": "bun ./scripts/check-cost-surfaces.mjs",
-    "check": "bun run check:cost-surfaces && bun run check:standalone && bun run check:sdk && bun run check:desktop && bun run check:web && bun run check:standalone && bun run test:package",
+    "check": "bun run check:cost-surfaces && bun run check:standalone && bun run check:sdk && bun run check:desktop && bun run check:gateway && bun run check:web && bun run check:standalone && bun run test:package",
     "prepack": "bun run check",
     "check:effect": "bun run ./scripts/check-effect-policy.ts && bun test ./scripts/check-effect-architecture.test.ts"
   },
   "dependencies": {
+    "@hraness/credits-foundation": "github:hraness/credits-foundation#19b7f04b7bc2f829f8daed0f92ecf604aa6d6142",
     "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
     "@noble/hashes": "2.2.0",

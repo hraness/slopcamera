@@ -48,6 +48,13 @@ export interface GeneratedSlopcameraImage {
   readonly provider: "vercel-ai-gateway"
   readonly requestId: string
   readonly warnings: readonly string[]
+  /** Present only when the Gateway reported this generation's cost; integer micro-USD. */
+  readonly cost?: SlopcameraReportedCost
+}
+
+export interface SlopcameraReportedCost {
+  readonly basis: "reported"
+  readonly microUsd: number
 }
 
 export interface GeneratedSlopcameraImageFile {
@@ -168,13 +175,18 @@ function validateModel(value: unknown): string {
   return value
 }
 
+/** A non-empty, control-character-free prompt within the bounded UTF-8 budget. */
+export function isValidSlopcameraPrompt(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) &&
+    Buffer.byteLength(value, "utf8") <= slopcameraMaximumPromptBytes
+  )
+}
+
 function validatePrompt(value: unknown): string {
-  if (
-    typeof value !== "string" ||
-    value.trim().length === 0 ||
-    /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) ||
-    Buffer.byteLength(value, "utf8") > slopcameraMaximumPromptBytes
-  ) {
+  if (!isValidSlopcameraPrompt(value)) {
     invalidArgument(
       `Prompt must be non-empty and no more than ${slopcameraMaximumPromptBytes} UTF-8 bytes.`,
     )
@@ -473,7 +485,8 @@ function mediaType(value: unknown): SlopcameraResponseMediaType {
   return value as SlopcameraResponseMediaType
 }
 
-function validImageBytes(
+/** Signature, trailer, and size checks for a decoded image of the declared type. */
+export function isValidSlopcameraImageBytes(
   bytes: Uint8Array,
   type: SlopcameraResponseMediaType,
 ): boolean {
@@ -540,7 +553,7 @@ function parseResult(
     )
   }
   const type = mediaType(image.mediaType)
-  if (!validImageBytes(image.uint8Array, type)) {
+  if (!isValidSlopcameraImageBytes(image.uint8Array, type)) {
     throw new SlopcameraCloudError(
       "GENERATION_INVALID_RESPONSE",
       "Vercel AI Gateway returned an invalid bounded image.",
@@ -564,6 +577,7 @@ function parseResult(
   const warnings = Array.isArray(value.warnings)
     ? value.warnings.slice(0, 100).map(warningReceipt)
     : []
+  const cost = reportedCost(gateway?.cost)
   return {
     bytes: image.uint8Array,
     response: {
@@ -575,8 +589,30 @@ function parseResult(
       provider: "vercel-ai-gateway",
       requestId,
       warnings,
+      ...(cost === undefined ? {} : { cost }),
     },
   }
+}
+
+const maximumReportedCostMicroUsd = 1_000_000_000
+
+/**
+ * The Gateway reports a generation's cost as decimal US dollars. Anything else
+ * stays unknown; a foreign value never becomes a zero-cost claim.
+ */
+function reportedCost(value: unknown): SlopcameraReportedCost | undefined {
+  const text = typeof value === "number"
+    ? (Number.isFinite(value) && value >= 0 && value < 1e6 ? value.toFixed(6) : "")
+    : typeof value === "string" ? value.trim() : ""
+  const match = /^(\d{1,6})(?:\.(\d{1,12}))?$/u.exec(text)
+  if (match === null) return undefined
+  const fraction = (match[2] ?? "").padEnd(6, "0")
+  // Round up any sub-micro-dollar remainder so a reported cost is never understated.
+  const microUsd = Number(match[1]) * 1_000_000
+    + Number(fraction.slice(0, 6))
+    + (/[1-9]/u.test(fraction.slice(6)) ? 1 : 0)
+  if (!Number.isSafeInteger(microUsd) || microUsd > maximumReportedCostMicroUsd) return undefined
+  return { basis: "reported", microUsd }
 }
 
 async function performGeneration(
@@ -637,7 +673,8 @@ export async function generateSlopcameraImage(
   return (await performGeneration(input, dependencies)).response
 }
 
-function expectedMediaType(outputPath: string): SlopcameraResponseMediaType {
+/** The image type an output path commits to, from its extension. */
+export function slopcameraOutputMediaType(outputPath: string): SlopcameraResponseMediaType {
   const extension = extname(outputPath).toLocaleLowerCase("en-US")
   if (extension === ".png") return "image/png"
   if (extension === ".jpg" || extension === ".jpeg") return "image/jpeg"
@@ -645,7 +682,8 @@ function expectedMediaType(outputPath: string): SlopcameraResponseMediaType {
   invalidArgument("Output path must end in .png, .jpg, .jpeg, or .webp.")
 }
 
-async function atomicImageWrite(
+/** Publish image bytes only when the output is absent; returns the absolute path. */
+export async function writeSlopcameraImageAtomically(
   outputPath: string,
   bytes: Uint8Array,
 ): Promise<string> {
@@ -670,19 +708,25 @@ async function atomicImageWrite(
   }
 }
 
+/** Reject empty, oversized, or NUL-bearing output paths before any paid work. */
+export function validateSlopcameraOutputPath(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length < 1 ||
+    value.length > 4_096 ||
+    value.includes("\0")
+  ) {
+    invalidArgument("Output path must be a non-empty local path.")
+  }
+  return value
+}
+
 export async function generateSlopcameraImageFile(
   input: GenerateSlopcameraImageInput & { readonly outputPath: string },
   dependencies: SlopcameraGenerateDependencies = {},
 ): Promise<GeneratedSlopcameraImageFile> {
-  if (
-    typeof input.outputPath !== "string" ||
-    input.outputPath.length < 1 ||
-    input.outputPath.length > 4_096 ||
-    input.outputPath.includes("\0")
-  ) {
-    invalidArgument("Output path must be a non-empty local path.")
-  }
-  const expected = expectedMediaType(input.outputPath)
+  validateSlopcameraOutputPath(input.outputPath)
+  const expected = slopcameraOutputMediaType(input.outputPath)
   const generated = await performGeneration(input, dependencies)
   if (generated.response.image.mediaType !== expected) {
     throw new SlopcameraCloudError(
@@ -690,7 +734,7 @@ export async function generateSlopcameraImageFile(
       `Generated ${generated.response.image.mediaType} does not match the requested ${expected} output path.`,
     )
   }
-  const outputPath = await atomicImageWrite(input.outputPath, generated.bytes)
+  const outputPath = await writeSlopcameraImageAtomically(input.outputPath, generated.bytes)
   return {
     bytes: generated.bytes.byteLength,
     mediaType: generated.response.image.mediaType,
