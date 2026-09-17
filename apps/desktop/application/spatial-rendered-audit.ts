@@ -200,8 +200,13 @@ export async function auditSpatialSceneRenderedHost(
             max: bounds.max.map((value, axis) => Math.max(value, existing.max[axis]!)) as unknown as Vec3,
           };
         }
+        const preparedSplatIds = new Set(prepared.preparedAssets.filter(asset => asset.kind === "splat").map(asset => asset.entityId));
+        const loweredSnapshots = windowSnapshots.map(snapshot => ({
+          ...snapshot,
+          entities: snapshot.entities.filter(entry => entry.entity.kind !== "splat" || preparedSplatIds.has(entry.entity.entityId)),
+        }));
         const partitions = partitionSpatialRenderWindow({
-          snapshots: windowSnapshots, preparedAssets: prepared.preparedAssets,
+          snapshots: loweredSnapshots, preparedAssets: prepared.preparedAssets,
           mode: { kind: "object-id", coverage: SPATIAL_RENDERED_AUDIT_COVERAGE },
           frameRate: { numerator: 1, denominator: 1 },
         });
@@ -242,7 +247,7 @@ export async function auditSpatialSceneRenderedHost(
           }
           await rm(batchDirectory, { recursive: true });
         }
-      });
+      }, { tolerateSplatDecodeFailure: true });
     }
     completed = auditSpatialSceneRendered(plan.scene, frames, {
       cameraId: plan.request.cameraId, assetBounds,

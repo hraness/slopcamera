@@ -344,9 +344,15 @@ export function spatialVideoTimeUs(entity: Extract<SpatialEntity, { kind: "video
 }
 
 /** Owns every temporary/native input until the consumer and all native calls settle. */
+export interface SpatialAssetPreparationOptions {
+  /** When true, an SPZ that fails inspection is skipped rather than aborting preparation. */
+  readonly tolerateSplatDecodeFailure?: boolean;
+}
+
 export async function withPreparedSpatialAssets<Result>(
   input: unknown, ports: SpatialAssetPreparationPorts, signal: AbortSignal,
   consume: (prepared: PreparedSpatialAssets) => Promise<Result>,
+  options: SpatialAssetPreparationOptions = {},
 ): Promise<Result> {
   const request = inputSchema.parse(createBoundedJsonSnapshot(input, SPATIAL_OVERLAY_LIMITS.requestBytes, "Spatial asset preparation request", { maximumDepth: 48, maximumValues: SPATIAL_OVERLAY_LIMITS.requestValues }).value);
   if (request.exactSceneTimesUs !== undefined && request.exactSceneTimesUs.length !== request.snapshots.length) throw new RangeError("Exact scene times must correspond one-to-one to snapshots.");
@@ -492,7 +498,15 @@ export async function withPreparedSpatialAssets<Result>(
         if (interpretation.kind !== "splat" || interpretation.format !== "spz") capability("splat-format", "The qualified world profile accepts gzip SPZ v2/v3 only.");
         const key = `${assetId}:${entity.entityId}:splat`;
         if (preparedAssets.has(key)) continue;
-        const { facts, modelBounds } = await inspectSpatialSpz(asset.bytes, signal);
+        const inspected = await inspectSpatialSpz(asset.bytes, signal).catch((error: unknown) => {
+          if (options.tolerateSplatDecodeFailure) return undefined;
+          throw error;
+        });
+        // Audits may skip a splat that cannot be inspected: the rendered audit
+        // analyzer reports unsupported-kind when no bounds are supplied. Beauty
+        // rendering keeps the failure so invalid source does not render silently.
+        if (inspected === undefined) continue;
+        const { facts, modelBounds } = inspected;
         // Entity-local enclosure: the same sourceUp→Y rotation and uniform
         // metersPerUnit scale the renderer applies ahead of the entity
         // transform, so the object-ID proxy and the geometric audit agree.
