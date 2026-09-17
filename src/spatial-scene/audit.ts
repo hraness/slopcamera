@@ -16,7 +16,7 @@ import {
 } from "./evaluate.js"
 import { parseSpatialValue, sortSpatialBy, SpatialSceneError } from "./identity.js"
 import {
-  cameraMathView, prepareCameraView, projectPreparedPoint, transformBounds,
+  cameraMathView, composeTransform, multiplyTransforms, prepareCameraView, projectPreparedPoint, transformBounds,
   type Bounds, type PreparedCameraView, type Vec3,
 } from "./math.js"
 
@@ -29,6 +29,8 @@ export const SPATIAL_AUDIT_LIMITS = Object.freeze({
   findings: 1_024,
   /** Joint bound on entities × samples so reports stay bounded. */
   entitySamples: 65_536,
+  /** Joint bound on Σ instance counts × samples; instancing multiplies enclosure work. */
+  instanceSamples: 1_048_576,
   /** Canonical report byte bound checked before return. */
   reportBytes: 33_554_432,
 })
@@ -36,7 +38,7 @@ export const SPATIAL_AUDIT_LIMITS = Object.freeze({
 const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"] as const
 const BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"] as const
 const CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"] as const
-const FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"] as const
+const FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples", "shadows-disabled"] as const
 // Fixed histogram order for deterministic finding details.
 const CONTAINED_HISTOGRAM_ORDER = ["full", "partial", "outside", "clipped", "behind-camera"] as const
 
@@ -83,6 +85,8 @@ export const SpatialAuditEntitySchema = z.strictObject({
     z.strictObject({ status: z.literal("unknown"), reason: z.enum(BOUNDS_UNKNOWN_REASONS) }),
   ]),
   samples: z.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
+  /** Present on mesh entities only when local-space instances are declared. */
+  instances: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional(),
 })
 export const SpatialAuditFindingSchema = z.strictObject({
   severity: z.enum(["info", "warning"]),
@@ -110,6 +114,8 @@ export const SpatialAuditReportSchema = z.strictObject({
       bounded: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       unknownBounds: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       byKind: entityKindCounts,
+      /** Total declared instance transforms across all instanced meshes. */
+      instances: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities),
     }),
     animations: z.strictObject({
       channels: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
@@ -162,6 +168,7 @@ export interface SpatialAuditEntity {
     | { readonly status: "bounded" }
     | { readonly status: "unknown"; readonly reason: (typeof BOUNDS_UNKNOWN_REASONS)[number] }
   readonly samples: readonly SpatialAuditSample[]
+  readonly instances?: number | undefined
 }
 export interface SpatialAuditFinding {
   readonly severity: "info" | "warning"
@@ -184,6 +191,7 @@ export interface SpatialAuditReport {
       readonly bounded: number
       readonly unknownBounds: number
       readonly byKind: Readonly<Record<(typeof ENTITY_KINDS)[number], number>>
+      readonly instances: number
     }
     readonly animations: {
       readonly channels: number
@@ -318,6 +326,20 @@ interface EntityDraft {
   readonly placement: SpatialEntity["placement"]
   readonly enclosure: { readonly status: "bounded" } | { readonly status: "unknown"; readonly reason: (typeof BOUNDS_UNKNOWN_REASONS)[number] }
   readonly samples: SampleDraft[]
+  readonly instances?: number
+}
+
+function unionBounds(items: readonly Bounds[]): Bounds {
+  return items.reduce((union, next) => ({
+    min: union.min.map((value, axis) => Math.min(value, next.min[axis]!)) as unknown as Vec3,
+    max: union.max.map((value, axis) => Math.max(value, next.max[axis]!)) as unknown as Vec3,
+  }))
+}
+
+/** Instance transforms live inside the entity's local frame: world × instance × local bounds. */
+function instanceDomain(worldMatrix: Parameters<typeof transformBounds>[0], entity: SpatialEntity, local: Bounds): Bounds {
+  if (entity.kind !== "mesh" || entity.instances === undefined) return transformBounds(worldMatrix, local)
+  return unionBounds(entity.instances.map(instance => transformBounds(multiplyTransforms(worldMatrix, composeTransform(instance)), local)))
 }
 
 /**
@@ -354,6 +376,10 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
   if (scene.entities.length * timesUs.length > SPATIAL_AUDIT_LIMITS.entitySamples) {
     throw new SpatialSceneError("invalid-data", "Audit entity-sample budget exceeded; pass fewer timesUs samples.", "timesUs")
   }
+  const instanceTotal = scene.entities.reduce((total, entity) => total + (entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : 1), 0)
+  if (instanceTotal * timesUs.length > SPATIAL_AUDIT_LIMITS.instanceSamples) {
+    throw new SpatialSceneError("invalid-data", "Audit instance-sample budget exceeded; pass fewer timesUs samples.", "timesUs")
+  }
 
   const enclosures = new Map(scene.entities.map(entity => [entity.entityId, spatialEntityLocalBounds(entity, assetBounds)]))
   const samplesByEntity = new Map(scene.entities.map(entity => [entity.entityId, [] as SampleDraft[]]))
@@ -378,7 +404,7 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
         continue
       }
       try {
-        const domain = transformBounds(entry.worldMatrix, enclosure.bounds)
+        const domain = instanceDomain(entry.worldMatrix, entity, enclosure.bounds)
         const frustum = placement.kind === "view"
           ? classifyViewOverlay(domain, placement.units, width, height)
           : classifyWorldFrustum(view, domain)
@@ -401,6 +427,7 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
       entityId: entity.entityId, name: entity.name, kind: entity.kind, placement: entity.placement,
       enclosure: enclosure.status === "bounded" ? { status: "bounded" } : { status: "unknown", reason: enclosure.reason },
       samples,
+      ...(entity.kind === "mesh" && entity.instances !== undefined ? { instances: entity.instances.length } : {}),
     })
     const applicable = samples.filter(sample => sample.note !== "other-camera")
     const visible = applicable.filter(sample => sample.visible)
@@ -455,6 +482,36 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
     }
   }
 
+  // Shadow declarations are honored only when an evaluated light, a caster and a receiver all participate.
+  const visibleAtSomeSample = new Set(scene.entities
+    .filter(entity => samplesByEntity.get(entity.entityId)!.some(sample => sample.visible && sample.note !== "other-camera"))
+    .map(entity => entity.entityId))
+  const shadowLights = scene.entities.filter((entity): entity is Extract<SpatialEntity, { kind: "light" }> => entity.kind === "light" && entity.shadow === true && visibleAtSomeSample.has(entity.entityId))
+  const shadowMeshes = scene.entities.filter((entity): entity is Extract<SpatialEntity, { kind: "mesh" }> => entity.kind === "mesh" && (entity.castShadow === true || entity.receiveShadow === true))
+  if (shadowLights.length === 0) {
+    for (const entity of shadowMeshes) {
+      findings.push({
+        severity: "warning", kind: "shadows-disabled", entityId: entity.entityId,
+        detail: "Declares shadow participation, but no evaluated light enables shadow casting; the renderer leaves shadow maps disabled.",
+      })
+    }
+  } else {
+    const casters = shadowMeshes.filter(entity => entity.castShadow === true)
+    const receivers = shadowMeshes.filter(entity => entity.receiveShadow === true)
+    for (const light of shadowLights) {
+      if (casters.length === 0 || receivers.length === 0) {
+        findings.push({
+          severity: "warning", kind: "shadows-disabled", entityId: light.entityId,
+          detail: casters.length === 0 && receivers.length === 0
+            ? "Enables shadow casting, but no mesh declares castShadow or receiveShadow; the shadow map renders no geometry."
+            : casters.length === 0
+              ? "Enables shadow casting, but no mesh declares castShadow; nothing writes into the shadow map."
+              : "Enables shadow casting, but no mesh declares receiveShadow; shadows have no receiving surface.",
+        })
+      }
+    }
+  }
+
   const boundedVisible = scene.entities.filter(entity => enclosures.get(entity.entityId)!.status === "bounded"
     && samplesByEntity.get(entity.entityId)!.some(sample => sample.visible && sample.note !== "other-camera")).length
   const everInFrustum = scene.entities.some(entity =>
@@ -484,6 +541,7 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
         bounded: [...enclosures.values()].filter(item => item.status === "bounded").length,
         unknownBounds: [...enclosures.values()].filter(item => item.status === "unknown").length,
         byKind,
+        instances: scene.entities.reduce((total, entity) => total + (entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : 0), 0),
       },
       animations: {
         channels: scene.animations.length,

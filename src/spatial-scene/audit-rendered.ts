@@ -61,6 +61,8 @@ export const SpatialRenderedAuditObjectSchema = z.strictObject({
   representation: z.string().min(1).max(256),
   placement: z.enum(["world", "view"]),
   assetManifestSha256: SpatialDigestSchema.optional(),
+  /** Lowered instance count; the object-ID pass attributes every instance to this entity's selection code. */
+  instances: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional(),
 })
 
 /** One decoded object-ID frame: per-selection pixel counts plus lowering evidence. */
@@ -125,6 +127,8 @@ export const SpatialRenderedAuditEntitySchema = z.strictObject({
     z.strictObject({ status: z.literal("bounded") }),
     z.strictObject({ status: z.literal("unknown"), reason: z.enum(BOUNDS_UNKNOWN_REASONS) }),
   ]),
+  /** Present on mesh entities only when local-space instances are declared. */
+  instances: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional(),
   samples: z.array(SpatialRenderedAuditSampleSchema).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
   totals: z.strictObject({
     expected: z.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.samples),
@@ -198,6 +202,7 @@ export interface SpatialRenderedAuditObject {
   readonly representation: string
   readonly placement: "world" | "view"
   readonly assetManifestSha256?: string | undefined
+  readonly instances?: number | undefined
 }
 export interface SpatialRenderedAuditFrame {
   readonly timeUs: number
@@ -228,6 +233,7 @@ export interface SpatialRenderedAuditEntity {
   readonly enclosure:
     | { readonly status: "bounded" }
     | { readonly status: "unknown"; readonly reason: (typeof BOUNDS_UNKNOWN_REASONS)[number] }
+  readonly instances?: number | undefined
   readonly samples: readonly SpatialRenderedAuditSample[]
   readonly totals: {
     readonly expected: number
@@ -443,6 +449,10 @@ export function auditSpatialSceneRenderedInContext(
           throw new SpatialSceneError("invalid-data", `Frame evidence asset digest does not match the declared manifest for ${object.entityId}.`, "frames")
         }
       }
+      const declaredInstances = entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : undefined
+      if (object.instances !== declaredInstances) {
+        throw new SpatialSceneError("invalid-data", `Frame evidence instance count differs from the authored declaration for ${object.entityId}.`, "frames")
+      }
       lowered.set(object.entityId, object)
       // The object-ID pass writes the declared selection code for every lowered
       // surface, including view placement; only the depth pass masks view to
@@ -516,7 +526,9 @@ export function auditSpatialSceneRenderedInContext(
     }
     entities.push({
       entityId: entity.entityId, name: entity.name, kind: entity.kind, placement: entity.placement,
-      eligibility: entityEligibility, selectionId, enclosure: geometricEntity.enclosure, samples, totals,
+      eligibility: entityEligibility, selectionId, enclosure: geometricEntity.enclosure,
+      ...(entity.kind === "mesh" && entity.instances !== undefined ? { instances: entity.instances.length } : {}),
+      samples, totals,
     })
     if (entityEligibility === "unsupported-kind") {
       findings.push({

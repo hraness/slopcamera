@@ -54,12 +54,12 @@ import {
   studioSourceBundleSha256,
   summarizeSceneVariantPatch,
   validateStudioReceipt
-} from "./index-m81h8m15.js";
+} from "./index-2n4v3450.js";
 import {
   bundledSkillPath,
   installSkill
 } from "./index-7308egqr.js";
-import"./index-fbgatzns.js";
+import"./index-jh3n3d1v.js";
 import"./index-8txs6fkn.js";
 import {
   SlopcameraWorkflowError,

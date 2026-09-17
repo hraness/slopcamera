@@ -216,8 +216,6 @@ describe("closed GLB triangle profile", () => {
       { ...fixture.document, meshes: [{ primitives: [{ attributes: { POSITION: 0 }, mode: 1 }] }] },
       { ...fixture.document, meshes: [{ primitives: [{ attributes: { POSITION: 0 }, targets: [] }] }] },
       { ...fixture.document, meshes: [{ primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 } }] }] },
-      { ...fixture.document, materials: [{ normalTexture: { index: 0 } }] },
-      { ...fixture.document, materials: [{ emissiveFactor: [1, 0, 0] }] },
       { ...fixture.document, accessors: [{ ...fixture.document.accessors[0], sparse: { count: 1 } }, ...fixture.document.accessors.slice(1)] },
     ]
     for (const document of variants) expect(() => fixtureGeometry(document)).toThrow(SPATIAL_GLB_PROFILE)

@@ -125,9 +125,13 @@ var SpatialAssetManifestSchema = z.strictObject({
   })
 });
 var color = z.string().regex(/^#[a-fA-F0-9]{6}$/u);
+var SpatialEmissiveSchema = z.strictObject({
+  color,
+  intensity: z.number().finite().min(0).max(1e5)
+});
 var SpatialMaterialSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional() })
+  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() })
 ]);
 var SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -142,6 +146,12 @@ var SpatialGeometrySchema = z.discriminatedUnion("kind", [
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional()
   })
 ]);
+var SpatialSpotLightSchema = z.strictObject({
+  angle: z.number().finite().min(0.000001).max(Math.PI / 2),
+  penumbra: unit,
+  distance: z.number().finite().min(0).max(1e6).optional(),
+  decay: z.number().finite().min(0).max(1000).optional()
+});
 var SpatialOriginSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("authored") }),
   z.strictObject({ kind: z.literal("generated"), generatorId: SpatialGeneratorIdSchema, key: z.string().min(1).max(256) })
@@ -168,12 +178,28 @@ var surfaceBase = {
 };
 var SpatialEntitySchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...entityBase, kind: z.literal("group") }),
-  z.strictObject({ ...entityBase, kind: z.literal("mesh"), geometry: SpatialGeometrySchema, material: SpatialMaterialSchema }),
+  z.strictObject({
+    ...entityBase,
+    kind: z.literal("mesh"),
+    geometry: SpatialGeometrySchema,
+    material: SpatialMaterialSchema,
+    castShadow: z.boolean().optional(),
+    receiveShadow: z.boolean().optional(),
+    instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
+  }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("image") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("diagram") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
-  z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point"]), color, intensity: z.number().finite().min(0).max(1e5) }),
+  z.strictObject({
+    ...entityBase,
+    kind: z.literal("light"),
+    light: z.enum(["ambient", "directional", "point", "spot"]),
+    color,
+    intensity: z.number().finite().min(0).max(1e5),
+    spot: SpatialSpotLightSchema.optional(),
+    shadow: z.boolean().optional()
+  }),
   z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
   z.strictObject({
     ...entityBase,
@@ -182,7 +208,16 @@ var SpatialEntitySchema = z.discriminatedUnion("kind", [
     role: z.enum(["background", "environment", "both"]),
     intensity: z.number().finite().min(0).max(16)
   })
-]);
+]).superRefine((entity, context) => {
+  if (entity.kind !== "light")
+    return;
+  if (entity.light === "spot" && entity.spot === undefined)
+    context.addIssue({ code: "custom", path: ["spot"], message: "Spot lights require their spot cone parameters." });
+  if (entity.light !== "spot" && entity.spot !== undefined)
+    context.addIssue({ code: "custom", path: ["spot"], message: "Only spot lights may carry spot cone parameters." });
+  if (entity.light === "ambient" && entity.shadow !== undefined)
+    context.addIssue({ code: "custom", path: ["shadow"], message: "Ambient lights cannot cast shadows; only directional, point, and spot lights may declare shadow." });
+});
 var key = (value) => z.strictObject({ timeUs: SpatialTimeUsSchema, value });
 var channelBase = { channelId: SpatialChannelIdSchema, targetId: z.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) };
 var SpatialAnimationSchema = z.discriminatedUnion("property", [
@@ -232,6 +267,11 @@ var SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
   z.strictObject({ kind: z.literal("set-color"), entityId: SpatialEntityIdSchema, color }),
   z.strictObject({ kind: z.literal("set-opacity"), entityId: SpatialEntityIdSchema, opacity: unit }),
+  z.strictObject({ kind: z.literal("set-emissive"), entityId: SpatialEntityIdSchema, emissive: SpatialEmissiveSchema.nullable() }),
+  z.strictObject({ kind: z.literal("set-spot"), entityId: SpatialEntityIdSchema, spot: SpatialSpotLightSchema }),
+  z.strictObject({ kind: z.literal("set-instances"), entityId: SpatialEntityIdSchema, instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).nullable() }),
+  z.strictObject({ kind: z.literal("set-mesh-shadow"), entityId: SpatialEntityIdSchema, castShadow: z.boolean().nullable(), receiveShadow: z.boolean().nullable() }),
+  z.strictObject({ kind: z.literal("set-light-shadow"), entityId: SpatialEntityIdSchema, shadow: z.boolean().nullable() }),
   z.strictObject({ kind: z.literal("set-camera"), camera: SpatialCameraSchema }),
   z.strictObject({ kind: z.literal("set-channel"), channel: SpatialAnimationSchema }),
   z.strictObject({ kind: z.literal("remove-channel"), channelId: SpatialChannelIdSchema }),
@@ -383,8 +423,11 @@ function generatedSpatialEntityId(generatorId, key2) {
   return `entity_${spatialValueSha256({ domain: "slopcamera.generated-entity.v1", generatorId, key: key2 })}`;
 }
 function normalizeEntity(entity) {
-  if (entity.kind === "mesh")
-    return { ...entity, material: { ...entity.material, color: entity.material.color.toLowerCase() } };
+  if (entity.kind === "mesh") {
+    const material = entity.material;
+    const emissive = material.kind === "standard" && material.emissive !== undefined ? { ...material.emissive, color: material.emissive.color.toLowerCase() } : undefined;
+    return { ...entity, material: { ...material, color: material.color.toLowerCase(), ...emissive === undefined ? {} : { emissive } } };
+  }
   if (entity.kind === "text" || entity.kind === "light")
     return { ...entity, color: entity.color.toLowerCase() };
   return entity;
@@ -825,7 +868,8 @@ function cameraMathView(camera2) {
 
 // src/spatial-scene/gltf.ts
 import { z as z2 } from "zod";
-var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
+var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-fullmaps-v1";
+var SPATIAL_GLB_PROFILE_V1 = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
 var SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134217728,
   jsonBytes: 2097152,
@@ -858,6 +902,8 @@ var quaternion = z2.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
 var metadata = { name: z2.string().max(1024).optional(), extras: z2.unknown().optional(), extensions: z2.never().optional() };
 var byteOffset = z2.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
 var textureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional() });
+var normalTextureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional(), scale: finite.optional() });
+var occlusionTextureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional(), strength: unit2.optional() });
 var samplerSchema = z2.strictObject({
   ...metadata,
   magFilter: z2.union([z2.literal(9728), z2.literal(9729)]).optional(),
@@ -905,11 +951,14 @@ var gltfSchema = z2.strictObject({
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
   materials: z2.array(z2.strictObject({
     ...metadata,
-    pbrMetallicRoughness: z2.strictObject({ ...metadata, baseColorFactor: z2.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional() }).optional(),
+    pbrMetallicRoughness: z2.strictObject({ ...metadata, baseColorFactor: z2.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
+    normalTexture: normalTextureInfo.optional(),
+    occlusionTexture: occlusionTextureInfo.optional(),
+    emissiveTexture: textureInfo.optional(),
     alphaMode: z2.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
     alphaCutoff: unit2.default(0.5),
     doubleSided: z2.boolean().default(false),
-    emissiveFactor: z2.tuple([z2.literal(0), z2.literal(0), z2.literal(0)]).optional()
+    emissiveFactor: z2.tuple([unit2, unit2, unit2]).optional()
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
   images: z2.array(z2.strictObject({ ...metadata, bufferView: index, mimeType: z2.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
   textures: z2.array(z2.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
@@ -1134,9 +1183,19 @@ function materials(document) {
     if (texture.sampler !== undefined)
       at(document.samplers, texture.sampler, "textures.sampler");
   }
+  const textureRef = (info, path) => {
+    if (info === undefined)
+      return;
+    const texture = at(document.textures, info.index, path);
+    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) };
+  };
   return deepFreezeJson(document.materials.map((material) => {
     const pbr = material.pbrMetallicRoughness;
-    const texture = pbr?.baseColorTexture === undefined ? undefined : at(document.textures, pbr.baseColorTexture.index, "baseColorTexture");
+    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture");
+    const metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture");
+    const normal = textureRef(material.normalTexture, "normalTexture");
+    const occlusion = textureRef(material.occlusionTexture, "occlusionTexture");
+    const emissive = textureRef(material.emissiveTexture, "emissiveTexture");
     return {
       baseColorLinear: pbr?.baseColorFactor ?? [1, 1, 1, 1],
       metalness: pbr?.metallicFactor ?? 1,
@@ -1144,12 +1203,35 @@ function materials(document) {
       alphaMode: material.alphaMode,
       alphaCutoff: material.alphaCutoff,
       doubleSided: material.doubleSided,
-      ...texture === undefined ? {} : { baseColorTexture: { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) } }
+      ...baseColor === undefined ? {} : { baseColorTexture: baseColor },
+      ...metallicRoughness === undefined ? {} : { metallicRoughnessTexture: metallicRoughness },
+      ...normal === undefined ? {} : { normalTexture: { ...normal, ...material.normalTexture.scale === undefined ? {} : { scale: material.normalTexture.scale } } },
+      ...occlusion === undefined ? {} : { occlusionTexture: { ...occlusion, ...material.occlusionTexture.strength === undefined ? {} : { strength: material.occlusionTexture.strength } } },
+      ...emissive === undefined ? {} : { emissiveTexture: emissive },
+      ...material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor }
     };
   }));
 }
-function readMeshes(document, accessors) {
-  const sources = materials(document);
+function materialFacts(document, sources) {
+  return deepFreezeJson(document.materials.map((material, index2) => {
+    const resolved = sources[index2];
+    const maps = [
+      resolved.baseColorTexture === undefined ? undefined : "baseColor",
+      resolved.metallicRoughnessTexture === undefined ? undefined : "metallicRoughness",
+      resolved.normalTexture === undefined ? undefined : "normal",
+      resolved.occlusionTexture === undefined ? undefined : "occlusion",
+      resolved.emissiveTexture === undefined ? undefined : "emissive"
+    ].filter((entry) => entry !== undefined);
+    return {
+      ...material.name === undefined ? {} : { name: material.name },
+      alphaMode: resolved.alphaMode,
+      doubleSided: resolved.doubleSided,
+      maps,
+      ...resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear }
+    };
+  }));
+}
+function readMeshes(document, accessors, sources) {
   const defaultMaterial = { baseColorLinear: [1, 1, 1, 1], metalness: 1, roughness: 1, alphaMode: "OPAQUE", alphaCutoff: 0.5, doubleSided: false };
   let primitiveCount = 0, triangles = 0;
   return deepFreezeJson(document.meshes.map((mesh, meshIndex) => mesh.primitives.map((primitive, primitiveIndex) => {
@@ -1197,8 +1279,9 @@ function readMeshes(document, accessors) {
     if (triangles > SPATIAL_GLB_LIMITS.triangles)
       fail("Source triangle budget exceeded.", path);
     const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path);
-    if (material.baseColorTexture && uvs === undefined)
-      fail("Base-color textures require TEXCOORD_0.", path);
+    if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some((texture) => texture !== undefined)) {
+      fail("Material textures require TEXCOORD_0.", path);
+    }
     return { positions: positions.values, ...normals === undefined ? {} : { normals: normals.values }, ...uvs === undefined ? {} : { uvs: uvs.values }, ...indices === undefined ? {} : { indices: indices.values }, material };
   })));
 }
@@ -1307,11 +1390,13 @@ class SpatialGlbModel {
   profile = SPATIAL_GLB_PROFILE;
   nodeCount;
   clipDurationsSeconds;
+  materialFacts;
   #state;
   constructor(state) {
     this.#state = state;
     this.nodeCount = state.document.nodes.length;
     this.clipDurationsSeconds = state.clipDurations;
+    this.materialFacts = state.materialFacts;
     Object.freeze(this);
   }
   static parse(input) {
@@ -1342,7 +1427,8 @@ class SpatialGlbModel {
       fail("BIN padding must contain zero bytes.");
     validateViewRoles(document);
     const accessors = readAccessors(document, binary);
-    const meshPrimitives = readMeshes(document, accessors);
+    const sources = materials(document);
+    const meshPrimitives = readMeshes(document, accessors, sources);
     const graph = hierarchy(document);
     const clipDurations = animationDurations(document, accessors);
     let totalImageBytes = 0, totalPixels = 0;
@@ -1360,7 +1446,7 @@ class SpatialGlbModel {
         fail("Embedded decoded image pixel budget exceeded.");
       return Object.freeze({ imageIndex, mimeType: image.mimeType, ...dimensions2, bytes: imageBytes });
     });
-    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, images: Object.freeze(images), ...graph, clipDurations });
+    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations });
   }
   evaluate(input) {
     const options = schemaValue(optionsSchema, input, "glb evaluation");
@@ -1444,8 +1530,12 @@ class SpatialGlbModel {
           fail("Instanced triangle budget exceeded.");
         const bounds2 = vertexBounds(primitive.positions, primitive.indices, matrix2);
         const { material, ...geometry } = primitive;
-        if (options.materialMode === "source" && material.baseColorTexture)
-          imageIds.add(material.baseColorTexture.imageIndex);
+        if (options.materialMode === "source") {
+          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+            if (texture !== undefined)
+              imageIds.add(texture.imageIndex);
+          }
+        }
         primitives.push({ ...geometry, matrix: matrix2, bounds: bounds2, sourceNodeIndex, sourcePrimitiveIndex, ...options.materialMode === "source" ? { material } : {} });
       }
     }
@@ -1498,15 +1588,24 @@ import { z as z3 } from "zod";
 var boundsComponent = z3.number().finite().min(-1000000000000000000).max(1000000000000000000);
 var boundsVector = z3.tuple([boundsComponent, boundsComponent, boundsComponent]);
 var SpatialBoundsSchema = z3.strictObject({ min: boundsVector, max: boundsVector }).refine((value) => value.min.every((component, index2) => component <= value.max[index2]), "Bounds min must not exceed max.");
+var factsUnit = z3.number().finite().min(0).max(1);
+var SpatialAssetMaterialFactSchema = z3.strictObject({
+  name: z3.string().max(1024).optional(),
+  alphaMode: z3.enum(["OPAQUE", "MASK", "BLEND"]),
+  doubleSided: z3.boolean(),
+  maps: z3.array(z3.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive"])).max(5),
+  emissiveLinear: z3.tuple([factsUnit, factsUnit, factsUnit]).optional()
+});
 var SpatialAssetFactsV1Schema = z3.strictObject({
   kind: z3.literal("slopcamera.spatial-asset-facts"),
   schemaVersion: z3.literal(1),
   subject: SpatialPayloadSchema,
   subjectManifestSha256: SpatialDigestSchema,
-  profile: z3.literal(SPATIAL_GLB_PROFILE),
+  profile: z3.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1]),
   nodeCount: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
   clipDurationsSeconds: z3.array(z3.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
-  bounds: z3.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema })
+  bounds: z3.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
+  materials: z3.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional()
 });
 var SpatialPublishedArtifactSchema = z3.strictObject({
   path: z3.string().min(1).max(1024),
@@ -1716,12 +1815,13 @@ var SPATIAL_AUDIT_LIMITS = Object.freeze({
   defaultSamples: 9,
   findings: 1024,
   entitySamples: 65536,
+  instanceSamples: 1048576,
   reportBytes: 33554432
 });
 var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"];
 var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
 var CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"];
-var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"];
+var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples", "shadows-disabled"];
 var CONTAINED_HISTOGRAM_ORDER = ["full", "partial", "outside", "clipped", "behind-camera"];
 var auditVector = z5.tuple([
   z5.number().finite().min(-1000000000000).max(1000000000000),
@@ -1754,7 +1854,8 @@ var SpatialAuditEntitySchema = z5.strictObject({
     z5.strictObject({ status: z5.literal("bounded") }),
     z5.strictObject({ status: z5.literal("unknown"), reason: z5.enum(BOUNDS_UNKNOWN_REASONS) })
   ]),
-  samples: z5.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples)
+  samples: z5.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
+  instances: z5.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
 });
 var SpatialAuditFindingSchema = z5.strictObject({
   severity: z5.enum(["info", "warning"]),
@@ -1787,7 +1888,8 @@ var SpatialAuditReportSchema = z5.strictObject({
       total: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       bounded: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       unknownBounds: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
-      byKind: entityKindCounts
+      byKind: entityKindCounts,
+      instances: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities)
     }),
     animations: z5.strictObject({
       channels: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
@@ -1884,6 +1986,17 @@ function spatialAuditDefaultTimesUs(durationUs) {
   return Array.from({ length: count }, (_, index2) => Math.round(index2 * durationUs / (count - 1)));
 }
 var findingOrder = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
+function unionBounds(items) {
+  return items.reduce((union, next) => ({
+    min: union.min.map((value, axis) => Math.min(value, next.min[axis])),
+    max: union.max.map((value, axis) => Math.max(value, next.max[axis]))
+  }));
+}
+function instanceDomain(worldMatrix, entity, local) {
+  if (entity.kind !== "mesh" || entity.instances === undefined)
+    return transformBounds(worldMatrix, local);
+  return unionBounds(entity.instances.map((instance) => transformBounds(multiplyTransforms(worldMatrix, composeTransform(instance)), local)));
+}
 function auditSpatialScene(sceneInput, options) {
   return auditSpatialSceneInContext(createSpatialEvaluationContext(sceneInput), options);
 }
@@ -1909,6 +2022,10 @@ function auditSpatialSceneInContext(context, options) {
   if (scene.entities.length * timesUs.length > SPATIAL_AUDIT_LIMITS.entitySamples) {
     throw new SpatialSceneError("invalid-data", "Audit entity-sample budget exceeded; pass fewer timesUs samples.", "timesUs");
   }
+  const instanceTotal = scene.entities.reduce((total, entity) => total + (entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : 1), 0);
+  if (instanceTotal * timesUs.length > SPATIAL_AUDIT_LIMITS.instanceSamples) {
+    throw new SpatialSceneError("invalid-data", "Audit instance-sample budget exceeded; pass fewer timesUs samples.", "timesUs");
+  }
   const enclosures = new Map(scene.entities.map((entity) => [entity.entityId, spatialEntityLocalBounds(entity, assetBounds)]));
   const samplesByEntity = new Map(scene.entities.map((entity) => [entity.entityId, []]));
   for (const timeUs of timesUs) {
@@ -1929,7 +2046,7 @@ function auditSpatialSceneInContext(context, options) {
         continue;
       }
       try {
-        const domain = transformBounds(entry.worldMatrix, enclosure.bounds);
+        const domain = instanceDomain(entry.worldMatrix, entity, enclosure.bounds);
         const frustum = placement.kind === "view" ? classifyViewOverlay(domain, placement.units, width, height) : classifyWorldFrustum(view, domain);
         samples.push({ timeUs, visible: entry.visible, bounds: domain, frustum });
       } catch (error) {
@@ -1952,7 +2069,8 @@ function auditSpatialSceneInContext(context, options) {
       kind: entity.kind,
       placement: entity.placement,
       enclosure: enclosure.status === "bounded" ? { status: "bounded" } : { status: "unknown", reason: enclosure.reason },
-      samples
+      samples,
+      ...entity.kind === "mesh" && entity.instances !== undefined ? { instances: entity.instances.length } : {}
     });
     const applicable = samples.filter((sample) => sample.note !== "other-camera");
     const visible = applicable.filter((sample) => sample.visible);
@@ -2009,6 +2127,32 @@ function auditSpatialSceneInContext(context, options) {
       }
     }
   }
+  const visibleAtSomeSample = new Set(scene.entities.filter((entity) => samplesByEntity.get(entity.entityId).some((sample) => sample.visible && sample.note !== "other-camera")).map((entity) => entity.entityId));
+  const shadowLights = scene.entities.filter((entity) => entity.kind === "light" && entity.shadow === true && visibleAtSomeSample.has(entity.entityId));
+  const shadowMeshes = scene.entities.filter((entity) => entity.kind === "mesh" && (entity.castShadow === true || entity.receiveShadow === true));
+  if (shadowLights.length === 0) {
+    for (const entity of shadowMeshes) {
+      findings.push({
+        severity: "warning",
+        kind: "shadows-disabled",
+        entityId: entity.entityId,
+        detail: "Declares shadow participation, but no evaluated light enables shadow casting; the renderer leaves shadow maps disabled."
+      });
+    }
+  } else {
+    const casters = shadowMeshes.filter((entity) => entity.castShadow === true);
+    const receivers = shadowMeshes.filter((entity) => entity.receiveShadow === true);
+    for (const light of shadowLights) {
+      if (casters.length === 0 || receivers.length === 0) {
+        findings.push({
+          severity: "warning",
+          kind: "shadows-disabled",
+          entityId: light.entityId,
+          detail: casters.length === 0 && receivers.length === 0 ? "Enables shadow casting, but no mesh declares castShadow or receiveShadow; the shadow map renders no geometry." : casters.length === 0 ? "Enables shadow casting, but no mesh declares castShadow; nothing writes into the shadow map." : "Enables shadow casting, but no mesh declares receiveShadow; shadows have no receiving surface."
+        });
+      }
+    }
+  }
   const boundedVisible = scene.entities.filter((entity) => enclosures.get(entity.entityId).status === "bounded" && samplesByEntity.get(entity.entityId).some((sample) => sample.visible && sample.note !== "other-camera")).length;
   const everInFrustum = scene.entities.some((entity) => samplesByEntity.get(entity.entityId).some((sample) => sample.visible && (sample.frustum?.contained === "full" || sample.frustum?.contained === "partial")));
   if (!everInFrustum) {
@@ -2040,7 +2184,8 @@ function auditSpatialSceneInContext(context, options) {
         total: scene.entities.length,
         bounded: [...enclosures.values()].filter((item) => item.status === "bounded").length,
         unknownBounds: [...enclosures.values()].filter((item) => item.status === "unknown").length,
-        byKind
+        byKind,
+        instances: scene.entities.reduce((total, entity) => total + (entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : 0), 0)
       },
       animations: {
         channels: scene.animations.length,
@@ -2142,11 +2287,32 @@ function inspectSpatialScene(input) {
     durationUs: scene.durationUs,
     entities: snapshot.entities.map(({ entity, worldMatrix }) => {
       const origin = entity.origin;
-      const declared = origin.kind === "generated" ? scene.generators.find((generator) => generator.generatorId === origin.generatorId).editableKeys.find((item) => item.key === origin.key)?.properties ?? [] : ["color", "opacity", "transform"].filter((property) => spatialPropertySupported(entity, property));
+      const declared = origin.kind === "generated" ? scene.generators.find((generator) => generator.generatorId === origin.generatorId).editableKeys.find((item) => item.key === origin.key)?.properties ?? [] : [
+        ...["color", "opacity", "transform"].filter((property) => spatialPropertySupported(entity, property)),
+        ...entity.kind === "mesh" ? [
+          ...entity.material.kind === "standard" && spatialPropertySupported(entity, "color") ? ["emissive"] : [],
+          "instances",
+          "castShadow",
+          "receiveShadow"
+        ] : [],
+        ...entity.kind === "light" ? [
+          ...entity.light === "spot" ? ["spot"] : [],
+          ...entity.light !== "ambient" ? ["shadow"] : []
+        ] : []
+      ];
       const animatedProperties = scene.animations.filter((channel) => channel.targetId === entity.entityId).map((channel) => channel.property);
       const editableControls = declared.filter((property) => !animatedProperties.some((animated) => animated === property || property === "transform" && ["position", "rotation", "scale"].includes(animated)));
       const local = localBounds(entity);
-      const bounds = "status" in local ? local : { status: "authored-enclosure", coordinateDomain: entity.placement, atTimeUs: 0, bounds: transformBounds(worldMatrix, local) };
+      const localDomains = "status" in local ? [] : entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.map((instance) => transformBounds(multiplyTransforms(worldMatrix, composeTransform(instance)), local)) : [transformBounds(worldMatrix, local)];
+      const bounds = "status" in local ? local : {
+        status: "authored-enclosure",
+        coordinateDomain: entity.placement,
+        atTimeUs: 0,
+        bounds: localDomains.reduce((union, next) => ({
+          min: union.min.map((value, axis) => Math.min(value, next.min[axis])),
+          max: union.max.map((value, axis) => Math.max(value, next.max[axis]))
+        }))
+      };
       const assetIds = entity.kind === "mesh" ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds };
     }),
@@ -2250,6 +2416,53 @@ function applySpatialScenePatch(sceneInput, patchInput) {
       case "set-opacity":
         entities.set(operation.entityId, applySpatialEntityOverride(authored(operation.entityId), { entityId: operation.entityId, property: "opacity", value: operation.opacity }));
         break;
+      case "set-emissive": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh" || entity.material.kind !== "standard")
+          throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard material.", "operations");
+        if (!spatialPropertySupported(entity, "color"))
+          throw new SpatialSceneError("conflict", "Source-material mode leaves emissive control to the retained GLB material.", "operations");
+        const { emissive: _cleared, ...material } = entity.material;
+        entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } });
+        break;
+      }
+      case "set-spot": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "light" || entity.light !== "spot")
+          throw new SpatialSceneError("conflict", "Spot cone edits require an authored spot light.", "operations");
+        entities.set(operation.entityId, { ...entity, spot: operation.spot });
+        break;
+      }
+      case "set-instances": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh")
+          throw new SpatialSceneError("conflict", "Instance edits apply to authored mesh entities.", "operations");
+        const { instances: _cleared, ...rest } = entity;
+        entities.set(operation.entityId, operation.instances === null ? rest : { ...rest, instances: operation.instances });
+        break;
+      }
+      case "set-mesh-shadow": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh")
+          throw new SpatialSceneError("conflict", "Mesh shadow flags apply to authored mesh entities.", "operations");
+        const { castShadow: _cast, receiveShadow: _receive, ...rest } = entity;
+        entities.set(operation.entityId, {
+          ...rest,
+          ...operation.castShadow === null ? {} : { castShadow: operation.castShadow },
+          ...operation.receiveShadow === null ? {} : { receiveShadow: operation.receiveShadow }
+        });
+        break;
+      }
+      case "set-light-shadow": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "light")
+          throw new SpatialSceneError("conflict", "Light shadow flags apply to authored light entities.", "operations");
+        if (entity.light === "ambient" && operation.shadow !== null)
+          throw new SpatialSceneError("conflict", "Ambient lights cannot cast shadows.", "operations");
+        const { shadow: _shadow, ...rest } = entity;
+        entities.set(operation.entityId, operation.shadow === null ? rest : { ...rest, shadow: operation.shadow });
+        break;
+      }
       case "set-camera":
         cameras.set(operation.camera.cameraId, operation.camera);
         break;
@@ -2318,4 +2531,4 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
-export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
+export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };

@@ -728,13 +728,13 @@
     ]
   },
   {
-    "identityLineCount": 50,
-    "identityLinesSha256": "e4348f70580cf8c6fb862c1e4175287742d36f9919b2e7c147e9df450977514a",
-    "occurrenceCount": 65,
     "path": "apps/desktop/cli/studio-spatial-asset.test.ts",
     "categories": [
       "native-film-studio"
-    ]
+    ],
+    "identityLineCount": 50,
+    "identityLinesSha256": "1f88f391eb93f180b4cb9772c4fddb180f28d346d425d14bf12b46d4ae12f82a",
+    "occurrenceCount": 65
   },
   {
     "identityLineCount": 55,
@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "9f4797a5f39e083fa706f0105d384420bba469eed0908ca1c779c070ee8974b4",
+    "identityLinesSha256": "7c48082c867820933df03b936a9da9cda007308d909098b7580187df31819f53",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1620,19 +1620,19 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
-    "occurrenceCount": 9,
-    "path": "dist/index-42zsesc1.js",
+    "identityLineCount": 142,
+    "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
+    "occurrenceCount": 237,
+    "path": "dist/index-2n4v3450.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
-    "occurrenceCount": 237,
-    "path": "dist/index-m81h8m15.js",
+    "identityLineCount": 9,
+    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
+    "occurrenceCount": 9,
+    "path": "dist/index-42zsesc1.js",
     "categories": [
       "generated"
     ]

@@ -589,7 +589,7 @@ describe("Slopcamera MCP scene tools", () => {
       })
       const inspection = (inspected.structuredContent as { inspection: { entities: readonly { entityId: string; editableControls: readonly string[] }[] } }).inspection
       const product = inspection.entities.find(({ entityId }) => entityId === "entity_product")
-      expect(product?.editableControls).toEqual(["color", "opacity"])
+      expect(product?.editableControls).toEqual(["color", "opacity", "emissive", "instances", "castShadow", "receiveShadow"])
 
       const audited = await runtime.call("audit_scene", {
         path: "scene.json",
