@@ -26,8 +26,6 @@ const siteOrigin = "https://slopcamera.com"
 const posthogPackageDirectory = dirname(fileURLToPath(import.meta.resolve("posthog-js/package.json")))
 const copiedFiles = publicIdentity.files
 
-const docsLastmod = "2026-09-13"
-
 const generatedTextFiles = {
   "index.md": homeMarkdown,
   "llms.txt": llmsTxt,
@@ -60,29 +58,22 @@ function assetPath(name: string, bytes: Uint8Array): string {
   return `/assets/${stem}-${digest}${extension}`
 }
 
-function renderSitemapUrl(
-  path: string,
-  lastmod: string,
-  priority: string,
-): string {
+function renderSitemapUrl(path: string): string {
   return `  <url>
     <loc>${siteOrigin}${path}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${path === "/" ? "weekly" : "monthly"}</changefreq>
-    <priority>${priority}</priority>
   </url>`
 }
 
 export function renderSitemapXml(): string {
   const entries = [
-    renderSitemapUrl("/", "2026-09-09", "1.0"),
-    renderSitemapUrl("/index.md", "2026-09-09", "0.8"),
+    renderSitemapUrl("/"),
+    renderSitemapUrl("/index.md"),
     ...docPages.flatMap(page => {
       const canonical = docsCanonicalUrl(page).slice(siteOrigin.length)
       const mirror = docsMarkdownUrl(page)
       return [
-        renderSitemapUrl(canonical, docsLastmod, page.slug === "index" ? "0.8" : "0.7"),
-        renderSitemapUrl(mirror, docsLastmod, "0.5"),
+        renderSitemapUrl(canonical),
+        renderSitemapUrl(mirror),
       ]
     }),
   ]

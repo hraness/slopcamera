@@ -1648,6 +1648,9 @@ describe("static Slopcamera site", () => {
     expect(robotsTxt).toContain("Sitemap: https://slopcamera.com/sitemap.xml")
     expect(sitemap).not.toContain("xmlns:image")
     expect(sitemap).toBe(renderSitemapXml())
+    for (const optional of ["<lastmod>", "<changefreq>", "<priority>"]) {
+      expect(sitemap).not.toContain(optional)
+    }
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
     expect(llmsTxt).toContain("> Slopcamera is a local visual studio for coding agents.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
