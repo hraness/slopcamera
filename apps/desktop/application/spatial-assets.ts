@@ -563,6 +563,7 @@ export async function withPreparedSpatialAssets<Result>(
             ...(entity.geometry.nodeIndex === undefined ? {} : { nodeIndex: entity.geometry.nodeIndex }),
             ...(entity.geometry.materialMode === undefined ? {} : { materialMode: entity.geometry.materialMode }),
             ...(entity.geometry.clip === undefined ? {} : { clip: entity.geometry.clip }),
+            ...(entity.geometry.morphWeights === undefined ? {} : { morphWeights: entity.geometry.morphWeights }),
           });
           const publishTexture = async (reference: { readonly imageIndex: number; readonly sampler: unknown } | undefined, opaque: boolean) => {
             if (reference === undefined) return undefined;
