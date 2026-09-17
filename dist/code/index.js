@@ -101,7 +101,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-jh3n3d1v.js";
+} from "../index-6ew11hhb.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -190,17 +190,19 @@ var SPATIAL_RENDERED_AUDIT_LIMITS = Object.freeze({
   framePixels: 33554432
 });
 var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"];
-var ELIGIBILITY = ["renderable", "view-masked", "no-surface", "unsupported-kind"];
+var ELIGIBILITY = ["renderable", "proxy-coverage", "view-masked", "no-surface", "unsupported-kind"];
 var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
 var FINDING_KINDS = [
   "never-rendered",
   "unsupported-kind",
+  "proxy-coverage",
   "occluded",
   "unattributed-pixels",
   "empty-render",
   "bounds-unknown"
 ];
 var SAMPLE_NOTES = ["out-of-range", "other-camera", "unlowered-expected"];
+var SPATIAL_SPLAT_PROXY_REPRESENTATION = "splat-bounding-box-proxy;spz-position-bounds;approximate-not-pixel-truth";
 var SpatialRenderedAuditCoverageSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("opaque") }),
   z.strictObject({ kind: z.literal("alpha-threshold"), threshold: z.number().finite().gt(0).max(1) })
@@ -314,6 +316,7 @@ var SpatialRenderedAuditReportSchema = z.strictObject({
     entities: z.strictObject({
       total: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       renderable: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      proxyCoverage: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities).optional(),
       viewMasked: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       noSurface: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       unsupported: z.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities)
@@ -321,6 +324,7 @@ var SpatialRenderedAuditReportSchema = z.strictObject({
     entitiesNeverRendered: z.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
     entitiesUnsupported: z.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
     entitiesViewMasked: z.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesProxyCoverage: z.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities).optional(),
     renderedPixels: z.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels * SPATIAL_RENDERED_AUDIT_LIMITS.samples),
     unattributedPixels: z.number().int().min(0).max(SPATIAL_RENDERED_AUDIT_LIMITS.framePixels * SPATIAL_RENDERED_AUDIT_LIMITS.samples)
   }),
@@ -359,9 +363,10 @@ function decodeObjectIdPixels(rgba, width, height) {
   return counts;
 }
 var round3 = (value) => Math.round(value * 1000) / 1000;
-function eligibility(entity) {
-  if (entity.kind === "splat")
-    return "unsupported-kind";
+function eligibility(entity, assetBounds) {
+  if (entity.kind === "splat") {
+    return entity.placement.kind === "world" && assetBounds[entity.assetId] !== undefined ? "proxy-coverage" : "unsupported-kind";
+  }
   if (entity.kind === "group" || entity.kind === "light" || entity.kind === "environment")
     return "no-surface";
   if (entity.placement.kind === "view")
@@ -442,6 +447,13 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
           throw new SpatialSceneError("invalid-data", `Frame evidence asset digest does not match the declared manifest for ${object.entityId}.`, "frames");
         }
       }
+      if (entity.kind === "splat") {
+        if (object.representation !== SPATIAL_SPLAT_PROXY_REPRESENTATION || object.placement !== "world" || entity.placement.kind !== "world" || captured.assetBounds?.[entity.assetId] === undefined) {
+          throw new SpatialSceneError("invalid-data", `Frame evidence may lower splat ${object.entityId} only as its supplied-bounds bounding-box proxy.`, "frames");
+        }
+      } else if (object.representation === SPATIAL_SPLAT_PROXY_REPRESENTATION) {
+        throw new SpatialSceneError("invalid-data", `Frame evidence must not mark non-splat ${object.entityId} as a splat bounding-box proxy.`, "frames");
+      }
       const declaredInstances = entity.kind === "mesh" && entity.instances !== undefined ? entity.instances.length : undefined;
       if (object.instances !== declaredInstances) {
         throw new SpatialSceneError("invalid-data", `Frame evidence instance count differs from the authored declaration for ${object.entityId}.`, "frames");
@@ -485,14 +497,18 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
   const entitiesNeverRendered = [];
   const entitiesUnsupported = [];
   const entitiesViewMasked = [];
-  const eligibilityCounts = { renderable: 0, "view-masked": 0, "no-surface": 0, "unsupported-kind": 0 };
+  const entitiesProxyCoverage = [];
+  const suppliedAssetBounds = captured.assetBounds ?? {};
+  const eligibilityCounts = { renderable: 0, "proxy-coverage": 0, "view-masked": 0, "no-surface": 0, "unsupported-kind": 0 };
   for (const entity of scene.entities) {
-    const entityEligibility = eligibility(entity);
+    const entityEligibility = eligibility(entity, suppliedAssetBounds);
     eligibilityCounts[entityEligibility]++;
     if (entityEligibility === "unsupported-kind")
       entitiesUnsupported.push(entity.entityId);
     if (entityEligibility === "view-masked")
       entitiesViewMasked.push(entity.entityId);
+    if (entityEligibility === "proxy-coverage")
+      entitiesProxyCoverage.push(entity.entityId);
     const selectionId = entityIndex.get(entity.entityId);
     const geometricEntity = geometricEntities.get(entity.entityId);
     const geoSamples = geometricSamples.get(entity.entityId);
@@ -501,7 +517,7 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
       const frame = frameDrafts.get(timeUs);
       const geo = geoSamples.get(timeUs);
       const evidence = frame.lowered.get(entity.entityId);
-      const expected = (entityEligibility === "renderable" || entityEligibility === "view-masked") && geo.visible && geo.note !== "other-camera";
+      const expected = (entityEligibility === "renderable" || entityEligibility === "view-masked" || entityEligibility === "proxy-coverage") && geo.visible && geo.note !== "other-camera";
       const lowered = evidence !== undefined;
       const pixels = evidence !== undefined ? frame.attributed.get(selectionId) ?? 0 : 0;
       const note = expected && !lowered ? "unlowered-expected" : geo.note;
@@ -542,12 +558,28 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
         severity: "info",
         kind: "unsupported-kind",
         entityId: entity.entityId,
-        detail: "The object-ID pass rejects splat entities; retained collider evidence is approximate, never pixel truth."
+        detail: entity.placement.kind === "world" ? "The object-ID pass cannot lower this splat's bounding-box proxy without decoded splat-position bounds; retained collider evidence is approximate, never pixel truth." : "The object-ID pass cannot lower a view-placed splat; bounding-box proxies require world placement."
       });
+      if (geometricEntity.enclosure.status === "unknown" && geometricEntity.enclosure.reason !== "no-surface") {
+        findings.push({
+          severity: "info",
+          kind: "bounds-unknown",
+          entityId: entity.entityId,
+          detail: "Bounds require decoded asset data; supply assetBounds so the object-ID pass can lower a bounding-box proxy."
+        });
+      }
       continue;
     }
     if (entityEligibility === "no-surface")
       continue;
+    if (entityEligibility === "proxy-coverage") {
+      findings.push({
+        severity: "info",
+        kind: "proxy-coverage",
+        entityId: entity.entityId,
+        detail: "Object-ID coverage counts this entity's bounding-box proxy built from supplied splat-position bounds \u2014 approximate coverage, never splat pixel truth."
+      });
+    }
     if (entityEligibility === "view-masked" && entity.placement.kind === "view" && entity.placement.cameraId === cameraId && totals.lowered > 0) {
       findings.push({
         severity: "info",
@@ -630,6 +662,7 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
       entities: {
         total: scene.entities.length,
         renderable: eligibilityCounts.renderable,
+        proxyCoverage: eligibilityCounts["proxy-coverage"],
         viewMasked: eligibilityCounts["view-masked"],
         noSurface: eligibilityCounts["no-surface"],
         unsupported: eligibilityCounts["unsupported-kind"]
@@ -637,6 +670,7 @@ function auditSpatialSceneRenderedInContext(context, framesInput, options) {
       entitiesNeverRendered: sortSpatialBy(entitiesNeverRendered, (id) => id),
       entitiesUnsupported: sortSpatialBy(entitiesUnsupported, (id) => id),
       entitiesViewMasked: sortSpatialBy(entitiesViewMasked, (id) => id),
+      entitiesProxyCoverage: sortSpatialBy(entitiesProxyCoverage, (id) => id),
       renderedPixels,
       unattributedPixels
     },
@@ -2445,6 +2479,7 @@ export {
   SlopcameraDiagramCheckInputSchema,
   SlopcameraCodeError,
   SerializedRefV1Schema,
+  SPATIAL_SPLAT_PROXY_REPRESENTATION,
   SPATIAL_SOLVE_PENDING_SCENE_SHA256,
   SPATIAL_SOLVE_LIMITS,
   SPATIAL_SCENE_LIMITS,

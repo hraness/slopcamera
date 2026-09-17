@@ -13,15 +13,49 @@ function fixture() {
   const snapshot = evaluateSpatialScene(scene, { timeUs: 0, cameraId: "camera_main" });
   const prepared = { kind: "splat", assetId: "asset_splat", entityId: "entity_box", assetManifestSha256: spatialAssetClosureDigests(scene.assets).asset_splat,
     resource: { name: "world", urlPath: "world.spz", sha256: "a".repeat(64), bytes: 100, mediaType: "application/octet-stream" },
-    facts: { kind: "slopcamera.spz-admission", schemaVersion: 1, version: 3, splats: 2, shDegree: 0, fractionalBits: 12, antialiased: false, decompressedBytes: 56, ...spatialSpzAllocationBounds(2, 100, 56) } };
+    facts: { kind: "slopcamera.spz-admission", schemaVersion: 1, version: 3, splats: 2, shDegree: 0, fractionalBits: 12, antialiased: false, decompressedBytes: 56, ...spatialSpzAllocationBounds(2, 100, 56) },
+    bounds: { min: [-1, -2, -3], max: [3, 4, 5] } };
   return { snapshots: [snapshot], preparedAssets: [prepared], frameRate: { numerator: 30, denominator: 1 }, mode: { kind: "beauty" }, executionProfile: "three-spark-webgl2-hardware-v1" };
 }
 describe("closed Three/Spark lowering", () => {
-  test("requires explicit hardware capability and rejects splat AOV claims", () => {
+  test("requires explicit hardware capability for beauty; axial-depth stays unsupported", () => {
     const input = fixture();
     const { executionProfile: _profile, ...absentProfile } = input;
     for (const request of [absentProfile, { ...input, executionProfile: "three-webgl2-hardware-v1" }]) expect(() => createSpatialOverlayBatch(request)).toThrow("explicit Three/Spark");
-    for (const kind of ["object-id", "axial-depth"]) expect(() => createSpatialOverlayBatch({ ...input, mode: { kind, coverage: { kind: "opaque" } } })).toThrow("unsupported");
+    expect(() => createSpatialOverlayBatch({ ...input, mode: { kind: "axial-depth", coverage: { kind: "opaque" } } })).toThrow("axial-depth");
+    expect(() => createSpatialOverlayBatch({ ...input, mode: { kind: "object-id", coverage: { kind: "opaque" } } })).toThrow("beauty only");
+  });
+  test("object-id lowers the splat as its bounding-box proxy under the normal selection code", () => {
+    const input = fixture();
+    const { executionProfile: _profile, ...absentProfile } = input;
+    for (const request of [absentProfile, { ...absentProfile, executionProfile: "three-webgl2-hardware-v1" }]) {
+      const result = createSpatialOverlayBatch({ ...request, mode: { kind: "object-id", coverage: { kind: "opaque" } } });
+      const payload = JSON.parse(result.authoring.html.match(/const input=(.*);\nconst canvas/u)![1]!) as { splats?: unknown; frames: { objects: { kind: string; selectionId: number; geometry: { kind: string; size: number[] }; matrix: number[] }[] }[] };
+      const object = payload.frames[0]!.objects[0]!;
+      expect(payload.splats).toBeUndefined();
+      expect(object.kind).toBe("mesh");
+      expect(object.geometry).toEqual({ kind: "box", size: [4, 6, 8] });
+      expect(object.selectionId).toBe(1);
+      // bounds min [-1,-2,-3] max [3,4,5] → center [1,1,1]; the fixture entity
+      // transform is identity, so the proxy matrix carries that translation.
+      expect(object.matrix.slice(12)).toEqual([1, 1, 1, 1]);
+      const evidence = result.metadata.frames[0]!.objects[0]!;
+      expect(evidence).toMatchObject({ entityId: "entity_box", selectionId: 1, placement: "world",
+        representation: "splat-bounding-box-proxy;spz-position-bounds;approximate-not-pixel-truth" });
+      expect(result.metadata.splatProfile).toBeUndefined();
+      expect(result.authoring.html).not.toContain("SparkRenderer");
+    }
+  });
+  test("object-id never proxies an invisible or view-placed splat", () => {
+    const input = fixture();
+    const { executionProfile: _profile, ...absentProfile } = input;
+    const snapshot = input.snapshots[0]!;
+    const invisible = { ...snapshot, entities: [{ ...snapshot.entities[0]!, visible: false }] };
+    const viewPlaced = { ...snapshot, entities: [{ ...snapshot.entities[0]!, entity: { ...snapshot.entities[0]!.entity, placement: { kind: "view", cameraId: "camera_main", units: "pixels", order: 0 } } }] };
+    for (const frame of [invisible, viewPlaced]) {
+      const result = createSpatialOverlayBatch({ ...absentProfile, snapshots: [frame], mode: { kind: "object-id", coverage: { kind: "opaque" } } });
+      expect(result.metadata.frames[0]!.objects).toHaveLength(0);
+    }
   });
   test("binds raw axes/units and exact nonmonotonic sample order without a collider surface", () => {
     const input = fixture(), snapshot = input.snapshots[0]!;
