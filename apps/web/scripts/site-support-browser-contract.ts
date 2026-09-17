@@ -85,10 +85,12 @@ export function parseSupportPhase(value: unknown, sequence: 0 | 1 | 2, request: 
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
         assertCopyPorts(observation.baseline as CopyEvidence["ports"], supportBaselineInstallCommand)
       } else {
-        keys(observation, ["name", "footer", "visible", "keyboardFocus", "hitTarget", "foundationRestored", "baselineObstructions"])
+        keys(observation, ["name", "footer", "contentFooterHeight", "visible", "keyboardFocus", "hitTarget", "foundationRestored", "baselineObstructions"])
         assert.deepEqual(observation.footer, supportFooterDigests)
-        for (const key of ["visible", "keyboardFocus", "hitTarget"]) assert.equal(observation[key], true)
         const scenario = cases[index]!
+        assert.ok(typeof observation.contentFooterHeight === "number" && observation.contentFooterHeight > 0 && observation.contentFooterHeight <= 256,
+          `${scenario.name}: bounded content footer height`)
+        for (const key of ["visible", "keyboardFocus", "hitTarget"]) assert.equal(observation[key], true)
         assert.equal(observation.foundationRestored, scenario.route === "/" && scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light")
         parseSupportBaselineObstructions(observation.baselineObstructions, scenario.name)
       }
@@ -114,24 +116,41 @@ export function supportCaseFailure(request: SupportRequest, scenario: string, st
     scenario, stage, comparedCases: [...comparedCases], error: String(error).replace(/[\x00-\x1f]/gu, " ").slice(0, 2048) || "Unknown failure" }, request)
 }
 
-/** The complete canonical old/new footer is independently hash-bound. Only
- * that literal island is removed; every remaining body byte stays exact. */
+/** The complete canonical old/new footer is independently hash-bound. The
+ * current page also carries the in-flow product content footer immediately
+ * before it; only that product-owned island and the canonical literal are
+ * removed, so every remaining body byte stays exact. */
 export async function supportDom(page: Page, current: boolean): Promise<string> {
-  const value = await page.evaluate(() => {
+  const value = await page.evaluate((current: boolean) => {
     const root = document.body.cloneNode(true) as HTMLElement
     for (const node of root.querySelectorAll("script")) node.remove()
-    const footers = root.querySelectorAll("footer")
-    if (footers.length !== 1 || footers[0]!.id !== "hraness-site-footer") throw Error("Exact canonical footer count")
-    const footer = footers[0]!.outerHTML
-    footers[0]!.replaceWith(document.createComment("reviewed-optional-support-footer"))
+    const siteFooters = root.querySelectorAll("footer#hraness-site-footer")
+    const contentFooters = root.querySelectorAll("footer.hraness-marketing-footer")
+    if (siteFooters.length !== 1) throw Error("Exact canonical footer count")
+    if (contentFooters.length !== (current ? 1 : 0)) throw Error("Exact content footer count")
+    const siteFooter = siteFooters[0]!
+    if (current) {
+      // Removing the content footer also removes the whitespace between the
+      // two footers so the projected body keeps the baseline's exact bytes.
+      const contentFooter = contentFooters[0]!
+      if (contentFooter.nextElementSibling !== siteFooter) throw Error("Content footer must immediately precede the site footer")
+      while (contentFooter.nextSibling !== siteFooter) contentFooter.nextSibling!.remove()
+      contentFooter.remove()
+    }
+    const footer = siteFooter.outerHTML
+    siteFooter.replaceWith(document.createComment("reviewed-optional-support-footer"))
     return { footer, body: root.outerHTML }
-  })
+  }, current)
   assert.equal(createHash("sha256").update(value.footer).digest("hex"), supportFooterDigests[current ? "current" : "baseline"], "Canonical footer differs from reviewed serialization")
   return value.body
 }
 const isFooter = (item: ShellElement) => item.key.startsWith("#hraness-site-footer[") || item.key.startsWith(".hraness-site-footer__")
-/** `label` is the scenario name; it selects the reviewed baseline inventory. */
-export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvidence, label: string): { readonly baselineObstructions: readonly ShellKeyboardObstruction[] } {
+  || item.key.startsWith(".hraness-marketing-footer")
+/** `label` is the scenario name; it selects the reviewed baseline inventory.
+ * `contentFooterHeight` is the live-measured in-flow content footer height on
+ * the current page, which shifts the shared footer's origin by exactly that
+ * amount without changing the shared footer's own footprint. */
+export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvidence, label: string, contentFooterHeight = 0): { readonly baselineObstructions: readonly ShellKeyboardObstruction[] } {
   // Every keyboard target on the current page must own its painted fragments,
   // including the four Ask-AI links and the recovery links that the fixed
   // footer bar covers on the immutable baseline at 720 x 450.
@@ -140,17 +159,22 @@ export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvi
   const currentFooter = actual.elements.find(item => item.key === "#hraness-site-footer[0]")!
   const oldFooter = baseline.elements.find(item => item.key === "#hraness-site-footer[0]")!
   assert.ok(currentFooter && oldFooter)
-  // The footer follows unchanged main content. Its origin and width stay exact;
-  // only its measured height may affect the containing body's used height.
-  for (const axis of [0, 1, 2]) assert.ok(Math.abs(currentFooter.rect[axis]! - oldFooter.rect[axis]!) <= .5, `${label}: footer origin/width`)
-  const delta = currentFooter.rect[3]! - oldFooter.rect[3]!
-  assert.ok(Number.isFinite(delta) && Math.abs(delta) <= 128, `${label}: bounded footer height change`)
+  // The footer follows unchanged main content plus the new content footer. Its
+  // left edge and width stay exact; its origin shifts by exactly the measured
+  // content-footer height, and only its own height may otherwise change.
+  for (const axis of [0, 2]) assert.ok(Math.abs(currentFooter.rect[axis]! - oldFooter.rect[axis]!) <= .5, `${label}: footer origin/width`)
+  const originDelta = currentFooter.rect[1]! - oldFooter.rect[1]!
+  assert.ok(Math.abs(originDelta - contentFooterHeight) <= .5, `${label}: footer origin must shift by the exact content footer height`)
+  const heightDelta = currentFooter.rect[3]! - oldFooter.rect[3]!
+  assert.ok(Number.isFinite(heightDelta) && Math.abs(heightDelta) <= 128, `${label}: bounded footer height change`)
+  const delta = originDelta + heightDelta
   const project = (items: readonly ShellElement[]) => items.filter(item => !isFooter(item)).map(item => {
     const old = baseline.elements.find(old => old.key === item.key)
     if (item.key !== "body[0]" || old === undefined) return item
     assert.ok(Math.abs(item.rect[3]! - old.rect[3]! - delta) <= .5, `${label}: body growth must equal footer growth`)
     assert.ok(Math.abs(Number.parseFloat(item.styles.height!) - Number.parseFloat(old.styles.height!) - delta) <= .5)
-    assert.equal(item.text.replace(/Support(?=Accept cookies)/u, ""), old.text, `${label}: only exact support label added to body text`)
+    assert.equal(item.text.replace(/Slopcamera Docs GitHub Install Slopcamera by Hraness(?=Accept cookies)/u, ""), old.text,
+      `${label}: only the exact content footer and organization lockup text added to body text`)
     return { ...item, text: old.text, rect: [...item.rect.slice(0, 3), old.rect[3]!], styles: { ...item.styles, height: old.styles.height! } }
   })
   // Existing footer targets retain native coverage in checkShellCase. Their
@@ -162,10 +186,42 @@ export function compareSupportEvidence(actual: ShellEvidence, baseline: ShellEvi
 }
 
 export async function observeSupportFooter(page: Page, scenario: ShellCase, foundationCss: string, negative: boolean) {
+  // The in-flow product content footer is one bounded island immediately
+  // before the shared footer: the authored camera mark, the product name and
+  // the header's own destinations. Each link retains native focus above the
+  // fixed footer bar with a visible outline and an unobstructed hit target.
+  const contentFooter = page.locator("footer.hraness-marketing-footer")
+  assert.equal(await contentFooter.count(), 1)
+  const contentFooterEvidence = await contentFooter.evaluate(node => {
+    return { height: node.getBoundingClientRect().height, next: node.nextElementSibling?.id ?? null }
+  })
+  assert.equal(contentFooterEvidence.next, "hraness-site-footer")
+  assert.ok(Number.isFinite(contentFooterEvidence.height) && contentFooterEvidence.height > 0 && contentFooterEvidence.height <= 256,
+    `${scenario.name}: bounded content footer height`)
+  for (const target of [".hraness-marketing-footer__brand", ".hraness-marketing-footer__nav a"]) {
+    const targets = page.locator(target)
+    const count = await targets.count()
+    assert.equal(count, target.endsWith("__brand") ? 1 : 3, `${scenario.name}: content footer target inventory`)
+    for (let index = 0; index < count; index++) {
+      const link = targets.nth(index)
+      await link.focus(); await settle(page, scenario.direction)
+      assert.equal(await link.evaluate(node => {
+        if (node !== document.activeElement || !node.matches(":focus-visible")) return false
+        const box = node.getBoundingClientRect(), hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+        return hit === node || (hit !== null && node.contains(hit))
+      }), true, `${scenario.name}: content footer target ${target}[${index}] must hold unobstructed native focus`)
+      const focused = (await measure(page, [target]))[index]!
+      assert.notEqual(focused.styles["outline-style"], "none"); assert.ok(Number.parseFloat(focused.styles["outline-width"]!) > 0)
+    }
+  }
   const selector = '[data-slot="hraness-support-link"]', link = page.locator(selector)
   assert.equal(await link.count(), 1); assert.equal(await link.getAttribute("href"), supportHref)
   assert.equal(await link.getAttribute("aria-label"), "Support Slopcamera: optional paid membership")
-  assert.equal(await link.textContent(), "Support"); assert.equal(await link.getAttribute("target"), null)
+  // v0.14 renders the support target as the muted question-mark icon only; the
+  // accessible name stays on the link and its title carries the proposition.
+  assert.equal(await link.textContent(), ""); assert.equal(await link.getAttribute("target"), null)
+  assert.equal(await link.getAttribute("title"), "Support ongoing development of local visual tools for agents. Review optional paid membership.")
+  assert.equal(await link.locator('[data-slot="hraness-support-icon"]').count(), 1)
   assert.equal(await page.locator("footer form,footer input,footer iframe").count(), 0)
   await link.scrollIntoViewIfNeeded(); await settle(page, scenario.direction)
   const targetEvidence = await link.evaluate(node => {
@@ -206,7 +262,8 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
     compareShellElements(await measure(page, ["body", selector]), before, "Exact foundation restoration")
     foundationRestored = true
   }
-  return { name: scenario.name, footer: supportFooterDigests, visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
+  return { name: scenario.name, footer: supportFooterDigests, contentFooterHeight: contentFooterEvidence.height,
+    visible: true, keyboardFocus: true, hitTarget: true, foundationRestored, baselineObstructions: [] as readonly ShellKeyboardObstruction[] }
 }
 const releaseVersion = (command: string): string => {
   const match = /releases\/download\/v(\d+\.\d+\.\d+)\//u.exec(command)

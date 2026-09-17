@@ -398,6 +398,24 @@ export async function withPreparedSpatialAssets<Result>(
     resources.set(name, { ...resource, absolutePath: path });
     return { resource, width: image.width, height: image.height, alpha: image.alpha };
   };
+  /** Verified image manifest → normalized PNG publication; shared by surfaces, environments, and material maps. */
+  const decodeImageRaster = async (asset: SpatialVerifiedAsset, label: string) => {
+    const interpretation = asset.manifest.interpretation;
+    if (interpretation.kind !== "image") throw new RangeError(`${label} requires an image asset interpretation.`);
+    let bytes = asset.bytes;
+    if (interpretation.mimeType === "image/png" && (bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71)
+      || interpretation.mimeType === "image/jpeg" && (bytes[0] !== 255 || bytes[1] !== 216)) throw new RangeError("Image payload format differs from its declared MIME type.");
+    if (interpretation.mimeType === "image/svg+xml") {
+      const svg = inertSpatialSvg(utf8(bytes));
+      const resvg = new Resvg(svg, { font: { loadSystemFonts: false } });
+      dimensions(resvg.width, resvg.height);
+      bytes = resvg.render().asPng(); profiles.add("shape-only-svg-resvg-2.6.2");
+    }
+    const decoded = await raster(bytes, interpretation.alpha === "opaque");
+    if (decoded.width !== interpretation.width || decoded.height !== interpretation.height) throw new RangeError("Image dimensions differ from its interpretation.");
+    profiles.add("sdr-png-jpeg-sharp-0.35.3");
+    return publishRaster(decoded);
+  };
   const native = async (argv: readonly [string, ...string[]], maxOutputBytes = 16_384) => {
     aborted(signal);
     const result = await ports.runner.run(argv, { abortSignal: signal, timeoutMs: SPATIAL_ASSET_PREPARATION_LIMITS.nativeTimeoutMs, maxOutputBytes, stdin: "ignore" });
@@ -441,6 +459,18 @@ export async function withPreparedSpatialAssets<Result>(
       const snapshot = request.snapshots[snapshotIndex]!, exactTime = exactTimes[snapshotIndex]!;
       aborted(signal);
       const entity = entry.entity;
+      // A procedural mesh's material map is a secondary binding: the entity
+      // still has no primary asset, so it bypasses the per-entity asset path.
+      if (entity.kind === "mesh" && entity.geometry.kind !== "asset" && entity.material.map !== undefined) {
+        const mapAsset = verified.get(entity.material.map);
+        if (mapAsset === undefined) throw new RangeError(`Missing manifest for spatial asset ${entity.material.map}.`);
+        const mapKey = `${entity.material.map}:${entity.entityId}:static`;
+        if (!preparedAssets.has(mapKey)) {
+          const output = await decodeImageRaster(mapAsset, `Material map on ${entity.entityId}`);
+          preparedAssets.set(mapKey, PreparedSpatialAssetSchema.parse({ kind: "raster", assetId: entity.material.map,
+            assetManifestSha256: mapAsset.manifestSha256, entityId: entity.entityId, timeUs: null, ...output }));
+        }
+      }
       if (entity.kind === "group" || entity.kind === "light" || entity.kind === "mesh" && entity.geometry.kind !== "asset") continue;
       const assetId = entity.kind === "text" ? entity.fontAssetId : entity.kind === "mesh" && entity.geometry.kind === "asset" ? entity.geometry.assetId : "assetId" in entity ? entity.assetId : "";
       const asset = verified.get(assetId);
@@ -550,20 +580,8 @@ export async function withPreparedSpatialAssets<Result>(
       if (preparedAssets.has(key)) continue;
       let output: Awaited<ReturnType<typeof publishRaster>>, sourceTimeUs: number | undefined;
       let videoEvidence: { sourceFrameIndex: number; sourcePresentationTimeUs: number; sourceTimestamp: string; sourcePts: number; sourceTimeBase: { numerator: string; denominator: string }; sourceExactTimeUs: { numerator: string; denominator: string } } | undefined;
-      if (entity.kind === "image") {
-        if (interpretation.kind !== "image") throw new RangeError("Image entity requires an image asset interpretation.");
-        let bytes = asset.bytes;
-        if (interpretation.mimeType === "image/png" && (bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71)
-          || interpretation.mimeType === "image/jpeg" && (bytes[0] !== 255 || bytes[1] !== 216)) throw new RangeError("Image payload format differs from its declared MIME type.");
-        if (interpretation.mimeType === "image/svg+xml") {
-          const svg = inertSpatialSvg(utf8(bytes));
-          const resvg = new Resvg(svg, { font: { loadSystemFonts: false } });
-          dimensions(resvg.width, resvg.height);
-          bytes = resvg.render().asPng(); profiles.add("shape-only-svg-resvg-2.6.2");
-        }
-        const decoded = await raster(bytes, interpretation.alpha === "opaque");
-        if (decoded.width !== interpretation.width || decoded.height !== interpretation.height) throw new RangeError("Image dimensions differ from its interpretation.");
-        output = await publishRaster(decoded); profiles.add("sdr-png-jpeg-sharp-0.35.3");
+      if (entity.kind === "image" || entity.kind === "environment") {
+        output = await decodeImageRaster(asset, entity.kind === "image" ? "Image entity" : "Environment entity");
       } else if (entity.kind === "video") {
         if (interpretation.kind !== "video") throw new RangeError("Video entity requires a video asset interpretation.");
         if (ports.ffmpegCommand === undefined || ports.ffprobeCommand === undefined) capability("video-decoder", "Video surfaces require bound FFmpeg and FFprobe capabilities.");

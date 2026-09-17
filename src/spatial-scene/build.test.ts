@@ -5,7 +5,7 @@ import {
   lookAtPose, nextTo, onTopOf, orbitKeys, perspectiveFromFov, row, scatter, stack,
   type SpatialLayoutEntry,
 } from "./build.js"
-import { SpatialAnimationSchema } from "./contracts.js"
+import { SpatialAnimationSchema, type SpatialEntity } from "./contracts.js"
 import { evaluateSpatialScene } from "./evaluate.js"
 import { parseSpatialScene, parseSpatialValue } from "./identity.js"
 import {
@@ -238,7 +238,7 @@ describe("placement helpers", () => {
       seed: 42, count: 3, region,
       instanced: true,
       entity: { entityId: "entity_scattered", name: "Scattered", geometry: { kind: "box", size: [1, 1, 1] }, material: { kind: "unlit", color: "#ffffff", opacity: 1 } },
-    })
+    }) as Extract<SpatialEntity, { kind: "mesh" }>
     expect(instanced.kind).toBe("mesh")
     expect(instanced.instances).toHaveLength(3)
     expect(instanced.instances).toEqual(scatter({ seed: 42, count: 3, region }).map(([x, , z]) => ({ position: [x, 0, z], rotation: [0, 0, 0, 1], scale: [1, 1, 1] })))

@@ -9,7 +9,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import {
   createProcessLocalHostResourceCoordinator,
@@ -18,6 +18,7 @@ import {
   type HostResourceLease,
   type HostResourceLeaseOptions,
 } from "@hraness/slopcamera/host-resources";
+import sharp from "sharp";
 
 import { EXIT_CODE } from "./errors";
 import type { GatewayMediaCatalogTransport } from "./gateway-media-catalog";
@@ -30,6 +31,10 @@ import type {
   GatewaySdkVideoRequest,
 } from "./gateway-media-service";
 import { probeCapability } from "./capabilities";
+import {
+  parseSpatialScene,
+  spatialSceneSha256,
+} from "../../../src/spatial-scene/identity";
 import { runCli as runProductionCli } from "./commands";
 import {
   BunProcessRunner,
@@ -368,6 +373,43 @@ class StallingImageGatewaySdk extends CapturingGatewaySdk {
   }
 }
 
+class GalleryGatewaySdk extends CapturingGatewaySdk {
+  inFlight = 0;
+  maxInFlight = 0;
+  #started = 0;
+  readonly #gate: Promise<void>;
+  #release: () => void = () => undefined;
+
+  constructor(private readonly barrierAt: number) {
+    super(WAV_BYTES, INVALID_MP4_BYTES);
+    this.#gate = new Promise(resolve => {
+      this.#release = resolve;
+    });
+  }
+
+  override async generateImage(
+    apiKey: string,
+    request: GatewaySdkImageRequest,
+  ): Promise<unknown> {
+    const prompt = typeof request.prompt === "string"
+      ? request.prompt
+      : request.prompt.text;
+    if (typeof prompt === "string" && prompt.includes("reject-this-candidate")) {
+      return Promise.reject(new Error("simulated gallery candidate failure"));
+    }
+    this.inFlight += 1;
+    this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
+    this.#started += 1;
+    if (this.#started >= this.barrierAt) this.#release();
+    try {
+      await this.#gate;
+      return await super.generateImage(apiKey, request);
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+}
+
 interface CliResult {
   readonly exitCode: number;
   readonly stderr: string;
@@ -443,7 +485,36 @@ function catalogPayload(): Readonly<Record<string, unknown>> {
   };
 }
 
-async function createFixture(): Promise<GatewayCommandFixture> {
+async function createFixture(
+  options?: Readonly<{
+    sdk?: CapturingGatewaySdk;
+    renderGalleryScene?: (
+      input: {
+        readonly application: {
+          readonly paths: { readonly repositoryRoot: string };
+        };
+        readonly assets?: readonly {
+          readonly assetId: string;
+          readonly artifact: {
+            readonly bytes: number;
+            readonly path: string;
+            readonly sha256: string;
+          };
+        }[];
+        readonly request?: unknown;
+        readonly sceneSha256?: string;
+        readonly source: { readonly path: string };
+      },
+    ) => Promise<{
+      readonly artifact: {
+        readonly path: string;
+        readonly sha256: string;
+        readonly bytes: number;
+      };
+      readonly receipt?: { readonly path: string };
+    }>;
+  }>,
+): Promise<GatewayCommandFixture> {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-gateway-commands-"));
   const paths: RepositoryPaths = {
     artifactRoot: join(root, "artifacts", "slopcamera", "recordings"),
@@ -493,10 +564,11 @@ async function createFixture(): Promise<GatewayCommandFixture> {
   if (speechRender.exitCode !== 0 || videoRender.exitCode !== 0) {
     throw new Error("Could not create deterministic Gateway output fixtures.");
   }
-  const sdk = new CapturingGatewaySdk(
+  const sdk = options?.sdk ?? new CapturingGatewaySdk(
     new Uint8Array(await readFile(speechOutputPath)),
     new Uint8Array(await readFile(videoOutputPath)),
   );
+  const renderGalleryScene = options?.renderGalleryScene;
   const catalogCalls = { value: 0 };
   const downloadCalls = { value: 0 };
   const networkCalls = { value: 0 };
@@ -550,6 +622,12 @@ async function createFixture(): Promise<GatewayCommandFixture> {
         gatewayMediaSdk: sdk,
         io,
         paths,
+        ...(renderGalleryScene === undefined
+          ? {}
+          : {
+            renderGalleryScene: async input =>
+              await renderGalleryScene(input),
+          }),
       });
       return { exitCode, stderr, stdout };
     },
@@ -1738,6 +1816,960 @@ describe("Gateway CLI commands", () => {
       });
       expect(requiredArray(receipt, "outputs")).toHaveLength(1);
       expect(fixture.sdk.videoCalls).toHaveLength(1);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery runs bounded tracked jobs and composes a durable review sheet", async () => {
+    const sdk = new GalleryGatewaySdk(4);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "weathered copper panel",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "6",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+      expect(`${result.stdout}${result.stderr}`).not.toContain(API_KEY);
+      expect(sdk.imageCalls).toHaveLength(6);
+      expect(sdk.maxInFlight).toBe(4);
+      for (const call of sdk.imageCalls) {
+        expect(call).toMatchObject({ maxRetries: 0, modelId: "bfl/flux-command" });
+        expect(call.prompt).toContain("weathered copper panel");
+      }
+      const summary = parseJsonRecord(result.stdout);
+      expect(summary).toMatchObject({
+        counts: { failed: 0, generated: 6, requested: 6 },
+        kind: "texture",
+        model: "bfl/flux-command",
+      });
+      const candidates = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidates).toHaveLength(6);
+      for (const candidate of candidates) {
+        expect(candidate.status).toBe("generated");
+        const job = parseJsonRecord(
+          await readRelative(fixture, requiredString(candidate, "job")),
+        );
+        expect(job).toMatchObject({
+          operation: "image.generate",
+          request: {
+            candidate: { id: candidate.id, index: candidate.index },
+            galleryKind: "texture",
+          },
+          state: "completed",
+        });
+        const durable = await readFile(
+          resolve(fixture.root, requiredString(candidate, "path")),
+        );
+        expect(durable.byteLength).toBe(PNG_BYTES.byteLength);
+        expect(createHash("sha256").update(durable).digest("hex"))
+          .toBe(requiredString(candidate, "sha256"));
+      }
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      expect(receipt).toMatchObject({
+        clientMaxRetries: 0,
+        galleryKind: "texture",
+        kind: "slopcamera.image-gallery",
+        model: "bfl/flux-command",
+        provider: "vercel-ai-gateway",
+        schemaVersion: 1,
+        subject: "weathered copper panel",
+      });
+      expect(requiredArray(receipt, "candidates")).toHaveLength(6);
+      const sheet = await readFile(
+        resolve(fixture.root, "review/gallery.png"),
+      );
+      expect(sheet.byteLength).toBeGreaterThan(0);
+      expect(`${JSON.stringify(receipt)}${result.stdout}`).not.toContain(API_KEY);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery keeps failed candidates and their ambiguous jobs in the receipt", async () => {
+    const sdk = new GalleryGatewaySdk(1);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const candidatesPath = join(fixture.root, "candidates.json");
+      await writeFile(
+        candidatesPath,
+        JSON.stringify([
+          { id: "keep", prompt: "keep this candidate" },
+          { id: "drop", prompt: "reject-this-candidate" },
+        ]),
+        { mode: 0o600 },
+      );
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "mixed review batch",
+        "--model",
+        "bfl/flux-command",
+        "--candidates",
+        "candidates.json",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      expect(result.stderr).not.toContain(API_KEY);
+      const summary = parseJsonRecord(result.stdout);
+      expect(summary.counts).toEqual({ failed: 1, generated: 1, requested: 2 });
+      const candidates = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidates[0]).toMatchObject({ id: "keep", status: "generated" });
+      expect(candidates[1]).toMatchObject({ id: "drop", status: "failed" });
+      const droppedJob = parseJsonRecord(
+        await readRelative(fixture, requiredString(candidates[1]!, "job")),
+      );
+      expect(droppedJob).toMatchObject({
+        chargeMayHaveOccurred: true,
+        operation: "image.generate",
+        state: "ambiguous",
+      });
+      expect(JSON.stringify(droppedJob)).not.toContain(API_KEY);
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const rows = requiredArray(receipt, "candidates").map(asRecord);
+      expect(rows[1]).toMatchObject({ id: "drop", status: "failed" });
+      expect(typeof rows[1]!.job).toBe("string");
+      expect(JSON.stringify(receipt)).not.toContain(API_KEY);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery refuses to replace outputs before any paid call", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      await mkdir(join(fixture.root, "review"), { recursive: true });
+      await writeFile(join(fixture.root, "review", "gallery.png"), PNG_BYTES);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "existing outputs",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({
+        exitCode: EXIT_CODE.conflict,
+        stdout: "",
+      });
+      expect(result.stderr).not.toContain(API_KEY);
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery rejects conflicting candidate selection flags", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "conflicting selection",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--candidates",
+        "candidates.json",
+        "--vary",
+        "style",
+      ]);
+      expect(result).toMatchObject({
+        exitCode: EXIT_CODE.usage,
+        stdout: "",
+      });
+      expect(result.stderr).toContain("mutually exclusive");
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  test("ai image gallery rejects --tile with --no-tile", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      const conflict = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "conflicting tile flags",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--tile",
+        "--no-tile",
+      ]);
+      expect(conflict).toMatchObject({
+        exitCode: EXIT_CODE.usage,
+        stdout: "",
+      });
+      expect(conflict.stderr).toContain("mutually exclusive");
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  test("ai image gallery tiles texture cells by default", async () => {
+    const sdk = new GalleryGatewaySdk(1);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "weathered copper",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "1",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      const summary = parseJsonRecord(result.stdout);
+      const [candidate] = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidate!.tiled).toBe(true);
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const [row] = requiredArray(receipt, "candidates").map(asRecord);
+      expect(row!.tiled).toBe(true);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery rejects --preview probe on flat kinds", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      for (const argv of [
+        ["ai", "image", "gallery", "x", "--model", "bfl/flux-command",
+          "--output-dir", "review", "--preview", "probe"],
+        ["ai", "image", "gallery", "x", "--model", "bfl/flux-command",
+          "--output-dir", "review", "--preview", "probe", "--kind", "image"],
+        ["ai", "image", "gallery", "x", "--model", "bfl/flux-command",
+          "--output-dir", "review", "--preview", "flat"],
+      ]) {
+        const result = await fixture.execute(argv);
+        expect(result).toMatchObject({ exitCode: EXIT_CODE.usage, stdout: "" });
+        expect(result.stderr).toContain("--preview");
+      }
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  test("ai image gallery --preview probe composites rendered stills with distinct provenance", async () => {
+    const probeScenes: Record<string, unknown>[] = [];
+    const fixture = await createFixture({
+      renderGalleryScene: async input => {
+        const scenePath = resolve(
+          input.application.paths.repositoryRoot,
+          input.source.path,
+        );
+        const scene = asRecord(
+          JSON.parse(await readFile(scenePath, "utf8")),
+        );
+        expect(input.sceneSha256).toBe(
+          spatialSceneSha256(parseSpatialScene(scene)),
+        );
+        probeScenes.push(scene);
+        const index = probeScenes.length;
+        const still = new Uint8Array(await sharp({
+          create: {
+            background: { alpha: 255, b: index * 60, g: 40, r: 200 - index * 40 },
+            channels: 4,
+            height: 32,
+            width: 32,
+          },
+        }).png().toBuffer());
+        const relative = join("probe-stills", `still-${index}.png`);
+        const absolute = join(input.application.paths.repositoryRoot, relative);
+        await mkdir(dirname(absolute), { recursive: true });
+        await writeFile(absolute, still);
+        return {
+          artifact: {
+            bytes: still.byteLength,
+            path: relative,
+            sha256: createHash("sha256").update(still).digest("hex"),
+          },
+        };
+      },
+      sdk: new GalleryGatewaySdk(2),
+    });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "weathered copper",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "2",
+        "--output-dir",
+        "review",
+        "--preview",
+        "probe",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+      expect(probeScenes).toHaveLength(2);
+      for (const scene of probeScenes) {
+        expect(scene.kind).toBe("slopcamera.spatial-scene");
+        // The candidate substituted as the subject material map.
+        const entities = requiredArray(scene, "entities").map(asRecord);
+        const subject = entities.find(
+          entity => entity.entityId === "entity_subject",
+        );
+        expect(asRecord(subject!.material).map).toBe("asset_candidate");
+        const [asset] = requiredArray(scene, "assets").map(asRecord);
+        expect(asset!.assetId).toBe("asset_candidate");
+      }
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      for (const row of requiredArray(receipt, "candidates").map(asRecord)) {
+        const cellImage = asRecord(row.cellImage);
+        // The rendered still and the generated candidate stay distinct.
+        expect(requiredString(cellImage, "path")).not.toBe(
+          requiredString(row, "path"),
+        );
+        expect(requiredString(cellImage, "sha256")).toMatch(/^[0-9a-f]{64}$/u);
+        expect(requiredString(cellImage, "sha256")).not.toBe(
+          requiredString(row, "sha256"),
+        );
+        expect(row.tiled).toBeUndefined();
+        const still = await readFile(
+          resolve(fixture.root, requiredString(cellImage, "path")),
+        );
+        expect(createHash("sha256").update(still).digest("hex")).toBe(
+          requiredString(cellImage, "sha256"),
+        );
+      }
+      // Rendered cells are what the sheet shows: still pixels, not raw bytes.
+      const sheet = await readFile(resolve(fixture.root, "review/gallery.png"));
+      expect(sheet.byteLength).toBeGreaterThan(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery --preview probe keeps the flat candidate when a render fails", async () => {
+    const fixture = await createFixture({
+      renderGalleryScene: () =>
+        Promise.reject(new Error("probe renderer unavailable")),
+      sdk: new GalleryGatewaySdk(1),
+    });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "basalt",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "1",
+        "--output-dir",
+        "review",
+        "--preview",
+        "probe",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const [row] = requiredArray(receipt, "candidates").map(asRecord);
+      expect(row!.status).toBe("generated");
+      expect(row!.cellImage).toBeUndefined();
+      // The generated candidate bytes are still durable and reviewable.
+      const candidateBytes = await readFile(
+        resolve(fixture.root, requiredString(row!, "path")),
+      );
+      expect(candidateBytes.byteLength).toBeGreaterThan(0);
+      const warnings = requiredArray(row!, "warnings");
+      expect(
+        warnings.some(warning => String(warning).includes("Probe preview")),
+      ).toBe(true);
+      // The flat candidate still composites into the sheet for review.
+      const sheet = await readFile(resolve(fixture.root, "review/gallery.png"));
+      expect(sheet.byteLength).toBeGreaterThan(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+});
+
+describe("ai scene gallery", () => {
+  async function writeSceneFixture(fixture: GatewayCommandFixture) {
+    const pixel = new Uint8Array(await sharp({
+      create: {
+        background: { alpha: 255, b: 40, g: 90, r: 200 },
+        channels: 4,
+        height: 32,
+        width: 32,
+      },
+    }).png().toBuffer());
+    const rebound = new Uint8Array(await sharp({
+      create: {
+        background: { alpha: 255, b: 200, g: 60, r: 40 },
+        channels: 4,
+        height: 32,
+        width: 32,
+      },
+    }).png().toBuffer());
+    await mkdir(join(fixture.root, "scenes", "textures"), { recursive: true });
+    await writeFile(join(fixture.root, "scenes", "textures", "pixel.png"), pixel);
+    await mkdir(join(fixture.root, "variant-assets"), { recursive: true });
+    await writeFile(
+      join(fixture.root, "variant-assets", "rebound.png"),
+      rebound,
+    );
+    const scene = {
+      kind: "slopcamera.spatial-scene",
+      schemaVersion: 1,
+      sceneId: "scene_world",
+      coordinates: "right-handed-y-up-meters",
+      durationUs: 1_000_000,
+      entities: [
+        {
+          entityId: "entity_subject",
+          name: "Subject",
+          kind: "mesh",
+          parentId: null,
+          placement: { kind: "world" },
+          origin: { kind: "authored" },
+          visible: true,
+          transform: {
+            position: [0, 0, 0],
+            rotation: [0, 0, 0, 1],
+            scale: [1, 1, 1],
+          },
+          geometry: { kind: "sphere", radius: 1 },
+          material: {
+            kind: "standard",
+            color: "#8899aa",
+            opacity: 1,
+            roughness: 0.5,
+            metalness: 0.1,
+            map: "asset_pixel",
+          },
+        },
+      ],
+      cameras: [
+        {
+          cameraId: "camera_main",
+          name: "Main",
+          pose: { position: [0, 1, 5], rotation: [0, 0, 0, 1] },
+          projection: {
+            kind: "perspective",
+            width: 960,
+            height: 540,
+            near: 0.1,
+            far: 100,
+            fx: 800,
+            fy: 800,
+            cx: 480,
+            cy: 270,
+          },
+        },
+      ],
+      assets: [
+        {
+          assetId: "asset_pixel",
+          payload: {
+            bytes: pixel.byteLength,
+            path: "textures/pixel.png",
+            sha256: createHash("sha256").update(pixel).digest("hex"),
+          },
+          interpretation: {
+            alpha: "opaque",
+            colorSpace: "srgb",
+            height: 32,
+            kind: "image",
+            mimeType: "image/png",
+            width: 32,
+          },
+          dependencies: [],
+          provenance: {
+            description: "Fixture texture.",
+            source: "authored",
+          },
+        },
+      ],
+      animations: [],
+      generators: [],
+      overrides: [],
+    };
+    await writeFile(
+      join(fixture.root, "scenes", "world.scene.json"),
+      `${JSON.stringify(scene, null, 2)}\n`,
+    );
+    const variants = {
+      kind: "slopcamera.scene-variants",
+      schemaVersion: 1,
+      variants: [
+        {
+          id: "dusk",
+          label: "Dusk",
+          patch: {
+            kind: "slopcamera.spatial-scene-patch",
+            schemaVersion: 1,
+            operations: [
+              {
+                kind: "set-color",
+                entityId: "entity_subject",
+                color: "#ff5522",
+              },
+            ],
+          },
+        },
+        {
+          id: "retexture",
+          patch: {
+            kind: "slopcamera.spatial-scene-patch",
+            schemaVersion: 1,
+            operations: [
+              {
+                kind: "add-asset",
+                asset: {
+                  assetId: "asset_variant",
+                  payload: {
+                    bytes: rebound.byteLength,
+                    path: "variant-assets/rebound.png",
+                    sha256: createHash("sha256").update(rebound).digest("hex"),
+                  },
+                  interpretation: {
+                    alpha: "opaque",
+                    colorSpace: "srgb",
+                    height: 32,
+                    kind: "image",
+                    mimeType: "image/png",
+                    width: 32,
+                  },
+                  dependencies: [],
+                  provenance: {
+                    description: "Variant texture.",
+                    source: "authored",
+                  },
+                },
+              },
+              {
+                kind: "set-material",
+                entityId: "entity_subject",
+                material: {
+                  kind: "standard",
+                  color: "#ffffff",
+                  opacity: 1,
+                  roughness: 0.6,
+                  metalness: 0,
+                  map: "asset_variant",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    await writeFile(
+      join(fixture.root, "gallery.variants.json"),
+      `${JSON.stringify(variants, null, 2)}\n`,
+    );
+    return { pixel, rebound };
+  }
+
+  test("renders typed variants into a provenance contact sheet", async () => {
+    const renderedScenes: Record<string, unknown>[] = [];
+    const renderRequests: unknown[] = [];
+    const fixture = await createFixture({
+      renderGalleryScene: async input => {
+        const scenePath = resolve(
+          input.application.paths.repositoryRoot,
+          input.source.path,
+        );
+        const derived = asRecord(
+          JSON.parse(await readFile(scenePath, "utf8")),
+        );
+        expect(input.sceneSha256).toBe(
+          spatialSceneSha256(parseSpatialScene(derived)),
+        );
+        // Every declared payload must resolve beside the derived scene.
+        for (const asset of requiredArray(derived, "assets").map(asRecord)) {
+          const payload = asRecord(asset.payload);
+          const stagedPath = join(
+            dirname(scenePath),
+            requiredString(payload, "path"),
+          );
+          const staged = await readFile(stagedPath);
+          expect(createHash("sha256").update(staged).digest("hex")).toBe(
+            requiredString(payload, "sha256"),
+          );
+          const binding = input.assets?.find(
+            candidate => candidate.assetId === requiredString(asset, "assetId"),
+          );
+          expect(binding).toBeDefined();
+          expect(resolve(
+            input.application.paths.repositoryRoot,
+            binding!.artifact.path,
+          )).toBe(stagedPath);
+          expect(binding!.artifact).toMatchObject({
+            bytes: staged.byteLength,
+            sha256: requiredString(payload, "sha256"),
+          });
+        }
+        expect(input.assets).toHaveLength(requiredArray(derived, "assets").length);
+        renderedScenes.push(derived);
+        renderRequests.push(input.request);
+        const index = renderedScenes.length;
+        const still = new Uint8Array(await sharp({
+          create: {
+            background: { alpha: 255, b: 30 * index, g: 80, r: 160 },
+            channels: 4,
+            height: 48,
+            width: 64,
+          },
+        }).png().toBuffer());
+        const stillRelative = join("renders", `still-${index}.png`);
+        const receiptRelative = join("renders", `receipt-${index}.json`);
+        await mkdir(
+          dirname(resolve(input.application.paths.repositoryRoot, stillRelative)),
+          { recursive: true },
+        );
+        await writeFile(
+          resolve(input.application.paths.repositoryRoot, stillRelative),
+          still,
+        );
+        await writeFile(
+          resolve(input.application.paths.repositoryRoot, receiptRelative),
+          "{}\n",
+        );
+        return {
+          artifact: {
+            bytes: still.byteLength,
+            path: stillRelative,
+            sha256: createHash("sha256").update(still).digest("hex"),
+          },
+          receipt: { path: receiptRelative },
+        };
+      },
+    });
+    try {
+      const { pixel } = await writeSceneFixture(fixture);
+      const sceneBefore = createHash("sha256")
+        .update(await readFile(join(fixture.root, "scenes", "world.scene.json")))
+        .digest("hex");
+      const result = await fixture.execute([
+        "ai", "scene", "gallery", "scenes/world.scene.json",
+        "--variants", "gallery.variants.json",
+        "--output-dir", "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+      // One still per variant, all through the requested beauty frame.
+      expect(renderedScenes).toHaveLength(2);
+      for (const request of renderRequests) {
+        expect(asRecord(request)).toMatchObject({
+          cameraId: "camera_main",
+          mode: { kind: "beauty" },
+          selection: { kind: "frame", timeUs: 0 },
+        });
+      }
+      const summary = parseJsonRecord(result.stdout);
+      expect(summary.kind).toBe("slopcamera.scene-gallery");
+      const sceneText = await readFile(
+        join(fixture.root, "scenes", "world.scene.json"),
+        "utf8",
+      );
+      const baseDigest = spatialSceneSha256(
+        parseSpatialScene(JSON.parse(sceneText)),
+      );
+      expect(summary.baseSceneSha256).toBe(baseDigest);
+      // The authored scene is byte-identical after the run.
+      expect(createHash("sha256").update(sceneText).digest("hex")).toBe(
+        sceneBefore,
+      );
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      expect(receipt.galleryKind).toBe("scene");
+      expect(receipt.provider).toBe("local");
+      expect(receipt.baseSceneSha256).toBe(baseDigest);
+      const rows = requiredArray(receipt, "candidates").map(asRecord);
+      expect(rows).toHaveLength(2);
+      const byId = new Map(rows.map(row => [requiredString(row, "id"), row]));
+      for (const id of ["dusk", "retexture"]) {
+        const row = byId.get(id);
+        expect(row).toBeDefined();
+        expect(row!.status).toBe("generated");
+        const sceneRow = asRecord(row!.scene);
+        expect(requiredString(sceneRow, "patchSha256")).toMatch(/^[0-9a-f]{64}$/u);
+        // The candidate artifact is the derived scene document.
+        const derivedPath = requiredString(row!, "path");
+        expect(derivedPath.endsWith(`review/variants/${id}/scene.json`)).toBe(true);
+        const derivedText = await readFile(derivedPath, "utf8");
+        expect(
+          spatialSceneSha256(parseSpatialScene(JSON.parse(derivedText))),
+        ).toBe(requiredString(sceneRow, "sceneSha256"));
+        expect(createHash("sha256").update(derivedText).digest("hex")).toBe(
+          requiredString(row!, "sha256"),
+        );
+        // The review still stays a distinct artifact from the derived scene.
+        const cellImage = asRecord(row!.cellImage);
+        expect(requiredString(cellImage, "path")).not.toBe(derivedPath);
+        const still = await readFile(requiredString(cellImage, "path"));
+        expect(createHash("sha256").update(still).digest("hex")).toBe(
+          requiredString(cellImage, "sha256"),
+        );
+        // The durable render receipt is inspectable provenance.
+        await readFile(requiredString(row!, "job"));
+      }
+      // Variant-authored payloads resolve beside the derived scene.
+      const staged = await readFile(
+        join(
+          fixture.root,
+          "review/variants/retexture/variant-assets/rebound.png",
+        ),
+      );
+      expect(staged.byteLength).toBeGreaterThan(0);
+      // Inherited payloads resolve beside the derived scene too.
+      const inherited = await readFile(
+        join(fixture.root, "review/variants/dusk/textures/pixel.png"),
+      );
+      expect(createHash("sha256").update(inherited).digest("hex")).toBe(
+        createHash("sha256").update(pixel).digest("hex"),
+      );
+      const sheet = await readFile(resolve(fixture.root, "review/gallery.png"));
+      expect(sheet.byteLength).toBeGreaterThan(0);
+      // No paid or network work happened anywhere in the lane.
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+      expect(fixture.networkCalls.value).toBe(0);
+      expect(fixture.downloadCalls.value).toBe(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("keeps a failed variant render as a reviewable row", async () => {
+    const fixture = await createFixture({
+      renderGalleryScene: async input => {
+        if (input.source.path.includes("retexture")) {
+          throw new Error("renderer exploded");
+        }
+        const still = new Uint8Array(await sharp({
+          create: {
+            background: { alpha: 255, b: 10, g: 10, r: 10 },
+            channels: 4,
+            height: 32,
+            width: 32,
+          },
+        }).png().toBuffer());
+        const stillRelative = join("renders", "still-dusk.png");
+        await mkdir(
+          dirname(resolve(input.application.paths.repositoryRoot, stillRelative)),
+          { recursive: true },
+        );
+        await writeFile(
+          resolve(input.application.paths.repositoryRoot, stillRelative),
+          still,
+        );
+        return {
+          artifact: {
+            bytes: still.byteLength,
+            path: stillRelative,
+            sha256: createHash("sha256").update(still).digest("hex"),
+          },
+        };
+      },
+    });
+    try {
+      await writeSceneFixture(fixture);
+      const result = await fixture.execute([
+        "ai", "scene", "gallery", "scenes/world.scene.json",
+        "--variants", "gallery.variants.json",
+        "--output-dir", "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const rows = requiredArray(receipt, "candidates").map(asRecord);
+      const byId = new Map(rows.map(row => [requiredString(row, "id"), row]));
+      expect(byId.get("dusk")!.status).toBe("generated");
+      const failed = byId.get("retexture")!;
+      expect(failed.status).toBe("failed");
+      expect(requiredString(failed, "error")).toContain("renderer exploded");
+      // Patch provenance survives the failure so the row stays diagnosable.
+      const sceneRow = asRecord(failed.scene);
+      expect(requiredString(sceneRow, "patchSha256")).toMatch(/^[0-9a-f]{64}$/u);
+      // The derived scene document itself remains identified durable evidence.
+      const derivedPath = requiredString(failed, "path");
+      const derived = await readFile(derivedPath);
+      expect(createHash("sha256").update(derived).digest("hex")).toBe(
+        requiredString(failed, "sha256"),
+      );
+      expect(failed.mediaType).toBe("application/json");
+      const sheet = await readFile(resolve(fixture.root, "review/gallery.png"));
+      expect(sheet.byteLength).toBeGreaterThan(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("rejects existing outputs, escaped inputs, and an unknown camera without rendering", async () => {
+    const renders: string[] = [];
+    const external = await mkdtemp(join(tmpdir(), "slopcamera-external-scene-"));
+    const fixture = await createFixture({
+      renderGalleryScene: async input => {
+        renders.push(input.source.path);
+        throw new Error("unreachable");
+      },
+    });
+    try {
+      await writeSceneFixture(fixture);
+      await mkdir(join(fixture.root, "review"), { recursive: true });
+      await writeFile(join(fixture.root, "review", "gallery.png"), "stale");
+      const replaced = await fixture.execute([
+        "ai", "scene", "gallery", "scenes/world.scene.json",
+        "--variants", "gallery.variants.json",
+        "--output-dir", "review",
+      ]);
+      expect(replaced.exitCode).toBe(EXIT_CODE.conflict);
+      expect(replaced.stderr).toContain("never replaced");
+      const camera = await fixture.execute([
+        "ai", "scene", "gallery", "scenes/world.scene.json",
+        "--variants", "gallery.variants.json",
+        "--output-dir", "other-review",
+        "--camera", "camera_absent",
+      ]);
+      expect(camera.exitCode).toBe(EXIT_CODE["invalid-data"]);
+      expect(camera.stderr).toContain("not a scene camera");
+      const externalScene = join(external, "world.scene.json");
+      await writeFile(
+        externalScene,
+        await readFile(join(fixture.root, "scenes", "world.scene.json")),
+      );
+      const escaped = await fixture.execute([
+        "ai", "scene", "gallery", externalScene,
+        "--variants", "gallery.variants.json",
+        "--output-dir", "escaped-review",
+      ]);
+      expect(escaped.exitCode).toBe(EXIT_CODE["unsafe-path"]);
+      expect(escaped.stderr).toContain("inside the repository");
+      expect(renders).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+      await rm(external, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("bounds parallel variant renders", async () => {
+    let active = 0;
+    let maximumActive = 0;
+    let renderIndex = 0;
+    const fixture = await createFixture({
+      renderGalleryScene: async input => {
+        const index = ++renderIndex;
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await Bun.sleep(40);
+        active -= 1;
+        const still = new Uint8Array(await sharp({
+          create: {
+            background: { alpha: 255, b: index * 10, g: 20, r: 30 },
+            channels: 4,
+            height: 16,
+            width: 16,
+          },
+        }).png().toBuffer());
+        const path = join("renders", `parallel-${index}.png`);
+        await mkdir(dirname(resolve(input.application.paths.repositoryRoot, path)), {
+          recursive: true,
+        });
+        await writeFile(resolve(input.application.paths.repositoryRoot, path), still);
+        return {
+          artifact: {
+            bytes: still.byteLength,
+            path,
+            sha256: createHash("sha256").update(still).digest("hex"),
+          },
+        };
+      },
+    });
+    try {
+      await writeSceneFixture(fixture);
+      const colors = ["#110000", "#220000", "#330000", "#440000", "#550000", "#660000"];
+      await writeFile(
+        join(fixture.root, "gallery.variants.json"),
+        `${JSON.stringify({
+          kind: "slopcamera.scene-variants",
+          schemaVersion: 1,
+          variants: colors.map((color, index) => ({
+            id: `variant-${index + 1}`,
+            patch: {
+              kind: "slopcamera.spatial-scene-patch",
+              schemaVersion: 1,
+              operations: [{
+                kind: "set-color",
+                entityId: "entity_subject",
+                color,
+              }],
+            },
+          })),
+        })}\n`,
+      );
+      const result = await fixture.execute([
+        "ai", "scene", "gallery", "scenes/world.scene.json",
+        "--variants", "gallery.variants.json",
+        "--output-dir", "parallel-review",
+      ]);
+      expect(result.exitCode).toBe(0);
+      expect(renderIndex).toBe(6);
+      expect(maximumActive).toBe(4);
     } finally {
       await rm(fixture.root, { force: true, recursive: true });
     }

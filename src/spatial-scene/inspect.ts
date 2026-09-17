@@ -83,7 +83,9 @@ export function inspectSpatialScene(input: unknown): SpatialSceneInspection {
           max: union.max.map((value, axis) => Math.max(value, next.max[axis]!)) as unknown as Bounds["max"],
         })),
       }
-      const assetIds = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
+      const assetIds = entity.kind === "mesh"
+        ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]]
+        : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds }
     }),
     cameras: scene.cameras, assets: scene.assets.map(manifest => ({ assetId: manifest.assetId, manifestSha256: digests[manifest.assetId]!, manifest })), generators: scene.generators,

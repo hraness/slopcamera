@@ -5,6 +5,7 @@ import {
   generateSlopcameraImageFile,
   type SlopcameraGenerateDependencies,
 } from "../generate.js"
+import { generateSlopcameraImageGallery } from "../image-gallery.js"
 import { builtInIcons } from "../icons.js"
 import { lintDiagram } from "../lint.js"
 import {
@@ -14,6 +15,7 @@ import {
   searchSlopcameraOperations,
   withSlopcameraOperationHostAdmission,
   type CheckSlopcameraOperationInput,
+  type GallerySlopcameraOperationInput,
   type GenerateSlopcameraOperationInput,
   type SlopcameraOperationCode,
   type RenderSlopcameraOperationInput,
@@ -853,6 +855,30 @@ export class SlopcameraMcpToolRuntime {
           )
         },
       ))
+    }
+    if (options.operation === "slopcamera.image.gallery") {
+      const input = parseSlopcameraOperationInput(
+        options.operation,
+        options.input,
+      ) as GallerySlopcameraOperationInput
+      return await this.withHostAdmission(options.operation, async () => {
+        const output = await this.boundary.prepareOutputDirectory(input.outputDir)
+        const receipt = await generateSlopcameraImageGallery(
+          { ...input, outputDir: output.absolutePath },
+          this.generateDependencies,
+        )
+        return successResult(
+          `Executed ${options.operation}: ${receipt.counts.generated}/${receipt.counts.requested} candidates in ${output.relativePath}.`,
+          {
+            ok: true,
+            operation: options.operation,
+            result: {
+              ...receipt,
+              outputDir: output.relativePath,
+            },
+          },
+        )
+      })
     }
     return await this.withHostAdmission(options.operation, async () => {
       const input = parseSlopcameraOperationInput(
