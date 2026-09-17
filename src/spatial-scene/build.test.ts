@@ -234,6 +234,14 @@ describe("placement helpers", () => {
     expect(scatter({ seed: 7, count: 8, region })).not.toEqual(scatter({ seed: 8, count: 8, region }))
     expect(scatter({ seed: 0, count: 0, region })).toEqual([])
     expect(() => scatter({ seed: 1, count: 50, region: { minX: 0, maxX: 0.1, minZ: 0, maxZ: 0.1 }, minSpacing: 1 })).toThrow(RangeError)
+    const instanced = scatter({
+      seed: 42, count: 3, region,
+      instanced: true,
+      entity: { entityId: "entity_scattered", name: "Scattered", geometry: { kind: "box", size: [1, 1, 1] }, material: { kind: "unlit", color: "#ffffff", opacity: 1 } },
+    })
+    expect(instanced.kind).toBe("mesh")
+    expect(instanced.instances).toHaveLength(3)
+    expect(instanced.instances).toEqual(scatter({ seed: 42, count: 3, region }).map(([x, , z]) => ({ position: [x, 0, z], rotation: [0, 0, 0, 1], scale: [1, 1, 1] })))
   })
 
   test("onTopOf stacks centers horizontally and rests min-Y on the target's top", () => {

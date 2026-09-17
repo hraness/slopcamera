@@ -112,9 +112,14 @@ export const SpatialAssetManifestSchema = z.strictObject({
   }),
 })
 const color = z.string().regex(/^#[a-fA-F0-9]{6}$/u)
+/** Emissive contribution on a standard material: sRGB hex color times a bounded scalar intensity. */
+export const SpatialEmissiveSchema = z.strictObject({
+  color,
+  intensity: z.number().finite().min(0).max(100_000),
+})
 export const SpatialMaterialSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("unlit"), color, opacity: unit }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit }),
+  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, emissive: SpatialEmissiveSchema.optional() }),
 ])
 export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -125,6 +130,18 @@ export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
   }),
 ])
+/**
+ * Spot cone parameters: `angle` is the outer cone half-angle in radians measured
+ * from the light's local -Z axis; `penumbra` is the angular falloff fraction in
+ * [0,1]. `distance` bounds the range in meters (0 is unbounded, the renderer
+ * default) and `decay` is the physical falloff exponent.
+ */
+export const SpatialSpotLightSchema = z.strictObject({
+  angle: z.number().finite().min(0.000001).max(Math.PI / 2),
+  penumbra: unit,
+  distance: z.number().finite().min(0).max(1_000_000).optional(),
+  decay: z.number().finite().min(0).max(1_000).optional(),
+})
 export const SpatialOriginSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("authored") }),
   z.strictObject({ kind: z.literal("generated"), generatorId: SpatialGeneratorIdSchema, key: z.string().min(1).max(256) }),
@@ -151,14 +168,24 @@ const surfaceBase = {
 }
 export const SpatialEntitySchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...entityBase, kind: z.literal("group") }),
-  z.strictObject({ ...entityBase, kind: z.literal("mesh"), geometry: SpatialGeometrySchema, material: SpatialMaterialSchema }),
+  z.strictObject({ ...entityBase, kind: z.literal("mesh"), geometry: SpatialGeometrySchema, material: SpatialMaterialSchema,
+    /** Optional shadow participation; omitted means no casting and no receiving. */
+    castShadow: z.boolean().optional(), receiveShadow: z.boolean().optional(),
+    /** Optional local-space instancing: every transform is drawn inside the entity's own local frame. */
+    instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).optional() }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("image") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("diagram") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16_384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
-  z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point"]), color, intensity: z.number().finite().min(0).max(100_000) }),
+  z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point", "spot"]), color, intensity: z.number().finite().min(0).max(100_000),
+    spot: SpatialSpotLightSchema.optional(), shadow: z.boolean().optional() }),
   z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
-])
+]).superRefine((entity, context) => {
+  if (entity.kind !== "light") return
+  if (entity.light === "spot" && entity.spot === undefined) context.addIssue({ code: "custom", path: ["spot"], message: "Spot lights require their spot cone parameters." })
+  if (entity.light !== "spot" && entity.spot !== undefined) context.addIssue({ code: "custom", path: ["spot"], message: "Only spot lights may carry spot cone parameters." })
+  if (entity.light === "ambient" && entity.shadow !== undefined) context.addIssue({ code: "custom", path: ["shadow"], message: "Ambient lights cannot cast shadows; only directional, point, and spot lights may declare shadow." })
+})
 
 const key = <T extends z.ZodType>(value: T) => z.strictObject({ timeUs: SpatialTimeUsSchema, value })
 const channelBase = { channelId: SpatialChannelIdSchema, targetId: z.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) }
@@ -209,6 +236,11 @@ export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
   z.strictObject({ kind: z.literal("set-color"), entityId: SpatialEntityIdSchema, color }),
   z.strictObject({ kind: z.literal("set-opacity"), entityId: SpatialEntityIdSchema, opacity: unit }),
+  z.strictObject({ kind: z.literal("set-emissive"), entityId: SpatialEntityIdSchema, emissive: SpatialEmissiveSchema.nullable() }),
+  z.strictObject({ kind: z.literal("set-spot"), entityId: SpatialEntityIdSchema, spot: SpatialSpotLightSchema }),
+  z.strictObject({ kind: z.literal("set-instances"), entityId: SpatialEntityIdSchema, instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).nullable() }),
+  z.strictObject({ kind: z.literal("set-mesh-shadow"), entityId: SpatialEntityIdSchema, castShadow: z.boolean().nullable(), receiveShadow: z.boolean().nullable() }),
+  z.strictObject({ kind: z.literal("set-light-shadow"), entityId: SpatialEntityIdSchema, shadow: z.boolean().nullable() }),
   z.strictObject({ kind: z.literal("set-camera"), camera: SpatialCameraSchema }),
   z.strictObject({ kind: z.literal("set-channel"), channel: SpatialAnimationSchema }),
   z.strictObject({ kind: z.literal("remove-channel"), channelId: SpatialChannelIdSchema }),
@@ -262,6 +294,11 @@ export const EvaluatedSpatialSceneSchema = z.strictObject({
 type DeepReadonly<T> = T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> } : T
 export type SpatialSceneV1 = DeepReadonly<z.infer<typeof SpatialSceneV1Schema>>
 export type SpatialEntity = DeepReadonly<z.infer<typeof SpatialEntitySchema>>
+export type SpatialMaterial = DeepReadonly<z.infer<typeof SpatialMaterialSchema>>
+export type SpatialEmissive = DeepReadonly<z.infer<typeof SpatialEmissiveSchema>>
+export type SpatialGeometry = DeepReadonly<z.infer<typeof SpatialGeometrySchema>>
+export type SpatialSpotLight = DeepReadonly<z.infer<typeof SpatialSpotLightSchema>>
+export type SpatialPlacement = DeepReadonly<z.infer<typeof SpatialPlacementSchema>>
 export type SpatialCamera = DeepReadonly<z.infer<typeof SpatialCameraSchema>>
 export type SpatialProjection = DeepReadonly<z.infer<typeof SpatialProjectionSchema>>
 export type SpatialTransform = DeepReadonly<z.infer<typeof SpatialTransformSchema>>

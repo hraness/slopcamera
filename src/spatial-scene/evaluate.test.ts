@@ -96,7 +96,7 @@ describe("immutable absolute-time spatial evaluation", () => {
   test("inspection reports authored bounds and never claims decoded GLB bounds", () => {
     const box = inspectSpatialScene(fixtureScene()).entities[0]!
     expect(box.bounds).toEqual({ status: "authored-enclosure", coordinateDomain: { kind: "world" }, atTimeUs: 0, bounds: { min: [-1, -2, -3], max: [1, 2, 3] } })
-    expect(box.editableControls).toEqual(["color", "opacity", "transform"])
+    expect(box.editableControls).toEqual(["color", "opacity", "transform", "instances", "castShadow", "receiveShadow"])
     const asset = { ...fixtureAsset("asset_model"), interpretation: { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" } }
     const scene = { ...fixtureScene(), assets: [asset], entities: [{ ...fixtureEntity(), geometry: { kind: "asset", assetId: "asset_model" } }] }
     const inspection = inspectSpatialScene(scene)

@@ -1,7 +1,7 @@
 import { deepFreezeJson } from "../code/json-snapshot.js"
 import { SpatialScenePatchV1Schema, type SpatialEntity, type SpatialSceneV1 } from "./contracts.js"
 import { applySpatialEntityOverride } from "./evaluate.js"
-import { parseSpatialScene, parseSpatialValue, SpatialSceneError, spatialAssetClosureDigests, spatialValueSha256 } from "./identity.js"
+import { parseSpatialScene, parseSpatialValue, SpatialSceneError, spatialAssetClosureDigests, spatialPropertySupported, spatialValueSha256 } from "./identity.js"
 
 export interface SpatialSceneDiffEntry {
   readonly kind: "added" | "removed" | "changed"
@@ -87,6 +87,46 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
       case "set-transform": entities.set(operation.entityId, { ...authored(operation.entityId), transform: operation.transform }); break
       case "set-color": entities.set(operation.entityId, applySpatialEntityOverride(authored(operation.entityId), { entityId: operation.entityId, property: "color", value: operation.color })); break
       case "set-opacity": entities.set(operation.entityId, applySpatialEntityOverride(authored(operation.entityId), { entityId: operation.entityId, property: "opacity", value: operation.opacity })); break
+      case "set-emissive": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "mesh" || entity.material.kind !== "standard") throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard material.", "operations")
+        if (!spatialPropertySupported(entity, "color")) throw new SpatialSceneError("conflict", "Source-material mode leaves emissive control to the retained GLB material.", "operations")
+        const { emissive: _cleared, ...material } = entity.material
+        entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } })
+        break
+      }
+      case "set-spot": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "light" || entity.light !== "spot") throw new SpatialSceneError("conflict", "Spot cone edits require an authored spot light.", "operations")
+        entities.set(operation.entityId, { ...entity, spot: operation.spot })
+        break
+      }
+      case "set-instances": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "mesh") throw new SpatialSceneError("conflict", "Instance edits apply to authored mesh entities.", "operations")
+        const { instances: _cleared, ...rest } = entity
+        entities.set(operation.entityId, operation.instances === null ? rest : { ...rest, instances: operation.instances })
+        break
+      }
+      case "set-mesh-shadow": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "mesh") throw new SpatialSceneError("conflict", "Mesh shadow flags apply to authored mesh entities.", "operations")
+        const { castShadow: _cast, receiveShadow: _receive, ...rest } = entity
+        entities.set(operation.entityId, {
+          ...rest,
+          ...(operation.castShadow === null ? {} : { castShadow: operation.castShadow }),
+          ...(operation.receiveShadow === null ? {} : { receiveShadow: operation.receiveShadow }),
+        })
+        break
+      }
+      case "set-light-shadow": {
+        const entity = authored(operation.entityId)
+        if (entity.kind !== "light") throw new SpatialSceneError("conflict", "Light shadow flags apply to authored light entities.", "operations")
+        if (entity.light === "ambient" && operation.shadow !== null) throw new SpatialSceneError("conflict", "Ambient lights cannot cast shadows.", "operations")
+        const { shadow: _shadow, ...rest } = entity
+        entities.set(operation.entityId, operation.shadow === null ? rest : { ...rest, shadow: operation.shadow })
+        break
+      }
       case "set-camera": cameras.set(operation.camera.cameraId, operation.camera); break
       case "set-channel": animations.set(operation.channel.channelId, operation.channel); break
       case "remove-channel":
