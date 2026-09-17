@@ -83,6 +83,7 @@ import {
   spatialAssetClosureDigests,
   spatialAssetManifestSha256,
   spatialAuditDefaultTimesUs,
+  spatialEntityLocalBounds,
   spatialGeneratorOutputSha256,
   spatialGlbBounds,
   spatialPropertySupported,
@@ -96,7 +97,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-j24d14ns.js";
+} from "../index-rmsyybkf.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -1737,16 +1738,265 @@ function frameFitPose(boundsInput, projectionInput, marginInput = 0.1) {
   ], [0, 0, 0, 1]);
 }
 
-// src/spatial-scene/generate.ts
+// src/spatial-scene/solve.ts
 import { z as z4 } from "zod";
+var SPATIAL_SOLVE_LIMITS = Object.freeze({
+  goals: 64,
+  relationsPerGoal: 8,
+  bases: 1024
+});
+var SPATIAL_SOLVE_PENDING_SCENE_SHA256 = "0".repeat(64);
+
+class SpatialSolveError extends Error {
+  code;
+  path;
+  constructor(code, message, path = "solve") {
+    super(message);
+    this.name = "SpatialSolveError";
+    this.code = code;
+    this.path = path;
+  }
+}
+var SpatialSolveEntityKeySchema = SpatialEntityIdSchema;
+var SpatialSolveAnchorKeySchema = z4.string().min(1).max(128).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u, "Solve keys start alphanumeric and may contain _ or -.");
+var axisSchema = z4.enum(["x", "y", "z"]);
+var boundedNumber = z4.number().finite().min(-1e6).max(1e6);
+var positiveDimension = z4.number().finite().min(0.000001).max(1e6);
+var scaleTuple = z4.tuple([positiveDimension, positiveDimension, positiveDimension]);
+var SpatialSolveBoundsSchema = z4.strictObject({ min: SpatialVec3Schema, max: SpatialVec3Schema }).refine((bounds2) => bounds2.min.every((value, index) => value <= bounds2.max[index]), "Bounds min must not exceed max.");
+var SpatialSolveRelationSchema = z4.discriminatedUnion("kind", [
+  z4.strictObject({ kind: z4.literal("onTopOf"), target: SpatialSolveAnchorKeySchema }),
+  z4.strictObject({
+    kind: z4.literal("nextTo"),
+    target: SpatialSolveAnchorKeySchema,
+    axis: axisSchema.optional(),
+    side: z4.enum(["before", "after"]).optional(),
+    gap: boundedNumber.optional()
+  }),
+  z4.strictObject({ kind: z4.literal("facing"), target: SpatialSolveAnchorKeySchema, up: SpatialVec3Schema.optional() }),
+  z4.strictObject({
+    kind: z4.literal("align"),
+    target: SpatialSolveAnchorKeySchema,
+    axis: axisSchema,
+    edge: z4.enum(["min", "center", "max"]).optional()
+  }),
+  z4.strictObject({
+    kind: z4.literal("at"),
+    position: SpatialVec3Schema.optional(),
+    rotation: SpatialQuaternionSchema.optional(),
+    scale: scaleTuple.optional()
+  }).refine((relation) => relation.position !== undefined || relation.rotation !== undefined || relation.scale !== undefined, "An at relation sets at least one of position, rotation, or scale."),
+  z4.strictObject({ kind: z4.literal("groundSnap"), floorY: boundedNumber.optional() })
+]);
+var SpatialSolveGoalSchema = z4.strictObject({
+  entityKey: SpatialSolveEntityKeySchema,
+  relations: z4.array(SpatialSolveRelationSchema).min(1).max(SPATIAL_SOLVE_LIMITS.relationsPerGoal)
+});
+var SpatialSolveBaseSchema = z4.strictObject({
+  transform: SpatialTransformSchema,
+  bounds: SpatialSolveBoundsSchema.optional()
+});
+var SpatialSolveRequestSchema = z4.strictObject({
+  goals: z4.array(SpatialSolveGoalSchema).min(1).max(SPATIAL_SOLVE_LIMITS.goals),
+  bases: z4.record(SpatialSolveAnchorKeySchema, SpatialSolveBaseSchema)
+});
+var SpatialSolveBasePatchSchema = z4.strictObject({
+  transform: SpatialTransformSchema.optional(),
+  bounds: SpatialSolveBoundsSchema.optional()
+});
+var SpatialSolveGoalsFileSchema = z4.strictObject({
+  goals: z4.array(SpatialSolveGoalSchema).min(1).max(SPATIAL_SOLVE_LIMITS.goals),
+  bases: z4.record(SpatialSolveAnchorKeySchema, SpatialSolveBasePatchSchema).optional()
+});
+function parseSolveRequest(input) {
+  let parsed;
+  try {
+    parsed = parseSpatialValue(SpatialSolveRequestSchema, input, "solve request");
+  } catch (error) {
+    if (error instanceof SpatialSceneError)
+      throw new SpatialSolveError("invalid-data", error.message, error.path);
+    throw error;
+  }
+  if (Object.keys(parsed.bases).length > SPATIAL_SOLVE_LIMITS.bases) {
+    throw new SpatialSolveError("invalid-data", `Solve bases are bounded to ${SPATIAL_SOLVE_LIMITS.bases} entries.`, "bases");
+  }
+  const request = parsed;
+  return request;
+}
+function orderGoals(goals, dependencies) {
+  const remaining = new Map(goals.map((goal) => [goal.entityKey, goal]));
+  const ordered = [];
+  for (;; ) {
+    const ready = goals.find((goal) => {
+      if (!remaining.has(goal.entityKey))
+        return false;
+      for (const dependency of dependencies.get(goal.entityKey))
+        if (remaining.has(dependency))
+          return false;
+      return true;
+    });
+    if (ready === undefined)
+      break;
+    remaining.delete(ready.entityKey);
+    ordered.push(ready);
+  }
+  if (remaining.size === 0)
+    return ordered;
+  const stack2 = [];
+  const seen = new Set;
+  let current = goals.find((goal) => remaining.has(goal.entityKey)).entityKey;
+  while (current !== undefined && remaining.has(current) && !seen.has(current)) {
+    seen.add(current);
+    stack2.push(current);
+    current = [...dependencies.get(current)].find((dependency) => remaining.has(dependency));
+  }
+  const from = current === undefined ? 0 : stack2.indexOf(current);
+  const cycle = stack2.slice(from === -1 ? 0 : from);
+  if (current !== undefined)
+    cycle.push(current);
+  throw new SpatialSolveError("relation-cycle", `Relation goals form a cycle: ${cycle.join(" \u2192 ")}.`, "goals");
+}
+function requireState(states, key, path) {
+  const state = states.get(key);
+  if (state === undefined) {
+    throw new SpatialSolveError("unknown-entity", `Relation target ${key} has no base and is not a solve goal.`, path);
+  }
+  return state;
+}
+function requireBounds(state, key, kind, path) {
+  if (state.bounds === undefined) {
+    throw new SpatialSolveError("bounds-unknown", `Entity ${key} has no bounds; ${kind} needs local bounds on every participant.`, path);
+  }
+  return state.bounds;
+}
+function emitTransform2(transform3, path) {
+  try {
+    return parseSpatialValue(SpatialTransformSchema, {
+      position: [...transform3.position],
+      rotation: [...transform3.rotation],
+      scale: [...transform3.scale]
+    }, "solved transform");
+  } catch (error) {
+    if (error instanceof SpatialSceneError)
+      throw new SpatialSolveError("relation-failed", error.message, path);
+    throw error;
+  }
+}
+function applyRelation(relation, entityKey, mover, states, path) {
+  try {
+    switch (relation.kind) {
+      case "onTopOf": {
+        const target = requireState(states, relation.target, path);
+        return onTopOf(requireBounds(mover, entityKey, relation.kind, path), mover.transform, requireBounds(target, relation.target, relation.kind, path), target.transform);
+      }
+      case "nextTo": {
+        const target = requireState(states, relation.target, path);
+        return nextTo(requireBounds(mover, entityKey, relation.kind, path), mover.transform, requireBounds(target, relation.target, relation.kind, path), target.transform, {
+          ...relation.axis === undefined ? {} : { axis: relation.axis },
+          ...relation.side === undefined ? {} : { side: relation.side },
+          ...relation.gap === undefined ? {} : { gap: relation.gap }
+        });
+      }
+      case "facing": {
+        const target = requireState(states, relation.target, path);
+        return facing(mover.transform, target.transform.position, relation.up ?? [0, 1, 0]);
+      }
+      case "align": {
+        const target = requireState(states, relation.target, path);
+        const moverBounds = requireBounds(mover, entityKey, relation.kind, path);
+        const targetBounds = requireBounds(target, relation.target, relation.kind, path);
+        const entries = [
+          { entityId: entityKey, transform: mover.transform, bounds: moverBounds },
+          { entityId: relation.target, transform: target.transform, bounds: targetBounds }
+        ];
+        const [moved2, anchorMoved] = align(entries, relation.axis, relation.edge ?? "center");
+        const correction = target.transform.position.map((value, index) => value - anchorMoved.position[index]);
+        return emitTransform2({
+          position: moved2.position.map((value, index) => value + correction[index]),
+          rotation: moved2.rotation,
+          scale: moved2.scale
+        }, path);
+      }
+      case "at":
+        return emitTransform2({
+          position: relation.position ?? mover.transform.position,
+          rotation: relation.rotation ?? mover.transform.rotation,
+          scale: relation.scale ?? mover.transform.scale
+        }, path);
+      case "groundSnap": {
+        const bounds2 = requireBounds(mover, entityKey, relation.kind, path);
+        const world = transformBounds(composeTransform(mover.transform), bounds2);
+        return groundSnap(mover.transform, mover.transform.position[1] - world.min[1], relation.floorY ?? 0);
+      }
+    }
+  } catch (error) {
+    if (error instanceof SpatialSolveError)
+      throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new SpatialSolveError("relation-failed", `${relation.kind} failed: ${message}`, path);
+  }
+}
+function solveSpatialRelations(input) {
+  const request = parseSolveRequest(input);
+  const goalKeys = new Set;
+  for (const [index, goal] of request.goals.entries()) {
+    if (goalKeys.has(goal.entityKey)) {
+      throw new SpatialSolveError("duplicate-goal", `Duplicate solve goal for ${goal.entityKey}.`, `goals[${index}]`);
+    }
+    goalKeys.add(goal.entityKey);
+  }
+  const states = new Map;
+  for (const [key, base] of Object.entries(request.bases)) {
+    states.set(key, { transform: base.transform, bounds: base.bounds });
+  }
+  const dependencies = new Map;
+  for (const [index, goal] of request.goals.entries()) {
+    if (!states.has(goal.entityKey)) {
+      throw new SpatialSolveError("unknown-entity", `Goal entity ${goal.entityKey} has no base transform; add bases.${goal.entityKey}.`, `goals[${index}]`);
+    }
+    const required = new Set;
+    for (const [relationIndex, relation] of goal.relations.entries()) {
+      if (!("target" in relation))
+        continue;
+      const path = `goals[${index}].relations[${relationIndex}].target`;
+      if (!states.has(relation.target) && !goalKeys.has(relation.target)) {
+        throw new SpatialSolveError("unknown-entity", `Relation target ${relation.target} has no base and is not a solve goal.`, path);
+      }
+      if (goalKeys.has(relation.target))
+        required.add(relation.target);
+    }
+    dependencies.set(goal.entityKey, required);
+  }
+  for (const goal of orderGoals(request.goals, dependencies)) {
+    const state = states.get(goal.entityKey);
+    const index = request.goals.indexOf(goal);
+    for (const [relationIndex, relation] of goal.relations.entries()) {
+      state.transform = applyRelation(relation, goal.entityKey, state, states, `goals[${index}].relations[${relationIndex}]`);
+    }
+  }
+  const transforms = {};
+  for (const goal of request.goals) {
+    transforms[goal.entityKey] = emitTransform2(states.get(goal.entityKey).transform, `transforms.${goal.entityKey}`);
+  }
+  const patch = parseSpatialValue(SpatialScenePatchV1Schema, {
+    kind: "slopcamera.spatial-scene-patch",
+    schemaVersion: 1,
+    expectedSceneSha256: SPATIAL_SOLVE_PENDING_SCENE_SHA256,
+    operations: request.goals.map((goal) => ({ kind: "set-transform", entityId: goal.entityKey, transform: transforms[goal.entityKey] }))
+  }, "solve patch");
+  return deepFreezeJson({ transforms, patch });
+}
+
+// src/spatial-scene/generate.ts
+import { z as z5 } from "zod";
 var SPATIAL_GENERATOR_LIMITS = Object.freeze({
   moduleSourceBytes: 1048576,
   parametersBytes: 65536,
   parametersDepth: 16,
   parametersValues: 8192
 });
-var moduleResultSchema = z4.strictObject({
-  entities: z4.array(z4.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
+var moduleResultSchema = z5.strictObject({
+  entities: z5.array(z5.unknown()).max(SPATIAL_SCENE_LIMITS.entities),
   editableKeys: SpatialGeneratorSchema.shape.editableKeys.optional()
 });
 function parseSpatialGeneratorParameters(input) {
@@ -1893,25 +2143,25 @@ function mergeSpatialGeneratorOutput(scene, generator, entities) {
 }
 
 // src/spatial-scene/camera-track.ts
-import { z as z5 } from "zod";
+import { z as z6 } from "zod";
 var SPATIAL_CAMERA_TRACK_MAX_FRAMES = 2048;
-var clockSchema = z5.strictObject({
+var clockSchema = z6.strictObject({
   startUs: SpatialTimeUsSchema,
   frameRate: SpatialFrameRateSchema,
-  frameCount: z5.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
+  frameCount: z6.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
 });
-var rationalSchema = z5.strictObject({
-  numerator: z5.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
-  denominator: z5.string().regex(/^[1-9][0-9]{0,6}$/u)
+var rationalSchema = z6.strictObject({
+  numerator: z6.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
+  denominator: z6.string().regex(/^[1-9][0-9]{0,6}$/u)
 });
-var SpatialCameraTrackSchema = z5.strictObject({
-  kind: z5.literal("slopcamera.spatial-camera-track"),
-  schemaVersion: z5.literal(1),
+var SpatialCameraTrackSchema = z6.strictObject({
+  kind: z6.literal("slopcamera.spatial-camera-track"),
+  schemaVersion: z6.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   clock: clockSchema,
-  samples: z5.array(z5.strictObject({
-    frameIndex: z5.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
+  samples: z6.array(z6.strictObject({
+    frameIndex: z6.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
     timeUs: SpatialTimeUsSchema,
     exactTimeUs: rationalSchema,
     camera: SpatialCameraSchema
@@ -2004,10 +2254,12 @@ export {
   spatialGeneratorAttemptId,
   spatialFrameSample,
   spatialFrameCount,
+  spatialEntityLocalBounds,
   spatialAuditDefaultTimesUs,
   spatialAssetManifestSha256,
   spatialAssetClosureDigests,
   sortSpatialBy,
+  solveSpatialRelations,
   slopcameraCodeErrorMessage,
   slerpQuaternion,
   sha256Hex,
@@ -2098,6 +2350,16 @@ export {
   SpatialVec3Schema,
   SpatialTransformSchema,
   SpatialTimeUsSchema,
+  SpatialSolveRequestSchema,
+  SpatialSolveRelationSchema,
+  SpatialSolveGoalsFileSchema,
+  SpatialSolveGoalSchema,
+  SpatialSolveError,
+  SpatialSolveEntityKeySchema,
+  SpatialSolveBoundsSchema,
+  SpatialSolveBaseSchema,
+  SpatialSolveBasePatchSchema,
+  SpatialSolveAnchorKeySchema,
   SpatialShotV1Schema,
   SpatialShotIdSchema,
   SpatialSceneV1Schema,
@@ -2175,6 +2437,8 @@ export {
   SlopcameraCodeError,
   SerializedRefV1Schema,
   SPATIAL_SPLAT_PROXY_REPRESENTATION,
+  SPATIAL_SOLVE_PENDING_SCENE_SHA256,
+  SPATIAL_SOLVE_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SPATIAL_REVIEW_UPLOAD_POLICY,
   SPATIAL_REVIEW_SEVERITIES,
