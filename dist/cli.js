@@ -6,23 +6,27 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-w0eks13n.js";
+} from "./index-ka4tvypf.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
-import"./index-e8b8t3j5.js";
+import"./index-081rnc6n.js";
 import"./index-8txs6fkn.js";
-import"./index-gwq5jc3q.js";
+import"./index-rx5qv31d.js";
 import {
   executeSlopcameraOperation,
   generateSlopcameraIcon,
+  generateSlopcameraImageGallery,
   isSlopcameraOperationCode,
+  parseSlopcameraGalleryVary,
   searchSlopcameraOperations,
+  slopcameraGalleryKinds,
+  slopcameraGalleryLimits,
   slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-rqcqb1h8.js";
+} from "./index-n4n19hs5.js";
 import {
   vectorizeImage
 } from "./index-9ajx7fzb.js";
@@ -37,7 +41,7 @@ import {
 } from "./index-z1w83f81.js";
 
 // src/cli.ts
-import { writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { resolve } from "path";
 
 // src/support-completion.ts
@@ -105,6 +109,9 @@ Usage:
   slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
     [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
     [--keep-raster] [--json]
+  slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
+    [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
+    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -138,6 +145,11 @@ normalized to canonical ink-on-transparent pixels, traced by the local
 vectorizer, and (when --rounds exceeds 1) critiqued by a vision model whose
 feedback revises the prompt for the next attempt. Only Slopcamera's own
 generated output is uploaded for critique \u2014 never user media.
+
+Gallery generates several bounded candidates in parallel and composes them
+into one labelled contact sheet plus a receipt. Use it to review texture,
+skybox, backdrop, sprite, or design alternatives, then promote a chosen
+candidate file explicitly \u2014 nothing is applied automatically.
 
 Optional support: after useful work, agents can read slopcamera support protocol --json.
 Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
@@ -207,6 +219,22 @@ function parseDuotone(value) {
   }
   return [colors[0], colors[1]];
 }
+function parseGalleryVary(value) {
+  if (value === undefined)
+    return;
+  return parseSlopcameraGalleryVary(value);
+}
+async function readGalleryCandidates(path) {
+  const text = await readFile(resolve(path), "utf8");
+  if (Buffer.byteLength(text, "utf8") > 64 * 1024) {
+    throw new Error("--candidates JSON must be no more than 65536 UTF-8 bytes");
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("--candidates must be valid JSON");
+  }
+}
 function printFindings(findings) {
   if (findings.length === 0) {
     console.log("No diagram lint findings.");
@@ -257,10 +285,10 @@ function canonicalArguments(args) {
     throw new Error("Use slopcamera diagram init, check, or render");
   }
   if (surface === "image") {
-    if (subcommand === "vectorize" || subcommand === "generate" || subcommand === "icon") {
+    if (subcommand === "vectorize" || subcommand === "generate" || subcommand === "icon" || subcommand === "gallery") {
       return [subcommand, ...rest];
     }
-    throw new Error("Use slopcamera image vectorize, generate, or icon");
+    throw new Error("Use slopcamera image vectorize, generate, icon, or gallery");
   }
   if (surface === "init" || surface === "check" || surface === "render" || surface === "vectorize" || surface === "generate") {
     throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.
@@ -422,6 +450,64 @@ async function main(args, dependencies = {}) {
       const scored = result.attempts.map((attempt) => attempt.score === undefined ? `#${attempt.round}` : `#${attempt.round}=${attempt.score}`).join(" ");
       (dependencies.log ?? console.log)(`Icon ${result.svgSha256.slice(0, 12)} round ${result.selectedRound}/${result.attempts.length} (${scored}): ${result.outputPath}`);
     }
+    return;
+  }
+  if (command === "gallery") {
+    const parsed = parseArguments(rest, new Set(["model", "output-dir", "kind", "count", "vary", "candidates", "cell", "timeout-ms"]));
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "tile" && flag !== "no-tile");
+    if (unknownFlags.length > 0) {
+      throw new Error(`Unknown gallery option: --${unknownFlags[0]}`);
+    }
+    if (parsed.flags.has("tile") && parsed.flags.has("no-tile")) {
+      throw new Error("--tile and --no-tile are mutually exclusive");
+    }
+    if (parsed.positionals.length !== 1) {
+      throw new Error("slopcamera image gallery accepts exactly one subject");
+    }
+    const model = parsed.options.model ?? slopcameraImageModels[1];
+    if (model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)) {
+      throw new Error("--model must be a bounded Vercel AI Gateway provider/model id");
+    }
+    const kind = parsed.options.kind;
+    if (kind !== undefined && !slopcameraGalleryKinds.includes(kind)) {
+      throw new Error(`--kind must be one of: ${slopcameraGalleryKinds.join(", ")}`);
+    }
+    const count = parsePositiveInteger(parsed.options.count, "count");
+    if (count !== undefined && count > slopcameraGalleryLimits.candidates) {
+      throw new Error(`--count must be at most ${slopcameraGalleryLimits.candidates}`);
+    }
+    const cell = parsePositiveInteger(parsed.options.cell, "cell");
+    if (cell !== undefined && (cell < slopcameraGalleryLimits.cellEdgeMin || cell > slopcameraGalleryLimits.cellEdgeMax)) {
+      throw new Error(`--cell must be between ${slopcameraGalleryLimits.cellEdgeMin} and ${slopcameraGalleryLimits.cellEdgeMax}`);
+    }
+    const timeoutMs = parsePositiveInteger(parsed.options["timeout-ms"], "timeout-ms");
+    const vary = parseGalleryVary(parsed.options.vary);
+    const candidates = parsed.options.candidates === undefined ? undefined : await readGalleryCandidates(parsed.options.candidates);
+    if (candidates !== undefined && !Array.isArray(candidates)) {
+      throw new Error("--candidates JSON must be an array of {id, prompt|variant} entries");
+    }
+    const result = await withSlopcameraOperationHostAdmission("slopcamera.image.gallery", async () => await (dependencies.gallery ?? generateSlopcameraImageGallery)({
+      subject: requiredPositional(parsed, 0, "subject"),
+      outputDir: requiredOption(parsed, "output-dir"),
+      model,
+      ...kind === undefined ? {} : { kind },
+      ...count === undefined ? {} : { count },
+      ...vary === undefined ? {} : { vary },
+      ...candidates === undefined ? {} : { candidates },
+      ...cell === undefined ? {} : { cellEdge: cell },
+      ...timeoutMs === undefined ? {} : { timeoutMs },
+      ...parsed.flags.has("tile") ? { tiled: true } : parsed.flags.has("no-tile") ? { tiled: false } : {}
+    }), hostAdmissionOptions(dependencies));
+    if (parsed.flags.has("json")) {
+      (dependencies.log ?? console.log)(JSON.stringify(result, null, 2));
+    } else {
+      const rows = result.candidates.map((candidate) => candidate.status === "generated" ? `#${candidate.index} ${candidate.id}	${candidate.path}` : `#${candidate.index} ${candidate.id}	failed`);
+      (dependencies.log ?? console.log)(`Gallery ${result.counts.generated}/${result.counts.requested} generated (${result.model}): ${result.gallery.path}
+` + `${rows.join(`
+`)}
+receipt ${result.receiptPath}`);
+    }
+    reportUsefulResult(dependencies.onUsefulResult);
     return;
   }
   if (command === "code") {

@@ -56,11 +56,14 @@ import {
   applySpatialEntityOverride,
   applySpatialScenePatch,
   auditSpatialScene,
+  auditSpatialSceneInContext,
   cameraMathView,
   composeTransform,
+  createSpatialEvaluationContext,
   diffSpatialScenes,
   evaluateSpatialGlb,
   evaluateSpatialScene,
+  evaluateSpatialSceneInContext,
   generatedSpatialEntityId,
   inspectSpatialScene,
   invertTransform,
@@ -72,7 +75,9 @@ import {
   parseSpatialScene,
   parseSpatialValue,
   pixelRay,
+  prepareCameraView,
   projectPoint,
+  projectPreparedPoint,
   slerpQuaternion,
   sortSpatialBy,
   spatialAssetClosureDigests,
@@ -91,7 +96,7 @@ import {
   unprojectPixel,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-e8b8t3j5.js";
+} from "../index-081rnc6n.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -178,7 +183,7 @@ var SPATIAL_RENDERED_AUDIT_LIMITS = Object.freeze({
   frameDimension: 8192,
   framePixels: 33554432
 });
-var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"];
+var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"];
 var ELIGIBILITY = ["renderable", "view-masked", "no-surface", "unsupported-kind"];
 var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
 var FINDING_KINDS = [
@@ -349,7 +354,7 @@ var round3 = (value) => Math.round(value * 1000) / 1000;
 function eligibility(entity) {
   if (entity.kind === "splat")
     return "unsupported-kind";
-  if (entity.kind === "group" || entity.kind === "light")
+  if (entity.kind === "group" || entity.kind === "light" || entity.kind === "environment")
     return "no-surface";
   if (entity.placement.kind === "view")
     return "view-masked";
@@ -358,10 +363,11 @@ function eligibility(entity) {
 function entityAssetId(entity) {
   switch (entity.kind) {
     case "mesh":
-      return entity.geometry.kind === "asset" ? entity.geometry.assetId : undefined;
+      return entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.material.map;
     case "image":
     case "diagram":
     case "video":
+    case "environment":
       return entity.assetId;
     case "text":
       return entity.fontAssetId;
@@ -373,11 +379,14 @@ function entityAssetId(entity) {
 }
 var findingOrder = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
 function auditSpatialSceneRendered(sceneInput, framesInput, options) {
-  const scene = parseSpatialScene(sceneInput);
+  return auditSpatialSceneRenderedInContext(createSpatialEvaluationContext(sceneInput), framesInput, options);
+}
+function auditSpatialSceneRenderedInContext(context, framesInput, options) {
+  const scene = context.scene;
   const captured = parseSpatialValue(SpatialRenderedAuditOptionsSchema, options, "rendered audit options");
   const coverage = captured.coverage ?? SPATIAL_RENDERED_AUDIT_COVERAGE;
   const cameraId = captured.cameraId;
-  if (!scene.cameras.some((camera) => camera.cameraId === cameraId)) {
+  if (!context.camerasById.has(cameraId)) {
     throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId");
   }
   const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
@@ -406,7 +415,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
   }
   const framePixels = first.width * first.height;
   const entityIndex = new Map(scene.entities.map((entity, index) => [entity.entityId, index + 1]));
-  const manifestDigests = spatialAssetClosureDigests(scene.assets);
+  const manifestDigests = context.assetDigests;
   const frameDrafts = new Map;
   for (const frame of frames) {
     const attributed = new Map;
@@ -449,7 +458,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
       unattributedPixels: unattributedPixels2
     });
   }
-  const geometric = auditSpatialScene(scene, {
+  const geometric = auditSpatialSceneInContext(context, {
     cameraId,
     timesUs,
     ...captured.assetBounds === undefined ? {} : { assetBounds: captured.assetBounds }
@@ -598,7 +607,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
     kind: "slopcamera.spatial-rendered-audit",
     schemaVersion: 1,
     sceneId: scene.sceneId,
-    sceneSha256: spatialValueSha256(scene),
+    sceneSha256: context.sceneSha256,
     cameraId,
     durationUs: scene.durationUs,
     timesUs,
@@ -751,6 +760,160 @@ function createSpatialSceneStarter() {
   });
 }
 
+// src/spatial-scene/probe.ts
+var transform = (position) => ({
+  position,
+  rotation: [0, 0, 0, 1],
+  scale: [1, 1, 1]
+});
+var entityBase = {
+  parentId: null,
+  placement: { kind: "world" },
+  origin: { kind: "authored" },
+  visible: true
+};
+var neutral = {
+  kind: "standard",
+  color: "#8b95a7",
+  opacity: 1,
+  roughness: 0.55,
+  metalness: 0.05
+};
+function galleryProbeScene(mode, asset) {
+  const subjectMaterial = mode === "texture" ? { kind: "standard", color: "#ffffff", opacity: 1, roughness: 0.75, metalness: 0, map: asset.assetId } : mode === "skybox" ? { kind: "standard", color: "#cfd6e4", opacity: 1, roughness: 0.18, metalness: 0.85 } : neutral;
+  const entities = [
+    {
+      ...entityBase,
+      entityId: "entity_subject",
+      name: "Subject",
+      kind: "mesh",
+      transform: transform([0, 0.15, 0]),
+      geometry: { kind: "sphere", radius: 0.9 },
+      material: subjectMaterial
+    },
+    {
+      ...entityBase,
+      entityId: "entity_ground",
+      name: "Ground",
+      kind: "mesh",
+      transform: {
+        position: [0, -0.75, 0],
+        rotation: [-0.7071067811865476, 0, 0, 0.7071067811865476],
+        scale: [1, 1, 1]
+      },
+      geometry: { kind: "plane", width: 10, height: 10 },
+      material: { ...neutral, roughness: 0.9 }
+    },
+    {
+      ...entityBase,
+      entityId: "entity_fill",
+      name: "Fill",
+      kind: "light",
+      transform: transform([0, 0, 0]),
+      light: "ambient",
+      color: "#ffffff",
+      intensity: 1.6
+    },
+    {
+      ...entityBase,
+      entityId: "entity_key",
+      name: "Key",
+      kind: "light",
+      transform: transform([3, 4, 5]),
+      light: "directional",
+      color: "#ffffff",
+      intensity: 3
+    }
+  ];
+  if (mode === "texture") {
+    const wallTiles = [
+      [-2.5, 0.2, -3],
+      [2.5, 0.2, -3],
+      [-2.5, 3, -3],
+      [2.5, 3, -3]
+    ];
+    for (const [index, position] of wallTiles.entries()) {
+      entities.push({
+        ...entityBase,
+        entityId: `entity_wall_${String(index + 1)}`,
+        name: `Wall tile ${String(index + 1)}`,
+        kind: "mesh",
+        transform: transform(position),
+        geometry: { kind: "plane", width: 5, height: 2.8 },
+        material: {
+          kind: "standard",
+          color: "#ffffff",
+          opacity: 1,
+          roughness: 0.85,
+          metalness: 0,
+          map: asset.assetId
+        }
+      });
+    }
+  }
+  if (mode === "skybox") {
+    entities.push({
+      ...entityBase,
+      entityId: "entity_environment",
+      name: "Environment",
+      kind: "environment",
+      transform: transform([0, 0, 0]),
+      assetId: asset.assetId,
+      role: "both",
+      intensity: 1
+    });
+  }
+  if (mode === "backdrop") {
+    entities.push({
+      ...entityBase,
+      entityId: "entity_backdrop",
+      name: "Backdrop",
+      kind: "image",
+      transform: transform([0, 1.6, -3]),
+      assetId: asset.assetId,
+      width: 12,
+      height: 6.75,
+      fit: "cover",
+      opacity: 1
+    });
+  }
+  return parseSpatialScene({
+    kind: "slopcamera.spatial-scene",
+    schemaVersion: 1,
+    sceneId: "scene_gallery_probe",
+    coordinates: "right-handed-y-up-meters",
+    durationUs: 4000000,
+    entities,
+    cameras: [{
+      cameraId: "camera_probe",
+      name: "Probe",
+      pose: { position: [0, 0.5, 4.4], rotation: [0, 0, 0, 1] },
+      projection: {
+        kind: "perspective",
+        width: 960,
+        height: 540,
+        fx: 650,
+        fy: 650,
+        cx: 480,
+        cy: 270,
+        near: 0.1,
+        far: 100
+      }
+    }],
+    assets: [asset],
+    animations: [],
+    generators: [],
+    overrides: []
+  });
+}
+function galleryProbeRenderRequest() {
+  return {
+    cameraId: "camera_probe",
+    mode: { kind: "beauty" },
+    selection: { kind: "frame", timeUs: 0 }
+  };
+}
+
 // src/spatial-scene/build.ts
 import { z as z2 } from "zod";
 var AXIS_INDEX = { x: 0, y: 1, z: 2 };
@@ -800,7 +963,7 @@ function bounds(value, label) {
     throw new RangeError(`${label} requires min <= max`);
   return value;
 }
-function transform(value, label) {
+function transform2(value, label) {
   vec3(value.position, `${label}.position`);
   quaternion(value.rotation, `${label}.rotation`);
   vec3(value.scale, `${label}.scale`);
@@ -984,7 +1147,7 @@ function align(items, axis, edge) {
   if (items.length === 0)
     return deepFreezeJson([]);
   for (const entry of items)
-    transform(entry.transform, "transform");
+    transform2(entry.transform, "transform");
   const enclosed = items.map(worldBounds);
   const lows = enclosed.map((item) => item.min[index]);
   const highs = enclosed.map((item) => item.max[index]);
@@ -999,7 +1162,7 @@ function distribute(items, axis, mode) {
   if (items.length < 2)
     return deepFreezeJson(items.map((item) => emitTransform(item.transform)));
   for (const entry of items)
-    transform(entry.transform, "transform");
+    transform2(entry.transform, "transform");
   const enclosed = items.map(worldBounds);
   const order = items.map((_, itemIndex) => itemIndex).sort((a, b) => items[a].transform.position[index] - items[b].transform.position[index] || a - b);
   const positions = new Array(items.length);
@@ -1043,7 +1206,7 @@ function groundSnap(transformValue, halfHeight, floorY = 0) {
   finite(floorY, "floorY");
   if (halfHeight < 0)
     throw new RangeError("halfHeight must be nonnegative");
-  transform(transformValue, "transform");
+  transform2(transformValue, "transform");
   return emitTransform({
     position: [transformValue.position[0], floorY + halfHeight, transformValue.position[2]],
     rotation: transformValue.rotation,
@@ -1093,8 +1256,8 @@ function scatter(input) {
   return deepFreezeJson(parseSpatialValue(z2.array(SpatialVec3Schema), accepted, "scatter"));
 }
 function onTopOf(moverBounds, moverTransform, targetBounds, targetTransform) {
-  const mover = transformBounds(composeTransform(transform(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
-  const target = transformBounds(composeTransform(transform(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
+  const mover = transformBounds(composeTransform(transform2(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
+  const target = transformBounds(composeTransform(transform2(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
   return shifted(moverTransform, [
     (target.min[0] + target.max[0]) / 2 - (mover.min[0] + mover.max[0]) / 2,
     target.max[1] - mover.min[1],
@@ -1105,8 +1268,8 @@ function nextTo(moverBounds, moverTransform, targetBounds, targetTransform, opti
   const index = AXIS_INDEX[options?.axis ?? "x"];
   const side = options?.side ?? "after";
   const gap = finite(options?.gap ?? 0, "gap");
-  const mover = transformBounds(composeTransform(transform(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
-  const target = transformBounds(composeTransform(transform(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
+  const mover = transformBounds(composeTransform(transform2(moverTransform, "moverTransform")), bounds(moverBounds, "moverBounds"));
+  const target = transformBounds(composeTransform(transform2(targetTransform, "targetTransform")), bounds(targetBounds, "targetBounds"));
   const delta = [0, 0, 0];
   delta[index] = side === "after" ? target.max[index] + gap - mover.min[index] : target.min[index] - gap - mover.max[index];
   for (const other of [0, 1, 2]) {
@@ -1117,7 +1280,7 @@ function nextTo(moverBounds, moverTransform, targetBounds, targetTransform, opti
   return shifted(moverTransform, delta);
 }
 function facing(transformValue, target, up = WORLD_UP) {
-  transform(transformValue, "transform");
+  transform2(transformValue, "transform");
   vec3(target, "target");
   vec3(up, "up");
   if (Math.hypot(...up) === 0)
@@ -1213,8 +1376,11 @@ function spatialGeneratorAttemptId(options) {
   return `attempt_${spatialValueSha256({ domain: "slopcamera.generator-attempt.v1", ...options }).slice(0, 32)}`;
 }
 function generatedAssetReference(entity) {
-  if (entity.kind === "mesh" && entity.geometry.kind === "asset")
-    return entity.geometry.assetId;
+  if (entity.kind === "mesh") {
+    if (entity.geometry.kind === "asset")
+      return entity.geometry.assetId;
+    return entity.material.map;
+  }
   if (entity.kind === "text")
     return entity.fontAssetId;
   return "assetId" in entity ? entity.assetId : undefined;
@@ -1404,6 +1570,7 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     overrides: [],
     animations: scene.animations.filter((channel) => channel.targetId === cameraId)
   };
+  const cameraContext = createSpatialEvaluationContext(cameraScene);
   return parseSpatialCameraTrack({
     kind: "slopcamera.spatial-camera-track",
     schemaVersion: 1,
@@ -1412,7 +1579,7 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     clock,
     samples: Array.from({ length: clock.frameCount }, (_, frameIndex) => {
       const sample = absoluteSample(frameIndex, clock);
-      return { ...sample, camera: evaluateSpatialScene(cameraScene, { cameraId, timeUs: sample.timeUs }).camera };
+      return { ...sample, camera: evaluateSpatialSceneInContext(cameraContext, { cameraId, timeUs: sample.timeUs }).camera };
     })
   });
 }
@@ -1459,7 +1626,9 @@ export {
   runBuiltWorkflow,
   row,
   reduceSpatialFrameRate,
+  projectPreparedPoint,
   projectPoint,
+  prepareCameraView,
   pixelRay,
   perspectiveFromFov,
   parseSpatialValue,
@@ -1482,8 +1651,11 @@ export {
   groundSnap,
   grid,
   generatedSpatialEntityId,
+  galleryProbeScene,
+  galleryProbeRenderRequest,
   frameFitPose,
   facing,
+  evaluateSpatialSceneInContext,
   evaluateSpatialScene,
   evaluateSpatialGlb,
   easeKeys,
@@ -1498,6 +1670,7 @@ export {
   createWorkflowCompilationHash,
   createSpatialSceneStarter,
   createSpatialGeneratorSceneShell,
+  createSpatialEvaluationContext,
   createSlopcameraCodeHost,
   createPublicWorkflowRegistryProjection,
   createGraphHash,
@@ -1512,7 +1685,9 @@ export {
   buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  auditSpatialSceneRenderedInContext,
   auditSpatialSceneRendered,
+  auditSpatialSceneInContext,
   auditSpatialScene,
   asSlopcameraCodeError,
   applySpatialScenePatch,

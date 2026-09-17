@@ -211,8 +211,17 @@ export function parseSpatialScene(input: unknown): SpatialSceneV1 {
       if (generatedKeys.has(identity)) throw new SpatialSceneError("invalid-data", "Duplicate generator output key.", "origin")
       generatedKeys.add(identity)
     }
+    if (entity.kind === "environment" && (entity.placement.kind !== "world" || entity.parentId !== null)) {
+      throw new SpatialSceneError("invalid-data", "Environment entities must be unparented world entities.", "placement")
+    }
+    if (entity.kind === "mesh" && entity.material.map !== undefined) {
+      if (entity.geometry.kind === "asset") throw new SpatialSceneError("invalid-data", "Material maps apply to authored procedural geometry only.", "entities")
+      const mapAsset = requireReference(assets, entity.material.map, "entity asset")
+      if (mapAsset.interpretation.kind !== "image") throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} material map requires an image asset.`, "entity asset")
+    }
     const reference = entity.kind === "mesh" && entity.geometry.kind === "asset" ? { assetId: entity.geometry.assetId, kind: "gltf" }
       : entity.kind === "text" ? { assetId: entity.fontAssetId, kind: "font" }
+      : entity.kind === "environment" ? { assetId: entity.assetId, kind: "image" }
       : "assetId" in entity ? { assetId: entity.assetId, kind: entity.kind } : undefined
     if (reference) {
       const asset = requireReference(assets, reference.assetId, "entity asset")

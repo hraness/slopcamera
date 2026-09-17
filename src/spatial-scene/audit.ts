@@ -11,9 +11,14 @@ import {
   SpatialEntityIdSchema, SpatialPlacementSchema, SpatialSceneIdSchema, SpatialTimeUsSchema,
   type SpatialAssetManifest, type SpatialEntity,
 } from "./contracts.js"
-import { evaluateSpatialScene } from "./evaluate.js"
-import { parseSpatialScene, parseSpatialValue, sortSpatialBy, spatialValueSha256, SpatialSceneError } from "./identity.js"
-import { cameraMathView, projectPoint, transformBounds, type Bounds, type Camera, type Vec3 } from "./math.js"
+import {
+  createSpatialEvaluationContext, evaluateSpatialSceneInContext, type SpatialEvaluationContext,
+} from "./evaluate.js"
+import { parseSpatialValue, sortSpatialBy, SpatialSceneError } from "./identity.js"
+import {
+  cameraMathView, prepareCameraView, projectPreparedPoint, transformBounds,
+  type Bounds, type PreparedCameraView, type Vec3,
+} from "./math.js"
 
 export const SPATIAL_AUDIT_LIMITS = Object.freeze({
   /** Caller-selected or default sample times per audit. */
@@ -28,7 +33,7 @@ export const SPATIAL_AUDIT_LIMITS = Object.freeze({
   reportBytes: 33_554_432,
 })
 
-const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"] as const
+const ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"] as const
 const BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"] as const
 const CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"] as const
 const FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"] as const
@@ -89,7 +94,7 @@ export const SpatialAuditFindingSchema = z.strictObject({
 const entityKindCounts = z.strictObject({
   group: z.number().int().min(0), mesh: z.number().int().min(0), image: z.number().int().min(0),
   diagram: z.number().int().min(0), video: z.number().int().min(0), text: z.number().int().min(0),
-  light: z.number().int().min(0), splat: z.number().int().min(0),
+  light: z.number().int().min(0), splat: z.number().int().min(0), environment: z.number().int().min(0),
 })
 export const SpatialAuditReportSchema = z.strictObject({
   kind: z.literal("slopcamera.spatial-audit"),
@@ -242,12 +247,12 @@ function boundsCorners(bounds: Bounds): readonly Vec3[] {
  * footprint is the projected-corner bbox intersected with the image, which may
  * still cover the frame when all corners fall outside it.
  */
-function classifyWorldFrustum(view: Camera, bounds: Bounds): SpatialAuditFrustum {
+function classifyWorldFrustum(view: PreparedCameraView, bounds: Bounds): SpatialAuditFrustum {
   const { width, height } = view.projection
   let behind = 0, inside = 0, inClip = 0
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (const corner of boundsCorners(bounds)) {
-    const projected = projectPoint(view, corner)
+    const projected = projectPreparedPoint(view, corner)
     if (projected === null) { behind++; continue }
     minX = Math.min(minX, projected.pixel[0]); maxX = Math.max(maxX, projected.pixel[0])
     minY = Math.min(minY, projected.pixel[1]); maxY = Math.max(maxY, projected.pixel[1])
@@ -321,10 +326,19 @@ interface EntityDraft {
  * bounds arrive through options and absent bounds are reported, not invented.
  */
 export function auditSpatialScene(sceneInput: unknown, options: SpatialAuditOptions): SpatialAuditReport {
-  const scene = parseSpatialScene(sceneInput)
+  return auditSpatialSceneInContext(createSpatialEvaluationContext(sceneInput), options)
+}
+
+/**
+ * The audit hot path against a shared evaluation context: one scene parse and
+ * index pass covers every sample instead of re-deriving them per sample, and
+ * each sample's camera inverse is prepared once for all corner projections.
+ */
+export function auditSpatialSceneInContext(context: SpatialEvaluationContext, options: SpatialAuditOptions): SpatialAuditReport {
+  const scene = context.scene
   const captured = parseSpatialValue(SpatialAuditOptionsSchema, options, "audit options")
   const cameraId = captured.cameraId
-  if (!scene.cameras.some(camera => camera.cameraId === cameraId)) {
+  if (!context.camerasById.has(cameraId)) {
     throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId")
   }
   const assetIds = new Set(scene.assets.map(asset => asset.assetId))
@@ -344,8 +358,10 @@ export function auditSpatialScene(sceneInput: unknown, options: SpatialAuditOpti
   const enclosures = new Map(scene.entities.map(entity => [entity.entityId, auditLocalBounds(entity, assetBounds)]))
   const samplesByEntity = new Map(scene.entities.map(entity => [entity.entityId, [] as SampleDraft[]]))
   for (const timeUs of timesUs) {
-    const snapshot = evaluateSpatialScene(scene, { timeUs, cameraId })
-    const view = cameraMathView(snapshot.camera)
+    const snapshot = evaluateSpatialSceneInContext(context, { timeUs, cameraId })
+    // The evaluated camera pose may move per sample, but within one sample its
+    // validation and world-to-camera inverse are shared by every corner test.
+    const view = prepareCameraView(cameraMathView(snapshot.camera))
     const { width, height } = snapshot.camera.projection
     for (const entry of snapshot.entities) {
       const entity = entry.entity
@@ -460,7 +476,7 @@ export function auditSpatialScene(sceneInput: unknown, options: SpatialAuditOpti
   for (const channel of scene.animations) properties[channel.property]++
   const report = {
     kind: "slopcamera.spatial-audit" as const, schemaVersion: 1 as const,
-    sceneId: scene.sceneId, sceneSha256: spatialValueSha256(scene), cameraId,
+    sceneId: scene.sceneId, sceneSha256: context.sceneSha256, cameraId,
     durationUs: scene.durationUs, timesUs,
     summary: {
       entities: {

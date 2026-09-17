@@ -60,7 +60,9 @@ export function inspectSpatialScene(input: unknown): SpatialSceneInspection {
       const editableControls = declared.filter(property => !animatedProperties.some(animated => animated === property || (property === "transform" && ["position", "rotation", "scale"].includes(animated))))
       const local = localBounds(entity)
       const bounds: SpatialInspectedBounds = "status" in local ? local : { status: "authored-enclosure", coordinateDomain: entity.placement, atTimeUs: 0, bounds: transformBounds(worldMatrix, local) }
-      const assetIds = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
+      const assetIds = entity.kind === "mesh"
+        ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]]
+        : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds }
     }),
     cameras: scene.cameras, assets: scene.assets.map(manifest => ({ assetId: manifest.assetId, manifestSha256: digests[manifest.assetId]!, manifest })), generators: scene.generators,

@@ -113,8 +113,8 @@ export const SpatialAssetManifestSchema = z.strictObject({
 })
 const color = z.string().regex(/^#[a-fA-F0-9]{6}$/u)
 export const SpatialMaterialSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("unlit"), color, opacity: unit }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit }),
+  z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
+  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional() }),
 ])
 export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -158,6 +158,8 @@ export const SpatialEntitySchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16_384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point"]), color, intensity: z.number().finite().min(0).max(100_000) }),
   z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
+  z.strictObject({ ...entityBase, kind: z.literal("environment"), assetId: SpatialAssetIdSchema,
+    role: z.enum(["background", "environment", "both"]), intensity: z.number().finite().min(0).max(16) }),
 ])
 
 const key = <T extends z.ZodType>(value: T) => z.strictObject({ timeUs: SpatialTimeUsSchema, value })
@@ -204,6 +206,7 @@ export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("add-asset"), asset: SpatialAssetManifestSchema }),
   z.strictObject({ kind: z.literal("replace-asset"), asset: SpatialAssetManifestSchema }),
   z.strictObject({ kind: z.literal("set-mesh-geometry"), entityId: SpatialEntityIdSchema, geometry: SpatialGeometrySchema }),
+  z.strictObject({ kind: z.literal("set-material"), entityId: SpatialEntityIdSchema, material: SpatialMaterialSchema }),
   z.strictObject({ kind: z.literal("rename-entity"), entityId: SpatialEntityIdSchema, name: z.string().min(1).max(256) }),
   z.strictObject({ kind: z.literal("reparent-entity"), entityId: SpatialEntityIdSchema, parentId: SpatialEntityIdSchema.nullable() }),
   z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),

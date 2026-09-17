@@ -1,3 +1,4 @@
+import assert from "node:assert"
 import { createHash } from "node:crypto"
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
@@ -26,8 +27,6 @@ const siteOrigin = "https://slopcamera.com"
 const posthogPackageDirectory = dirname(fileURLToPath(import.meta.resolve("posthog-js/package.json")))
 const copiedFiles = publicIdentity.files
 
-const docsLastmod = "2026-09-13"
-
 const generatedTextFiles = {
   "index.md": homeMarkdown,
   "llms.txt": llmsTxt,
@@ -35,6 +34,22 @@ const generatedTextFiles = {
   "sitemap.xml": renderSitemapXml(),
   "sitemap.md": sitemapMarkdown,
 } as const
+
+const marketingIconMaxBytes = 128 * 1024
+
+async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
+  const directory = join(sourceDirectory, "icons")
+  const names = (await readdir(directory))
+    .filter(entry => entry.endsWith(".svg") && /^[a-z0-9-]+\.svg$/u.test(entry))
+    .sort()
+  const icons: { path: string; bytes: Uint8Array }[] = []
+  for (const name of names) {
+    const bytes = new Uint8Array(await readFile(join(directory, name)))
+    assert.ok(bytes.byteLength <= marketingIconMaxBytes, `Marketing icon exceeds ${marketingIconMaxBytes} bytes: ${name}`)
+    icons.push({ path: `icons/${name}`, bytes })
+  }
+  return icons
+}
 
 async function docsMirrors(): Promise<Readonly<Record<string, string>>> {
   const files: Record<string, string> = {}
@@ -60,29 +75,22 @@ function assetPath(name: string, bytes: Uint8Array): string {
   return `/assets/${stem}-${digest}${extension}`
 }
 
-function renderSitemapUrl(
-  path: string,
-  lastmod: string,
-  priority: string,
-): string {
+function renderSitemapUrl(path: string): string {
   return `  <url>
     <loc>${siteOrigin}${path}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${path === "/" ? "weekly" : "monthly"}</changefreq>
-    <priority>${priority}</priority>
   </url>`
 }
 
 export function renderSitemapXml(): string {
   const entries = [
-    renderSitemapUrl("/", "2026-09-09", "1.0"),
-    renderSitemapUrl("/index.md", "2026-09-09", "0.8"),
+    renderSitemapUrl("/"),
+    renderSitemapUrl("/index.md"),
     ...docPages.flatMap(page => {
       const canonical = docsCanonicalUrl(page).slice(siteOrigin.length)
       const mirror = docsMarkdownUrl(page)
       return [
-        renderSitemapUrl(canonical, docsLastmod, page.slug === "index" ? "0.8" : "0.7"),
-        renderSitemapUrl(mirror, docsLastmod, "0.5"),
+        renderSitemapUrl(canonical),
+        renderSitemapUrl(mirror),
       ]
     }),
   ]
@@ -199,6 +207,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const site = await buildSite(appDirectory, { themePath, analyticsPath })
   const preview = await buildPreview(appDirectory)
   const icons = await readPublicIcons(appDirectory)
+  const marketingIcons = await readMarketingIcons()
 
   await rm(outputDirectory, { force: true, recursive: true })
   await mkdir(join(outputDirectory, "assets"), { recursive: true })
@@ -216,8 +225,10 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const { path, bytes } of icons) {
-    await writeFile(join(outputDirectory, path), bytes, { flag: "wx", mode: 0o644 })
+  for (const { path, bytes } of [...icons, ...marketingIcons]) {
+    const destination = join(outputDirectory, path)
+    await mkdir(dirname(destination), { recursive: true })
+    await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })
   }
 
   const docsTextFiles = await docsMirrors()

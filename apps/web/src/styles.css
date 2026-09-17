@@ -366,7 +366,7 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
-:where(.trust-links, .origin-note, .hraness-marketing-question__answer, .hraness-marketing-maker__links) a {
+:where(.trust-links, .origin-note, .hraness-marketing-question__answer) a {
   color: var(--gold);
 }
 
@@ -471,3 +471,6 @@ h3 {
   --hraness-marketing-inverse: var(--night);
   --hraness-marketing-inverse-ink: var(--night-ink);
 }
+
+/* Decorative topic icons (agent-generated line art, public/icons/). */
+.slopcamera-topic-icon { display: block; width: 88px; height: 88px; margin: 0 0 18px; }
