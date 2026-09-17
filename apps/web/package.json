@@ -7,7 +7,7 @@
   "packageManager": "bun@1.3.14",
   "dependencies": {
     "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-    "@hraness/site-footer": "github:hraness/site-footer#v0.12.1",
+    "@hraness/site-footer": "github:hraness/site-footer#v0.13.0",
     "@hraness/ui": "github:hraness/ui#v0.5.12",
     "@resvg/resvg-js": "2.6.2",
     "posthog-js": "1.413.2",

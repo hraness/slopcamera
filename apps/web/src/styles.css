@@ -366,7 +366,7 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
-:where(.trust-links, .origin-note, .hraness-marketing-question__answer, .hraness-marketing-maker__links) a {
+:where(.trust-links, .origin-note, .hraness-marketing-question__answer) a {
   color: var(--gold);
 }
 
