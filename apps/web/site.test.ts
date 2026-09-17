@@ -2009,10 +2009,25 @@ describe("static Slopcamera site", () => {
     }))
     expect(docsNotFound?.status).toBe(404)
     expect(docsNotFound?.headers.get("x-robots-tag")).toBe("noindex")
-    // Direct .md and .html requests bypass negotiation and serve statically.
-    expect(negotiateSiteRequest(new Request("https://slopcamera.com/docs/index.md", {
-      headers: { Accept: "text/markdown" },
-    }))).toBeUndefined()
+    // A direct request for a published .md mirror serves the identical sealed
+    // file with the canonical and alternate headers the negotiated response
+    // carries. Unregistered .md paths still bypass to the static origin.
+    for (const path of ["/docs/index.md", "/docs/tutorials/claude-code.md"]) {
+      const mirrorPage = docsPageForRequestPath(path)
+      expect(mirrorPage).not.toBeNull()
+      const direct = negotiateSiteRequest(new Request(`https://slopcamera.com${path}`))
+      expect(direct?.status).toBe(200)
+      expect(direct?.headers.get("x-middleware-rewrite"))
+        .toBe(`https://slopcamera.com${docsMarkdownUrl(mirrorPage!)}`)
+      expect(direct?.headers.get("link"))
+        .toBe(`<${docsCanonicalUrl(mirrorPage!)}>; rel="canonical", <${docsMarkdownUrl(mirrorPage!)}>; rel="alternate"; type="text/markdown"`)
+      expect(direct?.headers.get("vary")).toBe("Accept, Accept-Encoding")
+    }
+    for (const path of ["/index.md", "/docs.md", "/docs/not-a-page.md", "/sitemap.md"]) {
+      expect(negotiateSiteRequest(new Request(`https://slopcamera.com${path}`, {
+        headers: { Accept: "text/markdown" },
+      }))).toBeUndefined()
+    }
 
     const markdownNotFound = negotiateSiteRequest(new Request("https://slopcamera.com/this-path-does-not-exist", {
       headers: { Accept: "text/markdown" },
