@@ -39,6 +39,18 @@ import { pathExists } from "./fs.js"
 import { SLOPCAMERA_VERSION } from "./version.js"
 import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
 import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
+import {
+  SLOPCAMERA_IMAGE_GENERATE_OPERATION,
+  SlopcameraCreditsRequiredError,
+  emitProductCreditsRequired,
+  runProductCreditsCommand,
+  slopcameraCreditsRequiredExitCode,
+} from "./credits.js"
+import {
+  generateSlopcameraImageFileHosted,
+  resolveSlopcameraGenerationMode,
+} from "./hosted-generate.js"
+import type { CreditsOutput } from "@hraness/credits-foundation/node"
 
 export const slopcameraCliVersion = SLOPCAMERA_VERSION
 
@@ -51,7 +63,7 @@ Usage:
   slopcamera diagram check <file> [--config <file>] [--strict]
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
-  slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
+  slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--hosted] [--json]
   slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
     [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
     [--keep-raster] [--json]
@@ -63,6 +75,7 @@ Usage:
   slopcamera mcp --root <workspace>
   slopcamera doctor
   slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
+  slopcamera credits [protocol --json|status [--json]|topup [--usd N|--pack ID] [--email ADDR] [--json]|email --to ADDR|wait [--timeout 15m] [--json]|estimate OPERATION [--units N]|signout]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -85,6 +98,13 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- …\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+With --hosted (or SLOPCAMERA_GENERATION_MODE=hosted), generate sends the same
+request to the Hraness-operated gateway instead, paid with prepaid credits held
+by this device; no Gateway credential is read. When credits are needed the
+command prints one hraness-credits-required-v1 line on stderr and exits ${slopcameraCreditsRequiredExitCode}.
+Credits: slopcamera credits status|topup|wait; agents read credits protocol --json.
+One credit is one cent.
 
 Icon produces isometric line-art SVG: a style-locked Gateway raster is
 normalized to canonical ink-on-transparent pixels, traced by the local
@@ -237,10 +257,20 @@ export interface SlopcameraCliDependencies {
   readonly supportEnvironment?: Readonly<Record<string, string | undefined>>
   readonly gallery?: typeof generateSlopcameraImageGallery
   readonly generate?: typeof generateSlopcameraImageFile
+  readonly generateHosted?: typeof generateSlopcameraImageFileHosted
+  readonly environment?: Readonly<Record<string, string | undefined>>
+  /** Receives the credits handoff; defaults to the process stderr. */
+  readonly stderr?: CreditsOutput
   readonly hostResourceCoordinator?: HostResourceCoordinator
   readonly icon?: typeof generateSlopcameraIcon
   readonly log?: (value: string) => void
   readonly vectorize?: typeof vectorizeImage
+}
+
+function isHostedResult(
+  result: Awaited<ReturnType<typeof generateSlopcameraImageFile>> | Awaited<ReturnType<typeof generateSlopcameraImageFileHosted>>,
+): result is Awaited<ReturnType<typeof generateSlopcameraImageFileHosted>> {
+  return "route" in result && result.route === "hosted"
 }
 
 function hostAdmissionOptions(
@@ -289,6 +319,11 @@ export async function main(
   if (args[0] === "support") {
     process.exitCode = await runProductSupportCommand(args.slice(1),
       dependencies.supportEnvironment === undefined ? {} : { env: dependencies.supportEnvironment })
+    return
+  }
+  if (args[0] === "credits") {
+    process.exitCode = await runProductCreditsCommand(args.slice(1),
+      dependencies.environment === undefined ? {} : { env: dependencies.environment })
     return
   }
   const [command, ...rest] = canonicalArguments(args)
@@ -407,13 +442,15 @@ export async function main(
       rest,
       new Set(["model", "output"]),
     )
-    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json")
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "hosted")
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown generate option: --${unknownFlags[0]}`)
     }
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image generate accepts exactly one prompt")
     }
+    const environment = dependencies.environment ?? process.env
+    const mode = resolveSlopcameraGenerationMode(environment, parsed.flags.has("hosted"))
     const model = parsed.options.model ?? slopcameraImageModels[1]
     if (
       model.length > 256 ||
@@ -423,20 +460,57 @@ export async function main(
         "--model must be a bounded Vercel AI Gateway provider/model id",
       )
     }
-    const result = await withSlopcameraOperationHostAdmission(
-      "slopcamera.image.generate",
-      async () => await (dependencies.generate ?? generateSlopcameraImageFile)({
-        model: model as SlopcameraImageModel,
-        prompt: requiredPositional(parsed, 0, "prompt"),
-        outputPath: requiredOption(parsed, "output"),
-      }),
-      hostAdmissionOptions(dependencies),
-    )
+    if (mode === "hosted" && !slopcameraImageModels.includes(model as (typeof slopcameraImageModels)[number])) {
+      throw new Error(
+        `--hosted supports only: ${slopcameraImageModels.join(", ")}`,
+      )
+    }
+    const request = {
+      model: model as SlopcameraImageModel,
+      prompt: requiredPositional(parsed, 0, "prompt"),
+      outputPath: requiredOption(parsed, "output"),
+    }
+    let result: Awaited<ReturnType<typeof generateSlopcameraImageFile>> | Awaited<ReturnType<typeof generateSlopcameraImageFileHosted>>
+    try {
+      result = await withSlopcameraOperationHostAdmission(
+        "slopcamera.image.generate",
+        async () => mode === "hosted"
+          ? await (dependencies.generateHosted ?? generateSlopcameraImageFileHosted)(request, { environment })
+          : await (dependencies.generate ?? generateSlopcameraImageFile)(request),
+        hostAdmissionOptions(dependencies),
+      )
+    } catch (error) {
+      if (!(error instanceof SlopcameraCreditsRequiredError)) throw error
+      // A hosted generation that needs payment prints the shared credits
+      // handoff first: one JSON line for agents, plain lines for people.
+      const asJson = parsed.flags.has("json")
+      const handoffPrinted = await emitProductCreditsRequired(error, {
+        argv: args,
+        audience: asJson ? "agent" : "human",
+        env: environment,
+        ...(dependencies.stderr === undefined ? {} : { stderr: dependencies.stderr }),
+      })
+      if (asJson) {
+        ;(dependencies.log ?? console.log)(JSON.stringify({
+          error: "credits_required",
+          message: error.message,
+          operation: error.payload.operation === undefined ? SLOPCAMERA_IMAGE_GENERATE_OPERATION : error.payload.operation,
+          reason: error.payload.reason,
+        }, null, 2))
+      } else if (!handoffPrinted) {
+        console.error(`slopcamera: ${error.message}`)
+      }
+      process.exitCode = slopcameraCreditsRequiredExitCode
+      return
+    }
     if (parsed.flags.has("json")) {
       ;(dependencies.log ?? console.log)(JSON.stringify(result, null, 2))
     } else {
+      const charged = isHostedResult(result)
+        ? ` (charged $${result.credits.charged.usd}${result.credits.settled ? "" : ", settlement pending"})`
+        : ""
       ;(dependencies.log ?? console.log)(
-        `Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})`,
+        `Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})${charged}`,
       )
     }
     reportUsefulResult(dependencies.onUsefulResult)

@@ -31,6 +31,8 @@ Commands:
   menubar install|uninstall|status  Manage its per-user LaunchAgent
   support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
                                  Optional support; no feature requires payment
+  credits protocol|status|topup|email|wait|estimate|signout
+                                 Prepaid credits for image generate --hosted; agents read credits protocol --json
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
@@ -178,7 +180,7 @@ operations separately publish equivalent derivatives by content hash for workflo
   image: `Usage:
   slopcamera image vectorize <raster-path> --output <file.svg> [--json]
         [--duotone '<#primary,#secondary>'] [--alpha-cutoff <n>] [--timeout-ms <n>]
-  slopcamera image generate <prompt> --output <file.webp> [--model <model>]
+  slopcamera image generate <prompt> --output <file.webp> [--model <model>] [--hosted]
         [--idempotency-key <key>] [--json]
   slopcamera image generate --model <gateway-model> --prompt <prompt>
   slopcamera image gallery <subject> --output-dir <directory> [--model <model>]
@@ -191,7 +193,9 @@ operations separately publish equivalent derivatives by content hash for workflo
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
-caller's environment credential. The --prompt spelling without --output is an alias for the desktop
+caller's environment credential; --hosted (or SLOPCAMERA_GENERATION_MODE=hosted) sends the same
+request to the Hraness-operated gateway paid with this device's prepaid credits instead, and prints
+a hraness-credits-required-v1 line on stderr when credits are needed. The --prompt spelling without --output is an alias for the desktop
 content-addressed \`ai image generate\` lane and returns project-composable content hash references.
 Icon combines a style-locked Gateway raster, local ink extraction and VTracer tracing into a
 canonical isometric line-art SVG; --rounds above 1 adds a vision-model critique that revises the
@@ -519,11 +523,12 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "credits", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
+  if (command === "credits") return ["protocol", "status", "topup", "email", "wait", "estimate", "signout"];
   if (command === "html") return ["catalog", "scaffold", "render"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];

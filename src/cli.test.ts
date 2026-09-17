@@ -73,6 +73,8 @@ describe("Slopcamera CLI", () => {
       "slopcamera image gallery",
       "slopcamera image icon",
       "slopcamera doctor",
+      "slopcamera credits",
+      "--hosted",
       "slopcamera code search",
       "slopcamera code execute",
       "search_slopcamera/execute_slopcamera",
@@ -154,6 +156,154 @@ describe("Slopcamera CLI", () => {
       { resource: "network", amount: 1 },
       { resource: "paid-call", amount: 1 },
     ]])
+  })
+
+  test("routes --hosted and SLOPCAMERA_GENERATION_MODE=hosted to the hosted gateway lane with the same request", async () => {
+    for (const [argv, environment] of [
+      [["image", "generate", "one literal illustration", "--output", "illustration.webp", "--hosted", "--json"], {}],
+      [["image", "generate", "one literal illustration", "--output", "illustration.webp", "--json"], { SLOPCAMERA_GENERATION_MODE: "hosted" }],
+    ] as const) {
+      const output: string[] = []
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      let direct = 0
+      await runSlopcameraCliInProcess(argv, {
+        environment,
+        generate: async () => {
+          direct += 1
+          throw new Error("direct lane must stay untouched")
+        },
+        generateHosted: async (input, dependencies) => {
+          expect(input).toEqual({
+            model: slopcameraImageModels[1],
+            prompt: "one literal illustration",
+            outputPath: "illustration.webp",
+          })
+          expect(dependencies?.environment).toBe(environment)
+          return {
+            bytes: 128,
+            mediaType: "image/webp",
+            model: slopcameraImageModels[1],
+            outputPath: "/workspace/illustration.webp",
+            provider: "vercel-ai-gateway",
+            requestId: "request_hosted",
+            sha256: "a".repeat(64),
+            warnings: [],
+            route: "hosted",
+            credits: {
+              holdId: "hold_1",
+              chargedMicroUsd: 120_000,
+              charged: { microUsd: 120_000, credits: 12, usd: "0.12" },
+              balance: { microUsd: 7_980_000, availableMicroUsd: 7_980_000 },
+              lowBalance: false,
+              settled: true,
+            },
+          }
+        },
+        hostResourceCoordinator: recordingCoordinator(admission),
+        log: (line) => output.push(line),
+      })
+      expect(direct).toBe(0)
+      expect(JSON.parse(output.join("\n"))).toMatchObject({ route: "hosted", credits: { charged: { usd: "0.12" } } })
+      expect(admission.claims).toEqual([[
+        { resource: "local-io", amount: 1 },
+        { resource: "network", amount: 1 },
+        { resource: "paid-call", amount: 1 },
+      ]])
+    }
+  })
+
+  test("keeps the direct lane unchanged without --hosted and rejects foreign models before a hosted call", async () => {
+    let hosted = 0
+    let direct = 0
+    await runSlopcameraCliInProcess(
+      ["image", "generate", "one literal illustration", "--output", "illustration.webp"],
+      {
+        environment: { SLOPCAMERA_GENERATION_MODE: "direct" },
+        generate: async (input) => {
+          direct += 1
+          expect(input).toEqual({
+            model: slopcameraImageModels[1],
+            prompt: "one literal illustration",
+            outputPath: "illustration.webp",
+          })
+          return {
+            bytes: 128, mediaType: "image/webp", model: slopcameraImageModels[1], outputPath: "/workspace/illustration.webp",
+            provider: "vercel-ai-gateway", requestId: "request_direct", sha256: "a".repeat(64), warnings: [],
+          }
+        },
+        generateHosted: async () => {
+          hosted += 1
+          throw new Error("hosted lane must not run")
+        },
+        hostResourceCoordinator: recordingCoordinator({ assertions: 0, claims: [] }),
+        log: () => undefined,
+      },
+    )
+    expect({ direct, hosted }).toEqual({ direct: 1, hosted: 0 })
+    await expect(runSlopcameraCliInProcess(
+      ["image", "generate", "prompt", "--output", "x.webp", "--model", "openai/dall-e-3", "--hosted"],
+      { environment: {}, generateHosted: async () => { throw new Error("must not be called") } },
+    )).rejects.toThrow("--hosted supports only:")
+    await expect(runSlopcameraCliInProcess(
+      ["image", "generate", "prompt", "--output", "x.webp"],
+      { environment: { SLOPCAMERA_GENERATION_MODE: "cloud" } },
+    )).rejects.toThrow("SLOPCAMERA_GENERATION_MODE must be one of")
+    expect(hosted).toBe(0)
+  })
+
+  test("prints one credits-required envelope line on stderr and exits 10 when the gateway needs payment", async () => {
+    const { SlopcameraCreditsRequiredError, slopcameraCreditsRequiredExitCode } = await import("./credits.ts")
+    const payload = {
+      error: "credits_required" as const,
+      message: "Slopcamera needs $0.31 in credits for hosted image generation; this device has $0.00 available.",
+      operation: "image_generate",
+      reason: "insufficient_credits" as const,
+      required: { microUsd: 312500, credits: 31, usd: "0.31" },
+      balance: { microUsd: 0, credits: 0, usd: "0.00", availableMicroUsd: 0 },
+      topup: {
+        claimId: "clm_8f3k2q",
+        url: "https://credits.hraness.com/t/clm_8f3k2q",
+        expiresAt: "2026-09-17T22:00:00Z",
+        packs: [{ id: "p10", usd: 10, credits: 1000, bonusCredits: 0 }, { id: "p25", usd: 25, credits: 2500, bonusCredits: 150 }],
+        suggestedPackId: "p25",
+      },
+    }
+    const argv = ["image", "generate", "one literal illustration", "--output", "illustration.webp", "--hosted", "--json"]
+    // Bun ignores an assignment of undefined to process.exitCode, so this test
+    // starts from and restores an explicit zero.
+    const exitCodeOf = () => (process as { exitCode?: number | string | undefined }).exitCode
+    const previousExitCode = Number(exitCodeOf() ?? 0)
+    const stderr = { text: "", write(text: string, callback?: (error?: Error | null) => void) { stderr.text += text; callback?.(null); return true } }
+    const output: string[] = []
+    try {
+      process.exitCode = 0
+      await runSlopcameraCliInProcess(argv, {
+        environment: {},
+        generateHosted: async () => { throw new SlopcameraCreditsRequiredError(payload) },
+        hostResourceCoordinator: recordingCoordinator({ assertions: 0, claims: [] }),
+        log: (line) => output.push(line),
+        stderr,
+      })
+      expect(exitCodeOf()).toBe(slopcameraCreditsRequiredExitCode)
+      expect(exitCodeOf()).toBe(10)
+    } finally {
+      process.exitCode = previousExitCode
+    }
+    const lines = stderr.text.split("\n")
+    expect(lines).toHaveLength(2)
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      schemaVersion: "hraness-credits-required-v1",
+      product: { id: "slopcamera", name: "Slopcamera" },
+      operation: "image_generate",
+      required: { usd: "0.31" },
+      resume: { argv: ["slopcamera", ...argv], automatic: true },
+    })
+    expect(JSON.parse(output.join("\n"))).toEqual({
+      error: "credits_required",
+      message: payload.message,
+      operation: "image_generate",
+      reason: "insufficient_credits",
+    })
   })
 
   test("keeps canonical vectorization local and rejects the old flat grammar", async () => {

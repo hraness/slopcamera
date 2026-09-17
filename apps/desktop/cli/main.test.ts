@@ -56,3 +56,26 @@ test("keeps portable and copied-native CLI builds as distinct manifest commands"
   expect(scripts["build:cli:macos"]).toBe("bun run ./apps/desktop/cli/build-compiled.ts");
   expect(scripts["test:cli:compiled:macos"]).toStartWith("bun run build:cli:macos &&");
 });
+
+test("routes credits to the shared protocol and maps credits-required to the existing authorization exit code", async () => {
+  const { slopcameraCreditsRequiredExitCode } = await import("../../../src/credits");
+  const { EXIT_CODE } = await import("./errors");
+  expect(slopcameraCreditsRequiredExitCode).toBe(EXIT_CODE["authorization-required"]);
+  const child = Bun.spawn([process.execPath, new URL("./main.ts", import.meta.url).pathname, "credits", "protocol", "--json"], {
+    env: { ...process.env, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [exitCode, stdout, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ]);
+  expect(exitCode).toBe(0);
+  expect(stderr).toBe("");
+  expect(JSON.parse(stdout)).toMatchObject({
+    schemaVersion: "hraness-credits-protocol-v1",
+    product: { id: "slopcamera", name: "Slopcamera" },
+    commands: { status: ["slopcamera", "credits", "status", "--json"] },
+  });
+});

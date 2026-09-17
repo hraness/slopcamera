@@ -80,8 +80,11 @@ function validateModel(value) {
   }
   return value;
 }
+function isValidSlopcameraPrompt(value) {
+  return typeof value === "string" && value.trim().length > 0 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) && Buffer.byteLength(value, "utf8") <= slopcameraMaximumPromptBytes;
+}
 function validatePrompt(value) {
-  if (typeof value !== "string" || value.trim().length === 0 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) || Buffer.byteLength(value, "utf8") > slopcameraMaximumPromptBytes) {
+  if (!isValidSlopcameraPrompt(value)) {
     invalidArgument(`Prompt must be non-empty and no more than ${slopcameraMaximumPromptBytes} UTF-8 bytes.`);
   }
   return value;
@@ -275,7 +278,7 @@ function mediaType(value) {
   }
   return value;
 }
-function validImageBytes(bytes, type) {
+function isValidSlopcameraImageBytes(bytes, type) {
   if (bytes.byteLength < 12 || bytes.byteLength > slopcameraMaximumRawImageBytes) {
     return false;
   }
@@ -312,13 +315,14 @@ function parseResult(value, model) {
     throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "Vercel AI Gateway returned an invalid bounded image.");
   }
   const type = mediaType(image.mediaType);
-  if (!validImageBytes(image.uint8Array, type)) {
+  if (!isValidSlopcameraImageBytes(image.uint8Array, type)) {
     throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "Vercel AI Gateway returned an invalid bounded image.");
   }
   const gateway = isObject(value.providerMetadata) && isObject(value.providerMetadata.gateway) ? value.providerMetadata.gateway : undefined;
   const foreignGenerationId = gateway !== undefined && typeof gateway.generationId === "string" && gateway.generationId.length > 0 && gateway.generationId.length <= 256 && !/[\u0000-\u001f\u007f]/u.test(gateway.generationId) ? gateway.generationId : randomUUID();
   const requestId = `sha256:${createHash("sha256").update("slopcamera.gateway-generation-id/v1\x00").update(foreignGenerationId).digest("hex")}`;
   const warnings = Array.isArray(value.warnings) ? value.warnings.slice(0, 100).map(warningReceipt) : [];
+  const cost = reportedCost(gateway?.cost);
   return {
     bytes: image.uint8Array,
     response: {
@@ -329,9 +333,22 @@ function parseResult(value, model) {
       model,
       provider: "vercel-ai-gateway",
       requestId,
-      warnings
+      warnings,
+      ...cost === undefined ? {} : { cost }
     }
   };
+}
+var maximumReportedCostMicroUsd = 1e9;
+function reportedCost(value) {
+  const text = typeof value === "number" ? Number.isFinite(value) && value >= 0 && value < 1e6 ? value.toFixed(6) : "" : typeof value === "string" ? value.trim() : "";
+  const match = /^(\d{1,6})(?:\.(\d{1,12}))?$/u.exec(text);
+  if (match === null)
+    return;
+  const fraction = (match[2] ?? "").padEnd(6, "0");
+  const microUsd = Number(match[1]) * 1e6 + Number(fraction.slice(0, 6)) + (/[1-9]/u.test(fraction.slice(6)) ? 1 : 0);
+  if (!Number.isSafeInteger(microUsd) || microUsd > maximumReportedCostMicroUsd)
+    return;
+  return { basis: "reported", microUsd };
 }
 async function performGeneration(input, dependencies) {
   const model = validateModel(input.model);
@@ -374,7 +391,7 @@ async function performGeneration(input, dependencies) {
 async function generateSlopcameraImage(input, dependencies = {}) {
   return (await performGeneration(input, dependencies)).response;
 }
-function expectedMediaType(outputPath) {
+function slopcameraOutputMediaType(outputPath) {
   const extension = extname(outputPath).toLocaleLowerCase("en-US");
   if (extension === ".png")
     return "image/png";
@@ -384,7 +401,7 @@ function expectedMediaType(outputPath) {
     return "image/webp";
   invalidArgument("Output path must end in .png, .jpg, .jpeg, or .webp.");
 }
-async function atomicImageWrite(outputPath, bytes) {
+async function writeSlopcameraImageAtomically(outputPath, bytes) {
   const absolutePath = resolve(outputPath);
   const temporaryPath = resolve(dirname(absolutePath), `.${randomUUID()}.slopcamera-generate.tmp`);
   try {
@@ -399,16 +416,20 @@ async function atomicImageWrite(outputPath, bytes) {
     });
   }
 }
-async function generateSlopcameraImageFile(input, dependencies = {}) {
-  if (typeof input.outputPath !== "string" || input.outputPath.length < 1 || input.outputPath.length > 4096 || input.outputPath.includes("\x00")) {
+function validateSlopcameraOutputPath(value) {
+  if (typeof value !== "string" || value.length < 1 || value.length > 4096 || value.includes("\x00")) {
     invalidArgument("Output path must be a non-empty local path.");
   }
-  const expected = expectedMediaType(input.outputPath);
+  return value;
+}
+async function generateSlopcameraImageFile(input, dependencies = {}) {
+  validateSlopcameraOutputPath(input.outputPath);
+  const expected = slopcameraOutputMediaType(input.outputPath);
   const generated = await performGeneration(input, dependencies);
   if (generated.response.image.mediaType !== expected) {
     throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", `Generated ${generated.response.image.mediaType} does not match the requested ${expected} output path.`);
   }
-  const outputPath = await atomicImageWrite(input.outputPath, generated.bytes);
+  const outputPath = await writeSlopcameraImageAtomically(input.outputPath, generated.bytes);
   return {
     bytes: generated.bytes.byteLength,
     mediaType: generated.response.image.mediaType,
@@ -421,4 +442,4 @@ async function generateSlopcameraImageFile(input, dependencies = {}) {
   };
 }
 
-export { SlopcameraCloudError, slopcameraGatewayApiBaseUrl, slopcameraImageModels, slopcameraResponseMediaTypes, slopcameraMaximumPromptBytes, slopcameraMaximumRawImageBytes, resolveSlopcameraGatewayCredential, slopcameraGatewayCredentialStatus, createFixedGatewayFetch, generateSlopcameraImage, generateSlopcameraImageFile };
+export { SlopcameraCloudError, slopcameraGatewayApiBaseUrl, slopcameraImageModels, slopcameraResponseMediaTypes, slopcameraMaximumPromptBytes, slopcameraMaximumRawImageBytes, resolveSlopcameraGatewayCredential, slopcameraGatewayCredentialStatus, isValidSlopcameraPrompt, createFixedGatewayFetch, isValidSlopcameraImageBytes, generateSlopcameraImage, slopcameraOutputMediaType, writeSlopcameraImageAtomically, validateSlopcameraOutputPath, generateSlopcameraImageFile };

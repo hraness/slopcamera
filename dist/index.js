@@ -49,7 +49,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-xzdmyxhv.js";
+} from "./index-z316ncct.js";
 import {
   bundledSkillPath,
   installSkill
@@ -59,7 +59,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-sg902fta.js";
+} from "./index-2sbvyv0f.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -104,7 +104,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-6zc37y62.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -119,14 +119,19 @@ import {
   createFixedGatewayFetch,
   generateSlopcameraImage,
   generateSlopcameraImageFile,
+  isValidSlopcameraImageBytes,
+  isValidSlopcameraPrompt,
   resolveSlopcameraGatewayCredential,
   slopcameraGatewayApiBaseUrl,
   slopcameraGatewayCredentialStatus,
   slopcameraImageModels,
   slopcameraMaximumPromptBytes,
   slopcameraMaximumRawImageBytes,
-  slopcameraResponseMediaTypes
-} from "./index-231ernwj.js";
+  slopcameraOutputMediaType,
+  slopcameraResponseMediaTypes,
+  validateSlopcameraOutputPath,
+  writeSlopcameraImageAtomically
+} from "./index-vw5wjtsa.js";
 import {
   HOST_RESOURCE_MAX_WAIT_MILLISECONDS,
   HostResourceError,
@@ -141,6 +146,7 @@ import {
 } from "./index-sh6xbav6.js";
 import"./index-z1w83f81.js";
 export {
+  writeSlopcameraImageAtomically,
   withSlopcameraOperationHostAdmission,
   vtracerReleases,
   vectorizeProfileNames,
@@ -148,12 +154,14 @@ export {
   vectorizeHardLimits,
   vectorizeDefaultLimits,
   validateStudioReceipt,
+  validateSlopcameraOutputPath,
   studioSourceBundleSha256,
   studioRuntimeSha256,
   studioOutputPath,
   studioJobSha256,
   stackLayoutDefaults,
   slopcameraResponseMediaTypes,
+  slopcameraOutputMediaType,
   slopcameraOperationRegistry,
   slopcameraOperationHostResourceClaims,
   slopcameraOperationCodes,
@@ -206,6 +214,8 @@ export {
   mcpMaximumScale,
   mcpMaximumRenderedPixels,
   lintDiagram,
+  isValidSlopcameraPrompt,
+  isValidSlopcameraImageBytes,
   isSlopcameraOperationCode,
   installSkill,
   inspectStudioPlan,

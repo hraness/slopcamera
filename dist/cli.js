@@ -6,13 +6,13 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-xzdmyxhv.js";
+} from "./index-z316ncct.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
 import"./index-8txs6fkn.js";
-import"./index-sg902fta.js";
+import"./index-2sbvyv0f.js";
 import {
   executeSlopcameraOperation,
   generateSlopcameraIcon,
@@ -25,15 +25,23 @@ import {
   slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-6zc37y62.js";
 import {
   vectorizeImage
 } from "./index-9ajx7fzb.js";
 import {
+  SlopcameraCloudError,
   generateSlopcameraImageFile,
+  isValidSlopcameraImageBytes,
+  isValidSlopcameraPrompt,
   slopcameraGatewayCredentialStatus,
-  slopcameraImageModels
-} from "./index-231ernwj.js";
+  slopcameraImageModels,
+  slopcameraMaximumRawImageBytes,
+  slopcameraOutputMediaType,
+  slopcameraResponseMediaTypes,
+  validateSlopcameraOutputPath,
+  writeSlopcameraImageAtomically
+} from "./index-vw5wjtsa.js";
 import"./index-sh6xbav6.js";
 import {
   __require
@@ -93,6 +101,391 @@ async function showProductSupportInvitation(options = {}) {
   } catch {}
 }
 
+// src/credits.ts
+import {
+  buildCreditsRequiredEnvelope,
+  isCreditsClaimId,
+  isCreditsOperation,
+  isCreditsPackId,
+  isCreditsTimestamp,
+  isCreditsUrl,
+  isMicroUsd,
+  parseCreditsPack
+} from "@hraness/credits-foundation";
+import {
+  emitCreditsRequired,
+  runCreditsCommand
+} from "@hraness/credits-foundation/node";
+var SLOPCAMERA_CREDITS_SUBJECT_HEADER = "x-hraness-credits-subject";
+var SLOPCAMERA_CREDITS_PRODUCT_ID = "slopcamera";
+var SLOPCAMERA_IMAGE_GENERATE_OPERATION = "image_generate";
+var slopcameraCreditsRequiredExitCode = 10;
+var MAX_RESUME_ARGV = 32;
+var MAX_RESUME_ARGUMENT = 256;
+var UNSAFE_TEXT = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+var CREDITS_REQUIRED_REASONS = ["insufficient_credits", "subject_missing", "subject_rejected"];
+
+class SlopcameraCreditsRequiredError extends Error {
+  payload;
+  constructor(payload) {
+    super(payload.message);
+    this.name = "SlopcameraCreditsRequiredError";
+    this.payload = payload;
+  }
+}
+function creditsProfile(env = process.env) {
+  const serviceOrigin = env.SLOPCAMERA_CREDITS_SERVICE_ORIGIN;
+  return {
+    id: SLOPCAMERA_CREDITS_PRODUCT_ID,
+    name: "Slopcamera",
+    command: ["slopcamera"],
+    ...serviceOrigin === undefined || serviceOrigin === "" ? {} : { serviceOrigin }
+  };
+}
+async function runProductCreditsCommand(args, options = {}) {
+  const io = {
+    stdout: process.stdout,
+    stderr: process.stderr,
+    ...options
+  };
+  const result = await runCreditsCommand(creditsProfile(options.env ?? process.env), args, io);
+  return result.exitCode;
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function exactKeys(value, required, optional = []) {
+  const keys = Object.keys(value);
+  return required.every((key) => keys.includes(key)) && keys.every((key) => required.includes(key) || optional.includes(key));
+}
+function isUsdString(value) {
+  return typeof value === "string" && /^-?\d{1,10}\.\d{2}$/u.test(value);
+}
+function parseMoney(value) {
+  if (!isRecord(value) || !exactKeys(value, ["microUsd", "credits", "usd"]) || !isMicroUsd(value.microUsd) || !Number.isSafeInteger(value.credits) || !isUsdString(value.usd))
+    return null;
+  return Object.freeze({ microUsd: value.microUsd, credits: value.credits, usd: value.usd });
+}
+function parseTopup(value) {
+  if (!isRecord(value) || !exactKeys(value, ["claimId", "url", "expiresAt", "packs", "suggestedPackId"]) || !isCreditsClaimId(value.claimId) || !isCreditsUrl(value.url) || !isCreditsTimestamp(value.expiresAt) || !isCreditsPackId(value.suggestedPackId) || !Array.isArray(value.packs) || value.packs.length < 1 || value.packs.length > 16)
+    return null;
+  const packs = [];
+  for (const item of value.packs) {
+    const pack = parseCreditsPack(item);
+    if (pack === null)
+      return null;
+    packs.push(pack);
+  }
+  return Object.freeze({
+    claimId: value.claimId,
+    url: value.url,
+    expiresAt: value.expiresAt,
+    packs: Object.freeze(packs),
+    suggestedPackId: value.suggestedPackId
+  });
+}
+function parseSlopcameraCreditsRequiredPayload(value) {
+  if (!isRecord(value) || !exactKeys(value, ["error", "message", "operation", "reason"], ["required", "balance", "topup"]) || value.error !== "credits_required" || typeof value.message !== "string" || value.message.length > 2000 || UNSAFE_TEXT.test(value.message.replaceAll(`
+`, " ")) || !isCreditsOperation(value.operation) || !CREDITS_REQUIRED_REASONS.includes(value.reason))
+    return null;
+  const required = value.required === undefined ? undefined : parseMoney(value.required);
+  const topup = value.topup === undefined ? undefined : parseTopup(value.topup);
+  let balance;
+  if (value.balance !== undefined) {
+    if (!isRecord(value.balance) || !isMicroUsd(value.balance.availableMicroUsd))
+      return null;
+    const { availableMicroUsd, ...rest } = value.balance;
+    const money = parseMoney(rest);
+    balance = money === null ? null : { ...money, availableMicroUsd };
+  }
+  if (required === null || topup === null || balance === null)
+    return null;
+  return Object.freeze({
+    error: "credits_required",
+    message: value.message,
+    operation: value.operation,
+    reason: value.reason,
+    ...required === undefined ? {} : { required },
+    ...balance === undefined ? {} : { balance: Object.freeze(balance) },
+    ...topup === undefined ? {} : { topup }
+  });
+}
+function resumeCommand(argv) {
+  const full = ["slopcamera", ...argv];
+  const representable = full.length <= MAX_RESUME_ARGV && full.every((argument) => argument.length > 0 && argument.length <= MAX_RESUME_ARGUMENT && argument.trim() === argument && !UNSAFE_TEXT.test(argument));
+  return representable ? { argv: full, automatic: true } : { argv: ["slopcamera", "image", "generate"], automatic: false };
+}
+async function emitProductCreditsRequired(error, options) {
+  const payload = error.payload;
+  if (payload.required === undefined || payload.balance === undefined || payload.topup === undefined)
+    return false;
+  const profile = creditsProfile(options.env ?? process.env);
+  let envelope;
+  try {
+    envelope = buildCreditsRequiredEnvelope({
+      product: { id: profile.id, name: profile.name },
+      command: profile.command,
+      operation: payload.operation,
+      requiredMicroUsd: payload.required.microUsd,
+      balanceMicroUsd: payload.balance.microUsd,
+      topup: {
+        url: payload.topup.url,
+        expiresAt: payload.topup.expiresAt,
+        packs: payload.topup.packs.map((pack) => ({
+          id: pack.id,
+          usd: pack.usd,
+          credits: pack.credits,
+          bonusCredits: pack.bonusCredits
+        })),
+        suggestedPackId: payload.topup.suggestedPackId
+      },
+      resume: resumeCommand(options.argv)
+    });
+  } catch {
+    return false;
+  }
+  return emitCreditsRequired(envelope, options.stderr === undefined ? {} : { stderr: options.stderr }, options.audience);
+}
+
+// src/hosted-generate.ts
+import { createHash } from "crypto";
+import { readStoredDeviceToken } from "@hraness/credits-foundation/node";
+import { isMicroUsd as isMicroUsd2 } from "@hraness/credits-foundation";
+var slopcameraHostedGatewayOrigin = "https://gateway.slopcamera.com";
+var slopcameraHostedGeneratePath = "/v1/generate";
+var slopcameraGenerationModes = Object.freeze(["direct", "hosted"]);
+var defaultHostedTimeoutMs = 5 * 60000;
+var maximumHostedTimeoutMs = 30 * 60000;
+var defaultMaximumHostedResponseBytes = 96 * 1024 * 1024;
+var maximumErrorBodyBytes = 64 * 1024;
+var userAgent = `slopcamera/${SLOPCAMERA_VERSION} (hosted)`;
+function invalidArgument(message) {
+  throw new SlopcameraCloudError("INVALID_ARGUMENT", message);
+}
+function resolveSlopcameraGenerationMode(env, hostedFlag) {
+  if (hostedFlag)
+    return "hosted";
+  const configured = env.SLOPCAMERA_GENERATION_MODE;
+  if (configured === undefined || configured === "")
+    return "direct";
+  if (!slopcameraGenerationModes.includes(configured)) {
+    invalidArgument(`SLOPCAMERA_GENERATION_MODE must be one of: ${slopcameraGenerationModes.join(", ")}.`);
+  }
+  return configured;
+}
+function resolveSlopcameraHostedGatewayOrigin(env) {
+  const configured = env.SLOPCAMERA_HOSTED_GATEWAY_ORIGIN;
+  if (configured === undefined || configured === "")
+    return slopcameraHostedGatewayOrigin;
+  let url;
+  try {
+    url = new URL(configured);
+  } catch {
+    invalidArgument("SLOPCAMERA_HOSTED_GATEWAY_ORIGIN must be an https origin.");
+  }
+  const loopback = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !loopback || url.username !== "" || url.password !== "" || url.pathname !== "/" || url.search !== "" || url.hash !== "" || configured.length > 256) {
+    invalidArgument("SLOPCAMERA_HOSTED_GATEWAY_ORIGIN must be an https origin.");
+  }
+  return url.origin;
+}
+function validateModel(value) {
+  if (typeof value !== "string" || !slopcameraImageModels.includes(value)) {
+    invalidArgument(`Hosted generation supports only: ${slopcameraImageModels.join(", ")}.`);
+  }
+  return value;
+}
+function validateTimeout(value) {
+  const timeout = value ?? defaultHostedTimeoutMs;
+  if (!Number.isSafeInteger(timeout) || timeout < 1000 || timeout > maximumHostedTimeoutMs) {
+    invalidArgument(`timeoutMs must be an integer from 1000 through ${maximumHostedTimeoutMs}.`);
+  }
+  return timeout;
+}
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function exactKeys2(value, keys) {
+  const present = Object.keys(value);
+  return present.length === keys.length && keys.every((key) => present.includes(key));
+}
+function invalidResponse() {
+  throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", "The hosted gateway returned an invalid bounded response.");
+}
+async function readBoundedBytes(response, maximumBytes) {
+  const declared = response.headers.get("content-length");
+  if (declared !== null) {
+    const value = Number(declared);
+    if (!Number.isSafeInteger(value) || value < 0 || value > maximumBytes) {
+      await response.body?.cancel().catch(() => {
+        return;
+      });
+      invalidResponse();
+    }
+  }
+  if (response.body === null)
+    return new Uint8Array;
+  const reader = response.body.getReader();
+  const chunks = [];
+  let length = 0;
+  try {
+    for (;; ) {
+      const next = await reader.read();
+      if (next.done)
+        break;
+      length += next.value.byteLength;
+      if (length > maximumBytes) {
+        await reader.cancel().catch(() => {
+          return;
+        });
+        invalidResponse();
+      }
+      chunks.push(next.value);
+    }
+  } catch (error) {
+    if (error instanceof SlopcameraCloudError)
+      throw error;
+    invalidResponse();
+  }
+  return Buffer.concat(chunks);
+}
+function parseJson(bytes) {
+  try {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    invalidResponse();
+  }
+}
+function parseCreditsReceipt(value) {
+  if (!isRecord2(value) || !exactKeys2(value, ["holdId", "chargedMicroUsd", "charged", "balance", "lowBalance", "settled"]) || typeof value.holdId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/u.test(value.holdId) || !isMicroUsd2(value.chargedMicroUsd) || value.chargedMicroUsd < 0 || typeof value.lowBalance !== "boolean" || typeof value.settled !== "boolean" || !isRecord2(value.charged) || !exactKeys2(value.charged, ["microUsd", "credits", "usd"]) || !isMicroUsd2(value.charged.microUsd) || !Number.isSafeInteger(value.charged.credits) || typeof value.charged.usd !== "string" || !/^-?\d{1,10}\.\d{2}$/u.test(value.charged.usd) || !isRecord2(value.balance) || !exactKeys2(value.balance, ["microUsd", "availableMicroUsd"]) || !isMicroUsd2(value.balance.microUsd) || !isMicroUsd2(value.balance.availableMicroUsd)) {
+    invalidResponse();
+  }
+  return Object.freeze({
+    holdId: value.holdId,
+    chargedMicroUsd: value.chargedMicroUsd,
+    charged: Object.freeze({
+      microUsd: value.charged.microUsd,
+      credits: value.charged.credits,
+      usd: value.charged.usd
+    }),
+    balance: Object.freeze({ microUsd: value.balance.microUsd, availableMicroUsd: value.balance.availableMicroUsd }),
+    lowBalance: value.lowBalance,
+    settled: value.settled
+  });
+}
+function parseGeneration(value, model) {
+  if (!isRecord2(value) || !exactKeys2(value, ["image", "model", "provider", "requestId", "warnings", "credits"]) || value.model !== model || value.provider !== "vercel-ai-gateway" || typeof value.requestId !== "string" || !/^sha256:[a-f0-9]{64}$/u.test(value.requestId) || !Array.isArray(value.warnings) || value.warnings.length > 100 || !value.warnings.every((warning) => typeof warning === "string" && warning.length <= 256 && !/[\u0000-\u001F\u007F]/u.test(warning)) || !isRecord2(value.image) || !exactKeys2(value.image, ["base64", "mediaType"]) || typeof value.image.base64 !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/u.test(value.image.base64) || value.image.base64.length > Math.ceil(slopcameraMaximumRawImageBytes / 3) * 4 || !slopcameraResponseMediaTypes.includes(value.image.mediaType)) {
+    invalidResponse();
+  }
+  const mediaType = value.image.mediaType;
+  const bytes = new Uint8Array(Buffer.from(value.image.base64, "base64"));
+  if (!isValidSlopcameraImageBytes(bytes, mediaType))
+    invalidResponse();
+  return {
+    bytes,
+    mediaType,
+    model,
+    requestId: value.requestId,
+    warnings: Object.freeze([...value.warnings]),
+    credits: parseCreditsReceipt(value.credits)
+  };
+}
+async function storedSubjectToken(dependencies) {
+  if (dependencies.subjectToken !== undefined)
+    return dependencies.subjectToken;
+  const env = dependencies.environment ?? process.env;
+  const stored = await readStoredDeviceToken(creditsProfile(env), {
+    env,
+    ...dependencies.stateDirectory === undefined ? {} : { stateDirectory: dependencies.stateDirectory }
+  });
+  return stored.ok ? stored.value : null;
+}
+function creditsRequired(body) {
+  let parsed;
+  try {
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
+  } catch {
+    parsed = undefined;
+  }
+  const payload = parseSlopcameraCreditsRequiredPayload(parsed);
+  return new SlopcameraCreditsRequiredError(payload ?? {
+    error: "credits_required",
+    message: "Hosted generation needs prepaid credits. Run `slopcamera credits topup`, pay in your browser, then run `slopcamera credits wait` and rerun this command.",
+    operation: "image_generate",
+    reason: "insufficient_credits"
+  });
+}
+function failureMessage(status, body) {
+  let detail = "";
+  try {
+    const parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
+    if (isRecord2(parsed) && typeof parsed.error === "string" && /^[a-z][a-z_]{0,63}$/u.test(parsed.error)) {
+      detail = ` (${parsed.error})`;
+    }
+  } catch {
+    detail = "";
+  }
+  return `The hosted gateway answered HTTP ${status}${detail}; the request was not retried.`;
+}
+async function generateSlopcameraImageFileHosted(input, dependencies = {}) {
+  const env = dependencies.environment ?? process.env;
+  const model = validateModel(input.model);
+  if (!isValidSlopcameraPrompt(input.prompt)) {
+    invalidArgument("Prompt must be non-empty and within the bounded UTF-8 budget.");
+  }
+  validateSlopcameraOutputPath(input.outputPath);
+  const expected = slopcameraOutputMediaType(input.outputPath);
+  const timeoutMs = validateTimeout(input.timeoutMs);
+  const maximumResponseBytes = dependencies.maximumResponseBytes ?? defaultMaximumHostedResponseBytes;
+  if (!Number.isSafeInteger(maximumResponseBytes) || maximumResponseBytes < 1 || maximumResponseBytes > 1024 * 1024 * 1024) {
+    invalidArgument("maximumResponseBytes is outside the supported range.");
+  }
+  const origin = resolveSlopcameraHostedGatewayOrigin(env);
+  const token = await storedSubjectToken(dependencies);
+  const signal = input.signal === undefined ? AbortSignal.timeout(timeoutMs) : AbortSignal.any([input.signal, AbortSignal.timeout(timeoutMs)]);
+  let response;
+  try {
+    response = await (dependencies.fetch ?? globalThis.fetch)(`${origin}${slopcameraHostedGeneratePath}`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json; charset=utf-8",
+        "user-agent": userAgent,
+        ...token === null ? {} : { [SLOPCAMERA_CREDITS_SUBJECT_HEADER]: token }
+      },
+      body: JSON.stringify({ model, prompt: input.prompt }),
+      redirect: "error",
+      signal
+    });
+  } catch {
+    throw new SlopcameraCloudError("GENERATION_FAILED", "Hosted image generation failed before the gateway answered; the request was not retried.");
+  }
+  if (response.status === 402) {
+    throw creditsRequired(await readBoundedBytes(response, maximumErrorBodyBytes));
+  }
+  if (response.status !== 200) {
+    const body = await readBoundedBytes(response, maximumErrorBodyBytes);
+    throw new SlopcameraCloudError("GENERATION_FAILED", failureMessage(response.status, body));
+  }
+  const generated = parseGeneration(parseJson(await readBoundedBytes(response, maximumResponseBytes)), model);
+  if (generated.mediaType !== expected) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", `Generated ${generated.mediaType} does not match the requested ${expected} output path.`);
+  }
+  const outputPath = await writeSlopcameraImageAtomically(input.outputPath, generated.bytes);
+  return {
+    bytes: generated.bytes.byteLength,
+    mediaType: generated.mediaType,
+    model: generated.model,
+    outputPath,
+    provider: "vercel-ai-gateway",
+    requestId: generated.requestId,
+    sha256: createHash("sha256").update(generated.bytes).digest("hex"),
+    warnings: generated.warnings,
+    route: "hosted",
+    credits: generated.credits
+  };
+}
+
 // src/cli.ts
 var slopcameraCliVersion = SLOPCAMERA_VERSION;
 var help = `slopcamera ${slopcameraCliVersion}
@@ -104,7 +497,7 @@ Usage:
   slopcamera diagram check <file> [--config <file>] [--strict]
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
-  slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
+  slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--hosted] [--json]
   slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
     [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
     [--keep-raster] [--json]
@@ -116,6 +509,7 @@ Usage:
   slopcamera mcp --root <workspace>
   slopcamera doctor
   slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
+  slopcamera credits [protocol --json|status [--json]|topup [--usd N|--pack ID] [--email ADDR] [--json]|email --to ADDR|wait [--timeout 15m] [--json]|estimate OPERATION [--units N]|signout]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -138,6 +532,13 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- \u2026\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+With --hosted (or SLOPCAMERA_GENERATION_MODE=hosted), generate sends the same
+request to the Hraness-operated gateway instead, paid with prepaid credits held
+by this device; no Gateway credential is read. When credits are needed the
+command prints one hraness-credits-required-v1 line on stderr and exits ${slopcameraCreditsRequiredExitCode}.
+Credits: slopcamera credits status|topup|wait; agents read credits protocol --json.
+One credit is one cent.
 
 Icon produces isometric line-art SVG: a style-locked Gateway raster is
 normalized to canonical ink-on-transparent pixels, traced by the local
@@ -272,6 +673,9 @@ var starter = {
   ],
   edges: [{ id: "source-result", from: "source", to: "result" }]
 };
+function isHostedResult(result) {
+  return "route" in result && result.route === "hosted";
+}
 function hostAdmissionOptions(dependencies) {
   return dependencies.hostResourceCoordinator === undefined ? {} : { hostResourceCoordinator: dependencies.hostResourceCoordinator };
 }
@@ -299,6 +703,10 @@ ${help}`);
 async function main(args, dependencies = {}) {
   if (args[0] === "support") {
     process.exitCode = await runProductSupportCommand(args.slice(1), dependencies.supportEnvironment === undefined ? {} : { env: dependencies.supportEnvironment });
+    return;
+  }
+  if (args[0] === "credits") {
+    process.exitCode = await runProductCreditsCommand(args.slice(1), dependencies.environment === undefined ? {} : { env: dependencies.environment });
     return;
   }
   const [command, ...rest] = canonicalArguments(args);
@@ -380,26 +788,58 @@ async function main(args, dependencies = {}) {
   }
   if (command === "generate") {
     const parsed = parseArguments(rest, new Set(["model", "output"]));
-    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json");
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "hosted");
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown generate option: --${unknownFlags[0]}`);
     }
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image generate accepts exactly one prompt");
     }
+    const environment = dependencies.environment ?? process.env;
+    const mode = resolveSlopcameraGenerationMode(environment, parsed.flags.has("hosted"));
     const model = parsed.options.model ?? slopcameraImageModels[1];
     if (model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)) {
       throw new Error("--model must be a bounded Vercel AI Gateway provider/model id");
     }
-    const result = await withSlopcameraOperationHostAdmission("slopcamera.image.generate", async () => await (dependencies.generate ?? generateSlopcameraImageFile)({
+    if (mode === "hosted" && !slopcameraImageModels.includes(model)) {
+      throw new Error(`--hosted supports only: ${slopcameraImageModels.join(", ")}`);
+    }
+    const request = {
       model,
       prompt: requiredPositional(parsed, 0, "prompt"),
       outputPath: requiredOption(parsed, "output")
-    }), hostAdmissionOptions(dependencies));
+    };
+    let result;
+    try {
+      result = await withSlopcameraOperationHostAdmission("slopcamera.image.generate", async () => mode === "hosted" ? await (dependencies.generateHosted ?? generateSlopcameraImageFileHosted)(request, { environment }) : await (dependencies.generate ?? generateSlopcameraImageFile)(request), hostAdmissionOptions(dependencies));
+    } catch (error) {
+      if (!(error instanceof SlopcameraCreditsRequiredError))
+        throw error;
+      const asJson = parsed.flags.has("json");
+      const handoffPrinted = await emitProductCreditsRequired(error, {
+        argv: args,
+        audience: asJson ? "agent" : "human",
+        env: environment,
+        ...dependencies.stderr === undefined ? {} : { stderr: dependencies.stderr }
+      });
+      if (asJson) {
+        (dependencies.log ?? console.log)(JSON.stringify({
+          error: "credits_required",
+          message: error.message,
+          operation: error.payload.operation === undefined ? SLOPCAMERA_IMAGE_GENERATE_OPERATION : error.payload.operation,
+          reason: error.payload.reason
+        }, null, 2));
+      } else if (!handoffPrinted) {
+        console.error(`slopcamera: ${error.message}`);
+      }
+      process.exitCode = slopcameraCreditsRequiredExitCode;
+      return;
+    }
     if (parsed.flags.has("json")) {
       (dependencies.log ?? console.log)(JSON.stringify(result, null, 2));
     } else {
-      (dependencies.log ?? console.log)(`Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})`);
+      const charged = isHostedResult(result) ? ` (charged $${result.credits.charged.usd}${result.credits.settled ? "" : ", settlement pending"})` : "";
+      (dependencies.log ?? console.log)(`Generated ${result.mediaType} with ${result.model}: ${result.outputPath} (${result.bytes} bytes, request ${result.requestId})${charged}`);
     }
     reportUsefulResult(dependencies.onUsefulResult);
     return;

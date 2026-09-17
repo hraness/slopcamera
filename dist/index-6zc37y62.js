@@ -18,7 +18,7 @@ import {
   slopcameraGatewayApiBaseUrl,
   slopcameraImageModels,
   slopcameraMaximumPromptBytes
-} from "./index-231ernwj.js";
+} from "./index-vw5wjtsa.js";
 import {
   createDefaultHostResourceCoordinator
 } from "./index-sh6xbav6.js";

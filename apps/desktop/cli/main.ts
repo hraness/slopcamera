@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { runProductCreditsCommand } from "../../../src/credits";
 import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "../../../src/support";
 
 import { parseCliArgs } from "./args";
@@ -42,6 +43,7 @@ export async function main(
     return await runProductSupportCommand(argv.slice(1),
       supportEnvironment === undefined ? {} : { env: supportEnvironment });
   }
+  if (argv[0] === "credits") return await runProductCreditsCommand(argv.slice(1));
   const unifiedArgv = canonicalizeUnifiedCliArgs(argv);
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);
   if (portableExitCode !== undefined) return portableExitCode;
