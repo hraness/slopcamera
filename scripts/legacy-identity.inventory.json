@@ -729,7 +729,7 @@
   },
   {
     "identityLineCount": 50,
-    "identityLinesSha256": "e4348f70580cf8c6fb862c1e4175287742d36f9919b2e7c147e9df450977514a",
+    "identityLinesSha256": "1f88f391eb93f180b4cb9772c4fddb180f28d346d425d14bf12b46d4ae12f82a",
     "occurrenceCount": 65,
     "path": "apps/desktop/cli/studio-spatial-asset.test.ts",
     "categories": [
@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "b6a9c3b5dbe2c4f210c704a6c2d010f927c7819c52162199b9c7044d4cc93c96",
+    "identityLinesSha256": "4c1cb4f6745baf2f9885b1588c149e37b22c9d8c970255aa43f33d3f3240ac57",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1624,15 +1624,6 @@
     "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
     "occurrenceCount": 9,
     "path": "dist/index-42zsesc1.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
-    "identityLineCount": 142,
-    "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
-    "occurrenceCount": 237,
-    "path": "dist/index-9z3wabyn.js",
     "categories": [
       "generated"
     ]

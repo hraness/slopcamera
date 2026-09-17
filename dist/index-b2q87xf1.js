@@ -124,9 +124,13 @@ var SpatialAssetManifestSchema = z.strictObject({
   })
 });
 var color = z.string().regex(/^#[a-fA-F0-9]{6}$/u);
+var SpatialEmissiveSchema = z.strictObject({
+  color,
+  intensity: z.number().finite().min(0).max(1e5)
+});
 var SpatialMaterialSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional() })
+  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() })
 ]);
 var SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -141,6 +145,12 @@ var SpatialGeometrySchema = z.discriminatedUnion("kind", [
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional()
   })
 ]);
+var SpatialSpotLightSchema = z.strictObject({
+  angle: z.number().finite().min(0.000001).max(Math.PI / 2),
+  penumbra: unit,
+  distance: z.number().finite().min(0).max(1e6).optional(),
+  decay: z.number().finite().min(0).max(1000).optional()
+});
 var SpatialOriginSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("authored") }),
   z.strictObject({ kind: z.literal("generated"), generatorId: SpatialGeneratorIdSchema, key: z.string().min(1).max(256) })
@@ -167,12 +177,28 @@ var surfaceBase = {
 };
 var SpatialEntitySchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...entityBase, kind: z.literal("group") }),
-  z.strictObject({ ...entityBase, kind: z.literal("mesh"), geometry: SpatialGeometrySchema, material: SpatialMaterialSchema }),
+  z.strictObject({
+    ...entityBase,
+    kind: z.literal("mesh"),
+    geometry: SpatialGeometrySchema,
+    material: SpatialMaterialSchema,
+    castShadow: z.boolean().optional(),
+    receiveShadow: z.boolean().optional(),
+    instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
+  }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("image") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("diagram") }),
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
-  z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point"]), color, intensity: z.number().finite().min(0).max(1e5) }),
+  z.strictObject({
+    ...entityBase,
+    kind: z.literal("light"),
+    light: z.enum(["ambient", "directional", "point", "spot"]),
+    color,
+    intensity: z.number().finite().min(0).max(1e5),
+    spot: SpatialSpotLightSchema.optional(),
+    shadow: z.boolean().optional()
+  }),
   z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
   z.strictObject({
     ...entityBase,
@@ -181,7 +207,16 @@ var SpatialEntitySchema = z.discriminatedUnion("kind", [
     role: z.enum(["background", "environment", "both"]),
     intensity: z.number().finite().min(0).max(16)
   })
-]);
+]).superRefine((entity, context) => {
+  if (entity.kind !== "light")
+    return;
+  if (entity.light === "spot" && entity.spot === undefined)
+    context.addIssue({ code: "custom", path: ["spot"], message: "Spot lights require their spot cone parameters." });
+  if (entity.light !== "spot" && entity.spot !== undefined)
+    context.addIssue({ code: "custom", path: ["spot"], message: "Only spot lights may carry spot cone parameters." });
+  if (entity.light === "ambient" && entity.shadow !== undefined)
+    context.addIssue({ code: "custom", path: ["shadow"], message: "Ambient lights cannot cast shadows; only directional, point, and spot lights may declare shadow." });
+});
 var key = (value) => z.strictObject({ timeUs: SpatialTimeUsSchema, value });
 var channelBase = { channelId: SpatialChannelIdSchema, targetId: z.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) };
 var SpatialAnimationSchema = z.discriminatedUnion("property", [
@@ -231,6 +266,11 @@ var SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
   z.strictObject({ kind: z.literal("set-color"), entityId: SpatialEntityIdSchema, color }),
   z.strictObject({ kind: z.literal("set-opacity"), entityId: SpatialEntityIdSchema, opacity: unit }),
+  z.strictObject({ kind: z.literal("set-emissive"), entityId: SpatialEntityIdSchema, emissive: SpatialEmissiveSchema.nullable() }),
+  z.strictObject({ kind: z.literal("set-spot"), entityId: SpatialEntityIdSchema, spot: SpatialSpotLightSchema }),
+  z.strictObject({ kind: z.literal("set-instances"), entityId: SpatialEntityIdSchema, instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).nullable() }),
+  z.strictObject({ kind: z.literal("set-mesh-shadow"), entityId: SpatialEntityIdSchema, castShadow: z.boolean().nullable(), receiveShadow: z.boolean().nullable() }),
+  z.strictObject({ kind: z.literal("set-light-shadow"), entityId: SpatialEntityIdSchema, shadow: z.boolean().nullable() }),
   z.strictObject({ kind: z.literal("set-camera"), camera: SpatialCameraSchema }),
   z.strictObject({ kind: z.literal("set-channel"), channel: SpatialAnimationSchema }),
   z.strictObject({ kind: z.literal("remove-channel"), channelId: SpatialChannelIdSchema }),
@@ -382,8 +422,11 @@ function generatedSpatialEntityId(generatorId, key2) {
   return `entity_${spatialValueSha256({ domain: "slopcamera.generated-entity.v1", generatorId, key: key2 })}`;
 }
 function normalizeEntity(entity) {
-  if (entity.kind === "mesh")
-    return { ...entity, material: { ...entity.material, color: entity.material.color.toLowerCase() } };
+  if (entity.kind === "mesh") {
+    const material = entity.material;
+    const emissive = material.kind === "standard" && material.emissive !== undefined ? { ...material.emissive, color: material.emissive.color.toLowerCase() } : undefined;
+    return { ...entity, material: { ...material, color: material.color.toLowerCase(), ...emissive === undefined ? {} : { emissive } } };
+  }
   if (entity.kind === "text" || entity.kind === "light")
     return { ...entity, color: entity.color.toLowerCase() };
   return entity;
@@ -1099,6 +1142,53 @@ function applySpatialScenePatch(sceneInput, patchInput) {
       case "set-opacity":
         entities.set(operation.entityId, applySpatialEntityOverride(authored(operation.entityId), { entityId: operation.entityId, property: "opacity", value: operation.opacity }));
         break;
+      case "set-emissive": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh" || entity.material.kind !== "standard")
+          throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard material.", "operations");
+        if (!spatialPropertySupported(entity, "color"))
+          throw new SpatialSceneError("conflict", "Source-material mode leaves emissive control to the retained GLB material.", "operations");
+        const { emissive: _cleared, ...material } = entity.material;
+        entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } });
+        break;
+      }
+      case "set-spot": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "light" || entity.light !== "spot")
+          throw new SpatialSceneError("conflict", "Spot cone edits require an authored spot light.", "operations");
+        entities.set(operation.entityId, { ...entity, spot: operation.spot });
+        break;
+      }
+      case "set-instances": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh")
+          throw new SpatialSceneError("conflict", "Instance edits apply to authored mesh entities.", "operations");
+        const { instances: _cleared, ...rest } = entity;
+        entities.set(operation.entityId, operation.instances === null ? rest : { ...rest, instances: operation.instances });
+        break;
+      }
+      case "set-mesh-shadow": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh")
+          throw new SpatialSceneError("conflict", "Mesh shadow flags apply to authored mesh entities.", "operations");
+        const { castShadow: _cast, receiveShadow: _receive, ...rest } = entity;
+        entities.set(operation.entityId, {
+          ...rest,
+          ...operation.castShadow === null ? {} : { castShadow: operation.castShadow },
+          ...operation.receiveShadow === null ? {} : { receiveShadow: operation.receiveShadow }
+        });
+        break;
+      }
+      case "set-light-shadow": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "light")
+          throw new SpatialSceneError("conflict", "Light shadow flags apply to authored light entities.", "operations");
+        if (entity.light === "ambient" && operation.shadow !== null)
+          throw new SpatialSceneError("conflict", "Ambient lights cannot cast shadows.", "operations");
+        const { shadow: _shadow, ...rest } = entity;
+        entities.set(operation.entityId, operation.shadow === null ? rest : { ...rest, shadow: operation.shadow });
+        break;
+      }
       case "set-camera":
         cameras.set(operation.camera.cameraId, operation.camera);
         break;
@@ -1167,4 +1257,4 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
-export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, diffSpatialScenes, applySpatialScenePatch };
+export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, diffSpatialScenes, applySpatialScenePatch };
