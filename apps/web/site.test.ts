@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url"
 
 import {
   HRANESS_HOME_URL,
+  hranessAttribution,
   hranessSocialLinks,
 } from "@hraness/site-footer"
 
@@ -165,7 +166,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required 0.8 foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 310_500) throw new Error(`Combined site CSS exceeds its 310,500-byte budget: ${bytes}`)
+  if (bytes >= 313_500) throw new Error(`Combined site CSS exceeds its 313,500-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -256,15 +257,15 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(143_299), "x".repeat(167_200))).toBe(310_499)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(143_300), "x".repeat(167_200)))
-    .toThrow("Combined site CSS exceeds its 310,500-byte budget: 310500")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(143_299), `${"x".repeat(167_200)}é`))
-    .toThrow("Combined site CSS exceeds its 310,500-byte budget: 310501")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(310_500), ""))
-    .toThrow("Combined site CSS exceeds its 310,500-byte budget: 310500")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(310_500)))
-    .toThrow("Combined site CSS exceeds its 310,500-byte budget: 310500")
+  expect(assertCombinedSiteCssBudget("x".repeat(146_299), "x".repeat(167_200))).toBe(313_499)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(146_300), "x".repeat(167_200)))
+    .toThrow("Combined site CSS exceeds its 313,500-byte budget: 313500")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(146_299), `${"x".repeat(167_200)}é`))
+    .toThrow("Combined site CSS exceeds its 313,500-byte budget: 313501")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(313_500), ""))
+    .toThrow("Combined site CSS exceeds its 313,500-byte budget: 313500")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(313_500)))
+    .toThrow("Combined site CSS exceeds its 313,500-byte budget: 313500")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
@@ -963,7 +964,7 @@ describe("static Slopcamera site", () => {
       'id="interfaces"',
       'id="design"',
       'id="questions"',
-      'id="maker"',
+      'id="closing"',
     ]
     const positions = sections.map(section => html.indexOf(section))
     const navigation = /<nav aria-label="Primary" class="\{\{SITE_NAVIGATION_CLASS\}\}">([\s\S]*?)<\/nav>/u.exec(html)?.[1] ?? ""
@@ -987,11 +988,11 @@ describe("static Slopcamera site", () => {
       "interfaces",
       "trust",
       "questions",
-      "maker",
       "cta",
     ]) {
       expect(html).toContain(`data-hraness-marketing="${role}"`)
     }
+    expect(html).not.toContain('data-hraness-marketing="maker"')
     expect(html).not.toContain("Diátaxis")
   })
 
@@ -1167,7 +1168,7 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain('class="hraness-marketing-field"')
     expect(await readSource("404.html")).not.toContain("data-hraness-marketing-preset")
     expect(await readSource("preview.html")).not.toContain("data-hraness-marketing-preset")
-    expect(html).toContain("Built by Ben Guo")
+    expect(html).not.toContain("Ben Guo")
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
     expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall" data-align="start"')
     expect(css).toContain("grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr)")
@@ -1302,7 +1303,7 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.8.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.12.1",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.13.0",
       "@hraness/ui": "github:hraness/ui#v0.5.12",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
@@ -1329,7 +1330,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.8.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.12.1"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.13.0"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
@@ -1598,10 +1599,12 @@ describe("static Slopcamera site", () => {
     // The reviewed 0.8 refinement graph plus the documentation recipes is
     // under 298,500 bytes before compression; the shared-footer v0.12.x
     // optional-support styles and the host scroll-padding rule that keeps
-    // keyboard focus above the fixed footer bar measure 310,206 together. Keep
-    // a strict ceiling over the full sealed union and captured foundation; no
-    // import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(310_500)
+    // keyboard focus above the fixed footer bar measured 310,206 together, and
+    // the shared-footer v0.13.x organization-attribution styles measure
+    // 313,229. Keep a strict ceiling over the full sealed union and captured
+    // foundation; no import, recipe, snapshot, or repeated layered rule is
+    // discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(313_500)
     expect(new TextEncoder().encode(themeAsset).byteLength).toBeLessThan(24_000)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
@@ -1859,6 +1862,38 @@ describe("static Slopcamera site", () => {
         [...(footer?.matchAll(/<a\b[^>]*\shref="([^"]+)"/gu) ?? [])]
           .map(match => match[1]),
       ).toEqual(expectedHrefs)
+    }
+  })
+
+  test("attributes every public page to the organization through the shared footer only", async () => {
+    // The shared footer owns the "Built by Hraness" attribution. Public pages
+    // carry no separate maker section and never attribute the product to a person.
+    const documents = await Promise.all([
+      readBuilt("index.html"),
+      readBuilt("404.html"),
+      ...docPages.map(page => readBuilt(docsDocumentForPage(page))),
+    ])
+    expect(hranessAttribution).toEqual({
+      title: "Built by Hraness",
+      subtitle: "Hraness is an advanced software research organization dedicated to advancing the frontier of machine intelligence.",
+    })
+    for (const document of documents) {
+      const footer = /<footer\b[\s\S]*?<\/footer>/u.exec(document)?.[0]
+      expect(footer).toBeDefined()
+      const attribution = [...document.matchAll(/<div class="hraness-site-footer__attribution [^"]*" data-slot="hraness-attribution" lang="en" dir="ltr">([\s\S]*?)<\/div>/gu)]
+      expect(attribution).toHaveLength(1)
+      expect(document.indexOf(attribution[0]![0])).toBeGreaterThan(document.indexOf("<footer"))
+      expect(attribution[0]![1]).toMatch(new RegExp(`^<p class="hraness-site-footer__attribution-title [^"]*">${hranessAttribution.title}</p><p class="hraness-site-footer__attribution-subtitle [^"]*">${hranessAttribution.subtitle}</p>$`, "u"))
+      expect(document.split(hranessAttribution.title)).toHaveLength(2)
+      expect(document).not.toMatch(/Ben Guo|hraness-marketing-maker|id="maker"|href="#maker"/u)
+    }
+    const source = await readSource("index.html")
+    expect(source).not.toMatch(/Ben Guo|Puerto Rico|Venmo|hraness-marketing-maker|id="maker"|href="#maker"/u)
+    expect(source).toContain("<summary>Who made Slopcamera?</summary>")
+    expect(source).toContain('<a href="https://hraness.com">Hraness</a>, an advanced software research organization.')
+    expect(homeMarkdown).toContain(`## ${hranessAttribution.title}\n\n${hranessAttribution.subtitle}\n`)
+    for (const markdown of [homeMarkdown, llmsTxt, sitemapMarkdown, notFoundMarkdown]) {
+      expect(markdown).not.toMatch(/Ben Guo|Puerto Rico|Venmo/u)
     }
   })
 
