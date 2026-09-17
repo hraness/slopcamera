@@ -3,6 +3,7 @@ import {
   SLOPCAMERA_VERSION,
   STUDIO_LIMITS,
   SlopcameraMcpToolRuntime,
+  SlopcameraSceneVariantsSchema,
   StudioCapabilityNameSchema,
   StudioDigestSchema,
   StudioEngineOptionsSchema,
@@ -31,11 +32,13 @@ import {
   mcpMaximumRenderedPixels,
   mcpMaximumScale,
   mcpSourceByteLimit,
+  parseSlopcameraSceneVariants,
   parseStudioJob,
   parseStudioPlan,
   parseStudioReceipt,
   parseStudioRuntimeIdentity,
   parseStudioSourceBundle,
+  planSlopcameraSceneGallery,
   planStudioJob,
   readDiagramFile,
   renderDiagramFile,
@@ -44,22 +47,25 @@ import {
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
   slopcameraMcpTools,
+  slopcameraSceneGalleryLimits,
   studioJobSha256,
   studioOutputPath,
   studioRuntimeSha256,
   studioSourceBundleSha256,
+  summarizeSceneVariantPatch,
   validateStudioReceipt
-} from "./index-xzdmyxhv.js";
+} from "./index-9z3wabyn.js";
 import {
   bundledSkillPath,
   installSkill
 } from "./index-7308egqr.js";
+import"./index-hqbjn0xr.js";
 import"./index-8txs6fkn.js";
 import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-sg902fta.js";
+} from "./index-rx5qv31d.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -104,7 +110,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-n4n19hs5.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -148,11 +154,13 @@ export {
   vectorizeHardLimits,
   vectorizeDefaultLimits,
   validateStudioReceipt,
+  summarizeSceneVariantPatch,
   studioSourceBundleSha256,
   studioRuntimeSha256,
   studioOutputPath,
   studioJobSha256,
   stackLayoutDefaults,
+  slopcameraSceneGalleryLimits,
   slopcameraResponseMediaTypes,
   slopcameraOperationRegistry,
   slopcameraOperationHostResourceClaims,
@@ -190,12 +198,14 @@ export {
   renderDiagramFile,
   readDiagramFile,
   planStudioJob,
+  planSlopcameraSceneGallery,
   planSlopcameraGallery,
   parseStudioSourceBundle,
   parseStudioRuntimeIdentity,
   parseStudioReceipt,
   parseStudioPlan,
   parseStudioJob,
+  parseSlopcameraSceneVariants,
   parseSlopcameraOperationInput,
   parseSlopcameraGalleryVary,
   parseDiagramSpec,
@@ -258,6 +268,7 @@ export {
   StudioCapabilityNameSchema,
   StackLayoutError,
   SlopcameraWorkflowError,
+  SlopcameraSceneVariantsSchema,
   SlopcameraOperationError,
   SlopcameraMcpToolRuntime,
   SlopcameraCloudError,

@@ -55,6 +55,63 @@ invocation; both lanes are paid calls per candidate with zero client retries.
 
 `--candidates` is mutually exclusive with `--vary` and `--count`.
 
+## See seams and applied renders, not flat pixels
+
+`--kind texture` composites each cell as a 2×2 tiled repeat so tiling seams
+are visible in the sheet itself; `--no-tile` keeps a flat cell, and `--tile`
+opts other kinds in. `--tile` and `--no-tile` are mutually exclusive, and
+receipt rows carry `tiled: true`.
+
+On the durable lane, `--preview probe` renders each settled candidate inside a
+fixed checked-in probe scene — a texture becomes the material map on lit
+geometry plus four adjacent wall tiles that expose seams, a skybox becomes the
+scene environment lighting a reflective sphere, a backdrop becomes a surface
+behind a lit subject — and the cell shows the rendered still:
+
+```sh
+slopcamera ai image gallery 'weathered copper panel' \
+  --model <image-model-id> --kind texture --preview probe \
+  --output-dir review/copper --json
+```
+
+`--preview probe` is valid only for `texture`, `skybox`, and `backdrop`. The
+receipt row keeps the generated candidate `path`/`sha256` and the rendered
+`cellImage` `path`/`sha256` as separate fields — promotion always targets the
+candidate, never the still. A failed render leaves the flat candidate in the
+sheet with a warning.
+
+## Review whole-scene variants
+
+`slopcamera ai scene gallery` renders a base scene's bounded typed variants —
+environment swaps, material changes, palette or transform axes expressed as
+`slopcamera.spatial-scene-patch` operations — into the same kind of labelled
+contact sheet, with no paid calls:
+
+```sh
+slopcamera ai scene gallery scene.json \
+  --variants gallery.variants.json --output-dir review/world --json
+```
+
+```json
+{ "kind": "slopcamera.scene-variants", "schemaVersion": 1,
+  "variants": [
+    { "id": "dusk", "label": "Dusk",
+      "patch": { "kind": "slopcamera.spatial-scene-patch", "schemaVersion": 1,
+        "operations": [{ "kind": "set-color", "entityId": "entity_sky_dome", "color": "#2a1e4f" }] } }
+  ] }
+```
+
+Each variant's `expectedSceneSha256` is optional and defaults to the base
+digest; a mismatched value fails before any render. Every derived scene is
+published at `variants/<id>/scene.json` under the output directory with its
+asset payloads staged alongside — inherited payload paths resolve beside the
+authored scene, variant-authored `add-asset`/`replace-asset` payload paths
+resolve beside the variants file — so the derived scene re-renders
+standalone. The receipt keeps the base digest, per-variant patch and derived
+scene digests, the rendered still digest, and the render receipt path per row;
+a failed render stays in the sheet as a failed row. `--camera` selects a scene
+camera, `--time-us` picks the frame, `--cell` sizes cells.
+
 ## Review the sheet
 
 Inspect `gallery.png` directly. Each cell carries a `#<index> <id>` label; a
@@ -92,6 +149,12 @@ resolve, the same rule as world imports.
 Outside scenes, promote by pointing the consuming step at the exact retained
 path — a video `project add`, a design slot, or an `image vectorize` input —
 never by copying bytes into an authored path implicitly.
+
+For a scene-variant gallery, promotion is adopting the variant: apply the
+selected patch from the variants file through `scene patch` (the receipt row
+keeps its digest), or move the derived `variants/<id>/scene.json` — with its
+staged payloads — to its permanent home. The authored base scene is never
+edited by the gallery.
 
 ## Preserve failures and outputs
 

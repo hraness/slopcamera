@@ -205,7 +205,6 @@ export function commandHostResourceClaims(
         ? claims(coordinator, ["cpu", "local-io"])
         : [];
     case "ai-image-generate":
-    case "ai-image-gallery":
     case "ai-transcribe":
     case "ai-video-generate":
     case "ai-speech-generate":
@@ -215,6 +214,14 @@ export function commandHostResourceClaims(
       // A gallery command is one admitted paid batch; it bounds its own
       // in-flight candidate concurrency internally.
       return claims(coordinator, ["network", "paid-call"]);
+    case "ai-image-gallery":
+      // Probe previews admit the qualified browser render vector only for the
+      // settled-candidate render phase so paid waits never pin it.
+      return claims(coordinator, ["network", "paid-call"]);
+    case "ai-scene-gallery":
+      // Scene-variant galleries do no paid work: every variant render is a
+      // local qualified browser still plus content-addressed publication.
+      return claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication"]);
     case "ai-models-list":
     case "ai-models-show":
       return claims(coordinator, ["network"]);

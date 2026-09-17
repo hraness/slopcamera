@@ -57,7 +57,7 @@ Usage:
     [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
-    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--json]
+    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -524,9 +524,14 @@ export async function main(
       rest,
       new Set(["model", "output-dir", "kind", "count", "vary", "candidates", "cell", "timeout-ms"]),
     )
-    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json")
+    const unknownFlags = [...parsed.flags].filter(
+      (flag) => flag !== "json" && flag !== "tile" && flag !== "no-tile",
+    )
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown gallery option: --${unknownFlags[0]}`)
+    }
+    if (parsed.flags.has("tile") && parsed.flags.has("no-tile")) {
+      throw new Error("--tile and --no-tile are mutually exclusive")
     }
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image gallery accepts exactly one subject")
@@ -577,6 +582,9 @@ export async function main(
         ...(candidates === undefined ? {} : { candidates }),
         ...(cell === undefined ? {} : { cellEdge: cell }),
         ...(timeoutMs === undefined ? {} : { timeoutMs }),
+        ...(parsed.flags.has("tile")
+          ? { tiled: true }
+          : parsed.flags.has("no-tile") ? { tiled: false } : {}),
       }),
       hostAdmissionOptions(dependencies),
     )

@@ -6,13 +6,14 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-xzdmyxhv.js";
+} from "./index-9z3wabyn.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
+import"./index-hqbjn0xr.js";
 import"./index-8txs6fkn.js";
-import"./index-sg902fta.js";
+import"./index-rx5qv31d.js";
 import {
   executeSlopcameraOperation,
   generateSlopcameraIcon,
@@ -25,7 +26,7 @@ import {
   slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-d6m7tcc2.js";
+} from "./index-n4n19hs5.js";
 import {
   vectorizeImage
 } from "./index-9ajx7fzb.js";
@@ -110,7 +111,7 @@ Usage:
     [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
-    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--json]
+    [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -453,9 +454,12 @@ async function main(args, dependencies = {}) {
   }
   if (command === "gallery") {
     const parsed = parseArguments(rest, new Set(["model", "output-dir", "kind", "count", "vary", "candidates", "cell", "timeout-ms"]));
-    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json");
+    const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "tile" && flag !== "no-tile");
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown gallery option: --${unknownFlags[0]}`);
+    }
+    if (parsed.flags.has("tile") && parsed.flags.has("no-tile")) {
+      throw new Error("--tile and --no-tile are mutually exclusive");
     }
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image gallery accepts exactly one subject");
@@ -491,7 +495,8 @@ async function main(args, dependencies = {}) {
       ...vary === undefined ? {} : { vary },
       ...candidates === undefined ? {} : { candidates },
       ...cell === undefined ? {} : { cellEdge: cell },
-      ...timeoutMs === undefined ? {} : { timeoutMs }
+      ...timeoutMs === undefined ? {} : { timeoutMs },
+      ...parsed.flags.has("tile") ? { tiled: true } : parsed.flags.has("no-tile") ? { tiled: false } : {}
     }), hostAdmissionOptions(dependencies));
     if (parsed.flags.has("json")) {
       (dependencies.log ?? console.log)(JSON.stringify(result, null, 2));
