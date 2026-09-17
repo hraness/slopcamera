@@ -212,6 +212,6 @@ test("scene audit rejects conflicting, malformed, and assetId-less bounds files"
     await writeFile(join(root, name), JSON.stringify(value));
     const rejected = await failure(name);
     expect((rejected as CliError).code).toBe("invalid-data");
-    expect((rejected as CliError).message).toMatch(/--asset-bounds accepts/u);
+    expect((rejected as CliError).message).toMatch(/Asset bounds input accepts/u);
   }
 }));

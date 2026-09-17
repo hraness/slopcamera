@@ -1,9 +1,15 @@
 import { z } from "zod"
+import { canonicalJson } from "../code/canonical-json.js"
 import { createBoundedJsonValueSnapshot, deepFreezeJson } from "../code/json-snapshot.js"
 import {
-  SPATIAL_SCENE_LIMITS, SpatialAssetIdSchema, SpatialCameraIdSchema, SpatialDigestSchema,
+  SpatialAssetAdmissionV1Schema,
+  SpatialAssetFactsV1Schema,
+  type SpatialAssetFactsV1,
+} from "./asset-admission.js"
+import {
+  SPATIAL_SCENE_LIMITS, SpatialAssetIdSchema, SpatialAssetManifestSchema, SpatialCameraIdSchema, SpatialDigestSchema,
   SpatialEntityIdSchema, SpatialPlacementSchema, SpatialSceneIdSchema, SpatialTimeUsSchema,
-  type SpatialEntity,
+  type SpatialAssetManifest, type SpatialEntity,
 } from "./contracts.js"
 import {
   createSpatialEvaluationContext, evaluateSpatialSceneInContext, type SpatialEvaluationContext,
@@ -560,4 +566,52 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
     throw new SpatialSceneError("invalid-data", error instanceof Error ? error.message : "Audit report exceeds its bounded size.", "audit")
   }
   return deepFreezeJson(parsed)
+}
+
+const SpatialAuditAssetBoundsMapSchema = z.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema)
+/** A facts payload carries no assetId; the subject manifest supplies it. */
+const SpatialAuditAssetFactsPairSchema = z.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema })
+
+function auditSubjectBounds(manifest: SpatialAssetManifest, facts: SpatialAssetFactsV1): Record<string, unknown> {
+  if (facts.subject.sha256 !== manifest.payload.sha256 || facts.subject.bytes !== manifest.payload.bytes) {
+    throw new SpatialSceneError("invalid-data", `Asset facts for ${manifest.assetId} do not describe the manifest payload.`, "assetBounds")
+  }
+  return { [manifest.assetId]: facts.bounds.sceneSpace }
+}
+
+/** One document contributes assetId → scene-space bounds; model-space bounds never substitute. */
+function auditBoundsRecord(document: unknown): Record<string, unknown> {
+  if (typeof document === "object" && document !== null && !Array.isArray(document)) {
+    const kind = (document as { readonly kind?: unknown }).kind
+    if (kind === "slopcamera.spatial-asset-admission") {
+      const admission = parseSpatialValue(SpatialAssetAdmissionV1Schema, document, "asset admission")
+      return auditSubjectBounds(admission.manifest, admission.facts)
+    }
+    if (kind === "slopcamera.spatial-asset-facts") {
+      throw new SpatialSceneError("invalid-data", "A slopcamera.spatial-asset-facts payload carries no assetId; pass its slopcamera.spatial-asset-admission document or a {manifest, facts} pair.", "assetBounds")
+    }
+    const pair = SpatialAuditAssetFactsPairSchema.safeParse(document)
+    if (pair.success) return auditSubjectBounds(pair.data.manifest, pair.data.facts)
+    if (SpatialAuditAssetBoundsMapSchema.safeParse(document).success) return document as Record<string, unknown>
+  }
+  throw new SpatialSceneError("invalid-data", "Asset bounds input accepts a Record<assetId, {min, max}> bounds map, a slopcamera.spatial-asset-admission document, a {manifest, facts} pair, or an array of those documents.", "assetBounds")
+}
+
+/**
+ * Audit `assetBounds` accepts the raw bounds map or the documents produced by
+ * `scene asset admit`; each contributes scene-space bounds keyed by the
+ * subject assetId. Identical repeats dedupe; differing bounds conflict.
+ */
+export function normalizeSpatialAuditAssetBounds(input: unknown): Record<string, Bounds> {
+  const merged: Record<string, unknown> = Object.create(null) as Record<string, unknown>
+  for (const document of Array.isArray(input) ? input : [input]) {
+    for (const [assetId, bounds] of Object.entries(auditBoundsRecord(document))) {
+      const existing = merged[assetId]
+      if (existing !== undefined && canonicalJson(existing) !== canonicalJson(bounds)) {
+        throw new SpatialSceneError("conflict", `Asset bounds input supplies conflicting scene-space bounds for ${assetId}.`, "assetBounds")
+      }
+      merged[assetId] = bounds
+    }
+  }
+  return parseSpatialValue(SpatialAuditAssetBoundsMapSchema, merged, "asset bounds")
 }
