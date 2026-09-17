@@ -16,6 +16,7 @@ import {
   generateSlopcameraImageFile,
   resolveSlopcameraGatewayCredential,
   slopcameraGatewayApiBaseUrl,
+  slopcameraImageModels,
   slopcameraMaximumPromptBytes
 } from "./index-231ernwj.js";
 import {
@@ -26,9 +27,9 @@ import {
 } from "./index-z1w83f81.js";
 
 // src/operations.ts
-import { randomUUID as randomUUID2 } from "crypto";
-import { mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, writeFile as writeFile2 } from "fs/promises";
-import { dirname as dirname2, join, resolve as resolve2 } from "path";
+import { randomUUID as randomUUID3 } from "crypto";
+import { mkdir as mkdir3, readFile as readFile2, rename as rename2, rm as rm3, writeFile as writeFile3 } from "fs/promises";
+import { dirname as dirname3, join as join2, resolve as resolve3 } from "path";
 
 // src/icons.ts
 var shared = 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
@@ -2494,13 +2495,617 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
   }
   return receipt;
 }
+
+// src/image-gallery.ts
+import { createHash as createHash2, randomUUID as randomUUID2 } from "crypto";
+import { link, mkdir as mkdir2, rm as rm2, writeFile as writeFile2 } from "fs/promises";
+import { dirname as dirname2, join, resolve as resolve2 } from "path";
+import sharp from "sharp";
+var slopcameraGalleryKinds = Object.freeze([
+  "image",
+  "texture",
+  "skybox",
+  "backdrop",
+  "sprite"
+]);
+var slopcameraGalleryAxes = Object.freeze([
+  "style",
+  "palette",
+  "material",
+  "lighting",
+  "mood",
+  "detail"
+]);
+var slopcameraGalleryLimits = Object.freeze({
+  candidates: 16,
+  concurrency: 4,
+  subjectBytes: 2048,
+  candidatePromptBytes: slopcameraMaximumPromptBytes,
+  variantBytes: 1024,
+  idLength: 64,
+  cellEdgeMin: 64,
+  cellEdgeMax: 1024,
+  cellEdgeDefault: 512,
+  labelHeight: 28,
+  cellGap: 8,
+  galleryPixels: 33554432,
+  candidatePixels: 33554432,
+  candidateEdge: 8192
+});
+var GALLERY_KIND_CONTRACTS = {
+  image: {
+    aspect: [1, 1],
+    frame: (subject) => subject,
+    rules: "Clean readable composition; no text, captions, borders, or watermark."
+  },
+  texture: {
+    aspect: [1, 1],
+    frame: (subject) => `Seamless tileable texture of ${subject}.`,
+    rules: "Flat orthographic top-down material surface, uniform diffuse lighting, " + "edge-to-edge surface detail that tiles in both directions; no shadows, " + "no specular highlights, no vignette, no borders, no objects, no text."
+  },
+  skybox: {
+    aspect: [2, 1],
+    frame: (subject) => `Seamless equirectangular 360-degree panorama of ${subject}.`,
+    rules: "Full spherical environment in 2:1 equirectangular projection, continuous " + "horizon exactly at the vertical center, left and right edges wrapping " + "seamlessly; no seams, no text, no watermark, no foreground frame."
+  },
+  backdrop: {
+    aspect: [16, 9],
+    frame: (subject) => `Flat scenic backdrop plate of ${subject}.`,
+    rules: "Edge-to-edge environment plate for compositing behind foreground " + "subjects, consistent perspective and lighting across the frame; no " + "borders, no text, no watermark."
+  },
+  sprite: {
+    aspect: [1, 1],
+    frame: (subject) => `A single ${subject} on a plain solid neutral background.`,
+    rules: "One centered subject, fully visible with a clean silhouette, flat even " + "lighting; no shadows, no extra objects, no text, no watermark."
+  }
+};
+var GALLERY_AXIS_DEFAULTS = {
+  style: ["photorealistic", "stylized painterly", "flat minimal", "hand-drawn"],
+  palette: ["warm earthy palette", "cool desaturated palette", "neutral grayscale palette", "vivid saturated palette"],
+  material: ["rough weathered surface", "smooth polished surface", "organic natural surface", "synthetic industrial surface"],
+  lighting: ["soft diffuse lighting", "dramatic directional lighting", "flat ambient lighting", "golden-hour lighting"],
+  mood: ["serene calm mood", "dramatic mood", "playful mood", "mysterious mood"],
+  detail: ["minimal sparse detail", "balanced detail", "intricate dense detail"]
+};
+var SKYBOX_AXIS_DEFAULTS = {
+  material: ["clear air", "light haze", "thin clouds", "dense dramatic clouds"],
+  lighting: ["golden hour", "overcast midday", "clear night sky", "midday sun"]
+};
+function axisValues(kind, axis) {
+  return kind === "skybox" ? SKYBOX_AXIS_DEFAULTS[axis] ?? GALLERY_AXIS_DEFAULTS[axis] : GALLERY_AXIS_DEFAULTS[axis];
+}
+function invalidArgument2(message) {
+  throw new SlopcameraCloudError("INVALID_ARGUMENT", message);
+}
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function boundedText2(value, name, maximumBytes) {
+  if (typeof value !== "string" || value.trim().length === 0 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) || Buffer.byteLength(value, "utf8") > maximumBytes) {
+    invalidArgument2(`${name} must be non-empty text no more than ${maximumBytes} UTF-8 bytes.`);
+  }
+  return value.trim();
+}
+function galleryCandidateId(value) {
+  const id = boundedText2(value, "Candidate id", slopcameraGalleryLimits.idLength);
+  if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(id)) {
+    invalidArgument2("Candidate id must start with an alphanumeric and contain only alphanumerics, '.', '_', or '-'.");
+  }
+  return id;
+}
+function slug(value) {
+  const slugged = value.toLowerCase().split(/[^a-z0-9]+/u).filter((part) => part.length > 0).join("-").slice(0, slopcameraGalleryLimits.idLength);
+  return slugged.length === 0 ? "candidate" : slugged;
+}
+function galleryKind(value) {
+  const kind = value ?? "image";
+  if (typeof kind !== "string" || !slopcameraGalleryKinds.includes(kind)) {
+    invalidArgument2(`kind must be one of: ${slopcameraGalleryKinds.join(", ")}.`);
+  }
+  return kind;
+}
+function galleryPromptFor(subject, kind, variant) {
+  const contract = GALLERY_KIND_CONTRACTS[kind];
+  const sections = [contract.frame(subject), `Rules: ${contract.rules}`];
+  const direction = variant?.trim();
+  if (direction !== undefined && direction.length > 0) {
+    sections.push(`Variation direction: ${direction}.`);
+  }
+  return sections.join(`
+
+`);
+}
+function axisSpec(value) {
+  if (typeof value === "string") {
+    const axis2 = value.trim();
+    if (!slopcameraGalleryAxes.includes(axis2)) {
+      invalidArgument2(`vary axis must be one of: ${slopcameraGalleryAxes.join(", ")}.`);
+    }
+    return { axis: axis2 };
+  }
+  if (!isRecord3(value))
+    invalidArgument2("vary entries must be axis names or {axis, values} objects.");
+  const axis = value.axis;
+  if (!slopcameraGalleryAxes.includes(axis)) {
+    invalidArgument2(`vary axis must be one of: ${slopcameraGalleryAxes.join(", ")}.`);
+  }
+  const values = value.values;
+  if (values !== undefined) {
+    if (!Array.isArray(values) || values.length < 1 || values.length > slopcameraGalleryLimits.candidates) {
+      invalidArgument2("vary values must be a bounded non-empty list.");
+    }
+    return {
+      axis,
+      values: values.map((item) => boundedText2(item, "vary value", slopcameraGalleryLimits.variantBytes))
+    };
+  }
+  return { axis };
+}
+function explicitCandidate(value) {
+  if (!isRecord3(value))
+    invalidArgument2("candidates entries must be {id, prompt|variant} objects.");
+  const id = galleryCandidateId(value.id);
+  const prompt = value.prompt;
+  const variant = value.variant;
+  if (prompt !== undefined && variant !== undefined) {
+    invalidArgument2("A candidate supplies prompt or variant, not both.");
+  }
+  if (prompt === undefined && variant === undefined) {
+    invalidArgument2("A candidate requires a prompt or a variant.");
+  }
+  return {
+    id,
+    ...prompt === undefined ? {} : { prompt: boundedText2(prompt, "candidate prompt", slopcameraGalleryLimits.candidatePromptBytes) },
+    ...variant === undefined ? {} : { variant: boundedText2(variant, "candidate variant", slopcameraGalleryLimits.variantBytes) }
+  };
+}
+function planSlopcameraGallery(input) {
+  if (!isRecord3(input))
+    invalidArgument2("Gallery input must be an object.");
+  const subject = boundedText2(input.subject, "subject", slopcameraGalleryLimits.subjectBytes);
+  const kind = galleryKind(input.kind);
+  const aspect = GALLERY_KIND_CONTRACTS[kind].aspect;
+  const vary = (input.vary ?? []).map(axisSpec);
+  const explicit = input.candidates?.map(explicitCandidate);
+  if (explicit !== undefined && vary.length > 0) {
+    invalidArgument2("candidates and vary are mutually exclusive.");
+  }
+  if (explicit !== undefined && input.count !== undefined) {
+    invalidArgument2("candidates and count are mutually exclusive.");
+  }
+  if (vary.length > slopcameraGalleryAxes.length || new Set(vary.map((spec) => spec.axis)).size !== vary.length) {
+    invalidArgument2("vary axes must be unique.");
+  }
+  const count = input.count;
+  if (count !== undefined && (!Number.isInteger(count) || count < 1 || count > slopcameraGalleryLimits.candidates)) {
+    invalidArgument2(`count must be an integer from 1 through ${slopcameraGalleryLimits.candidates}.`);
+  }
+  const axes = vary.map((spec) => ({
+    axis: spec.axis,
+    values: spec.values ?? axisValues(kind, spec.axis).slice(0, slopcameraGalleryLimits.candidates)
+  }));
+  const prompts = [];
+  if (explicit !== undefined) {
+    if (explicit.length < 1 || explicit.length > slopcameraGalleryLimits.candidates) {
+      invalidArgument2(`candidates must contain 1 through ${slopcameraGalleryLimits.candidates} entries.`);
+    }
+    for (const candidate of explicit) {
+      prompts.push({
+        id: candidate.id,
+        prompt: candidate.prompt ?? galleryPromptFor(subject, kind, candidate.variant),
+        label: candidate.id
+      });
+    }
+  } else if (axes.length > 0) {
+    const total = axes.reduce((product, spec) => product * spec.values.length, 1);
+    if (total < 1 || total > slopcameraGalleryLimits.candidates) {
+      invalidArgument2(`vary expands to ${String(total)} candidates; the bound is ${slopcameraGalleryLimits.candidates}.`);
+    }
+    const seen = new Set;
+    for (let combination = 0;combination < total; combination++) {
+      let remainder = combination;
+      const parts = [];
+      for (let index = axes.length - 1;index >= 0; index--) {
+        const spec = axes[index];
+        const value = spec.values[remainder % spec.values.length];
+        remainder = Math.floor(remainder / spec.values.length);
+        parts.unshift(`${spec.axis}: ${value}`);
+      }
+      const direction = parts.join("; ");
+      let id = slug(parts.map((part) => part.split(": ")[1]).join("-"));
+      if (seen.has(id))
+        id = `${id}-${String(combination + 1)}`;
+      seen.add(id);
+      prompts.push({ id, prompt: galleryPromptFor(subject, kind, direction), label: id });
+    }
+  } else {
+    const requested = count ?? 4;
+    for (let index = 0;index < requested; index++) {
+      const id = `candidate-${String(index + 1)}`;
+      prompts.push({ id, prompt: galleryPromptFor(subject, kind), label: id });
+    }
+  }
+  return {
+    subject,
+    kind,
+    aspect,
+    axes,
+    candidates: prompts.map((candidate, index) => ({ index: index + 1, ...candidate }))
+  };
+}
+function parseSlopcameraGalleryVary(value) {
+  const specs = [];
+  for (const part of value.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed === "")
+      continue;
+    const [axis, values] = trimmed.split("=", 2);
+    if (!slopcameraGalleryAxes.includes(axis.trim())) {
+      invalidArgument2(`vary axis must be one of: ${slopcameraGalleryAxes.join(", ")}.`);
+    }
+    if (values === undefined) {
+      specs.push({ axis: axis.trim() });
+      continue;
+    }
+    const list = values.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
+    if (list.length === 0 || list.length > slopcameraGalleryLimits.candidates) {
+      invalidArgument2("vary values must be a non-empty bounded comma-separated list.");
+    }
+    specs.push({ axis: axis.trim(), values: list });
+  }
+  if (specs.length === 0) {
+    invalidArgument2("vary requires at least one axis, e.g. 'style; palette=warm,cool'.");
+  }
+  return specs;
+}
+var FONT_5X7 = {
+  " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
+  "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
+  "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+  "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
+  "3": ["11111", "00010", "00100", "00010", "00001", "10001", "01110"],
+  "4": ["00010", "00110", "01010", "11111", "00010", "00010", "00010"],
+  "5": ["11111", "10000", "11110", "00001", "00001", "10001", "01110"],
+  "6": ["00110", "01000", "10000", "11110", "10001", "10001", "01110"],
+  "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
+  "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
+  "9": ["01110", "10001", "10001", "01111", "00001", "00010", "01100"],
+  a: ["00000", "00000", "01110", "00001", "01111", "10001", "01111"],
+  b: ["10000", "10000", "10110", "11001", "10001", "10001", "11110"],
+  c: ["00000", "00000", "01110", "10000", "10000", "10001", "01110"],
+  d: ["00001", "00001", "01101", "10011", "10001", "10001", "01111"],
+  e: ["00000", "00000", "01110", "10001", "11111", "10000", "01110"],
+  f: ["00110", "01001", "01000", "11100", "01000", "01000", "01000"],
+  g: ["00000", "01111", "10001", "10001", "01111", "00001", "01110"],
+  h: ["10000", "10000", "10110", "11001", "10001", "10001", "10001"],
+  i: ["00100", "00000", "01100", "00100", "00100", "00100", "01110"],
+  j: ["00010", "00000", "00110", "00010", "00010", "10010", "01100"],
+  k: ["10000", "10000", "10010", "10100", "11000", "10100", "10010"],
+  l: ["01100", "00100", "00100", "00100", "00100", "00100", "01110"],
+  m: ["00000", "00000", "11010", "10101", "10101", "10101", "10101"],
+  n: ["00000", "00000", "10110", "11001", "10001", "10001", "10001"],
+  o: ["00000", "00000", "01110", "10001", "10001", "10001", "01110"],
+  p: ["00000", "00000", "11110", "10001", "11110", "10000", "10000"],
+  q: ["00000", "00000", "01101", "10011", "01111", "00001", "00001"],
+  r: ["00000", "00000", "10110", "11001", "10000", "10000", "10000"],
+  s: ["00000", "00000", "01111", "10000", "01110", "00001", "11110"],
+  t: ["01000", "01000", "11100", "01000", "01000", "01001", "00110"],
+  u: ["00000", "00000", "10001", "10001", "10001", "10011", "01101"],
+  v: ["00000", "00000", "10001", "10001", "10001", "01010", "00100"],
+  w: ["00000", "00000", "10001", "10101", "10101", "10101", "01010"],
+  x: ["00000", "00000", "10001", "01010", "00100", "01010", "10001"],
+  y: ["00000", "00000", "10001", "10001", "01111", "00001", "01110"],
+  z: ["00000", "00000", "11111", "00010", "00100", "01000", "11111"],
+  "#": ["01010", "01010", "11111", "01010", "11111", "01010", "01010"],
+  "-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
+  _: ["00000", "00000", "00000", "00000", "00000", "00000", "11111"],
+  ".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
+  ":": ["00000", "01100", "01100", "00000", "01100", "01100", "00000"],
+  "=": ["00000", "00000", "11111", "00000", "11111", "00000", "00000"],
+  "/": ["00001", "00010", "00010", "00100", "01000", "01000", "10000"],
+  "?": ["01110", "10001", "00001", "00010", "00100", "00000", "00100"]
+};
+function labelPixels(text, width, height) {
+  const scale = 2;
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let pixel = 0;pixel < width * height; pixel++) {
+    const index = pixel * 4;
+    rgba[index] = 18;
+    rgba[index + 1] = 21;
+    rgba[index + 2] = 27;
+    rgba[index + 3] = 255;
+  }
+  const draw = (character, originX) => {
+    const glyph = FONT_5X7[character] ?? FONT_5X7["?"];
+    const originY = Math.floor((height - 7 * scale) / 2);
+    for (let row = 0;row < 7; row++) {
+      for (let column = 0;column < 5; column++) {
+        if (glyph[row][column] !== "1")
+          continue;
+        for (let dy = 0;dy < scale; dy++) {
+          for (let dx = 0;dx < scale; dx++) {
+            const x = originX + column * scale + dx;
+            const y = originY + row * scale + dy;
+            if (x < 0 || x >= width || y < 0 || y >= height)
+              continue;
+            const index = (y * width + x) * 4;
+            rgba[index] = 235;
+            rgba[index + 1] = 238;
+            rgba[index + 2] = 244;
+            rgba[index + 3] = 255;
+          }
+        }
+      }
+    }
+  };
+  const advance = 6 * scale;
+  const maximum = Math.floor((width - 8) / advance);
+  const sanitized = text.toLowerCase().replace(/[^a-z0-9 #._:=/?-]/gu, "?").slice(0, Math.max(0, maximum));
+  for (let index = 0;index < sanitized.length; index++) {
+    draw(sanitized[index], 4 + index * advance);
+  }
+  return rgba;
+}
+function mediaExtension(mediaType) {
+  if (mediaType === "image/png")
+    return "png";
+  if (mediaType === "image/jpeg")
+    return "jpg";
+  if (mediaType === "image/webp")
+    return "webp";
+  invalidArgument2("Candidate media type is unsupported.");
+  return "png";
+}
+async function atomicPublish(path, bytes) {
+  const temporaryPath = join(dirname2(path), `.${randomUUID2()}.slopcamera-gallery.tmp`);
+  try {
+    await writeFile2(temporaryPath, bytes, { flag: "wx" });
+    await link(temporaryPath, path);
+  } catch {
+    throw new SlopcameraCloudError("OUTPUT_WRITE_FAILED", "Slopcamera could not atomically write a gallery output; existing files are never replaced.");
+  } finally {
+    await rm2(temporaryPath, { force: true }).catch(() => {
+      return;
+    });
+  }
+}
+async function generateCandidate(candidate, model, input, dependencies) {
+  const generate = dependencies.generate ?? generateSlopcameraImage;
+  try {
+    const generated = await generate({
+      model,
+      prompt: candidate.prompt,
+      ...input.signal === undefined ? {} : { signal: input.signal },
+      ...input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }
+    }, dependencies);
+    const bytes = Buffer.from(generated.image.base64, "base64");
+    return {
+      index: candidate.index,
+      id: candidate.id,
+      label: candidate.label,
+      prompt: candidate.prompt,
+      status: "generated",
+      bytes,
+      mediaType: generated.image.mediaType,
+      requestId: generated.requestId,
+      warnings: generated.warnings
+    };
+  } catch (error) {
+    return {
+      index: candidate.index,
+      id: candidate.id,
+      label: candidate.label,
+      prompt: candidate.prompt,
+      status: "failed",
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+async function mapBounded(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await worker(items[index]);
+    }
+  }));
+  return results;
+}
+function galleryModel(value) {
+  const model = value ?? slopcameraImageModels[1];
+  if (typeof model !== "string" || model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model)) {
+    invalidArgument2("model must be a bounded Vercel AI Gateway provider/model id.");
+  }
+  return model;
+}
+function galleryCellEdge(value) {
+  const cellEdge = value ?? slopcameraGalleryLimits.cellEdgeDefault;
+  if (typeof cellEdge !== "number" || !Number.isInteger(cellEdge) || cellEdge < slopcameraGalleryLimits.cellEdgeMin || cellEdge > slopcameraGalleryLimits.cellEdgeMax) {
+    invalidArgument2(`cellEdge must be an integer from ${String(slopcameraGalleryLimits.cellEdgeMin)} through ${String(slopcameraGalleryLimits.cellEdgeMax)}.`);
+  }
+  return cellEdge;
+}
+function galleryOutputDir(value) {
+  if (typeof value !== "string" || value.length < 1 || value.length > 4096 || value.includes("\x00")) {
+    invalidArgument2("outputDir must be a non-empty bounded local directory path.");
+  }
+  return resolve2(value);
+}
+async function generateSlopcameraImageGallery(rawInput, dependencies = {}) {
+  if (!isRecord3(rawInput))
+    invalidArgument2("Gallery input must be an object.");
+  const input = rawInput;
+  const outputDir = galleryOutputDir(input.outputDir);
+  const model = galleryModel(input.model);
+  const cellEdge = galleryCellEdge(input.cellEdge);
+  const plan = planSlopcameraGallery(input);
+  await mkdir2(outputDir, { recursive: true });
+  const generated = await mapBounded(plan.candidates, slopcameraGalleryLimits.concurrency, async (candidate) => await generateCandidate(candidate, model, input, dependencies));
+  return await composeSlopcameraImageGallery({
+    candidates: generated,
+    cellEdge,
+    model,
+    outputDir,
+    plan
+  });
+}
+async function composeSlopcameraImageGallery(input) {
+  const outputDir = galleryOutputDir(input.outputDir);
+  const model = galleryModel(input.model);
+  const cellEdge = galleryCellEdge(input.cellEdge);
+  const { plan } = input;
+  if (!isRecord3(plan) || !Array.isArray(plan.candidates) || plan.candidates.length === 0) {
+    invalidArgument2("plan must be a non-empty gallery plan from planSlopcameraGallery.");
+  }
+  const generated = input.candidates;
+  await mkdir2(outputDir, { recursive: true });
+  const labelHeight = slopcameraGalleryLimits.labelHeight;
+  const cellWidth = cellEdge;
+  const cellHeight = Math.round(cellEdge * plan.aspect[1] / plan.aspect[0]);
+  const cellBodyHeight = cellHeight + labelHeight;
+  const columns = Math.max(1, Math.ceil(Math.sqrt(generated.length)));
+  const rows = Math.ceil(generated.length / columns);
+  const gap = slopcameraGalleryLimits.cellGap;
+  const sheetWidth = columns * cellWidth + (columns - 1) * gap;
+  const sheetHeight = rows * cellBodyHeight + (rows - 1) * gap;
+  if (sheetWidth * sheetHeight > slopcameraGalleryLimits.galleryPixels) {
+    invalidArgument2("Gallery sheet exceeds its pixel budget; reduce count or cellEdge.");
+  }
+  const receiptCandidates = [];
+  const overlays = [];
+  for (const candidate of generated) {
+    const column = (candidate.index - 1) % columns;
+    const row = Math.floor((candidate.index - 1) / columns);
+    const x = column * (cellWidth + gap);
+    const y = row * (cellBodyHeight + gap);
+    const labelText = candidate.status === "failed" ? `#${String(candidate.index)} ${candidate.label} failed` : `#${String(candidate.index)} ${candidate.label}`;
+    overlays.push({
+      input: await sharp(labelPixels(labelText, cellWidth, labelHeight), {
+        raw: { width: cellWidth, height: labelHeight, channels: 4 }
+      }).png().toBuffer(),
+      left: x,
+      top: y
+    });
+    if (candidate.status === "generated") {
+      if (candidate.bytes === undefined || candidate.mediaType === undefined) {
+        invalidArgument2("A generated gallery candidate requires its bytes and media type.");
+      }
+      const path = candidate.path ?? join(outputDir, `candidate-${String(candidate.index).padStart(2, "0")}-${slug(candidate.id)}.${mediaExtension(candidate.mediaType)}`);
+      if (candidate.path === undefined) {
+        await atomicPublish(path, candidate.bytes);
+      }
+      const sha256 = createHash2("sha256").update(candidate.bytes).digest("hex");
+      if (candidate.sha256 !== undefined && candidate.sha256 !== sha256) {
+        invalidArgument2("A pre-published gallery candidate digest does not match its bytes.");
+      }
+      const source = sharp(candidate.bytes, {
+        limitInputPixels: slopcameraGalleryLimits.candidatePixels,
+        failOn: "warning"
+      });
+      const metadata = await source.metadata();
+      if (metadata.width === undefined || metadata.height === undefined || metadata.width > slopcameraGalleryLimits.candidateEdge || metadata.height > slopcameraGalleryLimits.candidateEdge || metadata.width * metadata.height > slopcameraGalleryLimits.candidatePixels) {
+        invalidArgument2("A generated candidate exceeds its raster bounds.");
+      }
+      const resized = await source.resize(cellWidth, cellHeight, { fit: "cover" }).png().toBuffer();
+      overlays.push({ input: resized, left: x, top: y + labelHeight });
+      receiptCandidates.push({
+        index: candidate.index,
+        id: candidate.id,
+        label: candidate.label,
+        prompt: candidate.prompt,
+        status: "generated",
+        path,
+        sha256,
+        bytes: candidate.bytes.byteLength,
+        mediaType: candidate.mediaType,
+        ...candidate.requestId === undefined ? {} : { requestId: candidate.requestId },
+        ...candidate.warnings === undefined ? {} : { warnings: candidate.warnings },
+        ...candidate.job === undefined ? {} : { job: candidate.job },
+        cell: { x, y, width: cellWidth, height: cellBodyHeight }
+      });
+    } else {
+      const blank = Buffer.alloc(cellWidth * cellHeight * 4);
+      for (let pixel = 0;pixel < cellWidth * cellHeight; pixel++) {
+        const index = pixel * 4;
+        blank[index] = 48;
+        blank[index + 1] = 52;
+        blank[index + 2] = 60;
+        blank[index + 3] = 255;
+      }
+      overlays.push({
+        input: await sharp(blank, {
+          raw: { width: cellWidth, height: cellHeight, channels: 4 }
+        }).png().toBuffer(),
+        left: x,
+        top: y + labelHeight
+      });
+      receiptCandidates.push({
+        index: candidate.index,
+        id: candidate.id,
+        label: candidate.label,
+        prompt: candidate.prompt,
+        status: "failed",
+        ...candidate.error === undefined ? {} : { error: candidate.error },
+        ...candidate.job === undefined ? {} : { job: candidate.job },
+        cell: { x, y, width: cellWidth, height: cellBodyHeight }
+      });
+    }
+  }
+  const sheet = await sharp({
+    create: {
+      width: sheetWidth,
+      height: sheetHeight,
+      channels: 4,
+      background: { r: 10, g: 12, b: 16, alpha: 255 }
+    }
+  }).composite(overlays).png().toBuffer();
+  const galleryPath = join(outputDir, "gallery.png");
+  await atomicPublish(galleryPath, sheet);
+  const gallerySha256 = createHash2("sha256").update(sheet).digest("hex");
+  const failed = generated.filter((candidate) => candidate.status === "failed").length;
+  const receiptPath = join(outputDir, "receipt.json");
+  const receipt = {
+    kind: "slopcamera.image-gallery",
+    schemaVersion: 1,
+    subject: plan.subject,
+    galleryKind: plan.kind,
+    model,
+    provider: "vercel-ai-gateway",
+    cell: { width: cellWidth, height: cellHeight, labelHeight },
+    axes: plan.axes,
+    candidates: receiptCandidates,
+    counts: {
+      requested: generated.length,
+      generated: generated.length - failed,
+      failed
+    },
+    gallery: {
+      path: galleryPath,
+      sha256: gallerySha256,
+      bytes: sheet.byteLength,
+      mediaType: "image/png",
+      width: sheetWidth,
+      height: sheetHeight
+    },
+    receiptPath,
+    clientMaxRetries: 0
+  };
+  await atomicPublish(receiptPath, `${JSON.stringify(receipt, null, 2)}
+`);
+  if (failed === generated.length) {
+    throw new SlopcameraCloudError("GENERATION_FAILED", `Every gallery candidate failed; see ${receiptPath} for the retained attempt record.`);
+  }
+  return receipt;
+}
 // src/operations.ts
 var slopcameraOperationCodes = [
   "slopcamera.diagram.check",
   "slopcamera.diagram.render",
   "slopcamera.image.vectorize",
   "slopcamera.image.generate",
-  "slopcamera.image.icon"
+  "slopcamera.image.icon",
+  "slopcamera.image.gallery"
 ];
 
 class SlopcameraOperationError extends Error {
@@ -2689,16 +3294,117 @@ var slopcameraOperationRegistry = deepFreeze([
       authorization: "bearer",
       retry: "never"
     }
+  },
+  {
+    code: "slopcamera.image.gallery",
+    title: "Generate image gallery",
+    description: "Generate several bounded Vercel AI Gateway image candidates in parallel and compose a labelled contact sheet with per-candidate provenance for explicit review and selection.",
+    execution: "gateway",
+    authentication: "environment",
+    destructive: true,
+    idempotent: false,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["subject", "outputDir"],
+      properties: {
+        subject: {
+          type: "string",
+          minLength: 1,
+          maxLength: slopcameraGalleryLimits.subjectBytes
+        },
+        outputDir: pathSchema,
+        kind: { type: "string", enum: [...slopcameraGalleryKinds] },
+        model: modelSchema,
+        count: {
+          type: "integer",
+          minimum: 1,
+          maximum: slopcameraGalleryLimits.candidates
+        },
+        vary: {
+          type: "array",
+          maxItems: slopcameraGalleryAxes.length,
+          items: {
+            anyOf: [
+              { type: "string", enum: [...slopcameraGalleryAxes] },
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["axis"],
+                properties: {
+                  axis: { type: "string", enum: [...slopcameraGalleryAxes] },
+                  values: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: slopcameraGalleryLimits.candidates,
+                    items: {
+                      type: "string",
+                      minLength: 1,
+                      maxLength: slopcameraGalleryLimits.variantBytes
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        candidates: {
+          type: "array",
+          minItems: 1,
+          maxItems: slopcameraGalleryLimits.candidates,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id"],
+            properties: {
+              id: {
+                type: "string",
+                minLength: 1,
+                maxLength: slopcameraGalleryLimits.idLength
+              },
+              prompt: {
+                type: "string",
+                minLength: 1,
+                maxLength: slopcameraGalleryLimits.candidatePromptBytes
+              },
+              variant: {
+                type: "string",
+                minLength: 1,
+                maxLength: slopcameraGalleryLimits.variantBytes
+              }
+            }
+          }
+        },
+        cellEdge: {
+          type: "integer",
+          minimum: slopcameraGalleryLimits.cellEdgeMin,
+          maximum: slopcameraGalleryLimits.cellEdgeMax
+        },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 30 * 60000 }
+      }
+    },
+    resources: [
+      { resource: "cpu", amount: 1 },
+      { resource: "local-io", amount: 1 },
+      { resource: "network", amount: 1 },
+      { resource: "paid-call", amount: 1 }
+    ],
+    transport: {
+      method: "POST",
+      authority: "https://ai-gateway.vercel.sh/v4/ai",
+      authorization: "bearer",
+      retry: "never"
+    }
   }
 ]);
 function operationFailure(message) {
   throw new SlopcameraOperationError("INVALID_OPERATION_INPUT", message);
 }
-function isRecord3(value) {
+function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function record(value, allowedKeys) {
-  if (!isRecord3(value))
+  if (!isRecord4(value))
     operationFailure("Operation input must be an object.");
   const unknown = Object.keys(value).filter((key) => !allowedKeys.includes(key));
   if (unknown.length > 0) {
@@ -2822,6 +3528,62 @@ function parseIcon(value) {
     ...input.keepRaster === undefined ? {} : { keepRaster: input.keepRaster }
   };
 }
+function parseGallery(value) {
+  const input = record(value, [
+    "subject",
+    "outputDir",
+    "kind",
+    "model",
+    "count",
+    "vary",
+    "candidates",
+    "cellEdge",
+    "timeoutMs"
+  ]);
+  if (typeof input.subject !== "string" || input.subject.trim().length < 1 || /[\u0000-\u001f\u007f]/u.test(input.subject) || Buffer.byteLength(input.subject, "utf8") > slopcameraGalleryLimits.subjectBytes) {
+    operationFailure(`subject must be non-empty and no more than ${slopcameraGalleryLimits.subjectBytes} UTF-8 bytes.`);
+  }
+  if (input.kind !== undefined && (typeof input.kind !== "string" || !slopcameraGalleryKinds.includes(input.kind))) {
+    operationFailure(`kind must be one of: ${slopcameraGalleryKinds.join(", ")}.`);
+  }
+  if (input.model !== undefined && (typeof input.model !== "string" || input.model.length > 256 || !/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(input.model))) {
+    operationFailure("model must be a bounded Vercel AI Gateway provider/model id.");
+  }
+  if (input.count !== undefined && (!Number.isInteger(input.count) || input.count < 1 || input.count > slopcameraGalleryLimits.candidates)) {
+    operationFailure(`count must be an integer from 1 through ${slopcameraGalleryLimits.candidates}.`);
+  }
+  if (input.vary !== undefined && (!Array.isArray(input.vary) || input.vary.length < 1 || input.vary.length > slopcameraGalleryAxes.length)) {
+    operationFailure(`vary must be a list of at most ${slopcameraGalleryAxes.length} axes.`);
+  }
+  if (input.candidates !== undefined && (!Array.isArray(input.candidates) || input.candidates.length < 1 || input.candidates.length > slopcameraGalleryLimits.candidates)) {
+    operationFailure(`candidates must contain 1 through ${slopcameraGalleryLimits.candidates} entries.`);
+  }
+  if (input.vary !== undefined && input.candidates !== undefined) {
+    operationFailure("vary and candidates are mutually exclusive.");
+  }
+  if (input.count !== undefined && input.candidates !== undefined) {
+    operationFailure("count and candidates are mutually exclusive.");
+  }
+  const cellEdge = input.cellEdge;
+  if (cellEdge !== undefined && (!Number.isInteger(cellEdge) || cellEdge < slopcameraGalleryLimits.cellEdgeMin || cellEdge > slopcameraGalleryLimits.cellEdgeMax)) {
+    operationFailure(`cellEdge must be an integer from ${slopcameraGalleryLimits.cellEdgeMin} through ${slopcameraGalleryLimits.cellEdgeMax}.`);
+  }
+  const timeoutMs = input.timeoutMs;
+  if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30 * 60000)) {
+    operationFailure("timeoutMs must be an integer from 1000 through 1800000.");
+  }
+  return {
+    subject: input.subject,
+    outputDir: pathValue(input.outputDir, "outputDir"),
+    ...input.kind === undefined ? {} : { kind: input.kind },
+    ...input.model === undefined ? {} : { model: input.model },
+    ...input.count === undefined ? {} : { count: input.count },
+    ...input.vary === undefined ? {} : { vary: input.vary },
+    ...input.candidates === undefined ? {} : { candidates: input.candidates },
+    ...cellEdge === undefined ? {} : { cellEdge },
+    ...timeoutMs === undefined ? {} : { timeoutMs }
+  };
+}
 function parseSlopcameraOperationInput(code, input) {
   switch (code) {
     case "slopcamera.diagram.check":
@@ -2834,6 +3596,8 @@ function parseSlopcameraOperationInput(code, input) {
       return parseGenerate(input);
     case "slopcamera.image.icon":
       return parseIcon(input);
+    case "slopcamera.image.gallery":
+      return parseGallery(input);
     default:
       throw new SlopcameraOperationError("INVALID_OPERATION", "Unknown Slopcamera operation code.");
   }
@@ -2891,7 +3655,7 @@ var operationBuiltInConfig = Object.freeze({
   icons: builtInIcons
 });
 async function readOperationDiagram(path) {
-  const absolutePath = resolve2(path);
+  const absolutePath = resolve3(path);
   let value;
   try {
     value = JSON.parse(await readFile2(absolutePath, "utf8"));
@@ -2907,12 +3671,12 @@ async function readOperationDiagram(path) {
   return { absolutePath, spec };
 }
 async function atomicOperationWrite(path, value) {
-  const temporaryPath = join(dirname2(path), `.${randomUUID2()}.slopcamera-operation.tmp`);
+  const temporaryPath = join2(dirname3(path), `.${randomUUID3()}.slopcamera-operation.tmp`);
   try {
-    await writeFile2(temporaryPath, value, { flag: "wx" });
+    await writeFile3(temporaryPath, value, { flag: "wx" });
     await rename2(temporaryPath, path);
   } finally {
-    await rm2(temporaryPath, { force: true }).catch(() => {
+    await rm3(temporaryPath, { force: true }).catch(() => {
       return;
     });
   }
@@ -2926,7 +3690,7 @@ async function checkOperationDiagram(path) {
 }
 async function renderOperationDiagram(input) {
   const { absolutePath, spec } = await readOperationDiagram(input.path);
-  const outputDirectory = resolve2(input.outDirectory ?? dirname2(absolutePath));
+  const outputDirectory = resolve3(input.outDirectory ?? dirname3(absolutePath));
   const scale = input.scale ?? 2;
   const [light, dark] = await Promise.all([
     renderSvg(spec, "light", operationBuiltInConfig),
@@ -2938,13 +3702,13 @@ async function renderOperationDiagram(input) {
   ];
   const artifacts = {
     spec: absolutePath,
-    tldr: join(outputDirectory, `${spec.name}.tldr`),
-    lightSvg: join(outputDirectory, `${spec.name}.light.svg`),
-    darkSvg: join(outputDirectory, `${spec.name}.dark.svg`),
-    lightPng: join(outputDirectory, `${spec.name}.light.png`),
-    darkPng: join(outputDirectory, `${spec.name}.dark.png`)
+    tldr: join2(outputDirectory, `${spec.name}.tldr`),
+    lightSvg: join2(outputDirectory, `${spec.name}.light.svg`),
+    darkSvg: join2(outputDirectory, `${spec.name}.dark.svg`),
+    lightPng: join2(outputDirectory, `${spec.name}.light.png`),
+    darkPng: join2(outputDirectory, `${spec.name}.dark.png`)
   };
-  await mkdir2(outputDirectory, { recursive: true });
+  await mkdir3(outputDirectory, { recursive: true });
   await Promise.all([
     atomicOperationWrite(artifacts.tldr, serializeTldr(spec, operationBuiltInConfig)),
     atomicOperationWrite(artifacts.lightSvg, light.svg),
@@ -3005,6 +3769,13 @@ async function executeSlopcameraOperationUncoordinated(code, value, dependencies
         }
       }, dependencies);
     }
+    case "slopcamera.image.gallery": {
+      const options = input;
+      return await generateSlopcameraImageGallery({
+        ...options,
+        ...dependencies.signal === undefined ? {} : { signal: dependencies.signal }
+      }, dependencies);
+    }
     default:
       throw new SlopcameraOperationError("INVALID_OPERATION", "Unknown Slopcamera operation code.");
   }
@@ -3033,4 +3804,4 @@ async function executeSlopcameraOperation(code, value, dependencies = {}) {
   return await withSlopcameraOperationHostAdmission(code, async (lease) => await executeSlopcameraOperationUncoordinated(code, input, operationDependenciesWithLease(dependencies, lease)), dependencies);
 }
 
-export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraIconDefaultInk, slopcameraIconPanel, slopcameraIconDefaultRounds, slopcameraIconMaximumRounds, slopcameraIconSubjectMaximumBytes, slopcameraIconCritiqueDefaultModel, slopcameraIconCritiqueTimeoutMs, iconPromptFor, extractIconLineArt, critiqueIconRaster, generateSlopcameraIcon, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };
+export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraIconDefaultInk, slopcameraIconPanel, slopcameraIconDefaultRounds, slopcameraIconMaximumRounds, slopcameraIconSubjectMaximumBytes, slopcameraIconCritiqueDefaultModel, slopcameraIconCritiqueTimeoutMs, iconPromptFor, extractIconLineArt, critiqueIconRaster, generateSlopcameraIcon, slopcameraGalleryKinds, slopcameraGalleryAxes, slopcameraGalleryLimits, galleryCandidateId, galleryPromptFor, planSlopcameraGallery, parseSlopcameraGalleryVary, generateSlopcameraImageGallery, composeSlopcameraImageGallery, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };

@@ -13,7 +13,7 @@ describe("geometric scene audit", () => {
     expect(report.timesUs).toEqual([0, 500_000, 1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000, 3_500_000, 4_000_000])
     expect(report.summary.entities).toEqual({
       total: 4, bounded: 2, unknownBounds: 2,
-      byKind: { group: 0, mesh: 2, image: 0, diagram: 0, video: 0, text: 0, light: 2, splat: 0 },
+      byKind: { group: 0, mesh: 2, image: 0, diagram: 0, video: 0, text: 0, light: 2, splat: 0, environment: 0 },
     })
     expect(report.summary.animations).toEqual({ channels: 1, targets: 1, properties: { position: 0, rotation: 1, scale: 0, opacity: 0 } })
     expect(report.summary.cameras).toEqual(["camera_hero"])

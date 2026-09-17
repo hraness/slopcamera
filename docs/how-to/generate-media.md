@@ -41,6 +41,23 @@ A local reference requires acknowledgement of uploading those exact files. Trans
 
 Use `slopcamera help ai` for masks, references, counts and other common flags. When a provider exposes an additional control, retain a private bounded JSON options file, inspect it with `slopcamera ai provider-options inspect`, and pass `--provider-options`. Provider fallback models and duplicate provider sample-count controls are rejected. Raw options are invocation-scoped; a resumed workflow may require the same file again.
 
+## Review alternatives as a gallery
+
+When the request leaves visual alternatives open — texture maps, skyboxes, backdrops, sprites, or competing design directions — generate a labelled candidate gallery instead of a single output:
+
+```sh
+slopcamera ai image gallery 'weathered copper panel' \
+  --model <image-model-id> --kind texture --output-dir review/copper --json
+```
+
+Each candidate runs as its own tracked paid job (bounded parallelism, zero client retries) and keeps its durable artifact path, prompt, digest, and job record. The output directory gains a `gallery.png` contact sheet with `#<index> <id>` labels and a `receipt.json` mapping every candidate to its evidence; failed cells stay in the sheet marked `failed` with their job records retained.
+
+Choose candidates with `--count` (repeated generations of the same contract), `--vary 'style;lighting=golden hour,night'` (a cartesian product over `style`, `palette`, `material`, `lighting`, `mood`, `detail`), or `--candidates <file.json>` (an explicit `[{id, prompt|variant}]` list). `--kind` selects the prompt contract — `texture` tiles, `skybox` is a 2:1 equirectangular panorama, `backdrop` is a 16:9 plate, `sprite` isolates one subject.
+
+Inspect the sheet, then promote the chosen candidate explicitly: point the consuming command at its retained path, or declare it as a scene image asset and apply it with a `scene patch` (`set-material` `map` for textures, an `environment` entity for a skybox). Gallery output never overwrites existing files and never edits authored source implicitly.
+
+The portable `slopcamera image gallery '<subject>' --output-dir <directory>` lane composes the same sheet without the durable job records; it defaults to the utility image model like `image generate`.
+
 ## Inspect and retain the result
 
 Generation returns content-addressed media and receipts beneath `artifacts/slopcamera/generated/`. Check actual picture or sound, identity fidelity, duration and fulfillment count before selecting a result. A provider response can succeed while local media admission fails; preserve the returned paid bytes and failure evidence.

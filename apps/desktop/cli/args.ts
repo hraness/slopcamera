@@ -1,6 +1,10 @@
 import { CliError } from "./errors";
 import { MAX_EVENT_QUERY_LIMIT } from "./query-limits";
 import { STUDIO_TEMPLATES, type StudioTemplate } from "./studio-template-names";
+import {
+  slopcameraGalleryKinds,
+  slopcameraGalleryLimits,
+} from "../../../src/image-gallery";
 
 export type OverlayKind = "image" | "svg" | "gif" | "video" | "emoji";
 export type ZoomTargetKind = "rect" | "point" | "cursor" | "window" | "focused-input";
@@ -204,6 +208,18 @@ export type CliCommand =
       readonly stopSequences: readonly string[];
       readonly temperature: number | undefined;
       readonly timeout: string;
+    } & JsonOption)
+  | ({
+      readonly candidatesFile: string | undefined;
+      readonly cell: number | undefined;
+      readonly count: number | undefined;
+      readonly galleryKind: string | undefined;
+      readonly kind: "ai-image-gallery";
+      readonly model: string;
+      readonly outputDir: string;
+      readonly subject: string;
+      readonly timeout: string;
+      readonly vary: string | undefined;
     } & JsonOption)
   | ({
       readonly allowCloudUpload: boolean;
@@ -922,7 +938,10 @@ function parseAiProviderOptions(argv: readonly string[]): CliCommand {
 }
 
 function parseAiImage(argv: readonly string[]): CliCommand {
-  if (argv[0] !== "generate") fail("Usage: slopcamera ai image generate --model <id> [options]");
+  if (argv[0] === "gallery") return parseAiImageGallery(argv.slice(1));
+  if (argv[0] !== "generate") {
+    fail("Usage: slopcamera ai image <generate|gallery> --model <id> [options]");
+  }
   const parsed = parseOptions(argv.slice(1), {
     ...JSON_SPEC,
     "--allow-cloud-upload": "flag",
@@ -977,6 +996,72 @@ function parseAiImage(argv: readonly string[]): CliCommand {
     stopSequences: optionStrings(parsed, "--stop"),
     temperature: optionalBoundedNumber(optionString(parsed, "--temperature"), "--temperature", 0, 100),
     timeout: optionString(parsed, "--timeout") ?? "10m",
+  };
+}
+
+function parseAiImageGallery(argv: readonly string[]): CliCommand {
+  const parsed = parseOptions(argv, {
+    ...JSON_SPEC,
+    "--candidates": "value",
+    "--cell": "value",
+    "--count": "value",
+    "--kind": "value",
+    "--model": "value",
+    "--output-dir": "value",
+    "--timeout": "value",
+    "--vary": "value",
+  });
+  const [subject] = exactPositionals(
+    parsed,
+    1,
+    "slopcamera ai image gallery <subject> --model <id> --output-dir <directory> [options]",
+  );
+  const model = optionString(parsed, "--model");
+  if (model === undefined) fail("--model is required.");
+  const outputDir = optionString(parsed, "--output-dir");
+  if (outputDir === undefined || outputDir.trim() === "") {
+    fail("--output-dir is required.");
+  }
+  const galleryKind = optionString(parsed, "--kind");
+  if (
+    galleryKind !== undefined
+    && !(slopcameraGalleryKinds as readonly string[]).includes(galleryKind)
+  ) {
+    fail(`--kind must be one of: ${slopcameraGalleryKinds.join(", ")}.`);
+  }
+  const count = optionalStrictInteger(optionString(parsed, "--count"), "--count");
+  if (count !== undefined && count > slopcameraGalleryLimits.candidates) {
+    fail(`--count must be at most ${slopcameraGalleryLimits.candidates}.`);
+  }
+  const cell = optionalStrictInteger(optionString(parsed, "--cell"), "--cell");
+  if (
+    cell !== undefined
+    && (
+      cell < slopcameraGalleryLimits.cellEdgeMin
+      || cell > slopcameraGalleryLimits.cellEdgeMax
+    )
+  ) {
+    fail(
+      `--cell must be between ${slopcameraGalleryLimits.cellEdgeMin} and ${slopcameraGalleryLimits.cellEdgeMax}.`,
+    );
+  }
+  const candidatesFile = optionString(parsed, "--candidates");
+  const vary = optionString(parsed, "--vary");
+  if (candidatesFile !== undefined && (vary !== undefined || count !== undefined)) {
+    fail("--candidates is mutually exclusive with --vary and --count.");
+  }
+  return {
+    candidatesFile,
+    cell,
+    count,
+    galleryKind,
+    json: optionFlag(parsed, "--json"),
+    kind: "ai-image-gallery",
+    model,
+    outputDir,
+    subject: subject!,
+    timeout: optionString(parsed, "--timeout") ?? "10m",
+    vary,
   };
 }
 

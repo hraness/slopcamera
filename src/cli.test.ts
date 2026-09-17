@@ -70,6 +70,7 @@ describe("Slopcamera CLI", () => {
       "slopcamera diagram render",
       "slopcamera image vectorize",
       "slopcamera image generate",
+      "slopcamera image gallery",
       "slopcamera image icon",
       "slopcamera doctor",
       "slopcamera code search",

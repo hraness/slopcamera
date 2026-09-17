@@ -194,8 +194,8 @@ var SpatialAssetManifestSchema = z.strictObject({
 });
 var color = z.string().regex(/^#[a-fA-F0-9]{6}$/u);
 var SpatialMaterialSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("unlit"), color, opacity: unit }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit })
+  z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
+  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional() })
 ]);
 var SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -242,7 +242,14 @@ var SpatialEntitySchema = z.discriminatedUnion("kind", [
   z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
   z.strictObject({ ...entityBase, kind: z.literal("light"), light: z.enum(["ambient", "directional", "point"]), color, intensity: z.number().finite().min(0).max(1e5) }),
-  z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema })
+  z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
+  z.strictObject({
+    ...entityBase,
+    kind: z.literal("environment"),
+    assetId: SpatialAssetIdSchema,
+    role: z.enum(["background", "environment", "both"]),
+    intensity: z.number().finite().min(0).max(16)
+  })
 ]);
 var key = (value) => z.strictObject({ timeUs: SpatialTimeUsSchema, value });
 var channelBase = { channelId: SpatialChannelIdSchema, targetId: z.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) };
@@ -287,6 +294,7 @@ var SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("add-asset"), asset: SpatialAssetManifestSchema }),
   z.strictObject({ kind: z.literal("replace-asset"), asset: SpatialAssetManifestSchema }),
   z.strictObject({ kind: z.literal("set-mesh-geometry"), entityId: SpatialEntityIdSchema, geometry: SpatialGeometrySchema }),
+  z.strictObject({ kind: z.literal("set-material"), entityId: SpatialEntityIdSchema, material: SpatialMaterialSchema }),
   z.strictObject({ kind: z.literal("rename-entity"), entityId: SpatialEntityIdSchema, name: z.string().min(1).max(256) }),
   z.strictObject({ kind: z.literal("reparent-entity"), entityId: SpatialEntityIdSchema, parentId: SpatialEntityIdSchema.nullable() }),
   z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
@@ -568,7 +576,17 @@ function parseSpatialScene(input) {
         throw new SpatialSceneError("invalid-data", "Duplicate generator output key.", "origin");
       generatedKeys.add(identity);
     }
-    const reference = entity.kind === "mesh" && entity.geometry.kind === "asset" ? { assetId: entity.geometry.assetId, kind: "gltf" } : entity.kind === "text" ? { assetId: entity.fontAssetId, kind: "font" } : ("assetId" in entity) ? { assetId: entity.assetId, kind: entity.kind } : undefined;
+    if (entity.kind === "environment" && (entity.placement.kind !== "world" || entity.parentId !== null)) {
+      throw new SpatialSceneError("invalid-data", "Environment entities must be unparented world entities.", "placement");
+    }
+    if (entity.kind === "mesh" && entity.material.map !== undefined) {
+      if (entity.geometry.kind === "asset")
+        throw new SpatialSceneError("invalid-data", "Material maps apply to authored procedural geometry only.", "entities");
+      const mapAsset = requireReference(assets, entity.material.map, "entity asset");
+      if (mapAsset.interpretation.kind !== "image")
+        throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} material map requires an image asset.`, "entity asset");
+    }
+    const reference = entity.kind === "mesh" && entity.geometry.kind === "asset" ? { assetId: entity.geometry.assetId, kind: "gltf" } : entity.kind === "text" ? { assetId: entity.fontAssetId, kind: "font" } : entity.kind === "environment" ? { assetId: entity.assetId, kind: "image" } : ("assetId" in entity) ? { assetId: entity.assetId, kind: entity.kind } : undefined;
     if (reference) {
       const asset = requireReference(assets, reference.assetId, "entity asset");
       if (asset.interpretation.kind !== reference.kind)
@@ -1128,6 +1146,15 @@ function applySpatialScenePatch(sceneInput, patchInput) {
         addressedGeometry.add(operation.entityId);
         break;
       }
+      case "set-material": {
+        const entity = authored(operation.entityId);
+        if (entity.kind !== "mesh")
+          throw new SpatialSceneError("conflict", "Material replacement requires an authored mesh entity.");
+        if (entity.geometry.kind === "asset" && entity.geometry.materialMode === "source")
+          throw new SpatialSceneError("conflict", "Source-material meshes consume source materials only; the entity material is inert.");
+        entities.set(operation.entityId, { ...entity, material: operation.material });
+        break;
+      }
       case "rename-entity":
         entities.set(operation.entityId, { ...authored(operation.entityId), name: operation.name });
         break;
@@ -1195,13 +1222,15 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   const beforeAssets = new Map(original.assets.map((asset) => [asset.assetId, asset]));
   const oldClosure = spatialAssetClosureDigests(original.assets), newClosure = spatialAssetClosureDigests(scene.assets);
   for (const entity of scene.entities) {
-    const assetId = entity.kind === "mesh" && entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.kind === "text" ? entity.fontAssetId : ("assetId" in entity) ? entity.assetId : undefined;
-    if (assetId === undefined)
-      continue;
-    if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
-      throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.");
+    const referenced = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
+    if (entity.kind === "mesh" && entity.material.map !== undefined)
+      referenced.push(entity.material.map);
+    for (const assetId of referenced) {
+      if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
+        throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.");
+      }
     }
-    if (entity.kind === "mesh" && entity.geometry.kind === "asset" && (entity.geometry.nodeIndex !== undefined || entity.geometry.clip !== undefined) && beforeAssets.has(assetId) && beforeAssets.get(assetId).payload.sha256 !== assets.get(assetId).payload.sha256 && !addressedGeometry.has(entity.entityId) && !(entity.origin.kind === "generated" && replacedGenerators.has(entity.origin.generatorId))) {
+    if (entity.kind === "mesh" && entity.geometry.kind === "asset" && (entity.geometry.nodeIndex !== undefined || entity.geometry.clip !== undefined) && beforeAssets.has(entity.geometry.assetId) && beforeAssets.get(entity.geometry.assetId).payload.sha256 !== assets.get(entity.geometry.assetId).payload.sha256 && !addressedGeometry.has(entity.entityId) && !(entity.origin.kind === "generated" && replacedGenerators.has(entity.origin.generatorId))) {
       throw new SpatialSceneError("conflict", "Replacing addressed GLB bytes requires explicit set-mesh-geometry with the new local node/clip addresses; internal correspondence is not inferred.");
     }
   }
@@ -1250,7 +1279,7 @@ function inspectSpatialScene(input) {
       const editableControls = declared.filter((property) => !animatedProperties.some((animated) => animated === property || property === "transform" && ["position", "rotation", "scale"].includes(animated)));
       const local = localBounds(entity);
       const bounds = "status" in local ? local : { status: "authored-enclosure", coordinateDomain: entity.placement, atTimeUs: 0, bounds: transformBounds(worldMatrix, local) };
-      const assetIds = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
+      const assetIds = entity.kind === "mesh" ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds };
     }),
     cameras: scene.cameras,
@@ -1268,7 +1297,7 @@ var SPATIAL_AUDIT_LIMITS = Object.freeze({
   entitySamples: 65536,
   reportBytes: 33554432
 });
-var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"];
+var ENTITY_KINDS = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"];
 var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
 var CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"];
 var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples"];
@@ -1321,7 +1350,8 @@ var entityKindCounts = z3.strictObject({
   video: z3.number().int().min(0),
   text: z3.number().int().min(0),
   light: z3.number().int().min(0),
-  splat: z3.number().int().min(0)
+  splat: z3.number().int().min(0),
+  environment: z3.number().int().min(0)
 });
 var SpatialAuditReportSchema = z3.strictObject({
   kind: z3.literal("slopcamera.spatial-audit"),
@@ -1627,7 +1657,7 @@ var SPATIAL_RENDERED_AUDIT_LIMITS = Object.freeze({
   frameDimension: 8192,
   framePixels: 33554432
 });
-var ENTITY_KINDS2 = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat"];
+var ENTITY_KINDS2 = ["group", "mesh", "image", "diagram", "video", "text", "light", "splat", "environment"];
 var ELIGIBILITY = ["renderable", "view-masked", "no-surface", "unsupported-kind"];
 var BOUNDS_UNKNOWN_REASONS2 = ["requires-asset-decoding", "requires-text-layout", "no-surface"];
 var FINDING_KINDS2 = [
@@ -1798,7 +1828,7 @@ var round32 = (value) => Math.round(value * 1000) / 1000;
 function eligibility(entity) {
   if (entity.kind === "splat")
     return "unsupported-kind";
-  if (entity.kind === "group" || entity.kind === "light")
+  if (entity.kind === "group" || entity.kind === "light" || entity.kind === "environment")
     return "no-surface";
   if (entity.placement.kind === "view")
     return "view-masked";
@@ -1807,10 +1837,11 @@ function eligibility(entity) {
 function entityAssetId(entity) {
   switch (entity.kind) {
     case "mesh":
-      return entity.geometry.kind === "asset" ? entity.geometry.assetId : undefined;
+      return entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.material.map;
     case "image":
     case "diagram":
     case "video":
+    case "environment":
       return entity.assetId;
     case "text":
       return entity.fontAssetId;
@@ -2665,8 +2696,11 @@ function spatialGeneratorAttemptId(options) {
   return `attempt_${spatialValueSha256({ domain: "slopcamera.generator-attempt.v1", ...options }).slice(0, 32)}`;
 }
 function generatedAssetReference(entity) {
-  if (entity.kind === "mesh" && entity.geometry.kind === "asset")
-    return entity.geometry.assetId;
+  if (entity.kind === "mesh") {
+    if (entity.geometry.kind === "asset")
+      return entity.geometry.assetId;
+    return entity.material.map;
+  }
   if (entity.kind === "text")
     return entity.fontAssetId;
   return "assetId" in entity ? entity.assetId : undefined;

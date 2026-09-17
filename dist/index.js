@@ -49,7 +49,7 @@ import {
   studioRuntimeSha256,
   studioSourceBundleSha256,
   validateStudioReceipt
-} from "./index-av1dvk2n.js";
+} from "./index-xzdmyxhv.js";
 import {
   bundledSkillPath,
   installSkill
@@ -59,23 +59,29 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-gwq5jc3q.js";
+} from "./index-sg902fta.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
   StackLayoutError,
   builtInIcons,
+  composeSlopcameraImageGallery,
   critiqueIconRaster,
   executeSlopcameraOperation,
   executeSlopcameraOperationWithLease,
   extractIconLineArt,
+  galleryCandidateId,
+  galleryPromptFor,
   generateSlopcameraIcon,
+  generateSlopcameraImageGallery,
   iconPromptFor,
   isSlopcameraOperationCode,
   lintDiagram,
   parseDiagramSource,
   parseDiagramSpec,
+  parseSlopcameraGalleryVary,
   parseSlopcameraOperationInput,
+  planSlopcameraGallery,
   renderPng,
   renderSvg,
   resolveDiagramSource,
@@ -83,6 +89,9 @@ import {
   resolveStackLayout,
   searchSlopcameraOperations,
   serializeTldr,
+  slopcameraGalleryAxes,
+  slopcameraGalleryKinds,
+  slopcameraGalleryLimits,
   slopcameraIconCritiqueDefaultModel,
   slopcameraIconCritiqueTimeoutMs,
   slopcameraIconDefaultInk,
@@ -95,7 +104,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-rqcqb1h8.js";
+} from "./index-d6m7tcc2.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -164,6 +173,9 @@ export {
   slopcameraHostResourceNames,
   slopcameraGatewayCredentialStatus,
   slopcameraGatewayApiBaseUrl,
+  slopcameraGalleryLimits,
+  slopcameraGalleryKinds,
+  slopcameraGalleryAxes,
   slopcameraApi,
   serializeTldr,
   searchSlopcameraOperations,
@@ -178,12 +190,14 @@ export {
   renderDiagramFile,
   readDiagramFile,
   planStudioJob,
+  planSlopcameraGallery,
   parseStudioSourceBundle,
   parseStudioRuntimeIdentity,
   parseStudioReceipt,
   parseStudioPlan,
   parseStudioJob,
   parseSlopcameraOperationInput,
+  parseSlopcameraGalleryVary,
   parseDiagramSpec,
   parseDiagramSource,
   normalizeHostResourceProfile,
@@ -197,9 +211,12 @@ export {
   inspectStudioPlan,
   inspectStudioBundle,
   iconPromptFor,
+  generateSlopcameraImageGallery,
   generateSlopcameraImageFile,
   generateSlopcameraImage,
   generateSlopcameraIcon,
+  galleryPromptFor,
+  galleryCandidateId,
   extractIconLineArt,
   executeSlopcameraOperationWithLease,
   executeSlopcameraOperation,
@@ -212,6 +229,7 @@ export {
   createHostResourceCoordinator,
   createFixedGatewayFetch,
   createDefaultHostResourceCoordinator,
+  composeSlopcameraImageGallery,
   checkDiagramFile,
   bundledSkillPath,
   builtInIcons,

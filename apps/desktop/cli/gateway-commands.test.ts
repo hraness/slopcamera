@@ -368,6 +368,43 @@ class StallingImageGatewaySdk extends CapturingGatewaySdk {
   }
 }
 
+class GalleryGatewaySdk extends CapturingGatewaySdk {
+  inFlight = 0;
+  maxInFlight = 0;
+  #started = 0;
+  readonly #gate: Promise<void>;
+  #release: () => void = () => undefined;
+
+  constructor(private readonly barrierAt: number) {
+    super(WAV_BYTES, INVALID_MP4_BYTES);
+    this.#gate = new Promise(resolve => {
+      this.#release = resolve;
+    });
+  }
+
+  override async generateImage(
+    apiKey: string,
+    request: GatewaySdkImageRequest,
+  ): Promise<unknown> {
+    const prompt = typeof request.prompt === "string"
+      ? request.prompt
+      : request.prompt.text;
+    if (typeof prompt === "string" && prompt.includes("reject-this-candidate")) {
+      return Promise.reject(new Error("simulated gallery candidate failure"));
+    }
+    this.inFlight += 1;
+    this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
+    this.#started += 1;
+    if (this.#started >= this.barrierAt) this.#release();
+    try {
+      await this.#gate;
+      return await super.generateImage(apiKey, request);
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+}
+
 interface CliResult {
   readonly exitCode: number;
   readonly stderr: string;
@@ -443,7 +480,9 @@ function catalogPayload(): Readonly<Record<string, unknown>> {
   };
 }
 
-async function createFixture(): Promise<GatewayCommandFixture> {
+async function createFixture(
+  options?: Readonly<{ sdk?: CapturingGatewaySdk }>,
+): Promise<GatewayCommandFixture> {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-gateway-commands-"));
   const paths: RepositoryPaths = {
     artifactRoot: join(root, "artifacts", "slopcamera", "recordings"),
@@ -493,7 +532,7 @@ async function createFixture(): Promise<GatewayCommandFixture> {
   if (speechRender.exitCode !== 0 || videoRender.exitCode !== 0) {
     throw new Error("Could not create deterministic Gateway output fixtures.");
   }
-  const sdk = new CapturingGatewaySdk(
+  const sdk = options?.sdk ?? new CapturingGatewaySdk(
     new Uint8Array(await readFile(speechOutputPath)),
     new Uint8Array(await readFile(videoOutputPath)),
   );
@@ -1742,4 +1781,195 @@ describe("Gateway CLI commands", () => {
       await rm(fixture.root, { force: true, recursive: true });
     }
   }, 30_000);
+
+  test("ai image gallery runs bounded tracked jobs and composes a durable review sheet", async () => {
+    const sdk = new GalleryGatewaySdk(4);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "weathered copper panel",
+        "--model",
+        "bfl/flux-command",
+        "--kind",
+        "texture",
+        "--count",
+        "6",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+      expect(`${result.stdout}${result.stderr}`).not.toContain(API_KEY);
+      expect(sdk.imageCalls).toHaveLength(6);
+      expect(sdk.maxInFlight).toBe(4);
+      for (const call of sdk.imageCalls) {
+        expect(call).toMatchObject({ maxRetries: 0, modelId: "bfl/flux-command" });
+        expect(call.prompt).toContain("weathered copper panel");
+      }
+      const summary = parseJsonRecord(result.stdout);
+      expect(summary).toMatchObject({
+        counts: { failed: 0, generated: 6, requested: 6 },
+        kind: "texture",
+        model: "bfl/flux-command",
+      });
+      const candidates = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidates).toHaveLength(6);
+      for (const candidate of candidates) {
+        expect(candidate.status).toBe("generated");
+        const job = parseJsonRecord(
+          await readRelative(fixture, requiredString(candidate, "job")),
+        );
+        expect(job).toMatchObject({
+          operation: "image.generate",
+          request: {
+            candidate: { id: candidate.id, index: candidate.index },
+            galleryKind: "texture",
+          },
+          state: "completed",
+        });
+        const durable = await readFile(
+          resolve(fixture.root, requiredString(candidate, "path")),
+        );
+        expect(durable.byteLength).toBe(PNG_BYTES.byteLength);
+        expect(createHash("sha256").update(durable).digest("hex"))
+          .toBe(requiredString(candidate, "sha256"));
+      }
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      expect(receipt).toMatchObject({
+        clientMaxRetries: 0,
+        galleryKind: "texture",
+        kind: "slopcamera.image-gallery",
+        model: "bfl/flux-command",
+        provider: "vercel-ai-gateway",
+        schemaVersion: 1,
+        subject: "weathered copper panel",
+      });
+      expect(requiredArray(receipt, "candidates")).toHaveLength(6);
+      const sheet = await readFile(
+        resolve(fixture.root, "review/gallery.png"),
+      );
+      expect(sheet.byteLength).toBeGreaterThan(0);
+      expect(`${JSON.stringify(receipt)}${result.stdout}`).not.toContain(API_KEY);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery keeps failed candidates and their ambiguous jobs in the receipt", async () => {
+    const sdk = new GalleryGatewaySdk(1);
+    const fixture = await createFixture({ sdk });
+    try {
+      await configureGatewayKey(fixture);
+      const candidatesPath = join(fixture.root, "candidates.json");
+      await writeFile(
+        candidatesPath,
+        JSON.stringify([
+          { id: "keep", prompt: "keep this candidate" },
+          { id: "drop", prompt: "reject-this-candidate" },
+        ]),
+        { mode: 0o600 },
+      );
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "mixed review batch",
+        "--model",
+        "bfl/flux-command",
+        "--candidates",
+        "candidates.json",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({ exitCode: 0 });
+      expect(result.stderr).not.toContain(API_KEY);
+      const summary = parseJsonRecord(result.stdout);
+      expect(summary.counts).toEqual({ failed: 1, generated: 1, requested: 2 });
+      const candidates = requiredArray(summary, "candidates").map(asRecord);
+      expect(candidates[0]).toMatchObject({ id: "keep", status: "generated" });
+      expect(candidates[1]).toMatchObject({ id: "drop", status: "failed" });
+      const droppedJob = parseJsonRecord(
+        await readRelative(fixture, requiredString(candidates[1]!, "job")),
+      );
+      expect(droppedJob).toMatchObject({
+        chargeMayHaveOccurred: true,
+        operation: "image.generate",
+        state: "ambiguous",
+      });
+      expect(JSON.stringify(droppedJob)).not.toContain(API_KEY);
+      const receipt = parseJsonRecord(
+        await readRelative(fixture, "review/receipt.json"),
+      );
+      const rows = requiredArray(receipt, "candidates").map(asRecord);
+      expect(rows[1]).toMatchObject({ id: "drop", status: "failed" });
+      expect(typeof rows[1]!.job).toBe("string");
+      expect(JSON.stringify(receipt)).not.toContain(API_KEY);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery refuses to replace outputs before any paid call", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      await mkdir(join(fixture.root, "review"), { recursive: true });
+      await writeFile(join(fixture.root, "review", "gallery.png"), PNG_BYTES);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "existing outputs",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--json",
+      ]);
+      expect(result).toMatchObject({
+        exitCode: EXIT_CODE.conflict,
+        stdout: "",
+      });
+      expect(result.stderr).not.toContain(API_KEY);
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
+
+  test("ai image gallery rejects conflicting candidate selection flags", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      const result = await fixture.execute([
+        "ai",
+        "image",
+        "gallery",
+        "conflicting selection",
+        "--model",
+        "bfl/flux-command",
+        "--output-dir",
+        "review",
+        "--candidates",
+        "candidates.json",
+        "--vary",
+        "style",
+      ]);
+      expect(result).toMatchObject({
+        exitCode: EXIT_CODE.usage,
+        stdout: "",
+      });
+      expect(result.stderr).toContain("mutually exclusive");
+      expect(fixture.sdk.imageCalls).toHaveLength(0);
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  });
 });
