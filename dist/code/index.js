@@ -807,14 +807,17 @@ function camera(camera2) {
   if (determinant <= 0)
     throw new RangeError("camera pose must preserve handedness");
 }
-function projectPoint(view, worldPoint) {
+function prepareCameraView(view) {
   camera(view);
+  return Object.freeze({ ...view, worldToCamera: invertTransform(view.cameraToWorld) });
+}
+function projectPreparedPoint(prepared, worldPoint) {
   values(worldPoint, 3, "world point");
-  const local = apply(invertTransform(view.cameraToWorld), worldPoint, true);
+  const local = apply(prepared.worldToCamera, worldPoint, true);
   const depthMeters = -local[2];
   if (depthMeters <= 0)
     return null;
-  const p = view.projection;
+  const p = prepared.projection;
   const pixel = p.kind === "perspective" ? vec2(p.fx * local[0] / depthMeters + p.cx, p.cy - p.fy * local[1] / depthMeters) : vec2((local[0] - p.left) / (p.right - p.left) * p.width, (p.top - local[1]) / (p.top - p.bottom) * p.height);
   return Object.freeze({
     pixel,
@@ -822,6 +825,9 @@ function projectPoint(view, worldPoint) {
     insideImage: pixel[0] >= 0 && pixel[0] < p.width && pixel[1] >= 0 && pixel[1] < p.height,
     insideClip: depthMeters >= p.near && depthMeters <= p.far
   });
+}
+function projectPoint(view, worldPoint) {
+  return projectPreparedPoint(prepareCameraView(view), worldPoint);
 }
 function unprojectPixel(view, pixel, depthMeters) {
   camera(view);
@@ -936,57 +942,89 @@ function sampleChannel(channel, timeUs) {
   return av.map((value, index) => value + (bv[index] - value) * t);
 }
 function validateSpatialShot(sceneInput, shotInput) {
-  const scene = parseSpatialScene(sceneInput);
+  const context = createSpatialEvaluationContext(sceneInput);
+  const scene = context.scene;
   const shot = parseSpatialValue(SpatialShotV1Schema, shotInput, "shot");
-  if (shot.sceneSha256 !== spatialValueSha256(scene))
+  if (shot.sceneSha256 !== context.sceneSha256)
     throw new SpatialSceneError("conflict", "Shot pins another scene revision.", "shot.sceneSha256");
-  if (!scene.cameras.some((camera2) => camera2.cameraId === shot.cameraId))
+  if (!context.camerasById.has(shot.cameraId))
     throw new SpatialSceneError("invalid-data", "Shot camera is absent from its scene.", "shot.cameraId");
   if (shot.sceneStartUs >= scene.durationUs)
     throw new SpatialSceneError("invalid-data", "Shot scene start must precede scene duration.", "shot.sceneStartUs");
   if (shot.playback === "once" && shot.sceneStartUs + shot.range.endUs - shot.range.startUs > scene.durationUs)
     throw new SpatialSceneError("invalid-data", "Once playback exceeds scene duration.", "shot.range");
   validateSpatialOverrides(scene, mergeSpatialOverrides(scene.overrides, shot.overrides));
-  if (shot.cameraPoseOverride && scene.animations.some((channel) => channel.targetId === shot.cameraId))
+  if (shot.cameraPoseOverride && context.cameraChannelsById.has(shot.cameraId))
     throw new SpatialSceneError("conflict", "Camera animation and shot pose override both own camera pose.", "shot.cameraPoseOverride");
   return deepFreezeJson(shot);
 }
-function evaluateSpatialScene(sceneInput, options) {
+function createSpatialEvaluationContext(sceneInput) {
   const scene = parseSpatialScene(sceneInput);
+  const entitiesById = new Map(scene.entities.map((entity) => [entity.entityId, entity]));
+  const camerasById = new Map(scene.cameras.map((camera2) => [camera2.cameraId, camera2]));
+  const entityOrder = spatialTopologicalIds(new Map(scene.entities.map((entity) => [entity.entityId, entity.parentId === null ? [] : [entity.parentId]])), "entity hierarchy");
+  const visibilityById = new Map;
+  for (const id of entityOrder) {
+    const entity = entitiesById.get(id);
+    visibilityById.set(id, entity.visible && (entity.parentId === null || visibilityById.get(entity.parentId) === true));
+  }
+  const entityChannels = [];
+  const cameraChannelsById = new Map;
+  for (const channel of scene.animations) {
+    if (entitiesById.has(channel.targetId))
+      entityChannels.push(channel);
+    else {
+      const list = cameraChannelsById.get(channel.targetId) ?? [];
+      list.push(channel);
+      cameraChannelsById.set(channel.targetId, list);
+    }
+  }
+  return Object.freeze({
+    scene,
+    sceneSha256: spatialValueSha256(scene),
+    entitiesById,
+    camerasById,
+    entityOrder,
+    visibilityById,
+    entityChannels,
+    cameraChannelsById,
+    baseOverrides: mergeSpatialOverrides(scene.overrides, []),
+    assetDigests: spatialAssetClosureDigests(scene.assets)
+  });
+}
+function evaluateSpatialSceneInContext(context, options) {
+  const scene = context.scene;
   const capturedOptions = parseSpatialValue(EvaluatedOptionsSchema, options, "evaluation options");
   const timeUs = capturedOptions.timeUs;
   if (timeUs > scene.durationUs)
     throw new SpatialSceneError("invalid-data", "Evaluation time exceeds scene duration.", "timeUs");
-  let camera2 = scene.cameras.find((item) => item.cameraId === capturedOptions.cameraId);
+  let camera2 = context.camerasById.get(capturedOptions.cameraId);
   if (!camera2)
     throw new SpatialSceneError("not-found", `Unknown camera ${capturedOptions.cameraId}.`, "cameraId");
-  const overrides = mergeSpatialOverrides(scene.overrides, capturedOptions.overrides ?? []);
-  validateSpatialOverrides(scene, overrides);
-  if (capturedOptions.cameraPoseOverride && scene.animations.some((channel) => channel.targetId === camera2.cameraId))
+  const overrides = capturedOptions.overrides === undefined ? context.baseOverrides : mergeSpatialOverrides(scene.overrides, capturedOptions.overrides);
+  if (capturedOptions.overrides !== undefined)
+    validateSpatialOverrides(scene, overrides);
+  if (capturedOptions.cameraPoseOverride && context.cameraChannelsById.has(camera2.cameraId))
     throw new SpatialSceneError("conflict", "Camera animation conflicts with camera pose override.", "cameraPoseOverride");
-  const entities = new Map(scene.entities.map((entity) => [entity.entityId, entity]));
-  for (const channel of scene.animations) {
+  const entities = new Map(context.entitiesById);
+  for (const channel of context.entityChannels) {
     const value = sampleChannel(channel, timeUs);
-    if (channel.targetId === camera2.cameraId) {
-      camera2 = { ...camera2, pose: { ...camera2.pose, [channel.property]: value } };
-    } else {
-      const entity = entities.get(channel.targetId);
-      if (!entity)
-        continue;
-      if (channel.property === "opacity")
-        entities.set(entity.entityId, applySpatialEntityOverride(entity, { entityId: entity.entityId, property: "opacity", value }));
-      else
-        entities.set(entity.entityId, { ...entity, transform: { ...entity.transform, [channel.property]: value } });
-    }
+    const entity = entities.get(channel.targetId);
+    if (channel.property === "opacity")
+      entities.set(entity.entityId, applySpatialEntityOverride(entity, { entityId: entity.entityId, property: "opacity", value }));
+    else
+      entities.set(entity.entityId, { ...entity, transform: { ...entity.transform, [channel.property]: value } });
+  }
+  for (const channel of context.cameraChannelsById.get(camera2.cameraId) ?? []) {
+    const value = sampleChannel(channel, timeUs);
+    camera2 = { ...camera2, pose: { ...camera2.pose, [channel.property]: value } };
   }
   for (const override of overrides)
     entities.set(override.entityId, applySpatialEntityOverride(entities.get(override.entityId), override));
   if (capturedOptions.cameraPoseOverride)
     camera2 = { ...camera2, pose: capturedOptions.cameraPoseOverride };
   const matrices = new Map;
-  const visibility = new Map;
-  const order = spatialTopologicalIds(new Map(scene.entities.map((entity) => [entity.entityId, entity.parentId === null ? [] : [entity.parentId]])), "entity hierarchy");
-  for (const id of order) {
+  for (const id of context.entityOrder) {
     const entity = entities.get(id);
     try {
       const local = composeTransform(entity.transform);
@@ -994,21 +1032,19 @@ function evaluateSpatialScene(sceneInput, options) {
     } catch (error) {
       throw new SpatialSceneError("invalid-data", error instanceof Error ? error.message : "Invalid evaluated transform.", `entities.${id}.transform`);
     }
-    visibility.set(id, entity.visible && (entity.parentId === null || visibility.get(entity.parentId) === true));
   }
   const evaluated = scene.entities.map((source, index) => ({
     entity: entities.get(source.entityId),
     worldMatrix: matrices.get(source.entityId),
-    visible: visibility.get(source.entityId),
+    visible: context.visibilityById.get(source.entityId),
     selectionId: index + 1
   }));
-  const assetDigests = spatialAssetClosureDigests(scene.assets);
-  const stateSha256 = spatialStateValueSha256({ domain: "slopcamera.spatial-state.v1", timeUs, entities: evaluated, assetDigests });
+  const stateSha256 = spatialStateValueSha256({ domain: "slopcamera.spatial-state.v1", timeUs, entities: evaluated, assetDigests: context.assetDigests });
   const viewSha256 = spatialValueSha256({ domain: "slopcamera.spatial-view.v1", stateSha256, camera: camera2 });
   const result = EvaluatedSpatialSceneSchema.parse({
     kind: "slopcamera.spatial-snapshot",
     schemaVersion: 1,
-    sceneSha256: spatialValueSha256(scene),
+    sceneSha256: context.sceneSha256,
     stateSha256,
     viewSha256,
     timeUs,
@@ -1017,6 +1053,9 @@ function evaluateSpatialScene(sceneInput, options) {
     assets: scene.assets
   });
   return deepFreezeJson(result);
+}
+function evaluateSpatialScene(sceneInput, options) {
+  return evaluateSpatialSceneInContext(createSpatialEvaluationContext(sceneInput), options);
 }
 
 // src/spatial-scene/patch.ts
@@ -1362,7 +1401,7 @@ function classifyWorldFrustum(view, bounds) {
   let behind = 0, inside = 0, inClip = 0;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const corner of boundsCorners(bounds)) {
-    const projected = projectPoint(view, corner);
+    const projected = projectPreparedPoint(view, corner);
     if (projected === null) {
       behind++;
       continue;
@@ -1395,10 +1434,13 @@ function spatialAuditDefaultTimesUs(durationUs) {
 }
 var findingOrder = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
 function auditSpatialScene(sceneInput, options) {
-  const scene = parseSpatialScene(sceneInput);
+  return auditSpatialSceneInContext(createSpatialEvaluationContext(sceneInput), options);
+}
+function auditSpatialSceneInContext(context, options) {
+  const scene = context.scene;
   const captured = parseSpatialValue(SpatialAuditOptionsSchema, options, "audit options");
   const cameraId = captured.cameraId;
-  if (!scene.cameras.some((camera2) => camera2.cameraId === cameraId)) {
+  if (!context.camerasById.has(cameraId)) {
     throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId");
   }
   const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
@@ -1419,8 +1461,8 @@ function auditSpatialScene(sceneInput, options) {
   const enclosures = new Map(scene.entities.map((entity) => [entity.entityId, auditLocalBounds(entity, assetBounds)]));
   const samplesByEntity = new Map(scene.entities.map((entity) => [entity.entityId, []]));
   for (const timeUs of timesUs) {
-    const snapshot = evaluateSpatialScene(scene, { timeUs, cameraId });
-    const view = cameraMathView(snapshot.camera);
+    const snapshot = evaluateSpatialSceneInContext(context, { timeUs, cameraId });
+    const view = prepareCameraView(cameraMathView(snapshot.camera));
     const { width, height } = snapshot.camera.projection;
     for (const entry of snapshot.entities) {
       const entity = entry.entity;
@@ -1538,7 +1580,7 @@ function auditSpatialScene(sceneInput, options) {
     kind: "slopcamera.spatial-audit",
     schemaVersion: 1,
     sceneId: scene.sceneId,
-    sceneSha256: spatialValueSha256(scene),
+    sceneSha256: context.sceneSha256,
     cameraId,
     durationUs: scene.durationUs,
     timesUs,
@@ -1780,11 +1822,14 @@ function entityAssetId(entity) {
 }
 var findingOrder2 = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
 function auditSpatialSceneRendered(sceneInput, framesInput, options) {
-  const scene = parseSpatialScene(sceneInput);
+  return auditSpatialSceneRenderedInContext(createSpatialEvaluationContext(sceneInput), framesInput, options);
+}
+function auditSpatialSceneRenderedInContext(context, framesInput, options) {
+  const scene = context.scene;
   const captured = parseSpatialValue(SpatialRenderedAuditOptionsSchema, options, "rendered audit options");
   const coverage = captured.coverage ?? SPATIAL_RENDERED_AUDIT_COVERAGE;
   const cameraId = captured.cameraId;
-  if (!scene.cameras.some((camera2) => camera2.cameraId === cameraId)) {
+  if (!context.camerasById.has(cameraId)) {
     throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId");
   }
   const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
@@ -1813,7 +1858,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
   }
   const framePixels = first.width * first.height;
   const entityIndex = new Map(scene.entities.map((entity, index) => [entity.entityId, index + 1]));
-  const manifestDigests = spatialAssetClosureDigests(scene.assets);
+  const manifestDigests = context.assetDigests;
   const frameDrafts = new Map;
   for (const frame of frames) {
     const attributed = new Map;
@@ -1856,7 +1901,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
       unattributedPixels: unattributedPixels2
     });
   }
-  const geometric = auditSpatialScene(scene, {
+  const geometric = auditSpatialSceneInContext(context, {
     cameraId,
     timesUs,
     ...captured.assetBounds === undefined ? {} : { assetBounds: captured.assetBounds }
@@ -2005,7 +2050,7 @@ function auditSpatialSceneRendered(sceneInput, framesInput, options) {
     kind: "slopcamera.spatial-rendered-audit",
     schemaVersion: 1,
     sceneId: scene.sceneId,
-    sceneSha256: spatialValueSha256(scene),
+    sceneSha256: context.sceneSha256,
     cameraId,
     durationUs: scene.durationUs,
     timesUs,
@@ -3481,6 +3526,7 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     overrides: [],
     animations: scene.animations.filter((channel) => channel.targetId === cameraId)
   };
+  const cameraContext = createSpatialEvaluationContext(cameraScene);
   return parseSpatialCameraTrack({
     kind: "slopcamera.spatial-camera-track",
     schemaVersion: 1,
@@ -3489,7 +3535,7 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
     clock,
     samples: Array.from({ length: clock.frameCount }, (_, frameIndex) => {
       const sample = absoluteSample(frameIndex, clock);
-      return { ...sample, camera: evaluateSpatialScene(cameraScene, { cameraId, timeUs: sample.timeUs }).camera };
+      return { ...sample, camera: evaluateSpatialSceneInContext(cameraContext, { cameraId, timeUs: sample.timeUs }).camera };
     })
   });
 }
@@ -3536,7 +3582,9 @@ export {
   runBuiltWorkflow,
   row,
   reduceSpatialFrameRate,
+  projectPreparedPoint,
   projectPoint,
+  prepareCameraView,
   pixelRay,
   perspectiveFromFov,
   parseSpatialValue,
@@ -3560,6 +3608,7 @@ export {
   generatedSpatialEntityId,
   frameFitPose,
   facing,
+  evaluateSpatialSceneInContext,
   evaluateSpatialScene,
   evaluateSpatialGlb,
   easeKeys,
@@ -3574,6 +3623,7 @@ export {
   createWorkflowCompilationHash,
   createSpatialSceneStarter,
   createSpatialGeneratorSceneShell,
+  createSpatialEvaluationContext,
   createSlopcameraCodeHost,
   createPublicWorkflowRegistryProjection,
   createGraphHash,
@@ -3588,7 +3638,9 @@ export {
   buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  auditSpatialSceneRenderedInContext,
   auditSpatialSceneRendered,
+  auditSpatialSceneInContext,
   auditSpatialScene,
   asSlopcameraCodeError,
   applySpatialScenePatch,

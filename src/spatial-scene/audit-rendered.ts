@@ -5,9 +5,10 @@ import {
   SpatialEntityIdSchema, SpatialPlacementSchema, SpatialSceneIdSchema, SpatialTimeUsSchema,
   type SpatialEntity,
 } from "./contracts.js"
-import { auditSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema } from "./audit.js"
+import { auditSpatialSceneInContext, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema } from "./audit.js"
+import { createSpatialEvaluationContext, type SpatialEvaluationContext } from "./evaluate.js"
 import {
-  parseSpatialScene, parseSpatialValue, sortSpatialBy, spatialAssetClosureDigests, spatialValueSha256, SpatialSceneError,
+  parseSpatialValue, sortSpatialBy, SpatialSceneError,
 } from "./identity.js"
 import type { Bounds } from "./math.js"
 
@@ -372,11 +373,24 @@ export function auditSpatialSceneRendered(
   framesInput: unknown,
   options: SpatialRenderedAuditOptions,
 ): SpatialRenderedAuditReport {
-  const scene = parseSpatialScene(sceneInput)
+  return auditSpatialSceneRenderedInContext(createSpatialEvaluationContext(sceneInput), framesInput, options)
+}
+
+/**
+ * The rendered audit against a shared evaluation context. The embedded
+ * geometric audit consumes the same context, so one parse and index pass
+ * covers frame reconciliation and every geometric sample.
+ */
+export function auditSpatialSceneRenderedInContext(
+  context: SpatialEvaluationContext,
+  framesInput: unknown,
+  options: SpatialRenderedAuditOptions,
+): SpatialRenderedAuditReport {
+  const scene = context.scene
   const captured = parseSpatialValue(SpatialRenderedAuditOptionsSchema, options, "rendered audit options")
   const coverage = captured.coverage ?? SPATIAL_RENDERED_AUDIT_COVERAGE
   const cameraId = captured.cameraId
-  if (!scene.cameras.some(camera => camera.cameraId === cameraId)) {
+  if (!context.camerasById.has(cameraId)) {
     throw new SpatialSceneError("not-found", `Unknown camera ${cameraId}.`, "cameraId")
   }
   const assetIds = new Set(scene.assets.map(asset => asset.assetId))
@@ -410,7 +424,7 @@ export function auditSpatialSceneRendered(
   // selection code is the canonical entity index and an asset digest must match
   // the declared manifest closure.
   const entityIndex = new Map(scene.entities.map((entity, index) => [entity.entityId, index + 1]))
-  const manifestDigests = spatialAssetClosureDigests(scene.assets)
+  const manifestDigests = context.assetDigests
   const frameDrafts = new Map<number, FrameDraft>()
   for (const frame of frames) {
     const attributed = new Map<number, number>()
@@ -450,7 +464,7 @@ export function auditSpatialSceneRendered(
 
   // The geometric audit supplies effective visibility and corner-projection
   // coverage; the rendered audit compares, never substitutes, its estimate.
-  const geometric = auditSpatialScene(scene, {
+  const geometric = auditSpatialSceneInContext(context, {
     cameraId, timesUs,
     ...(captured.assetBounds === undefined ? {} : { assetBounds: captured.assetBounds }),
   })
@@ -580,7 +594,7 @@ export function auditSpatialSceneRendered(
   const retainedFindings = sortedFindings.slice(0, SPATIAL_RENDERED_AUDIT_LIMITS.findings)
   const report = {
     kind: "slopcamera.spatial-rendered-audit" as const, schemaVersion: 1 as const,
-    sceneId: scene.sceneId, sceneSha256: spatialValueSha256(scene), cameraId,
+    sceneId: scene.sceneId, sceneSha256: context.sceneSha256, cameraId,
     durationUs: scene.durationUs, timesUs,
     mode: { kind: "object-id" as const, coverage },
     frame: { width: first.width, height: first.height, pixels: framePixels },
