@@ -16,6 +16,8 @@ import type {
   HostResourceClaim,
   HostResourceCoordinator,
 } from "../host-resources.ts"
+import { createSpatialSceneStarter } from "../spatial-scene/authoring.ts"
+import { fixtureAsset } from "../spatial-scene/test-fixture.ts"
 import {
   SlopcameraMcpToolRuntime,
   mcpMaximumEdges,
@@ -132,7 +134,9 @@ describe("Slopcamera MCP tools", () => {
     const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-render-"))
     try {
       await writeFile(join(root, "agent-flow.diagram.json"), source())
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const first = await runtime.call("render_diagram", {
         path: "agent-flow.diagram.json",
         out_dir: "out",
@@ -189,7 +193,9 @@ describe("Slopcamera MCP tools", () => {
       )
       await mkdir(join(outside, "writes"))
       await symlink(join(outside, "writes"), join(root, "outside-output"))
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
 
       const traversal = await runtime.call("check_diagram", {
         path: "../escape.diagram.json",
@@ -227,7 +233,9 @@ describe("Slopcamera MCP tools", () => {
         join(root, "oversized.diagram.json"),
         `{"padding":"${"x".repeat(1024 * 1024)}"}`,
       )
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const result = await runtime.call("check_diagram", {
         path: "oversized.diagram.json",
       })
@@ -293,7 +301,9 @@ describe("Slopcamera MCP tools", () => {
           ),
         }),
       )
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const [tooManyShapes, tooManyEdges] = await Promise.all([
         runtime.call("check_diagram", {
           path: "too-many-shapes.diagram.json",
@@ -319,7 +329,9 @@ describe("Slopcamera MCP tools", () => {
           edges: Array.from({ length: 20_000 }, () => ({})),
         }),
       )
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const result = await runtime.call("check_diagram", {
         path: "malformed-dense.diagram.json",
       })
@@ -352,7 +364,9 @@ describe("Slopcamera MCP tools", () => {
           ),
         }),
       )
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const result = await runtime.call("check_diagram", {
         path: "dense.diagram.json",
       })
@@ -401,7 +415,9 @@ describe("Slopcamera MCP tools", () => {
     const marker = join(root, "executed")
     try {
       await writeFile(join(root, "flow.diagram.json"), source())
-      const runtime = await SlopcameraMcpToolRuntime.create(root)
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator({ assertions: 0, claims: [] }),
+      )
       const search = await runtime.call("search_slopcamera", {
         query: "diagram",
       })
@@ -484,6 +500,352 @@ describe("Slopcamera MCP tools", () => {
       expect(await readFile(join(root, "generated", "image.webp"))).toEqual(
         Buffer.from(webp),
       )
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("Slopcamera MCP scene tools", () => {
+  const splatScene = () => {
+    const scene = createSpatialSceneStarter() as unknown as Record<string, unknown>
+    return {
+      ...scene,
+      assets: [
+        ...(scene.assets as readonly unknown[]),
+        {
+          assetId: "asset_splat",
+          payload: { path: "assets/splat.spz", sha256: "a".repeat(64), bytes: 100 },
+          interpretation: { kind: "splat", format: "spz", metersPerUnit: 1, sourceUp: "y" },
+          dependencies: [],
+          provenance: { source: "authored", description: "Fixture" },
+        },
+      ],
+      entities: [
+        ...(scene.entities as readonly unknown[]),
+        {
+          entityId: "entity_splat",
+          kind: "splat",
+          name: "Splat",
+          parentId: null,
+          transform: {
+            position: [0, 0, 0],
+            rotation: [0, 0, 0, 1],
+            scale: [1, 1, 1],
+          },
+          placement: { kind: "world" },
+          origin: { kind: "authored" },
+          visible: true,
+          assetId: "asset_splat",
+        },
+      ],
+    }
+  }
+
+  test("checks, inspects, audits, diffs, and evaluates a root-relative scene", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-scene-"))
+    try {
+      const scene = createSpatialSceneStarter()
+      await writeFile(join(root, "scene.json"), JSON.stringify(scene))
+      const changed = {
+        ...scene,
+        entities: scene.entities.map(entity =>
+          entity.entityId === "entity_product"
+            ? { ...entity, name: "Renamed" }
+            : entity,
+        ),
+      }
+      await writeFile(join(root, "changed.json"), JSON.stringify(changed))
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator(admission),
+      )
+
+      const checked = await runtime.call("check_scene", { path: "scene.json" })
+      expect(checked.isError).toBeUndefined()
+      expect(checked.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        sceneId: "scene_starter",
+        sceneSha256: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        summary: {
+          entityCount: scene.entities.length,
+          cameraCount: scene.cameras.length,
+          assetCount: scene.assets.length,
+          durationUs: scene.durationUs,
+        },
+      })
+
+      const inspected = await runtime.call("inspect_scene", { path: "scene.json" })
+      expect(inspected.isError).toBeUndefined()
+      expect(inspected.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        summary: {
+          entityCount: scene.entities.length,
+          returnedEntityCount: scene.entities.length,
+          entitiesTruncated: false,
+        },
+      })
+      const inspection = (inspected.structuredContent as { inspection: { entities: readonly { entityId: string; editableControls: readonly string[] }[] } }).inspection
+      const product = inspection.entities.find(({ entityId }) => entityId === "entity_product")
+      expect(product?.editableControls).toEqual(["color", "opacity"])
+
+      const audited = await runtime.call("audit_scene", {
+        path: "scene.json",
+        camera_id: "camera_hero",
+        times_us: [0, 2_000_000],
+      })
+      expect(audited.isError).toBeUndefined()
+      expect(audited.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        summary: { entityCount: scene.entities.length, findingCount: 0 },
+      })
+      const report = (audited.structuredContent as { report: { timesUs: readonly number[]; entities: readonly { entityId: string }[] } }).report
+      expect(report.timesUs).toEqual([0, 2_000_000])
+
+      const diffed = await runtime.call("diff_scenes", {
+        path: "scene.json",
+        other: "changed.json",
+      })
+      expect(diffed.isError).toBeUndefined()
+      const diff = diffed.structuredContent as {
+        diff: readonly { kind: string; collection?: string; id?: string; properties?: string[] }[]
+      }
+      expect(diff.diff).toContainEqual(
+        expect.objectContaining({ kind: "changed", collection: "entities", id: "entity_product" }),
+      )
+
+      const evaluated = await runtime.call("evaluate_scene", {
+        path: "scene.json",
+        camera_id: "camera_hero",
+        time_us: 1_000_000,
+      })
+      expect(evaluated.isError).toBeUndefined()
+      expect(evaluated.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        summary: { entityCount: scene.entities.length },
+      })
+      const snapshot = (evaluated.structuredContent as { snapshot: { timeUs: number; camera: { cameraId: string } } }).snapshot
+      expect(snapshot.timeUs).toBe(1_000_000)
+      expect(snapshot.camera.cameraId).toBe("camera_hero")
+
+      for (const claims of admission.claims) {
+        expect(claims).toEqual([
+          { resource: "cpu", amount: 1 },
+          { resource: "local-io", amount: 1 },
+        ])
+      }
+      expect(admission.claims).toHaveLength(5)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects bad arguments, invalid sources, and boundary escapes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-scene-"))
+    const outside = await mkdtemp(join(tmpdir(), "slopcamera-mcp-outside-"))
+    try {
+      await writeFile(join(root, "scene.json"), JSON.stringify(createSpatialSceneStarter()))
+      await writeFile(join(root, "invalid.json"), "{not json")
+      await writeFile(join(root, "broken.json"), JSON.stringify({ kind: "slopcamera.spatial-scene" }))
+      await writeFile(join(outside, "escape.json"), JSON.stringify(createSpatialSceneStarter()))
+      await symlink(join(outside, "escape.json"), join(root, "escape.json"))
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator(admission),
+      )
+
+      const codeOf = async (
+        name: Parameters<typeof runtime.call>[0],
+        args: Record<string, unknown>,
+      ) => {
+        const result = await runtime.call(name, args)
+        const match = /^\[([A-Z_]+)\]/u.exec(result.content[0]?.text ?? "")
+        expectToolError(result, match?.[1] ?? "")
+        return match?.[1]
+      }
+
+      expect(await codeOf("check_scene", { path: "../outside.json" })).toBe("INVALID_PATH")
+      expect(await codeOf("check_scene", { path: "escape.json" })).toBe("PATH_OUTSIDE_ROOT")
+      expect(await codeOf("check_scene", { path: "scene.txt" })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("check_scene", { path: "invalid.json" })).toBe("INVALID_JSON")
+      expect(await codeOf("check_scene", { path: "broken.json" })).toBe("INVALID_SCENE")
+      expect(await codeOf("check_scene", { path: "missing.json" })).toBe("SOURCE_NOT_FOUND")
+      expect(await codeOf("check_scene", { path: "scene.json", extra: 1 })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("check_scene", {})).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("evaluate_scene", {
+        path: "scene.json", camera_id: "camera_missing", time_us: 0,
+      })).toBe("NOT_FOUND")
+      expect(await codeOf("evaluate_scene", {
+        path: "scene.json", camera_id: "nope", time_us: 0,
+      })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("evaluate_scene", {
+        path: "scene.json", camera_id: "camera_hero", time_us: 5_000_000,
+      })).toBe("INVALID_DATA")
+      expect(await codeOf("evaluate_scene", {
+        path: "scene.json", camera_id: "camera_hero", time_us: 1.5,
+      })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("audit_scene", {
+        path: "scene.json", camera_id: "camera_missing",
+      })).toBe("NOT_FOUND")
+      expect(await codeOf("audit_scene", {
+        path: "scene.json", camera_id: "camera_hero", times_us: [],
+      })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("audit_scene", {
+        path: "scene.json", camera_id: "camera_hero", times_us: Array.from({ length: 65 }, () => 0),
+      })).toBe("INVALID_ARGUMENTS")
+      expect(await codeOf("audit_scene", {
+        path: "scene.json", camera_id: "camera_hero", times_us: [5_000_000],
+      })).toBe("INVALID_DATA")
+      expect(await codeOf("audit_scene", {
+        path: "scene.json", camera_id: "camera_hero", asset_bounds: "nope",
+      })).toBe("INVALID_DATA")
+      expect(await codeOf("diff_scenes", {
+        path: "scene.json", other: "../escape.json",
+      })).toBe("INVALID_PATH")
+      expect(await codeOf("diff_scenes", {
+        path: "scene.json", other: "missing.json",
+      })).toBe("SOURCE_NOT_FOUND")
+      expect(await codeOf("diff_scenes", {
+        path: "scene.json", other: "invalid.json",
+      })).toBe("INVALID_JSON")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  test("audit_scene normalizes inline asset bounds and reports conflicts", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-scene-"))
+    try {
+      await writeFile(join(root, "scene.json"), JSON.stringify(splatScene()))
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator(admission),
+      )
+
+      const audit = async (assetBounds?: unknown) => {
+        const args: Record<string, unknown> = { path: "scene.json", camera_id: "camera_hero" }
+        if (assetBounds !== undefined) args.asset_bounds = assetBounds
+        const result = await runtime.call("audit_scene", args)
+        return result
+      }
+      const splatEnclosure = (result: McpToolResult) => {
+        const report = (result.structuredContent as {
+          report: { entities: readonly { entityId: string; enclosure: { status: string; reason?: string } }[] }
+        }).report
+        return report.entities.find(({ entityId }) => entityId === "entity_splat")?.enclosure
+      }
+      const errorCode = (result: McpToolResult) => {
+        expect(result.isError).toBe(true)
+        return /^\[([A-Z_]+)\]/u.exec(result.content[0]?.text ?? "")?.[1]
+      }
+
+      const unbounded = await audit()
+      expect(unbounded.isError).toBeUndefined()
+      expect(splatEnclosure(unbounded)).toMatchObject({
+        status: "unknown",
+        reason: "requires-asset-decoding",
+      })
+
+      const mapBounds = { asset_splat: { min: [-1, -1, -1], max: [1, 1, 1] } }
+      const bounded = await audit(mapBounds)
+      expect(bounded.isError).toBeUndefined()
+      expect(splatEnclosure(bounded)?.status).toBe("bounded")
+
+      const manifest = fixtureAsset("asset_splat")
+      const facts = {
+        kind: "slopcamera.spatial-asset-facts",
+        schemaVersion: 1,
+        subject: { path: "assets/image.png", sha256: "a".repeat(64), bytes: 100 },
+        subjectManifestSha256: "b".repeat(64),
+        profile: "slopcamera.glb-triangles-trs-pbr-basecolor-v1",
+        nodeCount: 1,
+        clipDurationsSeconds: [],
+        bounds: {
+          modelSpace: { min: [-1, -1, -1], max: [1, 1, 1] },
+          sceneSpace: { min: [-2, -2, -2], max: [2, 2, 2] },
+        },
+      }
+      const paired = await audit({ manifest, facts })
+      expect(paired.isError).toBeUndefined()
+      expect(splatEnclosure(paired)?.status).toBe("bounded")
+
+      const merged = await audit([mapBounds, mapBounds])
+      expect(merged.isError).toBeUndefined()
+      expect(splatEnclosure(merged)?.status).toBe("bounded")
+
+      const conflicted = await audit([
+        mapBounds,
+        { asset_splat: { min: [-9, -9, -9], max: [9, 9, 9] } },
+      ])
+      expect(errorCode(conflicted)).toBe("CONFLICT")
+
+      const bareFacts = await audit(facts)
+      expect(errorCode(bareFacts)).toBe("INVALID_DATA")
+
+      const unknownAsset = await audit({ asset_missing: { min: [-1, -1, -1], max: [1, 1, 1] } })
+      expect(errorCode(unknownAsset)).toBe("INVALID_DATA")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("bounds returned entities, diff entries, and findings", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-scene-"))
+    try {
+      const scene = createSpatialSceneStarter() as unknown as Record<string, unknown>
+      const baseEntity = (scene.entities as readonly Record<string, unknown>[])[0]!
+      const manyEntities = Array.from({ length: 300 }, (_, index) => ({
+        ...baseEntity,
+        entityId: `entity_extra_${index}`,
+        name: `Extra ${index}`,
+      }))
+      const wideScene = { ...scene, entities: [...(scene.entities as readonly unknown[]), ...manyEntities] }
+      await writeFile(join(root, "wide.json"), JSON.stringify(wideScene))
+      const other = {
+        ...wideScene,
+        entities: (wideScene.entities as readonly Record<string, unknown>[]).map(entity => ({
+          ...entity,
+          name: `${entity.name} changed`,
+        })),
+      }
+      await writeFile(join(root, "other.json"), JSON.stringify(other))
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator(admission),
+      )
+
+      const inspected = await runtime.call("inspect_scene", { path: "wide.json" })
+      expect(inspected.isError).toBeUndefined()
+      expect(inspected.structuredContent).toMatchObject({
+        ok: true,
+        summary: { entityCount: 304, returnedEntityCount: 256, entitiesTruncated: true },
+      })
+      const inspection = (inspected.structuredContent as { inspection: { entities: readonly unknown[] } }).inspection
+      expect(inspection.entities).toHaveLength(256)
+
+      const evaluated = await runtime.call("evaluate_scene", {
+        path: "wide.json", camera_id: "camera_hero", time_us: 0,
+      })
+      expect(evaluated.isError).toBeUndefined()
+      const snapshot = (evaluated.structuredContent as { snapshot: { entities: readonly unknown[] } }).snapshot
+      expect(snapshot.entities).toHaveLength(256)
+      expect(evaluated.structuredContent).toMatchObject({
+        summary: { entityCount: 304, returnedEntityCount: 256, entitiesTruncated: true },
+      })
+
+      const diffed = await runtime.call("diff_scenes", { path: "wide.json", other: "other.json" })
+      expect(diffed.isError).toBeUndefined()
+      const diff = diffed.structuredContent as {
+        diff: readonly unknown[]
+        summary: { entryCount: number; returnedEntryCount: number; diffTruncated: boolean }
+      }
+      expect(diff.summary).toMatchObject({ entryCount: 304, returnedEntryCount: 304, diffTruncated: false })
+      expect(diff.diff.length).toBeLessThanOrEqual(1_024)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
