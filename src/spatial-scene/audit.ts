@@ -207,13 +207,13 @@ export interface SpatialAuditReport {
   readonly omittedFindings: number
 }
 
-type Enclosure =
+export type SpatialEntityEnclosure =
   | { readonly status: "bounded"; readonly bounds: Bounds }
   | { readonly status: "unknown"; readonly reason: (typeof BOUNDS_UNKNOWN_REASONS)[number] }
 
 /** Authored enclosures or caller-decoded asset bounds; never invented. */
-function auditLocalBounds(entity: SpatialEntity, assetBounds: Readonly<Record<string, Bounds>>): Enclosure {
-  const supplied = (assetId: string): Enclosure =>
+export function spatialEntityLocalBounds(entity: SpatialEntity, assetBounds: Readonly<Record<string, Bounds>>): SpatialEntityEnclosure {
+  const supplied = (assetId: string): SpatialEntityEnclosure =>
     assetBounds[assetId] === undefined
       ? { status: "unknown", reason: "requires-asset-decoding" }
       : { status: "bounded", bounds: assetBounds[assetId]! }
@@ -381,7 +381,7 @@ export function auditSpatialSceneInContext(context: SpatialEvaluationContext, op
     throw new SpatialSceneError("invalid-data", "Audit instance-sample budget exceeded; pass fewer timesUs samples.", "timesUs")
   }
 
-  const enclosures = new Map(scene.entities.map(entity => [entity.entityId, auditLocalBounds(entity, assetBounds)]))
+  const enclosures = new Map(scene.entities.map(entity => [entity.entityId, spatialEntityLocalBounds(entity, assetBounds)]))
   const samplesByEntity = new Map(scene.entities.map(entity => [entity.entityId, [] as SampleDraft[]]))
   for (const timeUs of timesUs) {
     const snapshot = evaluateSpatialSceneInContext(context, { timeUs, cameraId })
