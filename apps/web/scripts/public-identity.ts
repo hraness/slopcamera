@@ -14,8 +14,8 @@ export const publicIdentity = {
   sourceSvgSha256: "afced14ea43eb5e8b19c6dea8dd21b57ceff521a6efd606f1903cc84b4bdf754",
   sourceFlatSha256: "e94866676a3f56e4bd162809ef7198881cbd0bb1089b6c80871a908e6b8fe825",
   files: [
-    { path: "icon.png", handoffPath: "slopcamera/icon.png", width: 512, height: 512, bytes: 12226,
-      sha256: "6f5f3acd4be06001abcdf6921e96c164450887d8b7dcf693f25236276a3f882c" },
+    { path: "icon.png", handoffPath: "slopcamera/icon.png", width: 32, height: 32, bytes: 1859,
+      sha256: "588710a7310fb694b45d054979f13a82bf7c03501af0fa27716455a068880724" },
     { path: "apple-touch-icon.png", handoffPath: "slopcamera/apple-icon.png", width: 180, height: 180, bytes: 4235,
       sha256: "9db9e16ac33a7b70bfcf94fd935455759c7069ff0d3291433432cc7086629901" },
   ],
