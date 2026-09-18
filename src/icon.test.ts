@@ -7,6 +7,7 @@ import {
   extractIconLineArt,
   generateSlopcameraIcon,
   iconPromptFor,
+  iconVisualGateProblems,
   slopcameraIconDefaultInk,
   type IconCritique,
 } from "./icon.ts"
@@ -48,9 +49,32 @@ describe("icon prompt", () => {
     expect(prompt).toContain("a paper airplane")
     expect(prompt).toContain("isometric")
     expect(prompt).toContain("#2474d4")
-    expect(prompt).toContain("no fills")
+    expect(prompt).toContain("no hairlines")
     const revised = iconPromptFor("a cube", { feedback: "remove the shadow" })
     expect(revised).toContain("remove the shadow")
+    const mark = iconPromptFor("a sponge", { purpose: "mark" })
+    expect(mark).toContain("bold masses")
+    expect(mark).toContain("16 pixels")
+    expect(mark).toContain("no thin outlines")
+  })
+})
+
+describe("icon visual gates", () => {
+  test("keeps compact marks bold and simple", () => {
+    expect(iconVisualGateProblems("mark", { coverageRatio: 0.3, height: 80, width: 80 }, 3)).toEqual([])
+    expect(iconVisualGateProblems("mark", { coverageRatio: 0.05, height: 80, width: 160 }, 20)).toEqual([
+      "the subject is too narrow or elongated",
+      "the mark has too little bold visual mass",
+      "the mark has too many separate vector paths",
+    ])
+  })
+
+  test("bounds illustration density without requiring favicon mass", () => {
+    expect(iconVisualGateProblems("illustration", { coverageRatio: 0.12, height: 100, width: 120 }, 20)).toEqual([])
+    expect(iconVisualGateProblems("illustration", { coverageRatio: 0.7, height: 100, width: 100 }, 60)).toEqual([
+      "the illustration is too visually dense",
+      "the illustration has too much vector detail",
+    ])
   })
 })
 
@@ -179,7 +203,7 @@ function vectorizeStub(): {
 }
 
 function critiqueStub(score: number, pass: boolean) {
-  const seen: { ink: string; model: string; pngBytes: number; subject: string }[] =
+  const seen: { ink: string; model: string; pngBytes: number; purpose: string; subject: string }[] =
     []
   return {
     seen,
@@ -187,12 +211,14 @@ function critiqueStub(score: number, pass: boolean) {
       ink: string
       model: string
       png: Uint8Array
+      purpose: "illustration" | "mark"
       subject: string
     }): Promise<IconCritique> => {
       seen.push({
         ink: input.ink,
         model: input.model,
         pngBytes: input.png.byteLength,
+        purpose: input.purpose,
         subject: input.subject,
       })
       return {
@@ -240,6 +266,7 @@ describe("icon generation pipeline", () => {
           ink: slopcameraIconDefaultInk,
           model: "google/gemini-3-flash",
           pngBytes: 3,
+          purpose: "illustration",
           subject: "a lightning bolt",
         },
       ])
@@ -247,6 +274,7 @@ describe("icon generation pipeline", () => {
         { pass: true, round: 1, score: 92, status: "selected" },
       ])
       expect(receipt.selectedRound).toBe(1)
+      expect(receipt.purpose).toBe("illustration")
       const svg = await readFile(output, "utf8")
       expect(svg).toContain('fill="#2474d4"')
     } finally {
