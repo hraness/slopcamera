@@ -69,11 +69,23 @@ export const SpatialProjectionSchema = z.discriminatedUnion("kind", [
     context.addIssue({ code: "custom", message: "Orthographic extents must have positive width and height." })
   }
 })
+const boundedPhysical = (minimum: number, maximum: number) => z.number().finite().min(minimum).max(maximum)
+/** Optional physical metadata. Projection remains the calibrated rendering authority. */
+export const SpatialCameraLensSchema = z.strictObject({
+  focalLengthMm: boundedPhysical(1, 2_000),
+  sensorWidthMm: boundedPhysical(1, 200),
+  apertureFStop: boundedPhysical(0.5, 128).optional(),
+  focusDistanceM: boundedPhysical(0.001, 1_000_000).optional(),
+  shutterAngleDeg: boundedPhysical(0, 360).optional(),
+  exposureEv: boundedPhysical(-32, 32).optional(),
+  colorTemperatureK: boundedPhysical(1_000, 40_000).optional(),
+})
 export const SpatialCameraSchema = z.strictObject({
   cameraId: SpatialCameraIdSchema,
   name: z.string().min(1).max(256),
   pose: SpatialPoseSchema,
   projection: SpatialProjectionSchema,
+  lens: SpatialCameraLensSchema.optional(),
 })
 
 const relativePath = z.string().min(1).max(1_024).refine(value =>
@@ -130,6 +142,7 @@ export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("cylinder"), radius: positiveDimension, height: positiveDimension }),
   z.strictObject({ kind: z.literal("asset"), assetId: SpatialAssetIdSchema, nodeIndex: z.number().int().min(0).max(65_535).optional(), materialMode: z.enum(["entity", "source"]).optional(),
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
+    morphWeights: z.array(unit).max(16).optional(), // bound matches gltf.ts morphTargetsPerPrimitive
   }),
 ])
 /**
@@ -305,6 +318,7 @@ export type SpatialGeometry = DeepReadonly<z.infer<typeof SpatialGeometrySchema>
 export type SpatialSpotLight = DeepReadonly<z.infer<typeof SpatialSpotLightSchema>>
 export type SpatialPlacement = DeepReadonly<z.infer<typeof SpatialPlacementSchema>>
 export type SpatialCamera = DeepReadonly<z.infer<typeof SpatialCameraSchema>>
+export type SpatialCameraLens = DeepReadonly<z.infer<typeof SpatialCameraLensSchema>>
 export type SpatialProjection = DeepReadonly<z.infer<typeof SpatialProjectionSchema>>
 export type SpatialTransform = DeepReadonly<z.infer<typeof SpatialTransformSchema>>
 export type SpatialPose = DeepReadonly<z.infer<typeof SpatialPoseSchema>>

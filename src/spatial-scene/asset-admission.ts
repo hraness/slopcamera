@@ -7,7 +7,7 @@ import {
   SpatialPatchOperationSchema,
   SpatialPayloadSchema,
 } from "./contracts.js"
-import { SPATIAL_GLB_LIMITS, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1 } from "./gltf.js"
+import { SPATIAL_GLB_LIMITS, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE } from "./gltf.js"
 
 /**
  * Canonical document contracts produced by `scene asset admit` and consumed by
@@ -45,16 +45,39 @@ export const SpatialAssetMaterialFactSchema = z.strictObject({
   maps: z.array(z.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive"])).max(5),
   emissiveLinear: z.tuple([factsUnit, factsUnit, factsUnit]).optional(),
 })
+const SpatialAssetRigFactsSchema = z.strictObject({
+  profile: z.literal(SPATIAL_GLB_RIGGED_PROFILE),
+  skins: z.array(z.strictObject({
+    name: z.string().max(1_024).optional(),
+    jointNodeIndices: z.array(z.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
+    inverseBindMatricesAccessor: z.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1),
+  })).min(1).max(SPATIAL_GLB_LIMITS.skins),
+  morphTargets: z.array(z.array(z.array(z.strictObject({
+    name: z.string().min(1).max(1_024), hasPosition: z.boolean(), hasNormal: z.boolean(),
+  })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive)).max(SPATIAL_GLB_LIMITS.primitives)).max(SPATIAL_GLB_LIMITS.meshes),
+  clips: z.array(z.strictObject({
+    name: z.string().max(1_024).optional(),
+    durationSeconds: z.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
+    channels: z.array(z.strictObject({
+      nodeIndex: z.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
+      path: z.enum(["translation", "rotation", "scale", "weights"]),
+    })).max(SPATIAL_GLB_LIMITS.channels),
+  })).max(SPATIAL_GLB_LIMITS.clips),
+})
 export const SpatialAssetFactsV1Schema = z.strictObject({
   kind: z.literal("slopcamera.spatial-asset-facts"), schemaVersion: z.literal(1),
   subject: SpatialPayloadSchema,
   subjectManifestSha256: SpatialDigestSchema,
-  profile: z.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1]),
+  profile: z.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE]),
   nodeCount: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
   clipDurationsSeconds: z.array(z.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
   bounds: z.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
   /** Present on newly admitted assets; absent facts predate the material-facts extension. */
   materials: z.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
+  /** Exact skeleton, morph and channel facts for the additive rigged profile. */
+  rig: SpatialAssetRigFactsSchema.optional(),
+}).superRefine((facts, context) => {
+  if ((facts.profile === SPATIAL_GLB_RIGGED_PROFILE) !== (facts.rig !== undefined)) context.addIssue({ code: "custom", path: ["rig"], message: "Rig facts must be present exactly for the rigged GLB profile." })
 })
 export type SpatialAssetFactsV1 = Readonly<z.infer<typeof SpatialAssetFactsV1Schema>>
 

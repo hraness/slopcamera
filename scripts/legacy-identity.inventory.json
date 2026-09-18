@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "d2dae7884ba3623af4426c3526db97891270fc96e4e8d75938294c309264ce14",
+    "identityLinesSha256": "2ee305988a7244cbd17004d4f832065a0d746cd2cbf6bc82db95030b918704af",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1632,7 +1632,7 @@
     "identityLineCount": 142,
     "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
     "occurrenceCount": 237,
-    "path": "dist/index-qybe3hvr.js",
+    "path": "dist/index-a5xstfz0.js",
     "categories": [
       "generated"
     ]
@@ -1908,9 +1908,9 @@
     ]
   },
   {
-    "identityLineCount": 18,
-    "identityLinesSha256": "f452c334681be99da07cd97c08a207492efd68260943246dd9e72eab583a4b07",
-    "occurrenceCount": 18,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
+    "occurrenceCount": 17,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"
