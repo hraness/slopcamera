@@ -1,5 +1,6 @@
 # Contents
 
+- `cinematic-pack-authoring/` – declarative recipe-pack authoring for the built-in `cinematic-world` workflow.
 - `query-kb/` – scoped knowledge-base retrieval.
 - `plan-kb/` – durable implementation planning in the knowledge base.
 - `percolate-kb/` – evidence-backed concept and relationship promotion.

@@ -46,6 +46,12 @@ import {
   spatialPatchOperationDefinition,
   spatialEvaluateOperationDefinition,
   spatialAuditOperationDefinition,
+  spatialDirectionCheckOperationDefinition,
+  spatialDirectionCompileOperationDefinition,
+  spatialDirectionGalleryOperationDefinition,
+  spatialEffectsCheckOperationDefinition,
+  spatialEffectsPlanOperationDefinition,
+  spatialTemporalAuditOperationDefinition,
   spatialRenderOperationDefinition,
   spatialRenderedAuditOperationDefinition,
   spatialReviewOperationDefinition,
@@ -79,6 +85,12 @@ export function createApplicationOperationRegistry(
   registry.register(spatialPatchOperationDefinition);
   registry.register(spatialEvaluateOperationDefinition);
   registry.register(spatialAuditOperationDefinition);
+  registry.register(spatialDirectionCheckOperationDefinition);
+  registry.register(spatialDirectionCompileOperationDefinition);
+  registry.register(spatialDirectionGalleryOperationDefinition);
+  registry.register(spatialEffectsCheckOperationDefinition);
+  registry.register(spatialEffectsPlanOperationDefinition);
+  registry.register(spatialTemporalAuditOperationDefinition);
   registry.register(spatialRenderOperationDefinition);
   registry.register(spatialRenderedAuditOperationDefinition);
   registry.register(spatialReviewOperationDefinition);

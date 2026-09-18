@@ -24,12 +24,18 @@ const diagramImageOperations = [
 
 const spatialSceneOperations = [
   "scene.audit@1",
+  "scene.direction.check@1",
+  "scene.direction.compile@1",
+  "scene.direction.gallery@1",
+  "scene.effects.check@1",
+  "scene.effects.plan@1",
   "scene.evaluate@1",
   "scene.inspect@1",
   "scene.patch@1",
   "scene.render@1",
   "scene.render-audit@1",
   "scene.review@1",
+  "scene.temporal-audit@1",
 ] as const;
 
 const spatialProjectOperations = [
@@ -165,7 +171,7 @@ const capabilityModules = Object.freeze([
     ],
     trust: "local-effects",
     version: 1,
-    workflowKeys: [],
+    workflowKeys: ["cinematic-world@1"],
   }),
   defineSlopcameraCapabilityModule({
     commands: [{ effect: "project-mutation", name: "scene project" }],
