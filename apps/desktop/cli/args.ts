@@ -110,6 +110,7 @@ export type CliCommand =
   | SpatialProjectCommand
   | { readonly kind: "help"; readonly topic: readonly string[] }
   | { readonly kind: "version" }
+  | ({ readonly kind: "capabilities" } & JsonOption)
   | ({ readonly kind: "operations-list" } & JsonOption)
   | ({ readonly kind: "operations-show"; readonly operation: string } & JsonOption)
   | ({ readonly kind: "diagram-check"; readonly path: string } & JsonOption)
@@ -857,6 +858,12 @@ function exactPositionals(parsed: ParsedOptions, count: number, usage: string): 
 }
 
 const JSON_SPEC = { "--json": "flag" } as const;
+
+function parseCapabilities(argv: readonly string[]): CliCommand {
+  const parsed = parseOptions(argv, JSON_SPEC);
+  exactPositionals(parsed, 0, "slopcamera capabilities [--json]");
+  return { json: optionFlag(parsed, "--json"), kind: "capabilities" };
+}
 
 function parseDoctor(argv: readonly string[]): CliCommand {
   const parsed = parseOptions(argv, JSON_SPEC);
@@ -3408,6 +3415,7 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "direct": return parseDirectingArgs(argv.slice(1));
     case "scene": return parseSpatialSceneArgs(argv.slice(1));
     case "operations": return parseOperations(argv.slice(1));
+    case "capabilities": return parseCapabilities(argv.slice(1));
     case "diagram": return parseDiagram(argv.slice(1));
     case "image": return parseImage(argv.slice(1));
     case "workflows": return parseWorkflows(argv.slice(1));

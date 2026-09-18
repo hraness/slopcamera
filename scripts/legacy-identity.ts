@@ -72,6 +72,7 @@ export function isNativeFilmStudioPath(path: string): boolean {
       "apps/desktop/application/operations/studio.test.ts",
       "apps/desktop/application/operations/studio-test-support.ts",
       "apps/desktop/code/semantic-builder-studio.test.ts",
+      "apps/desktop/cli/capability-manifest.ts",
       "docs/studio.md",
       "skills/slopcamera/references/native-studio.md",
     ].includes(path)
