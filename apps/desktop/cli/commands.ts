@@ -92,6 +92,7 @@ import {
   addZoom,
   assertCinemaPlanComposition,
   auditCinemaContinuity,
+  auditCinemaTemporal,
   buildProjectOutputTimeMap,
   buildSourceTimeMap,
   canonicalSlopcameraPersistenceDocument,
@@ -113,6 +114,7 @@ import {
   normalizeProjectEditPlan,
   planAutomaticInactivityCuts,
   planAutomaticZooms,
+  planCinemaGallery,
   projectFillerCut,
   removeOverlay,
   removeZoom,
@@ -2601,6 +2603,42 @@ async function handleProjectCinema(
         `Cinema sidecar has ${errors} blocking findings; see ${auditPath}.`,
       );
     }
+    return;
+  }
+
+  if (command.action === "audit") {
+    const report = auditCinemaTemporal(cinema, project.project, edit);
+    const contents = `${canonicalJson(report)}\n`;
+    const auditPath = `cinema/audits/${sha256Hex(contents)}.json`;
+    await saveImmutableText(project.fileSystem, auditPath, contents, sha256Hex(contents));
+    const warnings = report.findings.filter(finding => finding.severity !== "advisory").length;
+    writeValue(context.io, command.json, {
+      auditPath,
+      findings: report.findings,
+      metrics: report.metrics,
+    }, () => `${report.findings.length} temporal findings (${warnings} warnings); audit=${auditPath}`);
+    return;
+  }
+
+  if (command.action === "gallery") {
+    const gallery = planCinemaGallery(cinema, command.axis);
+    const contents = `${canonicalJson(gallery)}\n`;
+    const galleryAbsolute = await resolveSafePath(project.directory.path, command.output ?? `cinema/galleries/${sha256Hex(contents)}.json`);
+    const galleryRelative = relative(project.directory.path, galleryAbsolute);
+    if (!galleryRelative.startsWith("cinema/") || isAbsolute(galleryRelative)) {
+      throw new CliError("unsafe-path", "Cinema gallery output must remain under the project's cinema/ directory.");
+    }
+    await saveImmutableText(project.fileSystem, galleryRelative, contents, sha256Hex(contents));
+    writeValue(context.io, command.json, {
+      axis: gallery.axis,
+      candidates: gallery.candidates.map(candidate => ({
+        candidateId: candidate.candidateId,
+        cinemaPlanSha256: candidate.cinemaPlanSha256,
+        label: candidate.label,
+      })),
+      galleryPath: galleryRelative,
+      selection: gallery.selection,
+    }, () => `${gallery.candidates.length} candidates on ${gallery.axis}; gallery=${galleryRelative}`);
     return;
   }
 

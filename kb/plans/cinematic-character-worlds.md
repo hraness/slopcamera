@@ -309,7 +309,7 @@ A canonical capability manifest will project the reviewed static catalog to CLI/
 
 ## Phase 12: Direction compiler, temporal audit, cinematic galleries, CLI, and MCP
 
-- **Status:** Not started
+- **Status:** Implemented locally — direction compiler, temporal audit, spatial/cinema galleries, CLI, and six MCP tools green on focused suites and full `bun run check`; package bounds raised 13→14 MB unpacked for reviewed growth (mirrors PR #154 precedent)
 - **Depends on:** Phases 10–11
 - **Objective:** Turn semantic direction into inspectable deterministic plans and expose the complete pure planning/review loop to coding agents.
 - **Scope:** direction compiler, temporal review, sequence/take gallery plans, operation definitions, CLI commands, read-only MCP tools, tests.

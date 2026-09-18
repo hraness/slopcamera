@@ -11,7 +11,7 @@ Commands:
   capabilities                   Discover the exact static capability modules and qualification status
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render
+  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|temporal-audit
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -137,6 +137,13 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene generate --module <generator.ts> --generator-id <id>
         [--parameters <params.json>] [--seed <n>] [--into <scene.json>] --output <new-scene.json> [--json]
   slopcamera scene plan|render <scene.json> --request <request.json> [--assets <bindings.json>] [--profile <profile>] [--json]
+  slopcamera scene direction check <direction.json> --scene <scene.json> [--json]
+  slopcamera scene direction plan <direction.json> --scene <scene.json> [--camera <camera-id>] [--output <out.json>] [--json]
+  slopcamera scene direction gallery <direction.json> --scene <scene.json> --axis <axis> [--camera <camera-id>] [--output <out.json>] [--json]
+  slopcamera scene effects check <effects.json> --scene <scene.json> [--json]
+  slopcamera scene effects plan <draft.json> --scene <scene.json> [--output <effects.json>] [--json]
+  slopcamera scene effects bake <plan.json> --scene <scene.json> --output <bake.json> [--json]
+  slopcamera scene temporal-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--contacts <contacts.json>] [--cut-before-us <csv>] [--json]
   slopcamera scene project snapshot <project-id> [--json]
   slopcamera scene project prepare-render <project-id> --input <request.json> --output <prepared-render.json> [--profile <profile>] [--json]
   slopcamera scene project migrate|patch|restore|add-shot|add-candidate|select-candidate|reconcile
@@ -178,6 +185,25 @@ auto-applies scene changes. The report is model-generated and unverified.
 Generate runs a trusted TypeScript generator at authoring time, stamps retained
 output with derived entity identity, and records source, closure, parameters, seed and
 runtime digests; it never reruns source during inspect, evaluate or render.
+Direction commands compile an authored direction document into deterministic,
+unverified proposals — performance actions, camera rigs, shots and looks bound to the
+actual scene digest. Check reports stale digests, unresolved references and intervals
+outside scene duration without compiling; plan emits the compilation (optionally to
+--output); gallery compiles a bounded set of single-axis variants as separate
+content-addressed candidates and never selects one. Direction gallery axes:
+performance, camera, lighting, materials, effects, sequence.
+Effects commands assemble and validate slopcamera.spatial-render-effects documents.
+Check verifies scene-digest bindings, entity and asset closure, and nested plan,
+particle and simulation digests before any host work; plan binds the caller's
+renderPlan, particleSystems and simulationBakes draft to the actual scene digest and
+emits a {document, documentSha256} binding; bake executes the bounded reference
+rigid-body integrator for one admitted simulation plan and publishes the canonical
+bake document. Native secondary-motion and hinge constraints remain unqualified.
+Temporal-audit evaluates the scene at bounded sample times under one camera and
+reports deterministic findings: visibility flicker, transform discontinuity,
+foot-slide against declared contact windows, camera acceleration/jerk/angular
+velocity, exposure and focus jumps, and per-sample resource spikes. Without
+--times-us it samples the scene duration at up to 17 evenly spaced times.
 Project operations use the exact full project ID and a versioned whole-project basis.
 Discover each request with slopcamera operations show spatial.project.<action> --json.
 Migration retains the frozen media/edit pair in V2 authority. Legacy project commands
@@ -543,6 +569,9 @@ Face track IDs describe local geometry continuity inside one immutable analysis.
   slopcamera project cinema init <project> [--force] [--json]
   slopcamera project cinema check <project> [--json]
   slopcamera project cinema plan <project> [--allow-placeholders] [--json]
+  slopcamera project cinema audit <project> [--json]
+  slopcamera project cinema gallery <project> --axis <audio|looks|mixed|pacing|structure|transitions>
+        [--output <cinema/path.json>] [--json]
   slopcamera project cinema animatic <project> [--output <renders/path.mp4>] [--dry-run] [--json]
   slopcamera project cinema run <project> [--output <renders/path.mp4>] [--allow-placeholders] [--dry-run] [--json]
 
@@ -550,7 +579,10 @@ Cinema commands drive the content-addressed cinema sidecar (cinema/current.json)
 project structure and edit-plan digests. Any project or edit change makes the sidecar stale until it is
 re-authorized. Animatics always allow deterministic placeholder frames for missing spatial artifacts;
 final runs require materialized media unless --allow-placeholders is explicit. Cinema never alters the
-project render plan or its identity.
+project render plan or its identity. Audit reports layout-derived temporal evidence — pacing floors,
+transition overruns, cue concurrency and uniform pacing — with deterministic shot metrics. Gallery
+compiles a bounded set of single-axis candidate plans under cinema/galleries/, each re-validated and
+re-hashed through the canonical composition digest; it never selects a candidate.
 
 Imported media starts unverified. Align its audio before relying on synchronization. Structural edits are project-time operations and affect every placement. Camera moves address any placed video stream; metadata-driven screen zooms still require a recording-backed source placement. Face analysis and geometry tracks remain local. --select largest follows the largest currently visible prepared-layer face per frame. --require-all-selected makes a missing explicit/all-selected face invoke the chosen gap policy.`,
   render: `Usage: slopcamera render <plan|run> <recording> [--display <id|primary>] [--output <path>] [--dry-run] [--keep-inactivity] [--json]
@@ -565,7 +597,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -581,7 +613,14 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
   if (command === "recordings") return ["list"];
   if (command === "projects") return ["list", "create"];
-  if (command === "project") return ["inspect", "add", "edit", "render", "cinema"];
+  if (command === "project") return words[1] === "cinema"
+    ? ["init", "check", "plan", "audit", "gallery", "animatic", "run"]
+    : ["inspect", "add", "edit", "render", "cinema"];
+  if (command === "scene") {
+    if (words[1] === "direction") return ["check", "plan", "gallery"];
+    if (words[1] === "effects") return ["check", "plan", "bake"];
+    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "temporal-audit"];
+  }
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];
   if (command === "faces") return ["list"];

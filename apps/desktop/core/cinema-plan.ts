@@ -1,10 +1,17 @@
 import {
   CINEMA_LIMITS,
+  CinemaGalleryAxisSchema,
+  CinemaGalleryPlanSchema,
   CinemaRenderPlanV1Schema,
+  CinemaTemporalReportSchema,
   ProjectCinemaPlanV1Schema,
   type CinemaAnchor,
+  type CinemaAudioCue,
   type CinemaContinuityFinding,
   type CinemaContinuityReport,
+  type CinemaGalleryAxis,
+  type CinemaGalleryCandidate,
+  type CinemaGalleryPlan,
   type CinemaMediaSlice,
   type CinemaRenderPlanV1,
   type CinemaResolvedAudioCue,
@@ -13,6 +20,8 @@ import {
   type CinemaResolvedTransition,
   type CinemaShot,
   type CinemaShotContinuity,
+  type CinemaTemporalFinding,
+  type CinemaTemporalReport,
   type CinemaTransition,
   type ProjectCinemaPlanV1,
   ProjectEditPlanV1Schema,
@@ -24,6 +33,9 @@ import {
 import { canonicalJsonSha256 } from "./canonical-json";
 import { hashProjectEditPlan, hashProjectStructure } from "./project-plan";
 import { mapProjectIntervalToAssetSlices } from "./project-time";
+
+type CinemaShotId = ProjectCinemaPlanV1["shots"][number]["shotId"];
+type CinemaLookId = ProjectCinemaPlanV1["looks"][number]["lookId"];
 
 type ProjectMediaStream = VideoProjectV1["assets"][number]["streams"][number];
 
@@ -964,4 +976,345 @@ export function createCinemaPlanScaffold(
   void _;
   const cinemaPlanSha256 = canonicalJsonSha256(parsedBody);
   return { ...parsed, cinemaPlanSha256 };
+}
+
+/** A shot shorter than this is a staccato cut that transitions cannot serve. */
+const PACING_COLLAPSE_US = 250_000;
+/** More than this many simultaneous audio cues is a concurrency finding. */
+const CUE_CONCURRENCY_LIMIT = 3;
+/** Uniform pacing fires only when every shot sits within this band of the median. */
+const UNIFORM_PACING_TOLERANCE = 0.1;
+const UNIFORM_PACING_MIN_SHOTS = 4;
+
+function temporalFinding(
+  code: CinemaTemporalFinding["code"],
+  severity: CinemaTemporalFinding["severity"],
+  message: string,
+  shotIds: readonly CinemaShotId[],
+  timeUs: number,
+  transitionIndex?: number,
+): CinemaTemporalFinding {
+  return {
+    code,
+    message,
+    severity,
+    shotIds: [...shotIds],
+    timeUs,
+    ...(transitionIndex === undefined ? {} : { transitionIndex }),
+  };
+}
+
+/**
+ * Audits one cinema plan's compiled layout for pacing, transition, and cue
+ * evidence the media audit does not derive. All measures come from the layout
+ * and declared cues; nothing inspects pixels or decodes media.
+ */
+export function auditCinemaTemporal(
+  cinemaInput: unknown,
+  projectInput: unknown,
+  editPlanInput: unknown,
+): CinemaTemporalReport {
+  const cinema = ProjectCinemaPlanV1Schema.parse(cinemaInput);
+  VideoProjectV1Schema.parse(projectInput);
+  ProjectEditPlanV1Schema.parse(editPlanInput);
+  const layout = cinemaSequenceLayout(cinema);
+  const findings: CinemaTemporalFinding[] = [];
+  const shotId = (id: string): CinemaShotId => cinema.shots.find((shot) => shot.shotId === id)!.shotId;
+
+  for (const transition of layout.transitions) {
+    const before = layout.shots.find((shot) => shot.shotId === transition.beforeShotId)!;
+    const after = layout.shots.find((shot) => shot.shotId === transition.afterShotId)!;
+    const shorterUs = Math.min(before.endUs - before.startUs, after.endUs - after.startUs);
+    if (transition.durationUs > shorterUs) {
+      findings.push(temporalFinding(
+        "transition-overrun",
+        "warning",
+        `Transition ${transition.index} lasts ${transition.durationUs}us, longer than the shorter adjacent shot window ${shorterUs}us.`,
+        [shotId(transition.beforeShotId), shotId(transition.afterShotId)],
+        transition.startUs,
+        transition.index,
+      ));
+    }
+  }
+
+  for (const shot of layout.shots) {
+    const windowUs = shot.endUs - shot.startUs;
+    if (windowUs < PACING_COLLAPSE_US) {
+      findings.push(temporalFinding(
+        "pacing-collapse",
+        "warning",
+        `Shot ${shot.shotId} is visible for only ${windowUs}us, below the ${PACING_COLLAPSE_US}us pacing floor.`,
+        [shotId(shot.shotId)],
+        shot.startUs,
+      ));
+    }
+  }
+
+  const cueWindows: { endUs: number; startUs: number }[] = [];
+  for (const cue of cinema.audioCues) {
+    const startUs = anchorTimeUs(cue.at, layout);
+    if (startUs === null) continue;
+    cueWindows.push({ endUs: startUs + (cue.assetRange.endUs - cue.assetRange.startUs), startUs });
+  }
+  const instants = new Set<number>();
+  for (const window of cueWindows) {
+    instants.add(window.startUs);
+    instants.add(window.endUs);
+  }
+  let maxConcurrentCues = 0;
+  for (const instant of [...instants].sort((a, b) => a - b)) {
+    const concurrent = cueWindows.filter((window) => window.startUs < instant && instant < window.endUs
+      || window.startUs === instant).length;
+    maxConcurrentCues = Math.max(maxConcurrentCues, concurrent);
+    if (concurrent > CUE_CONCURRENCY_LIMIT) {
+      findings.push(temporalFinding(
+        "cue-concurrency",
+        "warning",
+        `${concurrent} audio cues overlap at ${instant}us, above the ${CUE_CONCURRENCY_LIMIT}-cue limit.`,
+        [shotId(layout.shots.find((shot) => shot.startUs <= instant && instant < shot.endUs)?.shotId ?? layout.shots[0]!.shotId)],
+        instant,
+      ));
+    }
+  }
+
+  const durations = layout.shots.map((shot) => shot.endUs - shot.startUs);
+  const sortedDurations = [...durations].sort((a, b) => a - b);
+  const medianShotUs = sortedDurations[Math.floor(sortedDurations.length / 2)]!;
+  if (
+    durations.length >= UNIFORM_PACING_MIN_SHOTS
+    && durations.every((duration) => Math.abs(duration - medianShotUs) <= medianShotUs * UNIFORM_PACING_TOLERANCE)
+  ) {
+    findings.push(temporalFinding(
+      "uniform-pacing",
+      "advisory",
+      `All ${durations.length} shots sit within ${UNIFORM_PACING_TOLERANCE * 100}% of the ${medianShotUs}us median; the cut has no pacing contrast.`,
+      [shotId(layout.shots[0]!.shotId)],
+      0,
+    ));
+  }
+
+  const totalTransitionUs = layout.transitions.reduce((sum, transition) => sum + transition.durationUs, 0);
+  const totalShotUs = durations.reduce((sum, duration) => sum + duration, 0);
+  const sorted = [...findings].sort((left, right) => (
+    left.timeUs - right.timeUs
+    || left.code.localeCompare(right.code)
+    || left.shotIds.join("").localeCompare(right.shotIds.join(""))
+  ));
+  return CinemaTemporalReportSchema.parse({
+    cinemaPlanSha256: cinema.cinemaPlanSha256,
+    findings: sorted,
+    kind: "slopcamera.cinema-temporal-report",
+    metrics: {
+      audioCueCount: cinema.audioCues.length,
+      maxConcurrentCues,
+      maxShotUs: sortedDurations[sortedDurations.length - 1]!,
+      medianShotUs,
+      minShotUs: sortedDurations[0]!,
+      shotCount: layout.shots.length,
+      totalDurationUs: layout.durationUs,
+      transitionCount: layout.transitions.length,
+      transitionOverheadRatio: totalShotUs === 0 ? 0 : totalTransitionUs / totalShotUs,
+    },
+    schemaVersion: 1,
+  });
+}
+
+interface CinemaGalleryVariant {
+  readonly label: string;
+  readonly mutate: (plan: ProjectCinemaPlanV1) => ProjectCinemaPlanV1;
+  readonly parameter: string;
+}
+
+const scaleShotRange = (range: SourceInterval, factor: number): SourceInterval => ({
+  endUs: range.startUs + Math.max(1, Math.floor((range.endUs - range.startUs) * factor)),
+  startUs: range.startUs,
+});
+
+const PACING_FACTORS = [1, 0.9, 0.8, 0.7, 0.6, 0.5] as const;
+
+function pacingVariant(factor: number): CinemaGalleryVariant {
+  return {
+    label: factor === 1 ? "authored pacing" : `tighter coverage ${Math.round(factor * 100)}%`,
+    mutate: (plan) => ({
+      ...plan,
+      shots: plan.shots.map((shot) => ({
+        ...shot,
+        source: shot.source.kind === "placement"
+          ? { ...shot.source, range: scaleShotRange(shot.source.range, factor) }
+          : { ...shot.source, sourceRange: scaleShotRange(shot.source.sourceRange, factor) },
+      })),
+    }),
+    parameter: `factor:${factor}`,
+  };
+}
+
+const TRANSITION_PRESETS: readonly (CinemaTransition & { readonly label: string })[] = [
+  { kind: "cut", label: "hard cuts" } as CinemaTransition & { readonly label: string },
+  { durationUs: 250_000, kind: "dissolve", label: "short dissolves" } as CinemaTransition & { readonly label: string },
+  { durationUs: 500_000, kind: "dissolve", label: "half-second dissolves" } as CinemaTransition & { readonly label: string },
+  { durationUs: 1_000_000, kind: "dissolve", label: "one-second dissolves" } as CinemaTransition & { readonly label: string },
+  { color: "#000000", durationUs: 500_000, kind: "dip-to-color", label: "dips to black" } as CinemaTransition & { readonly label: string },
+  { durationUs: 400_000, kind: "light-flash", label: "light flashes" } as CinemaTransition & { readonly label: string },
+];
+
+function transitionVariant(index: number): CinemaGalleryVariant {
+  const preset = TRANSITION_PRESETS[index]!;
+  const { label: _label, ...transition } = preset;
+  void _label;
+  return {
+    label: preset.label,
+    mutate: (plan) => ({ ...plan, transitions: plan.transitions.map(() => ({ ...transition })) }),
+    parameter: `preset:${preset.kind}`,
+  };
+}
+
+const LOOK_ASSIGNMENTS: readonly {
+  readonly assign: (index: number, lookIds: readonly CinemaLookId[]) => CinemaLookId | undefined;
+  readonly label: string;
+  readonly parameter: string;
+}[] = [
+  { assign: () => undefined, label: "strip all looks", parameter: "strip" },
+  { assign: (_index, lookIds) => lookIds[0], label: "single look", parameter: "first" },
+  { assign: (index, lookIds) => lookIds[index % lookIds.length], label: "round-robin looks", parameter: "cycle" },
+  { assign: (index, lookIds) => lookIds[lookIds.length - 1 - (index % lookIds.length)], label: "reverse round-robin", parameter: "reverse-cycle" },
+  { assign: (index, lookIds) => (index % 2 === 0 ? lookIds[0] : lookIds[Math.min(1, lookIds.length - 1)]), label: "alternating looks", parameter: "alternate" },
+  { assign: (index, lookIds) => (index === 0 ? lookIds[0] : undefined), label: "hero shot only", parameter: "hero" },
+];
+
+function lookVariant(index: number): CinemaGalleryVariant {
+  const assignment = LOOK_ASSIGNMENTS[index]!;
+  return {
+    label: assignment.label,
+    mutate: (plan) => {
+      const lookIds = plan.looks.map((look) => look.lookId);
+      return {
+        ...plan,
+        shots: plan.shots.map((shot, shotIndex) => {
+          const lookId = assignment.assign(shotIndex, lookIds);
+          const next = { ...shot };
+          if (lookId === undefined) delete (next as { lookId?: CinemaLookId }).lookId;
+          else next.lookId = lookId;
+          return next;
+        }),
+      };
+    },
+    parameter: `assignment:${assignment.parameter}`,
+  };
+}
+
+const AUDIO_OFFSETS_DB = [-12, -6, -3, 0, 3, 6] as const;
+
+function audioVariant(offsetDb: number): CinemaGalleryVariant {
+  return {
+    label: offsetDb === 0 ? "authored gains" : `cue gain ${offsetDb > 0 ? "+" : ""}${offsetDb}dB`,
+    mutate: (plan) => ({
+      ...plan,
+      audioCues: plan.audioCues.map((cue): CinemaAudioCue => ({
+        ...cue,
+        gainDb: Math.max(-60, Math.min(24, cue.gainDb + offsetDb)),
+      })),
+    }),
+    parameter: `offset:${offsetDb}dB`,
+  };
+}
+
+const STRUCTURE_ORDERS: readonly {
+  readonly label: string;
+  readonly order: (count: number) => number[];
+  readonly parameter: string;
+}[] = [
+  { label: "authored order", order: (count) => Array.from({ length: count }, (_value, index) => index), parameter: "identity" },
+  { label: "reverse order", order: (count) => Array.from({ length: count }, (_value, index) => count - 1 - index), parameter: "reverse" },
+  { label: "rotate by one", order: (count) => Array.from({ length: count }, (_value, index) => (index + 1) % count), parameter: "rotate-1" },
+  { label: "rotate by half", order: (count) => Array.from({ length: count }, (_value, index) => (index + Math.floor(count / 2)) % count), parameter: "rotate-half" },
+  {
+    label: "interleaved ends",
+    order: (count) => {
+      const order: number[] = [];
+      for (let index = 0; index < count; index += 1) {
+        order.push(index % 2 === 0 ? index / 2 : count - 1 - Math.floor(index / 2));
+      }
+      return order;
+    },
+    parameter: "interleave",
+  },
+  {
+    label: "evens first",
+    order: (count) => [...Array.from({ length: count }, (_value, index) => index).filter((index) => index % 2 === 0), ...Array.from({ length: count }, (_value, index) => index).filter((index) => index % 2 !== 0)],
+    parameter: "evens-first",
+  },
+];
+
+function structureVariant(index: number): CinemaGalleryVariant {
+  const order = STRUCTURE_ORDERS[index]!;
+  return {
+    label: order.label,
+    mutate: (plan) => ({ ...plan, shots: order.order(plan.shots.length).map((shotIndex) => plan.shots[shotIndex]!) }),
+    parameter: `order:${order.parameter}`,
+  };
+}
+
+const MIXED_COMPOSITIONS: readonly { readonly label: string; readonly mutate: (plan: ProjectCinemaPlanV1) => ProjectCinemaPlanV1; readonly parameter: string }[] = [
+  { label: "tighter cuts, short dissolves", mutate: (plan) => transitionVariant(1).mutate(pacingVariant(0.8).mutate(plan)), parameter: "pacing-0.8+dissolve-250" },
+  { label: "tighter cuts, hard cuts", mutate: (plan) => transitionVariant(0).mutate(pacingVariant(0.7).mutate(plan)), parameter: "pacing-0.7+cut" },
+  { label: "reversed, quiet cues", mutate: (plan) => audioVariant(-6).mutate(structureVariant(1).mutate(plan)), parameter: "reverse+-6dB" },
+  { label: "rotated, long dissolves", mutate: (plan) => transitionVariant(3).mutate(structureVariant(2).mutate(plan)), parameter: "rotate-1+dissolve-1000" },
+  { label: "single look, dipped", mutate: (plan) => transitionVariant(4).mutate(lookVariant(1).mutate(plan)), parameter: "first-look+dip" },
+  { label: "interleaved, louder cues", mutate: (plan) => audioVariant(6).mutate(structureVariant(4).mutate(plan)), parameter: "interleave++6dB" },
+];
+
+function variantsForCinemaAxis(axis: CinemaGalleryAxis): readonly CinemaGalleryVariant[] {
+  switch (axis) {
+    case "audio": return AUDIO_OFFSETS_DB.map(audioVariant);
+    case "looks": return LOOK_ASSIGNMENTS.map((_assignment, index) => lookVariant(index));
+    case "mixed": return MIXED_COMPOSITIONS;
+    case "pacing": return PACING_FACTORS.map(pacingVariant);
+    case "structure": return STRUCTURE_ORDERS.map((_order, index) => structureVariant(index));
+    case "transitions": return TRANSITION_PRESETS.map((_preset, index) => transitionVariant(index));
+  }
+}
+
+const CINEMA_GALLERY_CANDIDATES = 6;
+
+/**
+ * Builds a bounded gallery of candidate cinema plans. Every candidate mutates
+ * the authored plan, re-parses through the canonical schema, and re-hashes
+ * through the composition digest; duplicates collapse to the first occurrence.
+ * `selection` is always null — the planner never promotes a candidate.
+ */
+export function planCinemaGallery(cinemaInput: unknown, axisInput: unknown): CinemaGalleryPlan {
+  const cinema = assertCinemaPlanComposition(ProjectCinemaPlanV1Schema.parse(cinemaInput));
+  const axis = CinemaGalleryAxisSchema.parse(axisInput);
+  const seen = new Set<string>([cinema.cinemaPlanSha256]);
+  const candidates: CinemaGalleryCandidate[] = [];
+  for (const variant of variantsForCinemaAxis(axis)) {
+    const mutated = variant.mutate(cinema);
+    const { cinemaPlanSha256: _sha, ...body } = mutated;
+    void _sha;
+    const parsed = ProjectCinemaPlanV1Schema.parse({ ...body, cinemaPlanSha256: "0".repeat(64) });
+    const { cinemaPlanSha256: _placeholder, ...parsedBody } = parsed;
+    void _placeholder;
+    const cinemaPlanSha256 = canonicalJsonSha256(parsedBody);
+    if (seen.has(cinemaPlanSha256)) continue;
+    seen.add(cinemaPlanSha256);
+    candidates.push({
+      candidateId: `gallery_${axis}_${variant.parameter.replaceAll(/[^a-zA-Z0-9]+/gu, "-")}_${cinemaPlanSha256.slice(0, 8)}`,
+      cinemaPlanSha256,
+      label: variant.label,
+      parameter: variant.parameter,
+      plan: { ...parsed, cinemaPlanSha256 },
+    });
+    if (candidates.length >= CINEMA_GALLERY_CANDIDATES) break;
+  }
+  if (candidates.length === 0) {
+    throw new TypeError(`Cinema gallery axis ${axis} produced no distinct candidates from this plan.`);
+  }
+  return CinemaGalleryPlanSchema.parse({
+    axis,
+    candidates,
+    cinemaPlanSha256: cinema.cinemaPlanSha256,
+    kind: "slopcamera.cinema-gallery-plan",
+    schemaVersion: 1,
+    selection: null,
+  });
 }
