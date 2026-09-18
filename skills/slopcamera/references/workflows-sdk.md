@@ -1,6 +1,6 @@
 # Use SDKs and durable workflows
 
-Use `slopcamera workflows list --json` and `slopcamera workflows show <id> --json` to discover checked recipes and their actual inputs. Built-ins include `talking-head-cleanup`, `polished-screen-demo`, `chaptered-demo`, `social-variants`, `creative-iteration`, `creative-selection` and `directed-scene`. Keep ordinary project edits complete before a V2 scene migration.
+Use `slopcamera workflows list --json` and `slopcamera workflows show <id> --json` to discover checked recipes and their actual inputs. Built-ins include `talking-head-cleanup`, `polished-screen-demo`, `chaptered-demo`, `social-variants`, `creative-iteration`, `creative-selection`, `directed-scene` and `cinematic-world`. Keep ordinary project edits complete before a V2 scene migration.
 
 ```sh
 slopcamera workflows plan <id> --input input.json --json
@@ -32,7 +32,7 @@ Keep run IDs, errors and receipts after failure. A missing journal does not prov
 
 ## Use the portable MCP surface narrowly
 
-When connected, use `check_diagram` and `render_diagram` for compatibility calls, `check_scene`/`inspect_scene`/`audit_scene`/`diff_scenes`/`evaluate_scene` for read-only spatial scene work, or `search_slopcamera` and `execute_slopcamera` with one exact returned operation and typed JSON. No tool rewrites source.
+When connected, use `check_diagram` and `render_diagram` for compatibility calls, `check_scene`/`inspect_scene`/`audit_scene`/`audit_scene_temporal`/`diff_scenes`/`evaluate_scene` for read-only spatial scene work, `check_scene_direction`/`plan_scene_direction`/`plan_scene_gallery`/`check_scene_effects`/`plan_scene_effects` for cinematic planning evidence, or `search_slopcamera` and `execute_slopcamera` with one exact returned operation and typed JSON. No tool rewrites source or mutates project state; candidate selection stays an explicit CLI or SDK call.
 
 - Use root-relative paths. A diagram must end in `.diagram.json`; a scene must end in `.json`.
 - Diagram render replaces the five documented exports, never its source.

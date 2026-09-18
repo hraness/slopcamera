@@ -1468,7 +1468,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "8cc3c4f6af39f0e3d8038b0421e064b2b677d801b963f6348713ace5949da119",
+    "identityLinesSha256": "8bb12f5bf2b82cd56b30522a6f761d81aacdb0c817bb2b342c2124c453efd299",
     "occurrenceCount": 8,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1494,9 +1494,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "2600d1c0ebb7f7fec70f9a9541d16cdabba2293adce613ec340e8d5f5e5dcf0b",
-    "occurrenceCount": 4,
+    "identityLineCount": 3,
+    "identityLinesSha256": "50feb1333d091d263b5f0a2641ddb9a4029a9b2ae7435c6a1d5e5cf178c2ffbc",
+    "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/extending.md",
     "categories": [
       "native-film-studio"
@@ -1670,6 +1670,15 @@
     "identityLinesSha256": "d390b460be871971c6be1620a5e8d55f70735f898301a2957138cd00709f1d70",
     "occurrenceCount": 3,
     "path": "docs/architecture.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "35bc26c9c786855e8f3156489c018281d0d6e689107dcc56b0d0100ce0010634",
+    "occurrenceCount": 2,
+    "path": "docs/extension-architecture.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1919,7 +1928,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "2a698802f5b7fc34d55902af4acf8be05ee2ef38b417171a23799c52e234913c",
+    "identityLinesSha256": "af2cd13ae2d7210c3b87b4c2dcad7b0fe0f25e722a2bf1a63001446bf0400140",
     "occurrenceCount": 7,
     "path": "README.md",
     "categories": [

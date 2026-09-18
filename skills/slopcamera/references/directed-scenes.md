@@ -33,6 +33,14 @@ Import saved SPZ and an optional approximate collider with `scene world import -
 Keep receipts and the original run ID after interruption. Inspect `slopcamera runs` and reconcile the exact attempt instead of blindly repeating a possibly published operation. Candidate records preserve derivation and staleness; candidate selection does not yet replace authored footage in the V2 scene compositor. Interactive scene editing and portable simulation remain deferred; native Blender jobs retain their own simulation caches. Use the separate [directing workflow](directing-video.md) to generate and review short clips before assembling an ordinary media project.
 
 
+## Direct cinematic worlds
+
+A `slopcamera.spatial-direction` document describes beats, actions, camera coverage, and look intents semantically; its `projectDigest` must equal the scene's `sceneSha256` from `scene inspect`. Check it with `slopcamera scene direction check direction.json --scene scene.json --json`, compile proposals with `scene direction plan ... --camera <camera-id> --output plan.json`, and plan bounded variants with `scene direction gallery ... --axis performance|camera|lighting|materials|effects|sequence`. Compiled direction stays `verified: false` — it is review evidence, not applied state.
+
+Bind declared effects through `scene effects plan` and `scene effects check` against the same scene, and bake planned simulation through `scene effects bake` when the plan calls for it. `scene temporal-audit` and `scene render-audit` report sampled evidence over explicit `--times-us` without inventing quality claims.
+
+The `cinematic-world` built-in workflow composes exactly these operations for one admitted scene. Its input is an inert `slopcamera.spatial-recipe-pack` — one scene digest, one direction document, bounded gallery axes, up to 4 named preview render requests, optional declared effects, and optional temporal-audit inputs — wrapped with the scene document and its repository path. Plan it with `slopcamera workflows plan cinematic-world --input input.json --json`; run it with `workflows run`. The workflow never selects or promotes a candidate: registration uses `scene project add-candidate <project-id> --input <request.json>`, and selection uses `scene project select-candidate <project-id> --input <request.json>`, both after review. A recipe pack is data — it cannot register executors, source paths beyond the declared render source, permissions, secrets, or URLs.
+
 ## Direct short generated clips
 
 Use [short-video directing](directing-video.md) for retained paid takes and accepted-shot assembly. Use the matching Slopcamera source build for those commands.

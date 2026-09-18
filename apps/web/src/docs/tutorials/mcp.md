@@ -1,4 +1,4 @@
-An MCP-capable client can check and render diagrams, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
+An MCP-capable client can check and render diagrams, vectorize rasters, generate images, and plan and audit spatial scenes inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
 
 ## Install the CLI
 
@@ -39,14 +39,19 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 | `render_diagram` | Write the same five artifacts the CLI render produces: `.tldr`, light and dark SVG, and light and dark PNG. |
 | `search_slopcamera` | Search the fixed Slopcamera operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
+| `check_scene`, `inspect_scene`, `diff_scenes` | Validate, summarize, or compare scene JSON sources. Read-only. |
+| `evaluate_scene`, `audit_scene`, `audit_scene_temporal` | Sample world state and report spatial or temporal findings. Read-only. |
+| `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery` | Check a direction document, compile proposals, plan bounded variants. Read-only. |
+| `check_scene_effects`, `plan_scene_effects` | Check declared effects and bind them to a render plan. Read-only. |
 
-`execute_slopcamera` admits exactly four operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, and `slopcamera.image.generate`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+`execute_slopcamera` admits exactly six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
 
 ## Path and limit rules
 
 - Every path is root-relative to the `--root` directory. Absolute paths and `..` segments reject, and links resolve inside the root before any read or write.
 - Diagram sources must end in `.diagram.json`, fit in 1 MiB, and contain at most 64 shapes and 128 edges. Checks and renders return at most 40 findings.
 - `render_diagram` accepts an optional `out_dir` and a `scale` of at most 4; the scaled canvas may not exceed 16,777,216 pixels. Rendering overwrites the five artifacts atomically.
+- Scene, direction, and effects JSON sources must end in `.json` and fit in 1 MiB; scene tools are read-mostly and never mutate project state.
 - `slopcamera.image.vectorize` reads a raster inside the root, up to 16 MiB, and writes an inert SVG inside the root.
 - `slopcamera.image.generate` takes a `provider/model` id, a prompt, and a root-relative `outputPath`, then sends one non-retried request to Vercel AI Gateway.
 

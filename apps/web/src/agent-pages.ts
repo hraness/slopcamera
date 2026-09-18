@@ -50,7 +50,7 @@ For source-only capabilities or development, follow the [complete source-install
 
 Create a product reveal with a moving camera. Keep the model editable, mount the product diagram on a screen in the scene, and show contact frames before rendering.
 
-Portable Three.js scenes support a defined GLB subset, calibrated cameras, an explicit hardware GPU profile, and saved splat worlds through Spark. Splats capture appearance, not collision geometry. [Direct a scene](https://slopcamera.com/docs/how-to/direct-scenes.md).
+Portable Three.js scenes support a defined GLB subset, calibrated cameras, an explicit hardware GPU profile, and saved splat worlds through Spark. Splats capture appearance, not collision geometry. Current source adds semantic direction and bounded effects through \`cinematic-world\`. [Direct a scene](https://slopcamera.com/docs/how-to/direct-scenes.md) · [Cinematic worlds](https://slopcamera.com/docs/how-to/cinematic-worlds.md).
 
 ### Film a native world
 
@@ -70,7 +70,7 @@ Record a product demo, remove pauses, zoom into important clicks, and add \`logo
 
 Edit screen recordings and imported footage, or generate images, video, and voice through your own Gateway access. Source-build shot recipes retain budgets, reviewed takes, and continuation references. [Edit video](https://slopcamera.com/docs/how-to/edit-video.md) · [Generate media](https://slopcamera.com/docs/how-to/generate-media.md) · [Direct takes](https://slopcamera.com/docs/how-to/direct-takes.md).
 
-**Source availability:** Build from \`main\` for portable scenes, the qualified Three.js GPU profile, saved worlds, native \`studio\`, shot-recipe \`direct\`, and \`scene camera-track\`. Engines install separately. [Check capabilities and requirements](https://slopcamera.com/docs/reference/capabilities.md).
+**Source availability:** Build from \`main\` for portable scenes, the qualified Three.js GPU profile, saved worlds, native \`studio\`, shot-recipe \`direct\`, \`scene camera-track\`, and the \`cinematic-world\` loop. Engines install separately. [Check capabilities and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
 After a job runs, your agent should show the result and report the source, preview, and final output files. Ask for changes in the same plain language.
 
@@ -91,7 +91,7 @@ Share supported geometry and calibrated cameras, or mount images and video in wo
 - Agent Skill: version-matched guidance for choosing creative operations.
 - CLI: human-readable commands and stable JSON for the broad local workflow. Start with \`slopcamera workflows list --json\`.
 - TypeScript SDK: declarative or imperative media work in Bun. For example, import \`vectorizeImage\` from \`@hraness/slopcamera\`.
-- MCP: a fixed toolset for checking and rendering diagrams, vectorizing images, and generating images within one selected root. Run \`slopcamera mcp --root /absolute/path/to/workspace\`. It does not expose every CLI command.
+- MCP: a fixed toolset for checking and rendering diagrams, planning and auditing scenes, and bounded portable operations in one selected root. Run \`slopcamera mcp --root /absolute/path/to/workspace\`. It does not expose every CLI command.
 
 ## Retain the sources behind the result
 
@@ -200,7 +200,7 @@ Use \`support dismiss\` or \`HRANESS_SUPPORT_AUDIENCE=off\` to decline invitatio
 
 - [Claude Code](https://slopcamera.com/docs/tutorials/claude-code.md): Install the release and Agent Skill for Claude Code
 - [Codex](https://slopcamera.com/docs/tutorials/codex.md): Install the release and Agent Skill for Codex
-- [MCP clients](https://slopcamera.com/docs/tutorials/mcp.md): Expose the fixed diagram and image toolset
+- [MCP clients](https://slopcamera.com/docs/tutorials/mcp.md): Expose the fixed diagram, image, and scene toolset
 - [Other agents](https://slopcamera.com/docs/tutorials/other-agents.md): Portable skill target and plain CLI access
 
 ## Choose a task
@@ -210,6 +210,7 @@ Use \`support dismiss\` or \`HRANESS_SUPPORT_AUDIENCE=off\` to decline invitatio
 - [Educational video](https://slopcamera.com/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
 - [Music video](https://slopcamera.com/docs/how-to/music-video.md): Authored HTML visuals with a local track
 - [Directed scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
+- [Cinematic worlds](https://slopcamera.com/docs/how-to/cinematic-worlds.md): Recipe packs, direction, galleries, effects, and audits
 - [Native films](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
 - [Direct generated clips](https://slopcamera.com/docs/how-to/direct-takes.md): Shot recipes, budgets, takes, and review
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
@@ -255,6 +256,7 @@ export const sitemapMarkdown = `# Sitemap
 - [Make an educational video](https://slopcamera.com/docs/how-to/educational-video.md)
 - [Make a music video from an HTML scene](https://slopcamera.com/docs/how-to/music-video.md)
 - [Render and edit spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md)
+- [Direct a cinematic world](https://slopcamera.com/docs/how-to/cinematic-worlds.md)
 - [Author a native film](https://slopcamera.com/docs/how-to/native-films.md)
 - [Direct short generated clips](https://slopcamera.com/docs/how-to/direct-takes.md)
 - [Run or recover a workflow](https://slopcamera.com/docs/how-to/run-workflows.md)
