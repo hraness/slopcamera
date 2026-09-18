@@ -2719,9 +2719,7 @@ function insetProfile(points, distance, path) {
     const e2 = unit22(next[0] - vertex[0], next[1] - vertex[1]);
     const n1 = [-e1[1], e1[0]], n2 = [-e2[1], e2[0]];
     const a1 = [prev[0] + n1[0] * distance, prev[1] + n1[1] * distance];
-    const a2 = [vertex[0] + n1[0] * distance, vertex[1] + n1[1] * distance];
     const b1 = [vertex[0] + n2[0] * distance, vertex[1] + n2[1] * distance];
-    const b2 = [next[0] + n2[0] * distance, next[1] + n2[1] * distance];
     const denominator = e1[0] * e2[1] - e1[1] * e2[0];
     if (Math.abs(denominator) < 0.000000000001) {
       out.push([vertex[0] + (n1[0] + n2[0]) / 2 * distance, vertex[1] + (n1[1] + n2[1]) / 2 * distance]);
@@ -3299,15 +3297,12 @@ function fragmentInside(planes, fragment) {
 }
 function emitFragments(b, fragments, flip) {
   for (const fragment of fragments) {
-    const normal = [0, 0, 0];
+    let z5 = 0;
     for (let index2 = 0;index2 < fragment.positions.length; index2++) {
       const a = fragment.positions[index2], c = fragment.positions[(index2 + 1) % fragment.positions.length];
-      normal[0] += (a[1] - c[1]) * (a[2] + c[2]);
-      normal[1] += (a[2] - c[2]) * (a[0] + c[0]);
-      normal[2] += (a[0] - c[0]) * (a[1] + c[1]);
+      z5 += a[0] * c[1] - a[1] * c[0];
     }
-    const length = Math.hypot(normal[0], normal[1], normal[2]);
-    const unit4 = length < 0.000000000001 ? [0, 1, 0] : [normal[0] / length, normal[1] / length, normal[2] / length];
+    const unit4 = z5 < 0 ? [0, 0, -1] : [0, 0, 1];
     const oriented = flip ? [-unit4[0], -unit4[1], -unit4[2]] : unit4;
     const indices = fragment.positions.map((position, index2) => vertex(b, position, oriented, fragment.uvs[index2]));
     for (let index2 = 1;index2 + 1 < indices.length; index2++) {
@@ -3465,7 +3460,7 @@ function inflateBounds(bounds, radius) {
     max: [bounds.max[0] + radius, bounds.max[1] + radius, bounds.max[2] + radius]
   };
 }
-function estimateNode(node, meshEstimates, profileEstimates, path) {
+function estimateNode(node, meshEstimates, profileEstimates, _path) {
   const mesh = (id) => meshEstimates.get(id);
   const profile = (id) => profileEstimates.get(id);
   switch (node.kind) {
@@ -3557,7 +3552,7 @@ function estimateNode(node, meshEstimates, profileEstimates, path) {
         vertices: inputs.reduce((sum, item) => sum + item.vertices, 0),
         triangles: inputs.reduce((sum, item) => sum + item.triangles, 0),
         planes: inputs.reduce((sum, item) => sum + item.planes, 0),
-        bounds: inputs.reduce(boundsUnion)
+        bounds: inputs.map((input) => input.bounds).reduce(boundsUnion)
       };
     }
     case "boolean": {
@@ -3791,7 +3786,7 @@ function emitSpatialGeometryGlb(mesh, materials2) {
     scene: 0,
     scenes: [{ nodes: [0] }],
     nodes: [{ mesh: 0 }],
-    meshes: [{ primitives: slots.map((slot, index2) => ({ attributes: { POSITION: 0, NORMAL: 1, ...hasUvs ? { TEXCOORD_0: 2 } : {} }, indices: (hasUvs ? 3 : 2) + index2, material: index2, mode: 4 })) }],
+    meshes: [{ primitives: slots.map((_slot, index2) => ({ attributes: { POSITION: 0, NORMAL: 1, ...hasUvs ? { TEXCOORD_0: 2 } : {} }, indices: (hasUvs ? 3 : 2) + index2, material: index2, mode: 4 })) }],
     materials: glbMaterials
   };
   const rawJson = new TextEncoder().encode(JSON.stringify(document));
@@ -4844,7 +4839,7 @@ function applySpatialScenePatch(sceneInput, patchInput) {
           if (entities.has(entity.entityId))
             throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`);
           const referenced = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
-          if (entity.kind === "mesh" && entity.material.map !== undefined)
+          if (entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map !== undefined)
             referenced.push(entity.material.map);
           for (const assetId2 of referenced) {
             if (!owned.has(assetId2) && !remainingAssets.has(assetId2))

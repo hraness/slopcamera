@@ -138,7 +138,7 @@ import {
   validatePbrMaterial,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-8y28685c.js";
+} from "../index-px9vqrc7.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -4268,7 +4268,9 @@ function verifySpatialGeometryNativeOutputs(receipt, outputs) {
     const bytes = outputs[index];
     if (!(bytes instanceof Uint8Array) || bytes.byteLength !== output.bytes)
       nativeFail(`Native output ${index} byte length differs from its receipt.`, `receipt.outputs.${index}`);
-    const sha256 = createSha256HexHasher().update(bytes).digestHex();
+    const hasher = createSha256HexHasher();
+    hasher.update(bytes);
+    const sha256 = hasher.digestHex();
     if (sha256 !== output.sha256)
       nativeFail(`Native output ${index} digest mismatch; refusing publication.`, `receipt.outputs.${index}`);
     return { sha256, bytes: output.bytes };
@@ -4287,7 +4289,9 @@ function executeSpatialGeometryNativeFake(input) {
     const bytes = new Uint8Array(length);
     for (let offset = 0;offset < length; offset++)
       bytes[offset] = Number.parseInt(seed.slice(offset % 32 * 2, offset % 32 * 2 + 2), 16);
-    const sha256 = createSha256HexHasher().update(bytes).digestHex();
+    const hasher = createSha256HexHasher();
+    hasher.update(bytes);
+    const sha256 = hasher.digestHex();
     outputs.push(bytes);
     declared.push({ sha256, bytes: length });
   }
@@ -4783,7 +4787,9 @@ var PLANNERS = {
   scatter: planScatter
 };
 function sha256Bytes(bytes) {
-  return createSha256HexHasher().update(bytes).digestHex();
+  const hasher = createSha256HexHasher();
+  hasher.update(bytes);
+  return hasher.digestHex();
 }
 var GLTF_INTERPRETATION = { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" };
 function emitSpatialParametric(input) {
@@ -4838,7 +4844,8 @@ function emitSpatialParametric(input) {
     }
     lods.sort((a, b) => a.level - b.level);
     const lod0 = lod0ByPart.get(part.key);
-    part.lods[0] === undefined && pfail("Every part requires a level-0 LOD.", "spec");
+    if (part.lods[0] === undefined)
+      pfail("Every part requires a level-0 LOD.", "spec");
     const subject = lod0.manifest.payload;
     const collision = request.collision !== undefined ? [...request.collision] : part.collision.length > 0 ? [...part.collision] : [boxBounds(lod0.mesh.bounds)];
     const materialFacts = part.materials.map((material) => ({
