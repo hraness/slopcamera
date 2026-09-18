@@ -9,6 +9,7 @@ const commonSlots = [
   ["{{SITE_SKIP_CLASS}}", siteShellClassNames.skip, 1],
   ["{{SITE_HEADER_CLASS}}", siteShellClassNames.header, 1],
   ["{{SITE_WORDMARK_CLASS}}", siteShellClassNames.wordmark, 1],
+  ["{{SITE_BRAND_MARK_CLASS}}", siteShellClassNames.brandMark, 1],
   ["{{SITE_ACTIONS_CLASS}}", siteShellClassNames.actions, 1],
   ["{{SITE_NAVIGATION_CLASS}}", siteShellClassNames.navigation, 1],
 ] as const

@@ -4,20 +4,22 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { readPreviewFile } from "./preview-file"
 
-// Only these reviewed public PNG derivatives are distributed. The source SVG
-// belongs to the separate identity catalog and is not a build input.
+// Only these reviewed public PNG derivatives are distributed. They render
+// from the canonical Slopcamera mark in the Jungle brand-assets registry;
+// the historical camera-with-flash emoji derivative is preserved as
+// provenance, not as a build input.
 export const publicIdentity = {
   contract: "hraness.identity-png-handoff/v1",
-  sourceCommit: "528f7b07a2b8340e2695893c30ee3e0abf25b597",
-  sourceCatalogManifestSha256: "14011800ad84e963a7179fbc395780aba07d89aa2d587fdf5bbb6dec7ba30f26",
-  id: "slopcamera", domain: "slopcamera.com", emoji: "📸", nativeId: "1f4f8",
-  sourceSvgSha256: "afced14ea43eb5e8b19c6dea8dd21b57ceff521a6efd606f1903cc84b4bdf754",
-  sourceFlatSha256: "e94866676a3f56e4bd162809ef7198881cbd0bb1089b6c80871a908e6b8fe825",
+  sourceCommit: "e286722d35fc23083930bfa77e6055ad776a1855",
+  sourceCatalogManifestSha256: "7b826d7e27d015b950279eb65fb03d05f85cf5af07462fc70716ffe18d28bcfc",
+  id: "slopcamera", domain: "slopcamera.com", mark: "slopcamera",
+  sourceSvgSha256: "219710e5aa5ad5f989fd1235dd6f93ef9e92875508c6f9c799c0c240eb74eafa",
+  sourceFlatSha256: "219710e5aa5ad5f989fd1235dd6f93ef9e92875508c6f9c799c0c240eb74eafa",
   files: [
-    { path: "icon.png", handoffPath: "slopcamera/icon.png", width: 32, height: 32, bytes: 1859,
-      sha256: "588710a7310fb694b45d054979f13a82bf7c03501af0fa27716455a068880724" },
-    { path: "apple-touch-icon.png", handoffPath: "slopcamera/apple-icon.png", width: 180, height: 180, bytes: 4235,
-      sha256: "9db9e16ac33a7b70bfcf94fd935455759c7069ff0d3291433432cc7086629901" },
+    { path: "icon.png", handoffPath: "slopcamera/icon.png", width: 32, height: 32, bytes: 640,
+      sha256: "a20638f99abf7c75d4b7ff0f8d749c7c510d816861d145dc179b4a4646bbe305" },
+    { path: "apple-touch-icon.png", handoffPath: "slopcamera/apple-icon.png", width: 180, height: 180, bytes: 3286,
+      sha256: "553d9fd77bc5b643bc7c42e52ea40b6f3111d59a53b41b24c1c618945b776d84" },
   ],
 } as const
 
@@ -35,5 +37,5 @@ export async function readPublicIcons(appDirectory: string) {
 
 if (import.meta.main) {
   await readPublicIcons(dirname(dirname(fileURLToPath(import.meta.url))))
-  console.log("Verified the two public Slopcamera camera-with-flash PNG derivatives")
+  console.log("Verified the two public Slopcamera mark PNG derivatives")
 }
