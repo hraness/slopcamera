@@ -103,6 +103,19 @@ describe("icon line-art extraction", () => {
     expect(result.height).toBeLessThan(height)
   })
 
+  test("uses binary alpha for mark tracing to avoid alpha-mask border seams", () => {
+    const width = 64
+    const height = 64
+    const pixels = solidRgba(width, height, [252, 252, 252, 255])
+    for (let x = 16; x <= 48; x += 1) {
+      setPixel(pixels, width, x, 24, [148, 180, 236, 255])
+      setPixel(pixels, width, x, 25, [36, 116, 212, 255])
+    }
+    const result = extractIconLineArt(pixels, width, height, { hardEdges: true })
+    const alpha = Array.from(result.pixels.filter((_, index) => index % 4 === 3))
+    expect(new Set(alpha)).toEqual(new Set([0, 255]))
+  })
+
   test("drops isolated speckle components below the area floor", () => {
     const width = 64
     const height = 64

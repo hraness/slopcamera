@@ -2237,7 +2237,8 @@ function extractIconLineArt(rgba, width, height, options = {}) {
     for (let x = 0;x < cropWidth; x += 1) {
       const sourceIndex = (cropY + y) * width + cropX + x;
       const targetIndex = (y * cropWidth + x) * 4;
-      const value = alpha[sourceIndex];
+      const measuredValue = alpha[sourceIndex];
+      const value = options.hardEdges === true ? measuredValue >= iconCoverageAlphaFloor ? 255 : 0 : measuredValue;
       coverage += value;
       pixels[targetIndex] = inkRed;
       pixels[targetIndex + 1] = inkGreen;
@@ -2498,7 +2499,10 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
       attemptRequestId = generated.requestId;
       const bytes = Buffer.from(generated.image.base64, "base64");
       const raster = await loadRaster(Uint8Array.from(bytes), limits, new VectorizeDeadline(limits.maxDurationMs));
-      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, { ink });
+      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
+        hardEdges: purpose === "mark",
+        ink
+      });
       const png = await encodeTracePng(extraction.pixels, extraction.width, extraction.height);
       const traced = await vectorize(png, {
         ...input.inheritedFileDescriptors === undefined ? {} : { inheritedFileDescriptors: input.inheritedFileDescriptors }

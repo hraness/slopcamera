@@ -463,7 +463,7 @@ export function extractIconLineArt(
   rgba: Uint8Array,
   width: number,
   height: number,
-  options: Readonly<{ ink?: string }> = {},
+  options: Readonly<{ hardEdges?: boolean; ink?: string }> = {},
 ): IconLineArtExtraction {
   if (
     rgba.length === 0 ||
@@ -552,7 +552,10 @@ export function extractIconLineArt(
     for (let x = 0; x < cropWidth; x += 1) {
       const sourceIndex = (cropY + y) * width + cropX + x
       const targetIndex = (y * cropWidth + x) * 4
-      const value = alpha[sourceIndex]!
+      const measuredValue = alpha[sourceIndex]!
+      const value = options.hardEdges === true
+        ? (measuredValue >= iconCoverageAlphaFloor ? 255 : 0)
+        : measuredValue
       coverage += value
       pixels[targetIndex] = inkRed
       pixels[targetIndex + 1] = inkGreen
@@ -963,7 +966,10 @@ export async function generateSlopcameraIcon(
         limits,
         new VectorizeDeadline(limits.maxDurationMs),
       )
-      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, { ink })
+      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
+        hardEdges: purpose === "mark",
+        ink,
+      })
       const png = await encodeTracePng(
         extraction.pixels,
         extraction.width,
