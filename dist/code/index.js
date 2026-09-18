@@ -4136,6 +4136,98 @@ function auditSpatialPerformance(take, optionsInput) {
     omittedFindings: omitted
   });
 }
+
+// src/spatial-scene/effects.ts
+import { z as z10 } from "zod";
+var positiveDimension2 = z10.number().finite().min(0);
+var unit2 = z10.number().finite().min(0).max(1);
+var SPATIAL_EFFECT_LIMITS = {
+  postProcessStack: 8,
+  luts: 4,
+  embers: 1e6,
+  rain: 1e5,
+  dust: 500000,
+  simulationSteps: 1e4,
+  simulationFrames: 1e4
+};
+var SpatialRenderQualitySchema = z10.strictObject({
+  tier: z10.enum(["preview", "final"]),
+  pixelBudget: positiveDimension2,
+  texturePixelBudget: positiveDimension2,
+  particleCount: z10.number().int().min(0).max(SPATIAL_EFFECT_LIMITS.embers),
+  simulationSteps: z10.number().int().min(0).max(SPATIAL_EFFECT_LIMITS.simulationSteps),
+  outputBytes: z10.number().int().min(0).max(8000000000)
+});
+var SpatialBloomSchema = z10.strictObject({
+  kind: z10.literal("bloom"),
+  threshold: unit2,
+  intensity: unit2,
+  radius: positiveDimension2
+});
+var SpatialDepthOfFieldSchema = z10.strictObject({
+  kind: z10.literal("depth-of-field"),
+  focusDistance: positiveDimension2,
+  focalLength: positiveDimension2,
+  aperture: positiveDimension2
+});
+var SpatialMotionBlurSchema = z10.strictObject({
+  kind: z10.literal("motion-blur"),
+  shutterAngle: z10.number().finite().min(0).max(360),
+  samples: z10.number().int().min(1).max(64)
+});
+var SpatialToneMapSchema = z10.strictObject({
+  kind: z10.literal("tone-map"),
+  exposure: z10.number().finite(),
+  whitePoint: positiveDimension2
+});
+var SpatialVignetteSchema = z10.strictObject({
+  kind: z10.literal("vignette"),
+  intensity: unit2,
+  radius: unit2
+});
+var SpatialGrainSchema = z10.strictObject({
+  kind: z10.literal("grain"),
+  intensity: unit2,
+  seed: z10.number().int().min(0).max(2147483647)
+});
+var SpatialLutGradeSchema = z10.strictObject({
+  kind: z10.literal("lut-grade"),
+  assetId: z10.string().min(1).max(128),
+  intensity: unit2
+});
+var SpatialPostProcessStepSchema = z10.discriminatedUnion("kind", [
+  SpatialBloomSchema,
+  SpatialDepthOfFieldSchema,
+  SpatialMotionBlurSchema,
+  SpatialToneMapSchema,
+  SpatialVignetteSchema,
+  SpatialGrainSchema,
+  SpatialLutGradeSchema
+]);
+var SpatialPostProcessStackSchema = z10.strictObject({
+  kind: z10.literal("slopcamera.spatial-post-process"),
+  schemaVersion: z10.literal(1),
+  steps: z10.array(SpatialPostProcessStepSchema).max(SPATIAL_EFFECT_LIMITS.postProcessStack)
+});
+var SpatialRenderPlanSchema = z10.strictObject({
+  kind: z10.literal("slopcamera.spatial-render-plan"),
+  schemaVersion: z10.literal(1),
+  quality: SpatialRenderQualitySchema,
+  postProcess: SpatialPostProcessStackSchema.optional()
+});
+function parseSpatialRenderPlan(input) {
+  const plan = parseSpatialValue(SpatialRenderPlanSchema, input, "render plan");
+  if (plan.quality.tier === "preview" && plan.quality.particleCount > 1e5) {
+    throw new SpatialSceneError("invalid-data", "Preview tier cannot request more than 100,000 particles.");
+  }
+  if (plan.quality.outputBytes < plan.quality.particleCount * 64) {
+    throw new SpatialSceneError("invalid-data", "Output byte budget is too small for declared particle count.");
+  }
+  return deepFreezeJson(plan);
+}
+function spatialRenderPlanSha256(plan) {
+  return spatialValueSha256(plan);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -4162,6 +4254,7 @@ export {
   spatialStateValueSha256,
   spatialSceneSha256,
   spatialReviewDefaultTimesUs,
+  spatialRenderPlanSha256,
   spatialPropertySupported,
   spatialOutputDuration,
   spatialGlbBounds,
@@ -4199,6 +4292,7 @@ export {
   pbrDerivationCandidates,
   parseSpatialValue,
   parseSpatialScene,
+  parseSpatialRenderPlan,
   parseSpatialPerformanceSources,
   parseSpatialPerformancePlan,
   parseSpatialPerformanceGallerySelection,
@@ -4284,9 +4378,11 @@ export {
   WORKFLOW_GRAPH_HASH_DOMAIN,
   WORKFLOW_COMPILATION_VERSION,
   WORKFLOW_COMPILATION_HASH_DOMAIN,
+  SpatialVignetteSchema,
   SpatialVec3Schema,
   SpatialUvTransformSchema,
   SpatialTransformSchema,
+  SpatialToneMapSchema,
   SpatialTimeUsSchema,
   SpatialSpotLightSchema,
   SpatialSolveRequestSchema,
@@ -4321,11 +4417,15 @@ export {
   SpatialRenderedAuditFindingSchema,
   SpatialRenderedAuditEntitySchema,
   SpatialRenderedAuditCoverageSchema,
+  SpatialRenderQualitySchema,
+  SpatialRenderPlanSchema,
   SpatialRackFocusSchema,
   SpatialQuaternionSchema,
   SpatialPublishedArtifactSchema,
   SpatialProjectionSchema,
   SpatialProbeGeometrySchema,
+  SpatialPostProcessStepSchema,
+  SpatialPostProcessStackSchema,
   SpatialPoseSchema,
   SpatialPlacementSchema,
   SpatialPerformanceTakeSchema,
@@ -4361,13 +4461,16 @@ export {
   SpatialPatchOperationSchema,
   SpatialOverrideSchema,
   SpatialOriginSchema,
+  SpatialMotionBlurSchema,
   SpatialMatrixSchema,
   SpatialMaterialSchema,
   SpatialMapColorSpaceSchema,
   SpatialMapChannelSchema,
+  SpatialLutGradeSchema,
   SpatialLightingRigTypeSchema,
   SpatialHumanoidMappingSchema,
   SpatialHumanoidAttachmentSchema,
+  SpatialGrainSchema,
   SpatialGlbModel,
   SpatialGeometrySchema,
   SpatialGeneratorSchema,
@@ -4381,6 +4484,7 @@ export {
   SpatialDigestSchema,
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
+  SpatialDepthOfFieldSchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
@@ -4388,6 +4492,7 @@ export {
   SpatialCameraLensSchema,
   SpatialCameraIdSchema,
   SpatialBoundsSchema,
+  SpatialBloomSchema,
   SpatialAuditSampleSchema,
   SpatialAuditReportSchema,
   SpatialAuditOptionsSchema,
@@ -4441,6 +4546,7 @@ export {
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
   SPATIAL_GENERATOR_LIMITS,
+  SPATIAL_EFFECT_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_AUDIT_LIMITS,
   RequirementEnvelopeSchema,
