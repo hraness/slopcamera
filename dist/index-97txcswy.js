@@ -4,11 +4,456 @@ import {
   canonicalJson,
   createBoundedJsonSnapshot,
   createBoundedJsonValueSnapshot,
-  deepFreezeJson
+  deepFreezeJson,
+  sha256Hex
 } from "./index-8txs6fkn.js";
 
-// src/spatial-scene/contracts.ts
+// src/spatial-scene/material-lighting.ts
 import { z } from "zod";
+var unit = z.number().finite().min(0).max(1);
+var positiveFinite = z.number().finite().min(0).max(1e6);
+var finiteCoordinate = z.number().finite().min(-1e6).max(1e6);
+var color = z.string().regex(/^#[a-fA-F0-9]{6}$/u);
+var SpatialMapChannelSchema = z.enum([
+  "rgb",
+  "rgba",
+  "r",
+  "g",
+  "b",
+  "a",
+  "rg",
+  "orm",
+  "xy-normal"
+]);
+var SpatialMapColorSpaceSchema = z.enum([
+  "srgb",
+  "linear"
+]);
+var SpatialUvTransformSchema = z.strictObject({
+  offset: z.tuple([finiteCoordinate, finiteCoordinate]),
+  rotation: z.number().finite().min(-Math.PI).max(Math.PI),
+  scale: z.tuple([positiveFinite, positiveFinite])
+});
+var assetId = z.string().min(7).max(128).regex(/^asset_[a-zA-Z0-9][a-zA-Z0-9_-]*$/u);
+var SpatialPbrMapSchema = z.strictObject({
+  assetId,
+  channel: SpatialMapChannelSchema,
+  colorSpace: SpatialMapColorSpaceSchema,
+  uvTransform: SpatialUvTransformSchema.optional()
+});
+var SpatialPbrEmissiveSchema = z.strictObject({
+  color,
+  intensity: z.number().finite().min(0).max(1e5),
+  map: SpatialPbrMapSchema.optional()
+});
+var SpatialPbrClearcoatSchema = z.strictObject({
+  factor: unit,
+  roughness: unit,
+  map: SpatialPbrMapSchema.optional(),
+  roughnessMap: SpatialPbrMapSchema.optional(),
+  normalMap: SpatialPbrMapSchema.optional(),
+  normalScale: z.number().finite().min(-16).max(16).optional()
+});
+var SpatialPbrTransmissionSchema = z.strictObject({
+  factor: unit,
+  map: SpatialPbrMapSchema.optional()
+});
+var SpatialPbrSheenSchema = z.strictObject({
+  color,
+  roughness: unit,
+  colorMap: SpatialPbrMapSchema.optional(),
+  roughnessMap: SpatialPbrMapSchema.optional()
+});
+var SpatialPbrAnisotropySchema = z.strictObject({
+  strength: z.number().finite().min(-1).max(1),
+  rotation: z.number().finite().min(0).max(2 * Math.PI),
+  map: SpatialPbrMapSchema.optional()
+});
+var SpatialPbrMaterialSchema = z.strictObject({
+  kind: z.literal("pbr"),
+  color,
+  opacity: unit,
+  roughness: unit,
+  metalness: unit,
+  baseColorMap: SpatialPbrMapSchema.optional(),
+  normalMap: SpatialPbrMapSchema.optional(),
+  normalScale: z.number().finite().min(-16).max(16).optional(),
+  ormMap: SpatialPbrMapSchema.optional(),
+  roughnessMap: SpatialPbrMapSchema.optional(),
+  metalnessMap: SpatialPbrMapSchema.optional(),
+  aoMap: SpatialPbrMapSchema.optional(),
+  aoMapIntensity: unit.optional(),
+  emissive: SpatialPbrEmissiveSchema.optional(),
+  heightMap: SpatialPbrMapSchema.optional(),
+  heightScale: z.number().finite().min(-10).max(10).optional(),
+  clearcoat: SpatialPbrClearcoatSchema.optional(),
+  transmission: SpatialPbrTransmissionSchema.optional(),
+  sheen: SpatialPbrSheenSchema.optional(),
+  anisotropy: SpatialPbrAnisotropySchema.optional(),
+  ior: z.number().finite().min(1).max(5).optional(),
+  alphaMode: z.enum(["OPAQUE", "MASK", "BLEND"]).optional(),
+  alphaCutoff: unit.optional(),
+  doubleSided: z.boolean().optional()
+}).superRefine((material, context) => {
+  const hasOrm = material.ormMap !== undefined;
+  const hasSeparate = material.roughnessMap !== undefined || material.metalnessMap !== undefined || material.aoMap !== undefined;
+  if (hasOrm && hasSeparate) {
+    context.addIssue({ code: "custom", message: "PBR materials must use either an ORM map or separate roughness/metalness/AO maps, never both." });
+  }
+  if (material.baseColorMap !== undefined && !["rgb", "rgba"].includes(material.baseColorMap.channel)) {
+    context.addIssue({ code: "custom", path: ["baseColorMap", "channel"], message: "Base-color maps must use rgb or rgba channels." });
+  }
+  if (material.baseColorMap !== undefined && material.baseColorMap.colorSpace !== "srgb") {
+    context.addIssue({ code: "custom", path: ["baseColorMap", "colorSpace"], message: "Base-color maps must be sRGB." });
+  }
+  if (material.normalMap !== undefined && material.normalMap.channel !== "xy-normal") {
+    context.addIssue({ code: "custom", path: ["normalMap", "channel"], message: "Normal maps must use xy-normal channel semantics." });
+  }
+  if (material.normalMap !== undefined && material.normalMap.colorSpace !== "linear") {
+    context.addIssue({ code: "custom", path: ["normalMap", "colorSpace"], message: "Normal maps must be linear." });
+  }
+  if (material.ormMap !== undefined && material.ormMap.channel !== "orm") {
+    context.addIssue({ code: "custom", path: ["ormMap", "channel"], message: "ORM maps must use orm channel semantics." });
+  }
+  if (material.ormMap !== undefined && material.ormMap.colorSpace !== "linear") {
+    context.addIssue({ code: "custom", path: ["ormMap", "colorSpace"], message: "ORM maps must be linear." });
+  }
+  if (material.heightMap !== undefined && material.heightMap.channel !== "r") {
+    context.addIssue({ code: "custom", path: ["heightMap", "channel"], message: "Height maps must use single red channel." });
+  }
+  if (material.heightMap !== undefined && material.heightMap.colorSpace !== "linear") {
+    context.addIssue({ code: "custom", path: ["heightMap", "colorSpace"], message: "Height maps must be linear." });
+  }
+  if (material.emissive?.map !== undefined && material.emissive.map.colorSpace !== "srgb") {
+    context.addIssue({ code: "custom", path: ["emissive", "map", "colorSpace"], message: "Emissive maps must be sRGB." });
+  }
+  for (const [name, map, channels] of [
+    ["roughnessMap", material.roughnessMap, ["g"]],
+    ["metalnessMap", material.metalnessMap, ["b"]],
+    ["aoMap", material.aoMap, ["r"]],
+    ["clearcoat.map", material.clearcoat?.map, ["r"]],
+    ["clearcoat.roughnessMap", material.clearcoat?.roughnessMap, ["g"]],
+    ["transmission.map", material.transmission?.map, ["r"]],
+    ["sheen.roughnessMap", material.sheen?.roughnessMap, ["a"]]
+  ]) {
+    if (map !== undefined && map.colorSpace !== "linear")
+      context.addIssue({ code: "custom", path: name.split("."), message: `${name} must be linear.` });
+    if (map !== undefined && !channels.includes(map.channel))
+      context.addIssue({ code: "custom", path: [...name.split("."), "channel"], message: `${name} has unsupported channel semantics.` });
+  }
+  for (const [name, map] of [["clearcoat.normalMap", material.clearcoat?.normalMap], ["anisotropy.map", material.anisotropy?.map]]) {
+    if (map !== undefined && map.colorSpace !== "linear")
+      context.addIssue({ code: "custom", path: name.split("."), message: `${name} must be linear.` });
+  }
+  if (material.clearcoat?.normalMap !== undefined && material.clearcoat.normalMap.channel !== "xy-normal")
+    context.addIssue({ code: "custom", path: ["clearcoat", "normalMap", "channel"], message: "Clearcoat normal maps must use xy-normal semantics." });
+  if (material.emissive?.map !== undefined && !["rgb", "rgba"].includes(material.emissive.map.channel))
+    context.addIssue({ code: "custom", path: ["emissive", "map", "channel"], message: "Emissive maps must use rgb or rgba channels." });
+  if (material.sheen?.colorMap !== undefined && (material.sheen.colorMap.colorSpace !== "srgb" || !["rgb", "rgba"].includes(material.sheen.colorMap.channel)))
+    context.addIssue({ code: "custom", path: ["sheen", "colorMap"], message: "Sheen color maps must use sRGB rgb or rgba semantics." });
+  if (material.anisotropy?.map !== undefined && material.anisotropy.map.channel !== "rgb")
+    context.addIssue({ code: "custom", path: ["anisotropy", "map", "channel"], message: "Anisotropy maps must use RGB direction-and-strength semantics." });
+  if (material.normalScale !== undefined && material.normalMap === undefined)
+    context.addIssue({ code: "custom", message: "normalScale requires a normalMap." });
+  if (material.heightScale !== undefined !== (material.heightMap !== undefined))
+    context.addIssue({ code: "custom", message: "heightScale and heightMap must be declared together." });
+  if (material.clearcoat?.normalScale !== undefined && material.clearcoat.normalMap === undefined)
+    context.addIssue({ code: "custom", message: "Clearcoat normalScale requires a clearcoat normalMap." });
+  if (material.aoMapIntensity !== undefined && material.aoMap === undefined && material.ormMap === undefined)
+    context.addIssue({ code: "custom", message: "aoMapIntensity requires an AO or ORM map." });
+  if (material.alphaCutoff !== undefined && material.alphaMode !== "MASK") {
+    context.addIssue({ code: "custom", message: "alphaCutoff is only applicable to MASK alpha mode." });
+  }
+});
+function pbrMaterialMapAssetIds(material) {
+  const ids = new Set;
+  const collect = (map) => {
+    if (map !== null && typeof map === "object" && map !== undefined && "assetId" in map && typeof map.assetId === "string")
+      ids.add(map.assetId);
+  };
+  const m = material;
+  collect(m.baseColorMap);
+  collect(m.normalMap);
+  collect(m.ormMap);
+  collect(m.roughnessMap);
+  collect(m.metalnessMap);
+  collect(m.aoMap);
+  collect(m.heightMap);
+  collect(m.emissive?.map);
+  collect(m.clearcoat?.map);
+  collect(m.clearcoat?.roughnessMap);
+  collect(m.clearcoat?.normalMap);
+  collect(m.transmission?.map);
+  collect(m.sheen?.colorMap);
+  collect(m.sheen?.roughnessMap);
+  collect(m.anisotropy?.map);
+  return Object.freeze([...ids]);
+}
+var SpatialDerivationMethodSchema = z.enum([
+  "sobel-normal-from-height",
+  "average-luminance-roughness",
+  "luminance-height"
+]);
+var SpatialDerivationCandidateSchema = z.strictObject({
+  method: SpatialDerivationMethodSchema,
+  sourceAssetId: assetId,
+  outputChannel: SpatialMapChannelSchema,
+  outputColorSpace: SpatialMapColorSpaceSchema,
+  provenance: z.literal("derived-candidate"),
+  description: z.string().min(1).max(1024)
+});
+function pbrDerivationCandidates(material) {
+  const candidates = [];
+  if (material.heightMap !== undefined && material.normalMap === undefined) {
+    candidates.push({
+      method: "sobel-normal-from-height",
+      sourceAssetId: material.heightMap.assetId,
+      outputChannel: "xy-normal",
+      outputColorSpace: "linear",
+      provenance: "derived-candidate",
+      description: "Sobel-filter tangent-space normal derived from the authored height map. Does not equal a surface scan."
+    });
+  }
+  if (material.baseColorMap !== undefined && material.roughnessMap === undefined && material.ormMap === undefined) {
+    candidates.push({
+      method: "average-luminance-roughness",
+      sourceAssetId: material.baseColorMap.assetId,
+      outputChannel: "r",
+      outputColorSpace: "linear",
+      provenance: "derived-candidate",
+      description: "Inverted luminance roughness derived from the base-color map. A heuristic approximation, not a measured surface."
+    });
+  }
+  if (material.baseColorMap !== undefined && material.heightMap === undefined) {
+    candidates.push({
+      method: "luminance-height",
+      sourceAssetId: material.baseColorMap.assetId,
+      outputChannel: "r",
+      outputColorSpace: "linear",
+      provenance: "derived-candidate",
+      description: "Luminance-based height derived from the base-color map. A visual approximation, not a measured displacement."
+    });
+  }
+  return deepFreezeJson(candidates);
+}
+var SpatialFogSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("linear"),
+    color,
+    near: positiveFinite,
+    far: positiveFinite
+  }).refine((fog) => fog.far > fog.near, "Fog far must exceed near."),
+  z.strictObject({
+    kind: z.literal("height"),
+    color,
+    density: z.number().finite().min(0).max(100),
+    heightFalloff: z.number().finite().min(0).max(100),
+    baseHeight: finiteCoordinate
+  })
+]);
+var SpatialLightingRigTypeSchema = z.enum([
+  "portrait",
+  "product",
+  "moonlight",
+  "golden-hour",
+  "neon-noir",
+  "interior-window",
+  "volumetric-stage"
+]);
+var IDENTITY_ROTATION = [0, 0, 0, 1];
+function localMinusZTowardOrigin(position) {
+  const length = Math.hypot(...position);
+  if (length === 0)
+    return IDENTITY_ROTATION;
+  const to = [-position[0] / length, -position[1] / length, -position[2] / length];
+  const dot = -to[2];
+  if (dot < -0.999999)
+    return [0, 1, 0, 0];
+  const scale = Math.sqrt(2 * (1 + dot));
+  return [to[1] / scale, -to[0] / scale, 0, scale / 2];
+}
+function rigEntity(light) {
+  const rotation = light.light === "ambient" || light.light === "point" ? light.rotation : localMinusZTowardOrigin(light.position);
+  return {
+    entityId: light.entityId,
+    kind: "light",
+    name: light.name,
+    parentId: null,
+    transform: { position: light.position, rotation, scale: [1, 1, 1] },
+    placement: { kind: "world" },
+    origin: { kind: "authored" },
+    visible: true,
+    light: light.light,
+    color: light.color,
+    intensity: light.intensity,
+    ...light.spot === undefined ? {} : { spot: light.spot },
+    ...light.shadow === undefined ? {} : { shadow: light.shadow }
+  };
+}
+var RIGS = {
+  portrait: {
+    description: "Classic three-point portrait: warm key at 45\xB0, cool fill opposite, rim backlight. Soft ambient fill.",
+    lights: [
+      { entityId: "entity_rig_key", name: "Key", light: "directional", color: "#fff5e6", intensity: 3.2, position: [3, 4, 3], rotation: IDENTITY_ROTATION, shadow: true },
+      { entityId: "entity_rig_fill", name: "Fill", light: "directional", color: "#ccd8ff", intensity: 1.2, position: [-3, 2, 3], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_rim", name: "Rim", light: "directional", color: "#ffffff", intensity: 2, position: [0, 3, -4], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#e8ecf0", intensity: 0.4, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  product: {
+    description: "Even product lighting: overhead softbox, two symmetric side fills, warm ambient. Minimal shadows for clean presentation.",
+    lights: [
+      { entityId: "entity_rig_top", name: "Top", light: "directional", color: "#ffffff", intensity: 3, position: [0, 5, 0], rotation: IDENTITY_ROTATION, shadow: true },
+      { entityId: "entity_rig_left", name: "Left fill", light: "directional", color: "#f5f5ff", intensity: 1.5, position: [-4, 2, 3], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_right", name: "Right fill", light: "directional", color: "#f5f5ff", intensity: 1.5, position: [4, 2, 3], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#f0ece8", intensity: 0.8, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  moonlight: {
+    description: "Cool blue directional moonlight with deep ambient. High contrast, strong shadows.",
+    lights: [
+      { entityId: "entity_rig_moon", name: "Moon", light: "directional", color: "#b4c8e8", intensity: 2, position: [-2, 8, -3], rotation: IDENTITY_ROTATION, shadow: true },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#1a2040", intensity: 0.15, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  "golden-hour": {
+    description: "Warm low-angle sunlight with long shadows. Complementary cool sky ambient.",
+    lights: [
+      { entityId: "entity_rig_sun", name: "Sun", light: "directional", color: "#ffb347", intensity: 4, position: [6, 1.5, 3], rotation: IDENTITY_ROTATION, shadow: true },
+      { entityId: "entity_rig_sky", name: "Sky ambient", light: "ambient", color: "#8cb4d8", intensity: 0.5, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  "neon-noir": {
+    description: "High-contrast colored point lights simulating neon signage. Deep shadows, no ambient fill.",
+    lights: [
+      { entityId: "entity_rig_neon_pink", name: "Neon pink", light: "point", color: "#ff1493", intensity: 8, position: [-3, 2, 1], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_neon_cyan", name: "Neon cyan", light: "point", color: "#00e5ff", intensity: 6, position: [3, 1, -2], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_neon_accent", name: "Neon accent", light: "point", color: "#7b68ee", intensity: 4, position: [0, 4, 0], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#0a0a14", intensity: 0.05, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  "interior-window": {
+    description: "Daylight from a single window direction. Warm interior ambient fill, exterior-facing key.",
+    lights: [
+      { entityId: "entity_rig_window", name: "Window", light: "directional", color: "#e8f0ff", intensity: 3.5, position: [5, 3, 0], rotation: IDENTITY_ROTATION, shadow: true },
+      { entityId: "entity_rig_bounce", name: "Bounce", light: "directional", color: "#fff0e0", intensity: 0.8, position: [-3, 1, 2], rotation: IDENTITY_ROTATION },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#f5e8d8", intensity: 0.35, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  },
+  "volumetric-stage": {
+    description: "Theatrical spot lights with tight cones and visible falloff. Low ambient for dramatic effect.",
+    lights: [
+      { entityId: "entity_rig_spot_center", name: "Center spot", light: "spot", color: "#ffffff", intensity: 12, position: [0, 6, 0], rotation: IDENTITY_ROTATION, spot: { angle: 0.5, penumbra: 0.6, distance: 20, decay: 2 }, shadow: true },
+      { entityId: "entity_rig_spot_left", name: "Left spot", light: "spot", color: "#ffccaa", intensity: 8, position: [-4, 5, 2], rotation: IDENTITY_ROTATION, spot: { angle: 0.4, penumbra: 0.5, distance: 15, decay: 2 } },
+      { entityId: "entity_rig_spot_right", name: "Right spot", light: "spot", color: "#aaccff", intensity: 8, position: [4, 5, 2], rotation: IDENTITY_ROTATION, spot: { angle: 0.4, penumbra: 0.5, distance: 15, decay: 2 } },
+      { entityId: "entity_rig_ambient", name: "Ambient", light: "ambient", color: "#1a1a2e", intensity: 0.08, position: [0, 0, 0], rotation: IDENTITY_ROTATION }
+    ]
+  }
+};
+function lightingRig(type) {
+  const rig = RIGS[type];
+  return deepFreezeJson({ description: rig.description, entities: rig.lights.map(rigEntity) });
+}
+function lightingRigDescription(type) {
+  return RIGS[type].description;
+}
+var SpatialProbeGeometrySchema = z.enum(["plane", "sphere", "hero"]);
+var DEFAULT_PROBE_GEOMETRIES = Object.freeze(["plane", "sphere", "hero"]);
+var DEFAULT_PROBE_RIGS = Object.freeze(["product", "golden-hour", "moonlight"]);
+var ORIGINAL_MATERIAL_HERO_FIXTURE = deepFreezeJson({ assetId: "asset_material_hero_original", manifestSha256: sha256Hex("slopcamera-original-material-hero-v1"), bounds: { min: [-0.8, -1, -0.55], max: [0.8, 1, 0.55] } });
+var DEFAULT_CAMERA_DISTANCES = Object.freeze([3, 6]);
+function planMaterialProbeGallery(input) {
+  const material = SpatialPbrMaterialSchema.parse(input.material);
+  const geometries = input.geometries ?? DEFAULT_PROBE_GEOMETRIES;
+  const rigs = input.lightingRigs ?? DEFAULT_PROBE_RIGS;
+  const distances = input.cameraDistances ?? DEFAULT_CAMERA_DISTANCES;
+  const heroAsset = input.heroAsset ?? ORIGINAL_MATERIAL_HERO_FIXTURE;
+  for (const geometry of geometries)
+    SpatialProbeGeometrySchema.parse(geometry);
+  for (const rig of rigs)
+    SpatialLightingRigTypeSchema.parse(rig);
+  for (const distance of distances) {
+    if (!Number.isFinite(distance) || distance <= 0 || distance > 1e6) {
+      throw new RangeError("Camera distances must be positive finite values.");
+    }
+  }
+  if (geometries.length < 1 || rigs.length < 1 || distances.length < 1 || geometries.length * rigs.length * distances.length > 64)
+    throw new RangeError("Material probe gallery requires 1\u201364 bounded cells.");
+  if (geometries.includes("hero")) {
+    if (!/^[a-f0-9]{64}$/u.test(heroAsset.manifestSha256))
+      throw new RangeError("Hero probe geometry requires an exact hero asset manifest binding.");
+    for (let axis = 0;axis < 3; axis++)
+      if (!Number.isFinite(heroAsset.bounds.min[axis]) || !Number.isFinite(heroAsset.bounds.max[axis]) || heroAsset.bounds.min[axis] > heroAsset.bounds.max[axis])
+        throw new RangeError("Hero probe geometry requires finite ordered bounds.");
+  }
+  const extensions = [];
+  if (material.clearcoat !== undefined)
+    extensions.push("clearcoat");
+  if (material.transmission !== undefined)
+    extensions.push("transmission");
+  if (material.sheen !== undefined)
+    extensions.push("sheen");
+  if (material.anisotropy !== undefined)
+    extensions.push("anisotropy");
+  const extensionNote = extensions.length > 0 ? ` Extensions: ${extensions.join(", ")}.` : "";
+  const mapCount = pbrMaterialMapAssetIds(material).length;
+  const description = `Probe gallery: ${geometries.length} geometr${geometries.length === 1 ? "y" : "ies"} \xD7 ${rigs.length} rig${rigs.length === 1 ? "" : "s"} \xD7 ${distances.length} distance${distances.length === 1 ? "" : "s"} = ${geometries.length * rigs.length * distances.length} probe${geometries.length * rigs.length * distances.length === 1 ? "" : "s"}. ${mapCount} texture map${mapCount === 1 ? "" : "s"} bound.${extensionNote}`;
+  const materialSha256 = sha256Hex(canonicalJson({ domain: "slopcamera.spatial-material/v1", material }));
+  const cells = geometries.flatMap((geometry) => rigs.flatMap((lightingRig2) => distances.map((cameraDistance) => ({ cellId: sha256Hex(canonicalJson({ domain: "slopcamera.spatial-material-probe-cell/v1", materialSha256, geometry, lightingRig: lightingRig2, cameraDistance, ...geometry === "hero" ? { heroAsset } : {} })), geometry, lightingRig: lightingRig2, cameraDistance }))));
+  const body = { kind: "slopcamera.spatial-material-probe-gallery", schemaVersion: 1, materialSha256, material, ...geometries.includes("hero") ? { heroAsset } : {}, geometries: [...geometries], lightingRigs: [...rigs], cameraDistances: [...distances], cells, description };
+  return deepFreezeJson({ ...body, gallerySha256: sha256Hex(canonicalJson({ domain: "slopcamera.spatial-material-probe-gallery/v1", body })) });
+}
+function validatePbrMaterial(material, assetLookup, pixelBudget = 67108864) {
+  const errors = [];
+  let totalPixels = 0;
+  let expectedDimensions;
+  const countedAssets = new Set;
+  const validateMap = (map, label) => {
+    if (map === undefined)
+      return;
+    const asset = assetLookup.get(map.assetId);
+    if (asset === undefined) {
+      errors.push(`${label}: references missing asset ${map.assetId}.`);
+      return;
+    }
+    if (asset.kind !== "image") {
+      errors.push(`${label}: asset ${map.assetId} is ${asset.kind}, not an image.`);
+      return;
+    }
+    if (!Number.isInteger(asset.width) || !Number.isInteger(asset.height) || asset.width < 1 || asset.height < 1) {
+      errors.push(`${label}: asset ${map.assetId} has invalid decoded dimensions.`);
+      return;
+    }
+    if (expectedDimensions !== undefined && (asset.width !== expectedDimensions[0] || asset.height !== expectedDimensions[1]))
+      errors.push(`${label}: decoded dimensions do not match the other PBR maps.`);
+    expectedDimensions ??= [asset.width, asset.height];
+    if (!countedAssets.has(map.assetId)) {
+      countedAssets.add(map.assetId);
+      totalPixels += asset.width * asset.height;
+      if (totalPixels > pixelBudget)
+        errors.push(`${label}: total decoded pixels (${totalPixels}) exceed budget (${pixelBudget}).`);
+    }
+  };
+  validateMap(material.baseColorMap, "baseColorMap");
+  validateMap(material.normalMap, "normalMap");
+  validateMap(material.ormMap, "ormMap");
+  validateMap(material.roughnessMap, "roughnessMap");
+  validateMap(material.metalnessMap, "metalnessMap");
+  validateMap(material.aoMap, "aoMap");
+  validateMap(material.heightMap, "heightMap");
+  validateMap(material.emissive?.map, "emissive.map");
+  validateMap(material.clearcoat?.map, "clearcoat.map");
+  validateMap(material.clearcoat?.roughnessMap, "clearcoat.roughnessMap");
+  validateMap(material.clearcoat?.normalMap, "clearcoat.normalMap");
+  validateMap(material.transmission?.map, "transmission.map");
+  validateMap(material.sheen?.colorMap, "sheen.colorMap");
+  validateMap(material.sheen?.roughnessMap, "sheen.roughnessMap");
+  validateMap(material.anisotropy?.map, "anisotropy.map");
+  return deepFreezeJson({ valid: errors.length === 0, errors });
+}
+
+// src/spatial-scene/contracts.ts
+import { z as z2 } from "zod";
 var SPATIAL_SCENE_LIMITS = Object.freeze({
   sourceBytes: 2097152,
   sourceDepth: 32,
@@ -21,8 +466,8 @@ var SPATIAL_SCENE_LIMITS = Object.freeze({
   durationUs: 3600000000,
   patchOperations: 256
 });
-var SpatialDigestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
-var stableId = (prefix) => z.string().min(prefix.length + 1).max(128).regex(new RegExp(`^${prefix}[a-zA-Z0-9][a-zA-Z0-9_-]*$`, "u"));
+var SpatialDigestSchema = z2.string().regex(/^[a-f0-9]{64}$/u);
+var stableId = (prefix) => z2.string().min(prefix.length + 1).max(128).regex(new RegExp(`^${prefix}[a-zA-Z0-9][a-zA-Z0-9_-]*$`, "u"));
 var SpatialSceneIdSchema = stableId("scene_");
 var SpatialEntityIdSchema = stableId("entity_");
 var SpatialCameraIdSchema = stableId("camera_");
@@ -30,53 +475,53 @@ var SpatialAssetIdSchema = stableId("asset_");
 var SpatialGeneratorIdSchema = stableId("generator_");
 var SpatialChannelIdSchema = stableId("channel_");
 var SpatialShotIdSchema = stableId("shot_");
-var finiteCoordinate = z.number().finite().min(-1e6).max(1e6);
-var positiveDimension = z.number().finite().min(0.000001).max(1e6);
-var unit = z.number().finite().min(0).max(1);
-var SpatialTimeUsSchema = z.number().int().safe().min(0).max(SPATIAL_SCENE_LIMITS.durationUs);
-var SpatialVec3Schema = z.tuple([finiteCoordinate, finiteCoordinate, finiteCoordinate]);
-var SpatialQuaternionSchema = z.tuple([
-  z.number().finite().min(-1).max(1),
-  z.number().finite().min(-1).max(1),
-  z.number().finite().min(-1).max(1),
-  z.number().finite().min(-1).max(1)
+var finiteCoordinate2 = z2.number().finite().min(-1e6).max(1e6);
+var positiveDimension = z2.number().finite().min(0.000001).max(1e6);
+var unit2 = z2.number().finite().min(0).max(1);
+var SpatialTimeUsSchema = z2.number().int().safe().min(0).max(SPATIAL_SCENE_LIMITS.durationUs);
+var SpatialVec3Schema = z2.tuple([finiteCoordinate2, finiteCoordinate2, finiteCoordinate2]);
+var SpatialQuaternionSchema = z2.tuple([
+  z2.number().finite().min(-1).max(1),
+  z2.number().finite().min(-1).max(1),
+  z2.number().finite().min(-1).max(1),
+  z2.number().finite().min(-1).max(1)
 ]).refine((value) => Math.abs(value.reduce((sum, part) => sum + part * part, 0) - 1) <= 0.000001, "Rotation must be a unit quaternion in XYZW order.");
-var SpatialTransformSchema = z.strictObject({
+var SpatialTransformSchema = z2.strictObject({
   position: SpatialVec3Schema,
   rotation: SpatialQuaternionSchema,
-  scale: z.tuple([positiveDimension, positiveDimension, positiveDimension])
+  scale: z2.tuple([positiveDimension, positiveDimension, positiveDimension])
 });
-var SpatialPoseSchema = z.strictObject({
+var SpatialPoseSchema = z2.strictObject({
   position: SpatialVec3Schema,
   rotation: SpatialQuaternionSchema
 });
-var SpatialFrameRateSchema = z.strictObject({
-  numerator: z.number().int().safe().min(1).max(1e6),
-  denominator: z.number().int().safe().min(1).max(1e6)
+var SpatialFrameRateSchema = z2.strictObject({
+  numerator: z2.number().int().safe().min(1).max(1e6),
+  denominator: z2.number().int().safe().min(1).max(1e6)
 }).refine((rate) => rate.numerator / rate.denominator <= 1000, "Frame rate exceeds 1,000 fps.");
 var dimensions = {
-  width: z.number().int().min(1).max(16384),
-  height: z.number().int().min(1).max(16384)
+  width: z2.number().int().min(1).max(16384),
+  height: z2.number().int().min(1).max(16384)
 };
 var clipping = { near: positiveDimension, far: positiveDimension };
-var SpatialProjectionSchema = z.discriminatedUnion("kind", [
-  z.strictObject({
-    kind: z.literal("perspective"),
+var SpatialProjectionSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({
+    kind: z2.literal("perspective"),
     ...dimensions,
     ...clipping,
     fx: positiveDimension,
     fy: positiveDimension,
-    cx: finiteCoordinate,
-    cy: finiteCoordinate
+    cx: finiteCoordinate2,
+    cy: finiteCoordinate2
   }),
-  z.strictObject({
-    kind: z.literal("orthographic"),
+  z2.strictObject({
+    kind: z2.literal("orthographic"),
     ...dimensions,
     ...clipping,
-    left: finiteCoordinate,
-    right: finiteCoordinate,
-    top: finiteCoordinate,
-    bottom: finiteCoordinate
+    left: finiteCoordinate2,
+    right: finiteCoordinate2,
+    top: finiteCoordinate2,
+    bottom: finiteCoordinate2
   })
 ]).superRefine((projection, context) => {
   if (projection.far <= projection.near)
@@ -87,127 +532,139 @@ var SpatialProjectionSchema = z.discriminatedUnion("kind", [
     context.addIssue({ code: "custom", message: "Orthographic extents must have positive width and height." });
   }
 });
-var SpatialCameraSchema = z.strictObject({
-  cameraId: SpatialCameraIdSchema,
-  name: z.string().min(1).max(256),
-  pose: SpatialPoseSchema,
-  projection: SpatialProjectionSchema
+var boundedPhysical = (minimum, maximum) => z2.number().finite().min(minimum).max(maximum);
+var SpatialCameraLensSchema = z2.strictObject({
+  focalLengthMm: boundedPhysical(1, 2000),
+  sensorWidthMm: boundedPhysical(1, 200),
+  apertureFStop: boundedPhysical(0.5, 128).optional(),
+  focusDistanceM: boundedPhysical(0.001, 1e6).optional(),
+  shutterAngleDeg: boundedPhysical(0, 360).optional(),
+  exposureEv: boundedPhysical(-32, 32).optional(),
+  colorTemperatureK: boundedPhysical(1000, 40000).optional()
 });
-var relativePath = z.string().min(1).max(1024).refine((value) => !value.startsWith("/") && !/[\\\u0000-\u001f]/u.test(value) && !/^[a-zA-Z]:/u.test(value) && value.split("/").every((part) => part !== "" && part !== "." && part !== ".."), "Asset paths must be contained root-relative paths.");
-var SpatialPayloadSchema = z.strictObject({
+var SpatialCameraSchema = z2.strictObject({
+  cameraId: SpatialCameraIdSchema,
+  name: z2.string().min(1).max(256),
+  pose: SpatialPoseSchema,
+  projection: SpatialProjectionSchema,
+  lens: SpatialCameraLensSchema.optional()
+});
+var relativePath = z2.string().min(1).max(1024).refine((value) => !value.startsWith("/") && !/[\\\u0000-\u001f]/u.test(value) && !/^[a-zA-Z]:/u.test(value) && value.split("/").every((part) => part !== "" && part !== "." && part !== ".."), "Asset paths must be contained root-relative paths.");
+var SpatialPayloadSchema = z2.strictObject({
   path: relativePath,
   sha256: SpatialDigestSchema,
-  bytes: z.number().int().safe().min(1).max(134217728)
+  bytes: z2.number().int().safe().min(1).max(134217728)
 });
 var imageInterpretation = {
   ...dimensions,
-  colorSpace: z.literal("srgb"),
-  alpha: z.enum(["straight", "opaque"])
+  colorSpace: z2.literal("srgb"),
+  alpha: z2.enum(["straight", "opaque"])
 };
-var SpatialAssetInterpretationSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("image"), ...imageInterpretation, mimeType: z.enum(["image/png", "image/jpeg", "image/svg+xml"]) }),
-  z.strictObject({ kind: z.literal("video"), ...imageInterpretation, durationUs: SpatialTimeUsSchema.refine((value) => value > 0), frameRate: SpatialFrameRateSchema }),
-  z.strictObject({ kind: z.literal("diagram"), schemaVersion: z.literal(1), theme: z.enum(["light", "dark"]) }),
-  z.strictObject({ kind: z.literal("gltf"), format: z.enum(["glb", "gltf"]), metersPerUnit: positiveDimension, sourceUp: z.enum(["x", "y", "z"]) }),
-  z.strictObject({ kind: z.literal("font"), format: z.enum(["otf", "woff2"]), family: z.string().min(1).max(128) }),
-  z.strictObject({ kind: z.literal("splat"), format: z.enum(["spz", "ply"]), metersPerUnit: positiveDimension, sourceUp: z.enum(["x", "y", "z"]) }),
-  z.strictObject({ kind: z.literal("metadata"), format: z.literal("json"), schema: z.enum(["slopcamera.spatial-world-import", "slopcamera.world-labs-provenance", "slopcamera.spatial-asset-facts", "slopcamera.provider-metadata"]) })
+var SpatialAssetInterpretationSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("image"), ...imageInterpretation, mimeType: z2.enum(["image/png", "image/jpeg", "image/svg+xml"]) }),
+  z2.strictObject({ kind: z2.literal("video"), ...imageInterpretation, durationUs: SpatialTimeUsSchema.refine((value) => value > 0), frameRate: SpatialFrameRateSchema }),
+  z2.strictObject({ kind: z2.literal("diagram"), schemaVersion: z2.literal(1), theme: z2.enum(["light", "dark"]) }),
+  z2.strictObject({ kind: z2.literal("gltf"), format: z2.enum(["glb", "gltf"]), metersPerUnit: positiveDimension, sourceUp: z2.enum(["x", "y", "z"]) }),
+  z2.strictObject({ kind: z2.literal("font"), format: z2.enum(["otf", "woff2"]), family: z2.string().min(1).max(128) }),
+  z2.strictObject({ kind: z2.literal("splat"), format: z2.enum(["spz", "ply"]), metersPerUnit: positiveDimension, sourceUp: z2.enum(["x", "y", "z"]) }),
+  z2.strictObject({ kind: z2.literal("metadata"), format: z2.literal("json"), schema: z2.enum(["slopcamera.spatial-world-import", "slopcamera.world-labs-provenance", "slopcamera.spatial-asset-facts", "slopcamera.provider-metadata"]) })
 ]);
-var SpatialAssetManifestSchema = z.strictObject({
+var SpatialAssetManifestSchema = z2.strictObject({
   assetId: SpatialAssetIdSchema,
   payload: SpatialPayloadSchema,
   interpretation: SpatialAssetInterpretationSchema,
-  dependencies: z.array(SpatialAssetIdSchema).max(SPATIAL_SCENE_LIMITS.assets),
-  provenance: z.strictObject({
-    source: z.enum(["authored", "imported", "generated", "derived"]),
-    description: z.string().min(1).max(2048),
+  dependencies: z2.array(SpatialAssetIdSchema).max(SPATIAL_SCENE_LIMITS.assets),
+  provenance: z2.strictObject({
+    source: z2.enum(["authored", "imported", "generated", "derived"]),
+    description: z2.string().min(1).max(2048),
     receiptSha256: SpatialDigestSchema.optional()
   })
 });
-var color = z.string().regex(/^#[a-fA-F0-9]{6}$/u);
-var SpatialEmissiveSchema = z.strictObject({
-  color,
-  intensity: z.number().finite().min(0).max(1e5)
+var color2 = z2.string().regex(/^#[a-fA-F0-9]{6}$/u);
+var SpatialEmissiveSchema = z2.strictObject({
+  color: color2,
+  intensity: z2.number().finite().min(0).max(1e5)
 });
-var SpatialMaterialSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
-  z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() })
+var SpatialMaterialSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("unlit"), color: color2, opacity: unit2, map: SpatialAssetIdSchema.optional() }),
+  z2.strictObject({ kind: z2.literal("standard"), color: color2, opacity: unit2, roughness: unit2, metalness: unit2, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() }),
+  SpatialPbrMaterialSchema
 ]);
-var SpatialGeometrySchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
-  z.strictObject({ kind: z.literal("sphere"), radius: positiveDimension }),
-  z.strictObject({ kind: z.literal("plane"), width: positiveDimension, height: positiveDimension }),
-  z.strictObject({ kind: z.literal("cylinder"), radius: positiveDimension, height: positiveDimension }),
-  z.strictObject({
-    kind: z.literal("asset"),
+var SpatialGeometrySchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("box"), size: z2.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
+  z2.strictObject({ kind: z2.literal("sphere"), radius: positiveDimension }),
+  z2.strictObject({ kind: z2.literal("plane"), width: positiveDimension, height: positiveDimension }),
+  z2.strictObject({ kind: z2.literal("cylinder"), radius: positiveDimension, height: positiveDimension }),
+  z2.strictObject({
+    kind: z2.literal("asset"),
     assetId: SpatialAssetIdSchema,
-    nodeIndex: z.number().int().min(0).max(65535).optional(),
-    materialMode: z.enum(["entity", "source"]).optional(),
-    clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
-    morphWeights: z.array(unit).max(16).optional()
+    nodeIndex: z2.number().int().min(0).max(65535).optional(),
+    materialMode: z2.enum(["entity", "source"]).optional(),
+    clip: z2.strictObject({ index: z2.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z2.enum(["once", "loop", "freeze"]) }).optional(),
+    morphWeights: z2.array(unit2).max(16).optional()
   })
 ]);
-var SpatialSpotLightSchema = z.strictObject({
-  angle: z.number().finite().min(0.000001).max(Math.PI / 2),
-  penumbra: unit,
-  distance: z.number().finite().min(0).max(1e6).optional(),
-  decay: z.number().finite().min(0).max(1000).optional()
+var SpatialSpotLightSchema = z2.strictObject({
+  angle: z2.number().finite().min(0.000001).max(Math.PI / 2),
+  penumbra: unit2,
+  distance: z2.number().finite().min(0).max(1e6).optional(),
+  decay: z2.number().finite().min(0).max(1000).optional()
 });
-var SpatialOriginSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("authored") }),
-  z.strictObject({ kind: z.literal("generated"), generatorId: SpatialGeneratorIdSchema, key: z.string().min(1).max(256) })
+var SpatialOriginSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("authored") }),
+  z2.strictObject({ kind: z2.literal("generated"), generatorId: SpatialGeneratorIdSchema, key: z2.string().min(1).max(256) })
 ]);
-var SpatialPlacementSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("world") }),
-  z.strictObject({ kind: z.literal("view"), cameraId: SpatialCameraIdSchema, units: z.enum(["pixels", "normalized"]), order: z.number().int().min(-4096).max(4096) })
+var SpatialPlacementSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("world") }),
+  z2.strictObject({ kind: z2.literal("view"), cameraId: SpatialCameraIdSchema, units: z2.enum(["pixels", "normalized"]), order: z2.number().int().min(-4096).max(4096) })
 ]);
 var entityBase = {
   entityId: SpatialEntityIdSchema,
-  name: z.string().min(1).max(256),
+  name: z2.string().min(1).max(256),
   parentId: SpatialEntityIdSchema.nullable(),
   transform: SpatialTransformSchema,
   placement: SpatialPlacementSchema,
   origin: SpatialOriginSchema,
-  visible: z.boolean()
+  visible: z2.boolean()
 };
 var surfaceBase = {
   assetId: SpatialAssetIdSchema,
   width: positiveDimension,
   height: positiveDimension,
-  fit: z.enum(["contain", "cover", "stretch"]),
-  opacity: unit
+  fit: z2.enum(["contain", "cover", "stretch"]),
+  opacity: unit2
 };
-var SpatialEntitySchema = z.discriminatedUnion("kind", [
-  z.strictObject({ ...entityBase, kind: z.literal("group") }),
-  z.strictObject({
+var SpatialEntitySchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ ...entityBase, kind: z2.literal("group") }),
+  z2.strictObject({
     ...entityBase,
-    kind: z.literal("mesh"),
+    kind: z2.literal("mesh"),
     geometry: SpatialGeometrySchema,
     material: SpatialMaterialSchema,
-    castShadow: z.boolean().optional(),
-    receiveShadow: z.boolean().optional(),
-    instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
+    castShadow: z2.boolean().optional(),
+    receiveShadow: z2.boolean().optional(),
+    instances: z2.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
   }),
-  z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("image") }),
-  z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("diagram") }),
-  z.strictObject({ ...entityBase, ...surfaceBase, kind: z.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }),
-  z.strictObject({ ...entityBase, kind: z.literal("text"), text: z.string().max(16384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color, align: z.enum(["left", "center", "right"]) }),
-  z.strictObject({
+  z2.strictObject({ ...entityBase, ...surfaceBase, kind: z2.literal("image") }),
+  z2.strictObject({ ...entityBase, ...surfaceBase, kind: z2.literal("diagram") }),
+  z2.strictObject({ ...entityBase, ...surfaceBase, kind: z2.literal("video"), sourceOffsetUs: SpatialTimeUsSchema, playback: z2.enum(["once", "loop", "freeze"]) }),
+  z2.strictObject({ ...entityBase, kind: z2.literal("text"), text: z2.string().max(16384), fontAssetId: SpatialAssetIdSchema, fontSize: positiveDimension, width: positiveDimension, color: color2, align: z2.enum(["left", "center", "right"]) }),
+  z2.strictObject({
     ...entityBase,
-    kind: z.literal("light"),
-    light: z.enum(["ambient", "directional", "point", "spot"]),
-    color,
-    intensity: z.number().finite().min(0).max(1e5),
+    kind: z2.literal("light"),
+    light: z2.enum(["ambient", "directional", "point", "spot"]),
+    color: color2,
+    intensity: z2.number().finite().min(0).max(1e5),
     spot: SpatialSpotLightSchema.optional(),
-    shadow: z.boolean().optional()
+    shadow: z2.boolean().optional()
   }),
-  z.strictObject({ ...entityBase, kind: z.literal("splat"), assetId: SpatialAssetIdSchema }),
-  z.strictObject({
+  z2.strictObject({ ...entityBase, kind: z2.literal("splat"), assetId: SpatialAssetIdSchema }),
+  z2.strictObject({
     ...entityBase,
-    kind: z.literal("environment"),
+    kind: z2.literal("environment"),
     assetId: SpatialAssetIdSchema,
-    role: z.enum(["background", "environment", "both"]),
-    intensity: z.number().finite().min(0).max(16)
+    role: z2.enum(["background", "environment", "both"]),
+    intensity: z2.number().finite().min(0).max(16)
   })
 ]).superRefine((entity, context) => {
   if (entity.kind !== "light")
@@ -219,87 +676,88 @@ var SpatialEntitySchema = z.discriminatedUnion("kind", [
   if (entity.light === "ambient" && entity.shadow !== undefined)
     context.addIssue({ code: "custom", path: ["shadow"], message: "Ambient lights cannot cast shadows; only directional, point, and spot lights may declare shadow." });
 });
-var key = (value) => z.strictObject({ timeUs: SpatialTimeUsSchema, value });
-var channelBase = { channelId: SpatialChannelIdSchema, targetId: z.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) };
-var SpatialAnimationSchema = z.discriminatedUnion("property", [
-  z.strictObject({ ...channelBase, property: z.literal("position"), interpolation: z.enum(["step", "linear"]), keys: z.array(key(SpatialVec3Schema)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
-  z.strictObject({ ...channelBase, property: z.literal("rotation"), interpolation: z.enum(["step", "slerp"]), keys: z.array(key(SpatialQuaternionSchema)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
-  z.strictObject({ ...channelBase, property: z.literal("scale"), interpolation: z.enum(["step", "linear"]), keys: z.array(key(z.tuple([positiveDimension, positiveDimension, positiveDimension]))).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
-  z.strictObject({ ...channelBase, property: z.literal("opacity"), interpolation: z.enum(["step", "linear"]), keys: z.array(key(unit)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) })
+var key = (value) => z2.strictObject({ timeUs: SpatialTimeUsSchema, value });
+var channelBase = { channelId: SpatialChannelIdSchema, targetId: z2.union([SpatialEntityIdSchema, SpatialCameraIdSchema]) };
+var SpatialAnimationSchema = z2.discriminatedUnion("property", [
+  z2.strictObject({ ...channelBase, property: z2.literal("position"), interpolation: z2.enum(["step", "linear"]), keys: z2.array(key(SpatialVec3Schema)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
+  z2.strictObject({ ...channelBase, property: z2.literal("rotation"), interpolation: z2.enum(["step", "slerp"]), keys: z2.array(key(SpatialQuaternionSchema)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
+  z2.strictObject({ ...channelBase, property: z2.literal("scale"), interpolation: z2.enum(["step", "linear"]), keys: z2.array(key(z2.tuple([positiveDimension, positiveDimension, positiveDimension]))).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) }),
+  z2.strictObject({ ...channelBase, property: z2.literal("opacity"), interpolation: z2.enum(["step", "linear"]), keys: z2.array(key(unit2)).min(1).max(SPATIAL_SCENE_LIMITS.keysPerChannel) })
 ]);
-var SpatialOverrideSchema = z.discriminatedUnion("property", [
-  z.strictObject({ entityId: SpatialEntityIdSchema, property: z.literal("color"), value: color }),
-  z.strictObject({ entityId: SpatialEntityIdSchema, property: z.literal("opacity"), value: unit }),
-  z.strictObject({ entityId: SpatialEntityIdSchema, property: z.literal("transform"), value: SpatialTransformSchema })
+var SpatialOverrideSchema = z2.discriminatedUnion("property", [
+  z2.strictObject({ entityId: SpatialEntityIdSchema, property: z2.literal("color"), value: color2 }),
+  z2.strictObject({ entityId: SpatialEntityIdSchema, property: z2.literal("opacity"), value: unit2 }),
+  z2.strictObject({ entityId: SpatialEntityIdSchema, property: z2.literal("transform"), value: SpatialTransformSchema })
 ]);
-var SpatialGeneratorSchema = z.strictObject({
+var SpatialGeneratorSchema = z2.strictObject({
   generatorId: SpatialGeneratorIdSchema,
   sourceSha256: SpatialDigestSchema,
   closureSha256: SpatialDigestSchema,
   parametersSha256: SpatialDigestSchema,
-  seed: z.number().int().safe().min(0).max(4294967295),
+  seed: z2.number().int().safe().min(0).max(4294967295),
   outputSha256: SpatialDigestSchema,
-  execution: z.discriminatedUnion("kind", [
-    z.strictObject({ kind: z.literal("qualified"), runtimeSha256: SpatialDigestSchema }),
-    z.strictObject({ kind: z.literal("attempt"), attemptId: z.string().min(1).max(128), runtimeSha256: SpatialDigestSchema })
+  execution: z2.discriminatedUnion("kind", [
+    z2.strictObject({ kind: z2.literal("qualified"), runtimeSha256: SpatialDigestSchema }),
+    z2.strictObject({ kind: z2.literal("attempt"), attemptId: z2.string().min(1).max(128), runtimeSha256: SpatialDigestSchema })
   ]),
-  editableKeys: z.array(z.strictObject({ key: z.string().min(1).max(256), properties: z.array(z.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities)
+  editableKeys: z2.array(z2.strictObject({ key: z2.string().min(1).max(256), properties: z2.array(z2.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities)
 });
-var SpatialSceneV1Schema = z.strictObject({
-  kind: z.literal("slopcamera.spatial-scene"),
-  schemaVersion: z.literal(1),
+var SpatialSceneV1Schema = z2.strictObject({
+  kind: z2.literal("slopcamera.spatial-scene"),
+  schemaVersion: z2.literal(1),
   sceneId: SpatialSceneIdSchema,
-  coordinates: z.literal("right-handed-y-up-meters"),
+  coordinates: z2.literal("right-handed-y-up-meters"),
   durationUs: SpatialTimeUsSchema.refine((value) => value > 0),
-  entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
-  cameras: z.array(SpatialCameraSchema).min(1).max(SPATIAL_SCENE_LIMITS.cameras),
-  assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets),
-  animations: z.array(SpatialAnimationSchema).max(SPATIAL_SCENE_LIMITS.channels),
-  generators: z.array(SpatialGeneratorSchema).max(128),
-  overrides: z.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities)
+  entities: z2.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+  cameras: z2.array(SpatialCameraSchema).min(1).max(SPATIAL_SCENE_LIMITS.cameras),
+  assets: z2.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets),
+  animations: z2.array(SpatialAnimationSchema).max(SPATIAL_SCENE_LIMITS.channels),
+  generators: z2.array(SpatialGeneratorSchema).max(128),
+  overrides: z2.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities),
+  fog: SpatialFogSchema.optional()
 });
-var SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("add-asset"), asset: SpatialAssetManifestSchema }),
-  z.strictObject({ kind: z.literal("replace-asset"), asset: SpatialAssetManifestSchema }),
-  z.strictObject({ kind: z.literal("set-mesh-geometry"), entityId: SpatialEntityIdSchema, geometry: SpatialGeometrySchema }),
-  z.strictObject({ kind: z.literal("set-material"), entityId: SpatialEntityIdSchema, material: SpatialMaterialSchema }),
-  z.strictObject({ kind: z.literal("rename-entity"), entityId: SpatialEntityIdSchema, name: z.string().min(1).max(256) }),
-  z.strictObject({ kind: z.literal("reparent-entity"), entityId: SpatialEntityIdSchema, parentId: SpatialEntityIdSchema.nullable() }),
-  z.strictObject({ kind: z.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
-  z.strictObject({ kind: z.literal("set-color"), entityId: SpatialEntityIdSchema, color }),
-  z.strictObject({ kind: z.literal("set-opacity"), entityId: SpatialEntityIdSchema, opacity: unit }),
-  z.strictObject({ kind: z.literal("set-emissive"), entityId: SpatialEntityIdSchema, emissive: SpatialEmissiveSchema.nullable() }),
-  z.strictObject({ kind: z.literal("set-spot"), entityId: SpatialEntityIdSchema, spot: SpatialSpotLightSchema }),
-  z.strictObject({ kind: z.literal("set-instances"), entityId: SpatialEntityIdSchema, instances: z.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).nullable() }),
-  z.strictObject({ kind: z.literal("set-mesh-shadow"), entityId: SpatialEntityIdSchema, castShadow: z.boolean().nullable(), receiveShadow: z.boolean().nullable() }),
-  z.strictObject({ kind: z.literal("set-light-shadow"), entityId: SpatialEntityIdSchema, shadow: z.boolean().nullable() }),
-  z.strictObject({ kind: z.literal("set-camera"), camera: SpatialCameraSchema }),
-  z.strictObject({ kind: z.literal("set-channel"), channel: SpatialAnimationSchema }),
-  z.strictObject({ kind: z.literal("remove-channel"), channelId: SpatialChannelIdSchema }),
-  z.strictObject({ kind: z.literal("add-entity"), entity: SpatialEntitySchema }),
-  z.strictObject({ kind: z.literal("remove-entity"), entityId: SpatialEntityIdSchema }),
-  z.strictObject({ kind: z.literal("set-override"), override: SpatialOverrideSchema }),
-  z.strictObject({ kind: z.literal("remove-override"), entityId: SpatialEntityIdSchema, property: z.enum(["color", "opacity", "transform"]) }),
-  z.strictObject({ kind: z.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities) })
+var SpatialPatchOperationSchema = z2.discriminatedUnion("kind", [
+  z2.strictObject({ kind: z2.literal("add-asset"), asset: SpatialAssetManifestSchema }),
+  z2.strictObject({ kind: z2.literal("replace-asset"), asset: SpatialAssetManifestSchema }),
+  z2.strictObject({ kind: z2.literal("set-mesh-geometry"), entityId: SpatialEntityIdSchema, geometry: SpatialGeometrySchema }),
+  z2.strictObject({ kind: z2.literal("set-material"), entityId: SpatialEntityIdSchema, material: SpatialMaterialSchema }),
+  z2.strictObject({ kind: z2.literal("rename-entity"), entityId: SpatialEntityIdSchema, name: z2.string().min(1).max(256) }),
+  z2.strictObject({ kind: z2.literal("reparent-entity"), entityId: SpatialEntityIdSchema, parentId: SpatialEntityIdSchema.nullable() }),
+  z2.strictObject({ kind: z2.literal("set-transform"), entityId: SpatialEntityIdSchema, transform: SpatialTransformSchema }),
+  z2.strictObject({ kind: z2.literal("set-color"), entityId: SpatialEntityIdSchema, color: color2 }),
+  z2.strictObject({ kind: z2.literal("set-opacity"), entityId: SpatialEntityIdSchema, opacity: unit2 }),
+  z2.strictObject({ kind: z2.literal("set-emissive"), entityId: SpatialEntityIdSchema, emissive: SpatialEmissiveSchema.nullable() }),
+  z2.strictObject({ kind: z2.literal("set-spot"), entityId: SpatialEntityIdSchema, spot: SpatialSpotLightSchema }),
+  z2.strictObject({ kind: z2.literal("set-instances"), entityId: SpatialEntityIdSchema, instances: z2.array(SpatialTransformSchema).min(1).max(SPATIAL_SCENE_LIMITS.entities).nullable() }),
+  z2.strictObject({ kind: z2.literal("set-mesh-shadow"), entityId: SpatialEntityIdSchema, castShadow: z2.boolean().nullable(), receiveShadow: z2.boolean().nullable() }),
+  z2.strictObject({ kind: z2.literal("set-light-shadow"), entityId: SpatialEntityIdSchema, shadow: z2.boolean().nullable() }),
+  z2.strictObject({ kind: z2.literal("set-camera"), camera: SpatialCameraSchema }),
+  z2.strictObject({ kind: z2.literal("set-channel"), channel: SpatialAnimationSchema }),
+  z2.strictObject({ kind: z2.literal("remove-channel"), channelId: SpatialChannelIdSchema }),
+  z2.strictObject({ kind: z2.literal("add-entity"), entity: SpatialEntitySchema }),
+  z2.strictObject({ kind: z2.literal("remove-entity"), entityId: SpatialEntityIdSchema }),
+  z2.strictObject({ kind: z2.literal("set-override"), override: SpatialOverrideSchema }),
+  z2.strictObject({ kind: z2.literal("remove-override"), entityId: SpatialEntityIdSchema, property: z2.enum(["color", "opacity", "transform"]) }),
+  z2.strictObject({ kind: z2.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z2.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities) })
 ]);
-var SpatialScenePatchV1Schema = z.strictObject({
-  kind: z.literal("slopcamera.spatial-scene-patch"),
-  schemaVersion: z.literal(1),
+var SpatialScenePatchV1Schema = z2.strictObject({
+  kind: z2.literal("slopcamera.spatial-scene-patch"),
+  schemaVersion: z2.literal(1),
   expectedSceneSha256: SpatialDigestSchema,
-  operations: z.array(SpatialPatchOperationSchema).min(1).max(SPATIAL_SCENE_LIMITS.patchOperations)
+  operations: z2.array(SpatialPatchOperationSchema).min(1).max(SPATIAL_SCENE_LIMITS.patchOperations)
 });
-var SpatialShotV1Schema = z.strictObject({
+var SpatialShotV1Schema = z2.strictObject({
   shotId: SpatialShotIdSchema,
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
-  range: z.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
+  range: z2.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
   sceneStartUs: SpatialTimeUsSchema,
-  playback: z.enum(["once", "loop", "freeze"]),
-  overrides: z.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities),
+  playback: z2.enum(["once", "loop", "freeze"]),
+  overrides: z2.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities),
   cameraPoseOverride: SpatialPoseSchema.optional()
 }).refine((shot) => shot.range.endUs > shot.range.startUs, "Shot range must be nonempty and half-open.");
-var matrixNumber = z.number().finite().min(-1000000000000).max(1000000000000);
-var SpatialMatrixSchema = z.tuple([
+var matrixNumber = z2.number().finite().min(-1000000000000).max(1000000000000);
+var SpatialMatrixSchema = z2.tuple([
   matrixNumber,
   matrixNumber,
   matrixNumber,
@@ -317,21 +775,22 @@ var SpatialMatrixSchema = z.tuple([
   matrixNumber,
   matrixNumber
 ]);
-var EvaluatedSpatialSceneSchema = z.strictObject({
-  kind: z.literal("slopcamera.spatial-snapshot"),
-  schemaVersion: z.literal(1),
+var EvaluatedSpatialSceneSchema = z2.strictObject({
+  kind: z2.literal("slopcamera.spatial-snapshot"),
+  schemaVersion: z2.literal(1),
   sceneSha256: SpatialDigestSchema,
   stateSha256: SpatialDigestSchema,
   viewSha256: SpatialDigestSchema,
   timeUs: SpatialTimeUsSchema,
   camera: SpatialCameraSchema,
-  entities: z.array(z.strictObject({
+  entities: z2.array(z2.strictObject({
     entity: SpatialEntitySchema,
     worldMatrix: SpatialMatrixSchema,
-    visible: z.boolean(),
-    selectionId: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities)
+    visible: z2.boolean(),
+    selectionId: z2.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities)
   })).max(SPATIAL_SCENE_LIMITS.entities),
-  assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets)
+  assets: z2.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets),
+  fog: SpatialFogSchema.optional()
 });
 
 // src/spatial-scene/identity.ts
@@ -426,6 +885,16 @@ function generatedSpatialEntityId(generatorId, key2) {
 function normalizeEntity(entity) {
   if (entity.kind === "mesh") {
     const material = entity.material;
+    if (material.kind === "pbr") {
+      const emissive2 = material.emissive !== undefined ? { ...material.emissive, color: material.emissive.color.toLowerCase() } : undefined;
+      const sheen = material.sheen !== undefined ? { ...material.sheen, color: material.sheen.color.toLowerCase() } : undefined;
+      return { ...entity, material: {
+        ...material,
+        color: material.color.toLowerCase(),
+        ...emissive2 === undefined ? {} : { emissive: emissive2 },
+        ...sheen === undefined ? {} : { sheen }
+      } };
+    }
     const emissive = material.kind === "standard" && material.emissive !== undefined ? { ...material.emissive, color: material.emissive.color.toLowerCase() } : undefined;
     return { ...entity, material: { ...material, color: material.color.toLowerCase(), ...emissive === undefined ? {} : { emissive } } };
   }
@@ -456,11 +925,11 @@ function spatialAssetManifestSha256(input, dependencyDigests = {}) {
   if (captured === null || Array.isArray(captured) || typeof captured !== "object")
     throw new SpatialSceneError("invalid-data", "Dependency digests must be an object.");
   unique(asset.dependencies, (item) => item, "asset.dependencies");
-  const dependencies = [...asset.dependencies].sort(compare).map((assetId) => {
-    const sha256 = captured[assetId];
+  const dependencies = [...asset.dependencies].sort(compare).map((assetId2) => {
+    const sha256 = captured[assetId2];
     if (typeof sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(sha256))
-      throw new SpatialSceneError("invalid-data", `Missing dependency digest for ${assetId}.`);
-    return { assetId, sha256 };
+      throw new SpatialSceneError("invalid-data", `Missing dependency digest for ${assetId2}.`);
+    return { assetId: assetId2, sha256 };
   });
   return spatialValueSha256({ domain: "slopcamera.asset-manifest.v1", payload: { sha256: asset.payload.sha256, bytes: asset.payload.bytes }, interpretation: asset.interpretation, dependencies });
 }
@@ -555,12 +1024,21 @@ function parseSpatialScene(input) {
     if (entity.kind === "environment" && (entity.placement.kind !== "world" || entity.parentId !== null)) {
       throw new SpatialSceneError("invalid-data", "Environment entities must be unparented world entities.", "placement");
     }
-    if (entity.kind === "mesh" && entity.material.map !== undefined) {
+    if (entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map !== undefined) {
       if (entity.geometry.kind === "asset")
         throw new SpatialSceneError("invalid-data", "Material maps apply to authored procedural geometry only.", "entities");
       const mapAsset = requireReference(assets, entity.material.map, "entity asset");
       if (mapAsset.interpretation.kind !== "image")
         throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} material map requires an image asset.`, "entity asset");
+    }
+    if (entity.kind === "mesh" && entity.material.kind === "pbr") {
+      if (entity.geometry.kind === "asset")
+        throw new SpatialSceneError("invalid-data", "PBR material maps apply to authored procedural geometry only.", "entities");
+      for (const mapAssetId of pbrMaterialMapAssetIds(entity.material)) {
+        const mapAsset = requireReference(assets, mapAssetId, "entity pbr map asset");
+        if (mapAsset.interpretation.kind !== "image")
+          throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} PBR map requires an image asset, got ${mapAsset.interpretation.kind}.`, "entity pbr map");
+      }
     }
     const reference = entity.kind === "mesh" && entity.geometry.kind === "asset" ? { assetId: entity.geometry.assetId, kind: "gltf" } : entity.kind === "text" ? { assetId: entity.fontAssetId, kind: "font" } : entity.kind === "environment" ? { assetId: entity.assetId, kind: "image" } : ("assetId" in entity) ? { assetId: entity.assetId, kind: entity.kind } : undefined;
     if (reference) {
@@ -636,8 +1114,8 @@ function values(value, length, label) {
 function vec2(x, y) {
   return Object.freeze([number(x, "x"), number(y, "y")]);
 }
-function vec3(x, y, z2) {
-  return Object.freeze([number(x, "x"), number(y, "y"), number(z2, "z")]);
+function vec3(x, y, z3) {
+  return Object.freeze([number(x, "x"), number(y, "y"), number(z3, "z")]);
 }
 function matrix(value) {
   values(value, 16, "matrix");
@@ -660,19 +1138,19 @@ function normalizeQuaternion(q) {
 function composeTransform(transform) {
   values(transform.position, 3, "position");
   values(transform.scale, 3, "scale");
-  const [x, y, z2, w] = normalizeQuaternion(transform.rotation);
+  const [x, y, z3, w] = normalizeQuaternion(transform.rotation);
   const [sx, sy, sz] = transform.scale;
   return matrix([
-    (1 - 2 * (y * y + z2 * z2)) * sx,
-    2 * (x * y + z2 * w) * sx,
-    2 * (x * z2 - y * w) * sx,
+    (1 - 2 * (y * y + z3 * z3)) * sx,
+    2 * (x * y + z3 * w) * sx,
+    2 * (x * z3 - y * w) * sx,
     0,
-    2 * (x * y - z2 * w) * sy,
-    (1 - 2 * (x * x + z2 * z2)) * sy,
-    2 * (y * z2 + x * w) * sy,
+    2 * (x * y - z3 * w) * sy,
+    (1 - 2 * (x * x + z3 * z3)) * sy,
+    2 * (y * z3 + x * w) * sy,
     0,
-    2 * (x * z2 + y * w) * sz,
-    2 * (y * z2 - x * w) * sz,
+    2 * (x * z3 + y * w) * sz,
+    2 * (y * z3 - x * w) * sz,
     (1 - 2 * (x * x + y * y)) * sz,
     0,
     ...transform.position,
@@ -868,7 +1346,7 @@ function cameraMathView(camera2) {
 }
 
 // src/spatial-scene/gltf.ts
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 var SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-fullmaps-v1";
 var SPATIAL_GLB_PROFILE_V1 = "slopcamera.glb-triangles-trs-pbr-basecolor-v1";
 var SPATIAL_GLB_RIGGED_PROFILE = "slopcamera.glb-rigged-morph-skin-v1";
@@ -899,93 +1377,106 @@ var SPATIAL_GLB_LIMITS = Object.freeze({
   morphTargetsPerPrimitive: 16,
   morphTargetDeltas: 2000000
 });
-var finite = z2.number().finite().min(-1e6).max(1e6);
-var index = z2.number().int().min(0).max(65535);
-var unit2 = z2.number().finite().min(0).max(1);
-var vec32 = z2.tuple([finite, finite, finite]);
-var signedUnit = z2.number().finite().min(-1).max(1);
-var quaternion = z2.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
-var metadata = { name: z2.string().max(1024).optional(), extras: z2.unknown().optional(), extensions: z2.never().optional() };
-var byteOffset = z2.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
-var textureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional() });
-var normalTextureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional(), scale: finite.optional() });
-var occlusionTextureInfo = z2.strictObject({ ...metadata, index, texCoord: z2.literal(0).optional(), strength: unit2.optional() });
-var samplerSchema = z2.strictObject({
-  ...metadata,
-  magFilter: z2.union([z2.literal(9728), z2.literal(9729)]).optional(),
-  minFilter: z2.union([z2.literal(9728), z2.literal(9729), z2.literal(9984), z2.literal(9985), z2.literal(9986), z2.literal(9987)]).optional(),
-  wrapS: z2.union([z2.literal(33071), z2.literal(33648), z2.literal(10497)]).default(10497),
-  wrapT: z2.union([z2.literal(33071), z2.literal(33648), z2.literal(10497)]).default(10497)
+var finite = z3.number().finite().min(-1e6).max(1e6);
+var index = z3.number().int().min(0).max(65535);
+var unit3 = z3.number().finite().min(0).max(1);
+var vec32 = z3.tuple([finite, finite, finite]);
+var signedUnit = z3.number().finite().min(-1).max(1);
+var quaternion = z3.tuple([signedUnit, signedUnit, signedUnit, signedUnit]);
+var metadata = { name: z3.string().max(1024).optional(), extras: z3.unknown().optional(), extensions: z3.never().optional() };
+var metadataWithoutExtensions = { name: z3.string().max(1024).optional(), extras: z3.unknown().optional() };
+var byteOffset = z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes);
+var textureTransform = z3.strictObject({ offset: z3.tuple([finite, finite]).default([0, 0]), rotation: z3.number().finite().min(-Math.PI).max(Math.PI).default(0), scale: z3.tuple([finite, finite]).default([1, 1]), texCoord: z3.literal(0).optional() });
+var textureExtensions = z3.strictObject({ KHR_texture_transform: textureTransform.optional() });
+var textureInfo = z3.strictObject({ ...metadataWithoutExtensions, index, texCoord: z3.literal(0).optional(), extensions: textureExtensions.optional() });
+var normalTextureInfo = z3.strictObject({ ...metadataWithoutExtensions, index, texCoord: z3.literal(0).optional(), scale: finite.optional(), extensions: textureExtensions.optional() });
+var occlusionTextureInfo = z3.strictObject({ ...metadataWithoutExtensions, index, texCoord: z3.literal(0).optional(), strength: unit3.optional(), extensions: textureExtensions.optional() });
+var supportedExtension = z3.enum(["KHR_texture_transform", "KHR_materials_clearcoat", "KHR_materials_transmission", "KHR_materials_sheen", "KHR_materials_anisotropy", "KHR_materials_ior", "KHR_materials_emissive_strength"]);
+var materialExtensions = z3.strictObject({
+  KHR_materials_clearcoat: z3.strictObject({ clearcoatFactor: unit3.default(0), clearcoatTexture: textureInfo.optional(), clearcoatRoughnessFactor: unit3.default(0), clearcoatRoughnessTexture: textureInfo.optional(), clearcoatNormalTexture: normalTextureInfo.optional() }).optional(),
+  KHR_materials_transmission: z3.strictObject({ transmissionFactor: unit3.default(0), transmissionTexture: textureInfo.optional() }).optional(),
+  KHR_materials_sheen: z3.strictObject({ sheenColorFactor: z3.tuple([unit3, unit3, unit3]).default([0, 0, 0]), sheenColorTexture: textureInfo.optional(), sheenRoughnessFactor: unit3.default(0), sheenRoughnessTexture: textureInfo.optional() }).optional(),
+  KHR_materials_anisotropy: z3.strictObject({ anisotropyStrength: unit3.default(0), anisotropyRotation: z3.number().finite().min(0).max(2 * Math.PI).default(0), anisotropyTexture: textureInfo.optional() }).optional(),
+  KHR_materials_ior: z3.strictObject({ ior: z3.number().finite().min(1).max(5).default(1.5) }).optional(),
+  KHR_materials_emissive_strength: z3.strictObject({ emissiveStrength: z3.number().finite().min(0).max(1e5).default(1) }).optional()
 });
-var nodeSchema = z2.strictObject({
+var samplerSchema = z3.strictObject({
   ...metadata,
-  children: z2.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
+  magFilter: z3.union([z3.literal(9728), z3.literal(9729)]).optional(),
+  minFilter: z3.union([z3.literal(9728), z3.literal(9729), z3.literal(9984), z3.literal(9985), z3.literal(9986), z3.literal(9987)]).optional(),
+  wrapS: z3.union([z3.literal(33071), z3.literal(33648), z3.literal(10497)]).default(10497),
+  wrapT: z3.union([z3.literal(33071), z3.literal(33648), z3.literal(10497)]).default(10497)
+});
+var nodeSchema = z3.strictObject({
+  ...metadata,
+  children: z3.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]),
   mesh: index.optional(),
   skin: index.optional(),
   translation: vec32.optional(),
   rotation: quaternion.optional(),
   scale: vec32.optional(),
-  matrix: z2.array(finite).length(16).optional()
+  matrix: z3.array(finite).length(16).optional()
 });
-var accessorSchema = z2.strictObject({
+var accessorSchema = z3.strictObject({
   ...metadata,
   bufferView: index,
   byteOffset: byteOffset.default(0),
-  componentType: z2.union([z2.literal(5121), z2.literal(5123), z2.literal(5125), z2.literal(5126)]),
-  normalized: z2.boolean().default(false),
-  count: z2.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z2.enum(["SCALAR", "VEC2", "VEC3", "VEC4", "MAT4"]),
-  min: z2.array(finite).min(1).max(4).optional(),
-  max: z2.array(finite).min(1).max(4).optional()
+  componentType: z3.union([z3.literal(5121), z3.literal(5123), z3.literal(5125), z3.literal(5126)]),
+  normalized: z3.boolean().default(false),
+  count: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
+  type: z3.enum(["SCALAR", "VEC2", "VEC3", "VEC4", "MAT4"]),
+  min: z3.array(finite).min(1).max(4).optional(),
+  max: z3.array(finite).min(1).max(4).optional()
 });
-var gltfSchema = z2.strictObject({
+var gltfSchema = z3.strictObject({
   ...metadata,
-  asset: z2.strictObject({ version: z2.literal("2.0"), minVersion: z2.literal("2.0").optional(), generator: z2.string().max(1024).optional(), copyright: z2.string().max(4096).optional(), extras: z2.unknown().optional(), extensions: z2.never().optional() }),
-  extensionsUsed: z2.array(z2.never()).optional(),
-  extensionsRequired: z2.array(z2.never()).optional(),
-  buffers: z2.array(z2.strictObject({ ...metadata, byteLength: z2.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
-  bufferViews: z2.array(z2.strictObject({ ...metadata, buffer: z2.literal(0), byteOffset: byteOffset.default(0), byteLength: z2.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z2.number().int().min(4).max(252).optional(), target: z2.union([z2.literal(34962), z2.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
-  accessors: z2.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
+  asset: z3.strictObject({ version: z3.literal("2.0"), minVersion: z3.literal("2.0").optional(), generator: z3.string().max(1024).optional(), copyright: z3.string().max(4096).optional(), extras: z3.unknown().optional(), extensions: z3.never().optional() }),
+  extensionsUsed: z3.array(supportedExtension).max(7).optional(),
+  extensionsRequired: z3.array(supportedExtension).max(7).optional(),
+  buffers: z3.array(z3.strictObject({ ...metadata, byteLength: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
+  bufferViews: z3.array(z3.strictObject({ ...metadata, buffer: z3.literal(0), byteOffset: byteOffset.default(0), byteLength: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z3.number().int().min(4).max(252).optional(), target: z3.union([z3.literal(34962), z3.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
+  accessors: z3.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
   scene: index.optional(),
-  scenes: z2.array(z2.strictObject({ ...metadata, nodes: z2.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
-  nodes: z2.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  meshes: z2.array(z2.strictObject({ ...metadata, primitives: z2.array(z2.strictObject({
+  scenes: z3.array(z3.strictObject({ ...metadata, nodes: z3.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
+  nodes: z3.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  meshes: z3.array(z3.strictObject({ ...metadata, primitives: z3.array(z3.strictObject({
     ...metadata,
-    attributes: z2.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional(), JOINTS_0: index.optional(), WEIGHTS_0: index.optional() }),
+    attributes: z3.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional(), JOINTS_0: index.optional(), WEIGHTS_0: index.optional() }),
     indices: index.optional(),
     material: index.optional(),
-    mode: z2.literal(4).default(4),
-    targets: z2.array(z2.strictObject({ ...metadata, POSITION: index.optional(), NORMAL: index.optional() })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
-  })).min(1).max(SPATIAL_GLB_LIMITS.primitives), weights: z2.array(unit2).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional() })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
-  skins: z2.array(z2.strictObject({ ...metadata, inverseBindMatrices: index, joints: z2.array(index).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin), skeleton: index.optional() })).max(SPATIAL_GLB_LIMITS.skins).optional(),
-  materials: z2.array(z2.strictObject({
-    ...metadata,
-    pbrMetallicRoughness: z2.strictObject({ ...metadata, baseColorFactor: z2.tuple([unit2, unit2, unit2, unit2]).default([1, 1, 1, 1]), metallicFactor: unit2.default(1), roughnessFactor: unit2.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
+    mode: z3.literal(4).default(4),
+    targets: z3.array(z3.strictObject({ ...metadata, POSITION: index.optional(), NORMAL: index.optional() })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
+  })).min(1).max(SPATIAL_GLB_LIMITS.primitives), weights: z3.array(unit3).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional() })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
+  skins: z3.array(z3.strictObject({ ...metadata, inverseBindMatrices: index, joints: z3.array(index).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin), skeleton: index.optional() })).max(SPATIAL_GLB_LIMITS.skins).optional(),
+  materials: z3.array(z3.strictObject({
+    ...metadataWithoutExtensions,
+    extensions: materialExtensions.optional(),
+    pbrMetallicRoughness: z3.strictObject({ ...metadata, baseColorFactor: z3.tuple([unit3, unit3, unit3, unit3]).default([1, 1, 1, 1]), metallicFactor: unit3.default(1), roughnessFactor: unit3.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
     normalTexture: normalTextureInfo.optional(),
     occlusionTexture: occlusionTextureInfo.optional(),
     emissiveTexture: textureInfo.optional(),
-    alphaMode: z2.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
-    alphaCutoff: unit2.default(0.5),
-    doubleSided: z2.boolean().default(false),
-    emissiveFactor: z2.tuple([unit2, unit2, unit2]).optional()
+    alphaMode: z3.enum(["OPAQUE", "MASK", "BLEND"]).default("OPAQUE"),
+    alphaCutoff: unit3.default(0.5),
+    doubleSided: z3.boolean().default(false),
+    emissiveFactor: z3.tuple([unit3, unit3, unit3]).optional()
   })).max(SPATIAL_GLB_LIMITS.materials).default([]),
-  images: z2.array(z2.strictObject({ ...metadata, bufferView: index, mimeType: z2.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  textures: z2.array(z2.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
-  samplers: z2.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
-  animations: z2.array(z2.strictObject({
+  images: z3.array(z3.strictObject({ ...metadata, bufferView: index, mimeType: z3.enum(["image/png", "image/jpeg"]) })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  textures: z3.array(z3.strictObject({ ...metadata, source: index, sampler: index.optional() })).max(SPATIAL_GLB_LIMITS.images).default([]),
+  samplers: z3.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
+  animations: z3.array(z3.strictObject({
     ...metadata,
-    samplers: z2.array(z2.strictObject({ ...metadata, input: index, output: index, interpolation: z2.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z2.array(z2.strictObject({ ...metadata, sampler: index, target: z2.strictObject({ ...metadata, node: index, path: z2.enum(["translation", "rotation", "scale", "weights"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
+    samplers: z3.array(z3.strictObject({ ...metadata, input: index, output: index, interpolation: z3.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
+    channels: z3.array(z3.strictObject({ ...metadata, sampler: index, target: z3.strictObject({ ...metadata, node: index, path: z3.enum(["translation", "rotation", "scale", "weights"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips).default([])
 });
-var optionsSchema = z2.strictObject({
-  metersPerUnit: z2.number().finite().min(0.000001).max(1e6),
-  sourceUp: z2.enum(["x", "y", "z"]),
+var optionsSchema = z3.strictObject({
+  metersPerUnit: z3.number().finite().min(0.000001).max(1e6),
+  sourceUp: z3.enum(["x", "y", "z"]),
   nodeIndex: index.optional(),
-  materialMode: z2.enum(["source", "entity"]).default("entity"),
-  timeUs: z2.number().int().min(0).max(3600000000),
-  clip: z2.strictObject({ index, offsetUs: z2.number().int().min(0).max(3600000000), playback: z2.enum(["once", "loop", "freeze"]) }).optional(),
-  morphWeights: z2.array(unit2).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
+  materialMode: z3.enum(["source", "entity"]).default("entity"),
+  timeUs: z3.number().int().min(0).max(3600000000),
+  clip: z3.strictObject({ index, offsetUs: z3.number().int().min(0).max(3600000000), playback: z3.enum(["once", "loop", "freeze"]) }).optional(),
+  morphWeights: z3.array(unit3).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional()
 });
 function fail(message, path = "glb") {
   throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path);
@@ -1189,6 +1680,39 @@ function validateViewRoles(document) {
     if (ids.size > 1 && at(document.bufferViews, viewIndex, "bufferViews").byteStride === undefined)
       fail("Shared vertex-attribute views require an explicit stride.", `bufferViews.${viewIndex}`);
 }
+function validateExtensions(document) {
+  const used = document.extensionsUsed ?? [], required = document.extensionsRequired ?? [];
+  if (new Set(used).size !== used.length || new Set(required).size !== required.length)
+    fail("Extension declarations must be unique.", "extensionsUsed");
+  for (const extension of required)
+    if (!used.includes(extension))
+      fail("Every required extension must also be listed in extensionsUsed.", "extensionsRequired");
+  const present = new Set;
+  const texture = (info) => {
+    if (info?.extensions?.KHR_texture_transform !== undefined)
+      present.add("KHR_texture_transform");
+  };
+  for (const material of document.materials) {
+    for (const name of Object.keys(material.extensions ?? {}))
+      present.add(name);
+    texture(material.pbrMetallicRoughness?.baseColorTexture);
+    texture(material.pbrMetallicRoughness?.metallicRoughnessTexture);
+    texture(material.normalTexture);
+    texture(material.occlusionTexture);
+    texture(material.emissiveTexture);
+    const extensions = material.extensions;
+    texture(extensions?.KHR_materials_clearcoat?.clearcoatTexture);
+    texture(extensions?.KHR_materials_clearcoat?.clearcoatRoughnessTexture);
+    texture(extensions?.KHR_materials_clearcoat?.clearcoatNormalTexture);
+    texture(extensions?.KHR_materials_transmission?.transmissionTexture);
+    texture(extensions?.KHR_materials_sheen?.sheenColorTexture);
+    texture(extensions?.KHR_materials_sheen?.sheenRoughnessTexture);
+    texture(extensions?.KHR_materials_anisotropy?.anisotropyTexture);
+  }
+  for (const extension of present)
+    if (!used.includes(extension))
+      fail(`Used extension ${extension} is not declared.`, "extensionsUsed");
+}
 function cleanSampler(sampler) {
   return Object.freeze({
     wrapS: sampler?.wrapS ?? 10497,
@@ -1206,16 +1730,17 @@ function materials(document) {
   const textureRef = (info, path) => {
     if (info === undefined)
       return;
-    const texture = at(document.textures, info.index, path);
-    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) };
+    const texture = at(document.textures, info.index, path), transform = info.extensions?.KHR_texture_transform;
+    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]), ...transform === undefined ? {} : { transform: { offset: transform.offset, rotation: transform.rotation, scale: transform.scale } } };
   };
   return deepFreezeJson(document.materials.map((material) => {
-    const pbr = material.pbrMetallicRoughness;
-    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture");
-    const metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture");
-    const normal = textureRef(material.normalTexture, "normalTexture");
-    const occlusion = textureRef(material.occlusionTexture, "occlusionTexture");
-    const emissive = textureRef(material.emissiveTexture, "emissiveTexture");
+    const { pbrMetallicRoughness: pbr, extensions } = material;
+    const clearcoat = extensions?.KHR_materials_clearcoat, transmission = extensions?.KHR_materials_transmission;
+    const sheen = extensions?.KHR_materials_sheen, anisotropy = extensions?.KHR_materials_anisotropy;
+    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture"), metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture");
+    const normal = textureRef(material.normalTexture, "normalTexture"), occlusion = textureRef(material.occlusionTexture, "occlusionTexture"), emissive = textureRef(material.emissiveTexture, "emissiveTexture");
+    const clearcoatTexture = textureRef(clearcoat?.clearcoatTexture, "clearcoatTexture"), clearcoatRoughnessTexture = textureRef(clearcoat?.clearcoatRoughnessTexture, "clearcoatRoughnessTexture"), clearcoatNormal = textureRef(clearcoat?.clearcoatNormalTexture, "clearcoatNormalTexture");
+    const transmissionTexture = textureRef(transmission?.transmissionTexture, "transmissionTexture"), sheenColorTexture = textureRef(sheen?.sheenColorTexture, "sheenColorTexture"), sheenRoughnessTexture = textureRef(sheen?.sheenRoughnessTexture, "sheenRoughnessTexture"), anisotropyTexture = textureRef(anisotropy?.anisotropyTexture, "anisotropyTexture");
     return {
       baseColorLinear: pbr?.baseColorFactor ?? [1, 1, 1, 1],
       metalness: pbr?.metallicFactor ?? 1,
@@ -1228,28 +1753,66 @@ function materials(document) {
       ...normal === undefined ? {} : { normalTexture: { ...normal, ...material.normalTexture.scale === undefined ? {} : { scale: material.normalTexture.scale } } },
       ...occlusion === undefined ? {} : { occlusionTexture: { ...occlusion, ...material.occlusionTexture.strength === undefined ? {} : { strength: material.occlusionTexture.strength } } },
       ...emissive === undefined ? {} : { emissiveTexture: emissive },
-      ...material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor }
+      ...material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor },
+      ...extensions?.KHR_materials_emissive_strength === undefined ? {} : { emissiveStrength: extensions.KHR_materials_emissive_strength.emissiveStrength },
+      ...clearcoat === undefined ? {} : { clearcoat: { factor: clearcoat.clearcoatFactor, roughness: clearcoat.clearcoatRoughnessFactor, ...clearcoatTexture === undefined ? {} : { texture: clearcoatTexture }, ...clearcoatRoughnessTexture === undefined ? {} : { roughnessTexture: clearcoatRoughnessTexture }, ...clearcoatNormal === undefined ? {} : { normalTexture: { ...clearcoatNormal, ...clearcoat.clearcoatNormalTexture?.scale === undefined ? {} : { scale: clearcoat.clearcoatNormalTexture.scale } } } } },
+      ...transmission === undefined ? {} : { transmission: { factor: transmission.transmissionFactor, ...transmissionTexture === undefined ? {} : { texture: transmissionTexture } } },
+      ...sheen === undefined ? {} : { sheen: { colorLinear: sheen.sheenColorFactor, roughness: sheen.sheenRoughnessFactor, ...sheenColorTexture === undefined ? {} : { colorTexture: sheenColorTexture }, ...sheenRoughnessTexture === undefined ? {} : { roughnessTexture: sheenRoughnessTexture } } },
+      ...anisotropy === undefined ? {} : { anisotropy: { strength: anisotropy.anisotropyStrength, rotation: anisotropy.anisotropyRotation, ...anisotropyTexture === undefined ? {} : { texture: anisotropyTexture } } },
+      ...extensions?.KHR_materials_ior === undefined ? {} : { ior: extensions.KHR_materials_ior.ior }
     };
   }));
 }
 function materialFacts(document, sources) {
   return deepFreezeJson(document.materials.map((material, index2) => {
     const resolved = sources[index2];
-    const maps = [
-      resolved.baseColorTexture === undefined ? undefined : "baseColor",
-      resolved.metallicRoughnessTexture === undefined ? undefined : "metallicRoughness",
-      resolved.normalTexture === undefined ? undefined : "normal",
-      resolved.occlusionTexture === undefined ? undefined : "occlusion",
-      resolved.emissiveTexture === undefined ? undefined : "emissive"
-    ].filter((entry) => entry !== undefined);
+    const slots = [
+      ["baseColor", resolved.baseColorTexture],
+      ["metallicRoughness", resolved.metallicRoughnessTexture],
+      ["normal", resolved.normalTexture],
+      ["occlusion", resolved.occlusionTexture],
+      ["emissive", resolved.emissiveTexture],
+      ["clearcoat", resolved.clearcoat?.texture],
+      ["clearcoatRoughness", resolved.clearcoat?.roughnessTexture],
+      ["clearcoatNormal", resolved.clearcoat?.normalTexture],
+      ["transmission", resolved.transmission?.texture],
+      ["sheenColor", resolved.sheen?.colorTexture],
+      ["sheenRoughness", resolved.sheen?.roughnessTexture],
+      ["anisotropy", resolved.anisotropy?.texture]
+    ];
+    const maps = slots.filter((entry) => entry[1] !== undefined).map((entry) => entry[0]);
+    const textureTransforms = slots.flatMap(([map, texture]) => texture?.transform === undefined ? [] : [{ map, ...texture.transform }]);
     return {
       ...material.name === undefined ? {} : { name: material.name },
       alphaMode: resolved.alphaMode,
       doubleSided: resolved.doubleSided,
       maps,
-      ...resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear }
+      textureTransforms,
+      ...resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear },
+      ...resolved.emissiveStrength === undefined ? {} : { emissiveStrength: resolved.emissiveStrength },
+      ...resolved.clearcoat === undefined ? {} : { clearcoat: { factor: resolved.clearcoat.factor, roughness: resolved.clearcoat.roughness } },
+      ...resolved.transmission === undefined ? {} : { transmission: { factor: resolved.transmission.factor } },
+      ...resolved.sheen === undefined ? {} : { sheen: { colorLinear: resolved.sheen.colorLinear, roughness: resolved.sheen.roughness } },
+      ...resolved.anisotropy === undefined ? {} : { anisotropy: { strength: resolved.anisotropy.strength, rotation: resolved.anisotropy.rotation } },
+      ...resolved.ior === undefined ? {} : { ior: resolved.ior }
     };
   }));
+}
+function allMaterialTextures(material) {
+  return [
+    material.baseColorTexture,
+    material.metallicRoughnessTexture,
+    material.normalTexture,
+    material.occlusionTexture,
+    material.emissiveTexture,
+    material.clearcoat?.texture,
+    material.clearcoat?.roughnessTexture,
+    material.clearcoat?.normalTexture,
+    material.transmission?.texture,
+    material.sheen?.colorTexture,
+    material.sheen?.roughnessTexture,
+    material.anisotropy?.texture
+  ];
 }
 function readMeshes(document, accessors, sources) {
   const defaultMaterial = { baseColorLinear: [1, 1, 1, 1], metalness: 1, roughness: 1, alphaMode: "OPAQUE", alphaCutoff: 0.5, doubleSided: false };
@@ -1349,7 +1912,7 @@ function readMeshes(document, accessors, sources) {
       if (triangles > SPATIAL_GLB_LIMITS.triangles)
         fail("Source triangle budget exceeded.", path);
       const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path);
-      if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some((texture) => texture !== undefined)) {
+      if (uvs === undefined && allMaterialTextures(material).some((texture) => texture !== undefined)) {
         fail("Material textures require TEXCOORD_0.", path);
       }
       const morphTargets = [];
@@ -1686,6 +2249,7 @@ class SpatialGlbModel {
       return fail("GLB JSON must be valid UTF-8 JSON.");
     }
     const document = schemaValue(gltfSchema, json, "gltf");
+    validateExtensions(document);
     const payloadLength = document.buffers[0].byteLength;
     if (payloadLength > binLength || binLength - payloadLength > 3)
       fail("Declared BIN length does not match its padding.");
@@ -1812,7 +2376,7 @@ class SpatialGlbModel {
         const deformed = deformPrimitive(primitive, morphWeights, skin, nodeWorld, matrices);
         const { material, positions: _positions, normals: _normals, morphTargets: _morphTargets, weights: _weights, jointIndices: _jointIndices, jointWeights: _jointWeights, ...geometry } = primitive;
         if (options.materialMode === "source") {
-          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+          for (const texture of allMaterialTextures(material)) {
             if (texture !== undefined)
               imageIds.add(texture.imageIndex);
           }
@@ -2004,78 +2568,85 @@ function spatialGlbBounds(model) {
 }
 
 // src/spatial-scene/asset-admission.ts
-import { z as z3 } from "zod";
-var boundsComponent = z3.number().finite().min(-1000000000000000000).max(1000000000000000000);
-var boundsVector = z3.tuple([boundsComponent, boundsComponent, boundsComponent]);
-var SpatialBoundsSchema = z3.strictObject({ min: boundsVector, max: boundsVector }).refine((value) => value.min.every((component, index2) => component <= value.max[index2]), "Bounds min must not exceed max.");
-var factsUnit = z3.number().finite().min(0).max(1);
-var SpatialAssetMaterialFactSchema = z3.strictObject({
-  name: z3.string().max(1024).optional(),
-  alphaMode: z3.enum(["OPAQUE", "MASK", "BLEND"]),
-  doubleSided: z3.boolean(),
-  maps: z3.array(z3.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive"])).max(5),
-  emissiveLinear: z3.tuple([factsUnit, factsUnit, factsUnit]).optional()
+import { z as z4 } from "zod";
+var boundsComponent = z4.number().finite().min(-1000000000000000000).max(1000000000000000000);
+var boundsVector = z4.tuple([boundsComponent, boundsComponent, boundsComponent]);
+var SpatialBoundsSchema = z4.strictObject({ min: boundsVector, max: boundsVector }).refine((value) => value.min.every((component, index2) => component <= value.max[index2]), "Bounds min must not exceed max.");
+var factsUnit = z4.number().finite().min(0).max(1);
+var SpatialAssetMaterialFactSchema = z4.strictObject({
+  name: z4.string().max(1024).optional(),
+  alphaMode: z4.enum(["OPAQUE", "MASK", "BLEND"]),
+  doubleSided: z4.boolean(),
+  maps: z4.array(z4.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive", "clearcoat", "clearcoatRoughness", "clearcoatNormal", "transmission", "sheenColor", "sheenRoughness", "anisotropy"])).max(12),
+  textureTransforms: z4.array(z4.strictObject({ map: z4.string().min(1).max(64), offset: z4.tuple([z4.number().finite(), z4.number().finite()]), rotation: z4.number().finite().min(-Math.PI).max(Math.PI), scale: z4.tuple([z4.number().finite(), z4.number().finite()]) })).max(12).default([]),
+  emissiveLinear: z4.tuple([factsUnit, factsUnit, factsUnit]).optional(),
+  emissiveStrength: z4.number().finite().min(0).max(1e5).optional(),
+  clearcoat: z4.strictObject({ factor: factsUnit, roughness: factsUnit }).optional(),
+  transmission: z4.strictObject({ factor: factsUnit }).optional(),
+  sheen: z4.strictObject({ colorLinear: z4.tuple([factsUnit, factsUnit, factsUnit]), roughness: factsUnit }).optional(),
+  anisotropy: z4.strictObject({ strength: z4.number().finite().min(-1).max(1), rotation: z4.number().finite().min(0).max(2 * Math.PI) }).optional(),
+  ior: z4.number().finite().min(1).max(5).optional()
 });
-var SpatialAssetRigFactsSchema = z3.strictObject({
-  profile: z3.literal(SPATIAL_GLB_RIGGED_PROFILE),
-  skins: z3.array(z3.strictObject({
-    name: z3.string().max(1024).optional(),
-    jointNodeIndices: z3.array(z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
-    inverseBindMatricesAccessor: z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1)
+var SpatialAssetRigFactsSchema = z4.strictObject({
+  profile: z4.literal(SPATIAL_GLB_RIGGED_PROFILE),
+  skins: z4.array(z4.strictObject({
+    name: z4.string().max(1024).optional(),
+    jointNodeIndices: z4.array(z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
+    inverseBindMatricesAccessor: z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1)
   })).min(1).max(SPATIAL_GLB_LIMITS.skins),
-  morphTargets: z3.array(z3.array(z3.array(z3.strictObject({
-    name: z3.string().min(1).max(1024),
-    hasPosition: z3.boolean(),
-    hasNormal: z3.boolean()
+  morphTargets: z4.array(z4.array(z4.array(z4.strictObject({
+    name: z4.string().min(1).max(1024),
+    hasPosition: z4.boolean(),
+    hasNormal: z4.boolean()
   })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive)).max(SPATIAL_GLB_LIMITS.primitives)).max(SPATIAL_GLB_LIMITS.meshes),
-  clips: z3.array(z3.strictObject({
-    name: z3.string().max(1024).optional(),
-    durationSeconds: z3.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
-    channels: z3.array(z3.strictObject({
-      nodeIndex: z3.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
-      path: z3.enum(["translation", "rotation", "scale", "weights"])
+  clips: z4.array(z4.strictObject({
+    name: z4.string().max(1024).optional(),
+    durationSeconds: z4.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
+    channels: z4.array(z4.strictObject({
+      nodeIndex: z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
+      path: z4.enum(["translation", "rotation", "scale", "weights"])
     })).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips)
 });
-var SpatialAssetFactsV1Schema = z3.strictObject({
-  kind: z3.literal("slopcamera.spatial-asset-facts"),
-  schemaVersion: z3.literal(1),
+var SpatialAssetFactsV1Schema = z4.strictObject({
+  kind: z4.literal("slopcamera.spatial-asset-facts"),
+  schemaVersion: z4.literal(1),
   subject: SpatialPayloadSchema,
   subjectManifestSha256: SpatialDigestSchema,
-  profile: z3.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE]),
-  nodeCount: z3.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  clipDurationsSeconds: z3.array(z3.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
-  bounds: z3.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
-  materials: z3.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
+  profile: z4.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE]),
+  nodeCount: z4.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  clipDurationsSeconds: z4.array(z4.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
+  bounds: z4.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
+  materials: z4.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
   rig: SpatialAssetRigFactsSchema.optional()
 }).superRefine((facts, context) => {
   if (facts.profile === SPATIAL_GLB_RIGGED_PROFILE !== (facts.rig !== undefined))
     context.addIssue({ code: "custom", path: ["rig"], message: "Rig facts must be present exactly for the rigged GLB profile." });
 });
-var SpatialPublishedArtifactSchema = z3.strictObject({
-  path: z3.string().min(1).max(1024),
+var SpatialPublishedArtifactSchema = z4.strictObject({
+  path: z4.string().min(1).max(1024),
   sha256: SpatialDigestSchema,
-  bytes: z3.number().int().safe().min(1).max(SPATIAL_GLB_LIMITS.bytes),
-  disposition: z3.enum(["created", "exists"])
+  bytes: z4.number().int().safe().min(1).max(SPATIAL_GLB_LIMITS.bytes),
+  disposition: z4.enum(["created", "exists"])
 });
-var SpatialAssetAdmissionV1Schema = z3.strictObject({
-  kind: z3.literal("slopcamera.spatial-asset-admission"),
-  schemaVersion: z3.literal(1),
+var SpatialAssetAdmissionV1Schema = z4.strictObject({
+  kind: z4.literal("slopcamera.spatial-asset-admission"),
+  schemaVersion: z4.literal(1),
   manifest: SpatialAssetManifestSchema,
   factsManifest: SpatialAssetManifestSchema,
   facts: SpatialAssetFactsV1Schema,
-  bounds: z3.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
+  bounds: z4.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
   entity: SpatialEntitySchema,
-  artifacts: z3.strictObject({ payload: SpatialPublishedArtifactSchema, facts: SpatialPublishedArtifactSchema }),
-  operations: z3.array(SpatialPatchOperationSchema).min(2).max(SPATIAL_SCENE_LIMITS.patchOperations)
+  artifacts: z4.strictObject({ payload: SpatialPublishedArtifactSchema, facts: SpatialPublishedArtifactSchema }),
+  operations: z4.array(SpatialPatchOperationSchema).min(2).max(SPATIAL_SCENE_LIMITS.patchOperations)
 });
 
 // src/spatial-scene/evaluate.ts
-import { z as z4 } from "zod";
-var EvaluatedOptionsSchema = z4.strictObject({
+import { z as z5 } from "zod";
+var EvaluatedOptionsSchema = z5.strictObject({
   timeUs: SpatialTimeUsSchema,
   cameraId: SpatialCameraIdSchema,
-  overrides: z4.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities).optional(),
+  overrides: z5.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities).optional(),
   cameraPoseOverride: SpatialPoseSchema.optional()
 });
 function mergeSpatialOverrides(sceneOverrides, shotOverrides) {
@@ -2096,11 +2667,11 @@ function applySpatialEntityOverride(entity, override) {
   if (override.property === "transform")
     return { ...entity, transform: override.value };
   if (override.property === "color") {
-    const color2 = override.value.toLowerCase();
+    const color3 = override.value.toLowerCase();
     if (entity.kind === "mesh")
-      return { ...entity, material: { ...entity.material, color: color2 } };
+      return { ...entity, material: { ...entity.material, color: color3 } };
     if (entity.kind === "text" || entity.kind === "light")
-      return { ...entity, color: color2 };
+      return { ...entity, color: color3 };
   }
   if (override.property === "opacity") {
     if (entity.kind === "mesh")
@@ -2245,7 +2816,8 @@ function evaluateSpatialSceneInContext(context, options) {
     timeUs,
     camera: camera2,
     entities: evaluated.map((item) => ({ ...item, visible: item.visible && (item.entity.placement.kind === "world" || item.entity.placement.cameraId === camera2.cameraId) })),
-    assets: scene.assets
+    assets: scene.assets,
+    ...scene.fog === undefined ? {} : { fog: scene.fog }
   });
   return deepFreezeJson(result);
 }
@@ -2254,7 +2826,7 @@ function evaluateSpatialScene(sceneInput, options) {
 }
 
 // src/spatial-scene/audit.ts
-import { z as z5 } from "zod";
+import { z as z6 } from "zod";
 var SPATIAL_AUDIT_LIMITS = Object.freeze({
   samples: 64,
   defaultSamples: 9,
@@ -2268,94 +2840,94 @@ var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout",
 var CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"];
 var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples", "shadows-disabled"];
 var CONTAINED_HISTOGRAM_ORDER = ["full", "partial", "outside", "clipped", "behind-camera"];
-var auditVector = z5.tuple([
-  z5.number().finite().min(-1000000000000).max(1000000000000),
-  z5.number().finite().min(-1000000000000).max(1000000000000),
-  z5.number().finite().min(-1000000000000).max(1000000000000)
+var auditVector = z6.tuple([
+  z6.number().finite().min(-1000000000000).max(1000000000000),
+  z6.number().finite().min(-1000000000000).max(1000000000000),
+  z6.number().finite().min(-1000000000000).max(1000000000000)
 ]);
-var SpatialAuditBoundsSchema = z5.strictObject({ min: auditVector, max: auditVector }).refine((bounds) => bounds.min.every((value, index2) => value <= bounds.max[index2]), "Bounds min must not exceed max.");
-var SpatialAuditOptionsSchema = z5.strictObject({
+var SpatialAuditBoundsSchema = z6.strictObject({ min: auditVector, max: auditVector }).refine((bounds) => bounds.min.every((value, index2) => value <= bounds.max[index2]), "Bounds min must not exceed max.");
+var SpatialAuditOptionsSchema = z6.strictObject({
   cameraId: SpatialCameraIdSchema,
-  timesUs: z5.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples).optional(),
-  assetBounds: z5.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional()
+  timesUs: z6.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples).optional(),
+  assetBounds: z6.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional()
 });
-var SpatialAuditFrustumSchema = z5.strictObject({
-  contained: z5.enum(CONTAINED),
-  pixelFootprint: z5.number().finite().min(0).max(1000000000000000)
+var SpatialAuditFrustumSchema = z6.strictObject({
+  contained: z6.enum(CONTAINED),
+  pixelFootprint: z6.number().finite().min(0).max(1000000000000000)
 });
-var SpatialAuditSampleSchema = z5.strictObject({
+var SpatialAuditSampleSchema = z6.strictObject({
   timeUs: SpatialTimeUsSchema,
-  visible: z5.boolean(),
+  visible: z6.boolean(),
   bounds: SpatialAuditBoundsSchema.optional(),
   frustum: SpatialAuditFrustumSchema.optional(),
-  note: z5.enum(["out-of-range", "other-camera"]).optional()
+  note: z6.enum(["out-of-range", "other-camera"]).optional()
 });
-var SpatialAuditEntitySchema = z5.strictObject({
+var SpatialAuditEntitySchema = z6.strictObject({
   entityId: SpatialEntityIdSchema,
-  name: z5.string().min(1).max(256),
-  kind: z5.enum(ENTITY_KINDS),
+  name: z6.string().min(1).max(256),
+  kind: z6.enum(ENTITY_KINDS),
   placement: SpatialPlacementSchema,
-  enclosure: z5.discriminatedUnion("status", [
-    z5.strictObject({ status: z5.literal("bounded") }),
-    z5.strictObject({ status: z5.literal("unknown"), reason: z5.enum(BOUNDS_UNKNOWN_REASONS) })
+  enclosure: z6.discriminatedUnion("status", [
+    z6.strictObject({ status: z6.literal("bounded") }),
+    z6.strictObject({ status: z6.literal("unknown"), reason: z6.enum(BOUNDS_UNKNOWN_REASONS) })
   ]),
-  samples: z5.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
-  instances: z5.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
+  samples: z6.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
+  instances: z6.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
 });
-var SpatialAuditFindingSchema = z5.strictObject({
-  severity: z5.enum(["info", "warning"]),
-  kind: z5.enum(FINDING_KINDS),
+var SpatialAuditFindingSchema = z6.strictObject({
+  severity: z6.enum(["info", "warning"]),
+  kind: z6.enum(FINDING_KINDS),
   entityId: SpatialEntityIdSchema.optional(),
   timeUs: SpatialTimeUsSchema.optional(),
-  detail: z5.string().min(1).max(1024)
+  detail: z6.string().min(1).max(1024)
 });
-var entityKindCounts = z5.strictObject({
-  group: z5.number().int().min(0),
-  mesh: z5.number().int().min(0),
-  image: z5.number().int().min(0),
-  diagram: z5.number().int().min(0),
-  video: z5.number().int().min(0),
-  text: z5.number().int().min(0),
-  light: z5.number().int().min(0),
-  splat: z5.number().int().min(0),
-  environment: z5.number().int().min(0)
+var entityKindCounts = z6.strictObject({
+  group: z6.number().int().min(0),
+  mesh: z6.number().int().min(0),
+  image: z6.number().int().min(0),
+  diagram: z6.number().int().min(0),
+  video: z6.number().int().min(0),
+  text: z6.number().int().min(0),
+  light: z6.number().int().min(0),
+  splat: z6.number().int().min(0),
+  environment: z6.number().int().min(0)
 });
-var SpatialAuditReportSchema = z5.strictObject({
-  kind: z5.literal("slopcamera.spatial-audit"),
-  schemaVersion: z5.literal(1),
+var SpatialAuditReportSchema = z6.strictObject({
+  kind: z6.literal("slopcamera.spatial-audit"),
+  schemaVersion: z6.literal(1),
   sceneId: SpatialSceneIdSchema,
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   durationUs: SpatialTimeUsSchema,
-  timesUs: z5.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples),
-  summary: z5.strictObject({
-    entities: z5.strictObject({
-      total: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
-      bounded: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
-      unknownBounds: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+  timesUs: z6.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples),
+  summary: z6.strictObject({
+    entities: z6.strictObject({
+      total: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      bounded: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      unknownBounds: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       byKind: entityKindCounts,
-      instances: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities)
+      instances: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities)
     }),
-    animations: z5.strictObject({
-      channels: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
-      targets: z5.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities + SPATIAL_SCENE_LIMITS.cameras),
-      properties: z5.strictObject({
-        position: z5.number().int().min(0),
-        rotation: z5.number().int().min(0),
-        scale: z5.number().int().min(0),
-        opacity: z5.number().int().min(0)
+    animations: z6.strictObject({
+      channels: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
+      targets: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities + SPATIAL_SCENE_LIMITS.cameras),
+      properties: z6.strictObject({
+        position: z6.number().int().min(0),
+        rotation: z6.number().int().min(0),
+        scale: z6.number().int().min(0),
+        opacity: z6.number().int().min(0)
       })
     }),
-    cameras: z5.array(SpatialCameraIdSchema).max(SPATIAL_SCENE_LIMITS.cameras),
-    entitiesNeverVisible: z5.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
-    entitiesNeverInFrustum: z5.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities)
+    cameras: z6.array(SpatialCameraIdSchema).max(SPATIAL_SCENE_LIMITS.cameras),
+    entitiesNeverVisible: z6.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesNeverInFrustum: z6.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities)
   }),
-  entities: z5.array(SpatialAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
-  findings: z5.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
-  omittedFindings: z5.number().int().min(0)
+  entities: z6.array(SpatialAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+  findings: z6.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
+  omittedFindings: z6.number().int().min(0)
 });
 function spatialEntityLocalBounds(entity, assetBounds) {
-  const supplied = (assetId) => assetBounds[assetId] === undefined ? { status: "unknown", reason: "requires-asset-decoding" } : { status: "bounded", bounds: assetBounds[assetId] };
+  const supplied = (assetId2) => assetBounds[assetId2] === undefined ? { status: "unknown", reason: "requires-asset-decoding" } : { status: "bounded", bounds: assetBounds[assetId2] };
   let half;
   if (entity.kind === "mesh") {
     switch (entity.geometry.kind) {
@@ -2454,10 +3026,10 @@ function auditSpatialSceneInContext(context, options) {
   }
   const assetIds = new Set(scene.assets.map((asset) => asset.assetId));
   const assetBounds = Object.create(null);
-  for (const [assetId, bounds] of Object.entries(captured.assetBounds ?? {})) {
-    if (!assetIds.has(assetId))
-      throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId}.`, "assetBounds");
-    assetBounds[assetId] = Object.freeze({ min: Object.freeze([...bounds.min]), max: Object.freeze([...bounds.max]) });
+  for (const [assetId2, bounds] of Object.entries(captured.assetBounds ?? {})) {
+    if (!assetIds.has(assetId2))
+      throw new SpatialSceneError("invalid-data", `Asset bounds reference unknown ${assetId2}.`, "assetBounds");
+    assetBounds[assetId2] = Object.freeze({ min: Object.freeze([...bounds.min]), max: Object.freeze([...bounds.max]) });
   }
   const timesUs = [...new Set(captured.timesUs ?? spatialAuditDefaultTimesUs(scene.durationUs))].sort((a, b) => a - b);
   for (const timeUs of timesUs) {
@@ -2656,8 +3228,8 @@ function auditSpatialSceneInContext(context, options) {
   }
   return deepFreezeJson(parsed);
 }
-var SpatialAuditAssetBoundsMapSchema = z5.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema);
-var SpatialAuditAssetFactsPairSchema = z5.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema });
+var SpatialAuditAssetBoundsMapSchema = z6.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema);
+var SpatialAuditAssetFactsPairSchema = z6.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema });
 function auditSubjectBounds(manifest, facts) {
   if (facts.subject.sha256 !== manifest.payload.sha256 || facts.subject.bytes !== manifest.payload.bytes) {
     throw new SpatialSceneError("invalid-data", `Asset facts for ${manifest.assetId} do not describe the manifest payload.`, "assetBounds");
@@ -2685,12 +3257,12 @@ function auditBoundsRecord(document) {
 function normalizeSpatialAuditAssetBounds(input) {
   const merged = Object.create(null);
   for (const document of Array.isArray(input) ? input : [input]) {
-    for (const [assetId, bounds] of Object.entries(auditBoundsRecord(document))) {
-      const existing = merged[assetId];
+    for (const [assetId2, bounds] of Object.entries(auditBoundsRecord(document))) {
+      const existing = merged[assetId2];
       if (existing !== undefined && canonicalJson(existing) !== canonicalJson(bounds)) {
-        throw new SpatialSceneError("conflict", `Asset bounds input supplies conflicting scene-space bounds for ${assetId}.`, "assetBounds");
+        throw new SpatialSceneError("conflict", `Asset bounds input supplies conflicting scene-space bounds for ${assetId2}.`, "assetBounds");
       }
-      merged[assetId] = bounds;
+      merged[assetId2] = bounds;
     }
   }
   return parseSpatialValue(SpatialAuditAssetBoundsMapSchema, merged, "asset bounds");
@@ -2735,7 +3307,7 @@ function inspectSpatialScene(input) {
       const declared = origin.kind === "generated" ? scene.generators.find((generator) => generator.generatorId === origin.generatorId).editableKeys.find((item) => item.key === origin.key)?.properties ?? [] : [
         ...["color", "opacity", "transform"].filter((property) => spatialPropertySupported(entity, property)),
         ...entity.kind === "mesh" ? [
-          ...entity.material.kind === "standard" && spatialPropertySupported(entity, "color") ? ["emissive"] : [],
+          ...(entity.material.kind === "standard" || entity.material.kind === "pbr") && spatialPropertySupported(entity, "color") ? ["emissive"] : [],
           "instances",
           "castShadow",
           "receiveShadow"
@@ -2758,7 +3330,8 @@ function inspectSpatialScene(input) {
           max: union.max.map((value, axis) => Math.max(value, next.max[axis]))
         }))
       };
-      const assetIds = entity.kind === "mesh" ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
+      const meshMapIds = entity.kind === "mesh" ? entity.material.kind === "pbr" ? pbrMaterialMapAssetIds(entity.material) : entity.material.map === undefined ? [] : [entity.material.map] : [];
+      const assetIds = entity.kind === "mesh" ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...meshMapIds] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds };
     }),
     cameras: scene.cameras,
@@ -2863,12 +3436,17 @@ function applySpatialScenePatch(sceneInput, patchInput) {
         break;
       case "set-emissive": {
         const entity = authored(operation.entityId);
-        if (entity.kind !== "mesh" || entity.material.kind !== "standard")
-          throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard material.", "operations");
+        if (entity.kind !== "mesh" || entity.material.kind !== "standard" && entity.material.kind !== "pbr")
+          throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard or pbr material.", "operations");
         if (!spatialPropertySupported(entity, "color"))
           throw new SpatialSceneError("conflict", "Source-material mode leaves emissive control to the retained GLB material.", "operations");
-        const { emissive: _cleared, ...material } = entity.material;
-        entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } });
+        if (entity.material.kind === "pbr") {
+          const { emissive: _cleared, ...material } = entity.material;
+          entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: { color: operation.emissive.color, intensity: operation.emissive.intensity } } });
+        } else {
+          const { emissive: _cleared, ...material } = entity.material;
+          entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } });
+        }
         break;
       }
       case "set-spot": {
@@ -2961,10 +3539,14 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   const oldClosure = spatialAssetClosureDigests(original.assets), newClosure = spatialAssetClosureDigests(scene.assets);
   for (const entity of scene.entities) {
     const referenced = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
-    if (entity.kind === "mesh" && entity.material.map !== undefined)
-      referenced.push(entity.material.map);
-    for (const assetId of referenced) {
-      if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
+    if (entity.kind === "mesh") {
+      if (entity.material.kind === "pbr")
+        referenced.push(...pbrMaterialMapAssetIds(entity.material));
+      else if (entity.material.map !== undefined)
+        referenced.push(entity.material.map);
+    }
+    for (const assetId2 of referenced) {
+      if (entity.origin.kind === "generated" && oldClosure[assetId2] !== undefined && oldClosure[assetId2] !== newClosure[assetId2] && !replacedGenerators.has(entity.origin.generatorId)) {
         throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.");
       }
     }
@@ -2976,4 +3558,4 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
-export { SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
+export { SpatialMapChannelSchema, SpatialMapColorSpaceSchema, SpatialUvTransformSchema, SpatialPbrMapSchema, SpatialPbrEmissiveSchema, SpatialPbrClearcoatSchema, SpatialPbrTransmissionSchema, SpatialPbrSheenSchema, SpatialPbrAnisotropySchema, SpatialPbrMaterialSchema, pbrMaterialMapAssetIds, SpatialDerivationMethodSchema, SpatialDerivationCandidateSchema, pbrDerivationCandidates, SpatialFogSchema, SpatialLightingRigTypeSchema, lightingRig, lightingRigDescription, SpatialProbeGeometrySchema, ORIGINAL_MATERIAL_HERO_FIXTURE, planMaterialProbeGallery, validatePbrMaterial, SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraLensSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
