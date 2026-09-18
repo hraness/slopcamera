@@ -2500,7 +2500,7 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
       const bytes = Buffer.from(generated.image.base64, "base64");
       const raster = await loadRaster(Uint8Array.from(bytes), limits, new VectorizeDeadline(limits.maxDurationMs));
       extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
-        hardEdges: purpose === "mark",
+        hardEdges: true,
         ink
       });
       const png = await encodeTracePng(extraction.pixels, extraction.width, extraction.height);

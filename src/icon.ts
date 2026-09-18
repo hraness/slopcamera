@@ -31,13 +31,15 @@ import { vectorizeImage } from "./vectorize/vectorize.js"
  * The pipeline combines four stages. A purpose-specific style-locked prompt
  * produces one bounded Gateway raster. Local pixel processing estimates the
  * background and ink colors, projects every pixel onto the background→ink
- * axis to recover antialiased stroke coverage, drops speckle components,
- * crops to content, and re-emits canonical ink-on-transparent RGBA for the
- * bounded vectorizer. Deterministic geometry gates then reject candidates
- * whose mass, aspect, or path count cannot serve the declared purpose. A
- * purpose-specific vision critique reviews the rendered SVG and its prompt
- * fix feeds the next attempt, so failed generations are retried with
- * concrete corrections instead of silently shipped.
+ * axis to recover antialiased stroke coverage, drops speckle and elongated
+ * boundary components, crops to content, and re-emits canonical
+ * ink-on-transparent RGBA for the bounded vectorizer. Both purposes threshold
+ * that alpha to crisp binary coverage before tracing, producing portable
+ * path-only SVGs without mask references. Deterministic geometry gates then
+ * reject candidates whose mass, aspect, or path count cannot serve the
+ * declared purpose. A purpose-specific vision critique reviews the rendered
+ * SVG and its prompt fix feeds the next attempt. Failed generations retry
+ * with concrete corrections instead of shipping silently.
  */
 
 export const slopcameraIconDefaultInk = "#2474d4"
@@ -967,7 +969,7 @@ export async function generateSlopcameraIcon(
         new VectorizeDeadline(limits.maxDurationMs),
       )
       extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
-        hardEdges: purpose === "mark",
+        hardEdges: true,
         ink,
       })
       const png = await encodeTracePng(
