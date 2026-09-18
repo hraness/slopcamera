@@ -4,6 +4,12 @@ import type {
   CandidateProjectRenderInput,
   SpatialInspectInput, SpatialInspectOutput, SpatialPatchInput, SpatialPatchOutput,
   SpatialEvaluateInput, SpatialEvaluateOutput,
+  SpatialDirectionCheckInput, SpatialDirectionCheckOutput,
+  SpatialDirectionCompileInput, SpatialDirectionCompileOutput,
+  SpatialDirectionGalleryInput, SpatialDirectionGalleryOutput,
+  SpatialEffectsCheckInput, SpatialEffectsCheckOutput,
+  SpatialEffectsPlanInput, SpatialEffectsPlanOutput,
+  SpatialTemporalAuditInput, SpatialTemporalAuditOutput,
   BindCandidateRevisionOutput,
   CommitProjectEditsOutput,
   CreateCandidateRevisionOutput,
@@ -1036,6 +1042,24 @@ export class WorkflowBuilder {
       this.#graph.operationByKind(key, { input, kind: "scene.patch", version: 1 }, options),
     evaluate: (key: string, input: OperationInputValue<SpatialEvaluateInput>, options?: OperationNodeOptions): Ref<SpatialEvaluateOutput> =>
       this.#graph.operationByKind(key, { input, kind: "scene.evaluate", version: 1 }, options),
+    /**
+     * Pure semantic planning and review operations: direction checking and
+     * compilation, bounded galleries, render-effects binding, and sampled
+     * temporal audit. They propose and review documents; they never mutate a
+     * project, render media, or select a candidate.
+     */
+    directionCheck: (key: string, input: OperationInputValue<SpatialDirectionCheckInput> | SpatialDirectionCheckInput, options?: OperationNodeOptions): Ref<SpatialDirectionCheckOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.direction.check", version: 1 }, options),
+    directionCompile: (key: string, input: OperationInputValue<SpatialDirectionCompileInput> | SpatialDirectionCompileInput, options?: OperationNodeOptions): Ref<SpatialDirectionCompileOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.direction.compile", version: 1 }, options),
+    directionGallery: (key: string, input: OperationInputValue<SpatialDirectionGalleryInput> | SpatialDirectionGalleryInput, options?: OperationNodeOptions): Ref<SpatialDirectionGalleryOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.direction.gallery", version: 1 }, options),
+    effectsCheck: (key: string, input: OperationInputValue<SpatialEffectsCheckInput> | SpatialEffectsCheckInput, options?: OperationNodeOptions): Ref<SpatialEffectsCheckOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.effects.check", version: 1 }, options),
+    effectsPlan: (key: string, input: OperationInputValue<SpatialEffectsPlanInput> | SpatialEffectsPlanInput, options?: OperationNodeOptions): Ref<SpatialEffectsPlanOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.effects.plan", version: 1 }, options),
+    temporalAudit: (key: string, input: OperationInputValue<SpatialTemporalAuditInput> | SpatialTemporalAuditInput, options?: OperationNodeOptions): Ref<SpatialTemporalAuditOutput> =>
+      this.#graph.operationByKind(key, { input, kind: "scene.temporal-audit", version: 1 }, options),
   });
 
   readonly spatialProject = Object.freeze({

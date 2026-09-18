@@ -194,6 +194,15 @@
     ]
   },
   {
+    "categories": [
+      "test-fixture"
+    ],
+    "identityLineCount": 1,
+    "identityLinesSha256": "2fdc532739e62993f244ddb06f33c4fc21810995d0f095260a1bd8ce90263f29",
+    "occurrenceCount": 2,
+    "path": "apps/desktop/application/operations/spatial-direction.test.ts"
+  },
+  {
     "identityLineCount": 12,
     "identityLinesSha256": "de07e677b0f7fd28f3f154d412b488fd9542441d6f9bf44be09f7bf146642faa",
     "occurrenceCount": 21,
@@ -1269,7 +1278,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "e29eb5eebc8ae6ef74764e806f3c932004874383fe3f3c7d521b1e749f2e0b96",
+    "identityLinesSha256": "11562369eb5acc4c36681d803fabfe76016a7533cdae88c91089651a550c869e",
     "occurrenceCount": 448,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [

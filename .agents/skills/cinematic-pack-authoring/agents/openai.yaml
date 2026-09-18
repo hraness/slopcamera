@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cinematic pack authoring"
+  short_description: "Author a recipe pack and run cinematic-world"
+  default_prompt: "Use $cinematic-pack-authoring to author a spatial recipe pack and plan or run the built-in cinematic-world workflow."
