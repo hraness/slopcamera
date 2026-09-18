@@ -4299,6 +4299,69 @@ function parseSpatialParticleSystem(input) {
 function spatialParticleSystemSha256(system) {
   return spatialValueSha256(system);
 }
+
+// src/spatial-scene/simulation.ts
+import { z as z12 } from "zod";
+var SPATIAL_SIMULATION_LIMITS = {
+  bodies: 256,
+  constraints: 256,
+  steps: 1e5,
+  substeps: 128
+};
+var SpatialRigidBodySchema = z12.strictObject({
+  id: z12.string().min(1).max(64),
+  mass: positiveDimension2,
+  restitution: z12.number().finite().min(0).max(1),
+  friction: z12.number().finite().min(0).max(1),
+  shape: z12.discriminatedUnion("kind", [
+    z12.strictObject({ kind: z12.literal("sphere"), radius: positiveDimension2 }),
+    z12.strictObject({ kind: z12.literal("box"), size: z12.tuple([positiveDimension2, positiveDimension2, positiveDimension2]) }),
+    z12.strictObject({ kind: z12.literal("capsule"), radius: positiveDimension2, height: positiveDimension2 })
+  ]),
+  initialPosition: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]),
+  initialOrientation: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite(), z12.number().finite()]),
+  initialVelocity: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]),
+  initialAngularVelocity: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]),
+  pinned: z12.boolean().default(false)
+});
+var SpatialConstraintSchema = z12.discriminatedUnion("kind", [
+  z12.strictObject({ kind: z12.literal("hinge"), bodyA: z12.string(), bodyB: z12.string(), axis: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]), limits: z12.tuple([z12.number().finite(), z12.number().finite()]).optional() }),
+  z12.strictObject({ kind: z12.literal("spring"), bodyA: z12.string(), bodyB: z12.string(), stiffness: positiveDimension2, damping: positiveDimension2 }),
+  z12.strictObject({ kind: z12.literal("fixed"), bodyA: z12.string(), bodyB: z12.string(), localA: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]), localB: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()]) })
+]);
+var SpatialSimulationPlanSchema = z12.strictObject({
+  kind: z12.literal("slopcamera.spatial-simulation-plan"),
+  schemaVersion: z12.literal(1),
+  entityId: z12.string().min(1).max(128),
+  engine: z12.string().min(1).max(64),
+  cacheId: z12.string().min(1).max(128),
+  sourceDigest: z12.string().length(64),
+  seed: z12.number().int().min(0).max(2147483647),
+  timeStepUs: z12.number().int().min(1),
+  stepCount: z12.number().int().min(0).max(SPATIAL_SIMULATION_LIMITS.steps),
+  maxSubsteps: z12.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.substeps),
+  bodies: z12.array(SpatialRigidBodySchema).max(SPATIAL_SIMULATION_LIMITS.bodies),
+  constraints: z12.array(SpatialConstraintSchema).max(SPATIAL_SIMULATION_LIMITS.constraints),
+  gravity: z12.tuple([z12.number().finite(), z12.number().finite(), z12.number().finite()])
+});
+function parseSpatialSimulationPlan(input) {
+  const plan = parseSpatialValue(SpatialSimulationPlanSchema, input, "simulation plan");
+  const bodyIds = new Set(plan.bodies.map((b) => b.id));
+  for (const c of plan.constraints) {
+    if (!bodyIds.has(c.bodyA) || !bodyIds.has(c.bodyB)) {
+      throw new TypeError(`Constraint ${c.kind} references unknown body ${c.bodyA} or ${c.bodyB}.`);
+    }
+  }
+  const floatsPerBody = 7 + 3;
+  const estimatedBytes = plan.bodies.length * plan.stepCount * floatsPerBody * 4;
+  if (estimatedBytes > 1e9) {
+    throw new TypeError(`Simulation ${plan.entityId} estimated animation bytes (${estimatedBytes}) exceed 1 GB.`);
+  }
+  return deepFreezeJson(plan);
+}
+function spatialSimulationPlanSha256(plan) {
+  return spatialValueSha256(plan);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -4324,6 +4387,7 @@ export {
   spatialValueSha256,
   spatialTopologicalIds,
   spatialStateValueSha256,
+  spatialSimulationPlanSha256,
   spatialSceneSha256,
   spatialReviewDefaultTimesUs,
   spatialRenderPlanSha256,
@@ -4365,6 +4429,7 @@ export {
   pbrMaterialMapAssetIds,
   pbrDerivationCandidates,
   parseSpatialValue,
+  parseSpatialSimulationPlan,
   parseSpatialScene,
   parseSpatialRenderPlan,
   parseSpatialPerformanceSources,
@@ -4470,12 +4535,14 @@ export {
   SpatialSolveBaseSchema,
   SpatialSolveBasePatchSchema,
   SpatialSolveAnchorKeySchema,
+  SpatialSimulationPlanSchema,
   SpatialShotV1Schema,
   SpatialShotIdSchema,
   SpatialSceneV1Schema,
   SpatialScenePatchV1Schema,
   SpatialSceneIdSchema,
   SpatialSceneError,
+  SpatialRigidBodySchema,
   SpatialReviewSeveritySchema,
   SpatialReviewReportSchema,
   SpatialReviewProviderError,
@@ -4566,6 +4633,7 @@ export {
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
   SpatialDepthOfFieldSchema,
+  SpatialConstraintSchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
@@ -4608,6 +4676,7 @@ export {
   SPATIAL_SPLAT_PROXY_REPRESENTATION,
   SPATIAL_SOLVE_PENDING_SCENE_SHA256,
   SPATIAL_SOLVE_LIMITS,
+  SPATIAL_SIMULATION_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SPATIAL_REVIEW_UPLOAD_POLICY,
   SPATIAL_REVIEW_SEVERITIES,
