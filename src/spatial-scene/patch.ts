@@ -70,10 +70,15 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
     switch (operation.kind) {
       case "add-asset":
         if (assets.has(operation.asset.assetId)) throw new SpatialSceneError("conflict", `Asset ${operation.asset.assetId} already exists.`)
+        if (operation.asset.provenance.source === "generated") throw new SpatialSceneError("conflict", "Generated assets enter only through retained generator output replacement.")
         assets.set(operation.asset.assetId, operation.asset)
         break
       case "replace-asset":
         if (!assets.has(operation.asset.assetId)) throw new SpatialSceneError("not-found", `Asset ${operation.asset.assetId} does not exist.`)
+        if (operation.asset.provenance.source === "generated") throw new SpatialSceneError("conflict", "Generated assets change only through retained generator output replacement.")
+        if (original.generators.some(generator => generator.assets?.includes(operation.asset.assetId))) {
+          throw new SpatialSceneError("conflict", `Asset ${operation.asset.assetId} is owned by a generator; replace its retained output.`)
+        }
         assets.set(operation.asset.assetId, operation.asset)
         break
       case "set-mesh-geometry": {
@@ -159,10 +164,34 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
       case "replace-generator-output": {
         const generatorId = operation.generator.generatorId
         replacedGenerators.add(generatorId)
+        // Owned assets are swapped atomically with retained output: drop the
+        // previous owned set, require the declared new set, then add manifests.
+        const previous = generators.get(generatorId)?.assets ?? []
+        const provided = operation.assets ?? []
+        const declared = operation.generator.assets ?? []
+        if ([...provided.map(asset => asset.assetId)].sort().join("") !== [...declared].sort().join("")) {
+          throw new SpatialSceneError("conflict", "Generator replacement must carry exactly the manifests its record declares.")
+        }
+        for (const asset of provided) {
+          if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived") {
+            throw new SpatialSceneError("conflict", "Generator-owned assets require generated or derived provenance.")
+          }
+          if (assets.has(asset.assetId) && !previous.includes(asset.assetId)) throw new SpatialSceneError("conflict", `Generator asset ${asset.assetId} collides with an existing asset.`)
+        }
+        for (const assetId of previous) assets.delete(assetId)
         for (const entity of entities.values()) if (entity.origin.kind === "generated" && entity.origin.generatorId === generatorId) entities.delete(entity.entityId)
+        for (const asset of provided) assets.set(asset.assetId, asset)
+        const owned = new Set(provided.map(asset => asset.assetId))
+        const remainingAssets = new Set(assets.keys())
         for (const entity of operation.entities) {
           if (entity.origin.kind !== "generated" || entity.origin.generatorId !== generatorId) throw new SpatialSceneError("conflict", "Generator replacement must contain only its own retained output.")
           if (entities.has(entity.entityId)) throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`)
+          const referenced: string[] = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId]
+            : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
+          if (entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map !== undefined) referenced.push(entity.material.map)
+          for (const assetId of referenced) {
+            if (!owned.has(assetId) && !remainingAssets.has(assetId)) throw new SpatialSceneError("conflict", `Generator output references missing asset ${assetId}.`)
+          }
           entities.set(entity.entityId, entity)
         }
         generators.set(generatorId, operation.generator)
