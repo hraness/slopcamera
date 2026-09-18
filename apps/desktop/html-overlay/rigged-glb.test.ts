@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import fc from "fast-check";
 
-import { parseSpatialGlb } from "../../../src/spatial-scene/gltf.js";
+import { parseSpatialGlb, SPATIAL_GLB_RIGGED_PROFILE } from "../../../src/spatial-scene/gltf.js";
 import { HtmlOverlayAuthoringInputSchema } from "./contracts";
 import { createHtmlOverlayImportMap } from "./libraries";
 import { createThreeRiggedGlbModule, prepareThreeRiggedGlb, THREE_RIGGED_GLB_PROFILE, type PreparedThreeRiggedGlb } from "./rigged-glb";
@@ -90,7 +90,8 @@ describe("prepared core-Three rigged GLB", () => {
       bones: [{ nodeIndex: 1, name: "hip", parentNodeIndex: 0 }, { nodeIndex: 2, name: "hand", parentNodeIndex: 1 }],
     });
     expect(Object.isFrozen(result.inspection.source.provenance)).toBe(true);
-    expect(() => parseSpatialGlb(fixture.bytes)).toThrow();
+    // The same source bytes are also a valid bounded rigged spatial-asset profile; the Three adapter path remains distinct.
+    expect(parseSpatialGlb(fixture.bytes).profile).toBe(SPATIAL_GLB_RIGGED_PROFILE);
   });
 
   test("deforms a real SkinnedMesh and resets under outer staging without double transforms", async () => {

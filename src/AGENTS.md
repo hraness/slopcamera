@@ -1,7 +1,7 @@
 # Contents
 
 - Canonical root modules – Slopcamera CLI, imperative workflow, diagram, canvas, artifact, direct Gateway generation, operation, MCP, and desktop-integration contracts.
-- `icon.ts` – the isometric line-art icon pipeline: style-locked Gateway raster, local ink extraction, VTracer trace, and bounded vision-model critique rounds.
+- `icon.ts` – the two-class product-identity pipeline: `mark` (bold compact favicon/app/header symbol) and `illustration` (bounded isometric marketing artwork) prompts, local ink extraction, VTracer trace, deterministic geometry gates, and purpose-specific vision-model critique rounds.
 - `code/` – canonical portable declarative graph authoring, closed public capability projection, compiler, plan, and execution contracts.
 - `vectorize/` – bounded local raster decoding, VTracer supervision, SVG sanitization, measurement, provenance, and worker isolation.
 - `*.test.ts` and `*.property.test.ts` – deterministic examples, parser laws, and standalone consumer evidence.

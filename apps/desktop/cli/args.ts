@@ -110,6 +110,7 @@ export type CliCommand =
   | SpatialProjectCommand
   | { readonly kind: "help"; readonly topic: readonly string[] }
   | { readonly kind: "version" }
+  | ({ readonly kind: "capabilities" } & JsonOption)
   | ({ readonly kind: "operations-list" } & JsonOption)
   | ({ readonly kind: "operations-show"; readonly operation: string } & JsonOption)
   | ({ readonly kind: "diagram-check"; readonly path: string } & JsonOption)
@@ -426,6 +427,15 @@ export type CliCommand =
       readonly output: string | undefined;
       readonly project: string;
       readonly width: number;
+    } & JsonOption)
+  | ({
+      readonly action: "init" | "check" | "plan" | "animatic" | "run";
+      readonly allowPlaceholders: boolean;
+      readonly dryRun: boolean;
+      readonly force: boolean;
+      readonly kind: "project-cinema";
+      readonly output: string | undefined;
+      readonly project: string;
     } & JsonOption)
   | ({
       readonly apply: boolean;
@@ -848,6 +858,12 @@ function exactPositionals(parsed: ParsedOptions, count: number, usage: string): 
 }
 
 const JSON_SPEC = { "--json": "flag" } as const;
+
+function parseCapabilities(argv: readonly string[]): CliCommand {
+  const parsed = parseOptions(argv, JSON_SPEC);
+  exactPositionals(parsed, 0, "slopcamera capabilities [--json]");
+  return { json: optionFlag(parsed, "--json"), kind: "capabilities" };
+}
 
 function parseDoctor(argv: readonly string[]): CliCommand {
   const parsed = parseOptions(argv, JSON_SPEC);
@@ -1925,7 +1941,54 @@ function parseProject(argv: readonly string[]): CliCommand {
       width: strictEvenPositiveInteger(optionString(parsed, "--width"), "--width", 1_920),
     };
   }
-  fail("Usage: slopcamera project <inspect|add|edit|render> ...");
+  if (action === "cinema") {
+    const cinemaAction = argv[1];
+    if (
+      cinemaAction !== "init"
+      && cinemaAction !== "check"
+      && cinemaAction !== "plan"
+      && cinemaAction !== "animatic"
+      && cinemaAction !== "run"
+    ) {
+      fail("Usage: slopcamera project cinema <init|check|plan|animatic|run> <project> [options]");
+    }
+    const parsed = parseOptions(argv.slice(2), {
+      ...JSON_SPEC,
+      "--allow-placeholders": "flag",
+      "--dry-run": "flag",
+      "--force": "flag",
+      "--output": "value",
+    });
+    const [project] = exactPositionals(
+      parsed,
+      1,
+      `slopcamera project cinema ${cinemaAction} <project> [options]`,
+    );
+    if (optionFlag(parsed, "--dry-run") && cinemaAction !== "animatic" && cinemaAction !== "run") {
+      fail("--dry-run is valid only for project cinema animatic or run.");
+    }
+    if (optionFlag(parsed, "--force") && cinemaAction !== "init") {
+      fail("--force is valid only for project cinema init.");
+    }
+    const output = optionString(parsed, "--output");
+    if (output !== undefined && (cinemaAction === "init" || cinemaAction === "check")) {
+      fail("--output is valid only for project cinema plan, animatic, or run.");
+    }
+    if (optionFlag(parsed, "--allow-placeholders") && (cinemaAction === "init" || cinemaAction === "check")) {
+      fail("--allow-placeholders is valid only for project cinema plan, animatic, or run.");
+    }
+    return {
+      action: cinemaAction,
+      allowPlaceholders: optionFlag(parsed, "--allow-placeholders"),
+      dryRun: optionFlag(parsed, "--dry-run"),
+      force: optionFlag(parsed, "--force"),
+      json: optionFlag(parsed, "--json"),
+      kind: "project-cinema",
+      output,
+      project: project!,
+    };
+  }
+  fail("Usage: slopcamera project <inspect|add|edit|render|cinema> ...");
 }
 
 function parseInspect(argv: readonly string[]): CliCommand {
@@ -3352,6 +3415,7 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "direct": return parseDirectingArgs(argv.slice(1));
     case "scene": return parseSpatialSceneArgs(argv.slice(1));
     case "operations": return parseOperations(argv.slice(1));
+    case "capabilities": return parseCapabilities(argv.slice(1));
     case "diagram": return parseDiagram(argv.slice(1));
     case "image": return parseImage(argv.slice(1));
     case "workflows": return parseWorkflows(argv.slice(1));

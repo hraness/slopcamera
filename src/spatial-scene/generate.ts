@@ -4,7 +4,7 @@ import { deepFreezeJson, createBoundedJsonValueSnapshot } from "../code/json-sna
 import {
   SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialEntitySchema, SpatialGeneratorIdSchema,
   SpatialGeneratorSchema,
-  type SpatialEntity, type SpatialGenerator, type SpatialSceneV1,
+  type SpatialAssetManifest, type SpatialEntity, type SpatialGenerator, type SpatialSceneV1,
 } from "./contracts.js"
 import {
   generatedSpatialEntityId, parseSpatialScene, parseSpatialValue, SpatialSceneError,
@@ -80,7 +80,7 @@ export function spatialGeneratorAttemptId(options: {
 function generatedAssetReference(entity: SpatialEntity): string | undefined {
   if (entity.kind === "mesh") {
     if (entity.geometry.kind === "asset") return entity.geometry.assetId
-    return entity.material.map
+    return entity.material.kind !== "pbr" ? entity.material.map : undefined
   }
   if (entity.kind === "text") return entity.fontAssetId
   return "assetId" in entity ? entity.assetId : undefined
@@ -147,6 +147,8 @@ export function buildSpatialGeneratorRecord(options: {
   readonly runtimeSha256: string
   readonly entities: readonly SpatialEntity[]
   readonly editableKeys: SpatialGenerator["editableKeys"]
+  /** Sorted ids of generator-owned assets (generated payloads and derived facts manifests). */
+  readonly assets?: readonly string[]
 }): SpatialGenerator {
   const outputSha256 = spatialGeneratorOutputSha256(options.entities)
   const attemptId = spatialGeneratorAttemptId({
@@ -166,6 +168,7 @@ export function buildSpatialGeneratorRecord(options: {
     outputSha256,
     execution: { kind: "attempt", attemptId, runtimeSha256: options.runtimeSha256 },
     editableKeys: options.editableKeys,
+    ...(options.assets === undefined ? {} : { assets: [...options.assets].sort() }),
   }, "generator")
 }
 
@@ -187,8 +190,22 @@ export function createSpatialGeneratorSceneShell(): unknown {
  * generator record are installed, and the merged document is revalidated end to
  * end. Other generators' retained output and all authored content are preserved.
  */
-export function mergeSpatialGeneratorOutput(scene: SpatialSceneV1 | undefined, generator: SpatialGenerator, entities: readonly SpatialEntity[]): SpatialSceneV1 {
+export function mergeSpatialGeneratorOutput(scene: SpatialSceneV1 | undefined, generator: SpatialGenerator, entities: readonly SpatialEntity[], assets: readonly SpatialAssetManifest[] = []): SpatialSceneV1 {
   const base = scene ?? (parseSpatialScene(createSpatialGeneratorSceneShell()) as SpatialSceneV1)
+  const previous = base.generators.find(record => record.generatorId === generator.generatorId)?.assets ?? []
+  if ([...assets.map(asset => asset.assetId)].sort().join("") !== [...(generator.assets ?? [])].sort().join("")) {
+    throw new SpatialSceneError("conflict", "Generator output must carry exactly the asset manifests its record declares.", "assets")
+  }
+  for (const asset of assets) {
+    if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived") {
+      throw new SpatialSceneError("conflict", "Generator-owned assets require generated or derived provenance.", "assets")
+    }
+  }
+  const retired = new Set(previous)
+  const keptAssets = base.assets.filter(asset => !retired.has(asset.assetId))
+  const keptAssetIds = new Set([...keptAssets.map(asset => asset.assetId), ...assets.map(asset => asset.assetId)])
+  const colliding = assets.find(asset => base.assets.some(existing => existing.assetId === asset.assetId) && !retired.has(asset.assetId))
+  if (colliding !== undefined) throw new SpatialSceneError("conflict", `Generator asset ${colliding.assetId} collides with an existing asset.`, "assets")
   const retained = new Set(entities.map(entity => entity.entityId))
   const removed = new Set<string>()
   const kept: SpatialEntity[] = []
@@ -212,7 +229,11 @@ export function mergeSpatialGeneratorOutput(scene: SpatialSceneV1 | undefined, g
   const keptIds = new Set(kept.map(entity => entity.entityId))
   for (const entity of entities) {
     if (keptIds.has(entity.entityId)) throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`, "entities")
+    const assetId = generatedAssetReference(entity)
+    if (assetId !== undefined && !keptAssetIds.has(assetId)) {
+      throw new SpatialSceneError("conflict", `Generator output references missing asset ${assetId}.`, "entities")
+    }
   }
   const generators = [...base.generators.filter(record => record.generatorId !== generator.generatorId), generator]
-  return parseSpatialScene({ ...base, entities: [...kept, ...entities], generators })
+  return parseSpatialScene({ ...base, assets: [...keptAssets, ...assets], entities: [...kept, ...entities], generators })
 }

@@ -1,5 +1,7 @@
 // @bun
 import {
+  PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS,
+  PORTABLE_SLOPCAMERA_OPERATION_KINDS,
   SlopcameraCodeError,
   canonicalJsonSha256,
   canonicalJsonSha256Prefixed,
@@ -7,9 +9,9 @@ import {
   createBoundedJsonSnapshot,
   createBoundedJsonValueSnapshot,
   deepFreezeJson,
-  slopcameraCodeErrorMessage,
-  utf8ByteLength
-} from "./index-8txs6fkn.js";
+  isPortableSlopcameraOperationKind,
+  slopcameraCodeErrorMessage
+} from "./index-ff4r9h6b.js";
 
 // src/code/contracts.ts
 import { z } from "zod";
@@ -330,254 +332,6 @@ var TRUSTED_COMPUTE_BRAND = Symbol.for("slopcamera.trusted-compute-definition");
 var LEGACY_TRUSTED_COMPUTE_BRAND = Symbol.for("studio.trusted-compute-definition");
 var WORKFLOW_REF_BRAND = Symbol.for("slopcamera.workflow-ref");
 
-// src/code/public-operations.ts
-import { z as z2 } from "zod";
-var MAX_PATH_CHARACTERS = 4096;
-var MAX_PROMPT_BYTES = 32 * 1024;
-var MAX_GENERATED_IMAGE_BYTES = 64 * 1024 * 1024;
-var MAX_VECTOR_INPUT_BYTES = 16 * 1024 * 1024;
-var MAX_VECTOR_OUTPUT_BYTES = 2000000;
-var MAX_DIAGRAM_ARTIFACT_BYTES = 64 * 1024 * 1024;
-var BoundedPathSchema = z2.string().min(1).max(MAX_PATH_CHARACTERS).refine((value) => !value.includes("\x00"), "Paths must not contain NUL bytes.");
-var Sha256Schema2 = z2.string().regex(/^[a-f0-9]{64}$/u);
-var BoundedVersionStringSchema = z2.string().min(1).max(256);
-var NonnegativeSafeIntegerSchema2 = z2.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-var PositiveSafeIntegerSchema2 = z2.number().int().positive().max(Number.MAX_SAFE_INTEGER);
-function schemaWithReadonlyOutput(schema) {
-  return schema;
-}
-var SlopcameraImageModelSchema = z2.string().min(3).max(256).regex(/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu);
-var SlopcameraDiagramCheckInputSchema = z2.strictObject({
-  path: BoundedPathSchema
-});
-var SlopcameraDiagramRenderInputSchema = schemaWithReadonlyOutput(z2.strictObject({
-  outDirectory: BoundedPathSchema.optional(),
-  path: BoundedPathSchema,
-  scale: z2.number().finite().positive().max(4).optional()
-}));
-var SlopcameraImageVectorizeInputSchema = schemaWithReadonlyOutput(z2.strictObject({
-  alphaCutoff: z2.number().int().min(1).max(64).optional(),
-  duotone: z2.tuple([
-    z2.string().regex(/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu),
-    z2.string().regex(/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu)
-  ]).optional(),
-  inputPath: BoundedPathSchema,
-  outputPath: BoundedPathSchema.refine((value) => value.toLowerCase().endsWith(".svg"), "Vector output paths must end in .svg."),
-  timeoutMs: z2.number().int().min(1).max(300000).optional()
-}));
-var PromptSchema = z2.string().superRefine((value, context) => {
-  if (utf8ByteLength(value, MAX_PROMPT_BYTES) === undefined) {
-    context.addIssue({
-      code: "custom",
-      message: `Prompts must contain at most ${String(MAX_PROMPT_BYTES)} UTF-8 bytes.`
-    });
-    return;
-  }
-  if (value.trim().length === 0) {
-    context.addIssue({ code: "custom", message: "Prompts must not be blank." });
-    return;
-  }
-  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) {
-    context.addIssue({
-      code: "custom",
-      message: "Prompts must not contain control characters."
-    });
-  }
-});
-var SlopcameraImageGenerateInputSchema = schemaWithReadonlyOutput(z2.strictObject({
-  model: SlopcameraImageModelSchema,
-  outputPath: BoundedPathSchema.refine((value) => /\.(?:jpe?g|png|webp)$/iu.test(value), "Generated image output paths must end in .png, .jpg, .jpeg, or .webp."),
-  prompt: PromptSchema
-}));
-var SlopcameraLintFindingSchema = z2.strictObject({
-  code: z2.string().min(1).max(160),
-  message: z2.string().min(1).max(4096),
-  shapeIds: z2.array(z2.string().min(1).max(256)).max(4096)
-});
-var SlopcameraDiagramCheckOutputSchema = z2.strictObject({
-  configPath: z2.null(),
-  findings: z2.array(SlopcameraLintFindingSchema).max(4096)
-});
-var SlopcameraRenderArtifactsSchema = z2.strictObject({
-  darkPng: BoundedPathSchema,
-  darkSvg: BoundedPathSchema,
-  lightPng: BoundedPathSchema,
-  lightSvg: BoundedPathSchema,
-  spec: BoundedPathSchema,
-  tldr: BoundedPathSchema
-});
-var SlopcameraDiagramRenderOutputSchema = z2.strictObject({
-  artifacts: SlopcameraRenderArtifactsSchema,
-  configPath: z2.null(),
-  findings: z2.array(SlopcameraLintFindingSchema).max(4096)
-});
-var SlopcameraVectorizeQualityReceiptSchema = z2.strictObject({
-  alphaRmse: z2.number().finite().nonnegative(),
-  colorRmse: z2.number().finite().nonnegative(),
-  outsideAlphaRatio: z2.number().finite().min(0).max(1),
-  sampleHeight: PositiveSafeIntegerSchema2,
-  sampleWidth: PositiveSafeIntegerSchema2,
-  supportRecall: z2.number().finite().min(0).max(1)
-});
-var SlopcameraVectorizeProvenanceSchema = z2.strictObject({
-  arch: BoundedVersionStringSchema,
-  platform: BoundedVersionStringSchema,
-  sharp: BoundedVersionStringSchema,
-  sharpVersions: z2.record(z2.string().min(1).max(128), BoundedVersionStringSchema),
-  vips: BoundedVersionStringSchema,
-  vtracerSha256: Sha256Schema2,
-  vtracerSource: z2.enum(["official-release", "override"]),
-  vtracerVersion: BoundedVersionStringSchema
-});
-var SlopcameraVectorizeReceiptSchema = z2.strictObject({
-  alphaCutoff: z2.number().int().min(1).max(64),
-  bytes: NonnegativeSafeIntegerSchema2.max(MAX_VECTOR_OUTPUT_BYTES),
-  candidatesEvaluated: PositiveSafeIntegerSchema2,
-  format: z2.string().min(1).max(80),
-  height: PositiveSafeIntegerSchema2.max(4096),
-  inputBytes: PositiveSafeIntegerSchema2.max(MAX_VECTOR_INPUT_BYTES),
-  outputMode: z2.enum(["color", "duotone"]),
-  pathCount: NonnegativeSafeIntegerSchema2.max(12000),
-  profile: z2.enum(["balanced", "detailed", "photo"]),
-  provenance: SlopcameraVectorizeProvenanceSchema,
-  quality: SlopcameraVectorizeQualityReceiptSchema,
-  receiptVersion: z2.literal(1),
-  representation: z2.enum(["color-paths", "alpha-mask"]),
-  sourceSha256: Sha256Schema2,
-  svgSha256: Sha256Schema2,
-  width: PositiveSafeIntegerSchema2.max(4096)
-});
-var SlopcameraImageVectorizeOutputSchema = z2.strictObject({
-  outputPath: BoundedPathSchema,
-  receipt: SlopcameraVectorizeReceiptSchema
-});
-var SlopcameraImageGenerateOutputSchema = z2.strictObject({
-  bytes: PositiveSafeIntegerSchema2.max(MAX_GENERATED_IMAGE_BYTES),
-  mediaType: z2.enum(["image/jpeg", "image/png", "image/webp"]),
-  model: SlopcameraImageModelSchema,
-  outputPath: BoundedPathSchema,
-  provider: z2.literal("vercel-ai-gateway"),
-  requestId: z2.string().min(1).max(256).refine((value) => !/[\u0000-\u001f\u007f]/u.test(value), "Request ids must not contain control characters."),
-  sha256: Sha256Schema2,
-  warnings: z2.array(z2.string().min(1).max(256)).max(100)
-});
-var PORTABLE_SLOPCAMERA_OPERATION_KINDS = Object.freeze([
-  "slopcamera.diagram.check",
-  "slopcamera.diagram.render",
-  "slopcamera.image.generate",
-  "slopcamera.image.vectorize"
-]);
-function freezePolicy(policy) {
-  const preparation = Object.freeze([...policy.preparation]);
-  const resources = Object.freeze(policy.resources.map((claim) => Object.freeze({ ...claim })));
-  return Object.freeze({ ...policy, preparation, resources });
-}
-function portableContract(contract) {
-  return Object.freeze({ ...contract, policy: freezePolicy(contract.policy) });
-}
-var PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS = Object.freeze({
-  "slopcamera.diagram.check": portableContract({
-    inputSchema: SlopcameraDiagramCheckInputSchema,
-    inputSchemaId: "slopcamera.operation.diagram.check.input/v2",
-    kind: "slopcamera.diagram.check",
-    lifecycle: "pure",
-    outputSchema: SlopcameraDiagramCheckOutputSchema,
-    outputSchemaId: "slopcamera.operation.diagram.check.output/v2",
-    policy: {
-      cache: "content-addressed",
-      cancellable: false,
-      effect: "local-read",
-      maxDurationMs: 30000,
-      maxFanOut: 0,
-      maxInputBytes: 4096,
-      maxOutputBytes: 256 * 1024,
-      preparation: ["local-media"],
-      resources: [
-        { amount: 1, resource: "cpu" },
-        { amount: 1, resource: "local-io" }
-      ],
-      resume: "deterministic"
-    },
-    version: 2
-  }),
-  "slopcamera.diagram.render": portableContract({
-    inputSchema: SlopcameraDiagramRenderInputSchema,
-    inputSchemaId: "slopcamera.operation.diagram.render.input/v2",
-    kind: "slopcamera.diagram.render",
-    lifecycle: "local-artifact",
-    outputSchema: SlopcameraDiagramRenderOutputSchema,
-    outputSchemaId: "slopcamera.operation.diagram.render.output/v2",
-    policy: {
-      cache: "none",
-      cancellable: false,
-      effect: "local-derived-write",
-      maxDurationMs: 120000,
-      maxFanOut: 5,
-      maxInputBytes: 8192,
-      maxOutputBytes: 5 * MAX_DIAGRAM_ARTIFACT_BYTES,
-      preparation: ["local-media"],
-      resources: [
-        { amount: 1, resource: "cpu" },
-        { amount: 1, resource: "local-io" }
-      ],
-      resume: "ambiguous-after-dispatch"
-    },
-    version: 2
-  }),
-  "slopcamera.image.generate": portableContract({
-    inputSchema: SlopcameraImageGenerateInputSchema,
-    inputSchemaId: "slopcamera.operation.image.generate.input/v2",
-    kind: "slopcamera.image.generate",
-    lifecycle: "paid-dispatch",
-    outputSchema: SlopcameraImageGenerateOutputSchema,
-    outputSchemaId: "slopcamera.operation.image.generate.output/v2",
-    policy: {
-      cache: "exact-run",
-      cancellable: false,
-      effect: "paid-cloud",
-      maxDurationMs: 120000,
-      maxFanOut: 1,
-      maxInputBytes: 16 * 1024,
-      maxOutputBytes: MAX_GENERATED_IMAGE_BYTES,
-      preparation: ["provider-options"],
-      resources: [
-        { amount: 1, resource: "local-io" },
-        { amount: 1, resource: "network" },
-        { amount: 1, resource: "paid-call" }
-      ],
-      resume: "ambiguous-after-dispatch"
-    },
-    version: 2
-  }),
-  "slopcamera.image.vectorize": portableContract({
-    inputSchema: SlopcameraImageVectorizeInputSchema,
-    inputSchemaId: "slopcamera.operation.image.vectorize.input/v2",
-    kind: "slopcamera.image.vectorize",
-    lifecycle: "local-artifact",
-    outputSchema: SlopcameraImageVectorizeOutputSchema,
-    outputSchemaId: "slopcamera.operation.image.vectorize.output/v2",
-    policy: {
-      cache: "none",
-      cancellable: false,
-      effect: "local-derived-write",
-      maxDurationMs: 300000,
-      maxFanOut: 1,
-      maxInputBytes: MAX_VECTOR_INPUT_BYTES,
-      maxOutputBytes: MAX_VECTOR_OUTPUT_BYTES,
-      preparation: ["local-media"],
-      resources: [
-        { amount: 1, resource: "cpu" },
-        { amount: 1, resource: "local-io" }
-      ],
-      resume: "ambiguous-after-dispatch"
-    },
-    version: 2
-  })
-});
-function isPortableSlopcameraOperationKind(value) {
-  return PORTABLE_SLOPCAMERA_OPERATION_KINDS.includes(value);
-}
-
 // src/code/boundary.ts
 function parseCodeBoundary(schema, input, name) {
   const result = schema.safeParse(input);
@@ -790,7 +544,7 @@ var PUBLIC_WORKFLOW_REGISTRY_PROJECTION = createPublicWorkflowRegistryProjection
 var PUBLIC_SLOPCAMERA_WORKFLOW_PROJECTION = PUBLIC_WORKFLOW_REGISTRY_PROJECTION;
 
 // src/code/compiler.ts
-import { z as z3 } from "zod";
+import { z as z2 } from "zod";
 var WORKFLOW_GRAPH_HASH_DOMAIN = "slopcamera.workflow.graph/v1";
 var WORKFLOW_COMPILATION_HASH_DOMAIN = "slopcamera.workflow.compilation/v1";
 var DEFAULT_GRAPH_COMPILER_LIMITS = Object.freeze({
@@ -1259,8 +1013,8 @@ function resolveProjection(options) {
   }
   return PUBLIC_WORKFLOW_REGISTRY_PROJECTION;
 }
-var RequiredCompilationComponentSchema = z3.unknown().refine((value) => value !== undefined, "Required");
-var ShallowCompiledWorkflowGraphSchema = z3.strictObject({
+var RequiredCompilationComponentSchema = z2.unknown().refine((value) => value !== undefined, "Required");
+var ShallowCompiledWorkflowGraphSchema = z2.strictObject({
   compilationSha256: Sha256Schema,
   envelope: RequiredCompilationComponentSchema,
   graph: RequiredCompilationComponentSchema,
@@ -1268,7 +1022,7 @@ var ShallowCompiledWorkflowGraphSchema = z3.strictObject({
   limits: RequiredCompilationComponentSchema,
   projection: RequiredCompilationComponentSchema,
   topologicalWaves: RequiredCompilationComponentSchema,
-  version: z3.literal(WORKFLOW_COMPILATION_VERSION)
+  version: z2.literal(WORKFLOW_COMPILATION_VERSION)
 });
 function boundedCompilationInput(input, name) {
   return createBoundedJsonValueSnapshot(input, MAX_WORKFLOW_COMPILATION_BYTES, name, {
@@ -2254,4 +2008,4 @@ async function runWorkflow(definition, input, options) {
   return await runBuiltWorkflow(buildWorkflow(definition, input), options);
 }
 
-export { WORKFLOW_GRAPH_VERSION, WORKFLOW_REF_VERSION, GRAPH_ABI, REQUIREMENT_ENVELOPE_VERSION, TRUSTED_COMPUTE_VERSION, WORKFLOW_COMPILATION_VERSION, LEGACY_WORKFLOW_GRAPH_VERSION, LEGACY_WORKFLOW_REF_VERSION, LEGACY_GRAPH_ABI, LEGACY_REQUIREMENT_ENVELOPE_VERSION, MAX_SERIALIZED_GRAPH_NODES, MAX_SERIALIZED_NODE_DEPENDENCIES, MAX_SERIALIZED_REF_PATH_SEGMENTS, MAX_OPERATION_DISCOVERY_ENTRIES, MAX_TRUSTED_COMPUTE_INPUT_BYTES, MAX_TRUSTED_COMPUTE_OUTPUT_BYTES, MAX_TRUSTED_COMPUTE_DURATION_MS, WorkflowIdSchema, NodeKeySegmentSchema, NodeKeySchema, SchemaIdSchema, ComputeKeySchema, OperationKindSchema, Sha256Schema, PositiveSafeIntegerSchema, NonnegativeSafeIntegerSchema, RefPathSegmentSchema, JsonValueSchema, SerializedRefV1Schema, GraphInputValueSchema, WorkflowOutputBindingSchema, AuthoredOperationIdentitySchema, AuthoredComputeIdentitySchema, AuthoredNodeExecutorSchema, AuthoredGraphNodeV1Schema, isOperationGraphNode, isComputeGraphNode, WorkflowIdentitySchema, AuthoredWorkflowGraphV1Schema, OPERATION_EFFECT_CLASSES, WORKFLOW_EFFECT_CLASSES, OPERATION_RESUME_CLASSES, WORKFLOW_RESUME_CLASSES, OPERATION_PREPARATION_KINDS, OPERATION_LIFECYCLE_KINDS, OPERATION_RESOURCE_KINDS, OperationResourceClaimSchema, OperationPolicySchema, TrustedComputePolicySchema, WorkflowNodePolicySchema, trustedComputePolicy, OperationDiscoverySchema, WorkflowRegistryProjectionSchema, GraphCompilerLimitsSchema, UNRESOLVED_REQUIREMENT_KINDS, RequirementEnvelopeBoundsSchema, RequirementEnvelopeSchema, CompiledWorkflowGraphSchema, TRUSTED_COMPUTE_BRAND, LEGACY_TRUSTED_COMPUTE_BRAND, WORKFLOW_REF_BRAND, SlopcameraImageModelSchema, SlopcameraDiagramCheckInputSchema, SlopcameraDiagramRenderInputSchema, SlopcameraImageVectorizeInputSchema, SlopcameraImageGenerateInputSchema, SlopcameraLintFindingSchema, SlopcameraDiagramCheckOutputSchema, SlopcameraRenderArtifactsSchema, SlopcameraDiagramRenderOutputSchema, SlopcameraVectorizeQualityReceiptSchema, SlopcameraVectorizeProvenanceSchema, SlopcameraVectorizeReceiptSchema, SlopcameraImageVectorizeOutputSchema, SlopcameraImageGenerateOutputSchema, PORTABLE_SLOPCAMERA_OPERATION_KINDS, PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS, isPortableSlopcameraOperationKind, WORKFLOW_REGISTRY_PROJECTION_HASH_DOMAIN, PUBLIC_WORKFLOW_REGISTRY_PROJECTION_ID, boundedOperationDiscoveryList, normalizeOperationDiscovery, createWorkflowRegistryProjectionHash, createWorkflowRegistryProjection, parseWorkflowRegistryProjection, createPublicWorkflowRegistryProjection, PUBLIC_WORKFLOW_REGISTRY_PROJECTION, PUBLIC_SLOPCAMERA_WORKFLOW_PROJECTION, WORKFLOW_GRAPH_HASH_DOMAIN, WORKFLOW_COMPILATION_HASH_DOMAIN, DEFAULT_GRAPH_COMPILER_LIMITS, normalizeAuthoredWorkflowGraph, createWorkflowGraphHash, createGraphHash, createWorkflowCompilationHash, compileWorkflowGraph, parseCompiledWorkflowGraph, defineWorkflowFragment, operationContract, WorkflowGraphBuilder, definePortableWorkflowFragment, PortableWorkflowBuilder, defineWorkflow, buildWorkflow, buildWorkflowGraph, defineCompute, defineAdvancedWorkflow, buildAdvancedWorkflow, seconds, WORKFLOW_NODE_RECEIPT_VERSION, WORKFLOW_NODE_RECEIPT_HASH_DOMAIN, MAX_WORKFLOW_RESULT_BYTES, MAX_WORKFLOW_RESULT_DEPTH, MAX_WORKFLOW_RESULT_VALUES, createSlopcameraCodeHost, SlopcameraWorkflowRunError, runBuiltWorkflow, runWorkflow };
+export { WORKFLOW_GRAPH_VERSION, WORKFLOW_REF_VERSION, GRAPH_ABI, REQUIREMENT_ENVELOPE_VERSION, TRUSTED_COMPUTE_VERSION, WORKFLOW_COMPILATION_VERSION, LEGACY_WORKFLOW_GRAPH_VERSION, LEGACY_WORKFLOW_REF_VERSION, LEGACY_GRAPH_ABI, LEGACY_REQUIREMENT_ENVELOPE_VERSION, MAX_SERIALIZED_GRAPH_NODES, MAX_SERIALIZED_NODE_DEPENDENCIES, MAX_SERIALIZED_REF_PATH_SEGMENTS, MAX_OPERATION_DISCOVERY_ENTRIES, MAX_TRUSTED_COMPUTE_INPUT_BYTES, MAX_TRUSTED_COMPUTE_OUTPUT_BYTES, MAX_TRUSTED_COMPUTE_DURATION_MS, WorkflowIdSchema, NodeKeySegmentSchema, NodeKeySchema, SchemaIdSchema, ComputeKeySchema, OperationKindSchema, Sha256Schema, PositiveSafeIntegerSchema, NonnegativeSafeIntegerSchema, RefPathSegmentSchema, JsonValueSchema, SerializedRefV1Schema, GraphInputValueSchema, WorkflowOutputBindingSchema, AuthoredOperationIdentitySchema, AuthoredComputeIdentitySchema, AuthoredNodeExecutorSchema, AuthoredGraphNodeV1Schema, isOperationGraphNode, isComputeGraphNode, WorkflowIdentitySchema, AuthoredWorkflowGraphV1Schema, OPERATION_EFFECT_CLASSES, WORKFLOW_EFFECT_CLASSES, OPERATION_RESUME_CLASSES, WORKFLOW_RESUME_CLASSES, OPERATION_PREPARATION_KINDS, OPERATION_LIFECYCLE_KINDS, OPERATION_RESOURCE_KINDS, OperationResourceClaimSchema, OperationPolicySchema, TrustedComputePolicySchema, WorkflowNodePolicySchema, trustedComputePolicy, OperationDiscoverySchema, WorkflowRegistryProjectionSchema, GraphCompilerLimitsSchema, UNRESOLVED_REQUIREMENT_KINDS, RequirementEnvelopeBoundsSchema, RequirementEnvelopeSchema, CompiledWorkflowGraphSchema, TRUSTED_COMPUTE_BRAND, LEGACY_TRUSTED_COMPUTE_BRAND, WORKFLOW_REF_BRAND, WORKFLOW_REGISTRY_PROJECTION_HASH_DOMAIN, PUBLIC_WORKFLOW_REGISTRY_PROJECTION_ID, boundedOperationDiscoveryList, normalizeOperationDiscovery, createWorkflowRegistryProjectionHash, createWorkflowRegistryProjection, parseWorkflowRegistryProjection, createPublicWorkflowRegistryProjection, PUBLIC_WORKFLOW_REGISTRY_PROJECTION, PUBLIC_SLOPCAMERA_WORKFLOW_PROJECTION, WORKFLOW_GRAPH_HASH_DOMAIN, WORKFLOW_COMPILATION_HASH_DOMAIN, DEFAULT_GRAPH_COMPILER_LIMITS, normalizeAuthoredWorkflowGraph, createWorkflowGraphHash, createGraphHash, createWorkflowCompilationHash, compileWorkflowGraph, parseCompiledWorkflowGraph, defineWorkflowFragment, operationContract, WorkflowGraphBuilder, definePortableWorkflowFragment, PortableWorkflowBuilder, defineWorkflow, buildWorkflow, buildWorkflowGraph, defineCompute, defineAdvancedWorkflow, buildAdvancedWorkflow, seconds, WORKFLOW_NODE_RECEIPT_VERSION, WORKFLOW_NODE_RECEIPT_HASH_DOMAIN, MAX_WORKFLOW_RESULT_BYTES, MAX_WORKFLOW_RESULT_DEPTH, MAX_WORKFLOW_RESULT_VALUES, createSlopcameraCodeHost, SlopcameraWorkflowRunError, runBuiltWorkflow, runWorkflow };

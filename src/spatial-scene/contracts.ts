@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { SpatialPbrMaterialSchema, SpatialFogSchema } from "./material-lighting.js"
 
 export const SPATIAL_SCENE_LIMITS = Object.freeze({
   sourceBytes: 2_097_152,
@@ -69,11 +70,23 @@ export const SpatialProjectionSchema = z.discriminatedUnion("kind", [
     context.addIssue({ code: "custom", message: "Orthographic extents must have positive width and height." })
   }
 })
+const boundedPhysical = (minimum: number, maximum: number) => z.number().finite().min(minimum).max(maximum)
+/** Optional physical metadata. Projection remains the calibrated rendering authority. */
+export const SpatialCameraLensSchema = z.strictObject({
+  focalLengthMm: boundedPhysical(1, 2_000),
+  sensorWidthMm: boundedPhysical(1, 200),
+  apertureFStop: boundedPhysical(0.5, 128).optional(),
+  focusDistanceM: boundedPhysical(0.001, 1_000_000).optional(),
+  shutterAngleDeg: boundedPhysical(0, 360).optional(),
+  exposureEv: boundedPhysical(-32, 32).optional(),
+  colorTemperatureK: boundedPhysical(1_000, 40_000).optional(),
+})
 export const SpatialCameraSchema = z.strictObject({
   cameraId: SpatialCameraIdSchema,
   name: z.string().min(1).max(256),
   pose: SpatialPoseSchema,
   projection: SpatialProjectionSchema,
+  lens: SpatialCameraLensSchema.optional(),
 })
 
 const relativePath = z.string().min(1).max(1_024).refine(value =>
@@ -122,6 +135,7 @@ export const SpatialEmissiveSchema = z.strictObject({
 export const SpatialMaterialSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
   z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() }),
+  SpatialPbrMaterialSchema,
 ])
 export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -130,6 +144,7 @@ export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("cylinder"), radius: positiveDimension, height: positiveDimension }),
   z.strictObject({ kind: z.literal("asset"), assetId: SpatialAssetIdSchema, nodeIndex: z.number().int().min(0).max(65_535).optional(), materialMode: z.enum(["entity", "source"]).optional(),
     clip: z.strictObject({ index: z.number().int().min(0).max(255), offsetUs: SpatialTimeUsSchema, playback: z.enum(["once", "loop", "freeze"]) }).optional(),
+    morphWeights: z.array(unit).max(16).optional(), // bound matches gltf.ts morphTargetsPerPrimitive
   }),
 ])
 /**
@@ -216,6 +231,12 @@ export const SpatialGeneratorSchema = z.strictObject({
     z.strictObject({ kind: z.literal("attempt"), attemptId: z.string().min(1).max(128), runtimeSha256: SpatialDigestSchema }),
   ]),
   editableKeys: z.array(z.strictObject({ key: z.string().min(1).max(256), properties: z.array(z.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities),
+  /**
+   * Sorted asset ids owned by this generator's retained output (generated mesh
+   * payloads and derived fact manifests). Owned assets are referenced only by
+   * this generator's entities and are replaced atomically with the output.
+   */
+  assets: z.array(SpatialAssetIdSchema).max(SPATIAL_SCENE_LIMITS.assets).optional(),
 })
 export const SpatialSceneV1Schema = z.strictObject({
   kind: z.literal("slopcamera.spatial-scene"),
@@ -229,6 +250,7 @@ export const SpatialSceneV1Schema = z.strictObject({
   animations: z.array(SpatialAnimationSchema).max(SPATIAL_SCENE_LIMITS.channels),
   generators: z.array(SpatialGeneratorSchema).max(128),
   overrides: z.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities),
+  fog: SpatialFogSchema.optional(),
 })
 
 export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
@@ -253,7 +275,9 @@ export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("remove-entity"), entityId: SpatialEntityIdSchema }),
   z.strictObject({ kind: z.literal("set-override"), override: SpatialOverrideSchema }),
   z.strictObject({ kind: z.literal("remove-override"), entityId: SpatialEntityIdSchema, property: z.enum(["color", "opacity", "transform"]) }),
-  z.strictObject({ kind: z.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities) }),
+  z.strictObject({ kind: z.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+    /** Owned asset manifests replacing the generator's previous owned set; ids must match `generator.assets`. */
+    assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets).optional() }),
 ])
 export const SpatialScenePatchV1Schema = z.strictObject({
   kind: z.literal("slopcamera.spatial-scene-patch"),
@@ -294,6 +318,7 @@ export const EvaluatedSpatialSceneSchema = z.strictObject({
     selectionId: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities),
   })).max(SPATIAL_SCENE_LIMITS.entities),
   assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets),
+  fog: SpatialFogSchema.optional(),
 })
 
 type DeepReadonly<T> = T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> } : T
@@ -305,6 +330,7 @@ export type SpatialGeometry = DeepReadonly<z.infer<typeof SpatialGeometrySchema>
 export type SpatialSpotLight = DeepReadonly<z.infer<typeof SpatialSpotLightSchema>>
 export type SpatialPlacement = DeepReadonly<z.infer<typeof SpatialPlacementSchema>>
 export type SpatialCamera = DeepReadonly<z.infer<typeof SpatialCameraSchema>>
+export type SpatialCameraLens = DeepReadonly<z.infer<typeof SpatialCameraLensSchema>>
 export type SpatialProjection = DeepReadonly<z.infer<typeof SpatialProjectionSchema>>
 export type SpatialTransform = DeepReadonly<z.infer<typeof SpatialTransformSchema>>
 export type SpatialPose = DeepReadonly<z.infer<typeof SpatialPoseSchema>>

@@ -142,12 +142,14 @@ export {
   WorkspaceBoundaryError,
   executeSlopcameraOperation,
 }
+export * from "./capability-manifest.js"
 export * from "./cloud-errors.js"
 export * from "./generate.js"
 export * from "./host-resources.js"
 export * from "./icon.js"
 export * from "./image-gallery.js"
 export * from "./operations.js"
+export * from "./portable-capability-manifest.js"
 export * from "./scene-gallery.js"
 export * from "./studio/index.js"
 export * from "./workflow.js"

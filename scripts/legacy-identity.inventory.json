@@ -324,6 +324,16 @@
     ]
   },
   {
+    "identityLineCount": 5,
+    "identityLinesSha256": "3ee2bf485d726e21a681d64bfd2859a6b7f438871a5058096f722e37a06ea5ee",
+    "occurrenceCount": 5,
+    "path": "apps/desktop/cli/capability-manifest.ts",
+    "categories": [
+      "native-film-studio",
+      "serialized-reader"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "a87f513e356c66f7c7ddc38885a27789ef0cf056da4cff7b86ea608278f8f2a3",
     "occurrenceCount": 1,
@@ -430,7 +440,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "f25d0451dced7c9a936ad4b46102445f59a4981f65ed9a51495440a25bfde85d",
+    "identityLinesSha256": "72a7c1e0562424b0e9954b7d8f858ab21182595b60744ed6dda8bde7a9d48357",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -1259,8 +1269,8 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "d2dae7884ba3623af4426c3526db97891270fc96e4e8d75938294c309264ce14",
-    "occurrenceCount": 443,
+    "identityLinesSha256": "ed1c616be9c0c70ec00194f66d3704e2b8a53389156200650a5419993dd45939",
+    "occurrenceCount": 448,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1620,19 +1630,19 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
-    "occurrenceCount": 9,
-    "path": "dist/index-42zsesc1.js",
+    "identityLineCount": 142,
+    "identityLinesSha256": "8b0218426811c110252d06848408742a8c58ab1ebe4bff06c1feb7ecacca63f6",
+    "occurrenceCount": 237,
+    "path": "dist/index-f9afrjet.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
-    "occurrenceCount": 237,
-    "path": "dist/index-qybe3hvr.js",
+    "identityLineCount": 9,
+    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
+    "occurrenceCount": 9,
+    "path": "dist/index-gzadr1hk.js",
     "categories": [
       "generated"
     ]
@@ -1908,9 +1918,9 @@
     ]
   },
   {
-    "identityLineCount": 18,
-    "identityLinesSha256": "f452c334681be99da07cd97c08a207492efd68260943246dd9e72eab583a4b07",
-    "occurrenceCount": 18,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
+    "occurrenceCount": 17,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"

@@ -250,6 +250,7 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
             type: "string",
             pattern: "^#[a-fA-F0-9]{3}(?:[a-fA-F0-9]{3})?$",
           },
+          purpose: { type: "string", enum: ["mark", "illustration"] },
           rounds: {
             type: "integer",
             minimum: 1,
@@ -405,6 +406,7 @@ export interface IconSlopcameraOperationInput {
   readonly model?: SlopcameraImageModel
   readonly critiqueModel?: string
   readonly ink?: string
+  readonly purpose?: "illustration" | "mark"
   readonly rounds?: number
   readonly keepRaster?: boolean
 }

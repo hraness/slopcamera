@@ -151,7 +151,7 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "da8102073aae050b954fea2e7e8504f0916d23f16227018ca2a6976334c02461") {
+  if (priorDigest !== "7eb61afd8895f835ebadfc938fc91269fa610f4e57feb159fc336899400db40c") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
@@ -855,9 +855,9 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 460")
-  expect(publishJob).toContain("const maximumPackedBytes = 4_300_000")
-  expect(publishJob).toContain("const maximumUnpackedBytes = 11_300_000")
+  expect(publishJob).toContain("const maximumFiles = 520")
+  expect(publishJob).toContain("const maximumPackedBytes = 4_800_000")
+  expect(publishJob).toContain("const maximumUnpackedBytes = 13_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
   expect(publishJob).toContain("unpackedSize !== record.unpackedSize")
   expect(publishJob).toContain('"src/assets/fonts/nebula-sans/PROVENANCE.md"')

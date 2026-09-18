@@ -8,6 +8,7 @@ const GLOBAL_HELP = `slopcamera — creative scenes and non-destructive media ed
 Usage: slopcamera <command> [options]
 
 Commands:
+  capabilities                   Discover the exact static capability modules and qualification status
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
   scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render
@@ -54,6 +55,9 @@ HRANESS_SUPPORT_AUDIENCE=off suppresses offers and incidental discovery.
 Run slopcamera help <command> for command-specific help.`;
 
 const HELP: Readonly<Record<string, string>> = {
+  capabilities: `Usage: slopcamera capabilities [--json]
+
+Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
   studio: `Usage:
   slopcamera studio init <new-directory> [--template blender-product|blender-character|blender-shaded-street|blender-cloth|blender-fluid|cadquery-bracket|manim-lesson] [--json]
   slopcamera studio bundle <source.json> [--source-root <directory>] [--json]
@@ -199,9 +203,9 @@ operations separately publish equivalent derivatives by content hash for workflo
         [--kind <image|texture|skybox|backdrop|sprite>] [--count <n>]
         [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
         [--cell <n>] [--tile|--no-tile] [--json]
-  slopcamera image icon <subject> --output <file.svg> [--model <model>]
-        [--ink <#rgb>] [--rounds <1-4>] [--critique-model <model>]
-        [--keep-raster] [--json]
+  slopcamera image icon <subject> --output <file.svg>
+        [--purpose <mark|illustration>] [--model <model>] [--ink <#rgb>]
+        [--rounds <1-4>] [--critique-model <model>] [--keep-raster] [--json]
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
@@ -536,6 +540,17 @@ Face track IDs describe local geometry continuity inside one immutable analysis.
   slopcamera project edit <project> overlay remove <id> [--json]
   slopcamera project render <plan|run> <project> [--width <px>] [--height <px>] [--fps <n>]
                        [--output <renders/path.mp4>] [--dry-run] [--allow-unverified-sync] [--json]
+  slopcamera project cinema init <project> [--force] [--json]
+  slopcamera project cinema check <project> [--json]
+  slopcamera project cinema plan <project> [--allow-placeholders] [--json]
+  slopcamera project cinema animatic <project> [--output <renders/path.mp4>] [--dry-run] [--json]
+  slopcamera project cinema run <project> [--output <renders/path.mp4>] [--allow-placeholders] [--dry-run] [--json]
+
+Cinema commands drive the content-addressed cinema sidecar (cinema/current.json), which binds exact
+project structure and edit-plan digests. Any project or edit change makes the sidecar stale until it is
+re-authorized. Animatics always allow deterministic placeholder frames for missing spatial artifacts;
+final runs require materialized media unless --allow-placeholders is explicit. Cinema never alters the
+project render plan or its identity.
 
 Imported media starts unverified. Align its audio before relying on synchronization. Structural edits are project-time operations and affect every placement. Camera moves address any placed video stream; metadata-driven screen zooms still require a recording-backed source placement. Face analysis and geometry tracks remain local. --select largest follows the largest currently visible prepared-layer face per frame. --require-all-selected makes a missing explicit/all-selected face invoke the chosen gap policy.`,
   render: `Usage: slopcamera render <plan|run> <recording> [--display <id|primary>] [--output <path>] [--dry-run] [--keep-inactivity] [--json]
@@ -550,7 +565,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -566,7 +581,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
   if (command === "recordings") return ["list"];
   if (command === "projects") return ["list", "create"];
-  if (command === "project") return ["inspect", "add", "edit", "render"];
+  if (command === "project") return ["inspect", "add", "edit", "render", "cinema"];
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];
   if (command === "faces") return ["list"];

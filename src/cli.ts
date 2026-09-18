@@ -52,9 +52,9 @@ Usage:
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
-  slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
-    [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
-    [--keep-raster] [--json]
+  slopcamera image icon <subject> --output <file.svg> [--purpose <mark|illustration>]
+    [--model <provider/model>] [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>]
+    [--critique-model <provider/model>] [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
@@ -446,7 +446,7 @@ export async function main(
   if (command === "icon") {
     const parsed = parseArguments(
       rest,
-      new Set(["model", "output", "ink", "rounds", "critique-model"]),
+      new Set(["model", "output", "ink", "purpose", "rounds", "critique-model"]),
     )
     const unknownFlags = [...parsed.flags].filter(
       (flag) => flag !== "json" && flag !== "keep-raster",
@@ -484,6 +484,10 @@ export async function main(
     if (ink !== undefined && !/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu.test(ink)) {
       throw new Error("--ink must be a #rgb or #rrggbb color")
     }
+    const purpose = parsed.options.purpose
+    if (purpose !== undefined && purpose !== "mark" && purpose !== "illustration") {
+      throw new Error("--purpose must be mark or illustration")
+    }
     const rounds = parsePositiveInteger(parsed.options.rounds, "rounds")
     if (rounds !== undefined && rounds > slopcameraIconMaximumRounds) {
       throw new Error(`--rounds must be at most ${slopcameraIconMaximumRounds}`)
@@ -498,6 +502,7 @@ export async function main(
         inheritedFileDescriptors: [lease.inheritedFileDescriptor],
         ...(critiqueModel === undefined ? {} : { critiqueModel }),
         ...(ink === undefined ? {} : { ink }),
+        ...(purpose === undefined ? {} : { purpose }),
         ...(rounds === undefined ? {} : { rounds }),
       }),
       hostAdmissionOptions(dependencies),

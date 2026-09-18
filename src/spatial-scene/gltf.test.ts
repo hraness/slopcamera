@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import fc from "fast-check"
 import { deflateSync } from "node:zlib"
 import { createHash } from "node:crypto"
-import { evaluateSpatialGlb, parseSpatialGlb, SPATIAL_GLB_PROFILE, type SpatialGlbEvaluateOptions } from "./gltf.js"
+import { evaluateSpatialGlb, parseSpatialGlb, SPATIAL_GLB_PROFILE, SPATIAL_GLB_RIGGED_PROFILE, type SpatialGlbEvaluateOptions } from "./gltf.js"
 import { applySpatialScenePatch } from "./patch.js"
 import { spatialSceneSha256 } from "./identity.js"
 import { inspectSpatialScene } from "./inspect.js"
@@ -224,6 +224,22 @@ describe("closed GLB triangle profile", () => {
     expect(() => fixtureGeometry({ ...animation.document, animations: [{ ...clip, samplers: [{ input: 4, output: 5, interpolation: "CUBICSPLINE" }] }] }, animation.binary)).toThrow()
   })
 
+  test("admits the reviewed material extensions with complete facts and texture transforms", () => {
+    const fixture = textureFixture(), extensionsUsed = ["KHR_texture_transform", "KHR_materials_clearcoat", "KHR_materials_transmission", "KHR_materials_sheen", "KHR_materials_anisotropy", "KHR_materials_ior", "KHR_materials_emissive_strength"]
+    const transformed = { index: 0, extensions: { KHR_texture_transform: { offset: [0.25, 0.5], rotation: 0.2, scale: [2, 3] } } }
+    const document = { ...fixture.document, extensionsUsed, extensionsRequired: extensionsUsed, materials: [{
+      ...fixture.document.materials[0], pbrMetallicRoughness: { ...fixture.document.materials[0]!.pbrMetallicRoughness, baseColorTexture: transformed }, emissiveFactor: [0.2, 0.3, 0.4], emissiveTexture: { index: 0 },
+      extensions: { KHR_materials_clearcoat: { clearcoatFactor: 0.8, clearcoatRoughnessFactor: 0.2, clearcoatTexture: { index: 0 }, clearcoatRoughnessTexture: { index: 0 }, clearcoatNormalTexture: { index: 0, scale: 0.7 } }, KHR_materials_transmission: { transmissionFactor: 0.6, transmissionTexture: { index: 0 } }, KHR_materials_sheen: { sheenColorFactor: [0.1, 0.2, 0.3], sheenRoughnessFactor: 0.4, sheenColorTexture: { index: 0 }, sheenRoughnessTexture: { index: 0 } }, KHR_materials_anisotropy: { anisotropyStrength: 0.5, anisotropyRotation: 1, anisotropyTexture: { index: 0 } }, KHR_materials_ior: { ior: 1.45 }, KHR_materials_emissive_strength: { emissiveStrength: 4 } },
+    }] }
+    const model = parseSpatialGlb(envelope(document, fixture.binary)), geometry = evaluateSpatialGlb(model, { ...options, materialMode: "source" })
+    expect(model.materialFacts[0]).toMatchObject({ clearcoat: { factor: 0.8, roughness: 0.2 }, transmission: { factor: 0.6 }, sheen: { roughness: 0.4 }, anisotropy: { strength: 0.5, rotation: 1 }, ior: 1.45, emissiveStrength: 4 })
+    expect(model.materialFacts[0]!.maps).toHaveLength(9)
+    expect(model.materialFacts[0]!.textureTransforms).toEqual([{ map: "baseColor", offset: [0.25, 0.5], rotation: 0.2, scale: [2, 3] }])
+    expect(geometry.primitives[0]!.material?.clearcoat?.normalTexture?.scale).toBe(0.7)
+    expect(geometry.images).toHaveLength(1)
+    expect(() => parseSpatialGlb(envelope({ ...document, extensionsRequired: ["KHR_materials_ior"], extensionsUsed: [] }, fixture.binary))).toThrow("required extension")
+  })
+
   test("malformed chunk lengths, padding, UTF-8 and binary envelopes reject without reads beyond bounds", () => {
     const fixture = triangleFixture(), valid = envelope(fixture.document, fixture.binary)
     for (const offset of [0, 4, 8, 12, 16]) {
@@ -382,5 +398,221 @@ describe("absolute-time embedded glTF clips", () => {
       expect(evaluateSpatialGlb(model, { ...options, clip, timeUs })).toEqual(a)
       expect(a.primitives[0]!.matrix[12]).toBeCloseTo(timeUs / 100_000, 10)
     }), { seed: 4251, numRuns: 100 })
+  })
+})
+
+function riggedFixture() {
+  const binary = new Uint8Array(344)
+  const data = new DataView(binary.buffer)
+  // positions: A(0,0,0) B(2,0,0) C(0,0,2)
+  const positions = [0, 0, 0, 2, 0, 0, 0, 0, 2]
+  positions.forEach((value, index) => data.setFloat32(index * 4, value, true))
+  // normals: all +Y
+  const normals = [0, 1, 0, 0, 1, 0, 0, 1, 0]
+  normals.forEach((value, index) => data.setFloat32(36 + index * 4, value, true))
+  // JOINTS_0: A and C -> joint 0, B -> joint 1
+  binary[72] = 0; binary[73] = 0; binary[74] = 0; binary[75] = 0
+  binary[76] = 1; binary[77] = 0; binary[78] = 0; binary[79] = 0
+  binary[80] = 0; binary[81] = 0; binary[82] = 0; binary[83] = 0
+  // WEIGHTS_0: all full single influence
+  const weights = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  weights.forEach((value, index) => data.setFloat32(84 + index * 4, value, true))
+  // indices
+  data.setUint16(132, 0, true); data.setUint16(134, 1, true); data.setUint16(136, 2, true)
+  // inverse bind matrices: joint0 identity, joint1 inverse of translation (1,0,0)
+  const ibm0 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+  const ibm1 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1]
+  ibm0.forEach((value, index) => data.setFloat32(140 + index * 4, value, true))
+  ibm1.forEach((value, index) => data.setFloat32(204 + index * 4, value, true))
+  // morph target POSITION deltas: all vertices move +Y by 1
+  const morphDeltas = [0, 1, 0, 0, 1, 0, 0, 1, 0]
+  morphDeltas.forEach((value, index) => data.setFloat32(268 + index * 4, value, true))
+  // animation input times
+  data.setFloat32(304, 0, true); data.setFloat32(308, 1, true)
+  // animation output rotations: identity, then 90° around Z
+  const qIdentity = [0, 0, 0, 1]
+  const q90z = [0, 0, Math.SQRT1_2, Math.SQRT1_2]
+  qIdentity.forEach((value, index) => data.setFloat32(312 + index * 4, value, true))
+  q90z.forEach((value, index) => data.setFloat32(328 + index * 4, value, true))
+
+  const document = {
+    asset: { version: "2.0", generator: "SLOPCAMERA rigged parser fixture" },
+    buffers: [{ byteLength: binary.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 36, target: 34962 },
+      { buffer: 0, byteOffset: 36, byteLength: 36, target: 34962 },
+      { buffer: 0, byteOffset: 72, byteLength: 12, target: 34962 },
+      { buffer: 0, byteOffset: 84, byteLength: 48, target: 34962 },
+      { buffer: 0, byteOffset: 132, byteLength: 6, target: 34963 },
+      { buffer: 0, byteOffset: 140, byteLength: 128 },
+      { buffer: 0, byteOffset: 268, byteLength: 36, target: 34962 },
+      { buffer: 0, byteOffset: 304, byteLength: 8 },
+      { buffer: 0, byteOffset: 312, byteLength: 32 },
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: "VEC3", min: [0, 0, 0], max: [2, 0, 2] },
+      { bufferView: 1, componentType: 5126, count: 3, type: "VEC3" },
+      { bufferView: 2, componentType: 5121, count: 3, type: "VEC4" },
+      { bufferView: 3, componentType: 5126, count: 3, type: "VEC4" },
+      { bufferView: 4, componentType: 5123, count: 3, type: "SCALAR" },
+      { bufferView: 5, componentType: 5126, count: 2, type: "MAT4" },
+      { bufferView: 6, componentType: 5126, count: 3, type: "VEC3" },
+      { bufferView: 7, componentType: 5126, count: 2, type: "SCALAR", min: [0], max: [1] },
+      { bufferView: 8, componentType: 5126, count: 2, type: "VEC4" },
+    ],
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [
+      { mesh: 0, skin: 0, rotation: [0, 0, 0, 1], children: [1] },
+      { name: "joint0", children: [2] },
+      { name: "joint1", translation: [1, 0, 0] },
+    ],
+    meshes: [{
+      weights: [0],
+      extras: { targetNames: ["bulge"] },
+      primitives: [{
+        attributes: { POSITION: 0, NORMAL: 1, JOINTS_0: 2, WEIGHTS_0: 3 },
+        indices: 4,
+        targets: [{ POSITION: 6 }],
+      }],
+    }],
+    skins: [{ inverseBindMatrices: 5, joints: [1, 2] }],
+    animations: [{
+      samplers: [{ input: 7, output: 8 }],
+      channels: [{ sampler: 0, target: { node: 2, path: "rotation" } }],
+    }],
+  }
+  return { binary, document }
+}
+
+describe("rigged GLB profile", () => {
+  test("parses bounded skinned mesh, reports rigged profile and retained rig facts", () => {
+    const fixture = riggedFixture(), model = parseSpatialGlb(envelope(fixture.document, fixture.binary))
+    expect(model.profile).toBe(SPATIAL_GLB_RIGGED_PROFILE)
+    expect(model.rigFacts).toBeDefined()
+    expect(model.rigFacts!.profile).toBe(SPATIAL_GLB_RIGGED_PROFILE)
+    expect(model.rigFacts!.skins).toEqual([{ jointNodeIndices: [1, 2], inverseBindMatricesAccessor: 5 }])
+    expect(model.rigFacts!.morphTargets).toEqual([[[{ name: "bulge", hasPosition: true, hasNormal: false }]]])
+    expect(model.rigFacts!.clips).toEqual([{ durationSeconds: 1, channels: [{ nodeIndex: 2, path: "rotation" }] }])
+  })
+
+  test("deterministic CPU skinning deforms geometry with joint rotation", () => {
+    const fixture = riggedFixture(), model = parseSpatialGlb(envelope(fixture.document, fixture.binary))
+    const clip = { index: 0, offsetUs: 0, playback: "once" as const }
+    const rest = evaluateSpatialGlb(model, { ...options, clip, timeUs: 0 })
+    expect(rest.profile).toBe(SPATIAL_GLB_RIGGED_PROFILE)
+    expect(rest.primitives[0]!.positions).toEqual([0, 0, 0, 2, 0, 0, 0, 0, 2])
+    expect(rest.primitives[0]!.normals).toEqual([0, 1, 0, 0, 1, 0, 0, 1, 0])
+    const posed = evaluateSpatialGlb(model, { ...options, clip, timeUs: 1_000_000 })
+    expect(posed.sourceTimeSeconds).toBe(1)
+    // Vertex B is fully bound to joint1; after 90° rotation around joint1 at x=1 it lands at (1,1,0).
+    const b = posed.primitives[0]!.positions.slice(3, 6)
+    expect(b[0]).toBeCloseTo(1, 10); expect(b[1]).toBeCloseTo(1, 10); expect(b[2]).toBe(0)
+    // Vertex A and C remain under joint0 and unchanged.
+    expect(posed.primitives[0]!.positions.slice(0, 3)).toEqual([0, 0, 0])
+    expect(posed.primitives[0]!.positions.slice(6, 9)).toEqual([0, 0, 2])
+    // Normal at B rotates with joint1 to -X.
+    expect(posed.primitives[0]!.normals![3]).toBeCloseTo(-1, 10)
+    expect(posed.primitives[0]!.normals![4]).toBeCloseTo(0, 10)
+    expect(posed.primitives[0]!.normals![5]).toBeCloseTo(0, 10)
+    expect(Object.isFrozen(posed.primitives[0]!.positions)).toBe(true)
+  })
+
+  test("skinned vertices remain mesh-local while bounds include the mesh transform", () => {
+    const fixture = riggedFixture()
+    const document = { ...fixture.document, nodes: [{ ...fixture.document.nodes[0]!, translation: [10, 0, 0] }, ...fixture.document.nodes.slice(1)] }
+    const geometry = evaluateSpatialGlb(parseSpatialGlb(envelope(document, fixture.binary)), options)
+    expect(geometry.primitives[0]!.positions).toEqual([0, 0, 0, 2, 0, 0, 0, 0, 2])
+    expect(geometry.primitives[0]!.matrix.slice(12, 15)).toEqual([10, 0, 0])
+    expect(geometry.bounds).toEqual({ min: [10, 0, 0], max: [12, 0, 2] })
+  })
+
+  test("morph target applies before skinning and can be overridden at evaluation", () => {
+    const fixture = riggedFixture(), model = parseSpatialGlb(envelope(fixture.document, fixture.binary))
+    const rest = evaluateSpatialGlb(model, options)
+    expect(rest.primitives[0]!.positions).toEqual([0, 0, 0, 2, 0, 0, 0, 0, 2])
+    const morphed = evaluateSpatialGlb(model, { ...options, morphWeights: [1] })
+    expect(morphed.primitives[0]!.positions).toEqual([0, 1, 0, 2, 1, 0, 0, 1, 2])
+    expect(morphed.primitives[0]!.normals).toEqual([0, 1, 0, 0, 1, 0, 0, 1, 0])
+  })
+
+  test("weights animation drives morph target influence deterministically", () => {
+    const fixture = riggedFixture()
+    const weightsDocument = {
+      ...fixture.document,
+      animations: [{
+        samplers: [{ input: 7, output: 7 }],
+        channels: [{ sampler: 0, target: { node: 0, path: "weights" } }],
+      }],
+    }
+    const model = parseSpatialGlb(envelope(weightsDocument, fixture.binary))
+    const clip = { index: 0, offsetUs: 0, playback: "once" as const }
+    const start = evaluateSpatialGlb(model, { ...options, clip, timeUs: 0 })
+    expect(start.primitives[0]!.positions).toEqual([0, 0, 0, 2, 0, 0, 0, 0, 2])
+    const mid = evaluateSpatialGlb(model, { ...options, clip, timeUs: 500_000 })
+    expect(mid.primitives[0]!.positions).toEqual([0, 0.5, 0, 2, 0.5, 0, 0, 0.5, 2])
+  })
+
+  test("joint world matrix supports bone attachment placement", () => {
+    const fixture = riggedFixture(), model = parseSpatialGlb(envelope(fixture.document, fixture.binary))
+    const rest = model.jointWorldMatrix(options, 2)
+    expect(rest.slice(12, 15)).toEqual([1, 0, 0])
+    const posed = model.jointWorldMatrix({ ...options, clip: { index: 0, offsetUs: 0, playback: "once" }, timeUs: 1_000_000 }, 2)
+    expect(posed.slice(12, 15)).toEqual([1, 0, 0])
+  })
+
+  test("rejects malformed or oversized rigged features", () => {
+    const fixture = riggedFixture()
+    // Missing WEIGHTS_0
+    const missingWeights = {
+      ...fixture.document,
+      meshes: [{
+        ...fixture.document.meshes[0],
+        primitives: [{ ...fixture.document.meshes[0]!.primitives[0]!, attributes: { POSITION: 0, NORMAL: 1, JOINTS_0: 2 } }],
+      }],
+    }
+    expect(() => parseSpatialGlb(envelope(missingWeights, fixture.binary))).toThrow()
+    // Invalid total weight > 1
+    const badWeights = fixture.binary.slice()
+    const view = new DataView(badWeights.buffer)
+    view.setFloat32(84, 1, true); view.setFloat32(88, 1, true)
+    expect(() => parseSpatialGlb(envelope(fixture.document, badWeights))).toThrow()
+    // CUBICSPLINE weights animation
+    const cubicWeights = {
+      ...fixture.document,
+      animations: [{
+        samplers: [{ input: 7, output: 7, interpolation: "CUBICSPLINE" }],
+        channels: [{ sampler: 0, target: { node: 0, path: "weights" } }],
+      }],
+    }
+    expect(() => parseSpatialGlb(envelope(cubicWeights, fixture.binary))).toThrow()
+    // Joint index outside skin joints
+    const badJoints = fixture.binary.slice()
+    badJoints[76] = 5
+    expect(() => parseSpatialGlb(envelope(fixture.document, badJoints))).toThrow()
+    const { skins: _skins, ...withoutSkins } = fixture.document
+    const { skin: _skin, ...unskinnedNode } = fixture.document.nodes[0]!
+    const orphanAttributes = { ...withoutSkins, nodes: [unskinnedNode, ...fixture.document.nodes.slice(1)] }
+    expect(() => parseSpatialGlb(envelope(orphanAttributes, fixture.binary))).toThrow(SPATIAL_GLB_PROFILE)
+    expect(() => parseSpatialGlb(envelope({ ...fixture.document, skins: [{ ...fixture.document.skins[0]!, joints: [1, 1] }] }, fixture.binary))).toThrow("Skin joints must be unique")
+    expect(() => parseSpatialGlb(envelope({ ...fixture.document, skins: [{ ...fixture.document.skins[0]!, skeleton: 2 }] }, fixture.binary))).toThrow("ancestor of every skin joint")
+    const detachedJoints = { ...fixture.document, nodes: [{ ...fixture.document.nodes[0]!, children: [] }, ...fixture.document.nodes.slice(1)] }
+    expect(() => parseSpatialGlb(envelope(detachedJoints, fixture.binary))).toThrow("selected default scene")
+    const primitive = fixture.document.meshes[0]!.primitives[0]!
+    const { targets: _targets, ...withoutTargets } = primitive
+    expect(() => parseSpatialGlb(envelope({ ...fixture.document, meshes: [{ ...fixture.document.meshes[0]!, primitives: [primitive, withoutTargets] }] }, fixture.binary))).toThrow("same number of morph targets")
+    const incompleteWeights = fixture.binary.slice()
+    new DataView(incompleteWeights.buffer).setFloat32(84, 0.5, true)
+    expect(() => parseSpatialGlb(envelope(fixture.document, incompleteWeights))).toThrow("sum to one")
+  })
+
+  test("rigged evaluation remains immutable and detaches source bytes", () => {
+    const fixture = riggedFixture(), bytes = envelope(fixture.document, fixture.binary), model = parseSpatialGlb(bytes)
+    const a = evaluateSpatialGlb(model, options)
+    bytes.fill(0)
+    const b = evaluateSpatialGlb(model, options)
+    expect(b).toEqual(a)
+    expect(Object.isFrozen(model)).toBe(true)
+    expect(Object.isFrozen(model.rigFacts)).toBe(true)
   })
 })

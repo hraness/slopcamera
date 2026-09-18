@@ -1,7 +1,22 @@
 // @bun
 import {
+  SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS,
+  SLOPCAMERA_PORTABLE_CAPABILITY_VERSION,
   SLOPCAMERA_VERSION,
   STUDIO_LIMITS,
+  SlopcameraCapabilityCommandSchema,
+  SlopcameraCapabilityEffectSchema,
+  SlopcameraCapabilityManifestSchema,
+  SlopcameraCapabilityModuleDeclarationSchema,
+  SlopcameraCapabilityModuleSchema,
+  SlopcameraCapabilityOperationSchema,
+  SlopcameraCapabilityPreparationSchema,
+  SlopcameraCapabilityProfileSchema,
+  SlopcameraCapabilityQualificationSchema,
+  SlopcameraCapabilityResourceSchema,
+  SlopcameraCapabilityResumeSchema,
+  SlopcameraCapabilityToolSchema,
+  SlopcameraCapabilityWorkflowSchema,
   SlopcameraMcpToolRuntime,
   SlopcameraSceneVariantsSchema,
   StudioCapabilityNameSchema,
@@ -26,12 +41,16 @@ import {
   WorkspaceBoundaryError,
   artifactSummary,
   checkDiagramFile,
+  compileSlopcameraCapabilityManifest,
+  createPortableSlopcameraCapabilityManifest,
+  defineSlopcameraCapabilityModule,
   diagramApi,
   inspectStudioBundle,
   inspectStudioPlan,
   mcpMaximumRenderedPixels,
   mcpMaximumScale,
   mcpSourceByteLimit,
+  parseSlopcameraCapabilityManifest,
   parseSlopcameraSceneVariants,
   parseStudioJob,
   parseStudioPlan,
@@ -47,6 +66,7 @@ import {
   slopcameraMcpProtocolVersion,
   slopcameraMcpServerName,
   slopcameraMcpTools,
+  slopcameraPortableCapabilityManifest,
   slopcameraSceneGalleryLimits,
   studioJobSha256,
   studioOutputPath,
@@ -54,18 +74,18 @@ import {
   studioSourceBundleSha256,
   summarizeSceneVariantPatch,
   validateStudioReceipt
-} from "./index-qybe3hvr.js";
+} from "./index-f9afrjet.js";
 import {
   bundledSkillPath,
   installSkill
 } from "./index-7308egqr.js";
-import"./index-6ew11hhb.js";
-import"./index-8txs6fkn.js";
+import"./index-yp5587bh.js";
+import"./index-ff4r9h6b.js";
 import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-rx5qv31d.js";
+} from "./index-00g35nt2.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -81,6 +101,7 @@ import {
   generateSlopcameraIcon,
   generateSlopcameraImageGallery,
   iconPromptFor,
+  iconVisualGateProblems,
   isSlopcameraOperationCode,
   lintDiagram,
   parseDiagramSource,
@@ -110,7 +131,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-n4n19hs5.js";
+} from "./index-qmv5ns83.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -162,6 +183,7 @@ export {
   stackLayoutDefaults,
   slopcameraSceneGalleryLimits,
   slopcameraResponseMediaTypes,
+  slopcameraPortableCapabilityManifest,
   slopcameraOperationRegistry,
   slopcameraOperationHostResourceClaims,
   slopcameraOperationCodes,
@@ -208,6 +230,7 @@ export {
   parseSlopcameraSceneVariants,
   parseSlopcameraOperationInput,
   parseSlopcameraGalleryVary,
+  parseSlopcameraCapabilityManifest,
   parseDiagramSpec,
   parseDiagramSource,
   normalizeHostResourceProfile,
@@ -220,6 +243,7 @@ export {
   installSkill,
   inspectStudioPlan,
   inspectStudioBundle,
+  iconVisualGateProblems,
   iconPromptFor,
   generateSlopcameraImageGallery,
   generateSlopcameraImageFile,
@@ -232,14 +256,17 @@ export {
   executeSlopcameraOperation,
   diagramApi,
   defineSlopcameraWorkflow,
+  defineSlopcameraCapabilityModule,
   defaultSlopcameraHostResourceStateRoot,
   defaultSlopcameraHostResourceProfile,
   critiqueIconRaster,
   createProcessLocalHostResourceCoordinator,
+  createPortableSlopcameraCapabilityManifest,
   createHostResourceCoordinator,
   createFixedGatewayFetch,
   createDefaultHostResourceCoordinator,
   composeSlopcameraImageGallery,
+  compileSlopcameraCapabilityManifest,
   checkDiagramFile,
   bundledSkillPath,
   builtInIcons,
@@ -272,8 +299,23 @@ export {
   SlopcameraOperationError,
   SlopcameraMcpToolRuntime,
   SlopcameraCloudError,
+  SlopcameraCapabilityWorkflowSchema,
+  SlopcameraCapabilityToolSchema,
+  SlopcameraCapabilityResumeSchema,
+  SlopcameraCapabilityResourceSchema,
+  SlopcameraCapabilityQualificationSchema,
+  SlopcameraCapabilityProfileSchema,
+  SlopcameraCapabilityPreparationSchema,
+  SlopcameraCapabilityOperationSchema,
+  SlopcameraCapabilityModuleSchema,
+  SlopcameraCapabilityModuleDeclarationSchema,
+  SlopcameraCapabilityManifestSchema,
+  SlopcameraCapabilityEffectSchema,
+  SlopcameraCapabilityCommandSchema,
   STUDIO_LIMITS,
   SLOPCAMERA_VERSION,
+  SLOPCAMERA_PORTABLE_CAPABILITY_VERSION,
+  SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS,
   HostResourceError,
   HOST_RESOURCE_MAX_WAIT_MILLISECONDS,
   DiagramValidationError

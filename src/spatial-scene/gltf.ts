@@ -12,6 +12,8 @@ import { composeTransform, invertTransform, multiplyTransforms, normalizeQuatern
 export const SPATIAL_GLB_PROFILE = "slopcamera.glb-triangles-trs-pbr-fullmaps-v1"
 /** Facts documents admitted before the texture-map extension remain valid under the new profile. */
 export const SPATIAL_GLB_PROFILE_V1 = "slopcamera.glb-triangles-trs-pbr-basecolor-v1"
+/** Explicit additive profile for bounded rigged GLB assets with skinning and morph targets. */
+export const SPATIAL_GLB_RIGGED_PROFILE = "slopcamera.glb-rigged-morph-skin-v1"
 export const SPATIAL_GLB_LIMITS = Object.freeze({
   bytes: 134_217_728, jsonBytes: 2_097_152, jsonValues: 200_000, jsonDepth: 32,
   nodes: 4096, meshes: 256, primitives: 256, verticesPerPrimitive: 65_536,
@@ -19,6 +21,7 @@ export const SPATIAL_GLB_LIMITS = Object.freeze({
   accessors: 4096, bufferViews: 4096, materials: 256, images: 128,
   imageBytes: 16_777_216, imageTotalBytes: 33_554_432, imagePixels: 67_108_864,
   clips: 256, channels: 4096, animationKeys: 4096, durationSeconds: 3600,
+  skins: 64, jointsPerSkin: 256, morphTargetsPerPrimitive: 16, morphTargetDeltas: 2_000_000,
 })
 
 const finite = z.number().finite().min(-1e6).max(1e6)
@@ -28,10 +31,22 @@ const vec3 = z.tuple([finite, finite, finite])
 const signedUnit = z.number().finite().min(-1).max(1)
 const quaternion = z.tuple([signedUnit, signedUnit, signedUnit, signedUnit])
 const metadata = { name: z.string().max(1024).optional(), extras: z.unknown().optional(), extensions: z.never().optional() }
+const metadataWithoutExtensions = { name: z.string().max(1024).optional(), extras: z.unknown().optional() }
 const byteOffset = z.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes)
-const textureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional() })
-const normalTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), scale: finite.optional() })
-const occlusionTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), strength: unit.optional() })
+const textureTransform = z.strictObject({ offset: z.tuple([finite, finite]).default([0, 0]), rotation: z.number().finite().min(-Math.PI).max(Math.PI).default(0), scale: z.tuple([finite, finite]).default([1, 1]), texCoord: z.literal(0).optional() })
+const textureExtensions = z.strictObject({ KHR_texture_transform: textureTransform.optional() })
+const textureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), extensions: textureExtensions.optional() })
+const normalTextureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), scale: finite.optional(), extensions: textureExtensions.optional() })
+const occlusionTextureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), strength: unit.optional(), extensions: textureExtensions.optional() })
+const supportedExtension = z.enum(["KHR_texture_transform", "KHR_materials_clearcoat", "KHR_materials_transmission", "KHR_materials_sheen", "KHR_materials_anisotropy", "KHR_materials_ior", "KHR_materials_emissive_strength"])
+const materialExtensions = z.strictObject({
+  KHR_materials_clearcoat: z.strictObject({ clearcoatFactor: unit.default(0), clearcoatTexture: textureInfo.optional(), clearcoatRoughnessFactor: unit.default(0), clearcoatRoughnessTexture: textureInfo.optional(), clearcoatNormalTexture: normalTextureInfo.optional() }).optional(),
+  KHR_materials_transmission: z.strictObject({ transmissionFactor: unit.default(0), transmissionTexture: textureInfo.optional() }).optional(),
+  KHR_materials_sheen: z.strictObject({ sheenColorFactor: z.tuple([unit, unit, unit]).default([0, 0, 0]), sheenColorTexture: textureInfo.optional(), sheenRoughnessFactor: unit.default(0), sheenRoughnessTexture: textureInfo.optional() }).optional(),
+  KHR_materials_anisotropy: z.strictObject({ anisotropyStrength: unit.default(0), anisotropyRotation: z.number().finite().min(0).max(2 * Math.PI).default(0), anisotropyTexture: textureInfo.optional() }).optional(),
+  KHR_materials_ior: z.strictObject({ ior: z.number().finite().min(1).max(5).default(1.5) }).optional(),
+  KHR_materials_emissive_strength: z.strictObject({ emissiveStrength: z.number().finite().min(0).max(100_000).default(1) }).optional(),
+})
 const samplerSchema = z.strictObject({
   ...metadata, magFilter: z.union([z.literal(9728), z.literal(9729)]).optional(),
   minFilter: z.union([z.literal(9728), z.literal(9729), z.literal(9984), z.literal(9985), z.literal(9986), z.literal(9987)]).optional(),
@@ -39,7 +54,7 @@ const samplerSchema = z.strictObject({
   wrapT: z.union([z.literal(33071), z.literal(33648), z.literal(10497)]).default(10497),
 })
 const nodeSchema = z.strictObject({
-  ...metadata, children: z.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]), mesh: index.optional(),
+  ...metadata, children: z.array(index).max(SPATIAL_GLB_LIMITS.nodes).default([]), mesh: index.optional(), skin: index.optional(),
   translation: vec3.optional(), rotation: quaternion.optional(), scale: vec3.optional(),
   matrix: z.array(finite).length(16).optional(),
 })
@@ -47,23 +62,25 @@ const accessorSchema = z.strictObject({
   ...metadata, bufferView: index, byteOffset: byteOffset.default(0),
   componentType: z.union([z.literal(5121), z.literal(5123), z.literal(5125), z.literal(5126)]),
   normalized: z.boolean().default(false), count: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.triangles * 3),
-  type: z.enum(["SCALAR", "VEC2", "VEC3", "VEC4"]), min: z.array(finite).min(1).max(4).optional(), max: z.array(finite).min(1).max(4).optional(),
+  type: z.enum(["SCALAR", "VEC2", "VEC3", "VEC4", "MAT4"]), min: z.array(finite).min(1).max(4).optional(), max: z.array(finite).min(1).max(4).optional(),
 })
 const gltfSchema = z.strictObject({
   ...metadata,
   asset: z.strictObject({ version: z.literal("2.0"), minVersion: z.literal("2.0").optional(), generator: z.string().max(1024).optional(), copyright: z.string().max(4096).optional(), extras: z.unknown().optional(), extensions: z.never().optional() }),
-  extensionsUsed: z.array(z.never()).optional(), extensionsRequired: z.array(z.never()).optional(),
+  extensionsUsed: z.array(supportedExtension).max(7).optional(), extensionsRequired: z.array(supportedExtension).max(7).optional(),
   buffers: z.array(z.strictObject({ ...metadata, byteLength: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
   bufferViews: z.array(z.strictObject({ ...metadata, buffer: z.literal(0), byteOffset: byteOffset.default(0), byteLength: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z.number().int().min(4).max(252).optional(), target: z.union([z.literal(34962), z.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
   accessors: z.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
   scene: index.optional(), scenes: z.array(z.strictObject({ ...metadata, nodes: z.array(index).min(1).max(SPATIAL_GLB_LIMITS.nodes) })).min(1).max(128),
   nodes: z.array(nodeSchema).min(1).max(SPATIAL_GLB_LIMITS.nodes),
   meshes: z.array(z.strictObject({ ...metadata, primitives: z.array(z.strictObject({
-    ...metadata, attributes: z.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional() }),
+    ...metadata, attributes: z.strictObject({ POSITION: index, NORMAL: index.optional(), TEXCOORD_0: index.optional(), JOINTS_0: index.optional(), WEIGHTS_0: index.optional() }),
     indices: index.optional(), material: index.optional(), mode: z.literal(4).default(4),
-  })).min(1).max(SPATIAL_GLB_LIMITS.primitives) })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
+    targets: z.array(z.strictObject({ ...metadata, POSITION: index.optional(), NORMAL: index.optional() })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional(),
+  })).min(1).max(SPATIAL_GLB_LIMITS.primitives), weights: z.array(unit).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional() })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
+  skins: z.array(z.strictObject({ ...metadata, inverseBindMatrices: index, joints: z.array(index).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin), skeleton: index.optional() })).max(SPATIAL_GLB_LIMITS.skins).optional(),
   materials: z.array(z.strictObject({
-    ...metadata, pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
+    ...metadataWithoutExtensions, extensions: materialExtensions.optional(), pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
     normalTexture: normalTextureInfo.optional(),
     occlusionTexture: occlusionTextureInfo.optional(),
     emissiveTexture: textureInfo.optional(),
@@ -75,7 +92,7 @@ const gltfSchema = z.strictObject({
   samplers: z.array(samplerSchema).max(SPATIAL_GLB_LIMITS.images).default([]),
   animations: z.array(z.strictObject({ ...metadata,
     samplers: z.array(z.strictObject({ ...metadata, input: index, output: index, interpolation: z.enum(["STEP", "LINEAR"]).default("LINEAR") })).min(1).max(SPATIAL_GLB_LIMITS.channels),
-    channels: z.array(z.strictObject({ ...metadata, sampler: index, target: z.strictObject({ ...metadata, node: index, path: z.enum(["translation", "rotation", "scale"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels),
+    channels: z.array(z.strictObject({ ...metadata, sampler: index, target: z.strictObject({ ...metadata, node: index, path: z.enum(["translation", "rotation", "scale", "weights"]) }) })).min(1).max(SPATIAL_GLB_LIMITS.channels),
   })).max(SPATIAL_GLB_LIMITS.clips).default([]),
 })
 type Gltf = z.infer<typeof gltfSchema>
@@ -92,6 +109,7 @@ export interface SpatialGlbSampler {
 export interface SpatialGlbTextureRef {
   readonly imageIndex: number
   readonly sampler: SpatialGlbSampler
+  readonly transform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] }
 }
 export interface SpatialGlbMaterial {
   readonly baseColorLinear: readonly [number, number, number, number]
@@ -108,6 +126,12 @@ export interface SpatialGlbMaterial {
   readonly emissiveTexture?: SpatialGlbTextureRef
   /** Declared emissiveFactor, linear RGB in [0,1]. */
   readonly emissiveLinear?: readonly [number, number, number]
+  readonly emissiveStrength?: number
+  readonly clearcoat?: { readonly factor: number; readonly roughness: number; readonly texture?: SpatialGlbTextureRef; readonly roughnessTexture?: SpatialGlbTextureRef; readonly normalTexture?: SpatialGlbTextureRef & { readonly scale?: number } }
+  readonly transmission?: { readonly factor: number; readonly texture?: SpatialGlbTextureRef }
+  readonly sheen?: { readonly colorLinear: readonly [number, number, number]; readonly roughness: number; readonly colorTexture?: SpatialGlbTextureRef; readonly roughnessTexture?: SpatialGlbTextureRef }
+  readonly anisotropy?: { readonly strength: number; readonly rotation: number; readonly texture?: SpatialGlbTextureRef }
+  readonly ior?: number
 }
 /** One row of the material fact table published into asset facts. */
 export interface SpatialGlbMaterialFact {
@@ -115,8 +139,15 @@ export interface SpatialGlbMaterialFact {
   readonly alphaMode: "OPAQUE" | "MASK" | "BLEND"
   readonly doubleSided: boolean
   /** Declared texture slots, in fixed baseColor→emissive order. */
-  readonly maps: readonly ("baseColor" | "metallicRoughness" | "normal" | "occlusion" | "emissive")[]
+  readonly maps: readonly ("baseColor" | "metallicRoughness" | "normal" | "occlusion" | "emissive" | "clearcoat" | "clearcoatRoughness" | "clearcoatNormal" | "transmission" | "sheenColor" | "sheenRoughness" | "anisotropy")[]
+  readonly textureTransforms: readonly { readonly map: string; readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] }[]
   readonly emissiveLinear?: readonly [number, number, number]
+  readonly emissiveStrength?: number
+  readonly clearcoat?: { readonly factor: number; readonly roughness: number }
+  readonly transmission?: { readonly factor: number }
+  readonly sheen?: { readonly colorLinear: readonly [number, number, number]; readonly roughness: number }
+  readonly anisotropy?: { readonly strength: number; readonly rotation: number }
+  readonly ior?: number
 }
 export interface SpatialGlbPrimitive {
   readonly positions: readonly number[]
@@ -138,11 +169,32 @@ export interface SpatialGlbImage {
   readonly bytes: Uint8Array
 }
 export interface SpatialGlbGeometry {
-  readonly profile: typeof SPATIAL_GLB_PROFILE
+  readonly profile: typeof SPATIAL_GLB_PROFILE | typeof SPATIAL_GLB_RIGGED_PROFILE
   readonly primitives: readonly SpatialGlbPrimitive[]
   readonly images: readonly SpatialGlbImage[]
   readonly bounds: Bounds
   readonly sourceTimeSeconds: number | null
+}
+export interface SpatialGlbMorphTargetFact {
+  readonly name: string
+  readonly hasPosition: boolean
+  readonly hasNormal: boolean
+}
+export interface SpatialGlbSkinFact {
+  readonly name?: string
+  readonly jointNodeIndices: readonly number[]
+  readonly inverseBindMatricesAccessor: number
+}
+export interface SpatialGlbClipFact {
+  readonly name?: string
+  readonly durationSeconds: number
+  readonly channels: readonly { readonly nodeIndex: number; readonly path: "translation" | "rotation" | "scale" | "weights" }[]
+}
+export interface SpatialGlbRigFacts {
+  readonly profile: typeof SPATIAL_GLB_RIGGED_PROFILE
+  readonly skins: readonly SpatialGlbSkinFact[]
+  readonly morphTargets: readonly (readonly SpatialGlbMorphTargetFact[][])[]
+  readonly clips: readonly SpatialGlbClipFact[]
 }
 export interface SpatialGlbEvaluateOptions {
   readonly metersPerUnit: number
@@ -151,11 +203,14 @@ export interface SpatialGlbEvaluateOptions {
   readonly materialMode?: "source" | "entity"
   readonly timeUs: number
   readonly clip?: { readonly index: number; readonly offsetUs: number; readonly playback: "once" | "loop" | "freeze" }
+  /** Optional override of morph target weights for every evaluated mesh node. */
+  readonly morphWeights?: readonly number[]
 }
 const optionsSchema = z.strictObject({
   metersPerUnit: z.number().finite().min(0.000001).max(1e6), sourceUp: z.enum(["x", "y", "z"]), nodeIndex: index.optional(), materialMode: z.enum(["source", "entity"]).default("entity"),
   timeUs: z.number().int().min(0).max(3_600_000_000),
   clip: z.strictObject({ index, offsetUs: z.number().int().min(0).max(3_600_000_000), playback: z.enum(["once", "loop", "freeze"]) }).optional(),
+  morphWeights: z.array(unit).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional(),
 })
 
 function fail(message: string, path = "glb"): never { throw new SpatialSceneError("invalid-data", `${SPATIAL_GLB_PROFILE}: ${message}`, path) }
@@ -243,7 +298,9 @@ function imageHeader(bytes: Uint8Array, mimeType: SpatialGlbImage["mimeType"]): 
 }
 
 interface DecodedAccessor { readonly source: Accessor; readonly values: readonly number[]; readonly components: number }
-interface PrimitiveData { readonly positions: readonly number[]; readonly normals?: readonly number[]; readonly uvs?: readonly number[]; readonly indices?: readonly number[]; readonly material: SpatialGlbMaterial }
+interface MorphTargetData { readonly positionDeltas?: readonly number[]; readonly normalDeltas?: readonly number[] }
+interface SkinData { readonly joints: readonly number[]; readonly inverseBindMatrices: readonly number[]; readonly sourceAccessorIndex: number; readonly matrixIndexByJointNode: ReadonlyMap<number, number> }
+interface PrimitiveData { readonly positions: readonly number[]; readonly normals?: readonly number[]; readonly uvs?: readonly number[]; readonly indices?: readonly number[]; readonly material: SpatialGlbMaterial; readonly morphTargets: readonly MorphTargetData[]; readonly weights: readonly number[]; readonly jointIndices?: readonly number[] | undefined; readonly jointWeights?: readonly number[] | undefined }
 interface ModelState {
   readonly document: Gltf
   readonly accessors: readonly DecodedAccessor[]
@@ -254,6 +311,9 @@ interface ModelState {
   readonly order: readonly number[]
   readonly reachable: ReadonlySet<number>
   readonly clipDurations: readonly number[]
+  readonly profile: typeof SPATIAL_GLB_PROFILE | typeof SPATIAL_GLB_RIGGED_PROFILE
+  readonly skins: readonly SkinData[]
+  readonly rigFacts?: SpatialGlbRigFacts | undefined
 }
 
 function readAccessors(document: Gltf, binary: Uint8Array): readonly DecodedAccessor[] {
@@ -267,7 +327,7 @@ function readAccessors(document: Gltf, binary: Uint8Array): readonly DecodedAcce
     const path = `accessors.${index}`
     const view = at(document.bufferViews, accessor.bufferView, path)
     const bytes = accessor.componentType === 5121 ? 1 : accessor.componentType === 5123 ? 2 : 4
-    const components = accessor.type === "SCALAR" ? 1 : Number(accessor.type.slice(3))
+    const components = accessor.type === "SCALAR" ? 1 : accessor.type === "MAT4" ? 16 : Number(accessor.type.slice(3))
     const stride = view.byteStride ?? components * bytes
     if (accessor.byteOffset % bytes !== 0 || (view.byteOffset + accessor.byteOffset) % bytes !== 0 || stride < components * bytes || stride % bytes !== 0) fail("Accessor alignment or stride is invalid.", path)
     if (accessor.byteOffset + (accessor.count - 1) * stride + components * bytes > view.byteLength) fail("Accessor exceeds its buffer view.", path)
@@ -308,10 +368,32 @@ function validateViewRoles(document: Gltf): void {
   for (const mesh of document.meshes) for (const primitive of mesh.primitives) {
     for (const index of Object.values(primitive.attributes)) if (index !== undefined) accessor(index, "vertex")
     if (primitive.indices !== undefined) accessor(primitive.indices, "index")
+    if (primitive.targets !== undefined) for (const target of primitive.targets) {
+      if (target.POSITION !== undefined) accessor(target.POSITION, "vertex")
+      if (target.NORMAL !== undefined) accessor(target.NORMAL, "vertex")
+    }
   }
+  if (document.skins !== undefined) for (const skin of document.skins) accessor(skin.inverseBindMatrices, "skin")
   for (const clip of document.animations) for (const sampler of clip.samplers) { accessor(sampler.input, "animation"); accessor(sampler.output, "animation") }
   for (const image of document.images) assign(image.bufferView, "image")
   for (const [viewIndex, ids] of vertexAccessors) if (ids.size > 1 && at(document.bufferViews, viewIndex, "bufferViews").byteStride === undefined) fail("Shared vertex-attribute views require an explicit stride.", `bufferViews.${viewIndex}`)
+}
+
+function validateExtensions(document: Gltf): void {
+  const used = document.extensionsUsed ?? [], required = document.extensionsRequired ?? []
+  if (new Set(used).size !== used.length || new Set(required).size !== required.length) fail("Extension declarations must be unique.", "extensionsUsed")
+  for (const extension of required) if (!used.includes(extension)) fail("Every required extension must also be listed in extensionsUsed.", "extensionsRequired")
+  const present = new Set<string>()
+  const texture = (info: { readonly extensions?: { readonly KHR_texture_transform?: unknown } | undefined } | undefined) => { if (info?.extensions?.KHR_texture_transform !== undefined) present.add("KHR_texture_transform") }
+  for (const material of document.materials) {
+    for (const name of Object.keys(material.extensions ?? {})) present.add(name)
+    texture(material.pbrMetallicRoughness?.baseColorTexture); texture(material.pbrMetallicRoughness?.metallicRoughnessTexture)
+    texture(material.normalTexture); texture(material.occlusionTexture); texture(material.emissiveTexture)
+    const extensions = material.extensions
+    texture(extensions?.KHR_materials_clearcoat?.clearcoatTexture); texture(extensions?.KHR_materials_clearcoat?.clearcoatRoughnessTexture); texture(extensions?.KHR_materials_clearcoat?.clearcoatNormalTexture)
+    texture(extensions?.KHR_materials_transmission?.transmissionTexture); texture(extensions?.KHR_materials_sheen?.sheenColorTexture); texture(extensions?.KHR_materials_sheen?.sheenRoughnessTexture); texture(extensions?.KHR_materials_anisotropy?.anisotropyTexture)
+  }
+  for (const extension of present) if (!used.includes(extension as typeof used[number])) fail(`Used extension ${extension} is not declared.`, "extensionsUsed")
 }
 
 function cleanSampler(sampler: Sampler | undefined): SpatialGlbSampler {
@@ -323,18 +405,19 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
     at(document.images, texture.source, "textures.source")
     if (texture.sampler !== undefined) at(document.samplers, texture.sampler, "textures.sampler")
   }
-  const textureRef = (info: { readonly index: number } | undefined, path: string): SpatialGlbTextureRef | undefined => {
+  const textureRef = (info: { readonly index: number; readonly extensions?: { readonly KHR_texture_transform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] } | undefined } | undefined } | undefined, path: string): SpatialGlbTextureRef | undefined => {
     if (info === undefined) return undefined
-    const texture = at(document.textures, info.index, path)
-    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) }
+    const texture = at(document.textures, info.index, path), transform = info.extensions?.KHR_texture_transform
+    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]), ...(transform === undefined ? {} : { transform: { offset: transform.offset, rotation: transform.rotation, scale: transform.scale } }) }
   }
   return deepFreezeJson(document.materials.map(material => {
-    const pbr = material.pbrMetallicRoughness
-    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture")
-    const metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture")
-    const normal = textureRef(material.normalTexture, "normalTexture")
-    const occlusion = textureRef(material.occlusionTexture, "occlusionTexture")
-    const emissive = textureRef(material.emissiveTexture, "emissiveTexture")
+    const pbr = material.pbrMetallicRoughness, extensions = material.extensions
+    const clearcoat = extensions?.KHR_materials_clearcoat, transmission = extensions?.KHR_materials_transmission
+    const sheen = extensions?.KHR_materials_sheen, anisotropy = extensions?.KHR_materials_anisotropy
+    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture"), metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture")
+    const normal = textureRef(material.normalTexture, "normalTexture"), occlusion = textureRef(material.occlusionTexture, "occlusionTexture"), emissive = textureRef(material.emissiveTexture, "emissiveTexture")
+    const clearcoatTexture = textureRef(clearcoat?.clearcoatTexture, "clearcoatTexture"), clearcoatRoughnessTexture = textureRef(clearcoat?.clearcoatRoughnessTexture, "clearcoatRoughnessTexture"), clearcoatNormal = textureRef(clearcoat?.clearcoatNormalTexture, "clearcoatNormalTexture")
+    const transmissionTexture = textureRef(transmission?.transmissionTexture, "transmissionTexture"), sheenColorTexture = textureRef(sheen?.sheenColorTexture, "sheenColorTexture"), sheenRoughnessTexture = textureRef(sheen?.sheenRoughnessTexture, "sheenRoughnessTexture"), anisotropyTexture = textureRef(anisotropy?.anisotropyTexture, "anisotropyTexture")
     return {
       baseColorLinear: pbr?.baseColorFactor ?? [1, 1, 1, 1] as const, metalness: pbr?.metallicFactor ?? 1, roughness: pbr?.roughnessFactor ?? 1,
       alphaMode: material.alphaMode, alphaCutoff: material.alphaCutoff, doubleSided: material.doubleSided,
@@ -344,6 +427,12 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
       ...(occlusion === undefined ? {} : { occlusionTexture: { ...occlusion, ...(material.occlusionTexture!.strength === undefined ? {} : { strength: material.occlusionTexture!.strength }) } }),
       ...(emissive === undefined ? {} : { emissiveTexture: emissive }),
       ...(material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor }),
+      ...(extensions?.KHR_materials_emissive_strength === undefined ? {} : { emissiveStrength: extensions.KHR_materials_emissive_strength.emissiveStrength }),
+      ...(clearcoat === undefined ? {} : { clearcoat: { factor: clearcoat.clearcoatFactor, roughness: clearcoat.clearcoatRoughnessFactor, ...(clearcoatTexture === undefined ? {} : { texture: clearcoatTexture }), ...(clearcoatRoughnessTexture === undefined ? {} : { roughnessTexture: clearcoatRoughnessTexture }), ...(clearcoatNormal === undefined ? {} : { normalTexture: { ...clearcoatNormal, ...(clearcoat.clearcoatNormalTexture?.scale === undefined ? {} : { scale: clearcoat.clearcoatNormalTexture.scale }) } }) } }),
+      ...(transmission === undefined ? {} : { transmission: { factor: transmission.transmissionFactor, ...(transmissionTexture === undefined ? {} : { texture: transmissionTexture }) } }),
+      ...(sheen === undefined ? {} : { sheen: { colorLinear: sheen.sheenColorFactor, roughness: sheen.sheenRoughnessFactor, ...(sheenColorTexture === undefined ? {} : { colorTexture: sheenColorTexture }), ...(sheenRoughnessTexture === undefined ? {} : { roughnessTexture: sheenRoughnessTexture }) } }),
+      ...(anisotropy === undefined ? {} : { anisotropy: { strength: anisotropy.anisotropyStrength, rotation: anisotropy.anisotropyRotation, ...(anisotropyTexture === undefined ? {} : { texture: anisotropyTexture }) } }),
+      ...(extensions?.KHR_materials_ior === undefined ? {} : { ior: extensions.KHR_materials_ior.ior }),
     }
   }))
 }
@@ -352,60 +441,212 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
 function materialFacts(document: Gltf, sources: readonly SpatialGlbMaterial[]): readonly SpatialGlbMaterialFact[] {
   return deepFreezeJson(document.materials.map((material, index) => {
     const resolved = sources[index]!
-    const maps = [
-      resolved.baseColorTexture === undefined ? undefined : "baseColor" as const,
-      resolved.metallicRoughnessTexture === undefined ? undefined : "metallicRoughness" as const,
-      resolved.normalTexture === undefined ? undefined : "normal" as const,
-      resolved.occlusionTexture === undefined ? undefined : "occlusion" as const,
-      resolved.emissiveTexture === undefined ? undefined : "emissive" as const,
-    ].filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+    const slots = [
+      ["baseColor", resolved.baseColorTexture], ["metallicRoughness", resolved.metallicRoughnessTexture], ["normal", resolved.normalTexture], ["occlusion", resolved.occlusionTexture], ["emissive", resolved.emissiveTexture],
+      ["clearcoat", resolved.clearcoat?.texture], ["clearcoatRoughness", resolved.clearcoat?.roughnessTexture], ["clearcoatNormal", resolved.clearcoat?.normalTexture], ["transmission", resolved.transmission?.texture], ["sheenColor", resolved.sheen?.colorTexture], ["sheenRoughness", resolved.sheen?.roughnessTexture], ["anisotropy", resolved.anisotropy?.texture],
+    ] as const
+    const maps = slots.filter((entry): entry is typeof entry & readonly [string, SpatialGlbTextureRef] => entry[1] !== undefined).map(entry => entry[0])
+    const textureTransforms = slots.flatMap(([map, texture]) => texture?.transform === undefined ? [] : [{ map, ...texture.transform }])
     return {
       ...(material.name === undefined ? {} : { name: material.name }),
-      alphaMode: resolved.alphaMode, doubleSided: resolved.doubleSided, maps,
+      alphaMode: resolved.alphaMode, doubleSided: resolved.doubleSided, maps, textureTransforms,
       ...(resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear }),
+      ...(resolved.emissiveStrength === undefined ? {} : { emissiveStrength: resolved.emissiveStrength }),
+      ...(resolved.clearcoat === undefined ? {} : { clearcoat: { factor: resolved.clearcoat.factor, roughness: resolved.clearcoat.roughness } }),
+      ...(resolved.transmission === undefined ? {} : { transmission: { factor: resolved.transmission.factor } }),
+      ...(resolved.sheen === undefined ? {} : { sheen: { colorLinear: resolved.sheen.colorLinear, roughness: resolved.sheen.roughness } }),
+      ...(resolved.anisotropy === undefined ? {} : { anisotropy: { strength: resolved.anisotropy.strength, rotation: resolved.anisotropy.rotation } }),
+      ...(resolved.ior === undefined ? {} : { ior: resolved.ior }),
     }
   }))
 }
 
+function allMaterialTextures(material: SpatialGlbMaterial): readonly (SpatialGlbTextureRef | undefined)[] {
+  return [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture,
+    material.clearcoat?.texture, material.clearcoat?.roughnessTexture, material.clearcoat?.normalTexture, material.transmission?.texture,
+    material.sheen?.colorTexture, material.sheen?.roughnessTexture, material.anisotropy?.texture]
+}
+
 function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[], sources: readonly SpatialGlbMaterial[]): readonly (readonly PrimitiveData[])[] {
   const defaultMaterial: SpatialGlbMaterial = { baseColorLinear: [1, 1, 1, 1], metalness: 1, roughness: 1, alphaMode: "OPAQUE", alphaCutoff: 0.5, doubleSided: false }
-  let primitiveCount = 0, triangles = 0
-  return deepFreezeJson(document.meshes.map((mesh, meshIndex) => mesh.primitives.map((primitive, primitiveIndex) => {
-    const path = `meshes.${meshIndex}.primitives.${primitiveIndex}`
-    if (++primitiveCount > SPATIAL_GLB_LIMITS.primitives) fail("Source primitive count exceeds this profile.", path)
-    const positions = at(accessors, primitive.attributes.POSITION, path)
-    const normals = primitive.attributes.NORMAL === undefined ? undefined : at(accessors, primitive.attributes.NORMAL, path)
-    const uvs = primitive.attributes.TEXCOORD_0 === undefined ? undefined : at(accessors, primitive.attributes.TEXCOORD_0, path)
-    const indices = primitive.indices === undefined ? undefined : at(accessors, primitive.indices, path)
-    if (positions.source.type !== "VEC3" || positions.source.componentType !== 5126 || positions.source.normalized || positions.source.min === undefined || positions.source.max === undefined || positions.source.count > SPATIAL_GLB_LIMITS.verticesPerPrimitive) fail("POSITION requires bounded float32 VEC3 with declared min/max.", path)
-    for (const attribute of [positions, normals, uvs]) if (attribute !== undefined) {
-      const view = document.bufferViews[attribute.source.bufferView]!
-      if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || (view.target !== undefined && view.target !== 34962)) fail("Vertex attributes require four-byte alignment and ARRAY_BUFFER target.", path)
-      const componentBytes = attribute.source.componentType === 5121 ? 1 : attribute.source.componentType === 5123 ? 2 : 4
-      if ((view.byteStride ?? attribute.components * componentBytes) % 4 !== 0) fail("Every vertex attribute element must remain four-byte aligned.", path)
-      if (attribute.source.count !== positions.source.count || attribute.values.some(value => Math.abs(value) > 1e6)) fail("Vertex attributes require matching counts and bounded coordinates.", path)
+  let primitiveCount = 0, triangles = 0, morphTargetDeltaCount = 0
+  return deepFreezeJson(document.meshes.map((mesh, meshIndex) => {
+    const targetCount = primitiveTargetCount(mesh, meshIndex)
+    if (mesh.weights !== undefined && mesh.weights.length !== targetCount) fail("Mesh weights count must match its morph target count.", `meshes.${meshIndex}.weights`)
+    const weights: readonly number[] = mesh.weights ?? (targetCount > 0 ? Object.freeze(new Array(targetCount).fill(0)) : Object.freeze([]))
+    return mesh.primitives.map((primitive, primitiveIndex) => {
+      const path = `meshes.${meshIndex}.primitives.${primitiveIndex}`
+      if (++primitiveCount > SPATIAL_GLB_LIMITS.primitives) fail("Source primitive count exceeds this profile.", path)
+      if (primitive.targets !== undefined && primitive.targets.length !== targetCount) fail("Every primitive in a mesh must declare the same number of morph targets.", path)
+      const positions = at(accessors, primitive.attributes.POSITION, path)
+      const normals = primitive.attributes.NORMAL === undefined ? undefined : at(accessors, primitive.attributes.NORMAL, path)
+      const uvs = primitive.attributes.TEXCOORD_0 === undefined ? undefined : at(accessors, primitive.attributes.TEXCOORD_0, path)
+      const jointsAttr = primitive.attributes.JOINTS_0 === undefined ? undefined : at(accessors, primitive.attributes.JOINTS_0, path)
+      const weightsAttr = primitive.attributes.WEIGHTS_0 === undefined ? undefined : at(accessors, primitive.attributes.WEIGHTS_0, path)
+      const indices = primitive.indices === undefined ? undefined : at(accessors, primitive.indices, path)
+      if (positions.source.type !== "VEC3" || positions.source.componentType !== 5126 || positions.source.normalized || positions.source.min === undefined || positions.source.max === undefined || positions.source.count > SPATIAL_GLB_LIMITS.verticesPerPrimitive) fail("POSITION requires bounded float32 VEC3 with declared min/max.", path)
+      for (const attribute of [positions, normals, uvs]) if (attribute !== undefined) {
+        const view = document.bufferViews[attribute.source.bufferView]!
+        if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || (view.target !== undefined && view.target !== 34962)) fail("Vertex attributes require four-byte alignment and ARRAY_BUFFER target.", path)
+        const componentBytes = attribute.source.componentType === 5121 ? 1 : attribute.source.componentType === 5123 ? 2 : 4
+        if ((view.byteStride ?? attribute.components * componentBytes) % 4 !== 0) fail("Every vertex attribute element must remain four-byte aligned.", path)
+        if (attribute.source.count !== positions.source.count || attribute.values.some(value => Math.abs(value) > 1e6)) fail("Vertex attributes require matching counts and bounded coordinates.", path)
+      }
+      if (normals) {
+        if (normals.source.type !== "VEC3" || normals.source.componentType !== 5126 || normals.source.normalized) fail("NORMAL requires float32 VEC3.", path)
+        for (let i = 0; i < normals.values.length; i += 3) if (Math.abs(Math.hypot(...normals.values.slice(i, i + 3)) - 1) > 1e-4) fail("Normals must be unit vectors.", path)
+      }
+      if (uvs && (uvs.source.type !== "VEC2" || (uvs.source.componentType !== 5126 && !([5121, 5123].includes(uvs.source.componentType) && uvs.source.normalized)))) fail("TEXCOORD_0 requires float32 or normalized unsigned byte/short VEC2.", path)
+      for (const attribute of [jointsAttr, weightsAttr]) {
+        if (attribute === undefined) continue
+        const view = document.bufferViews[attribute.source.bufferView]!
+        if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || (view.target !== undefined && view.target !== 34962)) fail("Skinning attributes require four-byte alignment and ARRAY_BUFFER target.", path)
+        const componentBytes = attribute.source.componentType === 5121 ? 1 : attribute.source.componentType === 5123 ? 2 : 4
+        if ((view.byteStride ?? attribute.components * componentBytes) % 4 !== 0) fail("Skinning attribute elements must remain four-byte aligned.", path)
+        if (attribute.source.count !== positions.source.count || attribute.values.some(value => Math.abs(value) > 1e6)) fail("Skinning attributes require matching counts and bounded values.", path)
+      }
+      let jointIndices: readonly number[] | undefined
+      let jointWeights: readonly number[] | undefined
+      if ((jointsAttr !== undefined) !== (weightsAttr !== undefined)) fail("JOINTS_0 and WEIGHTS_0 must appear together.", path)
+      if (jointsAttr !== undefined) {
+        if (jointsAttr.source.type !== "VEC4" || ![5121, 5123].includes(jointsAttr.source.componentType) || jointsAttr.source.normalized || jointsAttr.source.count !== positions.source.count) fail("JOINTS_0 requires unsigned byte/short VEC4 matching POSITION count.", path)
+        if (weightsAttr!.source.type !== "VEC4" || weightsAttr!.source.count !== positions.source.count) fail("WEIGHTS_0 requires VEC4 matching POSITION count.", path)
+        const normalized = weightsAttr!.source.normalized
+        const weightComponent = weightsAttr!.source.componentType
+        if (!(weightComponent === 5126 || ((weightComponent === 5121 || weightComponent === 5123) && normalized))) fail("WEIGHTS_0 requires float32 or normalized unsigned byte/short.", path)
+        jointIndices = Object.freeze(jointsAttr.values.map(value => {
+          const joint = Math.round(value)
+          if (joint < 0 || joint >= SPATIAL_GLB_LIMITS.jointsPerSkin || !Number.isFinite(joint) || Math.abs(joint - value) > 1e-6) fail("JOINTS_0 index must be an integer in skin joint range.", path)
+          return joint
+        }))
+        const normalizedWeights: number[] = []
+        for (let vertex = 0; vertex < weightsAttr!.source.count; vertex++) {
+          const values = weightsAttr!.values.slice(vertex * 4, vertex * 4 + 4)
+          const sum = values.reduce((total, value) => total + value, 0)
+          if (values.some(value => value < 0 || value > 1) || Math.abs(sum - 1) > 1e-4) fail("Vertex skinning weights must be in [0,1] and sum to one.", path)
+          normalizedWeights.push(...values.map(value => value / sum))
+        }
+        jointWeights = Object.freeze(normalizedWeights)
+      }
+      if (indices) {
+        const view = document.bufferViews[indices.source.bufferView]!
+        if (indices.source.type !== "SCALAR" || ![5121, 5123, 5125].includes(indices.source.componentType) || indices.source.normalized || view.byteStride !== undefined || (view.target !== undefined && view.target !== 34963)) fail("Triangle indices require tightly packed unsigned scalar storage.", path)
+        const restart = indices.source.componentType === 5121 ? 255 : indices.source.componentType === 5123 ? 65535 : 0xffffffff
+        if (indices.values.some(value => value >= positions.source.count || value === restart)) fail("Triangle index is out of range or reserved for primitive restart.", path)
+      }
+      const vertices = indices?.values.length ?? positions.source.count
+      if (vertices % 3 !== 0) fail("TRIANGLES require complete index or vertex triples.", path)
+      triangles += vertices / 3
+      if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Source triangle budget exceeded.", path)
+      const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path)
+      if (uvs === undefined && allMaterialTextures(material).some(texture => texture !== undefined)) {
+        fail("Material textures require TEXCOORD_0.", path)
+      }
+      const morphTargets: MorphTargetData[] = []
+      if (primitive.targets !== undefined) for (const [targetIndex, target] of primitive.targets.entries()) {
+        const targetPath = `${path}.targets.${targetIndex}`
+        const positionDeltas = target.POSITION === undefined ? undefined : at(accessors, target.POSITION, targetPath)
+        const normalDeltas = target.NORMAL === undefined ? undefined : at(accessors, target.NORMAL, targetPath)
+        if (positionDeltas === undefined && normalDeltas === undefined) fail("Morph target must declare POSITION or NORMAL deltas.", targetPath)
+        if (positionDeltas !== undefined) {
+          if (positionDeltas.source.type !== "VEC3" || positionDeltas.source.componentType !== 5126 || positionDeltas.source.normalized || positionDeltas.source.count !== positions.source.count) fail("Morph POSITION deltas require float32 VEC3 matching POSITION count.", targetPath)
+          morphTargetDeltaCount += positionDeltas.values.length
+        }
+        if (normalDeltas !== undefined) {
+          if (normalDeltas.source.type !== "VEC3" || normalDeltas.source.componentType !== 5126 || normalDeltas.source.normalized || normalDeltas.source.count !== positions.source.count) fail("Morph NORMAL deltas require float32 VEC3 matching POSITION count.", targetPath)
+          morphTargetDeltaCount += normalDeltas.values.length
+        }
+        for (const attribute of [positionDeltas, normalDeltas]) {
+          if (attribute === undefined) continue
+          const view = document.bufferViews[attribute.source.bufferView]!
+          if ((view.byteOffset + attribute.source.byteOffset) % 4 !== 0 || attribute.source.byteOffset % 4 !== 0 || (view.target !== undefined && view.target !== 34962)) fail("Morph target attributes require four-byte alignment and ARRAY_BUFFER target.", targetPath)
+          if ((view.byteStride ?? attribute.components * 4) % 4 !== 0) fail("Morph target attribute elements must remain four-byte aligned.", targetPath)
+          if (attribute.values.some(value => Math.abs(value) > 1e6)) fail("Morph target deltas must be bounded finite values.", targetPath)
+        }
+        if (morphTargetDeltaCount > SPATIAL_GLB_LIMITS.morphTargetDeltas) fail("Morph target delta budget exceeded.", targetPath)
+        morphTargets.push(Object.freeze({ ...(positionDeltas === undefined ? {} : { positionDeltas: positionDeltas.values }), ...(normalDeltas === undefined ? {} : { normalDeltas: normalDeltas.values }) }))
+      }
+      return Object.freeze({
+        positions: positions.values, ...(normals === undefined ? {} : { normals: normals.values }), ...(uvs === undefined ? {} : { uvs: uvs.values }), ...(indices === undefined ? {} : { indices: indices.values }),
+        ...(jointIndices === undefined ? {} : { jointIndices, jointWeights }), material, morphTargets: Object.freeze(morphTargets), weights,
+      })
+    })
+  }))
+}
+
+function primitiveTargetCount(mesh: { readonly primitives: readonly { readonly targets?: readonly unknown[] | undefined }[]; readonly weights?: readonly number[] | undefined }, meshIndex: number): number {
+  const count = mesh.primitives[0]?.targets?.length ?? 0
+  for (const [primitiveIndex, primitive] of mesh.primitives.entries()) {
+    if ((primitive.targets?.length ?? 0) !== count) fail("Every primitive in a mesh must declare the same number of morph targets.", `meshes.${meshIndex}.primitives.${primitiveIndex}`)
+  }
+  return count
+}
+
+function readSkins(document: Gltf, accessors: readonly DecodedAccessor[]): readonly SkinData[] {
+  if (document.skins === undefined) return Object.freeze([])
+  return Object.freeze(document.skins.map((skin, skinIndex) => {
+    const path = `skins.${skinIndex}`
+    const inverseBindMatrices = at(accessors, skin.inverseBindMatrices, path)
+    if (inverseBindMatrices.source.type !== "MAT4" || inverseBindMatrices.source.componentType !== 5126 || inverseBindMatrices.source.normalized || inverseBindMatrices.source.count !== skin.joints.length) fail("Inverse bind matrices require a float32 MAT4 accessor with one matrix per joint.", path)
+    const view = document.bufferViews[inverseBindMatrices.source.bufferView]!
+    if (view.byteStride !== undefined || view.target !== undefined) fail("Skin inverse bind matrices must be tightly packed without a GPU buffer target.", path)
+    for (let index = 0; index < skin.joints.length; index++) {
+      const matrix = inverseBindMatrices.values.slice(index * 16, (index + 1) * 16) as unknown as Mat4
+      safeMatrix(matrix, `${path}.inverseBindMatrices[${index}]`)
     }
-    if (normals) {
-      if (normals.source.type !== "VEC3" || normals.source.componentType !== 5126 || normals.source.normalized) fail("NORMAL requires float32 VEC3.", path)
-      for (let i = 0; i < normals.values.length; i += 3) if (Math.abs(Math.hypot(...normals.values.slice(i, i + 3)) - 1) > 1e-4) fail("Normals must be unit vectors.", path)
+    if (new Set(skin.joints).size !== skin.joints.length) fail("Skin joints must be unique.", `${path}.joints`)
+    for (const joint of skin.joints) at(document.nodes, joint, `${path}.joints`)
+    if (skin.skeleton !== undefined) at(document.nodes, skin.skeleton, `${path}.skeleton`)
+    const matrixIndexByJointNode = new Map<number, number>()
+    for (const [matrixIndex, jointNode] of skin.joints.entries()) matrixIndexByJointNode.set(jointNode, matrixIndex)
+    return Object.freeze({ joints: Object.freeze([...skin.joints]), inverseBindMatrices: Object.freeze([...inverseBindMatrices.values]), sourceAccessorIndex: skin.inverseBindMatrices, matrixIndexByJointNode: Object.freeze(matrixIndexByJointNode) })
+  }))
+}
+
+function rigFacts(document: Gltf, skins: readonly SkinData[], clipDurations: readonly number[]): SpatialGlbRigFacts {
+  const skinSources = document.skins!
+  const morphTargets: SpatialGlbMorphTargetFact[][][] = []
+  for (const [meshIndex, mesh] of document.meshes.entries()) {
+    const meshFacts: SpatialGlbMorphTargetFact[][] = []
+    const targetNames = meshTargetNames(mesh, meshIndex)
+    for (const primitive of mesh.primitives) {
+      const primitiveFacts: SpatialGlbMorphTargetFact[] = []
+      if (primitive.targets !== undefined) for (const [targetIndex, target] of primitive.targets.entries()) {
+        primitiveFacts.push({ name: targetNames[targetIndex] ?? `target${targetIndex}`, hasPosition: target.POSITION !== undefined, hasNormal: target.NORMAL !== undefined })
+      }
+      meshFacts.push(primitiveFacts)
     }
-    if (uvs && (uvs.source.type !== "VEC2" || (uvs.source.componentType !== 5126 && !([5121, 5123].includes(uvs.source.componentType) && uvs.source.normalized)))) fail("TEXCOORD_0 requires float32 or normalized unsigned byte/short VEC2.", path)
-    if (indices) {
-      const view = document.bufferViews[indices.source.bufferView]!
-      if (indices.source.type !== "SCALAR" || ![5121, 5123, 5125].includes(indices.source.componentType) || indices.source.normalized || view.byteStride !== undefined || (view.target !== undefined && view.target !== 34963)) fail("Triangle indices require tightly packed unsigned scalar storage.", path)
-      const restart = indices.source.componentType === 5121 ? 255 : indices.source.componentType === 5123 ? 65535 : 0xffffffff
-      if (indices.values.some(value => value >= positions.source.count || value === restart)) fail("Triangle index is out of range or reserved for primitive restart.", path)
-    }
-    const vertices = indices?.values.length ?? positions.source.count
-    if (vertices % 3 !== 0) fail("TRIANGLES require complete index or vertex triples.", path)
-    triangles += vertices / 3
-    if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Source triangle budget exceeded.", path)
-    const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path)
-    if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some(texture => texture !== undefined)) {
-      fail("Material textures require TEXCOORD_0.", path)
-    }
-    return { positions: positions.values, ...(normals === undefined ? {} : { normals: normals.values }), ...(uvs === undefined ? {} : { uvs: uvs.values }), ...(indices === undefined ? {} : { indices: indices.values }), material }
-  })))
+    morphTargets.push(meshFacts)
+  }
+  return deepFreezeJson({
+    profile: SPATIAL_GLB_RIGGED_PROFILE,
+    skins: skins.map((skin, index) => ({ ...(skinSources[index]!.name === undefined ? {} : { name: skinSources[index]!.name }), jointNodeIndices: skin.joints, inverseBindMatricesAccessor: skin.sourceAccessorIndex })),
+    morphTargets,
+    clips: document.animations.map((clip, index) => ({ ...(clip.name === undefined ? {} : { name: clip.name }), durationSeconds: clipDurations[index]!, channels: clip.channels.map(channel => ({ nodeIndex: channel.target.node, path: channel.target.path })) })),
+  })
+}
+
+function meshTargetNames(mesh: { readonly name?: string | undefined; readonly extras?: unknown; readonly weights?: readonly number[] | undefined; readonly primitives?: readonly unknown[] | undefined }, _meshIndex: number): readonly string[] {
+  const extras = mesh.extras
+  const list = extras !== null && typeof extras === "object" && "targetNames" in extras && Array.isArray((extras as { targetNames?: unknown }).targetNames) ? (extras as { targetNames: unknown[] }).targetNames : undefined
+  if (list === undefined) return []
+  return Object.freeze(list.map((value, index) => typeof value === "string" && value.length > 0 ? value : `target${index}`))
+}
+
+function detectRigProfile(document: Gltf): boolean {
+  if (document.skins !== undefined && document.skins.length > 0) return true
+  if (document.nodes.some(node => node.skin !== undefined)) return true
+  if (document.meshes.some(mesh => mesh.weights !== undefined || mesh.primitives.some(primitive => primitive.targets !== undefined && primitive.targets.length > 0 || primitive.attributes.JOINTS_0 !== undefined || primitive.attributes.WEIGHTS_0 !== undefined))) return true
+  if (document.animations.some(clip => clip.channels.some(channel => channel.target.path === "weights"))) return true
+  return false
+}
+
+function rejectStaticRigFields(document: Gltf, hasRig: boolean): void {
+  if (hasRig) return
+  if (document.skins !== undefined) fail("Static GLB profile does not support skins.", "skins")
+  if (document.nodes.some(node => node.skin !== undefined)) fail("Static GLB profile does not support skinned nodes.", "nodes")
+  if (document.meshes.some(mesh => mesh.weights !== undefined || mesh.primitives.some(primitive => primitive.targets !== undefined || primitive.attributes.JOINTS_0 !== undefined || primitive.attributes.WEIGHTS_0 !== undefined))) fail("Static GLB profile does not support morph targets or skinning attributes.", "meshes")
+  if (document.animations.some(clip => clip.channels.some(channel => channel.target.path === "weights"))) fail("Static GLB profile does not support weights animation.", "animations")
 }
 
 function hierarchy(document: Gltf) {
@@ -413,6 +654,12 @@ function hierarchy(document: Gltf) {
   for (const [index, node] of document.nodes.entries()) {
     nodeTransform(node, `nodes.${index}`)
     if (node.mesh !== undefined) at(document.meshes, node.mesh, `nodes.${index}.mesh`)
+    if (node.skin !== undefined) {
+      if (node.mesh === undefined) fail("Skin reference requires a mesh on the same node.", `nodes.${index}.skin`)
+      if (document.skins === undefined) fail("Skin reference requires a declared skins array.", `nodes.${index}.skin`)
+      const skin = at(document.skins, node.skin, `nodes.${index}.skin`)
+      for (const joint of skin.joints) at(document.nodes, joint, `skins.${node.skin}.joints`)
+    }
     const seen = new Set<number>()
     for (const child of node.children) {
       at(document.nodes, child, `nodes.${index}.children`)
@@ -443,6 +690,40 @@ function hierarchy(document: Gltf) {
   return { parents: Object.freeze(parents), order: Object.freeze(order), reachable }
 }
 
+function validateSkinHierarchy(document: Gltf, parents: readonly (number | null)[], reachable: ReadonlySet<number>): void {
+  for (const [skinIndex, skin] of (document.skins ?? []).entries()) {
+    for (const joint of skin.joints) {
+      if (!reachable.has(joint)) fail("Every skin joint must belong to the selected default scene.", `skins.${skinIndex}.joints`)
+      if (skin.skeleton === undefined) continue
+      let current: number | null = joint
+      while (current !== null && current !== skin.skeleton) current = parents[current]!
+      if (current === null) fail("The declared skeleton must be an ancestor of every skin joint.", `skins.${skinIndex}.skeleton`)
+    }
+  }
+}
+
+function validateSkinBindings(document: Gltf, meshPrimitives: readonly (readonly PrimitiveData[])[], skins: readonly SkinData[]): void {
+  if (detectRigProfile(document) && skins.length === 0) fail("The rigged GLB profile requires at least one declared skin.", "skins")
+  for (const [nodeIndex, node] of document.nodes.entries()) {
+    if (node.mesh === undefined) {
+      if (node.skin !== undefined) fail("A skinned node must reference a mesh.", `nodes.${nodeIndex}.skin`)
+      continue
+    }
+    const mesh = meshPrimitives[node.mesh]!
+    if (node.skin === undefined) {
+      if (mesh.some(primitive => primitive.jointIndices !== undefined)) fail("Skinning attributes require an explicit skin on every mesh instance.", `nodes.${nodeIndex}.mesh`)
+      continue
+    }
+    const skin = skins[node.skin]
+    if (skin === undefined) fail("Skinned node references a missing skin.", `nodes.${nodeIndex}.skin`)
+    for (const [primitiveIndex, primitive] of mesh.entries()) {
+      const path = `nodes.${nodeIndex}.mesh.primitives.${primitiveIndex}`
+      if (primitive.jointIndices === undefined || primitive.jointWeights === undefined) fail("Skinned mesh primitives must declare JOINTS_0 and WEIGHTS_0.", path)
+      for (const joint of primitive.jointIndices) if (joint < 0 || joint >= skin.joints.length) fail("JOINTS_0 index exceeds the skin joint count.", path)
+    }
+  }
+}
+
 function animationDurations(document: Gltf, accessors: readonly DecodedAccessor[]): readonly number[] {
   let totalChannels = 0
   return Object.freeze(document.animations.map((clip, clipIndex) => {
@@ -452,7 +733,7 @@ function animationDurations(document: Gltf, accessors: readonly DecodedAccessor[
     for (const sampler of clip.samplers) {
       const input = at(accessors, sampler.input, "animation input"), output = at(accessors, sampler.output, "animation output")
       if (input.source.type !== "SCALAR" || input.source.componentType !== 5126 || input.source.normalized || input.source.count > SPATIAL_GLB_LIMITS.animationKeys || input.source.min === undefined || input.source.max === undefined) fail("Animation input requires bounded float32 scalar seconds with min/max.")
-      if (output.source.componentType !== 5126 || output.source.normalized || output.source.count !== input.source.count) fail("Animation output must be float32 with matching key count.")
+      if (output.source.componentType !== 5126 || output.source.normalized) fail("Animation output must be float32.")
       for (const accessor of [input, output]) {
         const view = document.bufferViews[accessor.source.bufferView]!
         if (view.byteStride !== undefined || view.target !== undefined) fail("Animation data must be tightly packed without a GPU buffer target.")
@@ -472,11 +753,19 @@ function animationDurations(document: Gltf, accessors: readonly DecodedAccessor[
       if (writers.has(key)) fail("Animation has multiple writers for one node property.", `animations.${clipIndex}`)
       writers.add(key)
       const sampler = at(clip.samplers, channel.sampler, "animation sampler")
-      const output = accessors[sampler.output]!
-      if (output.source.type !== (channel.target.path === "rotation" ? "VEC4" : "VEC3")) fail("Animation output arity does not match its target property.")
-      if (channel.target.path === "rotation") for (let i = 0; i < output.values.length; i += 4) normalizedRotation(output.values.slice(i, i + 4), "animation rotation")
-      else if (output.values.some(value => Math.abs(value) > 1e6 || (channel.target.path === "scale" && value === 0))) fail("Animation transform values are unbounded or singular.")
-      if (channel.target.path === "scale" && sampler.interpolation === "LINEAR") for (let i = 3; i < output.values.length; i++) if (Math.sign(output.values[i]!) !== Math.sign(output.values[i - 3]!)) fail("Linear scale animation crosses a singular transform.")
+      const input = accessors[sampler.input]!, output = accessors[sampler.output]!
+      if (channel.target.path === "weights") {
+        const meshIndex = node.mesh ?? fail("Weights animation requires a mesh node target.", `animations.${clipIndex}.channels`)
+        const targetCount = primitiveTargetCount(document.meshes[meshIndex]!, meshIndex)
+        if (targetCount === 0) fail("Weights animation requires morph targets.", `animations.${clipIndex}.channels`)
+        if (output.source.type !== "SCALAR" || output.source.count !== input.source.count * targetCount) fail("Weights animation output must be scalar with input.count * morphTargetCount values.", `animations.${clipIndex}.channels`)
+        if (output.values.some(value => value < 0 || value > 1 || !Number.isFinite(value))) fail("Morph weights must be unit values.", `animations.${clipIndex}.channels`)
+      } else {
+        if (output.source.type !== (channel.target.path === "rotation" ? "VEC4" : "VEC3") || output.source.count !== input.source.count) fail("Animation output arity does not match its target property.")
+        if (channel.target.path === "rotation") for (let i = 0; i < output.values.length; i += 4) normalizedRotation(output.values.slice(i, i + 4), "animation rotation")
+        else if (output.values.some(value => Math.abs(value) > 1e6 || (channel.target.path === "scale" && value === 0))) fail("Animation transform values are unbounded or singular.")
+        if (channel.target.path === "scale" && sampler.interpolation === "LINEAR") for (let i = 3; i < output.values.length; i++) if (Math.sign(output.values[i]!) !== Math.sign(output.values[i - 3]!)) fail("Linear scale animation crosses a singular transform.")
+      }
     }
     return duration
   }))
@@ -484,18 +773,22 @@ function animationDurations(document: Gltf, accessors: readonly DecodedAccessor[
 
 /** Opaque model retains decoded authored data; callers cannot mutate its geometry or source images. */
 export class SpatialGlbModel {
-  readonly profile = SPATIAL_GLB_PROFILE
+  readonly profile: typeof SPATIAL_GLB_PROFILE | typeof SPATIAL_GLB_RIGGED_PROFILE
   readonly nodeCount: number
   readonly clipDurationsSeconds: readonly number[]
   /** Fact table over every declared material; the host publishes it into asset facts. */
   readonly materialFacts: readonly SpatialGlbMaterialFact[]
+  /** Retained rig facts for downstream integration; present only for rigged assets. */
+  readonly rigFacts?: SpatialGlbRigFacts | undefined
   readonly #state: ModelState
 
   private constructor(state: ModelState) {
     this.#state = state
+    this.profile = state.profile
     this.nodeCount = state.document.nodes.length
     this.clipDurationsSeconds = state.clipDurations
     this.materialFacts = state.materialFacts
+    this.rigFacts = state.rigFacts
     Object.freeze(this)
   }
 
@@ -511,15 +804,21 @@ export class SpatialGlbModel {
     let json: unknown
     try { json = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(20, binHeader))) } catch { return fail("GLB JSON must be valid UTF-8 JSON.") }
     const document = schemaValue(gltfSchema, json, "gltf")
+    validateExtensions(document)
     const payloadLength = document.buffers[0]!.byteLength
     if (payloadLength > binLength || binLength - payloadLength > 3) fail("Declared BIN length does not match its padding.")
     const binary = bytes.subarray(binHeader + 8)
     if (binary.subarray(payloadLength).some(byte => byte !== 0)) fail("BIN padding must contain zero bytes.")
+    const hasRig = detectRigProfile(document)
+    rejectStaticRigFields(document, hasRig)
     validateViewRoles(document)
     const accessors = readAccessors(document, binary)
     const sources = materials(document)
     const meshPrimitives = readMeshes(document, accessors, sources)
+    const skins = readSkins(document, accessors)
+    validateSkinBindings(document, meshPrimitives, skins)
     const graph = hierarchy(document)
+    validateSkinHierarchy(document, graph.parents, graph.reachable)
     const clipDurations = animationDurations(document, accessors)
     let totalImageBytes = 0, totalPixels = 0
     const images = document.images.map((image, imageIndex) => {
@@ -533,7 +832,9 @@ export class SpatialGlbModel {
       if (totalPixels > SPATIAL_GLB_LIMITS.imagePixels) fail("Embedded decoded image pixel budget exceeded.")
       return Object.freeze({ imageIndex, mimeType: image.mimeType, ...dimensions, bytes: imageBytes })
     })
-    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations })
+    const profile = hasRig ? SPATIAL_GLB_RIGGED_PROFILE : SPATIAL_GLB_PROFILE
+    const rigFactsValue = hasRig ? rigFacts(document, skins, clipDurations) : undefined
+    return new SpatialGlbModel({ document: deepFreezeJson(document), accessors, meshPrimitives, materialFacts: materialFacts(document, sources), images: Object.freeze(images), ...graph, clipDurations, profile, skins, rigFacts: rigFactsValue })
   }
 
   evaluate(input: SpatialGlbEvaluateOptions): SpatialGlbGeometry {
@@ -542,6 +843,7 @@ export class SpatialGlbModel {
     if (options.nodeIndex !== undefined && !state.reachable.has(options.nodeIndex)) fail("Selected node is absent from the default scene.", "nodeIndex")
     let sourceTimeSeconds: number | null = null
     const animated = new Map<number, { translation?: Vec3; rotation?: Quaternion; scale?: Vec3 }>()
+    const animatedWeights = new Map<number, readonly number[]>()
     if (options.clip !== undefined) {
       const clip = at(document.animations, options.clip.index, "clip.index")
       const duration = state.clipDurations[options.clip.index]!
@@ -562,10 +864,14 @@ export class SpatialGlbModel {
           const t = (sourceTimeSeconds - times[lower]!) / (times[upper]! - times[lower]!)
           value = channel.target.path === "rotation" ? slerpQuaternion(left as unknown as Quaternion, right as unknown as Quaternion, t) : left.map((part, index) => part + (right[index]! - part) * t)
         }
-        const pose = animated.get(channel.target.node) ?? {}
-        if (channel.target.path === "rotation") pose.rotation = normalizedRotation(value, "evaluated clip rotation")
-        else pose[channel.target.path] = value as Vec3
-        animated.set(channel.target.node, pose)
+        if (channel.target.path === "weights") {
+          animatedWeights.set(channel.target.node, Object.freeze(value.map(value => Math.max(0, Math.min(1, value)))))
+        } else {
+          const pose = animated.get(channel.target.node) ?? {}
+          if (channel.target.path === "rotation") pose.rotation = normalizedRotation(value, "evaluated clip rotation")
+          else pose[channel.target.path] = value as Vec3
+          animated.set(channel.target.node, pose)
+        }
       }
     }
     // Source X-up rotates +90° around Z; source Z-up rotates -90° around X.
@@ -589,29 +895,143 @@ export class SpatialGlbModel {
     for (const sourceNodeIndex of [...selected].sort((a, b) => a - b)) {
       const node = document.nodes[sourceNodeIndex]!
       if (node.mesh === undefined) continue
-      const matrix = safeMatrix(matrices.get(sourceNodeIndex)!, `nodes.${sourceNodeIndex}`)
+      const nodeWorld = safeMatrix(matrices.get(sourceNodeIndex)!, `nodes.${sourceNodeIndex}`)
       for (const [sourcePrimitiveIndex, primitive] of state.meshPrimitives[node.mesh]!.entries()) {
         if (primitives.length >= SPATIAL_GLB_LIMITS.primitives) fail("Instanced primitive budget exceeded.")
         triangles += (primitive.indices?.length ?? primitive.positions.length / 3) / 3
         if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Instanced triangle budget exceeded.")
-        const bounds = vertexBounds(primitive.positions, primitive.indices, matrix)
-        const { material, ...geometry } = primitive
+        const morphWeights = options.morphWeights ?? animatedWeights.get(sourceNodeIndex) ?? primitive.weights
+        const skin = node.skin !== undefined ? state.skins[node.skin] : undefined
+        const deformed = deformPrimitive(primitive, morphWeights, skin, nodeWorld, matrices)
+        const { material, positions: _positions, normals: _normals, morphTargets: _morphTargets, weights: _weights, jointIndices: _jointIndices, jointWeights: _jointWeights, ...geometry } = primitive
         if (options.materialMode === "source") {
-          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+          for (const texture of allMaterialTextures(material)) {
             if (texture !== undefined) imageIds.add(texture.imageIndex)
           }
         }
-        primitives.push({ ...geometry, matrix, bounds, sourceNodeIndex, sourcePrimitiveIndex, ...(options.materialMode === "source" ? { material } : {}) })
+        primitives.push(Object.freeze({ ...geometry, positions: deformed.positions, ...(deformed.normals === undefined ? {} : { normals: deformed.normals }), matrix: nodeWorld, bounds: deformed.bounds, sourceNodeIndex, sourcePrimitiveIndex, ...(options.materialMode === "source" ? { material } : {}) }) as unknown as SpatialGlbPrimitive)
       }
     }
     if (primitives.length === 0) fail("Selected scene or subtree contains no triangle geometry.")
     const bounds = combineBounds(primitives.map(primitive => primitive.bounds))
     const images = [...imageIds].sort((a, b) => a - b).map(index => { const image = state.images[index]!; return Object.freeze({ ...image, bytes: image.bytes.slice() }) })
-    return Object.freeze({ profile: SPATIAL_GLB_PROFILE, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds, sourceTimeSeconds })
+    const profile = state.profile
+    return Object.freeze({ profile, primitives: deepFreezeJson(primitives), images: Object.freeze(images), bounds, sourceTimeSeconds })
+  }
+
+  /** Deterministic world matrix of a joint node for prop/bone attachment; output is immutable. */
+  jointWorldMatrix(input: SpatialGlbEvaluateOptions, jointNodeIndex: number): Mat4 {
+    const options = schemaValue(optionsSchema, input, "glb evaluation")
+    if (jointNodeIndex < 0 || jointNodeIndex >= this.nodeCount) fail("Joint node index is out of range.", "jointNodeIndex")
+    const state = this.#state, document = state.document
+    const animated = new Map<number, { translation?: Vec3; rotation?: Quaternion; scale?: Vec3 }>()
+    let sourceTimeSeconds: number | null = null
+    if (options.clip !== undefined) {
+      const clip = at(document.animations, options.clip.index, "clip.index")
+      const duration = state.clipDurations[options.clip.index]!
+      const requested = (options.timeUs + options.clip.offsetUs) / 1_000_000
+      if (options.clip.offsetUs / 1_000_000 > duration) fail("Clip source offset exceeds its duration.")
+      if (options.clip.playback === "once" && requested > duration) fail("Once clip playback exceeds its duration.")
+      sourceTimeSeconds = options.clip.playback === "loop" ? duration === 0 ? 0 : requested % duration : Math.min(requested, duration)
+      for (const channel of clip.channels) {
+        if (channel.target.path === "weights") continue
+        const sampler = clip.samplers[channel.sampler]!, times = state.accessors[sampler.input]!.values, output = state.accessors[sampler.output]!
+        let lower = 0, upper = times.length - 1
+        if (sourceTimeSeconds <= times[0]!) upper = 0
+        else if (sourceTimeSeconds >= times[upper]!) lower = upper
+        else while (upper - lower > 1) { const middle = Math.floor((lower + upper) / 2); if (times[middle]! <= sourceTimeSeconds) lower = middle; else upper = middle }
+        const left = output.values.slice(lower * output.components, (lower + 1) * output.components)
+        let value: readonly number[] = left
+        if (sampler.interpolation === "LINEAR" && upper !== lower) {
+          const right = output.values.slice(upper * output.components, (upper + 1) * output.components)
+          const t = (sourceTimeSeconds - times[lower]!) / (times[upper]! - times[lower]!)
+          value = channel.target.path === "rotation" ? slerpQuaternion(left as unknown as Quaternion, right as unknown as Quaternion, t) : left.map((part, index) => part + (right[index]! - part) * t)
+        }
+        const pose = animated.get(channel.target.node) ?? {}
+        if (channel.target.path === "rotation") pose.rotation = normalizedRotation(value, "evaluated clip rotation")
+        else pose[channel.target.path] = value as Vec3
+        animated.set(channel.target.node, pose)
+      }
+    }
+    const rotation: Quaternion = options.sourceUp === "x" ? [0, 0, Math.SQRT1_2, Math.SQRT1_2] : options.sourceUp === "z" ? [-Math.SQRT1_2, 0, 0, Math.SQRT1_2] : [0, 0, 0, 1]
+    const conversion = composeTransform({ position: [0, 0, 0], rotation, scale: [options.metersPerUnit, options.metersPerUnit, options.metersPerUnit] })
+    const matrices = new Map<number, Mat4>()
+    for (const index of state.order) {
+      const node = document.nodes[index]!, overrides = animated.get(index)
+      const local = overrides ? nodeTransform({ ...node, ...overrides }, `nodes.${index}`) : nodeTransform(node, `nodes.${index}`)
+      const parent = state.parents[index]
+      matrices.set(index, multiplyTransforms(parent === null ? conversion : matrices.get(parent!)!, local))
+    }
+    return safeMatrix(matrices.get(jointNodeIndex)!, "jointWorldMatrix")
   }
 }
 
-function vertexBounds(positions: readonly number[], indices: readonly number[] | undefined, matrix: Mat4): Bounds {
+function combineBounds(bounds: readonly Bounds[]): Bounds {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
+  for (const bound of bounds) for (let axis = 0; axis < 3; axis++) { min[axis] = Math.min(min[axis]!, bound.min[axis]!); max[axis] = Math.max(max[axis]!, bound.max[axis]!) }
+  return deepFreezeJson({ min: min as unknown as Vec3, max: max as unknown as Vec3 })
+}
+
+function deformPrimitive(primitive: PrimitiveData, morphWeights: readonly number[], skin: SkinData | undefined, nodeWorld: Mat4, nodeMatrices: ReadonlyMap<number, Mat4>): { positions: readonly number[]; normals?: readonly number[] | undefined; bounds: Bounds } {
+  const positions = applyMorphWeights(primitive.positions, primitive.morphTargets.map(target => target.positionDeltas), morphWeights)
+  let normals: readonly number[] | undefined
+  if (primitive.normals !== undefined) {
+    const morphed = applyMorphWeights(primitive.normals, primitive.morphTargets.map(target => target.normalDeltas), morphWeights)
+    normals = normalizeVectors(morphed)
+  }
+  if (skin === undefined) {
+    const bounds = transformVertexBounds(positions, primitive.indices, nodeWorld)
+    return normals === undefined ? { positions, bounds } : { positions, normals, bounds }
+  }
+  const deformedPositions: number[] = [], deformedNormals: number[] = []
+  const hasNormals = normals !== undefined, meshInverse = invertTransform(nodeWorld)
+  for (let vertex = 0; vertex < positions.length / 3; vertex++) {
+    const skinMatrix = computeSkinMatrix(vertex, primitive, skin, nodeMatrices, meshInverse)
+    const position = transformPoint(skinMatrix, [positions[vertex * 3]!, positions[vertex * 3 + 1]!, positions[vertex * 3 + 2]!])
+    deformedPositions.push(position[0], position[1], position[2])
+    if (hasNormals) {
+      const n = transformNormal(skinMatrix, [normals![vertex * 3]!, normals![vertex * 3 + 1]!, normals![vertex * 3 + 2]!])
+      const len = Math.hypot(n[0], n[1], n[2])
+      deformedNormals.push(len === 0 ? 0 : n[0] / len, len === 0 ? 0 : n[1] / len, len === 0 ? 0 : n[2] / len)
+    }
+  }
+  const frozenPositions = Object.freeze(deformedPositions), bounds = transformVertexBounds(frozenPositions, primitive.indices, nodeWorld)
+  return hasNormals
+    ? { positions: frozenPositions, normals: Object.freeze(deformedNormals), bounds }
+    : { positions: frozenPositions, bounds }
+}
+
+function applyMorphWeights(base: readonly number[], deltas: readonly (readonly number[] | undefined)[], weights: readonly number[]): readonly number[] {
+  if (deltas.length === 0 || weights.length === 0) return base
+  const out = base.slice()
+  for (let target = 0; target < deltas.length; target++) {
+    const weight = weights[target] ?? 0
+    if (weight === 0 || deltas[target] === undefined) continue
+    const delta = deltas[target]!
+    for (let index = 0; index < out.length; index++) out[index] = (out[index]! + weight * (delta[index] ?? 0))
+  }
+  return Object.freeze(out)
+}
+
+function normalizeVectors(values: readonly number[]): readonly number[] {
+  const out: number[] = []
+  for (let index = 0; index < values.length; index += 3) {
+    const len = Math.hypot(values[index]!, values[index + 1]!, values[index + 2]!)
+    out.push(len === 0 ? 0 : values[index]! / len, len === 0 ? 0 : values[index + 1]! / len, len === 0 ? 0 : values[index + 2]! / len)
+  }
+  return Object.freeze(out)
+}
+
+function transformNormal(matrix: Mat4, normal: Vec3): Vec3 {
+  const inverse = invertTransform(matrix)
+  return [
+    inverse[0] * normal[0] + inverse[1] * normal[1] + inverse[2] * normal[2],
+    inverse[4] * normal[0] + inverse[5] * normal[1] + inverse[6] * normal[2],
+    inverse[8] * normal[0] + inverse[9] * normal[1] + inverse[10] * normal[2],
+  ]
+}
+
+function transformVertexBounds(positions: readonly number[], indices: readonly number[] | undefined, matrix: Mat4): Bounds {
   const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity]
   const count = indices?.length ?? positions.length / 3
   for (let index = 0; index < count; index++) {
@@ -621,10 +1041,25 @@ function vertexBounds(positions: readonly number[], indices: readonly number[] |
   }
   return deepFreezeJson({ min: low as unknown as Vec3, max: high as unknown as Vec3 })
 }
-function combineBounds(bounds: readonly Bounds[]): Bounds {
-  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
-  for (const bound of bounds) for (let axis = 0; axis < 3; axis++) { min[axis] = Math.min(min[axis]!, bound.min[axis]!); max[axis] = Math.max(max[axis]!, bound.max[axis]!) }
-  return deepFreezeJson({ min: min as unknown as Vec3, max: max as unknown as Vec3 })
+
+function computeSkinMatrix(vertex: number, primitive: PrimitiveData, skin: SkinData, nodeMatrices: ReadonlyMap<number, Mat4>, meshInverse: Mat4): Mat4 {
+  const jointIndices = primitive.jointIndices!
+  const jointWeights = primitive.jointWeights!
+  const entries = new Array<number>(16).fill(0)
+  for (let influence = 0; influence < 4; influence++) {
+    const weight = jointWeights[vertex * 4 + influence]!
+    if (weight === 0) continue
+    const jointNode = skin.joints[jointIndices[vertex * 4 + influence]!]!
+    const jointWorld = nodeMatrices.get(jointNode)
+    if (jointWorld === undefined) fail(`Joint node ${jointNode} missing from hierarchy.`, "skin")
+    const matrixIndex = skin.matrixIndexByJointNode.get(jointNode)
+    if (matrixIndex === undefined) fail(`Joint node ${jointNode} is not in skin joints.`, "skin")
+    const inverseBindMatrix = skin.inverseBindMatrices.slice(matrixIndex * 16, matrixIndex * 16 + 16) as unknown as Mat4
+    const jointMatrix = multiplyTransforms(meshInverse, multiplyTransforms(jointWorld, inverseBindMatrix))
+    for (let entry = 0; entry < 16; entry++) entries[entry] = (entries[entry]! + weight * jointMatrix[entry]!)
+  }
+  entries[15] = 1
+  return Object.freeze(entries) as unknown as Mat4
 }
 
 export function parseSpatialGlb(bytes: Uint8Array): SpatialGlbModel { return SpatialGlbModel.parse(bytes) }

@@ -29,7 +29,7 @@ describe("material maps and environment entities", () => {
     expect(inspectSpatialScene(scene).entities[0]!.assetIds).toEqual(["asset_image"])
     const snapshot = evaluateSpatialScene(scene, { timeUs: 0, cameraId: "camera_main" })
     const entity = snapshot.entities[0]!.entity
-    expect(entity.kind === "mesh" && entity.material.map).toBe("asset_image")
+    expect(entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map).toBe("asset_image")
     const unmapped = parseSpatialScene({
       ...fixtureScene(),
       entities: [{ ...fixtureEntity(), material: { kind: "standard", color: "#ffffff", opacity: 1, roughness: 0.8, metalness: 0 } }],

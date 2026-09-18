@@ -19,6 +19,7 @@ import {
 } from "../../../src/spatial-scene/contracts";
 import { cameraMathView, composeTransform, invertTransform, multiplyTransforms, type Mat4 } from "../../../src/spatial-scene/math";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
+import { pbrMaterialMapAssetIds } from "../../../src/spatial-scene/material-lighting";
 import { SpatialAuditBoundsSchema } from "../../../src/spatial-scene/audit";
 import { SPATIAL_SPLAT_PROXY_REPRESENTATION } from "../../../src/spatial-scene/audit-rendered";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
@@ -51,6 +52,7 @@ const textureShape = {
   width: z.number().int().min(1).max(8_192),
   height: z.number().int().min(1).max(8_192),
   alpha: alphaSchema,
+  uvTransform: z.strictObject({ offset: z.tuple([z.number().finite(), z.number().finite()]), rotation: z.number().finite().min(-Math.PI).max(Math.PI), scale: z.tuple([z.number().finite(), z.number().finite()]) }).optional(),
 };
 const samplerSchema = z.strictObject({
   wrapS: z.union([z.literal(33071), z.literal(33648), z.literal(10497)]),
@@ -79,10 +81,18 @@ const primitiveSchema = z.strictObject({
   metallicRoughnessTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
   occlusionTexture: z.strictObject({ ...textureShape, strength: z.number().finite().min(0).max(1).optional(), flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
   emissiveTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  clearcoatTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  clearcoatRoughnessTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  clearcoatNormalTexture: z.strictObject({ ...textureShape, scale: z.number().finite().optional(), flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  transmissionTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  sheenColorTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  sheenRoughnessTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  anisotropyTexture: z.strictObject({ ...textureShape, flipY: z.boolean().optional(), sampler: samplerSchema.optional() }).optional(),
+  physical: z.strictObject({ emissiveLinear: z.tuple([z.number(), z.number(), z.number()]).optional(), emissiveStrength: z.number().min(0).max(100_000).optional(), clearcoat: z.strictObject({ factor: z.number().min(0).max(1), roughness: z.number().min(0).max(1) }).optional(), transmission: z.number().min(0).max(1).optional(), sheen: z.strictObject({ colorLinear: z.tuple([z.number(), z.number(), z.number()]), roughness: z.number().min(0).max(1) }).optional(), anisotropy: z.strictObject({ strength: z.number().min(0).max(1), rotation: z.number().min(0).max(2 * Math.PI) }).optional(), ior: z.number().min(1).max(5).optional() }).optional(),
 }).superRefine((primitive, context) => {
   const vertices = primitive.positions.length / 3;
   const hasTexture = primitive.texture !== undefined || primitive.normalTexture !== undefined || primitive.metallicRoughnessTexture !== undefined
-    || primitive.occlusionTexture !== undefined || primitive.emissiveTexture !== undefined;
+    || primitive.occlusionTexture !== undefined || primitive.emissiveTexture !== undefined || primitive.clearcoatTexture !== undefined || primitive.clearcoatRoughnessTexture !== undefined || primitive.clearcoatNormalTexture !== undefined || primitive.transmissionTexture !== undefined || primitive.sheenColorTexture !== undefined || primitive.sheenRoughnessTexture !== undefined || primitive.anisotropyTexture !== undefined;
   if (!Number.isInteger(vertices)
     || (primitive.indices === undefined ? vertices % 3 !== 0 : primitive.indices.length % 3 !== 0)
     || primitive.indices?.some(index => index >= vertices)
@@ -243,6 +253,8 @@ type LoweredMesh = Readonly<{
   material: Material;
   textureName?: string;
   textureAlpha?: "straight" | "opaque";
+  /** Exact prepared resource name for every PBR map asset used by this mesh. */
+  pbrTextures?: Readonly<Record<string, string>>;
   uvScale: readonly [number, number];
   uvOffset: readonly [number, number];
   surfaceScale: readonly [number, number];
@@ -251,7 +263,11 @@ type LoweredMesh = Readonly<{
   alphaCutoff: number;
   alphaMode?: "OPAQUE" | "MASK" | "BLEND";
   linearColor?: readonly [number, number, number];
-  textureOptions?: Readonly<{ readonly flipY?: boolean; readonly sampler?: DeepReadonly<z.infer<typeof samplerSchema>> }>;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+  textureOptions?: Readonly<{ readonly flipY?: boolean; readonly sampler?: DeepReadonly<z.infer<typeof samplerSchema>>; readonly uvTransform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] } }>;
+  sourcePhysical?: DeepReadonly<NonNullable<z.infer<typeof primitiveSchema>["physical"]>>;
+  sourceTextures?: Readonly<Record<string, { readonly name: string; readonly uvTransform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] } }>>;
 }>;
 type LoweredLight = Readonly<{
   kind: "light";
@@ -335,6 +351,9 @@ function calibratedCamera(camera: SpatialCamera) {
     near: camera.projection.near,
     far: camera.projection.far,
     kind: camera.projection.kind,
+    // Physical values are carried to the renderer payload for deterministic
+    // cinematic consumers; calibrated projection remains authoritative.
+    ...(camera.lens === undefined ? {} : { lens: camera.lens }),
   };
 }
 
@@ -409,6 +428,7 @@ export function createSpatialOverlayBatch(input: unknown) {
     readonly objects: ReadonlyArray<{ readonly entityId: string; readonly selectionId: number; readonly representation: string; readonly placement: "world" | "view"; readonly assetManifestSha256?: string }>;
   }> = [];
   const frames = request.snapshots.map((snapshot: EvaluatedSpatialScene) => {
+    if (snapshot.fog?.kind === "height") unsupported("height-fog", "Height-dependent fog is not representable by Three FogExp2; use linear fog until a qualified height-fog lowering exists.");
     if (snapshot.camera.projection.width !== width || snapshot.camera.projection.height !== height) {
       throw new RangeError("A spatial overlay batch requires identical calibrated output dimensions.");
     }
@@ -495,7 +515,9 @@ export function createSpatialOverlayBatch(input: unknown) {
       }
       // Capability checks include invisible/off-camera entities, so changing
       // visibility or cameras cannot discover an unplanned loader during render.
-      const base = { kind: "mesh" as const, entityId: entity.entityId, selectionId: entry.selectionId, matrix: entry.worldMatrix, placement: entity.placement };
+      const base = { kind: "mesh" as const, entityId: entity.entityId, selectionId: entry.selectionId, matrix: entry.worldMatrix, placement: entity.placement,
+        ...(entity.kind === "mesh" && entity.castShadow !== undefined ? { castShadow: entity.castShadow } : {}),
+        ...(entity.kind === "mesh" && entity.receiveShadow !== undefined ? { receiveShadow: entity.receiveShadow } : {}) };
       const unitFit = { uvScale: [1, 1] as const, uvOffset: [0, 0] as const, surfaceScale: [1, 1] as const, flipViewUv: false, doubleSided: true, alphaCutoff: 0 };
       let meshes: LoweredMesh[];
       let representation: string;
@@ -516,7 +538,9 @@ export function createSpatialOverlayBatch(input: unknown) {
           representation = asset.timeUs === null ? "prepared-static-triangle-mesh" : "prepared-evaluated-triangle-mesh";
           const materialMode = entity.geometry.materialMode;
           meshes = asset.primitives.map((primitive, index) => {
+            const sourceTextureSlots = ["normalTexture", "metallicRoughnessTexture", "occlusionTexture", "emissiveTexture", "clearcoatTexture", "clearcoatRoughnessTexture", "clearcoatNormalTexture", "transmissionTexture", "sheenColorTexture", "sheenRoughnessTexture", "anisotropyTexture"] as const;
             if (primitive.texture !== undefined) bindTexture(primitive.texture);
+            for (const slot of sourceTextureSlots) if (primitive[slot] !== undefined) bindTexture(primitive[slot]);
             const material = primitive.material ?? entity.material;
             if (materialMode === "source" && primitive.material === undefined) throw new RangeError("Source-material geometry requires the exact resolved source material for every primitive.");
             if (materialMode !== "source" && (primitive.material !== undefined || primitive.texture !== undefined || primitive.linearColor !== undefined)) {
@@ -527,25 +551,36 @@ export function createSpatialOverlayBatch(input: unknown) {
               doubleSided: primitive.doubleSided ?? true, alphaCutoff: primitive.alphaCutoff ?? 0,
               ...(primitive.alphaMode === undefined ? {} : { alphaMode: primitive.alphaMode }),
               ...(primitive.linearColor === undefined ? {} : { linearColor: primitive.linearColor }),
+              ...(primitive.physical === undefined ? {} : { sourcePhysical: primitive.physical }),
+              ...(sourceTextureSlots.every(slot => primitive[slot] === undefined) ? {} : { sourceTextures: Object.fromEntries(sourceTextureSlots.flatMap(slot => primitive[slot] === undefined ? [] : [[slot, { name: primitive[slot]!.resource.name, ...(primitive[slot]!.uvTransform === undefined ? {} : { uvTransform: primitive[slot]!.uvTransform }) }]])) }),
               ...(primitive.texture === undefined ? {} : { textureName: primitive.texture.resource.name, textureAlpha: primitive.texture.alpha,
                 textureOptions: { ...(primitive.texture.flipY === undefined ? {} : { flipY: primitive.texture.flipY }),
-                  ...(primitive.texture.sampler === undefined ? {} : { sampler: primitive.texture.sampler }) } }) };
+                  ...(primitive.texture.sampler === undefined ? {} : { sampler: primitive.texture.sampler }), ...(primitive.texture.uvTransform === undefined ? {} : { uvTransform: primitive.texture.uvTransform }) } }) };
           });
         } else {
           let mapRaster: PreparedRaster | undefined;
-          if (entity.material.map !== undefined) {
-            const key = `${entity.material.map}:${entity.entityId}:static`;
-            const asset = bindAsset(entity.material.map, key);
-            if (asset.kind !== "raster" || manifests.get(entity.material.map)!.interpretation.kind !== "image") {
-              unsupported("prepared-material-map", "Material maps require a prepared image raster.");
-            }
+          const materialMap = entity.material.kind !== "pbr" ? entity.material.map : undefined;
+          const pbrTextures: Record<string, string> = {};
+          const mapIds = entity.material.kind === "pbr" ? pbrMaterialMapAssetIds(entity.material) : materialMap === undefined ? [] : [materialMap];
+          let mapDimensions: readonly [number, number] | undefined;
+          for (const mapId of mapIds) {
+            const key = `${mapId}:${entity.entityId}:static`;
+            const asset = bindAsset(mapId, key);
+            if (asset.kind !== "raster" || manifests.get(mapId)!.interpretation.kind !== "image") unsupported("prepared-material-map", "Material maps require a prepared image raster.");
             bindTexture(asset);
-            mapRaster = asset;
+            const dimensions = [asset.width, asset.height] as const;
+            if (mapDimensions !== undefined && (dimensions[0] !== mapDimensions[0] || dimensions[1] !== mapDimensions[1])) throw new RangeError("PBR maps must have identical decoded dimensions.");
+            mapDimensions = dimensions;
+            if (entity.material.kind === "pbr") {
+              pbrTextures[mapId] = asset.resource.name;
+              if (entity.material.baseColorMap?.assetId === mapId) mapRaster = asset;
+            } else mapRaster = asset;
             assetManifestSha256 = asset.assetManifestSha256;
           }
           assertCoverage(request.mode, entity.material, mapRaster);
-          representation = `primitive-${entity.geometry.kind}${mapRaster === undefined ? "" : "-textured"}`;
+          representation = `primitive-${entity.geometry.kind}${mapIds.length === 0 ? "" : "-textured"}`;
           meshes = [{ ...base, ...unitFit, geometry: entity.geometry, material: entity.material,
+            ...(Object.keys(pbrTextures).length === 0 ? {} : { pbrTextures }),
             ...(mapRaster === undefined ? {} : { textureName: mapRaster.resource.name, textureAlpha: mapRaster.alpha }) }];
         }
       } else {
@@ -591,7 +626,7 @@ export function createSpatialOverlayBatch(input: unknown) {
     }
     frameEvidence.push({ sceneSha256: snapshot.sceneSha256, stateSha256: snapshot.stateSha256, viewSha256: snapshot.viewSha256,
       timeUs: snapshot.timeUs, camera: snapshot.camera, objects: evidence });
-    return { camera: calibratedCamera(snapshot.camera), objects, ...(request.executionProfile === "three-spark-webgl2-hardware-v1" ? { timeUs: snapshot.timeUs } : {}) };
+    return { camera: calibratedCamera(snapshot.camera), objects, ...(request.executionProfile === "three-spark-webgl2-hardware-v1" ? { timeUs: snapshot.timeUs } : {}), ...(snapshot.fog === undefined ? {} : { fog: snapshot.fog }) };
   });
   if (usedPrepared.size !== prepared.size) throw new RangeError("Prepared assets must be referenced by this exact batch; unused bindings are rejected.");
   const declaredResources = HtmlOverlayDeclaredResourcesSchema.parse([...resources.values()]);
@@ -677,7 +712,7 @@ const canvas=document.querySelector("canvas");
 const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:false,premultipliedAlpha:true,preserveDrawingBuffer:true});
 renderer.setPixelRatio(1);renderer.setSize(SlopcameraOverlay.width,SlopcameraOverlay.height,false);
 renderer.setClearColor(0x000000,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.NoToneMapping;renderer.autoClear=false;
+renderer.toneMapping=THREE.NoToneMapping;renderer.autoClear=false;renderer.shadowMap.enabled=input.mode.kind==="beauty";renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 let beautyTarget=null,outputScene=null,outputCamera=null,outputGeometry=null,outputMaterial=null;
 if(input.mode.kind==="beauty"){
   if(!renderer.extensions.has("EXT_color_buffer_float"))throw new Error("Spatial SDR beauty requires renderable half-float linear color for correct alpha compositing.");
@@ -738,15 +773,17 @@ float high=floor(code/65536.0);float middle=floor((code-high*65536.0)/256.0);flo
 gl_FragColor=vec4(vec3(high,middle,low)/255.0,1.0);}\`;
 function makeGeometry(object,track){
   const g=object.geometry;let geometry;
-  if(g.kind==="box")geometry=new THREE.BoxGeometry(...g.size);
+  const displaced=object.material.kind==="pbr"&&object.material.heightMap!==undefined;
+  if(g.kind==="box")geometry=new THREE.BoxGeometry(...g.size,...(displaced?[16,16,16]:[1,1,1]));
   else if(g.kind==="sphere")geometry=new THREE.SphereGeometry(g.radius,32,16);
-  else if(g.kind==="plane")geometry=new THREE.PlaneGeometry(g.width*object.surfaceScale[0],g.height*object.surfaceScale[1]);
-  else if(g.kind==="cylinder")geometry=new THREE.CylinderGeometry(g.radius,g.radius,g.height,32);
+  else if(g.kind==="plane")geometry=new THREE.PlaneGeometry(g.width*object.surfaceScale[0],g.height*object.surfaceScale[1],displaced?32:1,displaced?32:1);
+  else if(g.kind==="cylinder")geometry=new THREE.CylinderGeometry(g.radius,g.radius,g.height,32,displaced?16:1);
   else{const p=input.geometry[g.key][g.primitive];geometry=new THREE.BufferGeometry();
     geometry.setAttribute("position",new THREE.Float32BufferAttribute(p.positions,3));
     if(p.normals)geometry.setAttribute("normal",new THREE.Float32BufferAttribute(p.normals,3));
     if(p.uvs)geometry.setAttribute("uv",new THREE.Float32BufferAttribute(p.uvs,2));
     if(p.indices)geometry.setIndex(p.indices);if(!p.normals)geometry.computeVertexNormals();}
+  if(geometry.attributes.uv&&!geometry.attributes.uv1)geometry.setAttribute("uv1",geometry.attributes.uv.clone());
   return track(geometry);
 }
 function makeMaterial(object,frame,track){
@@ -759,7 +796,7 @@ function makeMaterial(object,frame,track){
       const wraps={33071:THREE.ClampToEdgeWrapping,33648:THREE.MirroredRepeatWrapping,10497:THREE.RepeatWrapping};
       const filters={9728:THREE.NearestFilter,9729:THREE.LinearFilter,9984:THREE.NearestMipmapNearestFilter,9985:THREE.LinearMipmapNearestFilter,9986:THREE.NearestMipmapLinearFilter,9987:THREE.LinearMipmapLinearFilter};
       map.wrapS=wraps[s.wrapS];map.wrapT=wraps[s.wrapT];map.magFilter=filters[s.magFilter??9729];map.minFilter=filters[s.minFilter??9987];map.generateMipmaps=(s.minFilter??9987)>=9984;
-    }map.needsUpdate=true;
+    }if(options?.uvTransform){map.offset.fromArray(options.uvTransform.offset);map.rotation=options.uvTransform.rotation;map.repeat.fromArray(options.uvTransform.scale);map.wrapS=map.wrapT=THREE.RepeatWrapping;}map.needsUpdate=true;
   }
   const view=object.placement.kind==="view";
   if(input.mode.kind!=="beauty"){
@@ -772,11 +809,36 @@ function makeMaterial(object,frame,track){
       selection:{value:new THREE.Vector3(Math.floor(id/65536)/255,(Math.floor(id/256)%256)/255,(id%256)/255)},
       nearClip:{value:frame.camera.near},farClip:{value:frame.camera.far},mode:{value:input.mode.kind==="object-id"?0:view?2:1}}}));
   }
-  if(map){map.repeat.fromArray(object.uvScale);map.offset.fromArray(object.uvOffset);
+  if(map&&object.textureOptions?.uvTransform===undefined){map.repeat.fromArray(object.uvScale);map.offset.fromArray(object.uvOffset);
     if(object.flipViewUv){map.repeat.y*=-1;map.offset.y+=object.uvScale[1];}map.needsUpdate=true;}
   const transparent=object.alphaMode===undefined?object.alphaCutoff===0&&(m.opacity<1||object.textureAlpha==="straight"):object.alphaMode==="BLEND";
   const options={color:m.color,opacity:m.opacity,transparent,map,
     side:object.doubleSided?THREE.DoubleSide:THREE.FrontSide,alphaTest:object.alphaCutoff,depthTest:!view,depthWrite:!view&&!transparent,toneMapped:false};
+  const sourceMap=slot=>{const binding=object.sourceTextures?.[slot];if(!binding)return null;const texture=track(textures.get(binding.name).clone());if(binding.uvTransform){texture.offset.fromArray(binding.uvTransform.offset);texture.rotation=binding.uvTransform.rotation;texture.repeat.fromArray(binding.uvTransform.scale);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;}texture.colorSpace=(slot==="emissiveTexture"||slot==="sheenColorTexture")?THREE.SRGBColorSpace:THREE.NoColorSpace;texture.needsUpdate=true;return texture;};
+  if(object.sourcePhysical){const p=object.sourcePhysical;const physical=track(new THREE.MeshPhysicalMaterial({...options,roughness:m.roughness,metalness:m.metalness}));if(object.linearColor)physical.color.setRGB(...object.linearColor,THREE.LinearSRGBColorSpace);
+    physical.normalMap=sourceMap("normalTexture");physical.roughnessMap=physical.metalnessMap=sourceMap("metallicRoughnessTexture");physical.aoMap=sourceMap("occlusionTexture");physical.emissiveMap=sourceMap("emissiveTexture");if(p.emissiveLinear)physical.emissive.setRGB(...p.emissiveLinear,THREE.LinearSRGBColorSpace);physical.emissiveIntensity=p.emissiveStrength??1;
+    if(p.clearcoat){physical.clearcoat=p.clearcoat.factor;physical.clearcoatRoughness=p.clearcoat.roughness;}physical.clearcoatMap=sourceMap("clearcoatTexture");physical.clearcoatRoughnessMap=sourceMap("clearcoatRoughnessTexture");physical.clearcoatNormalMap=sourceMap("clearcoatNormalTexture");
+    physical.transmission=p.transmission??0;physical.transmissionMap=sourceMap("transmissionTexture");if(p.sheen){physical.sheen=1;physical.sheenColor.setRGB(...p.sheen.colorLinear,THREE.LinearSRGBColorSpace);physical.sheenRoughness=p.sheen.roughness;}physical.sheenColorMap=sourceMap("sheenColorTexture");physical.sheenRoughnessMap=sourceMap("sheenRoughnessTexture");if(p.anisotropy){physical.anisotropy=p.anisotropy.strength;physical.anisotropyRotation=p.anisotropy.rotation;}physical.anisotropyMap=sourceMap("anisotropyTexture");if(p.ior!==undefined)physical.ior=p.ior;physical.needsUpdate=true;return physical;}
+  if(m.kind==="pbr"){
+    const pbrMap=ref=>{if(!ref)return null;const name=object.pbrTextures?.[ref.assetId];if(!name)throw new Error("PBR map has no exact prepared texture binding.");
+      const texture=track(textures.get(name).clone());texture.colorSpace=ref.colorSpace==="srgb"?THREE.SRGBColorSpace:THREE.NoColorSpace;
+      if(ref.uvTransform){texture.offset.fromArray(ref.uvTransform.offset);texture.rotation=ref.uvTransform.rotation;texture.repeat.fromArray(ref.uvTransform.scale);texture.center.set(0,0);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;}
+      texture.needsUpdate=true;return texture;};
+    const baseMap=pbrMap(m.baseColorMap);const physical=track(new THREE.MeshPhysicalMaterial({...options,map:baseMap,roughness:m.roughness,metalness:m.metalness}));
+    if(object.linearColor)physical.color.setRGB(...object.linearColor,THREE.LinearSRGBColorSpace);
+    physical.normalMap=pbrMap(m.normalMap);if(physical.normalMap)physical.normalScale.setScalar(m.normalScale??1);
+    if(m.ormMap){const orm=pbrMap(m.ormMap);physical.roughnessMap=orm;physical.metalnessMap=orm;physical.aoMap=orm;}
+    else{physical.roughnessMap=pbrMap(m.roughnessMap);physical.metalnessMap=pbrMap(m.metalnessMap);physical.aoMap=pbrMap(m.aoMap);}
+    physical.aoMapIntensity=m.aoMapIntensity??1;
+    if(m.emissive){physical.emissive=new THREE.Color(m.emissive.color);physical.emissiveIntensity=m.emissive.intensity;physical.emissiveMap=pbrMap(m.emissive.map);}
+    if(m.heightMap){physical.displacementMap=pbrMap(m.heightMap);physical.displacementScale=m.heightScale;}
+    if(m.clearcoat){physical.clearcoat=m.clearcoat.factor;physical.clearcoatRoughness=m.clearcoat.roughness;physical.clearcoatMap=pbrMap(m.clearcoat.map);physical.clearcoatRoughnessMap=pbrMap(m.clearcoat.roughnessMap);physical.clearcoatNormalMap=pbrMap(m.clearcoat.normalMap);if(physical.clearcoatNormalMap)physical.clearcoatNormalScale.setScalar(m.clearcoat.normalScale??1);}
+    if(m.transmission){physical.transmission=m.transmission.factor;physical.transmissionMap=pbrMap(m.transmission.map);}
+    if(m.sheen){physical.sheen=1;physical.sheenColor=new THREE.Color(m.sheen.color);physical.sheenRoughness=m.sheen.roughness;physical.sheenColorMap=pbrMap(m.sheen.colorMap);physical.sheenRoughnessMap=pbrMap(m.sheen.roughnessMap);}
+    if(m.anisotropy){physical.anisotropy=m.anisotropy.strength;physical.anisotropyRotation=m.anisotropy.rotation;physical.anisotropyMap=pbrMap(m.anisotropy.map);}
+    if(m.ior!==undefined)physical.ior=m.ior;physical.needsUpdate=true;
+    return physical;
+  }
   const material=track(m.kind==="unlit"?new THREE.MeshBasicMaterial(options):new THREE.MeshStandardMaterial({...options,roughness:m.roughness,metalness:m.metalness}));
   if(object.linearColor)material.color.setRGB(...object.linearColor,THREE.LinearSRGBColorSpace);
   return material;
@@ -784,6 +846,8 @@ function makeMaterial(object,frame,track){
 function makeCamera(data){
   const camera=data.kind==="perspective"?new THREE.PerspectiveCamera():new THREE.OrthographicCamera();camera.matrixAutoUpdate=false;camera.matrix.fromArray(data.cameraToWorld);
   camera.projectionMatrix.fromArray(data.projection);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  // Preserve physical metadata for renderer effects without recomputing the authoritative calibrated projection.
+  if(data.lens){camera.filmGauge=data.lens.sensorWidthMm;camera.focus=data.lens.focusDistanceM??10;camera.userData.slopcameraLens=Object.freeze({...data.lens});}
   camera.updateMatrixWorld(true);return camera;
 }
 SlopcameraOverlay.onFrame(({frame:index})=>{
@@ -793,6 +857,10 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
   try{
     const world=new THREE.Scene();const view=new THREE.Scene();const camera=makeCamera(frame.camera);
     const viewCamera=new THREE.OrthographicCamera(0,SlopcameraOverlay.width,0,SlopcameraOverlay.height,0.01,2000002);viewCamera.position.z=1000001;viewCamera.updateMatrixWorld(true);
+    if(frame.fog&&input.mode.kind==="beauty"){
+      if(frame.fog.kind==="linear")world.fog=new THREE.Fog(frame.fog.color,frame.fog.near,frame.fog.far);
+      else world.fog=new THREE.FogExp2(frame.fog.color,frame.fog.density);
+    }
     const environment=frame.objects.find(object=>object.kind==="environment");
     if(environment!==undefined&&input.mode.kind==="beauty"){
       const equirect=track(textures.get(environment.textureName).clone());
@@ -803,13 +871,14 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
     }
     for(const object of frame.objects){
       if(object.kind==="light"){
-        const light=object.light==="ambient"?new THREE.AmbientLight(object.color,object.intensity):object.light==="point"?new THREE.PointLight(object.color,object.intensity):new THREE.DirectionalLight(object.color,object.intensity);
-        light.matrixAutoUpdate=false;light.matrix.fromArray(object.matrix);world.add(light);
-        if(object.light==="directional"){const target=new THREE.Object3D();target.position.set(0,0,-1).applyMatrix4(light.matrix);world.add(target);light.target=target;}
+        const light=object.light==="ambient"?new THREE.AmbientLight(object.color,object.intensity):object.light==="point"?new THREE.PointLight(object.color,object.intensity):object.light==="spot"?new THREE.SpotLight(object.color,object.intensity,object.spot.distance??0,object.spot.angle,object.spot.penumbra,object.spot.decay??2):new THREE.DirectionalLight(object.color,object.intensity);
+        light.matrixAutoUpdate=false;light.matrix.fromArray(object.matrix);if("castShadow" in light)light.castShadow=object.shadow===true;world.add(light);
+        if(object.light==="directional"||object.light==="spot"){const target=new THREE.Object3D();target.position.set(0,0,-1).applyMatrix4(light.matrix);world.add(target);light.target=target;}
         continue;
       }
       if(object.kind==="environment")continue;
       const mesh=new THREE.Mesh(makeGeometry(object,track),makeMaterial(object,frame,track));mesh.name=object.entityId;
+      mesh.castShadow=object.castShadow===true;mesh.receiveShadow=object.receiveShadow===true;
       mesh.matrixAutoUpdate=false;mesh.matrix.fromArray(object.matrix);
       if(object.geometry.kind==="prepared")mesh.matrix.multiply(new THREE.Matrix4().fromArray(input.geometry[object.geometry.key][object.geometry.primitive].matrix));
       if(object.placement.kind==="view"){

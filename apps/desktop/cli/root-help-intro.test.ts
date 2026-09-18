@@ -31,9 +31,9 @@ test("arbitrary extra arguments and non-TTY output never acquire decoration", ()
   }
 });
 
-test("the entrypoint writes the intro only inside the existing help/version/completion read path", async () => {
+test("the entrypoint writes the intro only inside the repository-free discovery path", async () => {
   const source = await readFile(new URL("./main.ts", import.meta.url), "utf8");
-  const early = source.indexOf('if (earlyCommand.kind === "help" || earlyCommand.kind === "version" || earlyCommand.kind === "complete")');
+  const early = source.indexOf('if (earlyCommand.kind === "help" || earlyCommand.kind === "version" || earlyCommand.kind === "complete" || earlyCommand.kind === "capabilities")');
   const intro = source.indexOf("rootHelpIntro(unifiedArgv, {");
   const existing = source.indexOf("return await runCli(unifiedArgv, { io: processIo });");
   const workspace = source.indexOf("const paths = await resolveRepositoryPaths(processIo.cwd()");
