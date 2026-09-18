@@ -4989,6 +4989,267 @@ function auditSpatialParametricScene(sceneInput, factsInput, options) {
   }
   return deepFreezeJson(entries);
 }
+
+// src/spatial-scene/effects.ts
+import { z as z12 } from "zod";
+var positiveDimension2 = z12.number().finite().min(0);
+var unit2 = z12.number().finite().min(0).max(1);
+var SPATIAL_EFFECT_LIMITS = {
+  postProcessStack: 8,
+  luts: 4,
+  embers: 1e6,
+  rain: 1e5,
+  dust: 500000,
+  simulationSteps: 1e4,
+  simulationFrames: 1e4
+};
+var SpatialRenderQualitySchema = z12.strictObject({
+  tier: z12.enum(["preview", "final"]),
+  pixelBudget: positiveDimension2,
+  texturePixelBudget: positiveDimension2,
+  particleCount: z12.number().int().min(0).max(SPATIAL_EFFECT_LIMITS.embers),
+  simulationSteps: z12.number().int().min(0).max(SPATIAL_EFFECT_LIMITS.simulationSteps),
+  outputBytes: z12.number().int().min(0).max(8000000000)
+});
+var SpatialBloomSchema = z12.strictObject({
+  kind: z12.literal("bloom"),
+  threshold: unit2,
+  intensity: unit2,
+  radius: positiveDimension2
+});
+var SpatialDepthOfFieldSchema = z12.strictObject({
+  kind: z12.literal("depth-of-field"),
+  focusDistance: positiveDimension2,
+  focalLength: positiveDimension2,
+  aperture: positiveDimension2
+});
+var SpatialMotionBlurSchema = z12.strictObject({
+  kind: z12.literal("motion-blur"),
+  shutterAngle: z12.number().finite().min(0).max(360),
+  samples: z12.number().int().min(1).max(64)
+});
+var SpatialToneMapSchema = z12.strictObject({
+  kind: z12.literal("tone-map"),
+  exposure: z12.number().finite(),
+  whitePoint: positiveDimension2
+});
+var SpatialVignetteSchema = z12.strictObject({
+  kind: z12.literal("vignette"),
+  intensity: unit2,
+  radius: unit2
+});
+var SpatialGrainSchema = z12.strictObject({
+  kind: z12.literal("grain"),
+  intensity: unit2,
+  seed: z12.number().int().min(0).max(2147483647)
+});
+var SpatialLutGradeSchema = z12.strictObject({
+  kind: z12.literal("lut-grade"),
+  assetId: z12.string().min(1).max(128),
+  intensity: unit2
+});
+var SpatialPostProcessStepSchema = z12.discriminatedUnion("kind", [
+  SpatialBloomSchema,
+  SpatialDepthOfFieldSchema,
+  SpatialMotionBlurSchema,
+  SpatialToneMapSchema,
+  SpatialVignetteSchema,
+  SpatialGrainSchema,
+  SpatialLutGradeSchema
+]);
+var SpatialPostProcessStackSchema = z12.strictObject({
+  kind: z12.literal("slopcamera.spatial-post-process"),
+  schemaVersion: z12.literal(1),
+  steps: z12.array(SpatialPostProcessStepSchema).max(SPATIAL_EFFECT_LIMITS.postProcessStack)
+});
+var SpatialRenderPlanSchema = z12.strictObject({
+  kind: z12.literal("slopcamera.spatial-render-plan"),
+  schemaVersion: z12.literal(1),
+  quality: SpatialRenderQualitySchema,
+  postProcess: SpatialPostProcessStackSchema.optional()
+});
+function parseSpatialRenderPlan(input) {
+  const plan = parseSpatialValue(SpatialRenderPlanSchema, input, "render plan");
+  if (plan.quality.tier === "preview" && plan.quality.particleCount > 1e5) {
+    throw new SpatialSceneError("invalid-data", "Preview tier cannot request more than 100,000 particles.");
+  }
+  if (plan.quality.outputBytes < plan.quality.particleCount * 64) {
+    throw new SpatialSceneError("invalid-data", "Output byte budget is too small for declared particle count.");
+  }
+  return deepFreezeJson(plan);
+}
+function spatialRenderPlanSha256(plan) {
+  return spatialValueSha256(plan);
+}
+
+// src/spatial-scene/particle.ts
+import { z as z13 } from "zod";
+var SPATIAL_PARTICLE_LIMITS = {
+  emitters: 64,
+  forces: 16,
+  killVolumes: 16,
+  preview: 1e5,
+  final: 1e6
+};
+var SpatialParticleEmitterShapeSchema = z13.discriminatedUnion("kind", [
+  z13.strictObject({ kind: z13.literal("point") }),
+  z13.strictObject({ kind: z13.literal("sphere"), radius: positiveDimension2 }),
+  z13.strictObject({ kind: z13.literal("box"), size: z13.tuple([positiveDimension2, positiveDimension2, positiveDimension2]) }),
+  z13.strictObject({ kind: z13.literal("disc"), radius: positiveDimension2 }),
+  z13.strictObject({ kind: z13.literal("surface"), assetId: z13.string().min(1).max(128) }),
+  z13.strictObject({ kind: z13.literal("spline"), controlPoints: z13.array(z13.tuple([positiveDimension2, positiveDimension2, positiveDimension2])).min(2).max(64) })
+]);
+var SpatialParticleForceSchema = z13.discriminatedUnion("kind", [
+  z13.strictObject({ kind: z13.literal("gravity"), direction: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]) }),
+  z13.strictObject({ kind: z13.literal("drag"), coefficient: unit2 }),
+  z13.strictObject({ kind: z13.literal("vortex"), axis: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]), strength: z13.number().finite() }),
+  z13.strictObject({ kind: z13.literal("turbulence"), seed: z13.number().int().min(0).max(2147483647), scale: positiveDimension2, strength: positiveDimension2 })
+]);
+var SpatialParticleKillVolumeSchema = z13.discriminatedUnion("kind", [
+  z13.strictObject({ kind: z13.literal("box"), min: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]), max: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]) }),
+  z13.strictObject({ kind: z13.literal("sphere"), center: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]), radius: positiveDimension2 })
+]);
+var SpatialParticleCurveSchema = z13.strictObject({
+  keys: z13.array(z13.strictObject({ t: unit2, value: unit2 })).min(1).max(16)
+});
+var SpatialParticleEmitterSchema = z13.strictObject({
+  id: z13.string().min(1).max(64),
+  enabled: z13.boolean().default(true),
+  seed: z13.number().int().min(0).max(2147483647),
+  rate: z13.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
+  burst: z13.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final).optional(),
+  lifetimeUs: z13.tuple([z13.number().int().min(0), z13.number().int().min(0)]),
+  shape: SpatialParticleEmitterShapeSchema,
+  velocity: z13.tuple([z13.number().finite(), z13.number().finite(), z13.number().finite()]),
+  velocitySpread: z13.tuple([unit2, unit2, unit2]),
+  sizeOverLife: SpatialParticleCurveSchema,
+  colorOverLife: z13.array(z13.tuple([unit2, unit2, unit2, unit2])).min(1).max(16),
+  opacityOverLife: SpatialParticleCurveSchema
+});
+var SpatialParticleSystemSchema = z13.strictObject({
+  kind: z13.literal("slopcamera.spatial-particle-system"),
+  schemaVersion: z13.literal(1),
+  entityId: z13.string().min(1).max(128),
+  countTier: z13.enum(["preview", "final"]),
+  maxCount: z13.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
+  emitters: z13.array(SpatialParticleEmitterSchema).max(SPATIAL_PARTICLE_LIMITS.emitters),
+  forces: z13.array(SpatialParticleForceSchema).max(SPATIAL_PARTICLE_LIMITS.forces),
+  killVolumes: z13.array(SpatialParticleKillVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.killVolumes),
+  preBake: z13.boolean().default(false)
+});
+function parseSpatialParticleSystem(input) {
+  const system = parseSpatialValue(SpatialParticleSystemSchema, input, "particle system");
+  const tierLimit = system.countTier === "preview" ? SPATIAL_PARTICLE_LIMITS.preview : SPATIAL_PARTICLE_LIMITS.final;
+  if (system.maxCount > tierLimit) {
+    throw new TypeError(`Particle system ${system.entityId} requests ${system.maxCount} particles, exceeding the ${system.countTier} tier limit of ${tierLimit}.`);
+  }
+  const maxRate = system.emitters.reduce((sum, e) => sum + e.rate + (e.burst ?? 0), 0);
+  if (maxRate > system.maxCount) {
+    throw new TypeError(`Particle system ${system.entityId} peak emission rate (${maxRate}) exceeds maxCount (${system.maxCount}).`);
+  }
+  return deepFreezeJson(system);
+}
+function spatialParticleSystemSha256(system) {
+  return spatialValueSha256(system);
+}
+
+// src/spatial-scene/simulation.ts
+import { z as z14 } from "zod";
+var SPATIAL_SIMULATION_LIMITS = {
+  bodies: 256,
+  constraints: 256,
+  steps: 1e5,
+  substeps: 128
+};
+var SpatialRigidBodySchema = z14.strictObject({
+  id: z14.string().min(1).max(64),
+  mass: positiveDimension2,
+  restitution: z14.number().finite().min(0).max(1),
+  friction: z14.number().finite().min(0).max(1),
+  shape: z14.discriminatedUnion("kind", [
+    z14.strictObject({ kind: z14.literal("sphere"), radius: positiveDimension2 }),
+    z14.strictObject({ kind: z14.literal("box"), size: z14.tuple([positiveDimension2, positiveDimension2, positiveDimension2]) }),
+    z14.strictObject({ kind: z14.literal("capsule"), radius: positiveDimension2, height: positiveDimension2 })
+  ]),
+  initialPosition: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]),
+  initialOrientation: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite(), z14.number().finite()]),
+  initialVelocity: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]),
+  initialAngularVelocity: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]),
+  pinned: z14.boolean().default(false)
+});
+var SpatialConstraintSchema = z14.discriminatedUnion("kind", [
+  z14.strictObject({ kind: z14.literal("hinge"), bodyA: z14.string(), bodyB: z14.string(), axis: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]), limits: z14.tuple([z14.number().finite(), z14.number().finite()]).optional() }),
+  z14.strictObject({ kind: z14.literal("spring"), bodyA: z14.string(), bodyB: z14.string(), stiffness: positiveDimension2, damping: positiveDimension2 }),
+  z14.strictObject({ kind: z14.literal("fixed"), bodyA: z14.string(), bodyB: z14.string(), localA: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]), localB: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()]) })
+]);
+var SpatialSimulationPlanSchema = z14.strictObject({
+  kind: z14.literal("slopcamera.spatial-simulation-plan"),
+  schemaVersion: z14.literal(1),
+  entityId: z14.string().min(1).max(128),
+  engine: z14.string().min(1).max(64),
+  cacheId: z14.string().min(1).max(128),
+  sourceDigest: z14.string().length(64),
+  seed: z14.number().int().min(0).max(2147483647),
+  timeStepUs: z14.number().int().min(1),
+  stepCount: z14.number().int().min(0).max(SPATIAL_SIMULATION_LIMITS.steps),
+  maxSubsteps: z14.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.substeps),
+  bodies: z14.array(SpatialRigidBodySchema).max(SPATIAL_SIMULATION_LIMITS.bodies),
+  constraints: z14.array(SpatialConstraintSchema).max(SPATIAL_SIMULATION_LIMITS.constraints),
+  gravity: z14.tuple([z14.number().finite(), z14.number().finite(), z14.number().finite()])
+});
+function parseSpatialSimulationPlan(input) {
+  const plan = parseSpatialValue(SpatialSimulationPlanSchema, input, "simulation plan");
+  const bodyIds = new Set(plan.bodies.map((b) => b.id));
+  for (const c of plan.constraints) {
+    if (!bodyIds.has(c.bodyA) || !bodyIds.has(c.bodyB)) {
+      throw new TypeError(`Constraint ${c.kind} references unknown body ${c.bodyA} or ${c.bodyB}.`);
+    }
+  }
+  const floatsPerBody = 7 + 3;
+  const estimatedBytes = plan.bodies.length * plan.stepCount * floatsPerBody * 4;
+  if (estimatedBytes > 1e9) {
+    throw new TypeError(`Simulation ${plan.entityId} estimated animation bytes (${estimatedBytes}) exceed 1 GB.`);
+  }
+  return deepFreezeJson(plan);
+}
+function spatialSimulationPlanSha256(plan) {
+  return spatialValueSha256(plan);
+}
+
+// src/spatial-scene/motion-evidence.ts
+import { z as z15 } from "zod";
+var SPATIAL_MOTION_EVIDENCE_LIMITS = {
+  pixels: 4096 * 4096,
+  samples: 16
+};
+var SpatialMotionSampleSchema = z15.strictObject({
+  id: z15.string().min(1).max(64),
+  entityId: z15.string().min(1).max(128),
+  viewport: z15.tuple([z15.number().int().min(0), z15.number().int().min(0), z15.number().int().min(0), z15.number().int().min(0)]),
+  width: z15.number().int().min(0).max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels),
+  height: z15.number().int().min(0).max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels),
+  samplesPerPixel: z15.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samples),
+  motionScale: positiveDimension2,
+  exposureUs: z15.number().int().min(0)
+});
+var SpatialMotionEvidenceSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-motion-evidence"),
+  schemaVersion: z15.literal(1),
+  entityId: z15.string().min(1).max(128),
+  samples: z15.array(SpatialMotionSampleSchema).max(4)
+});
+function parseSpatialMotionEvidence(input) {
+  const ev = parseSpatialValue(SpatialMotionEvidenceSchema, input, "motion evidence");
+  for (const s of ev.samples) {
+    if (s.width * s.height > SPATIAL_MOTION_EVIDENCE_LIMITS.pixels) {
+      throw new TypeError(`Motion sample ${s.id} viewport ${s.width}x${s.height} exceeds pixel budget.`);
+    }
+  }
+  return deepFreezeJson(ev);
+}
+function spatialMotionEvidenceSha256(ev) {
+  return spatialValueSha256(ev);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -5008,6 +5269,7 @@ export {
   validatePerformanceBakeReceipt,
   validatePbrMaterial,
   unprojectPixel,
+  unit2 as unit,
   transformPoint,
   transformDirection,
   transformBounds,
@@ -5015,10 +5277,14 @@ export {
   spatialValueSha256,
   spatialTopologicalIds,
   spatialStateValueSha256,
+  spatialSimulationPlanSha256,
   spatialSceneSha256,
   spatialReviewDefaultTimesUs,
+  spatialRenderPlanSha256,
   spatialPropertySupported,
+  spatialParticleSystemSha256,
   spatialOutputDuration,
+  spatialMotionEvidenceSha256,
   spatialGlbBounds,
   spatialGeometryNativeRequestSha256,
   spatialGeometryNativeRequestId,
@@ -5050,6 +5316,7 @@ export {
   projectPreparedPoint,
   projectPoint,
   prepareCameraView,
+  positiveDimension2 as positiveDimension,
   poseFromMatrix,
   planMaterialProbeGallery,
   pixelRay,
@@ -5057,7 +5324,9 @@ export {
   pbrMaterialMapAssetIds,
   pbrDerivationCandidates,
   parseSpatialValue,
+  parseSpatialSimulationPlan,
   parseSpatialScene,
+  parseSpatialRenderPlan,
   parseSpatialPerformanceSources,
   parseSpatialPerformancePlan,
   parseSpatialPerformanceGallerySelection,
@@ -5065,6 +5334,8 @@ export {
   parseSpatialPerformanceBakeRequest,
   parseSpatialPerformanceBakeReceipt,
   parseSpatialPerformanceAuditOptions,
+  parseSpatialParticleSystem,
+  parseSpatialMotionEvidence,
   parseSpatialGlb,
   parseSpatialGeometryNativeRequest,
   parseSpatialGeometryGraph,
@@ -5153,9 +5424,11 @@ export {
   WORKFLOW_GRAPH_HASH_DOMAIN,
   WORKFLOW_COMPILATION_VERSION,
   WORKFLOW_COMPILATION_HASH_DOMAIN,
+  SpatialVignetteSchema,
   SpatialVec3Schema,
   SpatialUvTransformSchema,
   SpatialTransformSchema,
+  SpatialToneMapSchema,
   SpatialTimeUsSchema,
   SpatialSpotLightSchema,
   SpatialSolveRequestSchema,
@@ -5168,12 +5441,14 @@ export {
   SpatialSolveBaseSchema,
   SpatialSolveBasePatchSchema,
   SpatialSolveAnchorKeySchema,
+  SpatialSimulationPlanSchema,
   SpatialShotV1Schema,
   SpatialShotIdSchema,
   SpatialSceneV1Schema,
   SpatialScenePatchV1Schema,
   SpatialSceneIdSchema,
   SpatialSceneError,
+  SpatialRigidBodySchema,
   SpatialReviewSeveritySchema,
   SpatialReviewReportSchema,
   SpatialReviewProviderError,
@@ -5191,11 +5466,15 @@ export {
   SpatialRenderedAuditFindingSchema,
   SpatialRenderedAuditEntitySchema,
   SpatialRenderedAuditCoverageSchema,
+  SpatialRenderQualitySchema,
+  SpatialRenderPlanSchema,
   SpatialRackFocusSchema,
   SpatialQuaternionSchema,
   SpatialPublishedArtifactSchema,
   SpatialProjectionSchema,
   SpatialProbeGeometrySchema,
+  SpatialPostProcessStepSchema,
+  SpatialPostProcessStackSchema,
   SpatialPoseSchema,
   SpatialPlacementSchema,
   SpatialPerformanceTakeSchema,
@@ -5229,17 +5508,28 @@ export {
   SpatialPbrAnisotropySchema,
   SpatialPayloadSchema,
   SpatialPatchOperationSchema,
+  SpatialParticleSystemSchema,
+  SpatialParticleKillVolumeSchema,
+  SpatialParticleForceSchema,
+  SpatialParticleEmitterShapeSchema,
+  SpatialParticleEmitterSchema,
+  SpatialParticleCurveSchema,
   SpatialParametricSpecSchema,
   SpatialParametricRequestSchema,
   SpatialOverrideSchema,
   SpatialOriginSchema,
+  SpatialMotionSampleSchema,
+  SpatialMotionEvidenceSchema,
+  SpatialMotionBlurSchema,
   SpatialMatrixSchema,
   SpatialMaterialSchema,
   SpatialMapColorSpaceSchema,
   SpatialMapChannelSchema,
+  SpatialLutGradeSchema,
   SpatialLightingRigTypeSchema,
   SpatialHumanoidMappingSchema,
   SpatialHumanoidAttachmentSchema,
+  SpatialGrainSchema,
   SpatialGlbModel,
   SpatialGeometrySchema,
   SpatialGeometryNodeSchema,
@@ -5257,6 +5547,8 @@ export {
   SpatialDigestSchema,
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
+  SpatialDepthOfFieldSchema,
+  SpatialConstraintSchema,
   SpatialCollisionProxySchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
@@ -5265,6 +5557,7 @@ export {
   SpatialCameraLensSchema,
   SpatialCameraIdSchema,
   SpatialBoundsSchema,
+  SpatialBloomSchema,
   SpatialAuditSampleSchema,
   SpatialAuditReportSchema,
   SpatialAuditOptionsSchema,
@@ -5301,6 +5594,7 @@ export {
   SPATIAL_SPLAT_PROXY_REPRESENTATION,
   SPATIAL_SOLVE_PENDING_SCENE_SHA256,
   SPATIAL_SOLVE_LIMITS,
+  SPATIAL_SIMULATION_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SPATIAL_REVIEW_UPLOAD_POLICY,
   SPATIAL_REVIEW_SEVERITIES,
@@ -5315,7 +5609,9 @@ export {
   SPATIAL_PERFORMANCE_LIMITS,
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,
+  SPATIAL_PARTICLE_LIMITS,
   SPATIAL_PARAMETRIC_LIMITS,
+  SPATIAL_MOTION_EVIDENCE_LIMITS,
   SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
@@ -5326,6 +5622,7 @@ export {
   SPATIAL_GEOMETRY_LIMITS,
   SPATIAL_GEOMETRY_GRAPH_KIND,
   SPATIAL_GENERATOR_LIMITS,
+  SPATIAL_EFFECT_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_AUDIT_LIMITS,
   RequirementEnvelopeSchema,
