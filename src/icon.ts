@@ -21,17 +21,25 @@ import type { VectorizeReceipt } from "./vectorize/types.js"
 import { vectorizeImage } from "./vectorize/vectorize.js"
 
 /**
- * Isometric line-art icons, the style used by developer-tool landing pages:
- * one uniform-weight outline in a single ink color on a light panel.
+ * Two-class product-identity generation for developer-tool surfaces.
  *
- * The pipeline combines three stages. A style-locked prompt produces one
- * bounded Gateway raster. Local pixel processing estimates the background and
- * ink colors, projects every pixel onto the background→ink axis to recover
- * antialiased stroke coverage, drops speckle components, crops to content, and
- * re-emits canonical ink-on-transparent RGBA for the bounded vectorizer. A
- * vision model then critiques the rendered SVG against the style contract and
- * its prompt fix feeds the next attempt, so failed generations are retried
- * with concrete corrections instead of silently shipped.
+ * `mark` produces a compact symbol built from a few bold masses that must
+ * stay legible at favicon and header sizes. `illustration` produces the
+ * related isometric artwork for marketing placements: simple structure,
+ * bounded fills, and no hairline detail that disappears at 64 px.
+ *
+ * The pipeline combines four stages. A purpose-specific style-locked prompt
+ * produces one bounded Gateway raster. Local pixel processing estimates the
+ * background and ink colors, projects every pixel onto the background→ink
+ * axis to recover antialiased stroke coverage, drops speckle and elongated
+ * boundary components, crops to content, and re-emits canonical
+ * ink-on-transparent RGBA for the bounded vectorizer. Both purposes threshold
+ * that alpha to crisp binary coverage before tracing, producing portable
+ * path-only SVGs without mask references. Deterministic geometry gates then
+ * reject candidates whose mass, aspect, or path count cannot serve the
+ * declared purpose. A purpose-specific vision critique reviews the rendered
+ * SVG and its prompt fix feeds the next attempt. Failed generations retry
+ * with concrete corrections instead of shipping silently.
  */
 
 export const slopcameraIconDefaultInk = "#2474d4"
@@ -47,18 +55,25 @@ const iconCoverageAlphaFloor = 24
 const iconCropAlphaFloor = 16
 const iconMarginRatio = 0.08
 
-const CRITIQUE_SYSTEM = `You are a strict design reviewer for isometric line-art product icons.
+const MARK_CRITIQUE_SYSTEM = `You are a strict design reviewer for small product marks.
 
 Style contract:
-- Orthographic isometric line drawing of the requested subject.
-- Uniform-weight outline strokes in exactly one ink color.
-- No filled areas, shading, gradients, shadows, text, or stray background objects.
-- Clean geometric edges, centered with generous margin, light or transparent background.
+- A distinctive, immediately recognizable silhouette or geometric symbol.
+- One to three bold masses with optional negative-space cuts and one ink color.
+- No fine line art, hatching, texture, tiny holes, text, shading, gradients, shadows, or background objects.
+- Clear at 16 px, balanced at 32 px, centered with optical rather than excessive margin.
 
-Judge the attached rendered icon against the contract and whether it clearly
-depicts the requested subject. Return pass only when the icon is ready to ship.
-Score is an integer from 0 to 100. When it fails, make promptFix a concrete
-image-prompt correction that addresses the listed problems.`
+Judge the attached rendered mark against the contract and whether it clearly depicts the requested subject. Return pass only when it is ready for favicons, application icons, headers, and compact project cards. Score is an integer from 0 to 100. When it fails, make promptFix a concrete image-prompt correction that addresses the listed problems.`
+
+const ILLUSTRATION_CRITIQUE_SYSTEM = `You are a strict design reviewer for product-brand illustrations.
+
+Style contract:
+- A simple isometric illustration of the requested subject that can belong to the same visual family as a separate brand mark. Do not require or include the brand mark inside the illustration.
+- Uniform medium-weight structure in exactly one ink color, with at most three large filled planes.
+- No hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, or stray background objects.
+- No important feature may disappear at 64 px. Center the subject with a modest clear margin.
+
+Judge the attached rendered illustration against the contract and whether it clearly depicts the requested subject. Return pass only when it is ready for a marketing header or feature section. Score is an integer from 0 to 100. When it fails, make promptFix a concrete image-prompt correction that addresses the listed problems.`
 
 export interface IconCritique {
   readonly pass: boolean
@@ -87,6 +102,7 @@ export interface SlopcameraIconReceipt {
   readonly ink: string
   readonly model: string
   readonly outputPath: string
+  readonly purpose: SlopcameraIconPurpose
   readonly rasterPath?: string
   readonly receiptVersion: 1
   readonly rounds: number
@@ -95,6 +111,8 @@ export interface SlopcameraIconReceipt {
   readonly svgSha256: string
 }
 
+export type SlopcameraIconPurpose = "illustration" | "mark"
+
 export interface GenerateSlopcameraIconInput {
   readonly critiqueModel?: string
   readonly inheritedFileDescriptors?: readonly number[]
@@ -102,6 +120,7 @@ export interface GenerateSlopcameraIconInput {
   readonly keepRaster?: boolean
   readonly model?: string
   readonly outputPath: string
+  readonly purpose?: SlopcameraIconPurpose
   readonly rounds?: number
   readonly signal?: AbortSignal
   readonly subject: string
@@ -143,6 +162,7 @@ export interface SlopcameraIconDependencies
       ink: string
       model: string
       png: Uint8Array
+      purpose: SlopcameraIconPurpose
       signal?: AbortSignal
       subject: string
     }>,
@@ -208,16 +228,29 @@ function validateRounds(value: number | undefined): number {
 
 export function iconPromptFor(
   subject: string,
-  options: Readonly<{ feedback?: string; ink?: string }> = {},
+  options: Readonly<{
+    feedback?: string
+    ink?: string
+    purpose?: SlopcameraIconPurpose
+  }> = {},
 ): string {
   const ink = normalizedHexColor(options.ink ?? slopcameraIconDefaultInk)
-  const sections = [
-    `A single minimal isometric line-art illustration of ${subject} for a developer-tool landing page.`,
-    "Style rules: orthographic isometric projection; uniform thin outline strokes; " +
-      `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
-      "no fills, no shading, no gradients, no shadows, no text, no extra objects; " +
-      "the subject centered with generous margin; clean geometric edges.",
-  ]
+  const purpose = options.purpose ?? "illustration"
+  const sections = purpose === "mark"
+    ? [
+        `A single small product mark for ${subject}.`,
+        "Style rules: front-facing or simple isometric geometry; a distinctive silhouette built from one to three bold masses; " +
+          `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
+          "negative space may separate major parts; no thin outlines, hatching, texture, tiny holes, shading, gradients, shadows, text, border, container shape, or extra objects; " +
+          "clear and recognizable at 16 pixels, balanced at 32 pixels, centered with a modest optical margin.",
+      ]
+    : [
+        `A single minimal product-brand illustration of ${subject}.`,
+        "Style rules: simple orthographic isometric projection; uniform medium-weight structural lines and at most three large filled planes; " +
+          `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
+          "no hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, border, or extra objects; " +
+          "every important feature remains visible at 64 pixels; centered with a modest clear margin; clean geometric edges.",
+      ]
   const feedback = options.feedback?.trim()
   if (feedback !== undefined && feedback.length > 0) {
     sections.push(`The previous attempt was rejected. Correct it: ${feedback}`)
@@ -343,12 +376,20 @@ function dropSpeckles(
     tail += 1
     seen[start] = 1
     const component: number[] = []
+    let minimumX = width
+    let maximumX = -1
+    let minimumY = height
+    let maximumY = -1
     while (head < tail) {
       const pixel = queue[head]!
       head += 1
       component.push(pixel)
       const x = pixel % width
       const y = Math.floor(pixel / width)
+      minimumX = Math.min(minimumX, x)
+      maximumX = Math.max(maximumX, x)
+      minimumY = Math.min(minimumY, y)
+      maximumY = Math.max(maximumY, y)
       const neighbors = [
         x > 0 ? pixel - 1 : -1,
         x < width - 1 ? pixel + 1 : -1,
@@ -367,7 +408,14 @@ function dropSpeckles(
         }
       }
     }
-    if (component.length < minimumComponent) {
+    const componentWidth = maximumX - minimumX + 1
+    const componentHeight = maximumY - minimumY + 1
+    const spansWidth = minimumX === 0 && maximumX === width - 1
+    const spansHeight = minimumY === 0 && maximumY === height - 1
+    const elongatedBorderArtifact =
+      (spansWidth || spansHeight) &&
+      Math.max(componentWidth / componentHeight, componentHeight / componentWidth) > 8
+    if (component.length < minimumComponent || elongatedBorderArtifact) {
       removed += 1
       for (const pixel of component) alpha[pixel] = 0
     }
@@ -387,6 +435,26 @@ export interface IconLineArtExtraction {
   readonly width: number
 }
 
+export function iconVisualGateProblems(
+  purpose: SlopcameraIconPurpose,
+  metrics: Readonly<Pick<IconLineArtExtraction, "coverageRatio" | "height" | "width">>,
+  pathCount: number,
+): readonly string[] {
+  const problems: string[] = []
+  const aspectRatio = Math.max(metrics.width / metrics.height, metrics.height / metrics.width)
+  if (aspectRatio > 1.8) problems.push("the subject is too narrow or elongated")
+  if (purpose === "mark") {
+    if (metrics.coverageRatio < 0.14) problems.push("the mark has too little bold visual mass")
+    if (metrics.coverageRatio > 0.72) problems.push("the mark has too little negative space")
+    if (pathCount > 12) problems.push("the mark has too many separate vector paths")
+  } else {
+    if (metrics.coverageRatio < 0.035) problems.push("the illustration lines are too sparse or thin")
+    if (metrics.coverageRatio > 0.62) problems.push("the illustration is too visually dense")
+    if (pathCount > 48) problems.push("the illustration has too much vector detail")
+  }
+  return problems
+}
+
 /**
  * Normalize a generated raster into canonical ink-on-transparent RGBA.
  * Background is the border median; ink is the dominant far-from-background
@@ -397,7 +465,7 @@ export function extractIconLineArt(
   rgba: Uint8Array,
   width: number,
   height: number,
-  options: Readonly<{ ink?: string }> = {},
+  options: Readonly<{ hardEdges?: boolean; ink?: string }> = {},
 ): IconLineArtExtraction {
   if (
     rgba.length === 0 ||
@@ -486,7 +554,10 @@ export function extractIconLineArt(
     for (let x = 0; x < cropWidth; x += 1) {
       const sourceIndex = (cropY + y) * width + cropX + x
       const targetIndex = (y * cropWidth + x) * 4
-      const value = alpha[sourceIndex]!
+      const measuredValue = alpha[sourceIndex]!
+      const value = options.hardEdges === true
+        ? (measuredValue >= iconCoverageAlphaFloor ? 255 : 0)
+        : measuredValue
       coverage += value
       pixels[targetIndex] = inkRed
       pixels[targetIndex + 1] = inkGreen
@@ -618,6 +689,7 @@ export async function critiqueIconRaster(
     ink: string
     model: string
     png: Uint8Array
+    purpose: SlopcameraIconPurpose
     signal?: AbortSignal
     subject: string
   }>,
@@ -649,8 +721,7 @@ export async function critiqueIconRaster(
       }),
     })
     const output = runtime.Output.object({
-      description:
-        "One bounded style critique for a rendered isometric line-art icon.",
+      description: `One bounded style critique for a rendered product ${input.purpose}.`,
       name: "slopcamera_icon_critique",
       schema: iconCritiqueSchema,
     })
@@ -663,8 +734,8 @@ export async function critiqueIconRaster(
           content: [
             {
               text:
-                `Subject: ${input.subject}\nInk: ${input.ink}\n` +
-                "Judge this rendered icon against the style contract.",
+                `Subject: ${input.subject}\nPurpose: ${input.purpose}\nInk: ${input.ink}\n` +
+                `Judge this rendered ${input.purpose} against the style contract.`,
               type: "text",
             },
             {
@@ -685,7 +756,9 @@ export async function critiqueIconRaster(
           zeroDataRetention: true,
         },
       },
-      system: CRITIQUE_SYSTEM,
+      system: input.purpose === "mark"
+        ? MARK_CRITIQUE_SYSTEM
+        : ILLUSTRATION_CRITIQUE_SYSTEM,
       temperature: 0,
     })
     return parseIconCritique(
@@ -704,19 +777,77 @@ export async function critiqueIconRaster(
   }
 }
 
-async function renderIconPreview(svg: string): Promise<Uint8Array> {
+const markPreviewSmallSizes = [16, 32] as const
+
+async function renderIconPreview(
+  svg: string,
+  purpose: SlopcameraIconPurpose,
+): Promise<Uint8Array> {
   try {
     const sharp = (await import("sharp")).default
-    return Uint8Array.from(
-      await sharp(Buffer.from(svg), {
+    const source = sharp(Buffer.from(svg), {
+      density: 96,
+      failOn: "error",
+      limitInputPixels: vectorizeHardLimits.maxDecodedPixels,
+    })
+    if (purpose === "illustration") {
+      return Uint8Array.from(
+        await source
+          .resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
+            fit: "inside",
+          })
+          .flatten({ background: slopcameraIconPanel })
+          .png({ compressionLevel: 9 })
+          .toBuffer(),
+      )
+    }
+    const large = await source
+      .clone()
+      .resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
+        fit: "inside",
+      })
+      .flatten({ background: slopcameraIconPanel })
+      .png({ compressionLevel: 9 })
+      .toBuffer()
+    const smallRenders: { input: Buffer; top: number; left: number }[] = []
+    let cursor = 16
+    for (const size of markPreviewSmallSizes) {
+      const rendered = await sharp(Buffer.from(svg), {
         density: 96,
         failOn: "error",
         limitInputPixels: vectorizeHardLimits.maxDecodedPixels,
       })
-        .resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
-          fit: "inside",
-        })
+        .resize(size, size, { fit: "inside" })
         .flatten({ background: slopcameraIconPanel })
+        .png({ compressionLevel: 9 })
+        .toBuffer()
+      smallRenders.push({
+        input: await sharp({
+          create: {
+            background: { b: 0xfb, channels: 3, g: 0xf8, r: 0xf7 },
+            channels: 3,
+            height: size + 32,
+            width: size + 32,
+          },
+        })
+          .composite([{ input: rendered, left: 16, top: 16 }])
+          .png()
+          .toBuffer(),
+        left: iconPreviewMaximumEdge + 16,
+        top: cursor,
+      })
+      cursor += size + 48
+    }
+    return Uint8Array.from(
+      await sharp({
+        create: {
+          background: { b: 0xfb, channels: 3, g: 0xf8, r: 0xf7 },
+          channels: 3,
+          height: Math.max(iconPreviewMaximumEdge, cursor + 16),
+          width: iconPreviewMaximumEdge + 16 + 96,
+        },
+      })
+        .composite([{ input: large, left: 0, top: 0 }, ...smallRenders])
         .png({ compressionLevel: 9 })
         .toBuffer(),
     )
@@ -751,11 +882,11 @@ async function writeAtomically(
 }
 
 /**
- * Generate one canonical isometric line-art icon: bounded Gateway raster →
- * local line-art normalization → supervised VTracer trace → optional vision
- * critique that revises the prompt across rounds. Only derived artifacts ever
- * leave the machine; the uploaded critique image is Slopcamera's own rendered
- * output, never user media.
+ * Generate one canonical product mark or marketing illustration: bounded
+ * Gateway raster → local normalization → supervised VTracer trace →
+ * deterministic purpose gate → optional purpose-specific vision critique.
+ * Only derived artifacts ever leave the machine; the uploaded critique image
+ * is Slopcamera's own rendered output, never user media.
  */
 export async function generateSlopcameraIcon(
   input: GenerateSlopcameraIconInput,
@@ -773,6 +904,10 @@ export async function generateSlopcameraIcon(
   }
   const model = validateIconModel(input.model ?? "recraft/recraft-v4.1-utility", "model")
   const rounds = validateRounds(input.rounds)
+  const purpose = input.purpose ?? "illustration"
+  if (purpose !== "illustration" && purpose !== "mark") {
+    invalidArgument("purpose must be illustration or mark.")
+  }
   const ink = normalizedHexColor(input.ink ?? slopcameraIconDefaultInk)
   const critiqueModel =
     input.critiqueModel === undefined
@@ -786,6 +921,7 @@ export async function generateSlopcameraIcon(
       ink: string
       model: string
       png: Uint8Array
+      purpose: SlopcameraIconPurpose
       signal?: AbortSignal
       subject: string
     }) => critiqueIconRaster(critiqueInput, dependencies))
@@ -807,9 +943,15 @@ export async function generateSlopcameraIcon(
         "Icon generation was cancelled.",
       )
     }
-    const prompt = iconPromptFor(subject, { ink, ...(feedback === undefined ? {} : { feedback }) })
+    const prompt = iconPromptFor(subject, {
+      ink,
+      purpose,
+      ...(feedback === undefined ? {} : { feedback }),
+    })
     let candidate: IconCandidate
     let extraction: IconLineArtExtraction
+    let attemptRequestId = ""
+    let attemptProblems: readonly string[] = []
     try {
       const generated = await generate(
         {
@@ -819,13 +961,17 @@ export async function generateSlopcameraIcon(
         },
         dependencies,
       )
+      attemptRequestId = generated.requestId
       const bytes = Buffer.from(generated.image.base64, "base64")
       const raster = await loadRaster(
         Uint8Array.from(bytes),
         limits,
         new VectorizeDeadline(limits.maxDurationMs),
       )
-      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, { ink })
+      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
+        hardEdges: true,
+        ink,
+      })
       const png = await encodeTracePng(
         extraction.pixels,
         extraction.width,
@@ -836,6 +982,19 @@ export async function generateSlopcameraIcon(
           ? {}
           : { inheritedFileDescriptors: input.inheritedFileDescriptors }),
       })
+      const visualProblems = iconVisualGateProblems(
+        purpose,
+        extraction,
+        traced.receipt.pathCount,
+      )
+      if (visualProblems.length > 0) {
+        feedback = visualProblems.join("; ")
+        attemptProblems = visualProblems
+        throw new SlopcameraCloudError(
+          "GENERATION_INVALID_RESPONSE",
+          `Generated ${purpose} failed its visual gate: ${feedback}.`,
+        )
+      }
       candidate = {
         png,
         requestId: generated.requestId,
@@ -846,7 +1005,8 @@ export async function generateSlopcameraIcon(
     } catch (error) {
       lastError = error
       attempts.push({
-        requestId: "",
+        ...(attemptProblems.length === 0 ? {} : { problems: attemptProblems }),
+        requestId: attemptRequestId,
         round,
         status: "failed",
         warnings: [],
@@ -858,13 +1018,14 @@ export async function generateSlopcameraIcon(
     let critiqueError: string | undefined
     if (critiqueEnabled) {
       try {
-        const preview = await (dependencies.rasterize ?? renderIconPreview)(
-          candidate.svg,
-        )
+        const preview = dependencies.rasterize === undefined
+          ? await renderIconPreview(candidate.svg, purpose)
+          : await dependencies.rasterize(candidate.svg)
         review = await critique({
           ink,
           model: critiqueModel,
           png: preview,
+          purpose,
           ...(input.signal === undefined ? {} : { signal: input.signal }),
           subject,
         })
@@ -903,7 +1064,16 @@ export async function generateSlopcameraIcon(
       "Every icon generation attempt failed.",
     )
   }
-  const selected = [...candidates].sort(
+  const eligibleCandidates = candidates.filter(
+    ({ critique: review }) => review === null || review.pass,
+  )
+  if (eligibleCandidates.length === 0) {
+    throw new SlopcameraCloudError(
+      "GENERATION_INVALID_RESPONSE",
+      `Every generated ${purpose} failed its design critique.`,
+    )
+  }
+  const selected = eligibleCandidates.sort(
     (left, right) =>
       (right.critique?.score ?? -1) - (left.critique?.score ?? -1) ||
       right.round - left.round,
@@ -923,6 +1093,7 @@ export async function generateSlopcameraIcon(
     ink,
     model,
     outputPath,
+    purpose,
     receiptVersion: 1,
     rounds,
     selectedRound: selected.round,

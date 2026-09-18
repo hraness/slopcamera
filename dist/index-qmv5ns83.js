@@ -1957,18 +1957,24 @@ var iconPreviewMaximumEdge = 448;
 var iconCoverageAlphaFloor = 24;
 var iconCropAlphaFloor = 16;
 var iconMarginRatio = 0.08;
-var CRITIQUE_SYSTEM = `You are a strict design reviewer for isometric line-art product icons.
+var MARK_CRITIQUE_SYSTEM = `You are a strict design reviewer for small product marks.
 
 Style contract:
-- Orthographic isometric line drawing of the requested subject.
-- Uniform-weight outline strokes in exactly one ink color.
-- No filled areas, shading, gradients, shadows, text, or stray background objects.
-- Clean geometric edges, centered with generous margin, light or transparent background.
+- A distinctive, immediately recognizable silhouette or geometric symbol.
+- One to three bold masses with optional negative-space cuts and one ink color.
+- No fine line art, hatching, texture, tiny holes, text, shading, gradients, shadows, or background objects.
+- Clear at 16 px, balanced at 32 px, centered with optical rather than excessive margin.
 
-Judge the attached rendered icon against the contract and whether it clearly
-depicts the requested subject. Return pass only when the icon is ready to ship.
-Score is an integer from 0 to 100. When it fails, make promptFix a concrete
-image-prompt correction that addresses the listed problems.`;
+Judge the attached rendered mark against the contract and whether it clearly depicts the requested subject. Return pass only when it is ready for favicons, application icons, headers, and compact project cards. Score is an integer from 0 to 100. When it fails, make promptFix a concrete image-prompt correction that addresses the listed problems.`;
+var ILLUSTRATION_CRITIQUE_SYSTEM = `You are a strict design reviewer for product-brand illustrations.
+
+Style contract:
+- A simple isometric illustration of the requested subject that can belong to the same visual family as a separate brand mark. Do not require or include the brand mark inside the illustration.
+- Uniform medium-weight structure in exactly one ink color, with at most three large filled planes.
+- No hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, or stray background objects.
+- No important feature may disappear at 64 px. Center the subject with a modest clear margin.
+
+Judge the attached rendered illustration against the contract and whether it clearly depicts the requested subject. Return pass only when it is ready for a marketing header or feature section. Score is an integer from 0 to 100. When it fails, make promptFix a concrete image-prompt correction that addresses the listed problems.`;
 function invalidArgument(message) {
   throw new SlopcameraCloudError("INVALID_ARGUMENT", message);
 }
@@ -1999,9 +2005,13 @@ function validateRounds(value) {
 }
 function iconPromptFor(subject, options = {}) {
   const ink = normalizedHexColor(options.ink ?? slopcameraIconDefaultInk);
-  const sections = [
-    `A single minimal isometric line-art illustration of ${subject} for a developer-tool landing page.`,
-    "Style rules: orthographic isometric projection; uniform thin outline strokes; " + `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` + "no fills, no shading, no gradients, no shadows, no text, no extra objects; " + "the subject centered with generous margin; clean geometric edges."
+  const purpose = options.purpose ?? "illustration";
+  const sections = purpose === "mark" ? [
+    `A single small product mark for ${subject}.`,
+    "Style rules: front-facing or simple isometric geometry; a distinctive silhouette built from one to three bold masses; " + `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` + "negative space may separate major parts; no thin outlines, hatching, texture, tiny holes, shading, gradients, shadows, text, border, container shape, or extra objects; " + "clear and recognizable at 16 pixels, balanced at 32 pixels, centered with a modest optical margin."
+  ] : [
+    `A single minimal product-brand illustration of ${subject}.`,
+    "Style rules: simple orthographic isometric projection; uniform medium-weight structural lines and at most three large filled planes; " + `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` + "no hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, border, or extra objects; " + "every important feature remains visible at 64 pixels; centered with a modest clear margin; clean geometric edges."
   ];
   const feedback = options.feedback?.trim();
   if (feedback !== undefined && feedback.length > 0) {
@@ -2099,12 +2109,20 @@ function dropSpeckles(alpha, width, height) {
     tail += 1;
     seen[start] = 1;
     const component = [];
+    let minimumX = width;
+    let maximumX = -1;
+    let minimumY = height;
+    let maximumY = -1;
     while (head < tail) {
       const pixel = queue[head];
       head += 1;
       component.push(pixel);
       const x = pixel % width;
       const y = Math.floor(pixel / width);
+      minimumX = Math.min(minimumX, x);
+      maximumX = Math.max(maximumX, x);
+      minimumY = Math.min(minimumY, y);
+      maximumY = Math.max(maximumY, y);
       const neighbors = [
         x > 0 ? pixel - 1 : -1,
         x < width - 1 ? pixel + 1 : -1,
@@ -2119,13 +2137,40 @@ function dropSpeckles(alpha, width, height) {
         }
       }
     }
-    if (component.length < minimumComponent) {
+    const componentWidth = maximumX - minimumX + 1;
+    const componentHeight = maximumY - minimumY + 1;
+    const spansWidth = minimumX === 0 && maximumX === width - 1;
+    const spansHeight = minimumY === 0 && maximumY === height - 1;
+    const elongatedBorderArtifact = (spansWidth || spansHeight) && Math.max(componentWidth / componentHeight, componentHeight / componentWidth) > 8;
+    if (component.length < minimumComponent || elongatedBorderArtifact) {
       removed += 1;
       for (const pixel of component)
         alpha[pixel] = 0;
     }
   }
   return removed;
+}
+function iconVisualGateProblems(purpose, metrics, pathCount) {
+  const problems = [];
+  const aspectRatio = Math.max(metrics.width / metrics.height, metrics.height / metrics.width);
+  if (aspectRatio > 1.8)
+    problems.push("the subject is too narrow or elongated");
+  if (purpose === "mark") {
+    if (metrics.coverageRatio < 0.14)
+      problems.push("the mark has too little bold visual mass");
+    if (metrics.coverageRatio > 0.72)
+      problems.push("the mark has too little negative space");
+    if (pathCount > 12)
+      problems.push("the mark has too many separate vector paths");
+  } else {
+    if (metrics.coverageRatio < 0.035)
+      problems.push("the illustration lines are too sparse or thin");
+    if (metrics.coverageRatio > 0.62)
+      problems.push("the illustration is too visually dense");
+    if (pathCount > 48)
+      problems.push("the illustration has too much vector detail");
+  }
+  return problems;
 }
 function extractIconLineArt(rgba, width, height, options = {}) {
   if (rgba.length === 0 || rgba.length % 4 !== 0 || !Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || rgba.length !== width * height * 4) {
@@ -2192,7 +2237,8 @@ function extractIconLineArt(rgba, width, height, options = {}) {
     for (let x = 0;x < cropWidth; x += 1) {
       const sourceIndex = (cropY + y) * width + cropX + x;
       const targetIndex = (y * cropWidth + x) * 4;
-      const value = alpha[sourceIndex];
+      const measuredValue = alpha[sourceIndex];
+      const value = options.hardEdges === true ? measuredValue >= iconCoverageAlphaFloor ? 255 : 0 : measuredValue;
       coverage += value;
       pixels[targetIndex] = inkRed;
       pixels[targetIndex + 1] = inkGreen;
@@ -2294,7 +2340,7 @@ async function critiqueIconRaster(input, dependencies) {
       })
     });
     const output = runtime.Output.object({
-      description: "One bounded style critique for a rendered isometric line-art icon.",
+      description: `One bounded style critique for a rendered product ${input.purpose}.`,
       name: "slopcamera_icon_critique",
       schema: iconCritiqueSchema
     });
@@ -2307,8 +2353,9 @@ async function critiqueIconRaster(input, dependencies) {
           content: [
             {
               text: `Subject: ${input.subject}
+Purpose: ${input.purpose}
 Ink: ${input.ink}
-` + "Judge this rendered icon against the style contract.",
+` + `Judge this rendered ${input.purpose} against the style contract.`,
               type: "text"
             },
             {
@@ -2329,7 +2376,7 @@ Ink: ${input.ink}
           zeroDataRetention: true
         }
       },
-      system: CRITIQUE_SYSTEM,
+      system: input.purpose === "mark" ? MARK_CRITIQUE_SYSTEM : ILLUSTRATION_CRITIQUE_SYSTEM,
       temperature: 0
     });
     return parseIconCritique(isRecord2(result) ? result.output : undefined, resolvedModelId(isRecord2(result) ? result.response : undefined));
@@ -2342,16 +2389,53 @@ Ink: ${input.ink}
     input.signal?.removeEventListener("abort", abort);
   }
 }
-async function renderIconPreview(svg) {
+var markPreviewSmallSizes = [16, 32];
+async function renderIconPreview(svg, purpose) {
   try {
     const sharp = (await import("sharp")).default;
-    return Uint8Array.from(await sharp(Buffer.from(svg), {
+    const source = sharp(Buffer.from(svg), {
       density: 96,
       failOn: "error",
       limitInputPixels: vectorizeHardLimits.maxDecodedPixels
-    }).resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
+    });
+    if (purpose === "illustration") {
+      return Uint8Array.from(await source.resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
+        fit: "inside"
+      }).flatten({ background: slopcameraIconPanel }).png({ compressionLevel: 9 }).toBuffer());
+    }
+    const large = await source.clone().resize(iconPreviewMaximumEdge, iconPreviewMaximumEdge, {
       fit: "inside"
-    }).flatten({ background: slopcameraIconPanel }).png({ compressionLevel: 9 }).toBuffer());
+    }).flatten({ background: slopcameraIconPanel }).png({ compressionLevel: 9 }).toBuffer();
+    const smallRenders = [];
+    let cursor = 16;
+    for (const size of markPreviewSmallSizes) {
+      const rendered = await sharp(Buffer.from(svg), {
+        density: 96,
+        failOn: "error",
+        limitInputPixels: vectorizeHardLimits.maxDecodedPixels
+      }).resize(size, size, { fit: "inside" }).flatten({ background: slopcameraIconPanel }).png({ compressionLevel: 9 }).toBuffer();
+      smallRenders.push({
+        input: await sharp({
+          create: {
+            background: { b: 251, channels: 3, g: 248, r: 247 },
+            channels: 3,
+            height: size + 32,
+            width: size + 32
+          }
+        }).composite([{ input: rendered, left: 16, top: 16 }]).png().toBuffer(),
+        left: iconPreviewMaximumEdge + 16,
+        top: cursor
+      });
+      cursor += size + 48;
+    }
+    return Uint8Array.from(await sharp({
+      create: {
+        background: { b: 251, channels: 3, g: 248, r: 247 },
+        channels: 3,
+        height: Math.max(iconPreviewMaximumEdge, cursor + 16),
+        width: iconPreviewMaximumEdge + 16 + 96
+      }
+    }).composite([{ input: large, left: 0, top: 0 }, ...smallRenders]).png({ compressionLevel: 9 }).toBuffer());
   } catch (error) {
     throw new SlopcameraCloudError("GENERATION_FAILED", "The canonical icon SVG could not be rendered for critique.", { cause: error });
   }
@@ -2378,6 +2462,10 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
   }
   const model = validateIconModel(input.model ?? "recraft/recraft-v4.1-utility", "model");
   const rounds = validateRounds(input.rounds);
+  const purpose = input.purpose ?? "illustration";
+  if (purpose !== "illustration" && purpose !== "mark") {
+    invalidArgument("purpose must be illustration or mark.");
+  }
   const ink = normalizedHexColor(input.ink ?? slopcameraIconDefaultInk);
   const critiqueModel = input.critiqueModel === undefined ? slopcameraIconCritiqueDefaultModel : validateIconModel(input.critiqueModel, "critiqueModel");
   const critiqueEnabled = rounds > 1 || input.critiqueModel !== undefined;
@@ -2393,22 +2481,38 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
     if (input.signal?.aborted === true) {
       throw new SlopcameraCloudError("GENERATION_FAILED", "Icon generation was cancelled.");
     }
-    const prompt = iconPromptFor(subject, { ink, ...feedback === undefined ? {} : { feedback } });
+    const prompt = iconPromptFor(subject, {
+      ink,
+      purpose,
+      ...feedback === undefined ? {} : { feedback }
+    });
     let candidate;
     let extraction;
+    let attemptRequestId = "";
+    let attemptProblems = [];
     try {
       const generated = await generate({
         model,
         prompt,
         ...input.signal === undefined ? {} : { signal: input.signal }
       }, dependencies);
+      attemptRequestId = generated.requestId;
       const bytes = Buffer.from(generated.image.base64, "base64");
       const raster = await loadRaster(Uint8Array.from(bytes), limits, new VectorizeDeadline(limits.maxDurationMs));
-      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, { ink });
+      extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
+        hardEdges: true,
+        ink
+      });
       const png = await encodeTracePng(extraction.pixels, extraction.width, extraction.height);
       const traced = await vectorize(png, {
         ...input.inheritedFileDescriptors === undefined ? {} : { inheritedFileDescriptors: input.inheritedFileDescriptors }
       });
+      const visualProblems = iconVisualGateProblems(purpose, extraction, traced.receipt.pathCount);
+      if (visualProblems.length > 0) {
+        feedback = visualProblems.join("; ");
+        attemptProblems = visualProblems;
+        throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", `Generated ${purpose} failed its visual gate: ${feedback}.`);
+      }
       candidate = {
         png,
         requestId: generated.requestId,
@@ -2419,7 +2523,8 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
     } catch (error) {
       lastError = error;
       attempts.push({
-        requestId: "",
+        ...attemptProblems.length === 0 ? {} : { problems: attemptProblems },
+        requestId: attemptRequestId,
         round,
         status: "failed",
         warnings: []
@@ -2430,11 +2535,12 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
     let critiqueError;
     if (critiqueEnabled) {
       try {
-        const preview = await (dependencies.rasterize ?? renderIconPreview)(candidate.svg);
+        const preview = dependencies.rasterize === undefined ? await renderIconPreview(candidate.svg, purpose) : await dependencies.rasterize(candidate.svg);
         review = await critique({
           ink,
           model: critiqueModel,
           png: preview,
+          purpose,
           ...input.signal === undefined ? {} : { signal: input.signal },
           subject
         });
@@ -2466,7 +2572,11 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
       throw lastError;
     throw new SlopcameraCloudError("GENERATION_FAILED", "Every icon generation attempt failed.");
   }
-  const selected = [...candidates].sort((left, right) => (right.critique?.score ?? -1) - (left.critique?.score ?? -1) || right.round - left.round)[0];
+  const eligibleCandidates = candidates.filter(({ critique: review }) => review === null || review.pass);
+  if (eligibleCandidates.length === 0) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", `Every generated ${purpose} failed its design critique.`);
+  }
+  const selected = eligibleCandidates.sort((left, right) => (right.critique?.score ?? -1) - (left.critique?.score ?? -1) || right.round - left.round)[0];
   const selectedAttempt = attempts.findIndex((attempt) => attempt.round === selected.round && attempt.status === "candidate");
   if (selectedAttempt >= 0) {
     attempts[selectedAttempt] = {
@@ -2480,6 +2590,7 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
     ink,
     model,
     outputPath,
+    purpose,
     receiptVersion: 1,
     rounds,
     selectedRound: selected.round,
@@ -3342,6 +3453,7 @@ var slopcameraOperationRegistry = deepFreeze([
           type: "string",
           pattern: "^#[a-fA-F0-9]{3}(?:[a-fA-F0-9]{3})?$"
         },
+        purpose: { type: "string", enum: ["mark", "illustration"] },
         rounds: {
           type: "integer",
           minimum: 1,
@@ -3878,4 +3990,4 @@ async function executeSlopcameraOperation(code, value, dependencies = {}) {
   return await withSlopcameraOperationHostAdmission(code, async (lease) => await executeSlopcameraOperationUncoordinated(code, input, operationDependenciesWithLease(dependencies, lease)), dependencies);
 }
 
-export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraIconDefaultInk, slopcameraIconPanel, slopcameraIconDefaultRounds, slopcameraIconMaximumRounds, slopcameraIconSubjectMaximumBytes, slopcameraIconCritiqueDefaultModel, slopcameraIconCritiqueTimeoutMs, iconPromptFor, extractIconLineArt, critiqueIconRaster, generateSlopcameraIcon, slopcameraGalleryKinds, slopcameraGalleryAxes, slopcameraGalleryLimits, galleryCandidateId, galleryPromptFor, planSlopcameraGallery, parseSlopcameraGalleryVary, generateSlopcameraImageGallery, composeSlopcameraImageGallery, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };
+export { builtInIcons, sanitizeIcon, resolveEdge, renderSvg, renderPng, lintDiagram, stackLayoutDefaults, StackLayoutError, resolveStackLayout, resolveDiagramSource, DiagramValidationError, parseDiagramSource, parseDiagramSpec, serializeTldr, slopcameraIconDefaultInk, slopcameraIconPanel, slopcameraIconDefaultRounds, slopcameraIconMaximumRounds, slopcameraIconSubjectMaximumBytes, slopcameraIconCritiqueDefaultModel, slopcameraIconCritiqueTimeoutMs, iconPromptFor, iconVisualGateProblems, extractIconLineArt, critiqueIconRaster, generateSlopcameraIcon, slopcameraGalleryKinds, slopcameraGalleryAxes, slopcameraGalleryLimits, galleryCandidateId, galleryPromptFor, planSlopcameraGallery, parseSlopcameraGalleryVary, generateSlopcameraImageGallery, composeSlopcameraImageGallery, slopcameraOperationCodes, SlopcameraOperationError, slopcameraOperationRegistry, parseSlopcameraOperationInput, isSlopcameraOperationCode, slopcameraOperationHostResourceClaims, searchSlopcameraOperations, withSlopcameraOperationHostAdmission, executeSlopcameraOperationWithLease, executeSlopcameraOperation };

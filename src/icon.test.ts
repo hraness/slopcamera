@@ -7,6 +7,7 @@ import {
   extractIconLineArt,
   generateSlopcameraIcon,
   iconPromptFor,
+  iconVisualGateProblems,
   slopcameraIconDefaultInk,
   type IconCritique,
 } from "./icon.ts"
@@ -48,9 +49,32 @@ describe("icon prompt", () => {
     expect(prompt).toContain("a paper airplane")
     expect(prompt).toContain("isometric")
     expect(prompt).toContain("#2474d4")
-    expect(prompt).toContain("no fills")
+    expect(prompt).toContain("no hairlines")
     const revised = iconPromptFor("a cube", { feedback: "remove the shadow" })
     expect(revised).toContain("remove the shadow")
+    const mark = iconPromptFor("a sponge", { purpose: "mark" })
+    expect(mark).toContain("bold masses")
+    expect(mark).toContain("16 pixels")
+    expect(mark).toContain("no thin outlines")
+  })
+})
+
+describe("icon visual gates", () => {
+  test("keeps compact marks bold and simple", () => {
+    expect(iconVisualGateProblems("mark", { coverageRatio: 0.3, height: 80, width: 80 }, 3)).toEqual([])
+    expect(iconVisualGateProblems("mark", { coverageRatio: 0.05, height: 80, width: 160 }, 20)).toEqual([
+      "the subject is too narrow or elongated",
+      "the mark has too little bold visual mass",
+      "the mark has too many separate vector paths",
+    ])
+  })
+
+  test("bounds illustration density without requiring favicon mass", () => {
+    expect(iconVisualGateProblems("illustration", { coverageRatio: 0.12, height: 100, width: 120 }, 20)).toEqual([])
+    expect(iconVisualGateProblems("illustration", { coverageRatio: 0.7, height: 100, width: 100 }, 60)).toEqual([
+      "the illustration is too visually dense",
+      "the illustration has too much vector detail",
+    ])
   })
 })
 
@@ -79,6 +103,19 @@ describe("icon line-art extraction", () => {
     expect(result.height).toBeLessThan(height)
   })
 
+  test("uses binary alpha for mark tracing to avoid alpha-mask border seams", () => {
+    const width = 64
+    const height = 64
+    const pixels = solidRgba(width, height, [252, 252, 252, 255])
+    for (let x = 16; x <= 48; x += 1) {
+      setPixel(pixels, width, x, 24, [148, 180, 236, 255])
+      setPixel(pixels, width, x, 25, [36, 116, 212, 255])
+    }
+    const result = extractIconLineArt(pixels, width, height, { hardEdges: true })
+    const alpha = Array.from(result.pixels.filter((_, index) => index % 4 === 3))
+    expect(new Set(alpha)).toEqual(new Set([0, 255]))
+  })
+
   test("drops isolated speckle components below the area floor", () => {
     const width = 64
     const height = 64
@@ -92,6 +129,23 @@ describe("icon line-art extraction", () => {
     setPixel(pixels, width, 5, 4, [36, 116, 212, 255])
     const result = extractIconLineArt(pixels, width, height)
     expect(result.removedComponents).toBe(1)
+  })
+
+  test("drops elongated extraction artifacts that span a raster boundary", () => {
+    const width = 64
+    const height = 64
+    const pixels = solidRgba(width, height, [252, 252, 252, 255])
+    for (let y = 0; y < height; y += 1) {
+      setPixel(pixels, width, 0, y, [36, 116, 212, 255])
+    }
+    for (let x = 20; x <= 44; x += 1) {
+      for (let y = 24; y <= 40; y += 1) {
+        setPixel(pixels, width, x, y, [36, 116, 212, 255])
+      }
+    }
+    const result = extractIconLineArt(pixels, width, height)
+    expect(result.removedComponents).toBe(1)
+    expect(result.width).toBeLessThan(width)
   })
 
   test("rejects a raster with no ink strokes", () => {
@@ -179,7 +233,7 @@ function vectorizeStub(): {
 }
 
 function critiqueStub(score: number, pass: boolean) {
-  const seen: { ink: string; model: string; pngBytes: number; subject: string }[] =
+  const seen: { ink: string; model: string; pngBytes: number; purpose: string; subject: string }[] =
     []
   return {
     seen,
@@ -187,12 +241,14 @@ function critiqueStub(score: number, pass: boolean) {
       ink: string
       model: string
       png: Uint8Array
+      purpose: "illustration" | "mark"
       subject: string
     }): Promise<IconCritique> => {
       seen.push({
         ink: input.ink,
         model: input.model,
         pngBytes: input.png.byteLength,
+        purpose: input.purpose,
         subject: input.subject,
       })
       return {
@@ -240,6 +296,7 @@ describe("icon generation pipeline", () => {
           ink: slopcameraIconDefaultInk,
           model: "google/gemini-3-flash",
           pngBytes: 3,
+          purpose: "illustration",
           subject: "a lightning bolt",
         },
       ])
@@ -247,6 +304,7 @@ describe("icon generation pipeline", () => {
         { pass: true, round: 1, score: 92, status: "selected" },
       ])
       expect(receipt.selectedRound).toBe(1)
+      expect(receipt.purpose).toBe("illustration")
       const svg = await readFile(output, "utf8")
       expect(svg).toContain('fill="#2474d4"')
     } finally {
@@ -296,6 +354,33 @@ describe("icon generation pipeline", () => {
         "candidate",
         "selected",
       ])
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("does not publish when every completed design critique fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-icon-critique-fail-"))
+    try {
+      const output = join(root, "rejected.svg")
+      const raster = await lineArtPng()
+      const vectorize = vectorizeStub()
+      await expect(generateSlopcameraIcon(
+        { subject: "a cube", outputPath: output, rounds: 2 },
+        {
+          critique: critiqueStub(40, false).critique,
+          generate: async () => ({
+            image: { base64: raster, mediaType: "image/png" },
+            model: "recraft/recraft-v4.1-utility",
+            provider: "vercel-ai-gateway",
+            requestId: "req_rejected",
+            warnings: [],
+          }),
+          rasterize: async () => Uint8Array.from([1]),
+          vectorize: vectorize.vectorize,
+        },
+      )).rejects.toThrow("Every generated illustration failed its design critique")
+      expect(await Bun.file(output).exists()).toBe(false)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
