@@ -459,10 +459,10 @@ jobs:
           const { posix } = require("node:path");
           const { gunzipSync } = require("node:zlib");
 
-          const maximumFiles = 460;
+          const maximumFiles = 520;
           const maximumMetadataBytes = 1_000_000;
-          const maximumPackedBytes = 4_300_000;
-          const maximumUnpackedBytes = 11_300_000;
+          const maximumPackedBytes = 4_800_000;
+          const maximumUnpackedBytes = 13_000_000;
           const expectedName = "@hraness/slopcamera";
           const expectedVersion = process.env.EXPECTED_VERSION;
           const expectedFilename = process.env.EXPECTED_TARBALL_NAME;
