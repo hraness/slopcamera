@@ -251,6 +251,7 @@ export function commandHostResourceClaims(
     case "fillers-apply":
     case "fillers-list":
     case "help":
+    case "capabilities":
     case "inspect":
     case "menubar":
     case "operations-list":

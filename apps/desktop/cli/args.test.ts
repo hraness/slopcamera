@@ -462,3 +462,28 @@ test("ai image gallery parses --preview probe only for scene-bound kinds", () =>
     ])).toThrow(/--preview/u);
   }
 });
+
+test("capabilities is a zero-effect discovery command", async () => {
+  expect(parseCliArgs(["capabilities", "--json"])).toEqual({ json: true, kind: "capabilities" });
+  expect(commandHelp(["capabilities"])).toContain("statically assembled capability manifest");
+  expect(completions([])).toContain("capabilities");
+  expect(() => parseCliArgs(["capabilities", "extra"])).toThrow(/Usage/u);
+
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const io: CliIo = {
+    cwd: () => "/path/that/does/not/need/to/exist",
+    env: {},
+    now: () => new Date("2026-01-01T00:00:00.000Z"),
+    platform: "linux",
+    stderr: value => { stderr.push(value); },
+    stdout: value => { stdout.push(value); },
+  };
+  expect(await runCli(["capabilities", "--json"], { io, version: "slopcamera-test" })).toBe(0);
+  expect(stderr).toEqual([]);
+  expect(JSON.parse(stdout.join(""))).toMatchObject({
+    host: "local",
+    kind: "slopcamera.capability-manifest",
+    toolVersion: "slopcamera-test",
+  });
+});

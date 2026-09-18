@@ -8,6 +8,7 @@ const GLOBAL_HELP = `slopcamera — creative scenes and non-destructive media ed
 Usage: slopcamera <command> [options]
 
 Commands:
+  capabilities                   Discover the exact static capability modules and qualification status
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
   scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render
@@ -54,6 +55,9 @@ HRANESS_SUPPORT_AUDIENCE=off suppresses offers and incidental discovery.
 Run slopcamera help <command> for command-specific help.`;
 
 const HELP: Readonly<Record<string, string>> = {
+  capabilities: `Usage: slopcamera capabilities [--json]
+
+Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
   studio: `Usage:
   slopcamera studio init <new-directory> [--template blender-product|blender-character|blender-shaded-street|blender-cloth|blender-fluid|cadquery-bracket|manim-lesson] [--json]
   slopcamera studio bundle <source.json> [--source-root <directory>] [--json]
@@ -561,7 +565,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];

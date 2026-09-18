@@ -6,7 +6,7 @@ import {
   createBoundedJsonValueSnapshot,
   deepFreezeJson,
   sha256Hex
-} from "./index-8txs6fkn.js";
+} from "./index-ff4r9h6b.js";
 
 // src/spatial-scene/material-lighting.ts
 import { z } from "zod";
