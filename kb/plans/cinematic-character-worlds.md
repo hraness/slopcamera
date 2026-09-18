@@ -294,7 +294,7 @@ A canonical capability manifest will project the reviewed static catalog to CLI/
 
 ## Phase 11: Executable effects, particles, simulation bakes, and diagnostic evidence
 
-- **Status:** In progress — vertical slice implemented and locally green; remaining qualification, gates, and PR pending
+- **Status:** In progress — vertical slice implemented; PR #165 open with auto-merge armed pending exact-head CI; browser/native qualification remains Phase 15 scope
 - **Depends on:** Phase 10
 - **Objective:** Complete Phase 7 from authored contracts through admitted resources, deterministic lowering, retained receipts, and honest qualification.
 - **Scope:** render request integration, resource planner, CPU-prepared particle simulation, locked beauty post-processing, motion evidence, deterministic rigid-body bake and native secondary-motion adapter.
