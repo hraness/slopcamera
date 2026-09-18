@@ -94,7 +94,14 @@ test("world import surfaces declared provider metadata as unverified suggested n
     // entity still carry exactly the caller-declared normalization.
     expect(imported.manifest.normalization).toEqual(savedImport.normalization);
     expect(imported.entity.transform).toEqual(savedImport.normalization.transform);
-    expect(imported.assets).toHaveLength(2);
+    // The raw provider bytes publish verbatim as a content-addressed metadata
+    // asset inside the import manifest's dependency closure.
+    expect(imported.assets).toHaveLength(3);
+    const retained = imported.assets.find((asset: { interpretation: { kind: string; schema?: string } }) => asset.interpretation.kind === "metadata" && asset.interpretation.schema === "slopcamera.provider-metadata");
+    expect(retained).toMatchObject({ assetId: `asset_world_provider_metadata_${providerMetadata.sha256}`, payload: { sha256: providerMetadata.sha256, bytes: metadataBytes.length } });
+    expect(await readFile(join(root, "artifacts/slopcamera/generated/import-test", retained.payload.path))).toEqual(metadataBytes);
+    const manifest = imported.assets.find((asset: { interpretation: { kind: string; schema?: string } }) => asset.interpretation.kind === "metadata" && asset.interpretation.schema === "slopcamera.spatial-world-import");
+    expect(manifest.dependencies).toContain(retained.assetId);
     expect(networkCalls).toBe(0);
     expect(errors).toEqual([]);
   } finally { await rm(root, { recursive: true, force: true }); }

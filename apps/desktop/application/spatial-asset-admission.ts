@@ -143,6 +143,8 @@ export async function admitSpatialAssetFile(options: SpatialAssetAdmissionReques
     subject: payload, subjectManifestSha256: spatialAssetManifestSha256(manifest),
     profile: model.profile, nodeCount: model.nodeCount, clipDurationsSeconds: [...model.clipDurationsSeconds],
     bounds: { modelSpace, sceneSpace },
+    materials: model.materialFacts.map(fact => ({ ...fact })),
+    ...(model.rigFacts === undefined ? {} : { rig: model.rigFacts }),
   });
   const factsText = `${canonicalJson(facts)}\n`, factsSha256 = createHash("sha256").update(factsText).digest("hex");
   const factsPayload = { path: `assets/${factsSha256}.json`, sha256: factsSha256, bytes: Buffer.byteLength(factsText) };

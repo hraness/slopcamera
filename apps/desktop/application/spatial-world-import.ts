@@ -69,7 +69,7 @@ export async function importSavedSpatialWorld(options: {
   options.signal.throwIfAborted();
   const sourceRoot = await physicalRoot(options.sourceRoot), destinationRoot = await physicalRoot(options.destinationRoot);
   const splatBytes = await readExact(sourceRoot, input.splat, options.signal);
-  const facts = await inspectSpatialSpz(splatBytes, options.signal);
+  const { facts } = await inspectSpatialSpz(splatBytes, options.signal);
   const colliderBytes = input.collider === undefined ? undefined : await readExact(sourceRoot, input.collider, options.signal);
   if (colliderBytes !== undefined) parseSpatialGlb(colliderBytes);
   const providerBytes = input.provenance.receipt === undefined ? undefined : await readExact(sourceRoot, input.provenance.receipt, options.signal);
@@ -81,13 +81,14 @@ export async function importSavedSpatialWorld(options: {
       || (input.provenance.worldId !== undefined && value.world.worldId !== input.provenance.worldId)) throw new RangeError("World provider provenance does not match the retained world and exact SPZ/collider bytes.");
   }
   let suggestedNormalization: SpatialWorldSuggestedNormalization | undefined;
+  let providerMetadataBytes: Uint8Array | undefined;
   if (input.providerMetadata !== undefined) {
-    const metadataBytes = await readExact(sourceRoot, input.providerMetadata, options.signal).catch((error: unknown) => {
+    providerMetadataBytes = await readExact(sourceRoot, input.providerMetadata, options.signal).catch((error: unknown) => {
       if (options.signal.aborted || error instanceof RangeError) throw error;
       throw new RangeError("World provider metadata source could not be read as declared.", { cause: error });
     });
     let document: unknown;
-    try { document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(metadataBytes)); }
+    try { document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(providerMetadataBytes)); }
     catch (error) { throw new RangeError("World provider metadata is not valid UTF-8 JSON.", { cause: error }); }
     const captured = createBoundedJsonSnapshot(document, 256 * 1024, "World provider metadata", { maximumDepth: 16, maximumValues: 4096 });
     suggestedNormalization = { ...extractWorldProviderMetadata(captured.value), artifactSha256: input.providerMetadata.sha256 };
@@ -112,12 +113,15 @@ export async function importSavedSpatialWorld(options: {
   try {
     const splat = await publishBytes(splatBytes, "spz"), collider = colliderBytes === undefined ? undefined : await publishBytes(colliderBytes, "glb");
     const receipt = providerBytes === undefined ? undefined : await publishBytes(providerBytes, "json");
+    // The provider metadata artifact is retained verbatim — the exact source
+    // bytes publish under their own content address, never canonicalized.
+    const providerMetadata = providerMetadataBytes === undefined ? undefined : await publishBytes(providerMetadataBytes, "json");
     const manifest = SpatialWorldImportManifestSchema.parse({ kind: "slopcamera.spatial-world-import", schemaVersion: 1,
       splat: { payload: splat, facts }, collider: collider === undefined ? null : { payload: collider, role: "approximate-collider", validation: "bounded-glb-structure-only" },
       identities: input.identities, normalization: input.normalization,
       provenance: { ...input.provenance, ...(receipt === undefined ? {} : { receipt }) },
       ...(suggestedNormalization === undefined ? {} : { suggestedNormalization }),
-      capabilities: { beauty: true, semanticIds: "authored-wrapper-only", depth: "unsupported", objectId: "unsupported", physics: collider === undefined ? "unavailable" : "unvalidated" },
+      capabilities: { beauty: true, semanticIds: "authored-wrapper-only", depth: "unsupported", objectId: "bounding-box-proxy", physics: collider === undefined ? "unavailable" : "unvalidated" },
     });
     const text = `${canonicalJson(manifest)}\n`, sha256 = createHash("sha256").update(text).digest("hex");
     const manifestArtifact = { path: `spatial/worlds/receipts/${sha256}.json`, sha256, bytes: Buffer.byteLength(text) };
@@ -130,10 +134,12 @@ export async function importSavedSpatialWorld(options: {
     const interpretation = { metersPerUnit: input.normalization.metersPerUnit, sourceUp: input.normalization.sourceUp };
     const manifestAssetId = `asset_world_manifest_${manifestArtifact.sha256}`;
     const receiptAssetId = receipt === undefined ? undefined : `asset_world_provider_${receipt.sha256}`;
+    const providerMetadataAssetId = providerMetadata === undefined ? undefined : `asset_world_provider_metadata_${providerMetadata.sha256}`;
     const assets = [
       ...(collider === undefined ? [] : [SpatialAssetManifestSchema.parse({ assetId: input.identities.colliderAssetId, payload: collider, interpretation: { kind: "gltf", format: "glb", ...interpretation }, dependencies: [], provenance })]),
-      SpatialAssetManifestSchema.parse({ assetId: manifestAssetId, payload: manifestArtifact, interpretation: { kind: "metadata", format: "json", schema: "slopcamera.spatial-world-import" }, dependencies: receiptAssetId === undefined ? [] : [receiptAssetId], provenance }),
+      SpatialAssetManifestSchema.parse({ assetId: manifestAssetId, payload: manifestArtifact, interpretation: { kind: "metadata", format: "json", schema: "slopcamera.spatial-world-import" }, dependencies: [...(receiptAssetId === undefined ? [] : [receiptAssetId]), ...(providerMetadataAssetId === undefined ? [] : [providerMetadataAssetId])], provenance }),
       ...(receipt === undefined ? [] : [SpatialAssetManifestSchema.parse({ assetId: receiptAssetId, payload: receipt, interpretation: { kind: "metadata", format: "json", schema: "slopcamera.world-labs-provenance" }, dependencies: [], provenance })]),
+      ...(providerMetadata === undefined ? [] : [SpatialAssetManifestSchema.parse({ assetId: providerMetadataAssetId, payload: providerMetadata, interpretation: { kind: "metadata", format: "json", schema: "slopcamera.provider-metadata" }, dependencies: [], provenance })]),
       SpatialAssetManifestSchema.parse({ assetId: input.identities.assetId, payload: splat, interpretation: { kind: "splat", format: "spz", ...interpretation }, dependencies: [...(input.identities.colliderAssetId === undefined ? [] : [input.identities.colliderAssetId]), manifestAssetId], provenance }),
     ];
     if (new Set(assets.map(asset => asset.assetId)).size !== assets.length) throw new RangeError("World metadata asset IDs conflict with requested identities.");

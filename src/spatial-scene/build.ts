@@ -1,9 +1,9 @@
 import { z } from "zod"
 import { deepFreezeJson } from "../code/json-snapshot.js"
 import {
-  SPATIAL_SCENE_LIMITS, SpatialAnimationSchema, SpatialPoseSchema, SpatialProjectionSchema, SpatialQuaternionSchema,
+  SPATIAL_SCENE_LIMITS, SpatialAnimationSchema, SpatialEntitySchema, SpatialPoseSchema, SpatialProjectionSchema, SpatialQuaternionSchema,
   SpatialTimeUsSchema, SpatialTransformSchema, SpatialVec3Schema,
-  type SpatialAnimation, type SpatialPose, type SpatialProjection, type SpatialTransform,
+  type SpatialAnimation, type SpatialEntity, type SpatialGeometry, type SpatialMaterial, type SpatialPlacement, type SpatialPose, type SpatialProjection, type SpatialTransform,
 } from "./contracts.js"
 import { parseSpatialValue } from "./identity.js"
 import {
@@ -405,17 +405,14 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/**
- * Deterministic XZ-plane positions at y = 0. With `minSpacing`, each point keeps
- * that Euclidean distance from every earlier accepted point; failure to place a
- * point within bounded attempts raises rather than silently relaxing spacing.
- */
-export function scatter(input: {
+interface ScatterInput {
   readonly seed: number
   readonly count: number
   readonly region: { readonly minX: number; readonly maxX: number; readonly minZ: number; readonly maxZ: number }
   readonly minSpacing?: number
-}): readonly Vec3[] {
+}
+
+function scatterPositions(input: ScatterInput): readonly Vec3[] {
   if (!Number.isSafeInteger(input.seed) || input.seed < 0 || input.seed > 0xffff_ffff) {
     throw new RangeError("seed must be an integer within [0, 2^32 - 1]")
   }
@@ -442,6 +439,71 @@ export function scatter(input: {
     if (!done) throw new RangeError("scatter could not satisfy minSpacing within the region")
   }
   return deepFreezeJson(parseSpatialValue(z.array(SpatialVec3Schema), accepted, "scatter"))
+}
+
+/**
+ * Deterministic XZ-plane positions at y = 0. With `minSpacing`, each point keeps
+ * that Euclidean distance from every earlier accepted point; failure to place a
+ * point within bounded attempts raises rather than silently relaxing spacing.
+ */
+export function scatter(input: ScatterInput): readonly Vec3[]
+
+/**
+ * `instanced: true` emits ONE mesh entity whose local-space `instances` carry
+ * the scattered placements (identity rotation and scale at each position).
+ * `entity` supplies the mesh wrapper; its transform parents the whole set.
+ */
+export function scatter(input: ScatterInput & {
+  readonly instanced: true
+  readonly entity: {
+    readonly entityId: string
+    readonly name: string
+    readonly geometry: SpatialGeometry
+    readonly material: SpatialMaterial
+    readonly transform?: Transform
+    readonly parentId?: string | null
+    readonly placement?: SpatialPlacement
+    readonly visible?: boolean
+    readonly castShadow?: boolean
+    readonly receiveShadow?: boolean
+  }
+}): SpatialEntity
+
+export function scatter(input: ScatterInput & {
+  readonly instanced?: boolean
+  readonly entity?: {
+    readonly entityId: string
+    readonly name: string
+    readonly geometry: SpatialGeometry
+    readonly material: SpatialMaterial
+    readonly transform?: Transform
+    readonly parentId?: string | null
+    readonly placement?: SpatialPlacement
+    readonly visible?: boolean
+    readonly castShadow?: boolean
+    readonly receiveShadow?: boolean
+  }
+}): readonly Vec3[] | SpatialEntity {
+  const positions = scatterPositions(input)
+  if (input.instanced !== true) {
+    if (input.entity !== undefined) throw new RangeError("entity applies only with instanced: true")
+    return positions
+  }
+  const template = input.entity
+  if (template === undefined) throw new RangeError("instanced scatter requires an entity template")
+  if (positions.length === 0) throw new RangeError("instanced scatter requires count >= 1")
+  const entity = template
+  return deepFreezeJson(parseSpatialValue(SpatialEntitySchema, {
+    kind: "mesh", entityId: entity.entityId, name: entity.name,
+    parentId: entity.parentId ?? null,
+    transform: entity.transform ?? { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    placement: entity.placement ?? { kind: "world" },
+    origin: { kind: "authored" }, visible: entity.visible ?? true,
+    geometry: entity.geometry, material: entity.material,
+    ...(entity.castShadow === undefined ? {} : { castShadow: entity.castShadow }),
+    ...(entity.receiveShadow === undefined ? {} : { receiveShadow: entity.receiveShadow }),
+    instances: positions.map(([x, , z]) => ({ position: [x, 0, z], rotation: [0, 0, 0, 1], scale: [1, 1, 1] })),
+  }, "instanced scatter entity"))
 }
 
 /** Recenters the mover horizontally on the target and rests its min-Y on the target's max-Y. */

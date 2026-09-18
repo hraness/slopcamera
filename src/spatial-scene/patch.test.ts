@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test"
 import fc from "fast-check"
 import { applySpatialScenePatch, diffSpatialScenes } from "./patch.js"
 import { spatialAssetClosureDigests, spatialGeneratorOutputSha256, spatialSceneSha256 } from "./identity.js"
-import { fixtureAsset, fixtureEntity, fixtureGenerated, fixtureScene } from "./test-fixture.js"
+import { type SpatialEntity } from "./contracts.js"
+import { fixtureAsset, fixtureEntity, fixtureGenerated, fixtureScene, fixtureTransform } from "./test-fixture.js"
 
 function patch(scene: unknown, operations: unknown[]) {
   return { kind: "slopcamera.spatial-scene-patch", schemaVersion: 1, expectedSceneSha256: spatialSceneSha256(scene), operations }
@@ -93,5 +94,32 @@ describe("typed atomic authored scene patches", () => {
   test("patch parser rejects unknown operations, unsafe shape, duplicate additions and oversize batches", () => {
     const scene = fixtureScene()
     for (const operations of [[{ kind: "execute", source: "throw Error()" }], [{ kind: "add-entity", entity: fixtureEntity() }], Array.from({ length: 257 }, () => ({ kind: "rename-entity", entityId: "entity_box", name: "Box" }))]) expect(() => applySpatialScenePatch(scene, patch(scene, operations))).toThrow()
+  })
+
+  test("contract-v1 extension patches mutate emissive, spot, instances and shadow flags", () => {
+    const standard = { ...fixtureEntity("entity_standard"), material: { kind: "standard" as const, color: "#ffffff", opacity: 1, roughness: 0.5, metalness: 0.1 } }
+    const spot = { entityId: "entity_spot", kind: "light" as const, name: "Spot", parentId: null, transform: fixtureTransform,
+      placement: { kind: "world" as const }, origin: { kind: "authored" as const }, visible: true, light: "spot" as const, color: "#ffffff", intensity: 1,
+      spot: { angle: Math.PI / 4, penumbra: 0.2 } }
+    const scene = { ...fixtureScene(), entities: [fixtureEntity(), standard, spot] }
+
+    const emissive = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-emissive", entityId: "entity_standard", emissive: { color: "#00ff00", intensity: 2 } }])).scene
+    expect((emissive.entities.find(e => e.entityId === "entity_standard")! as Extract<SpatialEntity, { kind: "mesh" }>).material).toMatchObject({ emissive: { color: "#00ff00", intensity: 2 } })
+    const clearedEmissive = applySpatialScenePatch(emissive, patch(emissive, [{ kind: "set-emissive", entityId: "entity_standard", emissive: null }])).scene
+    expect((clearedEmissive.entities.find(e => e.entityId === "entity_standard")! as Extract<SpatialEntity, { kind: "mesh" }>).material).not.toHaveProperty("emissive")
+
+    const instances = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-instances", entityId: "entity_box", instances: [{ ...fixtureTransform, position: [1, 0, 0] }] }])).scene
+    expect((instances.entities.find(e => e.entityId === "entity_box")! as Extract<SpatialEntity, { kind: "mesh" }>).instances).toEqual([{ ...fixtureTransform, position: [1, 0, 0] }])
+    const clearedInstances = applySpatialScenePatch(instances, patch(instances, [{ kind: "set-instances", entityId: "entity_box", instances: null }])).scene
+    expect((clearedInstances.entities.find(e => e.entityId === "entity_box")! as Extract<SpatialEntity, { kind: "mesh" }>).instances).toBeUndefined()
+
+    const spotCone = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-spot", entityId: "entity_spot", spot: { angle: Math.PI / 6, penumbra: 0.5 } }])).scene
+    expect((spotCone.entities.find(e => e.entityId === "entity_spot")! as Extract<SpatialEntity, { kind: "light" }>).spot).toEqual({ angle: Math.PI / 6, penumbra: 0.5 })
+
+    const meshShadow = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-mesh-shadow", entityId: "entity_box", castShadow: true, receiveShadow: false }])).scene
+    expect(meshShadow.entities.find(e => e.entityId === "entity_box")).toMatchObject({ castShadow: true, receiveShadow: false })
+
+    const lightShadow = applySpatialScenePatch(scene, patch(scene, [{ kind: "set-light-shadow", entityId: "entity_spot", shadow: true }])).scene
+    expect(lightShadow.entities.find(e => e.entityId === "entity_spot")).toMatchObject({ shadow: true })
   })
 })

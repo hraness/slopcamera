@@ -37,7 +37,7 @@ describe("material maps and environment entities", () => {
     })
     expect(spatialSceneSha256(scene)).not.toBe(spatialSceneSha256(unmapped))
     // The map is an authored material reference, not an editable override surface.
-    expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["color", "opacity", "transform"])
+    expect(inspectSpatialScene(scene).entities[0]!.editableControls).toEqual(["color", "opacity", "transform", "emissive", "instances", "castShadow", "receiveShadow"])
   })
 
   test("material maps reject missing references, non-image assets, and asset geometry", () => {

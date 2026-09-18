@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { auditSpatialScene } from "./audit.js"
 import {
-  auditSpatialSceneRendered, decodeObjectIdPixels,
+  auditSpatialSceneRendered, decodeObjectIdPixels, SPATIAL_SPLAT_PROXY_REPRESENTATION,
   SpatialRenderedAuditReportSchema, type SpatialRenderedAuditFrame,
 } from "./audit-rendered.js"
 import type { SpatialEntity, SpatialSceneV1 } from "./contracts.js"
@@ -161,6 +161,7 @@ describe("auditSpatialSceneRendered", () => {
     const report = auditSpatialSceneRendered(scene, [frame(0, { "1": 100, "2": 20 }, objects)], { cameraId: "camera_main" })
     const byId = new Map(report.entities.map(entity => [entity.entityId, entity]))
     expect(byId.get("entity_splat")!.eligibility).toBe("unsupported-kind")
+    expect(byId.get("entity_splat")!.enclosure).toEqual({ status: "unknown", reason: "requires-asset-decoding" })
     expect(byId.get("entity_hud")!.eligibility).toBe("view-masked")
     expect(byId.get("entity_hud")!.samples[0]!.lowered).toBe(true)
     expect(byId.get("entity_hud")!.samples[0]!.rendered).toBe(true)
@@ -170,8 +171,99 @@ describe("auditSpatialSceneRendered", () => {
     expect(report.summary.renderedPixels).toBe(120)
     expect(report.summary.entitiesUnsupported).toEqual(["entity_splat"])
     expect(report.summary.entitiesViewMasked).toEqual(["entity_hud"])
+    expect(report.summary.entities.proxyCoverage).toBe(0)
+    expect(report.summary.entitiesProxyCoverage).toEqual([])
     const kinds = new Map(report.findings.filter(finding => finding.kind === "unsupported-kind").map(finding => [finding.entityId, finding.severity]))
     expect(kinds).toEqual(new Map([["entity_splat", "info"], ["entity_hud", "info"]]))
+    // A world splat without supplied bounds reports why no proxy can stand in.
+    expect(report.findings.some(finding => finding.kind === "bounds-unknown" && finding.entityId === "entity_splat")).toBe(true)
+  })
+
+  test("a bounded world splat reports proxy-coverage and attributes its proxy pixels", () => {
+    const splat: SpatialEntity = {
+      entityId: "entity_splat", kind: "splat", name: "Splat", parentId: null,
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      origin: { kind: "authored" }, placement: { kind: "world" }, visible: true, assetId: "asset_splat",
+    }
+    const scene: SpatialSceneV1 = {
+      ...fixtureScene(),
+      entities: [fixtureEntity(), splat],
+      assets: [{ assetId: "asset_splat", payload: { path: "assets/cloud.spz", sha256: DIGEST, bytes: 100 }, interpretation: { kind: "splat", format: "spz", metersPerUnit: 1, sourceUp: "y" }, dependencies: [], provenance: { source: "authored", description: "fixture" } }],
+    }
+    // Sorted: entity_box(1), entity_splat(2). The proxy evidence row carries the
+    // entity's normal selection code and names its approximate representation.
+    const objects = [
+      WORLD_OBJECT,
+      { entityId: "entity_splat", selectionId: 2, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION, placement: "world" as const, assetManifestSha256: assetDigest(scene, "asset_splat") },
+    ]
+    const report = auditSpatialSceneRendered(scene, [
+      frame(0, { "1": 100, "2": 64 }, objects),
+      frame(500_000, { "1": 90 }, objects),
+    ], { cameraId: "camera_main", assetBounds: { asset_splat: { min: [-1, -1, -1], max: [1, 1, 1] } } })
+    const byId = new Map(report.entities.map(entity => [entity.entityId, entity]))
+    const row = byId.get("entity_splat")!
+    expect(row.eligibility).toBe("proxy-coverage")
+    expect(row.enclosure).toEqual({ status: "bounded" })
+    expect(row.samples.map(sample => [sample.expected, sample.lowered, sample.pixels])).toEqual([[true, true, 64], [true, true, 0]])
+    expect(row.samples[0]!.geometricPixels).toBeGreaterThan(0)
+    expect(row.samples[0]!.coverageRatio).toBe(Math.round(64 / row.samples[0]!.geometricPixels! * 1_000) / 1_000)
+    expect(report.summary.entities.proxyCoverage).toBe(1)
+    expect(report.summary.entitiesProxyCoverage).toEqual(["entity_splat"])
+    expect(report.summary.entitiesUnsupported).toEqual([])
+    const finding = report.findings.find(item => item.kind === "proxy-coverage")!
+    expect(finding).toMatchObject({ severity: "info", entityId: "entity_splat" })
+    expect(finding.detail).toContain("approximate")
+    expect(report.findings.some(item => item.kind === "occluded" && item.entityId === "entity_splat")).toBe(true)
+    expect(SpatialRenderedAuditReportSchema.parse(report)).toEqual(JSON.parse(JSON.stringify(report)))
+  })
+
+  test("splat proxy evidence is rejected without supplied bounds or for non-splat entities", () => {
+    const splat: SpatialEntity = {
+      entityId: "entity_splat", kind: "splat", name: "Splat", parentId: null,
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      origin: { kind: "authored" }, placement: { kind: "world" }, visible: true, assetId: "asset_splat",
+    }
+    const viewSplat: SpatialEntity = { ...splat, entityId: "entity_view_splat", placement: { kind: "view", cameraId: "camera_main", units: "normalized", order: 0 } }
+    const scene: SpatialSceneV1 = {
+      ...fixtureScene(),
+      entities: [fixtureEntity(), splat, viewSplat],
+      assets: [{ assetId: "asset_splat", payload: { path: "assets/cloud.spz", sha256: DIGEST, bytes: 100 }, interpretation: { kind: "splat", format: "spz", metersPerUnit: 1, sourceUp: "y" }, dependencies: [], provenance: { source: "authored", description: "fixture" } }],
+    }
+    // Sorted: entity_box(1), entity_splat(2), entity_view_splat(3).
+    const proxy = { entityId: "entity_splat", selectionId: 2, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION, placement: "world" as const, assetManifestSha256: assetDigest(scene, "asset_splat") }
+    const bounds = { asset_splat: { min: [-1, -1, -1] as const, max: [1, 1, 1] as const } }
+    // A proxy row without supplied bounds cannot prove its enclosure.
+    expect(() => auditSpatialSceneRendered(scene, [frame(0, {}, [WORLD_OBJECT, proxy])], { cameraId: "camera_main" })).toThrow("bounding-box proxy")
+    // The view placement never lowers a proxy.
+    const viewProxy = { entityId: "entity_view_splat", selectionId: 3, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION, placement: "world" as const, assetManifestSha256: assetDigest(scene, "asset_splat") }
+    expect(() => auditSpatialSceneRendered(scene, [frame(0, {}, [WORLD_OBJECT, proxy, viewProxy])], { cameraId: "camera_main", assetBounds: bounds })).toThrow("bounding-box proxy")
+    // Non-splat evidence must not claim the approximate representation.
+    const forged = { ...WORLD_OBJECT, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION }
+    expect(() => auditSpatialSceneRendered(scene, [frame(0, {}, [forged, proxy])], { cameraId: "camera_main", assetBounds: bounds })).toThrow("bounding-box proxy")
+    // A splat lowered under any other representation fails closed.
+    const mislabeled = { ...proxy, representation: "prepared-static-triangle-mesh" }
+    expect(() => auditSpatialSceneRendered(scene, [frame(0, {}, [WORLD_OBJECT, mislabeled])], { cameraId: "camera_main", assetBounds: bounds })).toThrow("bounding-box proxy")
+  })
+
+  test("a view-placed splat stays unsupported even when its asset bounds are supplied", () => {
+    const viewSplat: SpatialEntity = {
+      entityId: "entity_splat", kind: "splat", name: "Splat", parentId: null,
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      origin: { kind: "authored" }, placement: { kind: "view", cameraId: "camera_main", units: "normalized", order: 0 }, visible: true, assetId: "asset_splat",
+    }
+    const scene: SpatialSceneV1 = {
+      ...fixtureScene(),
+      entities: [fixtureEntity(), viewSplat],
+      assets: [{ assetId: "asset_splat", payload: { path: "assets/cloud.spz", sha256: DIGEST, bytes: 100 }, interpretation: { kind: "splat", format: "spz", metersPerUnit: 1, sourceUp: "y" }, dependencies: [], provenance: { source: "authored", description: "fixture" } }],
+    }
+    const report = auditSpatialSceneRendered(scene, [frame(0, { "1": 10 }, [WORLD_OBJECT])], {
+      cameraId: "camera_main", assetBounds: { asset_splat: { min: [-1, -1, -1], max: [1, 1, 1] } },
+    })
+    const row = report.entities.find(item => item.entityId === "entity_splat")!
+    expect(row.eligibility).toBe("unsupported-kind")
+    const finding = report.findings.find(item => item.kind === "unsupported-kind" && item.entityId === "entity_splat")!
+    expect(finding.detail).toContain("view-placed")
+    expect(report.findings.every(item => item.kind !== "bounds-unknown")).toBe(true)
   })
 
   test("warns on unattributed selection codes and never invents coverage", () => {

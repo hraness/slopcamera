@@ -62,8 +62,10 @@ export const SpatialWorldImportManifestSchema = z.strictObject({
   collider: z.strictObject({ payload: SpatialPayloadSchema, role: z.literal("approximate-collider"), validation: z.literal("bounded-glb-structure-only") }).nullable(),
   identities: identitiesSchema, normalization: normalizationSchema, provenance: provenanceSchema,
   suggestedNormalization: SpatialWorldSuggestedNormalizationSchema.optional(),
-  capabilities: z.strictObject({ beauty: z.literal(true), semanticIds: z.literal("authored-wrapper-only"), depth: z.literal("unsupported"), objectId: z.literal("unsupported"), physics: z.enum(["unvalidated", "unavailable"]) }),
+  // `bounding-box-proxy`: the object-ID pass attributes the splat's
+  // supplied-bounds proxy — approximate coverage, never splat pixel truth.
+  capabilities: z.strictObject({ beauty: z.literal(true), semanticIds: z.literal("authored-wrapper-only"), depth: z.literal("unsupported"), objectId: z.enum(["unsupported", "bounding-box-proxy"]), physics: z.enum(["unvalidated", "unavailable"]) }),
 }).refine(value => (value.collider === null) === (value.identities.colliderAssetId === undefined) && value.capabilities.physics === (value.collider === null ? "unavailable" : "unvalidated"), "Collider presence and capability evidence must agree.");
 export type SpatialWorldImportManifest = Readonly<z.infer<typeof SpatialWorldImportManifestSchema>>;
-export const SavedSpatialWorldImportOutputSchema = z.strictObject({ manifest: SpatialWorldImportManifestSchema, manifestArtifact: SpatialPayloadSchema, assets: z.array(SpatialAssetManifestSchema).min(2).max(4), entity: SpatialEntitySchema, manifestSha256: SpatialDigestSchema });
+export const SavedSpatialWorldImportOutputSchema = z.strictObject({ manifest: SpatialWorldImportManifestSchema, manifestArtifact: SpatialPayloadSchema, assets: z.array(SpatialAssetManifestSchema).min(2).max(5), entity: SpatialEntitySchema, manifestSha256: SpatialDigestSchema });
 export type SavedSpatialWorldImportOutput = Readonly<z.infer<typeof SavedSpatialWorldImportOutputSchema>>;

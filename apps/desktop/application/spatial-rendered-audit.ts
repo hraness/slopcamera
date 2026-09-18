@@ -104,12 +104,24 @@ export interface SpatialRenderedAuditDependencies {
   readonly bindBrowserRuntime?: typeof bindHtmlOverlayBrowserRuntime;
 }
 
-/** Per-vertex bounds over the exact prepared primitives actually lowered, unioned per declared asset. */
+/**
+ * Per-vertex bounds over the exact prepared primitives actually lowered,
+ * unioned per declared asset. Splat entries contribute their decoded
+ * SPZ-position enclosure — the same bounds the object-ID proxy lowers.
+ */
 function preparedAssetBounds(assets: readonly PreparedSpatialAsset[]): Record<string, Bounds> {
   const union = new Map<string, { min: [number, number, number]; max: [number, number, number] }>();
   for (const asset of assets) {
-    if (asset.kind !== "geometry") continue;
+    if (asset.kind !== "geometry" && asset.kind !== "splat") continue;
     const entry = union.get(asset.assetId) ?? { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    if (asset.kind === "splat") {
+      for (let axis = 0; axis < 3; axis++) {
+        entry.min[axis] = Math.min(entry.min[axis]!, asset.bounds.min[axis]!);
+        entry.max[axis] = Math.max(entry.max[axis]!, asset.bounds.max[axis]!);
+      }
+      union.set(asset.assetId, entry);
+      continue;
+    }
     for (const primitive of asset.primitives) {
       const count = primitive.indices?.length ?? primitive.positions.length / 3;
       for (let index = 0; index < count; index++) {
@@ -131,9 +143,9 @@ function preparedAssetBounds(assets: readonly PreparedSpatialAsset[]): Record<st
 
 /**
  * Renders each sampled time through the real object-ID pass, decodes the exact
- * PNG rasters, and runs the portable analyzer. Splats are excluded from the
- * batch (the pass cannot represent them) and surface as `unsupported-kind`
- * findings; nothing is published and no receipt is written.
+ * PNG rasters, and runs the portable analyzer. Splats lower as their
+ * bounding-box proxies and report `proxy-coverage` — approximate attribution,
+ * never splat pixel truth; nothing is published and no receipt is written.
  */
 export async function auditSpatialSceneRenderedHost(
   context: OperationExecutionContext,
@@ -173,12 +185,8 @@ export async function auditSpatialSceneRenderedHost(
     for (let offset = 0; offset < plan.timesUs.length; offset += SPATIAL_RENDER_LIMITS.batchFrames) {
       await assertCustody();
       const windowTimes = plan.timesUs.slice(offset, offset + SPATIAL_RENDER_LIMITS.batchFrames);
-      // The object-ID pass cannot encode splats; they are filtered before
-      // lowering and reported as unsupported entities, never silently rendered.
-      const windowSnapshots: EvaluatedSpatialScene[] = windowTimes.map(timeUs => {
-        const snapshot = evaluateSpatialScene(plan.scene, { cameraId: plan.request.cameraId, timeUs });
-        return { ...snapshot, entities: snapshot.entities.filter(entry => entry.entity.kind !== "splat") };
-      });
+      const windowSnapshots: EvaluatedSpatialScene[] = windowTimes.map(timeUs =>
+        evaluateSpatialScene(plan.scene, { cameraId: plan.request.cameraId, timeUs }));
       await withPreparedSpatialAssets({
         snapshots: windowSnapshots,
         exactSceneTimesUs: windowTimes.map(timeUs => ({ numerator: String(timeUs), denominator: "1" })),
@@ -192,8 +200,13 @@ export async function auditSpatialSceneRenderedHost(
             max: bounds.max.map((value, axis) => Math.max(value, existing.max[axis]!)) as unknown as Vec3,
           };
         }
+        const preparedSplatIds = new Set(prepared.preparedAssets.filter(asset => asset.kind === "splat").map(asset => asset.entityId));
+        const loweredSnapshots = windowSnapshots.map(snapshot => ({
+          ...snapshot,
+          entities: snapshot.entities.filter(entry => entry.entity.kind !== "splat" || preparedSplatIds.has(entry.entity.entityId)),
+        }));
         const partitions = partitionSpatialRenderWindow({
-          snapshots: windowSnapshots, preparedAssets: prepared.preparedAssets,
+          snapshots: loweredSnapshots, preparedAssets: prepared.preparedAssets,
           mode: { kind: "object-id", coverage: SPATIAL_RENDERED_AUDIT_COVERAGE },
           frameRate: { numerator: 1, denominator: 1 },
         });
@@ -234,7 +247,7 @@ export async function auditSpatialSceneRenderedHost(
           }
           await rm(batchDirectory, { recursive: true });
         }
-      });
+      }, { tolerateSplatDecodeFailure: true });
     }
     completed = auditSpatialSceneRendered(plan.scene, frames, {
       cameraId: plan.request.cameraId, assetBounds,

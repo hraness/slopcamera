@@ -728,13 +728,13 @@
     ]
   },
   {
-    "identityLineCount": 50,
-    "identityLinesSha256": "e4348f70580cf8c6fb862c1e4175287742d36f9919b2e7c147e9df450977514a",
-    "occurrenceCount": 65,
     "path": "apps/desktop/cli/studio-spatial-asset.test.ts",
     "categories": [
       "native-film-studio"
-    ]
+    ],
+    "identityLineCount": 50,
+    "identityLinesSha256": "1f88f391eb93f180b4cb9772c4fddb180f28d346d425d14bf12b46d4ae12f82a",
+    "occurrenceCount": 65
   },
   {
     "identityLineCount": 55,
@@ -1259,7 +1259,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "1fba05663b2a9e5fd2dcc1a819936ec9f7228259f9bc430bbbedb803790e2d4b",
+    "identityLinesSha256": "2ee305988a7244cbd17004d4f832065a0d746cd2cbf6bc82db95030b918704af",
     "occurrenceCount": 443,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1632,7 +1632,7 @@
     "identityLineCount": 142,
     "identityLinesSha256": "f68f80fa766d651a2f1e7e5554ee614debe8f6cf8599a0555a9e658da571df76",
     "occurrenceCount": 237,
-    "path": "dist/index-ka4tvypf.js",
+    "path": "dist/index-a5xstfz0.js",
     "categories": [
       "generated"
     ]
@@ -1908,9 +1908,9 @@
     ]
   },
   {
-    "identityLineCount": 18,
-    "identityLinesSha256": "f452c334681be99da07cd97c08a207492efd68260943246dd9e72eab583a4b07",
-    "occurrenceCount": 18,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
+    "occurrenceCount": 17,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"

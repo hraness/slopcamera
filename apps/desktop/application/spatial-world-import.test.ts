@@ -143,8 +143,33 @@ describe("saved world import and exact source closure", () => {
       const { suggestedNormalization: _suggested, ...manifestRest } = output.manifest;
       expect(manifestRest).toEqual(baseline.manifest);
       expect(output.entity).toEqual(baseline.entity);
-      expect(output.assets).toHaveLength(2);
+      // The provider bytes publish verbatim as a content-addressed metadata
+      // asset, and the import manifest closure depends on it.
+      expect(output.assets).toHaveLength(3);
+      const retained = output.assets.find(asset => asset.interpretation.kind === "metadata" && asset.interpretation.schema === "slopcamera.provider-metadata")!;
+      expect(retained).toBeDefined();
+      expect(retained.assetId).toBe(`asset_world_provider_metadata_${providerMetadata.sha256}`);
+      expect(retained.payload).toEqual({ path: `spatial/worlds/assets/${providerMetadata.sha256}.json`, sha256: providerMetadata.sha256, bytes: metadata.length });
+      expect(await readFile(join(fixture.destinationRoot, retained.payload.path))).toEqual(metadata);
+      const manifestAsset = output.assets.find(asset => asset.interpretation.kind === "metadata" && asset.interpretation.schema === "slopcamera.spatial-world-import")!;
+      expect(manifestAsset.dependencies).toContain(retained.assetId);
+      const scene = parseSpatialScene({ ...fixtureScene(), entities: [output.entity], assets: output.assets });
+      expect(Object.keys(spatialAssetClosureDigests(scene.assets))).toHaveLength(3);
+      // The retained asset prepares under the tolerant recognition path: it is
+      // parsed as bounded JSON but requires no slopcamera envelope.
+      const snapshot = evaluateSpatialScene(scene, { timeUs: 0, cameraId: "camera_main" });
+      await withPreparedSpatialAssets({ snapshots: [snapshot], assetRoot: fixture.destinationRoot, workspaceParent: fixture.destinationRoot }, { runner: { run: async () => { throw new Error("No native decoder is needed for retained SPZ admission."); } } }, fixture.signal, async prepared => {
+        expect(prepared.sources).toHaveLength(3);
+        expect(prepared.preparedAssets).toHaveLength(1);
+      });
     }
+  });
+  test("provider metadata rejection leaves nothing published", async () => {
+    const fixture = await setup(false);
+    await writeFile(join(fixture.sourceRoot, "bad.json"), "not json");
+    const providerMetadata = { path: "bad.json", bytes: 8, sha256: createHash("sha256").update("not json").digest("hex") };
+    await expect(importSavedSpatialWorld({ ...fixture, input: { ...fixture.input, providerMetadata } })).rejects.toThrow("UTF-8 JSON");
+    expect(await readdir(fixture.destinationRoot)).toEqual([]);
   });
   test("failure after immutable publication retains exact evidence and clears private staging", async () => {
     const fixture = await setup(); let guards = 0;

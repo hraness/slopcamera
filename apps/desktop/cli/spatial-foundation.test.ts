@@ -60,6 +60,21 @@ test("CLI scene source workflow retains the old source and prevents accidental o
   expect(await readFile(join(root, "source.json"), "utf8")).toBe(original);
   expect(await readFile(join(root, "edited.json"), "utf8")).toContain("New name");
   expect(() => parseCliArgs(["scene", "evaluate", "source.json", "--camera", "camera_hero", "--time-us", "NaN"])).toThrow();
+  // solve emits a patch with a placeholder digest; the caller fills it from inspect.
+  expect(parseCliArgs(["scene", "solve", "source.json", "--goals", "goals.json", "--output", "solved-patch.json", "--json"]))
+    .toEqual({ kind: "spatial-scene", action: "solve", path: "source.json", goals: "goals.json", output: "solved-patch.json", json: true });
+  expect(() => parseCliArgs(["scene", "solve", "source.json"])).toThrow("--goals");
+  await writeFile(join(root, "goals.json"), JSON.stringify({ goals: [{ entityKey: "entity_fill", relations: [{ kind: "at", position: [0, 0, -2] }, { kind: "facing", target: "camera_hero" }] }] }));
+  const solve = parseCliArgs(["scene", "solve", "source.json", "--goals", "goals.json", "--output", "solved-patch.json"]);
+  if (solve.kind !== "spatial-scene" || solve.action !== "solve") throw new Error("Wrong command");
+  const receipt = await executeSpatialSceneCommand(application, solve) as { readonly path: string };
+  const emitted = JSON.parse(await readFile(receipt.path, "utf8")) as Record<string, unknown>;
+  expect(emitted.expectedSceneSha256).toBe("0".repeat(64));
+  await writeFile(join(root, "solved-filled.json"), JSON.stringify({ ...emitted, expectedSceneSha256: report.sceneSha256 }));
+  const applySolved = parseCliArgs(["scene", "patch", "source.json", "--patch", "solved-filled.json", "--output", "solved.json"]);
+  if (applySolved.kind !== "spatial-scene") throw new Error("Wrong command");
+  await executeSpatialSceneCommand(application, applySolved);
+  expect(await readFile(join(root, "solved.json"), "utf8")).toContain("entity_fill");
 }));
 
 test("CLI V2 migration uses one real lease and makes legacy journals incapable of restoring V1", async () => await fixture(async root => {

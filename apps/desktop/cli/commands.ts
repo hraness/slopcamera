@@ -7459,7 +7459,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "directing": return undefined; // The directing store owns its explicit lease.
     case "spatial-world": return undefined; // Immutable world attempts and imports own their publication custody.
     case "spatial-asset": return undefined; // Content-addressed asset admission owns its publication custody.
-    case "spatial-scene": return command.action === "init" || command.action === "patch" || command.action === "camera-track" ? { kind: "workspace-private" } : undefined;
+    case "spatial-scene": return command.action === "init" || command.action === "patch" || command.action === "camera-track" || command.action === "solve" ? { kind: "workspace-private" } : undefined;
     case "spatial-project": return undefined; // Its explicit application adapter owns one version-aware lease.
     case "project-camera-edit": return command.action === "show"
       ? undefined

@@ -16,13 +16,16 @@ import {
 } from "../../../src/spatial-scene/contracts";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
 import { evaluateSpatialGlb, parseSpatialGlb, type SpatialGlbModel } from "../../../src/spatial-scene/gltf";
+import { transformBounds } from "../../../src/spatial-scene/math";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { SpatialWorldImportManifestSchema, SPATIAL_SPLAT_LIMITS } from "../contracts/spatial-world";
+import { SpatialAssetFactsV1Schema } from "../contracts/spatial-asset";
 import { inspectSpatialSpz } from "./spatial-spz";
+import { extractWorldProviderMetadata } from "./spatial-world-metadata";
 import { WorldLabsProvenanceSchema } from "./spatial-world-provenance";
 import {
   PreparedSpatialAssetSchema, SPATIAL_OVERLAY_LIMITS, SpatialOverlayCapabilityError, spatialTextRasterContentSha256,
-  spatialGeometryContentSha256, spatialVideoRasterContentSha256,
+  spatialGeometryContentSha256, spatialSplatContentTransform, spatialVideoRasterContentSha256,
   type PreparedSpatialAsset,
 } from "../html-overlay/spatial";
 import type { ApplicationProcessRunner } from "./context";
@@ -341,9 +344,15 @@ export function spatialVideoTimeUs(entity: Extract<SpatialEntity, { kind: "video
 }
 
 /** Owns every temporary/native input until the consumer and all native calls settle. */
+export interface SpatialAssetPreparationOptions {
+  /** When true, an SPZ that fails inspection is skipped rather than aborting preparation. */
+  readonly tolerateSplatDecodeFailure?: boolean;
+}
+
 export async function withPreparedSpatialAssets<Result>(
   input: unknown, ports: SpatialAssetPreparationPorts, signal: AbortSignal,
   consume: (prepared: PreparedSpatialAssets) => Promise<Result>,
+  options: SpatialAssetPreparationOptions = {},
 ): Promise<Result> {
   const request = inputSchema.parse(createBoundedJsonSnapshot(input, SPATIAL_OVERLAY_LIMITS.requestBytes, "Spatial asset preparation request", { maximumDepth: 48, maximumValues: SPATIAL_OVERLAY_LIMITS.requestValues }).value);
   if (request.exactSceneTimesUs !== undefined && request.exactSceneTimesUs.length !== request.snapshots.length) throw new RangeError("Exact scene times must correspond one-to-one to snapshots.");
@@ -444,9 +453,18 @@ export async function withPreparedSpatialAssets<Result>(
           if (bytes.byteLength > SPATIAL_SPLAT_LIMITS.metadataBytes) throw new RangeError("Retained metadata exceeds its byte bound.");
           const captured = createBoundedJsonSnapshot(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)), SPATIAL_SPLAT_LIMITS.metadataBytes, "Retained world metadata", { maximumDepth: 24, maximumValues: 32_768 });
           const metadata = captured.value as Record<string, unknown>;
-          if (metadata.kind !== manifest.interpretation.schema || metadata.schemaVersion !== 1) throw new RangeError("Retained metadata does not match its declared schema.");
-          if (manifest.interpretation.schema === "slopcamera.spatial-world-import") SpatialWorldImportManifestSchema.parse(metadata);
-          else WorldLabsProvenanceSchema.parse(metadata);
+          const schema = manifest.interpretation.schema;
+          if (schema === "slopcamera.provider-metadata") {
+            // Raw provider bytes are retained verbatim — no slopcamera
+            // envelope to match. A recognized semantics_metadata shape proves
+            // the declaration; unknown keys stay tolerated and ignored.
+            extractWorldProviderMetadata(metadata);
+          } else {
+            if (metadata.kind !== schema || metadata.schemaVersion !== 1) throw new RangeError("Retained metadata does not match its declared schema.");
+            if (schema === "slopcamera.spatial-world-import") SpatialWorldImportManifestSchema.parse(metadata);
+            else if (schema === "slopcamera.spatial-asset-facts") SpatialAssetFactsV1Schema.parse(metadata);
+            else WorldLabsProvenanceSchema.parse(metadata);
+          }
         }
         const record = { manifest, manifestSha256: closures[manifest.assetId]!, bytes };
         verified.set(manifest.assetId, record);
@@ -480,14 +498,26 @@ export async function withPreparedSpatialAssets<Result>(
         if (interpretation.kind !== "splat" || interpretation.format !== "spz") capability("splat-format", "The qualified world profile accepts gzip SPZ v2/v3 only.");
         const key = `${assetId}:${entity.entityId}:splat`;
         if (preparedAssets.has(key)) continue;
-        const facts = await inspectSpatialSpz(asset.bytes, signal);
+        const inspected = await inspectSpatialSpz(asset.bytes, signal).catch((error: unknown) => {
+          if (options.tolerateSplatDecodeFailure) return undefined;
+          throw error;
+        });
+        // Audits may skip a splat that cannot be inspected: the rendered audit
+        // analyzer reports unsupported-kind when no bounds are supplied. Beauty
+        // rendering keeps the failure so invalid source does not render silently.
+        if (inspected === undefined) continue;
+        const { facts, modelBounds } = inspected;
+        // Entity-local enclosure: the same sourceUp→Y rotation and uniform
+        // metersPerUnit scale the renderer applies ahead of the entity
+        // transform, so the object-ID proxy and the geometric audit agree.
+        const bounds = transformBounds(spatialSplatContentTransform(interpretation), modelBounds);
         const name = `splat-${asset.manifestSha256.slice(0, 40)}`;
         const resource = { name, sha256: asset.manifest.payload.sha256, bytes: asset.bytes.byteLength, mediaType: "application/octet-stream", urlPath: `${name}.spz` };
         if (!resources.has(name)) {
           if (resources.size >= 64 || outputBytes + asset.bytes.byteLength > SPATIAL_ASSET_PREPARATION_LIMITS.outputBytes) throw new RangeError("Prepared splat resources exceed their byte budget.");
           resources.set(name, { ...resource, absolutePath: paths.get(assetId)! }); outputBytes += asset.bytes.byteLength;
         }
-        preparedAssets.set(key, PreparedSpatialAssetSchema.parse({ kind: "splat", assetId, entityId: entity.entityId, assetManifestSha256: asset.manifestSha256, resource, facts }));
+        preparedAssets.set(key, PreparedSpatialAssetSchema.parse({ kind: "splat", assetId, entityId: entity.entityId, assetManifestSha256: asset.manifestSha256, resource, facts, bounds }));
         profiles.add("slopcamera.spz-v2-v3-spark-2.1.0-full-resolution-v1");
         continue;
       }
@@ -508,12 +538,18 @@ export async function withPreparedSpatialAssets<Result>(
             images.set(image.resourceName, await publishRaster(await raster(image.bytes, image.opaque), image.resourceName));
           }
           const used = new Set<string>();
+          const textureSlots = ["texture", "normalTexture", "metallicRoughnessTexture", "occlusionTexture", "emissiveTexture"] as const;
           const primitives = geometry.primitives.map(primitive => {
-            if (primitive.texture === undefined) return primitive;
-            const image = images.get(primitive.texture.resource.name);
-            if (image === undefined) throw new RangeError("Geometry texture has no exact prepared image bytes.");
-            used.add(primitive.texture.resource.name);
-            return { ...primitive, texture: { ...primitive.texture, ...image } };
+            const resolved: Record<string, unknown> = { ...primitive };
+            for (const slot of textureSlots) {
+              const texture = primitive[slot];
+              if (texture === undefined) continue;
+              const image = images.get(texture.resource.name);
+              if (image === undefined) throw new RangeError("Geometry texture has no exact prepared image bytes.");
+              used.add(texture.resource.name);
+              resolved[slot] = { ...texture, ...image };
+            }
+            return resolved;
           });
           if (used.size !== images.size) throw new RangeError("Geometry preparer returned unused image bytes.");
           const resolved = PreparedSpatialAssetSchema.parse({ ...geometry, primitives });
@@ -527,21 +563,32 @@ export async function withPreparedSpatialAssets<Result>(
             ...(entity.geometry.nodeIndex === undefined ? {} : { nodeIndex: entity.geometry.nodeIndex }),
             ...(entity.geometry.materialMode === undefined ? {} : { materialMode: entity.geometry.materialMode }),
             ...(entity.geometry.clip === undefined ? {} : { clip: entity.geometry.clip }),
+            ...(entity.geometry.morphWeights === undefined ? {} : { morphWeights: entity.geometry.morphWeights }),
           });
+          const publishTexture = async (reference: { readonly imageIndex: number; readonly sampler: unknown } | undefined, opaque: boolean) => {
+            if (reference === undefined) return undefined;
+            const image = geometry.images.find(image => image.imageIndex === reference.imageIndex);
+            if (image === undefined) throw new RangeError("GLB texture image is missing.");
+            return { ...await publishRaster(await raster(image.bytes, opaque)), flipY: false, sampler: reference.sampler };
+          };
           const primitives: unknown[] = [];
           for (const primitive of geometry.primitives) {
             const { bounds: _bounds, material: sourceMaterial, ...base } = primitive;
-            let texture: unknown;
-            if (sourceMaterial?.baseColorTexture !== undefined) {
-              const source = sourceMaterial.baseColorTexture, image = geometry.images.find(image => image.imageIndex === source.imageIndex);
-              if (image === undefined) throw new RangeError("GLB texture image is missing.");
-              texture = { ...await publishRaster(await raster(image.bytes, sourceMaterial.alphaMode === "OPAQUE")), flipY: false, sampler: source.sampler };
-            }
+            const texture = await publishTexture(sourceMaterial?.baseColorTexture, sourceMaterial?.alphaMode === "OPAQUE");
+            const metallicRoughnessTexture = await publishTexture(sourceMaterial?.metallicRoughnessTexture, false);
+            const normalTexture = await publishTexture(sourceMaterial?.normalTexture, false);
+            const occlusionTexture = await publishTexture(sourceMaterial?.occlusionTexture, false);
+            const emissiveTexture = await publishTexture(sourceMaterial?.emissiveTexture, false);
             primitives.push({ ...base,
               ...(sourceMaterial === undefined ? {} : { material: { kind: "standard", color: "#ffffff", opacity: sourceMaterial.alphaMode === "OPAQUE" ? 1 : sourceMaterial.baseColorLinear[3], metalness: sourceMaterial.metalness, roughness: sourceMaterial.roughness },
                 linearColor: sourceMaterial.baseColorLinear.slice(0, 3), doubleSided: sourceMaterial.doubleSided, alphaMode: sourceMaterial.alphaMode,
                 ...(sourceMaterial.alphaMode === "MASK" ? { alphaCutoff: sourceMaterial.alphaCutoff } : {}) }),
               ...(texture === undefined ? {} : { texture }),
+              ...(metallicRoughnessTexture === undefined ? {} : { metallicRoughnessTexture }),
+              ...(normalTexture === undefined ? {} : { normalTexture, ...(sourceMaterial?.normalTexture?.scale === undefined ? {} : { normalScale: sourceMaterial.normalTexture.scale }) }),
+              ...(occlusionTexture === undefined ? {} : { occlusionTexture, ...(sourceMaterial?.occlusionTexture?.strength === undefined ? {} : { occlusionStrength: sourceMaterial.occlusionTexture.strength }) }),
+              ...(emissiveTexture === undefined ? {} : { emissiveTexture }),
+              ...(sourceMaterial?.emissiveLinear === undefined ? {} : { emissiveLinear: sourceMaterial.emissiveLinear }),
             });
           }
           const resolved = PreparedSpatialAssetSchema.parse({ kind: "geometry", assetId, entityId: entity.entityId,
