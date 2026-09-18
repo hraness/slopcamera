@@ -231,6 +231,12 @@ export const SpatialGeneratorSchema = z.strictObject({
     z.strictObject({ kind: z.literal("attempt"), attemptId: z.string().min(1).max(128), runtimeSha256: SpatialDigestSchema }),
   ]),
   editableKeys: z.array(z.strictObject({ key: z.string().min(1).max(256), properties: z.array(z.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities),
+  /**
+   * Sorted asset ids owned by this generator's retained output (generated mesh
+   * payloads and derived fact manifests). Owned assets are referenced only by
+   * this generator's entities and are replaced atomically with the output.
+   */
+  assets: z.array(SpatialAssetIdSchema).max(SPATIAL_SCENE_LIMITS.assets).optional(),
 })
 export const SpatialSceneV1Schema = z.strictObject({
   kind: z.literal("slopcamera.spatial-scene"),
@@ -269,7 +275,9 @@ export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("remove-entity"), entityId: SpatialEntityIdSchema }),
   z.strictObject({ kind: z.literal("set-override"), override: SpatialOverrideSchema }),
   z.strictObject({ kind: z.literal("remove-override"), entityId: SpatialEntityIdSchema, property: z.enum(["color", "opacity", "transform"]) }),
-  z.strictObject({ kind: z.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities) }),
+  z.strictObject({ kind: z.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+    /** Owned asset manifests replacing the generator's previous owned set; ids must match `generator.assets`. */
+    assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets).optional() }),
 ])
 export const SpatialScenePatchV1Schema = z.strictObject({
   kind: z.literal("slopcamera.spatial-scene-patch"),

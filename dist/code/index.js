@@ -6,6 +6,9 @@ import {
   MAX_IMAGE_DIMENSION,
   ORIGINAL_MATERIAL_HERO_FIXTURE,
   SPATIAL_AUDIT_LIMITS,
+  SPATIAL_GEOMETRY_GRAPH_KIND,
+  SPATIAL_GEOMETRY_LIMITS,
+  SPATIAL_GEOMETRY_PROFILE,
   SPATIAL_GLB_LIMITS,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
@@ -14,8 +17,10 @@ import {
   SpatialAnimationSchema,
   SpatialAssetAdmissionV1Schema,
   SpatialAssetFactsV1Schema,
+  SpatialAssetGeneratorFactsSchema,
   SpatialAssetIdSchema,
   SpatialAssetInterpretationSchema,
+  SpatialAssetLodSchema,
   SpatialAssetManifestSchema,
   SpatialAssetMaterialFactSchema,
   SpatialAuditBoundsSchema,
@@ -30,6 +35,7 @@ import {
   SpatialCameraLensSchema,
   SpatialCameraSchema,
   SpatialChannelIdSchema,
+  SpatialCollisionProxySchema,
   SpatialDerivationCandidateSchema,
   SpatialDerivationMethodSchema,
   SpatialDigestSchema,
@@ -40,6 +46,8 @@ import {
   SpatialFrameRateSchema,
   SpatialGeneratorIdSchema,
   SpatialGeneratorSchema,
+  SpatialGeometryGraphSchema,
+  SpatialGeometryNodeSchema,
   SpatialGeometrySchema,
   SpatialGlbModel,
   SpatialLightingRigTypeSchema,
@@ -64,6 +72,7 @@ import {
   SpatialProjectionSchema,
   SpatialPublishedArtifactSchema,
   SpatialQuaternionSchema,
+  SpatialRetainedArtifactSchema,
   SpatialSceneError,
   SpatialSceneIdSchema,
   SpatialScenePatchV1Schema,
@@ -83,6 +92,9 @@ import {
   composeTransform,
   createSpatialEvaluationContext,
   diffSpatialScenes,
+  emitSpatialGeometryGlb,
+  estimateSpatialGeometryGraph,
+  evaluateSpatialGeometry,
   evaluateSpatialGlb,
   evaluateSpatialScene,
   evaluateSpatialSceneInContext,
@@ -95,6 +107,7 @@ import {
   multiplyTransforms,
   normalizeQuaternion,
   normalizeSpatialAuditAssetBounds,
+  parseSpatialGeometryGraph,
   parseSpatialGlb,
   parseSpatialScene,
   parseSpatialValue,
@@ -125,7 +138,7 @@ import {
   validatePbrMaterial,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-97txcswy.js";
+} from "../index-px9vqrc7.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -2151,7 +2164,8 @@ function buildSpatialGeneratorRecord(options) {
     seed: options.seed,
     outputSha256,
     execution: { kind: "attempt", attemptId, runtimeSha256: options.runtimeSha256 },
-    editableKeys: options.editableKeys
+    editableKeys: options.editableKeys,
+    ...options.assets === undefined ? {} : { assets: [...options.assets].sort() }
   }, "generator");
 }
 function createSpatialGeneratorSceneShell() {
@@ -2174,8 +2188,23 @@ function createSpatialGeneratorSceneShell() {
     overrides: []
   };
 }
-function mergeSpatialGeneratorOutput(scene, generator, entities) {
+function mergeSpatialGeneratorOutput(scene, generator, entities, assets = []) {
   const base = scene ?? parseSpatialScene(createSpatialGeneratorSceneShell());
+  const previous = base.generators.find((record) => record.generatorId === generator.generatorId)?.assets ?? [];
+  if ([...assets.map((asset) => asset.assetId)].sort().join("") !== [...generator.assets ?? []].sort().join("")) {
+    throw new SpatialSceneError("conflict", "Generator output must carry exactly the asset manifests its record declares.", "assets");
+  }
+  for (const asset of assets) {
+    if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived") {
+      throw new SpatialSceneError("conflict", "Generator-owned assets require generated or derived provenance.", "assets");
+    }
+  }
+  const retired = new Set(previous);
+  const keptAssets = base.assets.filter((asset) => !retired.has(asset.assetId));
+  const keptAssetIds = new Set([...keptAssets.map((asset) => asset.assetId), ...assets.map((asset) => asset.assetId)]);
+  const colliding = assets.find((asset) => base.assets.some((existing) => existing.assetId === asset.assetId) && !retired.has(asset.assetId));
+  if (colliding !== undefined)
+    throw new SpatialSceneError("conflict", `Generator asset ${colliding.assetId} collides with an existing asset.`, "assets");
   const retained = new Set(entities.map((entity) => entity.entityId));
   const removed = new Set;
   const kept = [];
@@ -2201,9 +2230,13 @@ function mergeSpatialGeneratorOutput(scene, generator, entities) {
   for (const entity of entities) {
     if (keptIds.has(entity.entityId))
       throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`, "entities");
+    const assetId = generatedAssetReference(entity);
+    if (assetId !== undefined && !keptAssetIds.has(assetId)) {
+      throw new SpatialSceneError("conflict", `Generator output references missing asset ${assetId}.`, "entities");
+    }
   }
   const generators = [...base.generators.filter((record) => record.generatorId !== generator.generatorId), generator];
-  return parseSpatialScene({ ...base, entities: [...kept, ...entities], generators });
+  return parseSpatialScene({ ...base, assets: [...keptAssets, ...assets], entities: [...kept, ...entities], generators });
 }
 
 // src/spatial-scene/camera-track.ts
@@ -4136,6 +4169,826 @@ function auditSpatialPerformance(take, optionsInput) {
     omittedFindings: omitted
   });
 }
+
+// src/spatial-scene/geometry-native.ts
+import { z as z10 } from "zod";
+var SPATIAL_GEOMETRY_NATIVE_LIMITS = Object.freeze({
+  inputs: 8,
+  inputBytes: SPATIAL_GLB_LIMITS.bytes,
+  outputs: 16,
+  outputBytes: 33554432,
+  parametersBytes: 4096,
+  parametersDepth: 8,
+  parametersValues: 256
+});
+var SPATIAL_GEOMETRY_NATIVE_OPERATIONS = [
+  "mesh-repair",
+  "complex-csg",
+  "uv-atlas",
+  "decimation",
+  "hull-decomposition",
+  "glb-emission"
+];
+var operation = z10.enum(SPATIAL_GEOMETRY_NATIVE_OPERATIONS);
+var engine = z10.strictObject({
+  engine: z10.string().min(1).max(64),
+  version: z10.string().min(1).max(64),
+  device: z10.string().min(1).max(64).optional()
+});
+var digestEntry = z10.strictObject({ sha256: SpatialDigestSchema, bytes: z10.number().int().safe().min(1).max(SPATIAL_GEOMETRY_NATIVE_LIMITS.outputBytes) });
+var SpatialGeometryNativeRequestSchema = z10.strictObject({
+  kind: z10.literal("slopcamera.spatial-geometry-native-request"),
+  schemaVersion: z10.literal(1),
+  operation,
+  engine,
+  profile: z10.string().min(1).max(128),
+  inputs: z10.array(digestEntry).max(SPATIAL_GEOMETRY_NATIVE_LIMITS.inputs),
+  parameters: z10.unknown().optional()
+});
+var SpatialGeometryNativeReceiptSchema = z10.strictObject({
+  kind: z10.literal("slopcamera.spatial-geometry-native-receipt"),
+  schemaVersion: z10.literal(1),
+  requestId: z10.string().regex(/^native_[a-f0-9]{32}$/u),
+  requestSha256: SpatialDigestSchema,
+  operation,
+  engine,
+  profile: z10.string().min(1).max(128),
+  state: z10.enum(["succeeded", "failed"]),
+  outputs: z10.array(digestEntry).max(SPATIAL_GEOMETRY_NATIVE_LIMITS.outputs),
+  failure: z10.strictObject({ code: z10.enum(["validation", "engine", "budget", "custody"]), message: z10.string().min(1).max(2048) }).optional()
+}).superRefine((receipt, context) => {
+  if (receipt.state === "succeeded" && receipt.failure !== undefined)
+    context.addIssue({ code: "custom", path: ["failure"], message: "Successful receipts carry no failure." });
+  if (receipt.state === "failed" && receipt.failure === undefined)
+    context.addIssue({ code: "custom", path: ["failure"], message: "Failed receipts require a failure reason." });
+  if (receipt.outputs.reduce((sum, output) => sum + output.bytes, 0) > SPATIAL_GEOMETRY_NATIVE_LIMITS.outputBytes)
+    context.addIssue({ code: "custom", path: ["outputs"], message: "Receipt exceeds the output byte bound." });
+});
+function nativeFail(message, path = "geometry-native") {
+  throw new SpatialSceneError("invalid-data", `slopcamera.spatial-geometry-native-v1: ${message}`, path);
+}
+function parseSpatialGeometryNativeRequest(input) {
+  const request = parseSpatialValue(SpatialGeometryNativeRequestSchema, input, "geometry-native request");
+  if (request.inputs.length !== new Set(request.inputs.map((item) => item.sha256)).size)
+    nativeFail("Request inputs must carry distinct digests.", "request.inputs");
+  const parameters = request.parameters === undefined ? undefined : createBoundedJsonValueSnapshot(request.parameters, SPATIAL_GEOMETRY_NATIVE_LIMITS.parametersBytes, "geometry-native parameters", {
+    maximumDepth: SPATIAL_GEOMETRY_NATIVE_LIMITS.parametersDepth,
+    maximumValues: SPATIAL_GEOMETRY_NATIVE_LIMITS.parametersValues
+  }).value;
+  return deepFreezeJson({ ...request, ...parameters === undefined ? {} : { parameters } });
+}
+function spatialGeometryNativeRequestSha256(request) {
+  return spatialValueSha256({ domain: "slopcamera.spatial-geometry-native-request.v1", request: parseSpatialGeometryNativeRequest(request) });
+}
+function spatialGeometryNativeRequestId(request) {
+  return `native_${spatialGeometryNativeRequestSha256(request).slice(0, 32)}`;
+}
+function spatialGeometryNativeReceiptSha256(receipt) {
+  return spatialValueSha256({ domain: "slopcamera.spatial-geometry-native-receipt.v1", receipt: parseSpatialValue(SpatialGeometryNativeReceiptSchema, receipt, "geometry-native receipt") });
+}
+function validateSpatialGeometryNativeReceipt(input) {
+  const request = parseSpatialGeometryNativeRequest(input.request);
+  const receipt = parseSpatialValue(SpatialGeometryNativeReceiptSchema, input.receipt, "geometry-native receipt");
+  if (receipt.requestSha256 !== spatialGeometryNativeRequestSha256(request) || receipt.requestId !== spatialGeometryNativeRequestId(request)) {
+    nativeFail("Receipt identity differs from the exact request it claims.", "receipt.requestSha256");
+  }
+  if (receipt.operation !== request.operation || receipt.profile !== request.profile || canonicalJson(receipt.engine) !== canonicalJson(request.engine)) {
+    nativeFail("Receipt operation, profile, or engine differs from its request.", "receipt.operation");
+  }
+  return deepFreezeJson(receipt);
+}
+function verifySpatialGeometryNativeOutputs(receipt, outputs) {
+  const parsed = parseSpatialValue(SpatialGeometryNativeReceiptSchema, receipt, "geometry-native receipt");
+  if (parsed.state !== "succeeded")
+    nativeFail("Only succeeded receipts publish retained outputs.", "receipt.state");
+  const declared = parsed.outputs;
+  if (outputs.length !== declared.length)
+    nativeFail("Retained output count differs from the receipt declaration.", "receipt.outputs");
+  const verified = declared.map((output, index) => {
+    const bytes = outputs[index];
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength !== output.bytes)
+      nativeFail(`Native output ${index} byte length differs from its receipt.`, `receipt.outputs.${index}`);
+    const hasher = createSha256HexHasher();
+    hasher.update(bytes);
+    const sha256 = hasher.digestHex();
+    if (sha256 !== output.sha256)
+      nativeFail(`Native output ${index} digest mismatch; refusing publication.`, `receipt.outputs.${index}`);
+    return { sha256, bytes: output.bytes };
+  });
+  return deepFreezeJson(verified);
+}
+function executeSpatialGeometryNativeFake(input) {
+  const request = parseSpatialGeometryNativeRequest(input);
+  const requestSha256 = spatialGeometryNativeRequestSha256(request);
+  const count = request.operation === "hull-decomposition" ? 4 : 1;
+  const outputs = [];
+  const declared = [];
+  for (let index = 0;index < count; index++) {
+    const seed = spatialValueSha256({ domain: "slopcamera.spatial-geometry-native-output.v1", requestSha256, index });
+    const length = 256 + Number.parseInt(seed.slice(0, 4), 16) % 256;
+    const bytes = new Uint8Array(length);
+    for (let offset = 0;offset < length; offset++)
+      bytes[offset] = Number.parseInt(seed.slice(offset % 32 * 2, offset % 32 * 2 + 2), 16);
+    const hasher = createSha256HexHasher();
+    hasher.update(bytes);
+    const sha256 = hasher.digestHex();
+    outputs.push(bytes);
+    declared.push({ sha256, bytes: length });
+  }
+  const receipt = parseSpatialValue(SpatialGeometryNativeReceiptSchema, {
+    kind: "slopcamera.spatial-geometry-native-receipt",
+    schemaVersion: 1,
+    requestId: spatialGeometryNativeRequestId(request),
+    requestSha256,
+    operation: request.operation,
+    engine: request.engine,
+    profile: request.profile,
+    state: "succeeded",
+    outputs: declared
+  }, "geometry-native receipt");
+  return deepFreezeJson({ receipt, outputs: Object.freeze(outputs) });
+}
+
+// src/spatial-scene/parametric.ts
+import { z as z11 } from "zod";
+var SPATIAL_PARAMETRIC_LIMITS = Object.freeze({
+  openings: 8,
+  pathPoints: 64,
+  scatterCount: 1024,
+  exclusions: 64,
+  panes: 8,
+  risers: 200,
+  archCount: 64,
+  parts: 64,
+  scatterAttempts: 128
+});
+var meter = z11.number().finite().min(0.000001).max(1e6);
+var coordinate = z11.number().finite().min(-1e6).max(1e6);
+var specVec2 = z11.tuple([coordinate, coordinate]);
+var specVec3 = z11.tuple([coordinate, coordinate, coordinate]);
+var editable = z11.array(z11.enum(["color", "opacity", "transform"])).max(3).optional();
+var partPlacement = { transform: SpatialTransformSchema.optional(), editable };
+var opening = z11.discriminatedUnion("kind", [
+  z11.strictObject({ kind: z11.literal("rect"), center: specVec2, width: meter, height: meter }),
+  z11.strictObject({ kind: z11.literal("arch"), center: specVec2, width: meter, height: meter })
+]);
+var SpatialParametricSpecSchema = z11.discriminatedUnion("kind", [
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("wall"),
+    length: meter,
+    height: meter,
+    thickness: meter,
+    openings: z11.array(opening).max(SPATIAL_PARAMETRIC_LIMITS.openings).optional(),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({ ...partPlacement, kind: z11.literal("floor"), width: meter, depth: meter, thickness: meter, material: SpatialMaterialSchema }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("stairs"),
+    width: meter,
+    risers: z11.number().int().min(2).max(SPATIAL_PARAMETRIC_LIMITS.risers),
+    riserHeight: meter,
+    treadDepth: meter,
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("arch"),
+    width: meter,
+    height: meter,
+    springline: meter,
+    depth: meter,
+    count: z11.number().int().min(1).max(SPATIAL_PARAMETRIC_LIMITS.archCount).optional(),
+    spacing: meter.optional(),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("column"),
+    height: meter,
+    radius: meter,
+    taper: z11.number().finite().min(0.25).max(1).optional(),
+    capital: z11.enum(["none", "doric"]).optional(),
+    segments: z11.number().int().min(8).max(128).optional(),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("window"),
+    width: meter,
+    height: meter,
+    frameWidth: meter,
+    depth: meter,
+    panesX: z11.number().int().min(1).max(SPATIAL_PARAMETRIC_LIMITS.panes).optional(),
+    panesY: z11.number().int().min(1).max(SPATIAL_PARAMETRIC_LIMITS.panes).optional(),
+    sill: z11.boolean().optional(),
+    material: SpatialMaterialSchema,
+    glassMaterial: SpatialMaterialSchema.optional()
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("roof"),
+    style: z11.enum(["gable", "hip", "shed"]),
+    width: meter,
+    depth: meter,
+    rise: meter,
+    overhang: meter.optional(),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("pipe"),
+    radius: meter,
+    segments: z11.number().int().min(4).max(64).optional(),
+    path: z11.array(specVec3).min(2).max(SPATIAL_PARAMETRIC_LIMITS.pathPoints),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("trim"),
+    length: meter,
+    size: meter,
+    profile: z11.enum(["square", "cove", "chamfer"]),
+    material: SpatialMaterialSchema
+  }),
+  z11.strictObject({
+    ...partPlacement,
+    kind: z11.literal("scatter"),
+    count: z11.number().int().min(1).max(SPATIAL_PARAMETRIC_LIMITS.scatterCount),
+    area: z11.strictObject({ width: meter, depth: meter }),
+    seed: z11.number().int().safe().min(0).max(4294967295),
+    subject: z11.discriminatedUnion("shape", [
+      z11.strictObject({ shape: z11.literal("box"), size: z11.tuple([meter, meter, meter]) }),
+      z11.strictObject({ shape: z11.literal("cylinder"), radius: meter, height: meter, segments: z11.number().int().min(8).max(64).optional() }),
+      z11.strictObject({ shape: z11.literal("sphere"), radius: meter, segments: z11.number().int().min(8).max(64).optional() })
+    ]),
+    exclusions: z11.array(z11.strictObject({ center: specVec2, halfExtents: specVec2 })).max(SPATIAL_PARAMETRIC_LIMITS.exclusions).optional(),
+    material: SpatialMaterialSchema
+  })
+]);
+var SpatialParametricRequestSchema = z11.strictObject({
+  kind: z11.literal("slopcamera.spatial-parametric-request"),
+  schemaVersion: z11.literal(1),
+  generatorId: SpatialGeneratorIdSchema,
+  spec: SpatialParametricSpecSchema,
+  seed: z11.number().int().safe().min(0).max(4294967295).optional(),
+  collision: z11.array(SpatialCollisionProxySchema).max(16).optional(),
+  native: z11.strictObject({ request: z11.unknown(), receipt: z11.unknown(), outputs: z11.array(z11.instanceof(Uint8Array)).min(1).max(16) }).optional()
+});
+var IDENTITY_TRANSFORM = { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] };
+function pfail(message, path = "parametric") {
+  throw new SpatialSceneError("invalid-data", `${SPATIAL_GEOMETRY_PROFILE}: ${message}`, path);
+}
+var graph = (nodes, output) => ({ kind: "slopcamera.spatial-geometry-graph", schemaVersion: 1, nodes, output });
+function boxBounds(bounds2) {
+  return {
+    kind: "box",
+    center: [(bounds2.min[0] + bounds2.max[0]) / 2, (bounds2.min[1] + bounds2.max[1]) / 2, (bounds2.min[2] + bounds2.max[2]) / 2],
+    halfExtents: [Math.max(0.0005, (bounds2.max[0] - bounds2.min[0]) / 2), Math.max(0.0005, (bounds2.max[1] - bounds2.min[1]) / 2), Math.max(0.0005, (bounds2.max[2] - bounds2.min[2]) / 2)]
+  };
+}
+var LOD1_DISTANCE_M = 25;
+function planWall(spec) {
+  const { length, height, thickness } = spec;
+  const openings = spec.openings ?? [];
+  const cutterNodes = [], cutterIds = [];
+  for (const [index, item] of openings.entries()) {
+    const cx = item.center[0], baseY = item.center[1];
+    if (cx - item.width / 2 < -length / 2 || cx + item.width / 2 > length / 2 || baseY < 0 || baseY + item.height > height) {
+      pfail(`Wall opening ${index} must stay inside the wall rectangle.`, "spec.openings");
+    }
+    const rectId = `cut${index}`;
+    cutterNodes.push({ id: rectId, kind: "box", size: [item.width, item.height, thickness * 4] });
+    cutterNodes.push({ id: `${rectId}p`, kind: "transform", input: rectId, transform: { position: [cx, baseY + item.height / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } });
+    cutterIds.push(`${rectId}p`);
+    if (item.kind === "arch") {
+      const radius = item.width / 2;
+      if (radius > item.height)
+        pfail(`Arch opening ${index} rise exceeds its height.`, "spec.openings");
+      const cylId = `cyl${index}`;
+      cutterNodes.push({ id: cylId, kind: "cylinder", radius, height: thickness * 4, segments: 24 });
+      cutterNodes.push({ id: `${cylId}r`, kind: "transform", input: cylId, transform: { position: [cx, baseY + item.height - radius, 0], rotation: [Math.SQRT1_2, 0, 0, Math.SQRT1_2], scale: [1, 1, 1] } });
+      cutterIds.push(`${cylId}r`);
+    }
+  }
+  const nodes = [{ id: "body", kind: "box", size: [length, height, thickness] }];
+  let output = "body";
+  if (cutterIds.length > 0) {
+    nodes.push(...cutterNodes);
+    nodes.push({ id: "wall", kind: "boolean", operation: "difference", a: "body", cutters: cutterIds });
+    output = "wall";
+  }
+  nodes.push({ id: "lift", kind: "transform", input: output, transform: { position: [0, height / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } });
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [length, height, thickness] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [0, height / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  return [{
+    key: "wall",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "lift") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function planFloor(spec) {
+  const nodes = [
+    { id: "slab", kind: "box", size: [spec.width, spec.thickness, spec.depth] },
+    { id: "drop", kind: "transform", input: "slab", transform: { position: [0, -spec.thickness / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ];
+  return [{
+    key: "floor",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "drop") }],
+    collision: []
+  }];
+}
+function planStairs(spec) {
+  const points = [[0, 0]];
+  let x = 0, y = 0;
+  for (let step = 0;step < spec.risers; step++) {
+    y += spec.riserHeight;
+    points.push([x, y]);
+    x += spec.treadDepth;
+    points.push([x, y]);
+  }
+  points.push([x, 0]);
+  const run = spec.risers * spec.treadDepth, rise = spec.risers * spec.riserHeight;
+  const nodes = [
+    { id: "flight", kind: "profile", points },
+    { id: "mesh", kind: "extrude", profile: "flight", depth: spec.width },
+    { id: "shift", kind: "transform", input: "mesh", transform: { position: [-run / 2, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ];
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [run, rise, spec.width] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [0, rise / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  return [{
+    key: "stairs",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "shift") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function archProfile(width, height, springline, leg, arcSegments) {
+  const half = width / 2, outer = half + leg;
+  const points = [[-outer, 0], [-outer, height], [outer, height], [outer, 0], [half, 0], [half, springline]];
+  for (let index = 1;index <= arcSegments; index++) {
+    const angle = Math.PI * index / arcSegments;
+    points.push([half * Math.cos(angle), springline + half * Math.sin(angle)]);
+  }
+  points.push([-half, 0]);
+  return points;
+}
+function planArch(spec) {
+  const count = spec.count ?? 1, spacing = spec.spacing ?? spec.width;
+  if (spec.springline >= spec.height)
+    pfail("Arch springline must stay below its apex height.", "spec.springline");
+  if (spec.width / 2 > spec.height - spec.springline + 0.000000001 && spec.height - spec.springline > 0) {
+    if (spec.width / 2 - (spec.height - spec.springline) > 0.000001)
+      pfail("Arch apex height must clear the opening radius.", "spec.height");
+  }
+  const leg = Math.min(spec.width * 0.25, spec.depth);
+  const points = archProfile(spec.width, spec.height, spec.springline, leg, 16);
+  const nodes = [
+    { id: "profile", kind: "profile", points },
+    { id: "one", kind: "extrude", profile: "profile", depth: spec.depth }
+  ];
+  let output = "one";
+  const span = spec.width + 2 * leg;
+  if (count > 1)
+    nodes.push({ id: "row", kind: "array", input: "one", count, step: [span + spacing, 0, 0] });
+  if (count > 1)
+    output = "row";
+  nodes.push({ id: "center", kind: "transform", input: output, transform: { position: [-((count - 1) * (span + spacing)) / 2, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } });
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [span * count + spacing * (count - 1), spec.height, spec.depth] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [0, spec.height / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  return [{
+    key: "arch",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "center") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function planColumn(spec) {
+  const segments2 = spec.segments ?? 32, taper = spec.taper ?? 0.85, capital = spec.capital ?? "doric";
+  const { radius: r, height: h } = spec;
+  const profile = capital === "doric" ? [[r * 1.15, 0], [r * 1.15, h * 0.05], [r, h * 0.08], [r * taper, h * 0.9], [r * taper, h * 0.94], [r * 1.18, h * 0.97], [r * 1.18, h], [0, h], [0, 0]] : [[r * 1.1, 0], [r * 1.1, h * 0.05], [r, h * 0.08], [r * taper, h * 0.96], [r * taper, h], [0, h], [0, 0]];
+  const nodes = [
+    { id: "silhouette", kind: "profile", points: profile },
+    { id: "shaft", kind: "revolve", profile: "silhouette", segments: segments2 }
+  ];
+  const lod1Profile = [[r * 1.18, 0], [r * 1.18, h], [0, h], [0, 0]];
+  const lod1 = graph([
+    { id: "silhouette", kind: "profile", points: lod1Profile },
+    { id: "shaft", kind: "revolve", profile: "silhouette", segments: Math.max(8, Math.floor(segments2 / 4)) }
+  ], "shaft");
+  return [{
+    key: "column",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "shaft") }, { level: 1, switchDistanceM: 20, graph: lod1 }],
+    collision: []
+  }];
+}
+function planWindow(spec) {
+  const { width, height, frameWidth, depth } = spec;
+  const panesX = spec.panesX ?? 2, panesY = spec.panesY ?? 1;
+  const nodes = [];
+  const box = (id, size, position) => {
+    nodes.push({ id, kind: "box", size });
+    nodes.push({ id: `${id}t`, kind: "transform", input: id, transform: { position, rotation: [0, 0, 0, 1], scale: [1, 1, 1] } });
+    return `${id}t`;
+  };
+  const hw = width / 2, hh = height / 2, fw = frameWidth / 2;
+  const frame = [
+    box("top", [width, frameWidth, depth], [0, hh - fw, 0]),
+    box("bottom", [width, frameWidth, depth], [0, -hh + fw, 0]),
+    box("left", [frameWidth, height - 2 * frameWidth, depth], [-hw + fw, 0, 0]),
+    box("right", [frameWidth, height - 2 * frameWidth, depth], [hw - fw, 0, 0])
+  ];
+  if (spec.sill)
+    frame.push(box("sill", [width + 2 * frameWidth, frameWidth, depth * 1.5], [0, -hh - frameWidth / 2, 0]));
+  const bars = [];
+  for (let index = 1;index < panesX; index++)
+    bars.push(box(`vx${index}`, [frameWidth * 0.5, height - 2 * frameWidth, depth * 0.5], [-hw + frameWidth + index * (width - 2 * frameWidth) / panesX, 0, 0]));
+  for (let index = 1;index < panesY; index++)
+    bars.push(box(`hy${index}`, [width - 2 * frameWidth, frameWidth * 0.5, depth * 0.5], [0, -hh + frameWidth + index * (height - 2 * frameWidth) / panesY, 0]));
+  nodes.push({ id: "frame", kind: "merge", inputs: [...frame, ...bars] });
+  nodes.push({ id: "glass", kind: "box", size: [width - 2 * frameWidth, height - 2 * frameWidth, depth * 0.15] });
+  nodes.push({ id: "slot1", kind: "material-slot", input: "glass", slot: 1 });
+  nodes.push({ id: "all", kind: "merge", inputs: ["frame", "slot1"] });
+  nodes.push({ id: "lift", kind: "transform", input: "all", transform: { position: [0, hh, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } });
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [width, height + (spec.sill ? frameWidth : 0), depth * (spec.sill ? 1.5 : 1)] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [0, (height + (spec.sill ? frameWidth : 0)) / 2 - (spec.sill ? frameWidth : 0), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  const glass = spec.glassMaterial ?? { kind: "standard", color: "#a8c8e0", opacity: 0.4, roughness: 0.1, metalness: 0 };
+  return [{
+    key: "window",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material, glass],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "lift") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function planRoof(spec) {
+  const { width, depth, rise } = spec, overhang = spec.overhang ?? 0;
+  const w = width + 2 * overhang, d = depth + 2 * overhang;
+  let nodes;
+  if (spec.style === "gable") {
+    nodes = [
+      { id: "face", kind: "profile", points: [[-w / 2, 0], [w / 2, 0], [0, rise]] },
+      { id: "prism", kind: "extrude", profile: "face", depth: d }
+    ];
+  } else if (spec.style === "shed") {
+    nodes = [
+      { id: "face", kind: "profile", points: [[-w / 2, 0], [w / 2, 0], [w / 2, rise]] },
+      { id: "prism", kind: "extrude", profile: "face", depth: d }
+    ];
+  } else {
+    const ridge = Math.max(0.02, Math.abs(w - d));
+    const alongX = w >= d;
+    nodes = [
+      { id: "eave", kind: "rect", width: w, height: d },
+      { id: "ridge", kind: "rect", width: alongX ? ridge : 0.02, height: alongX ? 0.02 : ridge },
+      { id: "hip", kind: "loft", bottom: "eave", top: "ridge", height: rise }
+    ];
+  }
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [w, rise, d] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [0, rise / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  return [{
+    key: "roof",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, spec.style === "hip" ? "hip" : "prism") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function planPipe(spec) {
+  const segments2 = spec.segments ?? 12;
+  const nodes = [
+    { id: "section", kind: "ellipse", radiusX: spec.radius, radiusY: spec.radius, segments: segments2 },
+    { id: "run", kind: "sweep", profile: "section", path: spec.path }
+  ];
+  const lod1 = graph([
+    { id: "section", kind: "ellipse", radiusX: spec.radius, radiusY: spec.radius, segments: Math.max(4, Math.floor(segments2 / 4)) },
+    { id: "run", kind: "sweep", profile: "section", path: spec.path }
+  ], "run");
+  const collision = [];
+  const path = spec.path;
+  for (let index = 0;index + 1 < path.length && collision.length < 16; index++) {
+    const a = path[index], c = path[index + 1];
+    const delta = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    const length = Math.hypot(delta[0], delta[1], delta[2]);
+    if (length < 0.000000001)
+      continue;
+    const axisIndex = [Math.abs(delta[0]), Math.abs(delta[1]), Math.abs(delta[2])].reduce((best, value, axis) => value > Math.abs(delta[best]) ? axis : best, 0);
+    collision.push({
+      kind: "capsule",
+      center: [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2, (a[2] + c[2]) / 2],
+      axis: ["x", "y", "z"][axisIndex],
+      radius: spec.radius,
+      halfLength: length / 2 + spec.radius
+    });
+  }
+  return [{
+    key: "pipe",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "run") }, { level: 1, switchDistanceM: 20, graph: lod1 }],
+    collision
+  }];
+}
+function planTrim(spec) {
+  const s = spec.size;
+  const points = spec.profile === "chamfer" ? [[0, 0], [s, 0], [s, s - s * 0.3], [s - s * 0.3, s], [0, s]] : spec.profile === "cove" ? [[0, 0], [s, 0], [s, s * 0.35], [s * 0.85, s * 0.5], [s * 0.6, s * 0.68], [s * 0.35, s], [0, s]] : [[0, 0], [s, 0], [s, s], [0, s]];
+  const nodes = [
+    { id: "section", kind: "profile", points },
+    { id: "rail", kind: "extrude", profile: "section", depth: spec.length }
+  ];
+  const lod1 = graph([
+    { id: "proxy", kind: "box", size: [s, s, spec.length] },
+    { id: "lift", kind: "transform", input: "proxy", transform: { position: [s / 2, s / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } }
+  ], "lift");
+  return [{
+    key: "trim",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "rail") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: []
+  }];
+}
+function yawQuaternion(radians) {
+  return [0, Math.sin(radians / 2), 0, Math.cos(radians / 2)];
+}
+function planScatter(spec) {
+  const subject = spec.subject;
+  const subjectNode = subject.shape === "box" ? { id: "subject", kind: "box", size: subject.size } : subject.shape === "cylinder" ? { id: "subject", kind: "cylinder", radius: subject.radius, height: subject.height, segments: subject.segments ?? 16 } : { id: "subject", kind: "sphere", radius: subject.radius, segments: subject.segments ?? 16 };
+  const subjectBounds = subject.shape === "box" ? { x: subject.size[0] / 2, y: subject.size[1] / 2, z: subject.size[2] / 2, yBase: 0 } : subject.shape === "cylinder" ? { x: subject.radius, y: subject.height / 2, z: subject.radius, yBase: 0 } : { x: subject.radius, y: subject.radius, z: subject.radius, yBase: 0 };
+  const lod1Node = subject.shape === "box" ? subjectNode : subject.shape === "cylinder" ? { id: "subject", kind: "cylinder", radius: subject.radius, height: subject.height, segments: 8 } : { id: "subject", kind: "sphere", radius: subject.radius, segments: 8 };
+  const exclusions = spec.exclusions ?? [];
+  const random = mulberry32(spec.seed);
+  const instances = [];
+  const halfW = spec.area.width / 2, halfD = spec.area.depth / 2;
+  let attempts = 0;
+  while (instances.length < spec.count && ++attempts <= SPATIAL_PARAMETRIC_LIMITS.scatterAttempts * Math.min(spec.count, 64)) {
+    const x = (random() * 2 - 1) * Math.max(0, halfW - subjectBounds.x);
+    const z12 = (random() * 2 - 1) * Math.max(0, halfD - subjectBounds.z);
+    const blocked = exclusions.some((zone) => x + subjectBounds.x > zone.center[0] - zone.halfExtents[0] && x - subjectBounds.x < zone.center[0] + zone.halfExtents[0] && z12 + subjectBounds.z > zone.center[1] - zone.halfExtents[1] && z12 - subjectBounds.z < zone.center[1] + zone.halfExtents[1]);
+    if (blocked)
+      continue;
+    const yaw = random() * Math.PI * 2;
+    const scale = 0.85 + random() * 0.3;
+    instances.push({ position: [x, subjectBounds.yBase, z12], rotation: [...yawQuaternion(yaw)], scale: [scale, scale, scale] });
+  }
+  if (instances.length < spec.count) {
+    pfail(`Scatter placed ${instances.length} of ${spec.count} subjects; relax exclusions or shrink the subject.`, "spec.exclusions");
+  }
+  const nodes = [subjectNode];
+  const lod1 = graph([lod1Node], "subject");
+  return [{
+    key: "scatter",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: [spec.material],
+    lods: [{ level: 0, switchDistanceM: 0, graph: graph(nodes, "subject") }, { level: 1, switchDistanceM: LOD1_DISTANCE_M, graph: lod1 }],
+    collision: [],
+    instances
+  }];
+}
+var PLANNERS = {
+  wall: planWall,
+  floor: planFloor,
+  stairs: planStairs,
+  arch: planArch,
+  column: planColumn,
+  window: planWindow,
+  roof: planRoof,
+  pipe: planPipe,
+  trim: planTrim,
+  scatter: planScatter
+};
+function sha256Bytes(bytes) {
+  const hasher = createSha256HexHasher();
+  hasher.update(bytes);
+  return hasher.digestHex();
+}
+var GLTF_INTERPRETATION = { kind: "gltf", format: "glb", metersPerUnit: 1, sourceUp: "y" };
+function emitSpatialParametric(input) {
+  const request = parseSpatialValue(SpatialParametricRequestSchema, input, "parametric request");
+  const { generatorId, spec } = request;
+  const retainedArtifacts = [];
+  if (request.native !== undefined) {
+    const receipt2 = validateSpatialGeometryNativeReceipt({ request: request.native.request, receipt: request.native.receipt });
+    const outputs = verifySpatialGeometryNativeOutputs(receipt2, request.native.outputs);
+    retainedArtifacts.push({
+      operation: receipt2.operation,
+      requestSha256: spatialGeometryNativeRequestSha256(request.native.request),
+      receiptSha256: spatialGeometryNativeReceiptSha256(receipt2),
+      outputs: [...outputs]
+    });
+  }
+  const sourceSha256 = spatialValueSha256({ domain: "slopcamera.parametric-source.v1", profile: SPATIAL_GEOMETRY_PROFILE, kind: spec.kind });
+  const parametersSha256 = spatialGeneratorParametersSha256(spec);
+  const specSha256 = spatialValueSha256({ domain: "slopcamera.parametric-spec.v1", spec });
+  const seed = request.seed ?? deriveSpatialGeneratorSeed(sourceSha256);
+  const runtimeSha256 = spatialValueSha256({ domain: "slopcamera.parametric-runtime.v1", profile: SPATIAL_GEOMETRY_PROFILE });
+  const plans = PLANNERS[spec.kind](spec);
+  if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts)
+    pfail("Spec expands beyond the part budget.", "spec");
+  const manifests = [];
+  const artifacts = [];
+  const entities = [];
+  const factsList = [];
+  const editableKeys = [];
+  const receiptAssets = [];
+  const lod0ByPart = new Map;
+  for (const part of plans) {
+    const lods = [];
+    for (const lod of part.lods) {
+      const evaluation = evaluateSpatialGeometry(lod.graph);
+      const bytes = emitSpatialGeometryGlb(evaluation.mesh, part.materials);
+      const sha256 = sha256Bytes(bytes);
+      const assetId = `asset_${spatialValueSha256({ domain: "slopcamera.parametric-asset.v1", generatorId, key: part.key, level: lod.level, sha256 }).slice(0, 32)}`;
+      const path = `generated/${generatorId}/${part.key}-lod${lod.level}.glb`;
+      const manifest = parseSpatialValue(SpatialAssetManifestSchema, {
+        assetId,
+        payload: { path, sha256, bytes: bytes.byteLength },
+        interpretation: GLTF_INTERPRETATION,
+        dependencies: [],
+        provenance: { source: "generated", description: `Parametric ${spec.kind} part "${part.key}" LOD ${lod.level}.`, receiptSha256: "0".repeat(64) }
+      }, `parametric asset ${part.key}`);
+      manifests.push(manifest);
+      artifacts.push({ assetId, path, bytes });
+      lods.push({ level: lod.level, assetId, sha256, switchDistanceM: lod.switchDistanceM });
+      if (lod.level === 0)
+        lod0ByPart.set(part.key, { assetId, manifest, mesh: evaluation.mesh, part });
+    }
+    lods.sort((a, b) => a.level - b.level);
+    const lod0 = lod0ByPart.get(part.key);
+    if (part.lods[0] === undefined)
+      pfail("Every part requires a level-0 LOD.", "spec");
+    const subject = lod0.manifest.payload;
+    const collision = request.collision !== undefined ? [...request.collision] : part.collision.length > 0 ? [...part.collision] : [boxBounds(lod0.mesh.bounds)];
+    const materialFacts = part.materials.map((material) => ({
+      alphaMode: material.opacity < 1 ? "BLEND" : "OPAQUE",
+      doubleSided: false,
+      maps: [],
+      ...material.kind === "standard" && material.emissive !== undefined ? { emissiveLinear: [1, 1, 1].map(() => 0) } : {}
+    }));
+    const facts = parseSpatialValue(SpatialAssetFactsV1Schema, {
+      kind: "slopcamera.spatial-asset-facts",
+      schemaVersion: 1,
+      subject: { path: subject.path, sha256: subject.sha256, bytes: subject.bytes },
+      subjectManifestSha256: spatialAssetManifestSha256(lod0.manifest),
+      profile: SPATIAL_GEOMETRY_PROFILE,
+      nodeCount: 1,
+      clipDurationsSeconds: [],
+      bounds: { modelSpace: lod0.mesh.bounds, sceneSpace: lod0.mesh.bounds },
+      materials: materialFacts,
+      generator: {
+        generatorId,
+        parametricKind: spec.kind,
+        specSha256,
+        parametersSha256,
+        lods: lods.map((lod) => ({ level: lod.level, assetId: lod.assetId, sha256: lod.sha256, switchDistanceM: lod.switchDistanceM })),
+        collision,
+        ...retainedArtifacts.length === 0 ? {} : { retainedArtifacts }
+      }
+    }, `parametric facts ${part.key}`);
+    const factsText = `${canonicalJson(facts)}
+`;
+    const factsBytes = new TextEncoder().encode(factsText);
+    const factsSha256 = sha256Bytes(factsBytes);
+    const factsManifest = parseSpatialValue(SpatialAssetManifestSchema, {
+      assetId: `asset_${spatialValueSha256({ domain: "slopcamera.parametric-facts.v1", generatorId, key: part.key, sha256: factsSha256 }).slice(0, 32)}`,
+      payload: { path: `generated/${generatorId}/${part.key}-facts.json`, sha256: factsSha256, bytes: factsBytes.byteLength },
+      interpretation: { kind: "metadata", format: "json", schema: "slopcamera.spatial-asset-facts" },
+      dependencies: [lod0.assetId],
+      provenance: { source: "derived", description: `Derived parametric facts for ${lod0.assetId}.`, receiptSha256: "0".repeat(64) }
+    }, `parametric facts manifest ${part.key}`);
+    manifests.push(factsManifest);
+    artifacts.push({ assetId: factsManifest.assetId, path: factsManifest.payload.path, bytes: factsBytes });
+    factsList.push({ manifest: factsManifest, facts });
+    const entityId = generatedSpatialEntityId(generatorId, part.key);
+    const multiSlot = part.materials.length > 1;
+    const entity = parseSpatialValue(SpatialEntitySchema, {
+      entityId,
+      kind: "mesh",
+      name: `${spec.kind}:${part.key}`,
+      parentId: null,
+      transform: part.transform,
+      placement: { kind: "world" },
+      origin: { kind: "generated", generatorId, key: part.key },
+      visible: true,
+      geometry: { kind: "asset", assetId: lod0.assetId, materialMode: multiSlot ? "source" : "entity" },
+      material: part.materials[0],
+      ...part.instances === undefined ? {} : { instances: [...part.instances] }
+    }, `parametric entity ${part.key}`);
+    entities.push(entity);
+    editableKeys.push({ key: part.key, properties: multiSlot ? ["transform"] : [...part.editable] });
+    receiptAssets.push(...lods.map((lod) => ({ assetId: lod.assetId, sha256: lod.sha256 })));
+    receiptAssets.push({ assetId: factsManifest.assetId, sha256: factsSha256 });
+  }
+  const closureSha256 = spatialValueSha256({ domain: "slopcamera.parametric-closure.v1", sourceSha256, parametersSha256, seed, specSha256 });
+  const assetIds = manifests.map((manifest) => manifest.assetId).sort();
+  const record = buildSpatialGeneratorRecord({
+    generatorId,
+    sourceSha256,
+    closureSha256,
+    parametersSha256,
+    seed,
+    runtimeSha256,
+    entities,
+    editableKeys,
+    assets: assetIds
+  });
+  const receipt = deepFreezeJson({
+    kind: "slopcamera.spatial-parametric-receipt",
+    schemaVersion: 1,
+    generatorId,
+    specSha256,
+    parametersSha256,
+    seed,
+    profile: SPATIAL_GEOMETRY_PROFILE,
+    assets: receiptAssets,
+    entities: entities.map((entity) => entity.entityId).sort(),
+    native: retainedArtifacts.map((artifact) => ({ requestSha256: artifact.requestSha256, receiptSha256: artifact.receiptSha256 }))
+  });
+  const receiptSha256 = spatialValueSha256({ domain: "slopcamera.spatial-parametric-receipt.v1", receipt });
+  const bound = manifests.map((manifest) => manifest.provenance.source === "generated" ? parseSpatialValue(SpatialAssetManifestSchema, { ...manifest, provenance: { ...manifest.provenance, receiptSha256 } }, `parametric asset ${manifest.assetId}`) : manifest);
+  return deepFreezeJson({ generator: record, entities, manifests: bound, artifacts, facts: factsList, receipt, receiptSha256 });
+}
+function mergeSpatialParametricOutput(scene, output) {
+  return mergeSpatialGeneratorOutput(scene, output.generator, output.entities, output.manifests);
+}
+function selectSpatialLod(lods, distanceM) {
+  let selected = lods[0];
+  for (const lod of lods) {
+    if (lod.level === 0)
+      selected = lod;
+    else if (distanceM >= lod.switchDistanceM && lod.level > selected.level)
+      selected = lod;
+  }
+  return selected;
+}
+function auditSpatialParametricScene(sceneInput, factsInput, options) {
+  const scene = parseSpatialScene(sceneInput);
+  const factsBySubject = new Map;
+  for (const input of factsInput) {
+    const facts = parseSpatialValue(SpatialAssetFactsV1Schema, input, "asset facts");
+    if (facts.generator !== undefined)
+      factsBySubject.set(facts.subject.sha256, facts);
+  }
+  const snapshot = evaluateSpatialScene(scene, { cameraId: options.cameraId, timeUs: options.timeUs ?? 0 });
+  const camera = snapshot.camera.pose.position;
+  const assetsById = new Map(scene.assets.map((asset) => [asset.assetId, asset]));
+  const entries = [];
+  for (const item of snapshot.entities) {
+    const { entity, worldMatrix } = item;
+    if (entity.origin.kind !== "generated" || entity.kind !== "mesh" || entity.geometry.kind !== "asset")
+      continue;
+    const asset = assetsById.get(entity.geometry.assetId);
+    if (asset === undefined)
+      continue;
+    const facts = factsBySubject.get(asset.payload.sha256);
+    if (facts === undefined || facts.generator === undefined)
+      continue;
+    const bounds2 = transformBounds(worldMatrix, facts.bounds.modelSpace);
+    const center = [(bounds2.min[0] + bounds2.max[0]) / 2, (bounds2.min[1] + bounds2.max[1]) / 2, (bounds2.min[2] + bounds2.max[2]) / 2];
+    const distance = Math.hypot(center[0] - camera[0], center[1] - camera[1], center[2] - camera[2]);
+    const lod = selectSpatialLod(facts.generator.lods, distance);
+    entries.push({
+      entityId: entity.entityId,
+      key: entity.origin.key,
+      generatorId: entity.origin.generatorId,
+      distanceM: distance,
+      lodAssetId: lod.assetId,
+      lodLevel: lod.level,
+      collision: facts.generator.collision.map((proxy) => proxy.kind),
+      retainedArtifacts: facts.generator.retainedArtifacts?.length ?? 0
+    });
+  }
+  return deepFreezeJson(entries);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -4145,9 +4998,11 @@ function compileWorkflowGraph2(options) {
   });
 }
 export {
+  verifySpatialGeometryNativeOutputs,
   validateSpatialShot,
   validateSpatialReviewProviderRequest,
   validateSpatialOverrides,
+  validateSpatialGeometryNativeReceipt,
   validateSpatialGeneratorOutput,
   validatePerformanceGallerySelection,
   validatePerformanceBakeReceipt,
@@ -4165,6 +5020,9 @@ export {
   spatialPropertySupported,
   spatialOutputDuration,
   spatialGlbBounds,
+  spatialGeometryNativeRequestSha256,
+  spatialGeometryNativeRequestId,
+  spatialGeometryNativeReceiptSha256,
   spatialGeneratorParametersSha256,
   spatialGeneratorOutputSha256,
   spatialGeneratorAttemptId,
@@ -4180,6 +5038,7 @@ export {
   slopcameraCodeErrorMessage,
   slerpQuaternion,
   sha256Hex,
+  selectSpatialLod,
   seconds,
   scatter,
   sampleSpatialCameraTrack,
@@ -4207,6 +5066,8 @@ export {
   parseSpatialPerformanceBakeReceipt,
   parseSpatialPerformanceAuditOptions,
   parseSpatialGlb,
+  parseSpatialGeometryNativeRequest,
+  parseSpatialGeometryGraph,
   parseSpatialGeneratorParameters,
   parseSpatialCameraTrack,
   parseHumanoidMapping,
@@ -4217,6 +5078,8 @@ export {
   normalizeQuaternion,
   nextTo,
   multiplyTransforms,
+  mulberry32,
+  mergeSpatialParametricOutput,
   mergeSpatialOverrides,
   mergeSpatialGeneratorOutput,
   lookAtPose,
@@ -4232,10 +5095,15 @@ export {
   galleryProbeRenderRequest,
   frameFitPose,
   facing,
+  executeSpatialGeometryNativeFake,
   evaluateSpatialSceneInContext,
   evaluateSpatialScene,
   evaluateSpatialGlb,
+  evaluateSpatialGeometry,
   evaluateHumanoidAttachmentMatrix,
+  estimateSpatialGeometryGraph,
+  emitSpatialParametric,
+  emitSpatialGeometryGlb,
   easeKeys,
   easeChannel,
   distribute,
@@ -4271,6 +5139,7 @@ export {
   auditSpatialSceneInContext,
   auditSpatialScene,
   auditSpatialPerformance,
+  auditSpatialParametricScene,
   auditSpatialCameraTrack,
   asSlopcameraCodeError,
   applySpatialScenePatch,
@@ -4312,6 +5181,7 @@ export {
   SpatialReviewFrameEvidenceSchema,
   SpatialReviewFindingSchema,
   SpatialReviewCategorySchema,
+  SpatialRetainedArtifactSchema,
   SpatialRenderedAuditSampleSchema,
   SpatialRenderedAuditReportSchema,
   SpatialRenderedAuditOptionsSchema,
@@ -4359,6 +5229,8 @@ export {
   SpatialPbrAnisotropySchema,
   SpatialPayloadSchema,
   SpatialPatchOperationSchema,
+  SpatialParametricSpecSchema,
+  SpatialParametricRequestSchema,
   SpatialOverrideSchema,
   SpatialOriginSchema,
   SpatialMatrixSchema,
@@ -4370,6 +5242,10 @@ export {
   SpatialHumanoidAttachmentSchema,
   SpatialGlbModel,
   SpatialGeometrySchema,
+  SpatialGeometryNodeSchema,
+  SpatialGeometryNativeRequestSchema,
+  SpatialGeometryNativeReceiptSchema,
+  SpatialGeometryGraphSchema,
   SpatialGeneratorSchema,
   SpatialGeneratorIdSchema,
   SpatialFramingGoalSchema,
@@ -4381,6 +5257,7 @@ export {
   SpatialDigestSchema,
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
+  SpatialCollisionProxySchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
@@ -4397,8 +5274,10 @@ export {
   SpatialAuditBoundsSchema,
   SpatialAssetMaterialFactSchema,
   SpatialAssetManifestSchema,
+  SpatialAssetLodSchema,
   SpatialAssetInterpretationSchema,
   SpatialAssetIdSchema,
+  SpatialAssetGeneratorFactsSchema,
   SpatialAssetFactsV1Schema,
   SpatialAssetAdmissionV1Schema,
   SpatialAnimationSchema,
@@ -4436,10 +5315,16 @@ export {
   SPATIAL_PERFORMANCE_LIMITS,
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,
+  SPATIAL_PARAMETRIC_LIMITS,
   SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
   SPATIAL_GLB_LIMITS,
+  SPATIAL_GEOMETRY_PROFILE,
+  SPATIAL_GEOMETRY_NATIVE_OPERATIONS,
+  SPATIAL_GEOMETRY_NATIVE_LIMITS,
+  SPATIAL_GEOMETRY_LIMITS,
+  SPATIAL_GEOMETRY_GRAPH_KIND,
   SPATIAL_GENERATOR_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_AUDIT_LIMITS,
