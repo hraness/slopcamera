@@ -91,6 +91,13 @@ export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" 
   | { readonly action: "camera-track"; readonly path: string; readonly request: string; readonly output: string }
   | { readonly action: "plan" | "render"; readonly path: string; readonly request: string; readonly assets?: string; readonly executionProfile?: SpatialCliExecutionProfile }
   | { readonly action: "generate"; readonly module: string; readonly generatorId: string; readonly parameters?: string; readonly seed?: number; readonly into?: string; readonly output: string }
+  | { readonly action: "direction-check"; readonly direction: string; readonly scene: string }
+  | { readonly action: "direction-plan"; readonly direction: string; readonly scene: string; readonly camera?: string; readonly output?: string }
+  | { readonly action: "direction-gallery"; readonly direction: string; readonly scene: string; readonly axis: string; readonly camera?: string; readonly output?: string }
+  | { readonly action: "effects-check"; readonly effects: string; readonly scene: string }
+  | { readonly action: "effects-plan"; readonly draft: string; readonly scene: string; readonly output?: string }
+  | { readonly action: "effects-bake"; readonly simulation: string; readonly scene: string; readonly output: string }
+  | { readonly action: "temporal-audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly contacts?: string; readonly cutBeforeUs?: readonly number[] }
 );
 export type SpatialProjectCommand = JsonOption & {
   readonly kind: "spatial-project"; readonly project: string;
@@ -429,8 +436,9 @@ export type CliCommand =
       readonly width: number;
     } & JsonOption)
   | ({
-      readonly action: "init" | "check" | "plan" | "animatic" | "run";
+      readonly action: "init" | "check" | "plan" | "animatic" | "run" | "audit" | "gallery";
       readonly allowPlaceholders: boolean;
+      readonly axis: string | undefined;
       readonly dryRun: boolean;
       readonly force: boolean;
       readonly kind: "project-cinema";
@@ -1949,12 +1957,15 @@ function parseProject(argv: readonly string[]): CliCommand {
       && cinemaAction !== "plan"
       && cinemaAction !== "animatic"
       && cinemaAction !== "run"
+      && cinemaAction !== "audit"
+      && cinemaAction !== "gallery"
     ) {
-      fail("Usage: slopcamera project cinema <init|check|plan|animatic|run> <project> [options]");
+      fail("Usage: slopcamera project cinema <init|check|plan|animatic|run|audit|gallery> <project> [options]");
     }
     const parsed = parseOptions(argv.slice(2), {
       ...JSON_SPEC,
       "--allow-placeholders": "flag",
+      "--axis": "value",
       "--dry-run": "flag",
       "--force": "flag",
       "--output": "value",
@@ -1971,15 +1982,23 @@ function parseProject(argv: readonly string[]): CliCommand {
       fail("--force is valid only for project cinema init.");
     }
     const output = optionString(parsed, "--output");
-    if (output !== undefined && (cinemaAction === "init" || cinemaAction === "check")) {
-      fail("--output is valid only for project cinema plan, animatic, or run.");
+    if (output !== undefined && (cinemaAction === "init" || cinemaAction === "check" || cinemaAction === "audit")) {
+      fail("--output is valid only for project cinema plan, animatic, run, or gallery.");
     }
-    if (optionFlag(parsed, "--allow-placeholders") && (cinemaAction === "init" || cinemaAction === "check")) {
+    const axis = optionString(parsed, "--axis");
+    if (cinemaAction === "gallery" && axis === undefined) {
+      fail("project cinema gallery requires --axis <pacing|transitions|looks|audio|structure|mixed>.");
+    }
+    if (axis !== undefined && cinemaAction !== "gallery") {
+      fail("--axis is valid only for project cinema gallery.");
+    }
+    if (optionFlag(parsed, "--allow-placeholders") && (cinemaAction === "init" || cinemaAction === "check" || cinemaAction === "audit" || cinemaAction === "gallery")) {
       fail("--allow-placeholders is valid only for project cinema plan, animatic, or run.");
     }
     return {
       action: cinemaAction,
       allowPlaceholders: optionFlag(parsed, "--allow-placeholders"),
+      axis,
       dryRun: optionFlag(parsed, "--dry-run"),
       force: optionFlag(parsed, "--force"),
       json: optionFlag(parsed, "--json"),
@@ -3387,7 +3406,72 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
     const parameters = optionString(parsed, "--parameters"), into = optionString(parsed, "--into");
     return { kind: "spatial-scene", action, module: modulePath, generatorId, output, ...(parameters === undefined ? {} : { parameters }), ...(seed === undefined ? {} : { seed }), ...(into === undefined ? {} : { into }), json: optionFlag(parsed, "--json") };
   }
-  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|asset|project|world> ...");
+  if (action === "direction") {
+    const directionAction = argv[1];
+    if (directionAction === "check") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--scene": "value" });
+      const [direction] = exactPositionals(parsed, 1, "slopcamera scene direction check <direction.json> --scene <scene.json> [--json]");
+      const scene = optionString(parsed, "--scene");
+      if (scene === undefined) fail("scene direction check requires --scene.");
+      return { kind: "spatial-scene", action: "direction-check", direction: direction!, scene, json: optionFlag(parsed, "--json") };
+    }
+    if (directionAction === "plan" || directionAction === "gallery") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--axis": "value", "--camera": "value", "--output": "value", "--scene": "value" });
+      const [direction] = exactPositionals(parsed, 1, `slopcamera scene direction ${directionAction} <direction.json> --scene <scene.json>${directionAction === "gallery" ? " --axis <axis>" : ""} [--camera <camera-id>] [--output <out.json>] [--json]`);
+      const scene = optionString(parsed, "--scene"), camera = optionString(parsed, "--camera"), output = optionString(parsed, "--output"), axis = optionString(parsed, "--axis");
+      if (scene === undefined) fail(`scene direction ${directionAction} requires --scene.`);
+      if (directionAction === "gallery" && axis === undefined) fail("scene direction gallery requires --axis.");
+      return directionAction === "gallery"
+        ? { kind: "spatial-scene", action: "direction-gallery", direction: direction!, scene, axis: axis!, ...(camera === undefined ? {} : { camera }), ...(output === undefined ? {} : { output }), json: optionFlag(parsed, "--json") }
+        : { kind: "spatial-scene", action: "direction-plan", direction: direction!, scene, ...(camera === undefined ? {} : { camera }), ...(output === undefined ? {} : { output }), json: optionFlag(parsed, "--json") };
+    }
+    fail("Usage: slopcamera scene direction <check|plan|gallery> ...");
+  }
+  if (action === "effects") {
+    const effectsAction = argv[1];
+    if (effectsAction === "check") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--scene": "value" });
+      const [effects] = exactPositionals(parsed, 1, "slopcamera scene effects check <effects.json> --scene <scene.json> [--json]");
+      const scene = optionString(parsed, "--scene");
+      if (scene === undefined) fail("scene effects check requires --scene.");
+      return { kind: "spatial-scene", action: "effects-check", effects: effects!, scene, json: optionFlag(parsed, "--json") };
+    }
+    if (effectsAction === "plan") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--output": "value", "--scene": "value" });
+      const [draft] = exactPositionals(parsed, 1, "slopcamera scene effects plan <draft.json> --scene <scene.json> [--output <effects.json>] [--json]");
+      const scene = optionString(parsed, "--scene"), output = optionString(parsed, "--output");
+      if (scene === undefined) fail("scene effects plan requires --scene.");
+      return { kind: "spatial-scene", action: "effects-plan", draft: draft!, scene, ...(output === undefined ? {} : { output }), json: optionFlag(parsed, "--json") };
+    }
+    if (effectsAction === "bake") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--output": "value", "--scene": "value" });
+      const [simulation] = exactPositionals(parsed, 1, "slopcamera scene effects bake <simulation.json> --scene <scene.json> --output <receipt.json> [--json]");
+      const scene = optionString(parsed, "--scene"), output = optionString(parsed, "--output");
+      if (scene === undefined || output === undefined) fail("scene effects bake requires --scene and --output.");
+      return { kind: "spatial-scene", action: "effects-bake", simulation: simulation!, scene, output, json: optionFlag(parsed, "--json") };
+    }
+    fail("Usage: slopcamera scene effects <check|plan|bake> ...");
+  }
+  if (action === "temporal-audit") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--camera": "value", "--contacts": "value", "--cut-before-us": "value", "--times-us": "value" });
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene temporal-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--contacts <contacts.json>] [--cut-before-us <csv>] [--json]");
+    const camera = optionString(parsed, "--camera"), times = optionString(parsed, "--times-us"), contacts = optionString(parsed, "--contacts"), cutBefore = optionString(parsed, "--cut-before-us");
+    if (camera === undefined) fail("scene temporal-audit requires --camera.");
+    let timesUs: number[] | undefined;
+    if (times !== undefined) {
+      if (!/^\d+(,\d+)*$/u.test(times)) return fail("scene temporal-audit --times-us must be a comma-separated list of nonnegative integers.");
+      timesUs = times.split(",").map(Number);
+      if (timesUs.length > 64) return fail("scene temporal-audit --times-us is bounded to 64 samples.");
+    }
+    let cutBeforeUs: number[] | undefined;
+    if (cutBefore !== undefined) {
+      if (!/^\d+(,\d+)*$/u.test(cutBefore)) return fail("scene temporal-audit --cut-before-us must be a comma-separated list of nonnegative integers.");
+      cutBeforeUs = cutBefore.split(",").map(Number);
+      if (cutBeforeUs.length > 64) return fail("scene temporal-audit --cut-before-us is bounded to 64 values.");
+    }
+    return { kind: "spatial-scene", action, path: path!, camera, ...(timesUs === undefined ? {} : { timesUs }), ...(contacts === undefined ? {} : { contacts }), ...(cutBeforeUs === undefined ? {} : { cutBeforeUs }), json: optionFlag(parsed, "--json") };
+  }
+  fail("Usage: slopcamera scene <init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|temporal-audit|asset|project|world> ...");
 }
 
 export function parseCliArgs(argv: readonly string[]): CliCommand {

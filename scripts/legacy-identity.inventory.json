@@ -440,7 +440,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "72a7c1e0562424b0e9954b7d8f858ab21182595b60744ed6dda8bde7a9d48357",
+    "identityLinesSha256": "c3637a44b7781d6d3dd4bced778753c9b3e43f0ee417f113b54428c00265b2b6",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -1269,7 +1269,7 @@
   },
   {
     "identityLineCount": 84,
-    "identityLinesSha256": "711e60aa73760b1dd2eff96640aac8f4ea10ee6bf2d993e6eec66d447f8ec34f",
+    "identityLinesSha256": "e29eb5eebc8ae6ef74764e806f3c932004874383fe3f3c7d521b1e749f2e0b96",
     "occurrenceCount": 448,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1630,19 +1630,19 @@
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "8b0218426811c110252d06848408742a8c58ab1ebe4bff06c1feb7ecacca63f6",
-    "occurrenceCount": 237,
-    "path": "dist/index-f9afrjet.js",
+    "identityLineCount": 9,
+    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
+    "occurrenceCount": 9,
+    "path": "dist/index-gzadr1hk.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
-    "occurrenceCount": 9,
-    "path": "dist/index-gzadr1hk.js",
+    "identityLineCount": 142,
+    "identityLinesSha256": "8b0218426811c110252d06848408742a8c58ab1ebe4bff06c1feb7ecacca63f6",
+    "occurrenceCount": 237,
+    "path": "dist/index-qhr0443j.js",
     "categories": [
       "generated"
     ]

@@ -1,93 +1,125 @@
 import { describe, expect, test } from "bun:test"
 
-import { parseSpatialRenderPlan, spatialRenderPlanSha256 } from "./effects"
-import { parseSpatialParticleSystem, spatialParticleSystemSha256 } from "./particle"
+import { perspectiveFromFov } from "./build"
+import { parseSpatialScene, parseSpatialValue, spatialValueSha256 } from "./identity"
+import { SpatialRenderPlanSchema, spatialRenderPlanSha256 } from "./effects"
+import { SpatialParticleSystemSchema, spatialParticleSystemSha256 } from "./particle"
 import {
-  parseSpatialRenderEffectsDocument,
-  spatialRenderEffectsAssetIds,
+  checkSpatialRenderEffects,
+  planSpatialRenderEffects,
   spatialRenderEffectsSha256,
 } from "./render-effects"
 
-const SCENE_SHA256 = "a".repeat(64)
+const scene = (): unknown => ({
+  kind: "slopcamera.spatial-scene", schemaVersion: 1, sceneId: "scene_effects",
+  coordinates: "right-handed-y-up-meters", durationUs: 2_000_000,
+  entities: [{
+    entityId: "entity_emitter", name: "Emitter", kind: "mesh", parentId: null,
+    placement: { kind: "world" }, origin: { kind: "authored" }, visible: true,
+    transform: { position: [0, 0.5, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+    geometry: { kind: "box", size: [1, 1, 1] },
+    material: { kind: "unlit", color: "#112233", opacity: 1 },
+  }],
+  cameras: [{
+    cameraId: "camera_main", name: "Main",
+    pose: { position: [0, 1.6, 6], rotation: [0, 0, 0, 1] },
+    projection: perspectiveFromFov({ fovDeg: 50, width: 640, height: 480, near: 0.1, far: 200 }),
+  }],
+  animations: [], assets: [], generators: [], overrides: [],
+})
 
-function particleSystem(): Record<string, unknown> {
-  return {
-    countTier: "preview",
-    emitters: [{
-      colorOverLife: [[1, 0.5, 0.1, 1], [1, 0, 0, 0]],
-      id: "emitter_01",
-      lifetimeUs: [100_000, 1_000_000],
-      opacityOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] },
-      rate: 100,
-      seed: 42,
-      shape: { kind: "point" },
-      sizeOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] },
-      velocity: [0, 1, 0],
-      velocitySpread: [0.1, 0.1, 0.1],
-    }],
-    entityId: "entity_00000001",
-    forces: [],
-    killVolumes: [],
-    kind: "slopcamera.spatial-particle-system",
-    maxCount: 100,
-    renderer: { assetId: "asset_particle", billboard: true, kind: "sprite" },
-    schemaVersion: 1,
-  }
-}
+const sceneSha = (): string => spatialValueSha256(parseSpatialScene(scene()))
 
-function renderPlan(): Record<string, unknown> {
-  return {
-    kind: "slopcamera.spatial-render-plan",
-    postProcess: {
-      kind: "slopcamera.spatial-post-process",
+const renderPlan = (): unknown => ({
+  kind: "slopcamera.spatial-render-plan",
+  schemaVersion: 1,
+  quality: {
+    outputBytes: 8_000_000, particleCount: 0, pixelBudget: 640 * 480,
+    simulationSteps: 0, texturePixelBudget: 1_000_000, tier: "final",
+  },
+  postProcess: {
+    kind: "slopcamera.spatial-post-process", schemaVersion: 1,
+    steps: [{ kind: "tone-map", exposure: 1, whitePoint: 4 }],
+  },
+})
+
+const particleSystem = (entityId: string = "entity_emitter"): unknown => ({
+  kind: "slopcamera.spatial-particle-system",
+  schemaVersion: 1,
+  entityId,
+  countTier: "preview",
+  maxCount: 8,
+  emitters: [{
+    id: "emitter_01", seed: 3, rate: 4,
+    shape: { kind: "point" },
+    velocity: [0, 1, 0], velocitySpread: [0.1, 0.1, 0.1],
+    lifetimeUs: [500_000, 1_000_000],
+    colorOverLife: [[1, 1, 1, 1], [1, 0.5, 0.1, 0]],
+    opacityOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] },
+    sizeOverLife: { keys: [{ t: 0, value: 0.1 }, { t: 1, value: 0 }] },
+  }],
+  forces: [],
+  killVolumes: [],
+})
+
+describe("spatial render effects plan and check", () => {
+  test("plan assembles a self-verifying binding bound to the scene digest", () => {
+    const binding = planSpatialRenderEffects({ scene: scene(), renderPlan: renderPlan() })
+    expect(binding.document.sceneSha256).toBe(sceneSha())
+    expect(binding.documentSha256).toBe(spatialRenderEffectsSha256(binding.document))
+    expect(binding.document.renderPlanSha256).toBe(spatialRenderPlanSha256(binding.document.renderPlan))
+    const report = checkSpatialRenderEffects({ effects: binding, scene: scene() })
+    expect(report.counts.errors).toBe(0)
+    expect(report.documentSha256).toBe(binding.documentSha256)
+  })
+
+  test("plan rejects particle systems on unknown entities before forming the document", () => {
+    expect(() => planSpatialRenderEffects({
+      scene: scene(), renderPlan: renderPlan(),
+      particleSystems: [particleSystem("entity_ghost")],
+    })).toThrow(/does not resolve/)
+  })
+
+  test("check flags a stale scene digest on a foreign-bound document", () => {
+    const binding = planSpatialRenderEffects({ scene: scene(), renderPlan: renderPlan() })
+    const stale = {
+      ...binding.document,
+      sceneSha256: "f".repeat(64),
+    }
+    const report = checkSpatialRenderEffects({ effects: stale, scene: scene() })
+    expect(report.findings.some((item) => item.code === "stale-scene" && item.severity === "error")).toBe(true)
+    expect(report.counts.errors).toBe(1)
+  })
+
+  test("check flags unresolved particle entities and missing assets", () => {
+    const document = {
+      kind: "slopcamera.spatial-render-effects",
       schemaVersion: 1,
-      steps: [{ assetId: "asset_lut", intensity: 0.5, kind: "lut-grade" }],
-    },
-    quality: {
-      outputBytes: 64_000_000,
-      particleCount: 100,
-      pixelBudget: 1920 * 1080,
-      simulationSteps: 0,
-      texturePixelBudget: 4096 * 4096,
-      tier: "preview",
-    },
-    schemaVersion: 1,
-  }
-}
-
-function document(overrides: Record<string, unknown> = {}): unknown {
-  const system = parseSpatialParticleSystem(particleSystem())
-  const plan = parseSpatialRenderPlan(renderPlan())
-  return {
-    kind: "slopcamera.spatial-render-effects",
-    particleSystems: [{ system, systemSha256: spatialParticleSystemSha256(system) }],
-    renderPlan: plan,
-    renderPlanSha256: spatialRenderPlanSha256(plan),
-    sceneSha256: SCENE_SHA256,
-    schemaVersion: 1,
-    simulationBakes: [],
-    ...overrides,
-  }
-}
-
-describe("spatial render effects document", () => {
-  test("binds render, particle, scene, and asset identities deterministically", () => {
-    const parsed = parseSpatialRenderEffectsDocument(document())
-    expect(spatialRenderEffectsAssetIds(parsed)).toEqual(["asset_lut", "asset_particle"])
-    expect(spatialRenderEffectsSha256(parsed)).toBe(spatialRenderEffectsSha256(parseSpatialRenderEffectsDocument(document())))
-    expect(Object.isFrozen(parsed.particleSystems[0]?.system)).toBe(true)
+      sceneSha256: sceneSha(),
+      renderPlan: {
+        kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+        quality: { outputBytes: 8_000_000, particleCount: 8, pixelBudget: 640 * 480, simulationSteps: 0, texturePixelBudget: 1_000_000, tier: "final" },
+      },
+      renderPlanSha256: "",
+      particleSystems: [{ system: particleSystem("entity_ghost"), systemSha256: "" }],
+      simulationBakes: [],
+    }
+    // Recompute honest digests so only the closure findings fire.
+    const planSha = spatialRenderPlanSha256(parseSpatialValue(SpatialRenderPlanSchema, document.renderPlan, "render plan"))
+    const system = parseSpatialValue(SpatialParticleSystemSchema, document.particleSystems[0]!.system, "particle system")
+    const sysSha = spatialParticleSystemSha256(system)
+    document.renderPlanSha256 = planSha
+    document.particleSystems[0]!.systemSha256 = sysSha
+    const report = checkSpatialRenderEffects({ effects: document, scene: scene() })
+    expect(report.findings.some((item) => item.code === "unresolved-entity")).toBe(true)
+    expect(report.counts.particleSystems).toBe(1)
   })
 
-  test("rejects tampered nested digests and dishonest aggregate costs", () => {
-    const base = document() as { particleSystems: { system: unknown; systemSha256: string }[]; renderPlan: Record<string, unknown> }
-    expect(() => parseSpatialRenderEffectsDocument({ ...base, renderPlanSha256: "f".repeat(64) })).toThrow(/Render-plan digest/)
-    expect(() => parseSpatialRenderEffectsDocument({ ...base, particleSystems: [{ ...base.particleSystems[0]!, systemSha256: "f".repeat(64) }] })).toThrow(/Particle-system digest/)
-    const dishonestPlan = parseSpatialRenderPlan({ ...base.renderPlan, quality: { ...(base.renderPlan.quality as object), particleCount: 99 } })
-    expect(() => parseSpatialRenderEffectsDocument({ ...base, renderPlan: dishonestPlan, renderPlanSha256: spatialRenderPlanSha256(dishonestPlan) })).toThrow(/exact aggregate particle/)
-  })
-
-  test("rejects duplicate particle targets", () => {
-    const base = document() as { particleSystems: unknown[] }
-    expect(() => parseSpatialRenderEffectsDocument({ ...base, particleSystems: [base.particleSystems[0], base.particleSystems[0]] })).toThrow(/Duplicate particle-system entity/)
+  test("plan is deterministic and rejects malformed drafts", () => {
+    const first = planSpatialRenderEffects({ scene: scene(), renderPlan: renderPlan() })
+    const second = planSpatialRenderEffects({ scene: scene(), renderPlan: renderPlan() })
+    expect(first).toEqual(second)
+    expect(() => planSpatialRenderEffects({ scene: scene(), renderPlan: { kind: "nope" } })).toThrow()
+    expect(() => checkSpatialRenderEffects({ effects: { kind: "nope" }, scene: scene() })).toThrow()
   })
 })
