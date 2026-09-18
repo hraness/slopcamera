@@ -5018,30 +5018,81 @@ function spatialMotionEvidenceSha256(evidence) {
   return spatialValueSha256(evidence);
 }
 
-// src/spatial-scene/simulation-bake.ts
+// src/spatial-scene/recipe-pack.ts
 import { z as z12 } from "zod";
+var SPATIAL_RECIPE_PACK_LIMITS = Object.freeze({
+  axes: 6,
+  previews: 4,
+  timesUs: 64
+});
+var SpatialRecipePackPreviewSchema = z12.strictObject({
+  name: z12.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/u),
+  request: z12.unknown()
+});
+var SpatialRecipePackEffectsSchema = z12.strictObject({
+  particleSystems: z12.array(SpatialParticleSystemSchema).max(64).default([]),
+  renderPlan: SpatialRenderPlanSchema,
+  simulationBakes: z12.array(SpatialSimulationBakeReceiptSchema).max(64).default([])
+});
+var SpatialRecipePackAuditSchema = z12.strictObject({
+  contacts: z12.array(SpatialTemporalContactSchema).max(64).default([]),
+  cutBeforeUs: z12.array(SpatialTimeUsSchema).max(64).default([]),
+  timesUs: z12.array(SpatialTimeUsSchema).min(2).max(SPATIAL_RECIPE_PACK_LIMITS.timesUs).optional()
+});
+var SpatialRecipePackSchema = z12.strictObject({
+  kind: z12.literal("slopcamera.spatial-recipe-pack"),
+  schemaVersion: z12.literal(1),
+  packId: z12.string().regex(/^recipe_[a-zA-Z0-9_-]{1,64}$/u),
+  sceneSha256: SpatialDigestSchema,
+  direction: SpatialDirectionSchema,
+  cameraId: SpatialCameraIdSchema.optional(),
+  axes: z12.array(SpatialGalleryAxisSchema).min(1).max(SPATIAL_RECIPE_PACK_LIMITS.axes),
+  previews: z12.array(SpatialRecipePackPreviewSchema).max(SPATIAL_RECIPE_PACK_LIMITS.previews).default([]),
+  effects: SpatialRecipePackEffectsSchema.optional(),
+  temporalAudit: SpatialRecipePackAuditSchema.optional()
+}).superRefine((pack, context) => {
+  if (new Set(pack.axes).size !== pack.axes.length) {
+    context.addIssue({ code: "custom", message: "Recipe pack gallery axes must be unique.", path: ["axes"] });
+  }
+  const names = pack.previews.map((preview) => preview.name);
+  if (new Set(names).size !== names.length) {
+    context.addIssue({ code: "custom", message: "Recipe pack preview names must be unique.", path: ["previews"] });
+  }
+  if (pack.temporalAudit !== undefined && pack.cameraId === undefined) {
+    context.addIssue({ code: "custom", message: "A temporal audit requires the pack cameraId.", path: ["temporalAudit"] });
+  }
+});
+function parseSpatialRecipePack(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialRecipePackSchema, input, "spatial recipe pack"));
+}
+function spatialRecipePackSha256(pack) {
+  return spatialValueSha256(pack);
+}
+
+// src/spatial-scene/simulation-bake.ts
+import { z as z13 } from "zod";
 var SPATIAL_SIMULATION_BAKE_LIMITS = Object.freeze({
   channels: SPATIAL_SIMULATION_LIMITS.bodies,
   keysPerChannel: SPATIAL_SIMULATION_LIMITS.steps
 });
-var transformKeySchema = z12.strictObject({
+var transformKeySchema = z13.strictObject({
   orientation: SpatialQuaternionSchema,
   position: SpatialVec3Schema,
   timeUs: SpatialTimeUsSchema
 });
-var SpatialSimulationBakeChannelSchema = z12.strictObject({
+var SpatialSimulationBakeChannelSchema = z13.strictObject({
   entityId: SpatialEntityIdSchema,
-  keys: z12.array(transformKeySchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.keysPerChannel),
-  kind: z12.literal("transform")
+  keys: z13.array(transformKeySchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.keysPerChannel),
+  kind: z13.literal("transform")
 });
-var SpatialSimulationBakeDocumentSchema = z12.strictObject({
-  cacheId: z12.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
-  channels: z12.array(SpatialSimulationBakeChannelSchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.channels),
-  engineProfile: z12.literal("slopcamera-rigid-body-reference-v1"),
-  kind: z12.literal("slopcamera.spatial-simulation-bake"),
+var SpatialSimulationBakeDocumentSchema = z13.strictObject({
+  cacheId: z13.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
+  channels: z13.array(SpatialSimulationBakeChannelSchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.channels),
+  engineProfile: z13.literal("slopcamera-rigid-body-reference-v1"),
+  kind: z13.literal("slopcamera.spatial-simulation-bake"),
   planSha256: SpatialDigestSchema,
-  schemaVersion: z12.literal(1),
-  stepCount: z12.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
+  schemaVersion: z13.literal(1),
+  stepCount: z13.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
   timeStepUs: SpatialTimeUsSchema.min(1).max(1e6)
 }).superRefine((document, context) => {
   const entityIds = new Set;
@@ -5226,6 +5277,7 @@ export {
   spatialRenderPlanAssetIds,
   spatialRenderEffectsSha256,
   spatialRenderEffectsAssetIds,
+  spatialRecipePackSha256,
   spatialPropertySupported,
   spatialParticleSystemSha256,
   spatialParticleAssetIds,
@@ -5283,6 +5335,7 @@ export {
   parseSpatialScene,
   parseSpatialRenderPlan,
   parseSpatialRenderEffectsDocument,
+  parseSpatialRecipePack,
   parseSpatialPerformanceSources,
   parseSpatialPerformancePlan,
   parseSpatialPerformanceGallerySelection,
@@ -5445,6 +5498,10 @@ export {
   SpatialRenderPlanSchema,
   SpatialRenderEffectsDocumentSchema,
   SpatialRenderEffectsBindingSchema,
+  SpatialRecipePackSchema,
+  SpatialRecipePackPreviewSchema,
+  SpatialRecipePackEffectsSchema,
+  SpatialRecipePackAuditSchema,
   SpatialRackFocusSchema,
   SpatialQuaternionSchema,
   SpatialPublishedArtifactSchema,
@@ -5609,6 +5666,7 @@ export {
   SPATIAL_RENDER_EFFECTS_LIMITS,
   SPATIAL_RENDERED_AUDIT_LIMITS,
   SPATIAL_RENDERED_AUDIT_COVERAGE,
+  SPATIAL_RECIPE_PACK_LIMITS,
   SPATIAL_PERFORMANCE_LIMITS,
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,

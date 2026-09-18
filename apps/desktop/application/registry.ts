@@ -129,7 +129,7 @@ function eraseDefinition<Input, Output>(
         $id: definition.inputSchemaId,
       },
       outputJsonSchema: {
-        ...z.toJSONSchema(definition.outputSchema),
+        ...z.toJSONSchema(definition.outputSchema, { io: "input" }),
         $id: definition.outputSchemaId,
       },
     }),
