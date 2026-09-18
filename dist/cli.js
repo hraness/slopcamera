@@ -6,14 +6,14 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-r4mjqmz7.js";
+} from "./index-jssapabk.js";
 import {
   installSkill,
   pathExists
 } from "./index-7308egqr.js";
 import"./index-px9vqrc7.js";
 import"./index-8txs6fkn.js";
-import"./index-rx5qv31d.js";
+import"./index-rjx1jmyg.js";
 import {
   executeSlopcameraOperation,
   generateSlopcameraIcon,
@@ -26,7 +26,7 @@ import {
   slopcameraIconMaximumRounds,
   slopcameraOperationCodes,
   withSlopcameraOperationHostAdmission
-} from "./index-n4n19hs5.js";
+} from "./index-kjj7fxg6.js";
 import {
   vectorizeImage
 } from "./index-9ajx7fzb.js";
@@ -106,9 +106,9 @@ Usage:
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
-  slopcamera image icon <subject> --output <file.svg> [--model <provider/model>]
-    [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>] [--critique-model <provider/model>]
-    [--keep-raster] [--json]
+  slopcamera image icon <subject> --output <file.svg> [--purpose <mark|illustration>]
+    [--model <provider/model>] [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>]
+    [--critique-model <provider/model>] [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
@@ -406,7 +406,7 @@ async function main(args, dependencies = {}) {
     return;
   }
   if (command === "icon") {
-    const parsed = parseArguments(rest, new Set(["model", "output", "ink", "rounds", "critique-model"]));
+    const parsed = parseArguments(rest, new Set(["model", "output", "ink", "purpose", "rounds", "critique-model"]));
     const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json" && flag !== "keep-raster");
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown icon option: --${unknownFlags[0]}`);
@@ -430,6 +430,10 @@ async function main(args, dependencies = {}) {
     if (ink !== undefined && !/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu.test(ink)) {
       throw new Error("--ink must be a #rgb or #rrggbb color");
     }
+    const purpose = parsed.options.purpose;
+    if (purpose !== undefined && purpose !== "mark" && purpose !== "illustration") {
+      throw new Error("--purpose must be mark or illustration");
+    }
     const rounds = parsePositiveInteger(parsed.options.rounds, "rounds");
     if (rounds !== undefined && rounds > slopcameraIconMaximumRounds) {
       throw new Error(`--rounds must be at most ${slopcameraIconMaximumRounds}`);
@@ -442,6 +446,7 @@ async function main(args, dependencies = {}) {
       inheritedFileDescriptors: [lease.inheritedFileDescriptor],
       ...critiqueModel === undefined ? {} : { critiqueModel },
       ...ink === undefined ? {} : { ink },
+      ...purpose === undefined ? {} : { purpose },
       ...rounds === undefined ? {} : { rounds }
     }), hostAdmissionOptions(dependencies));
     if (parsed.flags.has("json")) {

@@ -54,7 +54,7 @@ import {
   studioSourceBundleSha256,
   summarizeSceneVariantPatch,
   validateStudioReceipt
-} from "./index-r4mjqmz7.js";
+} from "./index-jssapabk.js";
 import {
   bundledSkillPath,
   installSkill
@@ -65,7 +65,7 @@ import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
   runSlopcameraWorkflow
-} from "./index-rx5qv31d.js";
+} from "./index-rjx1jmyg.js";
 import {
   DiagramValidationError,
   SlopcameraOperationError,
@@ -81,6 +81,7 @@ import {
   generateSlopcameraIcon,
   generateSlopcameraImageGallery,
   iconPromptFor,
+  iconVisualGateProblems,
   isSlopcameraOperationCode,
   lintDiagram,
   parseDiagramSource,
@@ -110,7 +111,7 @@ import {
   slopcameraOperationRegistry,
   stackLayoutDefaults,
   withSlopcameraOperationHostAdmission
-} from "./index-n4n19hs5.js";
+} from "./index-kjj7fxg6.js";
 import {
   VTRACER_VERSION,
   VectorizeError,
@@ -220,6 +221,7 @@ export {
   installSkill,
   inspectStudioPlan,
   inspectStudioBundle,
+  iconVisualGateProblems,
   iconPromptFor,
   generateSlopcameraImageGallery,
   generateSlopcameraImageFile,
