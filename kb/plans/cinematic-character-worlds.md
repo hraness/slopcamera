@@ -199,7 +199,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 7: Particles, post-processing, and deterministic simulation bakes
 
-- **Status:** PR open (PR #157, auto-merge enabled)
+- **Status:** Merged (PR #157, `18f3abf`)
 - **Depends on:** Phases 4 and 6
 - **Objective:** Add impressive but bounded particles, atmosphere, finishing passes, rigid-body motion, and secondary-motion bakes while preserving deterministic evidence passes.
 - **Scope:** effect/simulation contracts, render quality request, locked Three.js post-processing modules, renderer lowering, retained Studio bake adapter, tests.
@@ -219,7 +219,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 8: Agent direction, galleries, temporal review, and integration
 
-- **Status:** Not started
+- **Status:** PR open (#159, auto-merge enabled)
 - **Depends on:** Phases 2, 5, and 7
 - **Objective:** Expose the complete workflow as ergonomic typed agent tools that propose, render, audit, compare, and explicitly promote cinematic takes.
 - **Scope:** scene/cinema planners, CLI and MCP pure tools, galleries, temporal review/audits, operation routing, skill/docs tests.
@@ -238,7 +238,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 9: Qualifications, documentation, final review, and delivery
 
-- **Status:** Not started
+- **Status:** PR open (#160, auto-merge enabled)
 - **Depends on:** Phases 1–8
 - **Objective:** Prove the integrated system, document honest operating boundaries, and deliver it through protected current-head PRs.
 - **Scope:** qualification fixtures, docs, public skill, plan finalization, generated bundles/inventory, full review and CI.
@@ -285,3 +285,4 @@ Parallel architecture spikes established four implementation boundaries:
 - 2026-09-19 — Rebuilt and re-committed `apps/desktop/dist/cli/main.js` and `scripts/legacy-identity.inventory.json` for PRs #155 and #156 after the local-runtime/standalone check caught identity-bearing line drift. Phase 7 extended to `SpatialParticleSystem` (5 tests) and `SpatialSimulationPlan` (3 tests), giving seeded bounded emitters, forces, kill volumes, preview/final tiers, and deterministic rigid-body/constraint bake plans with cache and source-digest binding; 14 focused tests pass and the draft PR is updated.
 - 2026-09-19 — Phase 5 merged at `78bcb9a` (PR #155); all `Required` checks passed. Phase 6 had to merge-forward past the p5 merge because of generated bundle/identity inventory conflicts; the merge-forward `c4699ab` was pushed and fresh exact-head CI is running.
 - 2026-09-19 — Phase 6 merged at `63acd80` (PR #156) after the merge-forward; all `Required` checks passed. Phase 7 was merged-forward past both p5 and p6, fixed lint casts, and promoted from draft to ready; `gh pr merge --auto` is active on PR #157. The phase now contains contracts for `SpatialRenderPlan`, post-processing, particle systems, simulation-bake plans, and motion evidence; renderer lowering, bake adapter, and browser qualifications remain out of scope for this workstream.
+- 2026-09-19 — Phase 7 merged at `18f3abf` (PR #157) through auto-merge; all `Required` checks passed. Phase 8 opened as PR #159 with the `SpatialDirection` agent-direction contract (3 tests, SDK lint/typecheck/build/standalone green). Phase 9 opened as PR #160 with a `docs/how-to/cinematic-character-worlds.md` guide and updated legacy identity inventory.
