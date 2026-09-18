@@ -191,7 +191,7 @@ export function parseSpatialScene(input: unknown): SpatialSceneV1 {
     cameras: sortSpatialBy(parsed.cameras, item => item.cameraId),
     assets: sortSpatialBy(parsed.assets.map(normalizeAsset).map(asset => ({ ...asset, dependencies: [...asset.dependencies].sort(compare) })), item => item.assetId),
     animations: sortSpatialBy(parsed.animations, item => item.channelId),
-    generators: sortSpatialBy(parsed.generators.map(generator => ({ ...generator, editableKeys: sortSpatialBy(generator.editableKeys.map(item => ({ ...item, properties: [...item.properties].sort(compare) })), item => item.key) })), item => item.generatorId),
+    generators: sortSpatialBy(parsed.generators.map(generator => ({ ...generator, editableKeys: sortSpatialBy(generator.editableKeys.map(item => ({ ...item, properties: [...item.properties].sort(compare) })), item => item.key), ...(generator.assets === undefined ? {} : { assets: [...generator.assets].sort(compare) }) })), item => item.generatorId),
     overrides: sortSpatialBy(parsed.overrides.map(item => item.property === "color" ? { ...item, value: item.value.toLowerCase() } : item), item => `${item.entityId}:${item.property}`),
   }
   const entities = unique(scene.entities, entity => entity.entityId, "entities")
@@ -210,6 +210,26 @@ export function parseSpatialScene(input: unknown): SpatialSceneV1 {
   }
   spatialTopologicalIds(new Map(scene.assets.map(asset => [asset.assetId, asset.dependencies])), "asset dependencies")
   spatialTopologicalIds(new Map(scene.entities.map(entity => [entity.entityId, entity.parentId === null ? [] : [entity.parentId]])), "entity hierarchy")
+  // Generator-owned assets: each declared id must exist, carry a generated or
+  // derived provenance, and belong to exactly one generator. Owned assets may
+  // be referenced only by that generator's retained entities.
+  const ownedAssets = new Map<string, string>()
+  for (const generator of scene.generators) {
+    unique(generator.assets ?? [], id => id, "generator assets")
+    for (const assetId of generator.assets ?? []) {
+      const asset = requireReference(assets, assetId, "generator asset")
+      if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived") throw new SpatialSceneError("invalid-data", `Generator-owned asset ${assetId} requires generated or derived provenance.`, "generators")
+      const owner = ownedAssets.get(assetId)
+      if (owner !== undefined && owner !== generator.generatorId) throw new SpatialSceneError("invalid-data", `Asset ${assetId} is owned by more than one generator.`, "generators")
+      ownedAssets.set(assetId, generator.generatorId)
+    }
+  }
+  const checkAssetOwnership = (entity: SpatialEntity, assetId: string, path: string) => {
+    const owner = ownedAssets.get(assetId)
+    if (owner !== undefined && (entity.origin.kind !== "generated" || entity.origin.generatorId !== owner)) {
+      throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} references an asset owned by another generator.`, path)
+    }
+  }
   const generatedKeys = new Set<string>()
   for (const entity of scene.entities) {
     if (entity.placement.kind === "view") requireReference(cameras, entity.placement.cameraId, "placement")
@@ -231,6 +251,7 @@ export function parseSpatialScene(input: unknown): SpatialSceneV1 {
     }
     if (entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map !== undefined) {
       if (entity.geometry.kind === "asset") throw new SpatialSceneError("invalid-data", "Material maps apply to authored procedural geometry only.", "entities")
+      checkAssetOwnership(entity, entity.material.map, "entity asset")
       const mapAsset = requireReference(assets, entity.material.map, "entity asset")
       if (mapAsset.interpretation.kind !== "image") throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} material map requires an image asset.`, "entity asset")
     }
@@ -246,6 +267,7 @@ export function parseSpatialScene(input: unknown): SpatialSceneV1 {
       : entity.kind === "environment" ? { assetId: entity.assetId, kind: "image" }
       : "assetId" in entity ? { assetId: entity.assetId, kind: entity.kind } : undefined
     if (reference) {
+      checkAssetOwnership(entity, reference.assetId, "entity asset")
       const asset = requireReference(assets, reference.assetId, "entity asset")
       if (asset.interpretation.kind !== reference.kind) throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} requires a ${reference.kind} asset.`, "entity asset")
       if (entity.kind === "video" && asset.interpretation.kind === "video" && entity.sourceOffsetUs >= asset.interpretation.durationUs) throw new SpatialSceneError("invalid-data", "Video source offset must precede its duration.", "sourceOffsetUs")

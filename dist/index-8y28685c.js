@@ -700,7 +700,8 @@ var SpatialGeneratorSchema = z2.strictObject({
     z2.strictObject({ kind: z2.literal("qualified"), runtimeSha256: SpatialDigestSchema }),
     z2.strictObject({ kind: z2.literal("attempt"), attemptId: z2.string().min(1).max(128), runtimeSha256: SpatialDigestSchema })
   ]),
-  editableKeys: z2.array(z2.strictObject({ key: z2.string().min(1).max(256), properties: z2.array(z2.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities)
+  editableKeys: z2.array(z2.strictObject({ key: z2.string().min(1).max(256), properties: z2.array(z2.enum(["color", "opacity", "transform"])).min(1).max(3) })).max(SPATIAL_SCENE_LIMITS.entities),
+  assets: z2.array(SpatialAssetIdSchema).max(SPATIAL_SCENE_LIMITS.assets).optional()
 });
 var SpatialSceneV1Schema = z2.strictObject({
   kind: z2.literal("slopcamera.spatial-scene"),
@@ -738,7 +739,12 @@ var SpatialPatchOperationSchema = z2.discriminatedUnion("kind", [
   z2.strictObject({ kind: z2.literal("remove-entity"), entityId: SpatialEntityIdSchema }),
   z2.strictObject({ kind: z2.literal("set-override"), override: SpatialOverrideSchema }),
   z2.strictObject({ kind: z2.literal("remove-override"), entityId: SpatialEntityIdSchema, property: z2.enum(["color", "opacity", "transform"]) }),
-  z2.strictObject({ kind: z2.literal("replace-generator-output"), generator: SpatialGeneratorSchema, entities: z2.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities) })
+  z2.strictObject({
+    kind: z2.literal("replace-generator-output"),
+    generator: SpatialGeneratorSchema,
+    entities: z2.array(SpatialEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+    assets: z2.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets).optional()
+  })
 ]);
 var SpatialScenePatchV1Schema = z2.strictObject({
   kind: z2.literal("slopcamera.spatial-scene-patch"),
@@ -979,7 +985,7 @@ function parseSpatialScene(input) {
     cameras: sortSpatialBy(parsed.cameras, (item) => item.cameraId),
     assets: sortSpatialBy(parsed.assets.map(normalizeAsset).map((asset) => ({ ...asset, dependencies: [...asset.dependencies].sort(compare) })), (item) => item.assetId),
     animations: sortSpatialBy(parsed.animations, (item) => item.channelId),
-    generators: sortSpatialBy(parsed.generators.map((generator) => ({ ...generator, editableKeys: sortSpatialBy(generator.editableKeys.map((item) => ({ ...item, properties: [...item.properties].sort(compare) })), (item) => item.key) })), (item) => item.generatorId),
+    generators: sortSpatialBy(parsed.generators.map((generator) => ({ ...generator, editableKeys: sortSpatialBy(generator.editableKeys.map((item) => ({ ...item, properties: [...item.properties].sort(compare) })), (item) => item.key), ...generator.assets === undefined ? {} : { assets: [...generator.assets].sort(compare) } })), (item) => item.generatorId),
     overrides: sortSpatialBy(parsed.overrides.map((item) => item.property === "color" ? { ...item, value: item.value.toLowerCase() } : item), (item) => `${item.entityId}:${item.property}`)
   };
   const entities = unique(scene.entities, (entity) => entity.entityId, "entities");
@@ -1001,6 +1007,25 @@ function parseSpatialScene(input) {
   }
   spatialTopologicalIds(new Map(scene.assets.map((asset) => [asset.assetId, asset.dependencies])), "asset dependencies");
   spatialTopologicalIds(new Map(scene.entities.map((entity) => [entity.entityId, entity.parentId === null ? [] : [entity.parentId]])), "entity hierarchy");
+  const ownedAssets = new Map;
+  for (const generator of scene.generators) {
+    unique(generator.assets ?? [], (id) => id, "generator assets");
+    for (const assetId2 of generator.assets ?? []) {
+      const asset = requireReference(assets, assetId2, "generator asset");
+      if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived")
+        throw new SpatialSceneError("invalid-data", `Generator-owned asset ${assetId2} requires generated or derived provenance.`, "generators");
+      const owner = ownedAssets.get(assetId2);
+      if (owner !== undefined && owner !== generator.generatorId)
+        throw new SpatialSceneError("invalid-data", `Asset ${assetId2} is owned by more than one generator.`, "generators");
+      ownedAssets.set(assetId2, generator.generatorId);
+    }
+  }
+  const checkAssetOwnership = (entity, assetId2, path) => {
+    const owner = ownedAssets.get(assetId2);
+    if (owner !== undefined && (entity.origin.kind !== "generated" || entity.origin.generatorId !== owner)) {
+      throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} references an asset owned by another generator.`, path);
+    }
+  };
   const generatedKeys = new Set;
   for (const entity of scene.entities) {
     if (entity.placement.kind === "view")
@@ -1027,6 +1052,7 @@ function parseSpatialScene(input) {
     if (entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map !== undefined) {
       if (entity.geometry.kind === "asset")
         throw new SpatialSceneError("invalid-data", "Material maps apply to authored procedural geometry only.", "entities");
+      checkAssetOwnership(entity, entity.material.map, "entity asset");
       const mapAsset = requireReference(assets, entity.material.map, "entity asset");
       if (mapAsset.interpretation.kind !== "image")
         throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} material map requires an image asset.`, "entity asset");
@@ -1042,6 +1068,7 @@ function parseSpatialScene(input) {
     }
     const reference = entity.kind === "mesh" && entity.geometry.kind === "asset" ? { assetId: entity.geometry.assetId, kind: "gltf" } : entity.kind === "text" ? { assetId: entity.fontAssetId, kind: "font" } : entity.kind === "environment" ? { assetId: entity.assetId, kind: "image" } : ("assetId" in entity) ? { assetId: entity.assetId, kind: entity.kind } : undefined;
     if (reference) {
+      checkAssetOwnership(entity, reference.assetId, "entity asset");
       const asset = requireReference(assets, reference.assetId, "entity asset");
       if (asset.interpretation.kind !== reference.kind)
         throw new SpatialSceneError("invalid-data", `Entity ${entity.entityId} requires a ${reference.kind} asset.`, "entity asset");
@@ -2567,86 +2594,1349 @@ function spatialGlbBounds(model) {
   return evaluateSpatialGlb(model, { metersPerUnit: 1, sourceUp: "y", timeUs: 0 }).bounds;
 }
 
-// src/spatial-scene/asset-admission.ts
+// src/spatial-scene/geometry.ts
 import { z as z4 } from "zod";
-var boundsComponent = z4.number().finite().min(-1000000000000000000).max(1000000000000000000);
-var boundsVector = z4.tuple([boundsComponent, boundsComponent, boundsComponent]);
-var SpatialBoundsSchema = z4.strictObject({ min: boundsVector, max: boundsVector }).refine((value) => value.min.every((component, index2) => component <= value.max[index2]), "Bounds min must not exceed max.");
-var factsUnit = z4.number().finite().min(0).max(1);
-var SpatialAssetMaterialFactSchema = z4.strictObject({
-  name: z4.string().max(1024).optional(),
-  alphaMode: z4.enum(["OPAQUE", "MASK", "BLEND"]),
-  doubleSided: z4.boolean(),
-  maps: z4.array(z4.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive", "clearcoat", "clearcoatRoughness", "clearcoatNormal", "transmission", "sheenColor", "sheenRoughness", "anisotropy"])).max(12),
-  textureTransforms: z4.array(z4.strictObject({ map: z4.string().min(1).max(64), offset: z4.tuple([z4.number().finite(), z4.number().finite()]), rotation: z4.number().finite().min(-Math.PI).max(Math.PI), scale: z4.tuple([z4.number().finite(), z4.number().finite()]) })).max(12).default([]),
-  emissiveLinear: z4.tuple([factsUnit, factsUnit, factsUnit]).optional(),
-  emissiveStrength: z4.number().finite().min(0).max(1e5).optional(),
-  clearcoat: z4.strictObject({ factor: factsUnit, roughness: factsUnit }).optional(),
-  transmission: z4.strictObject({ factor: factsUnit }).optional(),
-  sheen: z4.strictObject({ colorLinear: z4.tuple([factsUnit, factsUnit, factsUnit]), roughness: factsUnit }).optional(),
-  anisotropy: z4.strictObject({ strength: z4.number().finite().min(-1).max(1), rotation: z4.number().finite().min(0).max(2 * Math.PI) }).optional(),
-  ior: z4.number().finite().min(1).max(5).optional()
+var SPATIAL_GEOMETRY_LIMITS = Object.freeze({
+  nodes: 128,
+  depth: 32,
+  profilePoints: 512,
+  pathPoints: 256,
+  mergeInputs: 64,
+  arrayCount: 512,
+  arcSegments: 256,
+  booleanPlanes: 64,
+  booleanInputTriangles: 4096,
+  vertices: 65536,
+  triangles: 1e5,
+  materialSlots: 16,
+  outputBytes: 33554432,
+  coordinate: 1e6
 });
-var SpatialAssetRigFactsSchema = z4.strictObject({
-  profile: z4.literal(SPATIAL_GLB_RIGGED_PROFILE),
-  skins: z4.array(z4.strictObject({
-    name: z4.string().max(1024).optional(),
-    jointNodeIndices: z4.array(z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
-    inverseBindMatricesAccessor: z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1)
+var SPATIAL_GEOMETRY_GRAPH_KIND = "slopcamera.spatial-geometry-graph";
+var SPATIAL_GEOMETRY_PROFILE = "slopcamera.parametric-geometry-v1";
+var finite2 = z4.number().finite().min(-SPATIAL_GEOMETRY_LIMITS.coordinate).max(SPATIAL_GEOMETRY_LIMITS.coordinate);
+var positive = z4.number().finite().min(0.000000001).max(SPATIAL_GEOMETRY_LIMITS.coordinate);
+var segments = z4.number().int().min(3).max(SPATIAL_GEOMETRY_LIMITS.arcSegments);
+var vec22 = z4.tuple([finite2, finite2]);
+var vec33 = z4.tuple([finite2, finite2, finite2]);
+var nodeId = z4.string().min(1).max(64).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u, "Geometry node ids must be safe identifiers.");
+var materialSlot = z4.number().int().min(0).max(SPATIAL_GEOMETRY_LIMITS.materialSlots - 1);
+var axis = z4.enum(["x", "y", "z"]);
+var SpatialGeometryNodeSchema = z4.discriminatedUnion("kind", [
+  z4.strictObject({ id: nodeId, kind: z4.literal("profile"), points: z4.array(vec22).min(3).max(SPATIAL_GEOMETRY_LIMITS.profilePoints) }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("rect"), width: positive, height: positive }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("ellipse"), radiusX: positive, radiusY: positive, segments }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("inset"), input: nodeId, distance: positive }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("bevel"), input: nodeId, radius: positive, segments: z4.number().int().min(1).max(64) }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("box"), size: z4.tuple([positive, positive, positive]) }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("cylinder"), radius: positive, height: positive, segments }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("sphere"), radius: positive, segments: z4.number().int().min(4).max(SPATIAL_GEOMETRY_LIMITS.arcSegments) }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("extrude"), profile: nodeId, depth: positive, sideSlot: materialSlot.optional(), capSlot: materialSlot.optional() }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("revolve"), profile: nodeId, segments, capSlot: materialSlot.optional() }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("sweep"), profile: nodeId, path: z4.array(vec33).min(2).max(SPATIAL_GEOMETRY_LIMITS.pathPoints) }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("loft"), bottom: nodeId, top: nodeId, height: positive }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("transform"), input: nodeId, transform: SpatialTransformSchema }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("mirror"), input: nodeId, axis, offset: finite2 }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("array"), input: nodeId, count: z4.number().int().min(1).max(SPATIAL_GEOMETRY_LIMITS.arrayCount), step: vec33 }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("merge"), inputs: z4.array(nodeId).min(2).max(SPATIAL_GEOMETRY_LIMITS.mergeInputs) }),
+  z4.discriminatedUnion("operation", [
+    z4.strictObject({ id: nodeId, kind: z4.literal("boolean"), operation: z4.literal("difference"), a: nodeId, cutters: z4.array(nodeId).min(1).max(16) }),
+    z4.strictObject({ id: nodeId, kind: z4.literal("boolean"), operation: z4.enum(["union", "intersection"]), a: nodeId, b: nodeId })
+  ]),
+  z4.strictObject({ id: nodeId, kind: z4.literal("material-slot"), input: nodeId, slot: materialSlot }),
+  z4.strictObject({ id: nodeId, kind: z4.literal("uv-project"), input: nodeId, projection: z4.discriminatedUnion("mode", [
+    z4.strictObject({ mode: z4.literal("box"), scale: positive }),
+    z4.strictObject({ mode: z4.literal("planar"), axis, scale: positive, offset: vec22.optional() }),
+    z4.strictObject({ mode: z4.literal("cylindrical"), axis, scale: positive })
+  ]) })
+]);
+var SpatialGeometryGraphSchema = z4.strictObject({
+  kind: z4.literal(SPATIAL_GEOMETRY_GRAPH_KIND),
+  schemaVersion: z4.literal(1),
+  nodes: z4.array(SpatialGeometryNodeSchema).min(1).max(SPATIAL_GEOMETRY_LIMITS.nodes),
+  output: nodeId
+});
+function fail2(message, path = "geometry") {
+  throw new SpatialSceneError("invalid-data", `${SPATIAL_GEOMETRY_PROFILE}: ${message}`, path);
+}
+function polygonArea(points) {
+  let area = 0;
+  for (let index2 = 0;index2 < points.length; index2++) {
+    const a = points[index2], b = points[(index2 + 1) % points.length];
+    area += a[0] * b[1] - b[0] * a[1];
+  }
+  return area / 2;
+}
+function segmentsCross(a1, a2, b1, b2) {
+  const cross = (o, p, q) => (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]);
+  const d1 = cross(b1, b2, a1), d2 = cross(b1, b2, a2), d3 = cross(a1, a2, b1), d4 = cross(a1, a2, b2);
+  return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) && (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0);
+}
+function pointOnSegment(p, a, b) {
+  const cross = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+  const scale = Math.hypot(b[0] - a[0], b[1] - a[1]) + 0.000000000001;
+  if (Math.abs(cross) > 0.000000001 * scale)
+    return false;
+  return (p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1]) >= -0.000000000001 && (p[0] - b[0]) * (a[0] - b[0]) + (p[1] - b[1]) * (a[1] - b[1]) >= -0.000000000001;
+}
+function polygonIsSimple(points) {
+  const count = points.length;
+  for (let edge = 0;edge < count; edge++) {
+    const a1 = points[edge], a2 = points[(edge + 1) % count];
+    for (let other = edge + 1;other < count; other++) {
+      if (other === edge || (other + 1) % count === edge || (edge + 1) % count === other)
+        continue;
+      const b1 = points[other], b2 = points[(other + 1) % count];
+      if (segmentsCross(a1, a2, b1, b2))
+        return false;
+      if (pointOnSegment(a1, b1, b2) || pointOnSegment(a2, b1, b2) || pointOnSegment(b1, a1, a2))
+        return false;
+    }
+  }
+  return true;
+}
+function checkedProfile(points, path) {
+  if (points.length < 3 || points.length > SPATIAL_GEOMETRY_LIMITS.profilePoints)
+    fail2("Profile requires 3\u2013512 points.", path);
+  const area = polygonArea(points);
+  if (!Number.isFinite(area) || Math.abs(area) < 0.000000000001)
+    fail2("Profile polygon is degenerate or collinear.", path);
+  const ccw = area > 0 ? [...points] : [...points].reverse();
+  if (!polygonIsSimple(ccw))
+    fail2("Profile polygon must be simple (no self-intersections).", path);
+  return Object.freeze(ccw);
+}
+function unit22(x, y) {
+  const length = Math.hypot(x, y);
+  return length === 0 ? [0, 0] : [x / length, y / length];
+}
+function insetProfile(points, distance, path) {
+  const count = points.length;
+  const out = [];
+  for (let index2 = 0;index2 < count; index2++) {
+    const prev = points[(index2 - 1 + count) % count], vertex = points[index2], next = points[(index2 + 1) % count];
+    const e1 = unit22(vertex[0] - prev[0], vertex[1] - prev[1]);
+    const e2 = unit22(next[0] - vertex[0], next[1] - vertex[1]);
+    const n1 = [-e1[1], e1[0]], n2 = [-e2[1], e2[0]];
+    const a1 = [prev[0] + n1[0] * distance, prev[1] + n1[1] * distance];
+    const a2 = [vertex[0] + n1[0] * distance, vertex[1] + n1[1] * distance];
+    const b1 = [vertex[0] + n2[0] * distance, vertex[1] + n2[1] * distance];
+    const b2 = [next[0] + n2[0] * distance, next[1] + n2[1] * distance];
+    const denominator = e1[0] * e2[1] - e1[1] * e2[0];
+    if (Math.abs(denominator) < 0.000000000001) {
+      out.push([vertex[0] + (n1[0] + n2[0]) / 2 * distance, vertex[1] + (n1[1] + n2[1]) / 2 * distance]);
+      continue;
+    }
+    const t = ((b1[0] - a1[0]) * e2[1] - (b1[1] - a1[1]) * e2[0]) / denominator;
+    out.push([a1[0] + e1[0] * t, a1[1] + e1[1] * t]);
+  }
+  return checkedProfile(out, path);
+}
+function bevelProfile(points, radius, arcSegments, path) {
+  const count = points.length;
+  const out = [];
+  for (let index2 = 0;index2 < count; index2++) {
+    const prev = points[(index2 - 1 + count) % count], vertex = points[index2], next = points[(index2 + 1) % count];
+    const u = unit22(vertex[0] - prev[0], vertex[1] - prev[1]);
+    const v = unit22(next[0] - vertex[0], next[1] - vertex[1]);
+    const turn = u[0] * v[1] - u[1] * v[0];
+    if (turn <= 0.000000000001) {
+      out.push(vertex);
+      continue;
+    }
+    const cosInterior = Math.min(1, Math.max(-1, -(u[0] * v[0] + u[1] * v[1])));
+    const interior = Math.PI - Math.acos(cosInterior);
+    if (interior <= 0.000000001) {
+      out.push(vertex);
+      continue;
+    }
+    const half = interior / 2;
+    const lenPrev = Math.hypot(vertex[0] - prev[0], vertex[1] - prev[1]);
+    const lenNext = Math.hypot(next[0] - vertex[0], next[1] - vertex[1]);
+    const tangent = Math.min(radius / Math.tan(half), lenPrev / 2, lenNext / 2);
+    const effectiveRadius = tangent * Math.tan(half);
+    const bisector = unit22(v[0] - u[0], v[1] - u[1]);
+    const center = [vertex[0] + bisector[0] * effectiveRadius / Math.sin(half), vertex[1] + bisector[1] * effectiveRadius / Math.sin(half)];
+    const touchA = [vertex[0] - u[0] * tangent, vertex[1] - u[1] * tangent];
+    const touchB = [vertex[0] + v[0] * tangent, vertex[1] + v[1] * tangent];
+    const start = Math.atan2(touchA[1] - center[1], touchA[0] - center[0]);
+    let end = Math.atan2(touchB[1] - center[1], touchB[0] - center[0]);
+    while (end <= start)
+      end += 2 * Math.PI;
+    out.push(touchA);
+    for (let step = 1;step <= arcSegments; step++) {
+      const angle = start + (end - start) * step / arcSegments;
+      out.push([center[0] + effectiveRadius * Math.cos(angle), center[1] + effectiveRadius * Math.sin(angle)]);
+    }
+  }
+  if (out.length > SPATIAL_GEOMETRY_LIMITS.profilePoints)
+    fail2("Bevel expands the profile beyond the point budget.", path);
+  return checkedProfile(out, path);
+}
+function builder() {
+  return { positions: [], normals: [], uvs: [], indices: [], slots: [], uvsSet: false };
+}
+function vertex(b, position, normal, uv = [0, 0]) {
+  const index2 = b.positions.length / 3;
+  b.positions.push(position[0], position[1], position[2]);
+  b.normals.push(normal[0], normal[1], normal[2]);
+  b.uvs.push(uv[0], uv[1]);
+  return index2;
+}
+var DEGENERATE_AREA2 = 0.00000000000000000001;
+function triangle(b, a, c, d, slot) {
+  const pa = a * 3, pb = c * 3, pc = d * 3;
+  const ux = b.positions[pb] - b.positions[pa], uy = b.positions[pb + 1] - b.positions[pa + 1], uz = b.positions[pb + 2] - b.positions[pa + 2];
+  const vx = b.positions[pc] - b.positions[pa], vy = b.positions[pc + 1] - b.positions[pa + 1], vz = b.positions[pc + 2] - b.positions[pa + 2];
+  const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+  if (cx * cx + cy * cy + cz * cz < DEGENERATE_AREA2)
+    return;
+  b.indices.push(a, c, d);
+  b.slots.push(slot);
+}
+function triangulate(points, path) {
+  const remaining = points.map((_, index2) => index2);
+  const indices = [];
+  let guard = 0;
+  while (remaining.length > 3 && ++guard <= points.length * points.length) {
+    let clipped = false;
+    for (let index2 = 0;index2 < remaining.length; index2++) {
+      const ia = remaining[(index2 - 1 + remaining.length) % remaining.length];
+      const ib = remaining[index2];
+      const ic = remaining[(index2 + 1) % remaining.length];
+      const a = points[ia], b = points[ib], c = points[ic];
+      const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      if (cross <= 0.00000000000001)
+        continue;
+      let empty = true;
+      for (const other of remaining) {
+        if (other === ia || other === ib || other === ic)
+          continue;
+        const p = points[other];
+        const d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+        const d2 = (c[0] - b[0]) * (p[1] - b[1]) - (c[1] - b[1]) * (p[0] - b[0]);
+        const d3 = (a[0] - c[0]) * (p[1] - c[1]) - (a[1] - c[1]) * (p[0] - c[0]);
+        if (d1 >= -0.00000000000001 && d2 >= -0.00000000000001 && d3 >= -0.00000000000001) {
+          empty = false;
+          break;
+        }
+      }
+      if (empty) {
+        indices.push(ia, ib, ic);
+        remaining.splice(index2, 1);
+        clipped = true;
+        break;
+      }
+    }
+    if (!clipped)
+      fail2("Profile triangulation failed; polygon must be simple.", path);
+  }
+  if (remaining.length === 3)
+    indices.push(remaining[0], remaining[1], remaining[2]);
+  return indices;
+}
+function signedVolume(b) {
+  let volume = 0;
+  for (let index2 = 0;index2 < b.indices.length; index2 += 3) {
+    const a = b.indices[index2] * 3, c = b.indices[index2 + 1] * 3, d = b.indices[index2 + 2] * 3;
+    const ax = b.positions[a], ay = b.positions[a + 1], az = b.positions[a + 2];
+    const bx = b.positions[c], by = b.positions[c + 1], bz = b.positions[c + 2];
+    const cx = b.positions[d], cy = b.positions[d + 1], cz = b.positions[d + 2];
+    volume += (ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx)) / 6;
+  }
+  return volume;
+}
+function orientOutward(b) {
+  if (b.indices.length === 0 || signedVolume(b) >= 0)
+    return;
+  for (let index2 = 0;index2 < b.indices.length; index2 += 3) {
+    const swap = b.indices[index2 + 1];
+    b.indices[index2 + 1] = b.indices[index2 + 2];
+    b.indices[index2 + 2] = swap;
+  }
+  for (let index2 = 0;index2 < b.normals.length; index2++)
+    b.normals[index2] = -b.normals[index2];
+}
+function freezeMesh(b) {
+  const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
+  for (let index2 = 0;index2 < b.positions.length; index2 += 3) {
+    for (let axisIndex = 0;axisIndex < 3; axisIndex++) {
+      const value = b.positions[index2 + axisIndex];
+      if (!Number.isFinite(value) || Math.abs(value) > SPATIAL_GEOMETRY_LIMITS.coordinate)
+        fail2("Evaluated geometry exceeds the coordinate bound.");
+      low[axisIndex] = Math.min(low[axisIndex], value);
+      high[axisIndex] = Math.max(high[axisIndex], value);
+    }
+  }
+  if (b.positions.length === 0)
+    fail2("Evaluated geometry produced no vertices.");
+  const triangles = b.indices.length / 3;
+  return deepFreezeJson({
+    positions: Object.freeze(b.positions),
+    normals: Object.freeze(b.normals),
+    uvs: Object.freeze(b.uvs),
+    indices: Object.freeze(b.indices),
+    slots: Object.freeze(b.slots),
+    bounds: { min: Object.freeze(low), max: Object.freeze(high) },
+    vertices: b.positions.length / 3,
+    triangles,
+    uvsProjected: b.uvsSet
+  });
+}
+function boxMesh(size) {
+  const b = builder();
+  const [hx, hy, hz] = [size[0] / 2, size[1] / 2, size[2] / 2];
+  const faces = [
+    [[1, 0, 0], [hx, -hy, -hz], [hx, hy, -hz], [hx, hy, hz], [hx, -hy, hz]],
+    [[-1, 0, 0], [-hx, -hy, hz], [-hx, hy, hz], [-hx, hy, -hz], [-hx, -hy, -hz]],
+    [[0, 1, 0], [-hx, hy, -hz], [-hx, hy, hz], [hx, hy, hz], [hx, hy, -hz]],
+    [[0, -1, 0], [-hx, -hy, hz], [-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz]],
+    [[0, 0, 1], [-hx, -hy, hz], [hx, -hy, hz], [hx, hy, hz], [-hx, hy, hz]],
+    [[0, 0, -1], [hx, -hy, -hz], [-hx, -hy, -hz], [-hx, hy, -hz], [hx, hy, -hz]]
+  ];
+  for (const [normal, ...corners] of faces) {
+    const uv = [[0, 0], [1, 0], [1, 1], [0, 1]];
+    const base = corners.map((corner, index2) => vertex(b, corner, normal, uv[index2]));
+    triangle(b, base[0], base[1], base[2], 0);
+    triangle(b, base[0], base[2], base[3], 0);
+  }
+  return b;
+}
+function cylinderMesh(radius, height, seg) {
+  const b = builder(), half = height / 2;
+  for (let index2 = 0;index2 <= seg; index2++) {
+    const angle = 2 * Math.PI * index2 / seg, c = Math.cos(angle), s = Math.sin(angle);
+    vertex(b, [radius * c, -half, radius * s], [c, 0, s], [index2 / seg, 0]);
+    vertex(b, [radius * c, half, radius * s], [c, 0, s], [index2 / seg, 1]);
+  }
+  for (let index2 = 0;index2 < seg; index2++) {
+    const a = index2 * 2, c = index2 * 2 + 2;
+    triangle(b, a, a + 1, c + 1, 0);
+    triangle(b, a, c + 1, c, 0);
+  }
+  for (const [y, normal] of [[half, 1], [-half, -1]]) {
+    const center = vertex(b, [0, y, 0], [0, normal, 0], [0.5, 0.5]);
+    const ring = [];
+    for (let index2 = 0;index2 <= seg; index2++) {
+      const angle = 2 * Math.PI * index2 / seg;
+      ring.push(vertex(b, [radius * Math.cos(angle), y, radius * Math.sin(angle)], [0, normal, 0], [0.5 + 0.5 * Math.cos(angle), 0.5 + 0.5 * Math.sin(angle)]));
+    }
+    for (let index2 = 0;index2 < seg; index2++) {
+      if (normal === 1)
+        triangle(b, center, ring[index2 + 1], ring[index2], 0);
+      else
+        triangle(b, center, ring[index2], ring[index2 + 1], 0);
+    }
+  }
+  return b;
+}
+function sphereMesh(radius, seg) {
+  const b = builder(), latitudes = Math.max(2, Math.floor(seg / 2));
+  const top = vertex(b, [0, radius, 0], [0, 1, 0], [0.5, 1]);
+  const rings = [];
+  for (let lat = 1;lat < latitudes; lat++) {
+    const phi = Math.PI / 2 - Math.PI * lat / latitudes, y = radius * Math.sin(phi), ringRadius = radius * Math.cos(phi);
+    const ring = [];
+    for (let index2 = 0;index2 <= seg; index2++) {
+      const angle = 2 * Math.PI * index2 / seg;
+      const position = [ringRadius * Math.cos(angle), y, ringRadius * Math.sin(angle)];
+      ring.push(vertex(b, position, [position[0] / radius, position[1] / radius, position[2] / radius], [index2 / seg, lat / latitudes]));
+    }
+    rings.push(ring);
+  }
+  const bottom = vertex(b, [0, -radius, 0], [0, -1, 0], [0.5, 0]);
+  for (let index2 = 0;index2 < seg; index2++) {
+    triangle(b, top, rings[0][index2 + 1], rings[0][index2], 0);
+    triangle(b, bottom, rings[rings.length - 1][index2], rings[rings.length - 1][index2 + 1], 0);
+  }
+  for (let lat = 0;lat + 1 < rings.length; lat++) {
+    for (let index2 = 0;index2 < seg; index2++) {
+      const a = rings[lat][index2], c = rings[lat][index2 + 1], d = rings[lat + 1][index2], e = rings[lat + 1][index2 + 1];
+      triangle(b, a, c, e, 0);
+      triangle(b, a, e, d, 0);
+    }
+  }
+  return b;
+}
+function extrudeMesh(profile, depth, sideSlot, capSlot, path) {
+  const b = builder(), half = depth / 2, count = profile.length;
+  const tris = triangulate(profile, path);
+  const front = profile.map(([x, y]) => vertex(b, [x, y, half], [0, 0, 1], [x, y]));
+  const back = profile.map(([x, y]) => vertex(b, [x, y, -half], [0, 0, -1], [x, y]));
+  for (let index2 = 0;index2 < tris.length; index2 += 3) {
+    triangle(b, front[tris[index2]], front[tris[index2 + 1]], front[tris[index2 + 2]], capSlot);
+    triangle(b, back[tris[index2]], back[tris[index2 + 2]], back[tris[index2 + 1]], capSlot);
+  }
+  let perimeter = 0;
+  const lengths = profile.map((point, index2) => {
+    const next = profile[(index2 + 1) % count];
+    const length = Math.hypot(next[0] - point[0], next[1] - point[1]);
+    perimeter += length;
+    return length;
+  });
+  let distance = 0;
+  for (let index2 = 0;index2 < count; index2++) {
+    const a = profile[index2], c = profile[(index2 + 1) % count];
+    const edge = unit22(c[0] - a[0], c[1] - a[1]);
+    const normal = [edge[1], -edge[0], 0];
+    const u0 = perimeter === 0 ? 0 : distance / perimeter;
+    distance += lengths[index2];
+    const u1 = perimeter === 0 ? 0 : distance / perimeter;
+    const v0 = vertex(b, [a[0], a[1], -half], normal, [u0, 0]);
+    const v1 = vertex(b, [c[0], c[1], -half], normal, [u1, 0]);
+    const v2 = vertex(b, [c[0], c[1], half], normal, [u1, 1]);
+    const v3 = vertex(b, [a[0], a[1], half], normal, [u0, 1]);
+    triangle(b, v0, v1, v2, sideSlot);
+    triangle(b, v0, v2, v3, sideSlot);
+  }
+  orientOutward(b);
+  return b;
+}
+function revolveMesh(profile, seg, capSlot, path) {
+  const b = builder(), count = profile.length;
+  if (profile.some(([r]) => r < -0.000000000001))
+    fail2("Revolve profiles must stay at nonnegative radius.", path);
+  const rings = [];
+  for (let point = 0;point < count; point++) {
+    const [r, y] = profile[point];
+    const prev = profile[(point - 1 + count) % count], next = profile[(point + 1) % count];
+    const tangent = unit22(next[0] - prev[0], next[1] - prev[1]);
+    const outward = unit22(tangent[1], -tangent[0]);
+    const ring = [];
+    for (let index2 = 0;index2 <= seg; index2++) {
+      const angle = 2 * Math.PI * index2 / seg, c = Math.cos(angle), s = Math.sin(angle);
+      ring.push(vertex(b, [r * c, y, r * s], [outward[0] * c, outward[1], outward[0] * s], [index2 / seg, point / (count - 1)]));
+    }
+    rings.push(ring);
+  }
+  for (let point = 0;point < count; point++) {
+    const next = (point + 1) % count;
+    for (let index2 = 0;index2 < seg; index2++) {
+      const a = rings[point][index2], c = rings[point][index2 + 1], d = rings[next][index2], e = rings[next][index2 + 1];
+      triangle(b, a, d, e, capSlot);
+      triangle(b, a, e, c, capSlot);
+    }
+  }
+  orientOutward(b);
+  return b;
+}
+function sweepMesh(profile, path, slotPath) {
+  const b = builder(), count = profile.length;
+  const points = path.map((point) => [point[0], point[1], point[2]]);
+  for (let index2 = 0;index2 + 1 < points.length; index2++) {
+    const a = points[index2], c = points[index2 + 1];
+    if (Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]) < 0.000000001)
+      fail2("Sweep path requires distinct consecutive points.", slotPath);
+  }
+  const tangents = points.map((_, index2) => {
+    const a = points[Math.max(0, index2 - 1)], c = points[Math.min(points.length - 1, index2 + 1)];
+    const length = Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
+    return [(c[0] - a[0]) / length, (c[1] - a[1]) / length, (c[2] - a[2]) / length];
+  });
+  let normal = Math.abs(tangents[0][1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const rings = [];
+  for (let station = 0;station < points.length; station++) {
+    const t = tangents[station];
+    const projected = [
+      normal[0] - t[0] * (normal[0] * t[0] + normal[1] * t[1] + normal[2] * t[2]),
+      normal[1] - t[1] * (normal[0] * t[0] + normal[1] * t[1] + normal[2] * t[2]),
+      normal[2] - t[2] * (normal[0] * t[0] + normal[1] * t[1] + normal[2] * t[2])
+    ];
+    const nLength = Math.hypot(...projected);
+    if (nLength < 0.000000001)
+      fail2("Sweep path curvature degenerates the transport frame.", slotPath);
+    normal = [projected[0] / nLength, projected[1] / nLength, projected[2] / nLength];
+    const binormal = [
+      t[1] * normal[2] - t[2] * normal[1],
+      t[2] * normal[0] - t[0] * normal[2],
+      t[0] * normal[1] - t[1] * normal[0]
+    ];
+    const ring = [];
+    const center = points[station];
+    for (let point = 0;point < count; point++) {
+      const prev = profile[(point - 1 + count) % count], next = profile[(point + 1) % count];
+      const tangent2 = unit22(next[0] - prev[0], next[1] - prev[1]);
+      const outward = unit22(tangent2[1], -tangent2[0]);
+      const [px, py] = profile[point];
+      ring.push(vertex(b, [
+        center[0] + normal[0] * px + binormal[0] * py,
+        center[1] + normal[1] * px + binormal[1] * py,
+        center[2] + normal[2] * px + binormal[2] * py
+      ], [
+        normal[0] * outward[0] + binormal[0] * outward[1],
+        normal[1] * outward[0] + binormal[1] * outward[1],
+        normal[2] * outward[0] + binormal[2] * outward[1]
+      ], [point / count, station / (points.length - 1)]));
+    }
+    rings.push(ring);
+  }
+  for (let station = 0;station + 1 < rings.length; station++) {
+    for (let point = 0;point < count; point++) {
+      const next = (point + 1) % count;
+      const a = rings[station][point], c = rings[station][next], d = rings[station + 1][point], e = rings[station + 1][next];
+      triangle(b, a, c, e, 0);
+      triangle(b, a, e, d, 0);
+    }
+  }
+  const tris = triangulate(profile, slotPath);
+  for (const [station, direction] of [[0, -1], [points.length - 1, 1]]) {
+    const t = tangents[station];
+    const capNormal = [t[0] * direction, t[1] * direction, t[2] * direction];
+    const positions = rings[station].map((index2) => b.positions.slice(index2 * 3, index2 * 3 + 3));
+    const cap = positions.map((position) => vertex(b, position, capNormal));
+    const pa = positions[tris[0]], pb = positions[tris[1]], pc = positions[tris[2]];
+    const cx = (pb[1] - pa[1]) * (pc[2] - pa[2]) - (pb[2] - pa[2]) * (pc[1] - pa[1]);
+    const cy = (pb[2] - pa[2]) * (pc[0] - pa[0]) - (pb[0] - pa[0]) * (pc[2] - pa[2]);
+    const cz = (pb[0] - pa[0]) * (pc[1] - pa[1]) - (pb[1] - pa[1]) * (pc[0] - pa[0]);
+    const flip = cx * capNormal[0] + cy * capNormal[1] + cz * capNormal[2] < 0;
+    for (let index2 = 0;index2 < tris.length; index2 += 3) {
+      if (flip)
+        triangle(b, cap[tris[index2]], cap[tris[index2 + 2]], cap[tris[index2 + 1]], 0);
+      else
+        triangle(b, cap[tris[index2]], cap[tris[index2 + 1]], cap[tris[index2 + 2]], 0);
+    }
+  }
+  orientOutward(b);
+  return b;
+}
+function loftMesh(bottom, top, height, path) {
+  const b = builder(), count = bottom.length;
+  if (top.length !== count)
+    fail2("Loft profiles must share one point count.", path);
+  const lower = bottom.map(([x, y]) => vertex(b, [x, 0, y], [0, -1, 0], [x, y]));
+  const upper = top.map(([x, y]) => vertex(b, [x, height, y], [0, 1, 0], [x, y]));
+  for (const [tris, ring, flip] of [[triangulate(bottom, path), lower, true], [triangulate(top, path), upper, false]]) {
+    for (let index2 = 0;index2 < tris.length; index2 += 3) {
+      if (flip)
+        triangle(b, ring[tris[index2]], ring[tris[index2 + 2]], ring[tris[index2 + 1]], 0);
+      else
+        triangle(b, ring[tris[index2]], ring[tris[index2 + 1]], ring[tris[index2 + 2]], 0);
+    }
+  }
+  const centroid = bottom.reduce((acc, point) => [acc[0] + point[0] / count, acc[1] + point[1] / count], [0, 0]);
+  for (let index2 = 0;index2 < count; index2++) {
+    const next = (index2 + 1) % count;
+    const a = bottom[index2], c = bottom[next], d = top[index2], e = top[next];
+    const ux = c[0] - a[0], uz = c[1] - a[1];
+    const wx = d[0] - a[0], wy = height, wz = d[1] - a[1];
+    let nx = -(uz * wy), ny = uz * wx - ux * wz, nz = ux * wy;
+    const midX = (a[0] + c[0] + d[0] + e[0]) / 4 - centroid[0], midZ = (a[1] + c[1] + d[1] + e[1]) / 4 - centroid[1];
+    const inward = nx * midX + nz * midZ < 0;
+    if (inward) {
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
+    }
+    const nLength = Math.hypot(nx, ny, nz) || 1;
+    const normal = [nx / nLength, ny / nLength, nz / nLength];
+    const v0 = vertex(b, [a[0], 0, a[1]], normal), v1 = vertex(b, [c[0], 0, c[1]], normal);
+    const v2 = vertex(b, [e[0], height, e[1]], normal), v3 = vertex(b, [d[0], height, d[1]], normal);
+    if (inward) {
+      triangle(b, v0, v3, v2, 0);
+      triangle(b, v0, v2, v1, 0);
+    } else {
+      triangle(b, v0, v1, v2, 0);
+      triangle(b, v0, v2, v3, 0);
+    }
+  }
+  orientOutward(b);
+  return b;
+}
+function transformMesh(input, transform) {
+  const b = builder();
+  const matrix2 = composeTransform(transform);
+  const inverse = invertTransform(matrix2);
+  for (let index2 = 0;index2 < input.positions.length; index2 += 3) {
+    const position = transformPoint(matrix2, [input.positions[index2], input.positions[index2 + 1], input.positions[index2 + 2]]);
+    const n0 = input.normals[index2], n1 = input.normals[index2 + 1], n2 = input.normals[index2 + 2];
+    const normal = [
+      inverse[0] * n0 + inverse[1] * n1 + inverse[2] * n2,
+      inverse[4] * n0 + inverse[5] * n1 + inverse[6] * n2,
+      inverse[8] * n0 + inverse[9] * n1 + inverse[10] * n2
+    ];
+    const length = Math.hypot(normal[0], normal[1], normal[2]) || 1;
+    vertex(b, position, [normal[0] / length, normal[1] / length, normal[2] / length], [input.uvs[index2 / 3 * 2], input.uvs[index2 / 3 * 2 + 1]]);
+  }
+  b.indices.push(...input.indices);
+  b.slots.push(...input.slots);
+  b.uvsSet = input.uvsSet;
+  return b;
+}
+function mirrorMesh(input, axisIndex, offset) {
+  const b = builder();
+  for (let index2 = 0;index2 < input.positions.length; index2 += 3) {
+    const position = [input.positions[index2], input.positions[index2 + 1], input.positions[index2 + 2]];
+    const normal = [input.normals[index2], input.normals[index2 + 1], input.normals[index2 + 2]];
+    position[axisIndex] = 2 * offset - position[axisIndex];
+    normal[axisIndex] = -normal[axisIndex];
+    vertex(b, position, normal, [input.uvs[index2 / 3 * 2], input.uvs[index2 / 3 * 2 + 1]]);
+  }
+  for (let index2 = 0;index2 < input.indices.length; index2 += 3) {
+    triangle(b, input.indices[index2], input.indices[index2 + 2], input.indices[index2 + 1], input.slots[index2 / 3]);
+  }
+  b.uvsSet = input.uvsSet;
+  return b;
+}
+function arrayMesh(input, count, step) {
+  const b = builder(), vertices = input.positions.length / 3;
+  for (let copy = 0;copy < count; copy++) {
+    const offset = [copy * step[0], copy * step[1], copy * step[2]];
+    for (let index2 = 0;index2 < input.positions.length; index2 += 3) {
+      vertex(b, [input.positions[index2] + offset[0], input.positions[index2 + 1] + offset[1], input.positions[index2 + 2] + offset[2]], [input.normals[index2], input.normals[index2 + 1], input.normals[index2 + 2]], [input.uvs[index2 / 3 * 2], input.uvs[index2 / 3 * 2 + 1]]);
+    }
+    for (let index2 = 0;index2 < input.indices.length; index2 += 3) {
+      triangle(b, input.indices[index2] + copy * vertices, input.indices[index2 + 1] + copy * vertices, input.indices[index2 + 2] + copy * vertices, input.slots[index2 / 3]);
+    }
+  }
+  b.uvsSet = input.uvsSet;
+  return b;
+}
+function mergeMeshes(inputs) {
+  const b = builder();
+  for (const input of inputs) {
+    const base = input.positions.length === 0 ? 0 : b.positions.length / 3;
+    for (let index2 = 0;index2 < input.positions.length; index2 += 3) {
+      vertex(b, [input.positions[index2], input.positions[index2 + 1], input.positions[index2 + 2]], [input.normals[index2], input.normals[index2 + 1], input.normals[index2 + 2]], [input.uvs[index2 / 3 * 2], input.uvs[index2 / 3 * 2 + 1]]);
+    }
+    for (let index2 = 0;index2 < input.indices.length; index2 += 3) {
+      b.indices.push(input.indices[index2] + base, input.indices[index2 + 1] + base, input.indices[index2 + 2] + base);
+      b.slots.push(input.slots[index2 / 3]);
+    }
+    b.uvsSet = b.uvsSet || input.uvsSet;
+  }
+  return b;
+}
+var PLANE_EPS = 0.000000001;
+function trianglePlane(b, index2) {
+  const a = b.indices[index2] * 3, c = b.indices[index2 + 1] * 3, d = b.indices[index2 + 2] * 3;
+  const ux = b.positions[c] - b.positions[a], uy = b.positions[c + 1] - b.positions[a + 1], uz = b.positions[c + 2] - b.positions[a + 2];
+  const vx = b.positions[d] - b.positions[a], vy = b.positions[d + 1] - b.positions[a + 1], vz = b.positions[d + 2] - b.positions[a + 2];
+  const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+  const length = Math.hypot(nx, ny, nz);
+  if (length < 0.000000000001)
+    return null;
+  const normal = [nx / length, ny / length, nz / length];
+  return { normal, d: normal[0] * b.positions[a] + normal[1] * b.positions[a + 1] + normal[2] * b.positions[a + 2] };
+}
+function uniquePlanes(b, path) {
+  const planes = [];
+  for (let index2 = 0;index2 < b.indices.length; index2 += 3) {
+    const plane = trianglePlane(b, index2);
+    if (plane === null)
+      continue;
+    if (!planes.some((other) => Math.abs(other.d - plane.d) < 0.0000001 && Math.abs(other.normal[0] - plane.normal[0]) < 0.0000001 && Math.abs(other.normal[1] - plane.normal[1]) < 0.0000001 && Math.abs(other.normal[2] - plane.normal[2]) < 0.0000001))
+      planes.push(plane);
+    if (planes.length > SPATIAL_GEOMETRY_LIMITS.booleanPlanes)
+      fail2("Hull boolean inputs may carry at most 64 support planes.", path);
+  }
+  return Object.freeze(planes);
+}
+function assertHull(b, planes, path) {
+  let extent = 1;
+  for (let index2 = 0;index2 < b.positions.length; index2++)
+    extent = Math.max(extent, Math.abs(b.positions[index2]));
+  const epsilon = 0.0000001 * extent;
+  for (const plane of planes) {
+    for (let index2 = 0;index2 < b.positions.length; index2 += 3) {
+      const signed = plane.normal[0] * b.positions[index2] + plane.normal[1] * b.positions[index2 + 1] + plane.normal[2] * b.positions[index2 + 2] - plane.d;
+      if (signed > epsilon)
+        fail2("Boolean inputs must be closed hull meshes; a vertex lies outside a support plane.", path);
+    }
+  }
+}
+function clipFragment(fragment, plane, keepInside) {
+  const output = [], uvOut = [];
+  const signed = fragment.positions.map((position) => plane.normal[0] * position[0] + plane.normal[1] * position[1] + plane.normal[2] * position[2] - plane.d);
+  const inside = signed.map((value) => keepInside ? value <= PLANE_EPS : value >= -PLANE_EPS);
+  for (let index2 = 0;index2 < fragment.positions.length; index2++) {
+    const next = (index2 + 1) % fragment.positions.length;
+    const a = fragment.positions[index2], c = fragment.positions[next];
+    if (inside[index2]) {
+      output.push(a);
+      uvOut.push(fragment.uvs[index2]);
+    }
+    if (inside[index2] !== inside[next]) {
+      const t = signed[index2] / (signed[index2] - signed[next]);
+      output.push([a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t, a[2] + (c[2] - a[2]) * t]);
+      uvOut.push([
+        fragment.uvs[index2][0] + (fragment.uvs[next][0] - fragment.uvs[index2][0]) * t,
+        fragment.uvs[index2][1] + (fragment.uvs[next][1] - fragment.uvs[index2][1]) * t
+      ]);
+    }
+  }
+  return output.length >= 3 ? { positions: output, uvs: uvOut, slot: fragment.slot } : null;
+}
+function partitionTriangles(input, planes) {
+  const result = [];
+  for (let index2 = 0;index2 < input.indices.length; index2 += 3) {
+    const positions = [0, 1, 2].map((part) => input.positions.slice(input.indices[index2 + part] * 3, input.indices[index2 + part] * 3 + 3));
+    const uvs = [0, 1, 2].map((part) => [input.uvs[input.indices[index2 + part] * 2], input.uvs[input.indices[index2 + part] * 2 + 1]]);
+    let fragments = [{ positions, uvs, slot: input.slots[index2 / 3] }];
+    for (const plane of planes) {
+      const next = [];
+      for (const fragment of fragments) {
+        const inner = clipFragment(fragment, plane, true);
+        const outer = clipFragment(fragment, plane, false);
+        if (inner !== null)
+          next.push(inner);
+        if (outer !== null)
+          next.push(outer);
+      }
+      fragments = next;
+    }
+    result.push(...fragments);
+  }
+  return result;
+}
+function fragmentInside(planes, fragment) {
+  const count = fragment.positions.length;
+  const centroid = [
+    fragment.positions.reduce((sum, p) => sum + p[0], 0) / count,
+    fragment.positions.reduce((sum, p) => sum + p[1], 0) / count,
+    fragment.positions.reduce((sum, p) => sum + p[2], 0) / count
+  ];
+  return planes.every((plane) => plane.normal[0] * centroid[0] + plane.normal[1] * centroid[1] + plane.normal[2] * centroid[2] - plane.d <= PLANE_EPS);
+}
+function emitFragments(b, fragments, flip) {
+  for (const fragment of fragments) {
+    const normal = [0, 0, 0];
+    for (let index2 = 0;index2 < fragment.positions.length; index2++) {
+      const a = fragment.positions[index2], c = fragment.positions[(index2 + 1) % fragment.positions.length];
+      normal[0] += (a[1] - c[1]) * (a[2] + c[2]);
+      normal[1] += (a[2] - c[2]) * (a[0] + c[0]);
+      normal[2] += (a[0] - c[0]) * (a[1] + c[1]);
+    }
+    const length = Math.hypot(normal[0], normal[1], normal[2]);
+    const unit4 = length < 0.000000000001 ? [0, 1, 0] : [normal[0] / length, normal[1] / length, normal[2] / length];
+    const oriented = flip ? [-unit4[0], -unit4[1], -unit4[2]] : unit4;
+    const indices = fragment.positions.map((position, index2) => vertex(b, position, oriented, fragment.uvs[index2]));
+    for (let index2 = 1;index2 + 1 < indices.length; index2++) {
+      if (flip)
+        triangle(b, indices[0], indices[index2 + 1], indices[index2], fragment.slot);
+      else
+        triangle(b, indices[0], indices[index2], indices[index2 + 1], fragment.slot);
+    }
+  }
+}
+function booleanMesh(input, meshes, path) {
+  const a = meshes.get(input.a);
+  const cutters = input.operation === "difference" ? input.cutters.map((id) => meshes.get(id)) : [meshes.get(input.b)];
+  for (const [index2, mesh] of [a, ...cutters].entries()) {
+    if (mesh.indices.length / 3 > SPATIAL_GEOMETRY_LIMITS.booleanInputTriangles) {
+      fail2("Boolean inputs exceed the bounded simple-input triangle budget.", `${path}.${index2}`);
+    }
+  }
+  const planesA = uniquePlanes(a, path);
+  const planesC = cutters.map((cutter) => uniquePlanes(cutter, path));
+  assertHull(a, planesA, path);
+  cutters.forEach((cutter, index2) => assertHull(cutter, planesC[index2], path));
+  const output = builder();
+  if (input.operation === "difference") {
+    const allCutterPlanes = planesC.flat();
+    const kept = partitionTriangles(a, allCutterPlanes).filter((piece) => !planesC.some((planes) => fragmentInside(planes, piece)));
+    emitFragments(output, kept, false);
+    for (const [index2, cutter] of cutters.entries()) {
+      const caps = partitionTriangles(cutter, planesA).filter((piece) => fragmentInside(planesA, piece) && !planesC.some((other, otherIndex) => otherIndex !== index2 && fragmentInside(other, piece)));
+      emitFragments(output, caps, true);
+    }
+  } else {
+    const planesB = planesC[0], b = cutters[0];
+    const piecesA = partitionTriangles(a, planesB), piecesB = partitionTriangles(b, planesA);
+    if (input.operation === "intersection") {
+      emitFragments(output, piecesA.filter((piece) => fragmentInside(planesB, piece)), false);
+      emitFragments(output, piecesB.filter((piece) => fragmentInside(planesA, piece)), false);
+    } else {
+      emitFragments(output, piecesA.filter((piece) => !fragmentInside(planesB, piece)), false);
+      emitFragments(output, piecesB.filter((piece) => !fragmentInside(planesA, piece)), false);
+    }
+  }
+  output.uvsSet = [a, ...cutters].some((mesh) => mesh.uvsSet);
+  if (output.indices.length === 0)
+    fail2("Boolean result is empty; the inputs do not overlap as the operation requires.", path);
+  orientOutward(output);
+  return output;
+}
+var AXIS_INDEX = { x: 0, y: 1, z: 2 };
+function projectUvs(input, projection2) {
+  const b = builder();
+  b.positions.push(...input.positions);
+  b.normals.push(...input.normals);
+  b.indices.push(...input.indices);
+  b.slots.push(...input.slots);
+  for (let index2 = 0;index2 < input.positions.length; index2 += 3) {
+    const p = [input.positions[index2], input.positions[index2 + 1], input.positions[index2 + 2]];
+    const n = [input.normals[index2], input.normals[index2 + 1], input.normals[index2 + 2]];
+    let uv;
+    if (projection2.mode === "box") {
+      const axisIndex = Math.abs(n[0]) >= Math.abs(n[1]) && Math.abs(n[0]) >= Math.abs(n[2]) ? 0 : Math.abs(n[1]) >= Math.abs(n[2]) ? 1 : 2;
+      const pair = [0, 1, 2].filter((part) => part !== axisIndex);
+      uv = [p[pair[0]] * projection2.scale, p[pair[1]] * projection2.scale];
+    } else if (projection2.mode === "planar") {
+      const pair = [0, 1, 2].filter((part) => part !== AXIS_INDEX[projection2.axis]);
+      uv = [p[pair[0]] * projection2.scale + (projection2.offset?.[0] ?? 0), p[pair[1]] * projection2.scale + (projection2.offset?.[1] ?? 0)];
+    } else {
+      const axisIndex = AXIS_INDEX[projection2.axis];
+      const pair = [0, 1, 2].filter((part) => part !== axisIndex);
+      uv = [Math.atan2(p[pair[1]], p[pair[0]]) / (2 * Math.PI) + 0.5, p[axisIndex] * projection2.scale];
+    }
+    b.uvs.push(uv[0], uv[1]);
+  }
+  b.uvsSet = true;
+  return b;
+}
+var PROFILE_KINDS = new Set(["profile", "rect", "ellipse", "inset", "bevel"]);
+function nodeDependencies(node) {
+  switch (node.kind) {
+    case "inset":
+    case "bevel":
+    case "transform":
+    case "mirror":
+    case "array":
+    case "material-slot":
+    case "uv-project":
+      return [node.input];
+    case "extrude":
+    case "revolve":
+    case "sweep":
+      return [node.profile];
+    case "loft":
+      return [node.bottom, node.top];
+    case "merge":
+      return node.inputs;
+    case "boolean":
+      return node.operation === "difference" ? [node.a, ...node.cutters] : [node.a, node.b];
+    default:
+      return [];
+  }
+}
+function parseSpatialGeometryGraph(input) {
+  const graph = parseSpatialValue(SpatialGeometryGraphSchema, input, "geometry graph");
+  const nodesById = new Map;
+  for (const node of graph.nodes) {
+    if (nodesById.has(node.id))
+      fail2(`Duplicate geometry node ${node.id}.`, "geometry.nodes");
+    nodesById.set(node.id, node);
+  }
+  for (const node of graph.nodes) {
+    for (const dependency of nodeDependencies(node)) {
+      const target = nodesById.get(dependency);
+      if (target === undefined)
+        fail2(`Geometry node ${node.id} references missing ${dependency}.`, `geometry.nodes.${node.id}`);
+      const expectsProfile = node.kind === "inset" || node.kind === "bevel" || node.kind === "extrude" || node.kind === "revolve" || node.kind === "sweep" || node.kind === "loft";
+      if (expectsProfile !== PROFILE_KINDS.has(target.kind)) {
+        fail2(`Geometry node ${node.id} wires a ${expectsProfile ? "mesh" : "profile"} output into a ${expectsProfile ? "profile" : "mesh"} input.`, `geometry.nodes.${node.id}`);
+      }
+    }
+  }
+  const order = spatialTopologicalIds(new Map(graph.nodes.map((node) => [node.id, nodeDependencies(node)])), "geometry graph");
+  const depth = new Map;
+  for (const id of order) {
+    const node = nodesById.get(id);
+    const value = 1 + Math.max(0, ...nodeDependencies(node).map((dependency) => depth.get(dependency)));
+    if (value > SPATIAL_GEOMETRY_LIMITS.depth)
+      fail2(`Geometry graph exceeds the ${SPATIAL_GEOMETRY_LIMITS.depth}-node evaluation depth bound.`, `geometry.nodes.${id}`);
+    depth.set(id, value);
+  }
+  if (!nodesById.has(graph.output))
+    fail2("Geometry output names a missing node.", "geometry.output");
+  if (PROFILE_KINDS.has(nodesById.get(graph.output).kind))
+    fail2("Geometry output must evaluate to a mesh, not a profile.", "geometry.output");
+  return deepFreezeJson(graph);
+}
+function profileBounds(points) {
+  const xs = points.map((point) => point[0]), ys = points.map((point) => point[1]);
+  return { min: [Math.min(...xs), Math.min(...ys), 0], max: [Math.max(...xs), Math.max(...ys), 0] };
+}
+function boundsUnion(a, b) {
+  return {
+    min: [Math.min(a.min[0], b.min[0]), Math.min(a.min[1], b.min[1]), Math.min(a.min[2], b.min[2])],
+    max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1]), Math.max(a.max[2], b.max[2])]
+  };
+}
+function boundsOffset(bounds, delta) {
+  return {
+    min: [bounds.min[0] + delta[0], bounds.min[1] + delta[1], bounds.min[2] + delta[2]],
+    max: [bounds.max[0] + delta[0], bounds.max[1] + delta[1], bounds.max[2] + delta[2]]
+  };
+}
+function inflateBounds(bounds, radius) {
+  return {
+    min: [bounds.min[0] - radius, bounds.min[1] - radius, bounds.min[2] - radius],
+    max: [bounds.max[0] + radius, bounds.max[1] + radius, bounds.max[2] + radius]
+  };
+}
+function estimateNode(node, meshEstimates, profileEstimates, path) {
+  const mesh = (id) => meshEstimates.get(id);
+  const profile = (id) => profileEstimates.get(id);
+  switch (node.kind) {
+    case "profile":
+      return { points: node.points.length, bounds: profileBounds(node.points) };
+    case "rect":
+      return { points: 4, bounds: { min: [-node.width / 2, -node.height / 2, 0], max: [node.width / 2, node.height / 2, 0] } };
+    case "ellipse":
+      return { points: node.segments, bounds: { min: [-node.radiusX, -node.radiusY, 0], max: [node.radiusX, node.radiusY, 0] } };
+    case "inset":
+      return { points: profile(node.input).points, bounds: profile(node.input).bounds };
+    case "bevel": {
+      const source = profile(node.input);
+      return { points: source.points * (node.segments + 1), bounds: source.bounds };
+    }
+    case "box": {
+      const [x, y, z5] = [node.size[0] / 2, node.size[1] / 2, node.size[2] / 2];
+      return { vertices: 24, triangles: 12, planes: 6, bounds: { min: [-x, -y, -z5], max: [x, y, z5] } };
+    }
+    case "cylinder":
+      return {
+        vertices: 4 * node.segments + 6,
+        triangles: 4 * node.segments,
+        planes: node.segments + 2,
+        bounds: { min: [-node.radius, -node.height / 2, -node.radius], max: [node.radius, node.height / 2, node.radius] }
+      };
+    case "sphere": {
+      const latitudes = Math.max(2, Math.floor(node.segments / 2));
+      return {
+        vertices: (node.segments + 1) * (latitudes - 1) + 2,
+        triangles: 2 * node.segments * latitudes,
+        planes: node.segments * latitudes,
+        bounds: { min: [-node.radius, -node.radius, -node.radius], max: [node.radius, node.radius, node.radius] }
+      };
+    }
+    case "extrude": {
+      const p = profile(node.profile), count = p.points;
+      return {
+        vertices: 6 * count,
+        triangles: 4 * count,
+        planes: count + 2,
+        bounds: { min: [p.bounds.min[0], p.bounds.min[1], -node.depth / 2], max: [p.bounds.max[0], p.bounds.max[1], node.depth / 2] }
+      };
+    }
+    case "revolve": {
+      const p = profile(node.profile);
+      const radius = Math.max(Math.abs(p.bounds.min[0]), Math.abs(p.bounds.max[0]));
+      return {
+        vertices: p.points * (node.segments + 1),
+        triangles: 4 * p.points * node.segments,
+        planes: p.points * node.segments + p.points,
+        bounds: { min: [-radius, p.bounds.min[1], -radius], max: [radius, p.bounds.max[1], radius] }
+      };
+    }
+    case "sweep": {
+      const p = profile(node.profile);
+      const radius = Math.hypot(Math.max(Math.abs(p.bounds.min[0]), Math.abs(p.bounds.max[0])), Math.max(Math.abs(p.bounds.min[1]), Math.abs(p.bounds.max[1])));
+      const pathBounds = node.path.reduce((acc, point) => boundsUnion(acc, { min: point, max: point }), { min: node.path[0], max: node.path[0] });
+      const count = node.path.length;
+      return { vertices: p.points * count + 2 * p.points, triangles: 4 * p.points * count, planes: p.points * count + 2, bounds: inflateBounds(pathBounds, radius) };
+    }
+    case "loft": {
+      const a = profile(node.bottom), c = profile(node.top), count = a.points + c.points;
+      const bounds = boundsUnion({ min: [a.bounds.min[0], 0, a.bounds.min[1]], max: [a.bounds.max[0], 0, a.bounds.max[1]] }, { min: [c.bounds.min[0], node.height, c.bounds.min[1]], max: [c.bounds.max[0], node.height, c.bounds.max[1]] });
+      return { vertices: 7 * count, triangles: 4 * count, planes: count + 2, bounds };
+    }
+    case "transform": {
+      const source = mesh(node.input);
+      return { ...source, bounds: transformBounds(composeTransform(node.transform), source.bounds) };
+    }
+    case "mirror": {
+      const source = mesh(node.input), index2 = AXIS_INDEX[node.axis];
+      const bounds = { min: [...source.bounds.min], max: [...source.bounds.max] };
+      const low = 2 * node.offset - bounds.max[index2], high = 2 * node.offset - bounds.min[index2];
+      bounds.min[index2] = low;
+      bounds.max[index2] = high;
+      return { ...source, bounds };
+    }
+    case "array": {
+      const source = mesh(node.input);
+      let bounds = source.bounds;
+      for (let copy = 1;copy < node.count; copy++)
+        bounds = boundsUnion(bounds, boundsOffset(source.bounds, [copy * node.step[0], copy * node.step[1], copy * node.step[2]]));
+      return { vertices: source.vertices * node.count, triangles: source.triangles * node.count, planes: source.planes * node.count, bounds };
+    }
+    case "merge": {
+      const inputs = node.inputs.map(mesh);
+      return {
+        vertices: inputs.reduce((sum, item) => sum + item.vertices, 0),
+        triangles: inputs.reduce((sum, item) => sum + item.triangles, 0),
+        planes: inputs.reduce((sum, item) => sum + item.planes, 0),
+        bounds: inputs.reduce(boundsUnion)
+      };
+    }
+    case "boolean": {
+      const a = mesh(node.a);
+      const cutters = node.operation === "difference" ? node.cutters.map(mesh) : [mesh(node.b)];
+      const triangles = a.triangles * (1 + cutters.reduce((sum, cutter) => sum + cutter.planes, 0)) + cutters.reduce((sum, cutter) => sum + cutter.triangles * (a.planes + 1), 0);
+      const other = cutters[0];
+      const bounds = node.operation === "intersection" ? {
+        min: [Math.max(a.bounds.min[0], other.bounds.min[0]), Math.max(a.bounds.min[1], other.bounds.min[1]), Math.max(a.bounds.min[2], other.bounds.min[2])],
+        max: [Math.min(a.bounds.max[0], other.bounds.max[0]), Math.min(a.bounds.max[1], other.bounds.max[1]), Math.min(a.bounds.max[2], other.bounds.max[2])]
+      } : node.operation === "union" ? boundsUnion(a.bounds, other.bounds) : a.bounds;
+      return { vertices: 3 * triangles, triangles, planes: a.planes + cutters.reduce((sum, cutter) => sum + cutter.planes, 0), bounds };
+    }
+    case "material-slot":
+    case "uv-project":
+      return mesh(node.input);
+  }
+}
+function estimateSpatialGeometryGraph(input) {
+  const graph = parseSpatialGeometryGraph(input);
+  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const order = spatialTopologicalIds(new Map(graph.nodes.map((node) => [node.id, nodeDependencies(node)])), "geometry graph");
+  const meshEstimates = new Map, profileEstimates = new Map;
+  let depth = 0;
+  const depthOf = new Map;
+  for (const id of order) {
+    const node = nodesById.get(id);
+    depthOf.set(id, 1 + Math.max(0, ...nodeDependencies(node).map((dependency) => depthOf.get(dependency))));
+    depth = Math.max(depth, depthOf.get(id));
+    const estimate = estimateNode(node, meshEstimates, profileEstimates, `geometry.nodes.${id}`);
+    if (PROFILE_KINDS.has(node.kind)) {
+      const candidate = estimate;
+      if (candidate.points > SPATIAL_GEOMETRY_LIMITS.profilePoints)
+        fail2(`Profile node ${id} exceeds the point budget before evaluation.`, `geometry.nodes.${id}`);
+      profileEstimates.set(id, candidate);
+    } else {
+      const candidate = estimate;
+      if (candidate.vertices > SPATIAL_GEOMETRY_LIMITS.vertices || candidate.triangles > SPATIAL_GEOMETRY_LIMITS.triangles) {
+        fail2(`Geometry node ${id} exceeds the vertex/triangle budget before evaluation.`, `geometry.nodes.${id}`);
+      }
+      meshEstimates.set(id, candidate);
+    }
+  }
+  const output = meshEstimates.get(graph.output);
+  const bytes = output.vertices * 32 + output.triangles * 16;
+  if (bytes > SPATIAL_GEOMETRY_LIMITS.outputBytes)
+    fail2("Geometry output exceeds the byte budget before evaluation.", "geometry.output");
+  return deepFreezeJson({ nodes: graph.nodes.length, depth, vertices: output.vertices, triangles: output.triangles, bytes, bounds: output.bounds });
+}
+function evaluateSpatialGeometry(input) {
+  const graph = parseSpatialGeometryGraph(input);
+  const estimate = estimateSpatialGeometryGraph(graph);
+  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const order = spatialTopologicalIds(new Map(graph.nodes.map((node) => [node.id, nodeDependencies(node)])), "geometry graph");
+  const profiles = new Map, meshes = new Map;
+  for (const id of order) {
+    const node = nodesById.get(id), path = `geometry.nodes.${id}`;
+    const profile = (key2) => profiles.get(key2);
+    const mesh2 = (key2) => meshes.get(key2);
+    switch (node.kind) {
+      case "profile":
+        profiles.set(id, checkedProfile(node.points, path));
+        break;
+      case "rect":
+        profiles.set(id, checkedProfile([[-node.width / 2, -node.height / 2], [node.width / 2, -node.height / 2], [node.width / 2, node.height / 2], [-node.width / 2, node.height / 2]], path));
+        break;
+      case "ellipse":
+        profiles.set(id, checkedProfile(Array.from({ length: node.segments }, (_, index2) => {
+          const angle = 2 * Math.PI * index2 / node.segments;
+          return [node.radiusX * Math.cos(angle), node.radiusY * Math.sin(angle)];
+        }), path));
+        break;
+      case "inset":
+        profiles.set(id, insetProfile(profile(node.input), node.distance, path));
+        break;
+      case "bevel":
+        profiles.set(id, bevelProfile(profile(node.input), node.radius, node.segments, path));
+        break;
+      case "box":
+        meshes.set(id, boxMesh(node.size));
+        break;
+      case "cylinder":
+        meshes.set(id, cylinderMesh(node.radius, node.height, node.segments));
+        break;
+      case "sphere":
+        meshes.set(id, sphereMesh(node.radius, node.segments));
+        break;
+      case "extrude":
+        meshes.set(id, extrudeMesh(profile(node.profile), node.depth, node.sideSlot ?? 0, node.capSlot ?? node.sideSlot ?? 0, path));
+        break;
+      case "revolve":
+        meshes.set(id, revolveMesh(profile(node.profile), node.segments, node.capSlot ?? 0, path));
+        break;
+      case "sweep":
+        meshes.set(id, sweepMesh(profile(node.profile), node.path, path));
+        break;
+      case "loft":
+        meshes.set(id, loftMesh(profile(node.bottom), profile(node.top), node.height, path));
+        break;
+      case "transform":
+        meshes.set(id, transformMesh(mesh2(node.input), node.transform));
+        break;
+      case "mirror":
+        meshes.set(id, mirrorMesh(mesh2(node.input), AXIS_INDEX[node.axis], node.offset));
+        break;
+      case "array":
+        meshes.set(id, arrayMesh(mesh2(node.input), node.count, node.step));
+        break;
+      case "merge":
+        meshes.set(id, mergeMeshes(node.inputs.map(mesh2)));
+        break;
+      case "boolean":
+        meshes.set(id, booleanMesh(node, meshes, path));
+        break;
+      case "material-slot": {
+        const source = mesh2(node.input), copy = builder();
+        copy.positions.push(...source.positions);
+        copy.normals.push(...source.normals);
+        copy.uvs.push(...source.uvs);
+        copy.indices.push(...source.indices);
+        copy.slots.push(...source.slots.map(() => node.slot));
+        copy.uvsSet = source.uvsSet;
+        meshes.set(id, copy);
+        break;
+      }
+      case "uv-project":
+        meshes.set(id, projectUvs(mesh2(node.input), node.projection));
+        break;
+    }
+  }
+  const mesh = freezeMesh(meshes.get(graph.output));
+  if (mesh.vertices > estimate.vertices || mesh.triangles > estimate.triangles) {
+    fail2("Evaluated mesh exceeded its static budget estimate.", "geometry.output");
+  }
+  return deepFreezeJson({ mesh, estimate, graphSha256: spatialValueSha256({ domain: "slopcamera.spatial-geometry-graph.v1", graph }) });
+}
+var srgbToLinear = (value) => value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+function materialToGlb(material) {
+  const rgb = [1, 3, 5].map((index2) => srgbToLinear(Number.parseInt(material.color.slice(index2, index2 + 2), 16) / 255));
+  const baseColorLinear = [rgb[0], rgb[1], rgb[2], material.opacity];
+  const alphaMode = material.opacity < 1 ? "BLEND" : "OPAQUE";
+  if (material.kind === "unlit") {
+    return { baseColorLinear, metallic: 0, roughness: 1, alphaMode, emissiveLinear: [rgb[0], rgb[1], rgb[2]] };
+  }
+  const emissiveLinear = material.emissive === undefined ? undefined : (() => {
+    const factor = Math.min(1, material.emissive.intensity);
+    const e = [1, 3, 5].map((index2) => srgbToLinear(Number.parseInt(material.emissive.color.slice(index2, index2 + 2), 16) / 255) * factor);
+    return e.every((value) => value === 0) ? undefined : [e[0], e[1], e[2]];
+  })();
+  return { baseColorLinear, metallic: material.metalness, roughness: material.roughness, alphaMode, ...emissiveLinear === undefined ? {} : { emissiveLinear } };
+}
+function emitSpatialGeometryGlb(mesh, materials2) {
+  if (materials2.length < 1 || materials2.length > SPATIAL_GEOMETRY_LIMITS.materialSlots)
+    fail2("GLB emission requires 1\u201316 material slots.");
+  for (const material of materials2)
+    parseSpatialValue(SpatialMaterialSchema, material, "geometry material");
+  const slotTriangles = new Map;
+  for (let index2 = 0;index2 < mesh.triangles; index2++) {
+    const slot = mesh.slots[index2];
+    if (slot >= materials2.length)
+      fail2(`Material slot ${slot} has no declared material.`);
+    const list = slotTriangles.get(slot) ?? [];
+    list.push(mesh.indices[index2 * 3], mesh.indices[index2 * 3 + 1], mesh.indices[index2 * 3 + 2]);
+    slotTriangles.set(slot, list);
+  }
+  const slots = [...slotTriangles.keys()].sort((a, b) => a - b);
+  const vertices = mesh.vertices;
+  const indexComponent = vertices <= 65535 ? 5123 : 5125;
+  const indexBytes = indexComponent === 5123 ? 2 : 4;
+  const hasUvs = mesh.uvsProjected;
+  const positionBytes = vertices * 12, normalBytes = vertices * 12, uvBytes = hasUvs ? vertices * 8 : 0;
+  const indexRanges = [];
+  let binLength = positionBytes + normalBytes + uvBytes;
+  for (const slot of slots) {
+    const count = slotTriangles.get(slot).length;
+    indexRanges.push({ slot, byteOffset: binLength, byteLength: count * indexBytes, count });
+    binLength += count * indexBytes;
+    binLength = Math.ceil(binLength / 4) * 4;
+  }
+  const bin = new Uint8Array(binLength), data = new DataView(bin.buffer);
+  for (let index2 = 0;index2 < mesh.positions.length; index2++)
+    data.setFloat32(index2 * 4, mesh.positions[index2], true);
+  for (let index2 = 0;index2 < mesh.normals.length; index2++)
+    data.setFloat32(positionBytes + index2 * 4, mesh.normals[index2], true);
+  if (hasUvs)
+    for (let index2 = 0;index2 < mesh.uvs.length; index2++)
+      data.setFloat32(positionBytes + normalBytes + index2 * 4, mesh.uvs[index2], true);
+  for (const range of indexRanges) {
+    const indices = slotTriangles.get(range.slot);
+    for (let index2 = 0;index2 < indices.length; index2++) {
+      if (indexComponent === 5123)
+        data.setUint16(range.byteOffset + index2 * 2, indices[index2], true);
+      else
+        data.setUint32(range.byteOffset + index2 * 4, indices[index2], true);
+    }
+  }
+  const positions32 = new Float32Array(mesh.positions);
+  const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
+  for (let index2 = 0;index2 < positions32.length; index2 += 3) {
+    for (let axisIndex = 0;axisIndex < 3; axisIndex++) {
+      low[axisIndex] = Math.min(low[axisIndex], positions32[index2 + axisIndex]);
+      high[axisIndex] = Math.max(high[axisIndex], positions32[index2 + axisIndex]);
+    }
+  }
+  const bufferViews = [
+    { buffer: 0, byteOffset: 0, byteLength: positionBytes, target: 34962 },
+    { buffer: 0, byteOffset: positionBytes, byteLength: normalBytes, target: 34962 },
+    ...hasUvs ? [{ buffer: 0, byteOffset: positionBytes + normalBytes, byteLength: uvBytes, target: 34962 }] : [],
+    ...indexRanges.map((range) => ({ buffer: 0, byteOffset: range.byteOffset, byteLength: range.byteLength, target: 34963 }))
+  ];
+  const accessors = [
+    { bufferView: 0, componentType: 5126, count: vertices, type: "VEC3", min: low, max: high },
+    { bufferView: 1, componentType: 5126, count: vertices, type: "VEC3" },
+    ...hasUvs ? [{ bufferView: 2, componentType: 5126, count: vertices, type: "VEC2" }] : [],
+    ...indexRanges.map((range, index2) => ({ bufferView: (hasUvs ? 3 : 2) + index2, componentType: indexComponent, count: range.count, type: "SCALAR" }))
+  ];
+  const glbMaterials = slots.map((slot) => {
+    const resolved = materialToGlb(materials2[slot]);
+    return {
+      pbrMetallicRoughness: { baseColorFactor: resolved.baseColorLinear, metallicFactor: resolved.metallic, roughnessFactor: resolved.roughness },
+      alphaMode: resolved.alphaMode,
+      doubleSided: false,
+      ...resolved.emissiveLinear === undefined ? {} : { emissiveFactor: resolved.emissiveLinear }
+    };
+  });
+  const document = {
+    asset: { version: "2.0", generator: SPATIAL_GEOMETRY_PROFILE },
+    buffers: [{ byteLength: binLength }],
+    bufferViews,
+    accessors,
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: slots.map((slot, index2) => ({ attributes: { POSITION: 0, NORMAL: 1, ...hasUvs ? { TEXCOORD_0: 2 } : {} }, indices: (hasUvs ? 3 : 2) + index2, material: index2, mode: 4 })) }],
+    materials: glbMaterials
+  };
+  const rawJson = new TextEncoder().encode(JSON.stringify(document));
+  const json = new Uint8Array(Math.ceil(rawJson.length / 4) * 4).fill(32);
+  json.set(rawJson);
+  const bytes = new Uint8Array(28 + json.length + bin.length), view = new DataView(bytes.buffer);
+  view.setUint32(0, 1179937895, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, bytes.length, true);
+  view.setUint32(12, json.length, true);
+  view.setUint32(16, 1313821514, true);
+  bytes.set(json, 20);
+  view.setUint32(20 + json.length, bin.length, true);
+  view.setUint32(24 + json.length, 5130562, true);
+  bytes.set(bin, 28 + json.length);
+  return bytes;
+}
+
+// src/spatial-scene/asset-admission.ts
+import { z as z5 } from "zod";
+var boundsComponent = z5.number().finite().min(-1000000000000000000).max(1000000000000000000);
+var boundsVector = z5.tuple([boundsComponent, boundsComponent, boundsComponent]);
+var SpatialBoundsSchema = z5.strictObject({ min: boundsVector, max: boundsVector }).refine((value) => value.min.every((component, index2) => component <= value.max[index2]), "Bounds min must not exceed max.");
+var factsUnit = z5.number().finite().min(0).max(1);
+var SpatialAssetMaterialFactSchema = z5.strictObject({
+  name: z5.string().max(1024).optional(),
+  alphaMode: z5.enum(["OPAQUE", "MASK", "BLEND"]),
+  doubleSided: z5.boolean(),
+  maps: z5.array(z5.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive", "clearcoat", "clearcoatRoughness", "clearcoatNormal", "transmission", "sheenColor", "sheenRoughness", "anisotropy"])).max(12),
+  textureTransforms: z5.array(z5.strictObject({ map: z5.string().min(1).max(64), offset: z5.tuple([z5.number().finite(), z5.number().finite()]), rotation: z5.number().finite().min(-Math.PI).max(Math.PI), scale: z5.tuple([z5.number().finite(), z5.number().finite()]) })).max(12).default([]),
+  emissiveLinear: z5.tuple([factsUnit, factsUnit, factsUnit]).optional(),
+  emissiveStrength: z5.number().finite().min(0).max(1e5).optional(),
+  clearcoat: z5.strictObject({ factor: factsUnit, roughness: factsUnit }).optional(),
+  transmission: z5.strictObject({ factor: factsUnit }).optional(),
+  sheen: z5.strictObject({ colorLinear: z5.tuple([factsUnit, factsUnit, factsUnit]), roughness: factsUnit }).optional(),
+  anisotropy: z5.strictObject({ strength: z5.number().finite().min(-1).max(1), rotation: z5.number().finite().min(0).max(2 * Math.PI) }).optional(),
+  ior: z5.number().finite().min(1).max(5).optional()
+});
+var SpatialAssetRigFactsSchema = z5.strictObject({
+  profile: z5.literal(SPATIAL_GLB_RIGGED_PROFILE),
+  skins: z5.array(z5.strictObject({
+    name: z5.string().max(1024).optional(),
+    jointNodeIndices: z5.array(z5.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1)).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin),
+    inverseBindMatricesAccessor: z5.number().int().min(0).max(SPATIAL_GLB_LIMITS.accessors - 1)
   })).min(1).max(SPATIAL_GLB_LIMITS.skins),
-  morphTargets: z4.array(z4.array(z4.array(z4.strictObject({
-    name: z4.string().min(1).max(1024),
-    hasPosition: z4.boolean(),
-    hasNormal: z4.boolean()
+  morphTargets: z5.array(z5.array(z5.array(z5.strictObject({
+    name: z5.string().min(1).max(1024),
+    hasPosition: z5.boolean(),
+    hasNormal: z5.boolean()
   })).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive)).max(SPATIAL_GLB_LIMITS.primitives)).max(SPATIAL_GLB_LIMITS.meshes),
-  clips: z4.array(z4.strictObject({
-    name: z4.string().max(1024).optional(),
-    durationSeconds: z4.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
-    channels: z4.array(z4.strictObject({
-      nodeIndex: z4.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
-      path: z4.enum(["translation", "rotation", "scale", "weights"])
+  clips: z5.array(z5.strictObject({
+    name: z5.string().max(1024).optional(),
+    durationSeconds: z5.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds),
+    channels: z5.array(z5.strictObject({
+      nodeIndex: z5.number().int().min(0).max(SPATIAL_GLB_LIMITS.nodes - 1),
+      path: z5.enum(["translation", "rotation", "scale", "weights"])
     })).max(SPATIAL_GLB_LIMITS.channels)
   })).max(SPATIAL_GLB_LIMITS.clips)
 });
-var SpatialAssetFactsV1Schema = z4.strictObject({
-  kind: z4.literal("slopcamera.spatial-asset-facts"),
-  schemaVersion: z4.literal(1),
+var meterBound = z5.number().finite().min(0).max(1e6);
+var lodCoordinate = z5.number().finite().min(-1e6).max(1e6);
+var lodVector = z5.tuple([lodCoordinate, lodCoordinate, lodCoordinate]);
+var SpatialAssetLodSchema = z5.strictObject({
+  level: z5.number().int().min(0).max(7),
+  assetId: SpatialAssetIdSchema,
+  sha256: SpatialDigestSchema,
+  switchDistanceM: meterBound
+});
+var SpatialCollisionProxySchema = z5.discriminatedUnion("kind", [
+  z5.strictObject({ kind: z5.literal("box"), center: lodVector, halfExtents: z5.tuple([meterBound, meterBound, meterBound]).refine((v) => v.every((c) => c > 0), "Box half extents must be positive.") }),
+  z5.strictObject({ kind: z5.literal("sphere"), center: lodVector, radius: meterBound.refine((v) => v > 0, "Sphere radius must be positive.") }),
+  z5.strictObject({ kind: z5.literal("capsule"), center: lodVector, axis: z5.enum(["x", "y", "z"]), radius: meterBound.refine((v) => v > 0, "Capsule radius must be positive."), halfLength: meterBound }),
+  z5.strictObject({ kind: z5.literal("hull-hull"), artifactSha256: SpatialDigestSchema })
+]);
+var SpatialRetainedArtifactSchema = z5.strictObject({
+  operation: z5.enum(["mesh-repair", "complex-csg", "uv-atlas", "decimation", "hull-decomposition", "glb-emission"]),
+  requestSha256: SpatialDigestSchema,
+  receiptSha256: SpatialDigestSchema,
+  outputs: z5.array(z5.strictObject({ sha256: SpatialDigestSchema, bytes: z5.number().int().safe().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).min(1).max(16)
+});
+var SpatialAssetGeneratorFactsSchema = z5.strictObject({
+  generatorId: SpatialGeneratorIdSchema,
+  parametricKind: z5.string().min(1).max(64),
+  specSha256: SpatialDigestSchema,
+  parametersSha256: SpatialDigestSchema,
+  lods: z5.array(SpatialAssetLodSchema).min(1).max(8),
+  collision: z5.array(SpatialCollisionProxySchema).max(16),
+  retainedArtifacts: z5.array(SpatialRetainedArtifactSchema).max(8).optional()
+});
+var SpatialAssetFactsV1Schema = z5.strictObject({
+  kind: z5.literal("slopcamera.spatial-asset-facts"),
+  schemaVersion: z5.literal(1),
   subject: SpatialPayloadSchema,
   subjectManifestSha256: SpatialDigestSchema,
-  profile: z4.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE]),
-  nodeCount: z4.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
-  clipDurationsSeconds: z4.array(z4.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
-  bounds: z4.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
-  materials: z4.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
-  rig: SpatialAssetRigFactsSchema.optional()
+  profile: z5.enum([SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GEOMETRY_PROFILE]),
+  nodeCount: z5.number().int().min(1).max(SPATIAL_GLB_LIMITS.nodes),
+  clipDurationsSeconds: z5.array(z5.number().finite().min(0).max(SPATIAL_GLB_LIMITS.durationSeconds)).max(SPATIAL_GLB_LIMITS.clips),
+  bounds: z5.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
+  materials: z5.array(SpatialAssetMaterialFactSchema).max(SPATIAL_GLB_LIMITS.materials).optional(),
+  rig: SpatialAssetRigFactsSchema.optional(),
+  generator: SpatialAssetGeneratorFactsSchema.optional()
 }).superRefine((facts, context) => {
   if (facts.profile === SPATIAL_GLB_RIGGED_PROFILE !== (facts.rig !== undefined))
     context.addIssue({ code: "custom", path: ["rig"], message: "Rig facts must be present exactly for the rigged GLB profile." });
+  if (facts.profile === SPATIAL_GEOMETRY_PROFILE !== (facts.generator !== undefined))
+    context.addIssue({ code: "custom", path: ["generator"], message: "Generator facts must be present exactly for the parametric geometry profile." });
+  if (facts.generator !== undefined) {
+    const levels = new Set(facts.generator.lods.map((lod) => lod.level));
+    if (levels.size !== facts.generator.lods.length || !levels.has(0))
+      context.addIssue({ code: "custom", path: ["generator", "lods"], message: "LOD levels must be unique and include level 0." });
+    const distances = facts.generator.lods.map((lod) => lod.switchDistanceM);
+    if (distances.some((value, index2) => index2 > 0 && value <= distances[index2 - 1]))
+      context.addIssue({ code: "custom", path: ["generator", "lods"], message: "LOD switch distances must strictly increase." });
+    const hulls = facts.generator.collision.filter((proxy) => proxy.kind === "hull-hull");
+    for (const hull of hulls) {
+      const bound = facts.generator.retainedArtifacts?.some((artifact) => artifact.outputs.some((output) => output.sha256 === hull.artifactSha256)) ?? false;
+      if (!bound)
+        context.addIssue({ code: "custom", path: ["generator", "collision"], message: "Hull-hull proxies must reference a retained artifact output." });
+    }
+  }
 });
-var SpatialPublishedArtifactSchema = z4.strictObject({
-  path: z4.string().min(1).max(1024),
+var SpatialPublishedArtifactSchema = z5.strictObject({
+  path: z5.string().min(1).max(1024),
   sha256: SpatialDigestSchema,
-  bytes: z4.number().int().safe().min(1).max(SPATIAL_GLB_LIMITS.bytes),
-  disposition: z4.enum(["created", "exists"])
+  bytes: z5.number().int().safe().min(1).max(SPATIAL_GLB_LIMITS.bytes),
+  disposition: z5.enum(["created", "exists"])
 });
-var SpatialAssetAdmissionV1Schema = z4.strictObject({
-  kind: z4.literal("slopcamera.spatial-asset-admission"),
-  schemaVersion: z4.literal(1),
+var SpatialAssetAdmissionV1Schema = z5.strictObject({
+  kind: z5.literal("slopcamera.spatial-asset-admission"),
+  schemaVersion: z5.literal(1),
   manifest: SpatialAssetManifestSchema,
   factsManifest: SpatialAssetManifestSchema,
   facts: SpatialAssetFactsV1Schema,
-  bounds: z4.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
+  bounds: z5.strictObject({ modelSpace: SpatialBoundsSchema, sceneSpace: SpatialBoundsSchema }),
   entity: SpatialEntitySchema,
-  artifacts: z4.strictObject({ payload: SpatialPublishedArtifactSchema, facts: SpatialPublishedArtifactSchema }),
-  operations: z4.array(SpatialPatchOperationSchema).min(2).max(SPATIAL_SCENE_LIMITS.patchOperations)
+  artifacts: z5.strictObject({ payload: SpatialPublishedArtifactSchema, facts: SpatialPublishedArtifactSchema }),
+  operations: z5.array(SpatialPatchOperationSchema).min(2).max(SPATIAL_SCENE_LIMITS.patchOperations)
 });
 
 // src/spatial-scene/evaluate.ts
-import { z as z5 } from "zod";
-var EvaluatedOptionsSchema = z5.strictObject({
+import { z as z6 } from "zod";
+var EvaluatedOptionsSchema = z6.strictObject({
   timeUs: SpatialTimeUsSchema,
   cameraId: SpatialCameraIdSchema,
-  overrides: z5.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities).optional(),
+  overrides: z6.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities).optional(),
   cameraPoseOverride: SpatialPoseSchema.optional()
 });
 function mergeSpatialOverrides(sceneOverrides, shotOverrides) {
@@ -2826,7 +4116,7 @@ function evaluateSpatialScene(sceneInput, options) {
 }
 
 // src/spatial-scene/audit.ts
-import { z as z6 } from "zod";
+import { z as z7 } from "zod";
 var SPATIAL_AUDIT_LIMITS = Object.freeze({
   samples: 64,
   defaultSamples: 9,
@@ -2840,91 +4130,91 @@ var BOUNDS_UNKNOWN_REASONS = ["requires-asset-decoding", "requires-text-layout",
 var CONTAINED = ["full", "partial", "outside", "behind-camera", "clipped"];
 var FINDING_KINDS = ["never-visible", "off-camera", "empty-scene-region", "bounds-unknown", "behind-camera-all-samples", "shadows-disabled"];
 var CONTAINED_HISTOGRAM_ORDER = ["full", "partial", "outside", "clipped", "behind-camera"];
-var auditVector = z6.tuple([
-  z6.number().finite().min(-1000000000000).max(1000000000000),
-  z6.number().finite().min(-1000000000000).max(1000000000000),
-  z6.number().finite().min(-1000000000000).max(1000000000000)
+var auditVector = z7.tuple([
+  z7.number().finite().min(-1000000000000).max(1000000000000),
+  z7.number().finite().min(-1000000000000).max(1000000000000),
+  z7.number().finite().min(-1000000000000).max(1000000000000)
 ]);
-var SpatialAuditBoundsSchema = z6.strictObject({ min: auditVector, max: auditVector }).refine((bounds) => bounds.min.every((value, index2) => value <= bounds.max[index2]), "Bounds min must not exceed max.");
-var SpatialAuditOptionsSchema = z6.strictObject({
+var SpatialAuditBoundsSchema = z7.strictObject({ min: auditVector, max: auditVector }).refine((bounds) => bounds.min.every((value, index2) => value <= bounds.max[index2]), "Bounds min must not exceed max.");
+var SpatialAuditOptionsSchema = z7.strictObject({
   cameraId: SpatialCameraIdSchema,
-  timesUs: z6.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples).optional(),
-  assetBounds: z6.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional()
+  timesUs: z7.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples).optional(),
+  assetBounds: z7.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema).optional()
 });
-var SpatialAuditFrustumSchema = z6.strictObject({
-  contained: z6.enum(CONTAINED),
-  pixelFootprint: z6.number().finite().min(0).max(1000000000000000)
+var SpatialAuditFrustumSchema = z7.strictObject({
+  contained: z7.enum(CONTAINED),
+  pixelFootprint: z7.number().finite().min(0).max(1000000000000000)
 });
-var SpatialAuditSampleSchema = z6.strictObject({
+var SpatialAuditSampleSchema = z7.strictObject({
   timeUs: SpatialTimeUsSchema,
-  visible: z6.boolean(),
+  visible: z7.boolean(),
   bounds: SpatialAuditBoundsSchema.optional(),
   frustum: SpatialAuditFrustumSchema.optional(),
-  note: z6.enum(["out-of-range", "other-camera"]).optional()
+  note: z7.enum(["out-of-range", "other-camera"]).optional()
 });
-var SpatialAuditEntitySchema = z6.strictObject({
+var SpatialAuditEntitySchema = z7.strictObject({
   entityId: SpatialEntityIdSchema,
-  name: z6.string().min(1).max(256),
-  kind: z6.enum(ENTITY_KINDS),
+  name: z7.string().min(1).max(256),
+  kind: z7.enum(ENTITY_KINDS),
   placement: SpatialPlacementSchema,
-  enclosure: z6.discriminatedUnion("status", [
-    z6.strictObject({ status: z6.literal("bounded") }),
-    z6.strictObject({ status: z6.literal("unknown"), reason: z6.enum(BOUNDS_UNKNOWN_REASONS) })
+  enclosure: z7.discriminatedUnion("status", [
+    z7.strictObject({ status: z7.literal("bounded") }),
+    z7.strictObject({ status: z7.literal("unknown"), reason: z7.enum(BOUNDS_UNKNOWN_REASONS) })
   ]),
-  samples: z6.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
-  instances: z6.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
+  samples: z7.array(SpatialAuditSampleSchema).max(SPATIAL_AUDIT_LIMITS.samples),
+  instances: z7.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities).optional()
 });
-var SpatialAuditFindingSchema = z6.strictObject({
-  severity: z6.enum(["info", "warning"]),
-  kind: z6.enum(FINDING_KINDS),
+var SpatialAuditFindingSchema = z7.strictObject({
+  severity: z7.enum(["info", "warning"]),
+  kind: z7.enum(FINDING_KINDS),
   entityId: SpatialEntityIdSchema.optional(),
   timeUs: SpatialTimeUsSchema.optional(),
-  detail: z6.string().min(1).max(1024)
+  detail: z7.string().min(1).max(1024)
 });
-var entityKindCounts = z6.strictObject({
-  group: z6.number().int().min(0),
-  mesh: z6.number().int().min(0),
-  image: z6.number().int().min(0),
-  diagram: z6.number().int().min(0),
-  video: z6.number().int().min(0),
-  text: z6.number().int().min(0),
-  light: z6.number().int().min(0),
-  splat: z6.number().int().min(0),
-  environment: z6.number().int().min(0)
+var entityKindCounts = z7.strictObject({
+  group: z7.number().int().min(0),
+  mesh: z7.number().int().min(0),
+  image: z7.number().int().min(0),
+  diagram: z7.number().int().min(0),
+  video: z7.number().int().min(0),
+  text: z7.number().int().min(0),
+  light: z7.number().int().min(0),
+  splat: z7.number().int().min(0),
+  environment: z7.number().int().min(0)
 });
-var SpatialAuditReportSchema = z6.strictObject({
-  kind: z6.literal("slopcamera.spatial-audit"),
-  schemaVersion: z6.literal(1),
+var SpatialAuditReportSchema = z7.strictObject({
+  kind: z7.literal("slopcamera.spatial-audit"),
+  schemaVersion: z7.literal(1),
   sceneId: SpatialSceneIdSchema,
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   durationUs: SpatialTimeUsSchema,
-  timesUs: z6.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples),
-  summary: z6.strictObject({
-    entities: z6.strictObject({
-      total: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
-      bounded: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
-      unknownBounds: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+  timesUs: z7.array(SpatialTimeUsSchema).min(1).max(SPATIAL_AUDIT_LIMITS.samples),
+  summary: z7.strictObject({
+    entities: z7.strictObject({
+      total: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      bounded: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
+      unknownBounds: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities),
       byKind: entityKindCounts,
-      instances: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities)
+      instances: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities * SPATIAL_SCENE_LIMITS.entities)
     }),
-    animations: z6.strictObject({
-      channels: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
-      targets: z6.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities + SPATIAL_SCENE_LIMITS.cameras),
-      properties: z6.strictObject({
-        position: z6.number().int().min(0),
-        rotation: z6.number().int().min(0),
-        scale: z6.number().int().min(0),
-        opacity: z6.number().int().min(0)
+    animations: z7.strictObject({
+      channels: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.channels),
+      targets: z7.number().int().min(0).max(SPATIAL_SCENE_LIMITS.entities + SPATIAL_SCENE_LIMITS.cameras),
+      properties: z7.strictObject({
+        position: z7.number().int().min(0),
+        rotation: z7.number().int().min(0),
+        scale: z7.number().int().min(0),
+        opacity: z7.number().int().min(0)
       })
     }),
-    cameras: z6.array(SpatialCameraIdSchema).max(SPATIAL_SCENE_LIMITS.cameras),
-    entitiesNeverVisible: z6.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
-    entitiesNeverInFrustum: z6.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities)
+    cameras: z7.array(SpatialCameraIdSchema).max(SPATIAL_SCENE_LIMITS.cameras),
+    entitiesNeverVisible: z7.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities),
+    entitiesNeverInFrustum: z7.array(SpatialEntityIdSchema).max(SPATIAL_SCENE_LIMITS.entities)
   }),
-  entities: z6.array(SpatialAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
-  findings: z6.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
-  omittedFindings: z6.number().int().min(0)
+  entities: z7.array(SpatialAuditEntitySchema).max(SPATIAL_SCENE_LIMITS.entities),
+  findings: z7.array(SpatialAuditFindingSchema).max(SPATIAL_AUDIT_LIMITS.findings),
+  omittedFindings: z7.number().int().min(0)
 });
 function spatialEntityLocalBounds(entity, assetBounds) {
   const supplied = (assetId2) => assetBounds[assetId2] === undefined ? { status: "unknown", reason: "requires-asset-decoding" } : { status: "bounded", bounds: assetBounds[assetId2] };
@@ -3005,8 +4295,8 @@ function spatialAuditDefaultTimesUs(durationUs) {
 var findingOrder = (finding) => `${finding.kind}:${finding.entityId ?? ""}:${String(finding.timeUs ?? -1).padStart(12, "0")}`;
 function unionBounds(items) {
   return items.reduce((union, next) => ({
-    min: union.min.map((value, axis) => Math.min(value, next.min[axis])),
-    max: union.max.map((value, axis) => Math.max(value, next.max[axis]))
+    min: union.min.map((value, axis2) => Math.min(value, next.min[axis2])),
+    max: union.max.map((value, axis2) => Math.max(value, next.max[axis2]))
   }));
 }
 function instanceDomain(worldMatrix, entity, local) {
@@ -3228,8 +4518,8 @@ function auditSpatialSceneInContext(context, options) {
   }
   return deepFreezeJson(parsed);
 }
-var SpatialAuditAssetBoundsMapSchema = z6.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema);
-var SpatialAuditAssetFactsPairSchema = z6.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema });
+var SpatialAuditAssetBoundsMapSchema = z7.record(SpatialAssetIdSchema, SpatialAuditBoundsSchema);
+var SpatialAuditAssetFactsPairSchema = z7.strictObject({ manifest: SpatialAssetManifestSchema, facts: SpatialAssetFactsV1Schema });
 function auditSubjectBounds(manifest, facts) {
   if (facts.subject.sha256 !== manifest.payload.sha256 || facts.subject.bytes !== manifest.payload.bytes) {
     throw new SpatialSceneError("invalid-data", `Asset facts for ${manifest.assetId} do not describe the manifest payload.`, "assetBounds");
@@ -3326,8 +4616,8 @@ function inspectSpatialScene(input) {
         coordinateDomain: entity.placement,
         atTimeUs: 0,
         bounds: localDomains.reduce((union, next) => ({
-          min: union.min.map((value, axis) => Math.min(value, next.min[axis])),
-          max: union.max.map((value, axis) => Math.max(value, next.max[axis]))
+          min: union.min.map((value, axis2) => Math.min(value, next.min[axis2])),
+          max: union.max.map((value, axis2) => Math.max(value, next.max[axis2]))
         }))
       };
       const meshMapIds = entity.kind === "mesh" ? entity.material.kind === "pbr" ? pbrMaterialMapAssetIds(entity.material) : entity.material.map === undefined ? [] : [entity.material.map] : [];
@@ -3395,11 +4685,18 @@ function applySpatialScenePatch(sceneInput, patchInput) {
       case "add-asset":
         if (assets.has(operation.asset.assetId))
           throw new SpatialSceneError("conflict", `Asset ${operation.asset.assetId} already exists.`);
+        if (operation.asset.provenance.source === "generated")
+          throw new SpatialSceneError("conflict", "Generated assets enter only through retained generator output replacement.");
         assets.set(operation.asset.assetId, operation.asset);
         break;
       case "replace-asset":
         if (!assets.has(operation.asset.assetId))
           throw new SpatialSceneError("not-found", `Asset ${operation.asset.assetId} does not exist.`);
+        if (operation.asset.provenance.source === "generated")
+          throw new SpatialSceneError("conflict", "Generated assets change only through retained generator output replacement.");
+        if (original.generators.some((generator) => generator.assets?.includes(operation.asset.assetId))) {
+          throw new SpatialSceneError("conflict", `Asset ${operation.asset.assetId} is owned by a generator; replace its retained output.`);
+        }
         assets.set(operation.asset.assetId, operation.asset);
         break;
       case "set-mesh-geometry": {
@@ -3519,14 +4816,40 @@ function applySpatialScenePatch(sceneInput, patchInput) {
       case "replace-generator-output": {
         const generatorId = operation.generator.generatorId;
         replacedGenerators.add(generatorId);
+        const previous = generators.get(generatorId)?.assets ?? [];
+        const provided = operation.assets ?? [];
+        const declared = operation.generator.assets ?? [];
+        if ([...provided.map((asset) => asset.assetId)].sort().join("") !== [...declared].sort().join("")) {
+          throw new SpatialSceneError("conflict", "Generator replacement must carry exactly the manifests its record declares.");
+        }
+        for (const asset of provided) {
+          if (asset.provenance.source !== "generated" && asset.provenance.source !== "derived") {
+            throw new SpatialSceneError("conflict", "Generator-owned assets require generated or derived provenance.");
+          }
+          if (assets.has(asset.assetId) && !previous.includes(asset.assetId))
+            throw new SpatialSceneError("conflict", `Generator asset ${asset.assetId} collides with an existing asset.`);
+        }
+        for (const assetId2 of previous)
+          assets.delete(assetId2);
         for (const entity of entities.values())
           if (entity.origin.kind === "generated" && entity.origin.generatorId === generatorId)
             entities.delete(entity.entityId);
+        for (const asset of provided)
+          assets.set(asset.assetId, asset);
+        const owned = new Set(provided.map((asset) => asset.assetId));
+        const remainingAssets = new Set(assets.keys());
         for (const entity of operation.entities) {
           if (entity.origin.kind !== "generated" || entity.origin.generatorId !== generatorId)
             throw new SpatialSceneError("conflict", "Generator replacement must contain only its own retained output.");
           if (entities.has(entity.entityId))
             throw new SpatialSceneError("conflict", `Generator output collides with ${entity.entityId}.`);
+          const referenced = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId] : entity.kind === "text" ? [entity.fontAssetId] : ("assetId" in entity) ? [entity.assetId] : [];
+          if (entity.kind === "mesh" && entity.material.map !== undefined)
+            referenced.push(entity.material.map);
+          for (const assetId2 of referenced) {
+            if (!owned.has(assetId2) && !remainingAssets.has(assetId2))
+              throw new SpatialSceneError("conflict", `Generator output references missing asset ${assetId2}.`);
+          }
           entities.set(entity.entityId, entity);
         }
         generators.set(generatorId, operation.generator);
@@ -3558,4 +4881,4 @@ function applySpatialScenePatch(sceneInput, patchInput) {
   return deepFreezeJson({ scene, sceneSha256: spatialValueSha256(scene), diff });
 }
 
-export { SpatialMapChannelSchema, SpatialMapColorSpaceSchema, SpatialUvTransformSchema, SpatialPbrMapSchema, SpatialPbrEmissiveSchema, SpatialPbrClearcoatSchema, SpatialPbrTransmissionSchema, SpatialPbrSheenSchema, SpatialPbrAnisotropySchema, SpatialPbrMaterialSchema, pbrMaterialMapAssetIds, SpatialDerivationMethodSchema, SpatialDerivationCandidateSchema, pbrDerivationCandidates, SpatialFogSchema, SpatialLightingRigTypeSchema, lightingRig, lightingRigDescription, SpatialProbeGeometrySchema, ORIGINAL_MATERIAL_HERO_FIXTURE, planMaterialProbeGallery, validatePbrMaterial, SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraLensSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
+export { SpatialMapChannelSchema, SpatialMapColorSpaceSchema, SpatialUvTransformSchema, SpatialPbrMapSchema, SpatialPbrEmissiveSchema, SpatialPbrClearcoatSchema, SpatialPbrTransmissionSchema, SpatialPbrSheenSchema, SpatialPbrAnisotropySchema, SpatialPbrMaterialSchema, pbrMaterialMapAssetIds, SpatialDerivationMethodSchema, SpatialDerivationCandidateSchema, pbrDerivationCandidates, SpatialFogSchema, SpatialLightingRigTypeSchema, lightingRig, lightingRigDescription, SpatialProbeGeometrySchema, ORIGINAL_MATERIAL_HERO_FIXTURE, planMaterialProbeGallery, validatePbrMaterial, SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraLensSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SPATIAL_GEOMETRY_LIMITS, SPATIAL_GEOMETRY_GRAPH_KIND, SPATIAL_GEOMETRY_PROFILE, SpatialGeometryNodeSchema, SpatialGeometryGraphSchema, parseSpatialGeometryGraph, estimateSpatialGeometryGraph, evaluateSpatialGeometry, emitSpatialGeometryGlb, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetLodSchema, SpatialCollisionProxySchema, SpatialRetainedArtifactSchema, SpatialAssetGeneratorFactsSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch };
