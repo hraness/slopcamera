@@ -39,8 +39,8 @@ describe("spatial particle system", () => {
   });
 
   test("rejects a peak rate above maxCount", () => {
-    const base = system() as any;
-    expect(() => parseSpatialParticleSystem(system({ emitters: [{ ...base.emitters[0], rate: 5000, burst: 10000 } as unknown as Record<string, unknown>] }))).toThrow(/peak emission/);
+    const base = system() as unknown as { emitters: Record<string, unknown>[] };
+    expect(() => parseSpatialParticleSystem(system({ emitters: [{ ...base.emitters[0]!, rate: 5000, burst: 10000 }] }))).toThrow(/peak emission/);
   });
 
   test("rejects too many emitters", () => {

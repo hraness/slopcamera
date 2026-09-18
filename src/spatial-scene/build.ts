@@ -394,7 +394,7 @@ export function groundSnap(transformValue: Transform, halfHeight: number, floorY
 }
 
 /** mulberry32: checked-in deterministic RNG; identical seeds produce identical streams. */
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let state = seed >>> 0
   return () => {
     state = (state + 0x6d2b79f5) >>> 0

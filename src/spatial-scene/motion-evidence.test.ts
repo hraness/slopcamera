@@ -28,7 +28,7 @@ describe("spatial motion evidence", () => {
   });
 
   test("rejects a sample that exceeds the pixel budget", () => {
-    const base = evidence() as any;
-    expect(() => parseSpatialMotionEvidence(evidence({ samples: [{ ...base.samples[0], width: 8192, height: 8192 }] }))).toThrow(/pixel budget/);
+    const base = evidence() as unknown as { samples: Record<string, unknown>[] };
+    expect(() => parseSpatialMotionEvidence(evidence({ samples: [{ ...base.samples[0]!, width: 8192, height: 8192 }] }))).toThrow(/pixel budget/);
   });
 });
