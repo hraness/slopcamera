@@ -42,8 +42,16 @@ export const SpatialAssetMaterialFactSchema = z.strictObject({
   name: z.string().max(1_024).optional(),
   alphaMode: z.enum(["OPAQUE", "MASK", "BLEND"]),
   doubleSided: z.boolean(),
-  maps: z.array(z.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive"])).max(5),
+  maps: z.array(z.enum(["baseColor", "metallicRoughness", "normal", "occlusion", "emissive", "clearcoat", "clearcoatRoughness", "clearcoatNormal", "transmission", "sheenColor", "sheenRoughness", "anisotropy"])).max(12),
+  textureTransforms: z.array(z.strictObject({ map: z.string().min(1).max(64), offset: z.tuple([z.number().finite(), z.number().finite()]), rotation: z.number().finite().min(-Math.PI).max(Math.PI), scale: z.tuple([z.number().finite(), z.number().finite()]) })).max(12).default([]),
   emissiveLinear: z.tuple([factsUnit, factsUnit, factsUnit]).optional(),
+  emissiveStrength: z.number().finite().min(0).max(100_000).optional(),
+  /** PBR extension indicators: present only when the GLB declares the corresponding KHR extension on this material. */
+  clearcoat: z.strictObject({ factor: factsUnit, roughness: factsUnit }).optional(),
+  transmission: z.strictObject({ factor: factsUnit }).optional(),
+  sheen: z.strictObject({ colorLinear: z.tuple([factsUnit, factsUnit, factsUnit]), roughness: factsUnit }).optional(),
+  anisotropy: z.strictObject({ strength: z.number().finite().min(-1).max(1), rotation: z.number().finite().min(0).max(2 * Math.PI) }).optional(),
+  ior: z.number().finite().min(1).max(5).optional(),
 })
 const SpatialAssetRigFactsSchema = z.strictObject({
   profile: z.literal(SPATIAL_GLB_RIGGED_PROFILE),

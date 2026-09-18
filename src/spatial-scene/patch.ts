@@ -2,6 +2,7 @@ import { deepFreezeJson } from "../code/json-snapshot.js"
 import { SpatialScenePatchV1Schema, type SpatialEntity, type SpatialSceneV1 } from "./contracts.js"
 import { applySpatialEntityOverride } from "./evaluate.js"
 import { parseSpatialScene, parseSpatialValue, SpatialSceneError, spatialAssetClosureDigests, spatialPropertySupported, spatialValueSha256 } from "./identity.js"
+import { pbrMaterialMapAssetIds } from "./material-lighting.js"
 
 export interface SpatialSceneDiffEntry {
   readonly kind: "added" | "removed" | "changed"
@@ -96,10 +97,15 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
       case "set-opacity": entities.set(operation.entityId, applySpatialEntityOverride(authored(operation.entityId), { entityId: operation.entityId, property: "opacity", value: operation.opacity })); break
       case "set-emissive": {
         const entity = authored(operation.entityId)
-        if (entity.kind !== "mesh" || entity.material.kind !== "standard") throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard material.", "operations")
+        if (entity.kind !== "mesh" || (entity.material.kind !== "standard" && entity.material.kind !== "pbr")) throw new SpatialSceneError("conflict", "Emissive edits require an authored mesh with a standard or pbr material.", "operations")
         if (!spatialPropertySupported(entity, "color")) throw new SpatialSceneError("conflict", "Source-material mode leaves emissive control to the retained GLB material.", "operations")
-        const { emissive: _cleared, ...material } = entity.material
-        entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } })
+        if (entity.material.kind === "pbr") {
+          const { emissive: _cleared, ...material } = entity.material
+          entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: { color: operation.emissive.color, intensity: operation.emissive.intensity } } })
+        } else {
+          const { emissive: _cleared, ...material } = entity.material
+          entities.set(operation.entityId, { ...entity, material: operation.emissive === null ? material : { ...material, emissive: operation.emissive } })
+        }
         break
       }
       case "set-spot": {
@@ -170,7 +176,10 @@ export function applySpatialScenePatch(sceneInput: unknown, patchInput: unknown)
   for (const entity of scene.entities) {
     const referenced: string[] = entity.kind === "mesh" && entity.geometry.kind === "asset" ? [entity.geometry.assetId]
       : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
-    if (entity.kind === "mesh" && entity.material.map !== undefined) referenced.push(entity.material.map)
+    if (entity.kind === "mesh") {
+      if (entity.material.kind === "pbr") referenced.push(...pbrMaterialMapAssetIds(entity.material))
+      else if (entity.material.map !== undefined) referenced.push(entity.material.map)
+    }
     for (const assetId of referenced) {
       if (entity.origin.kind === "generated" && oldClosure[assetId] !== undefined && oldClosure[assetId] !== newClosure[assetId] && !replacedGenerators.has(entity.origin.generatorId)) {
         throw new SpatialSceneError("conflict", "Changing a generated part's asset closure requires explicit retained generator output replacement.")

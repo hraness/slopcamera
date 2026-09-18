@@ -365,7 +365,7 @@ function eligibility(entity: SpatialEntity, assetBounds: Readonly<Record<string,
 /** The manifest-bearing asset an entity's lowered representation binds, if any. */
 function entityAssetId(entity: SpatialEntity): string | undefined {
   switch (entity.kind) {
-    case "mesh": return entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.material.map
+    case "mesh": return entity.geometry.kind === "asset" ? entity.geometry.assetId : entity.material.kind !== "pbr" ? entity.material.map : undefined
     case "image": case "diagram": case "video": case "environment": return entity.assetId
     case "text": return entity.fontAssetId
     case "splat": return entity.assetId

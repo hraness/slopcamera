@@ -224,6 +224,22 @@ describe("closed GLB triangle profile", () => {
     expect(() => fixtureGeometry({ ...animation.document, animations: [{ ...clip, samplers: [{ input: 4, output: 5, interpolation: "CUBICSPLINE" }] }] }, animation.binary)).toThrow()
   })
 
+  test("admits the reviewed material extensions with complete facts and texture transforms", () => {
+    const fixture = textureFixture(), extensionsUsed = ["KHR_texture_transform", "KHR_materials_clearcoat", "KHR_materials_transmission", "KHR_materials_sheen", "KHR_materials_anisotropy", "KHR_materials_ior", "KHR_materials_emissive_strength"]
+    const transformed = { index: 0, extensions: { KHR_texture_transform: { offset: [0.25, 0.5], rotation: 0.2, scale: [2, 3] } } }
+    const document = { ...fixture.document, extensionsUsed, extensionsRequired: extensionsUsed, materials: [{
+      ...fixture.document.materials[0], pbrMetallicRoughness: { ...fixture.document.materials[0]!.pbrMetallicRoughness, baseColorTexture: transformed }, emissiveFactor: [0.2, 0.3, 0.4], emissiveTexture: { index: 0 },
+      extensions: { KHR_materials_clearcoat: { clearcoatFactor: 0.8, clearcoatRoughnessFactor: 0.2, clearcoatTexture: { index: 0 }, clearcoatRoughnessTexture: { index: 0 }, clearcoatNormalTexture: { index: 0, scale: 0.7 } }, KHR_materials_transmission: { transmissionFactor: 0.6, transmissionTexture: { index: 0 } }, KHR_materials_sheen: { sheenColorFactor: [0.1, 0.2, 0.3], sheenRoughnessFactor: 0.4, sheenColorTexture: { index: 0 }, sheenRoughnessTexture: { index: 0 } }, KHR_materials_anisotropy: { anisotropyStrength: 0.5, anisotropyRotation: 1, anisotropyTexture: { index: 0 } }, KHR_materials_ior: { ior: 1.45 }, KHR_materials_emissive_strength: { emissiveStrength: 4 } },
+    }] }
+    const model = parseSpatialGlb(envelope(document, fixture.binary)), geometry = evaluateSpatialGlb(model, { ...options, materialMode: "source" })
+    expect(model.materialFacts[0]).toMatchObject({ clearcoat: { factor: 0.8, roughness: 0.2 }, transmission: { factor: 0.6 }, sheen: { roughness: 0.4 }, anisotropy: { strength: 0.5, rotation: 1 }, ior: 1.45, emissiveStrength: 4 })
+    expect(model.materialFacts[0]!.maps).toHaveLength(9)
+    expect(model.materialFacts[0]!.textureTransforms).toEqual([{ map: "baseColor", offset: [0.25, 0.5], rotation: 0.2, scale: [2, 3] }])
+    expect(geometry.primitives[0]!.material?.clearcoat?.normalTexture?.scale).toBe(0.7)
+    expect(geometry.images).toHaveLength(1)
+    expect(() => parseSpatialGlb(envelope({ ...document, extensionsRequired: ["KHR_materials_ior"], extensionsUsed: [] }, fixture.binary))).toThrow("required extension")
+  })
+
   test("malformed chunk lengths, padding, UTF-8 and binary envelopes reject without reads beyond bounds", () => {
     const fixture = triangleFixture(), valid = envelope(fixture.document, fixture.binary)
     for (const offset of [0, 4, 8, 12, 16]) {

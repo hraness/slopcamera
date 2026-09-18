@@ -11,7 +11,7 @@ import { composeTransform } from "../../../src/spatial-scene/math";
 import { createOriginalRiggedGlbFixture } from "../html-overlay/rigged-glb.testing";
 import { createSpatialOverlayBatch } from "../html-overlay/spatial";
 import type { ApplicationProcessRunner } from "./context";
-import { inertSpatialSvg, spatialOpenTypeFont, spatialVideoTimeUs, withPreparedSpatialAssets } from "./spatial-assets";
+import { deriveSpatialMaterialRaster, inertSpatialSvg, spatialOpenTypeFont, spatialVideoTimeUs, withPreparedSpatialAssets } from "./spatial-assets";
 
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const transform = { position: [0, 0, -3], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } as const;
@@ -39,6 +39,19 @@ async function workspace<Result>(use: (root: string, parent: string) => Promise<
   await mkdir(root); await mkdir(parent);
   try { return await use(root, parent); } finally { await rm(path, { force: true, recursive: true }); }
 }
+
+describe("material raster derivation", () => {
+  test("derives deterministic normal, roughness, and height PNGs with exact provenance digests", async () => {
+    const source = new Uint8Array(await png()), sourceSha256 = sha(source)
+    for (const [method, outputChannel] of [["sobel-normal-from-height", "xy-normal"], ["average-luminance-roughness", "r"], ["luminance-height", "r"]] as const) {
+      const candidate = { method, sourceAssetId: "asset_image", outputChannel, outputColorSpace: "linear" as const, provenance: "derived-candidate" as const, description: "Original deterministic test candidate; not an authored scan." }
+      const first = await deriveSpatialMaterialRaster({ candidate, source, sourceSha256 }), second = await deriveSpatialMaterialRaster({ candidate, source, sourceSha256 })
+      expect(first.outputSha256).toBe(sha(first.output)); expect(second.outputSha256).toBe(first.outputSha256); expect(second.provenanceSha256).toBe(first.provenanceSha256)
+      expect(first).toMatchObject({ sourceSha256, width: 2, height: 1, candidate: { provenance: "derived-candidate" } })
+    }
+    await expect(deriveSpatialMaterialRaster({ candidate: { method: "luminance-height", sourceAssetId: "asset_image", outputChannel: "r", outputColorSpace: "linear", provenance: "derived-candidate", description: "Mismatch test." }, source, sourceSha256: "0".repeat(64) })).rejects.toThrow("digest")
+  })
+})
 
 describe("contained spatial asset preparation", () => {
   test("captures exact source bytes, publishes immutable raster, and cleans after consumer settlement", async () => {

@@ -38,7 +38,7 @@ describe("galleryProbeScene", () => {
     )
     expect(mapped).toHaveLength(5)
     for (const mesh of mapped) {
-      expect(mesh.material.map).toBe("asset_candidate")
+      expect(mesh.material.kind !== "pbr" && mesh.material.map).toBe("asset_candidate")
     }
     expect(scene.entities.some(entity => entity.kind === "light")).toBe(true)
     expect(scene.cameras[0]?.cameraId).toBe("camera_probe")
@@ -56,7 +56,7 @@ describe("galleryProbeScene", () => {
     })
     expect(
       scene.entities.some(
-        entity => entity.kind === "mesh" && entity.material.map === "asset_candidate",
+        entity => entity.kind === "mesh" && entity.material.kind !== "pbr" && entity.material.map === "asset_candidate",
       ),
     ).toBe(false)
   })

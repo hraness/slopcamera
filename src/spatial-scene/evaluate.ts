@@ -214,6 +214,7 @@ export function evaluateSpatialSceneInContext(context: SpatialEvaluationContext,
     stateSha256, viewSha256, timeUs, camera,
     entities: evaluated.map(item => ({ ...item, visible: item.visible && (item.entity.placement.kind === "world" || item.entity.placement.cameraId === camera.cameraId) })),
     assets: scene.assets,
+    ...(scene.fog === undefined ? {} : { fog: scene.fog }),
   })
   return deepFreezeJson(result)
 }
