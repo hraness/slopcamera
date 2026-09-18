@@ -34,7 +34,7 @@ slopcamera cinema check film.json --json
 
 ## Render and audit
 
-The desktop renderer lowers the closed contracts to Three.js, FFmpeg, and the retained Studio bake adapter. Diagnostic object-ID, depth, and motion outputs are produced before any beauty post-processing.
+The desktop renderer lowers the closed contracts to Three.js, FFmpeg, and a retained native bake adapter. Diagnostic object-ID, depth, and motion outputs are produced before any beauty post-processing.
 
 After rendering, run the continuity and temporal audits:
 
@@ -53,6 +53,6 @@ slopcamera project promote --from <candidate-digest> --reason "best continuity" 
 
 ## Boundaries
 
-- No arbitrary runtime code. Native execution only through `slopcamera.studio.run` with a retained, hash-bound bundle.
+- No arbitrary runtime code. Native execution only through the fixed, hash-bound native authoring operation.
 - No caller-authored GLSL or network shader catalogs. Post-processing is locked to in-repo modules.
 - No hidden paid calls. Provider work is explicit, byte-bound, and opt-in.
