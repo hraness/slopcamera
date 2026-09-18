@@ -50,7 +50,7 @@ test("partitioned timed surfaces retain only referenced resources and preserve t
   expect(parts.length).toBeGreaterThan(1);
   for (const part of parts) {
     const times = snapshots.slice(part.offset, part.offset + part.length).map(snapshot => snapshot.timeUs);
-    expect(part.preparedAssets.map(asset => asset.kind === "splat" ? null : asset.timeUs)).toEqual(times);
+    expect(part.preparedAssets.map(asset => asset.kind === "splat" || asset.kind === "lut" ? null : asset.timeUs)).toEqual(times);
     expect(part.batch.authoring.resources.map(resource => resource.name).sort()).toEqual(times.map(time => `surface_${time}`).sort());
     expect(part.batch.metadata.preparation.map(asset => asset.assetManifestSha256)).toEqual(times.map(() => spatialAssetClosureDigests(scene.assets)[asset.assetId]!));
   }
