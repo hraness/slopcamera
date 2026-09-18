@@ -203,9 +203,9 @@ operations separately publish equivalent derivatives by content hash for workflo
         [--kind <image|texture|skybox|backdrop|sprite>] [--count <n>]
         [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
         [--cell <n>] [--tile|--no-tile] [--json]
-  slopcamera image icon <subject> --output <file.svg> [--model <model>]
-        [--ink <#rgb>] [--rounds <1-4>] [--critique-model <model>]
-        [--keep-raster] [--json]
+  slopcamera image icon <subject> --output <file.svg>
+        [--purpose <mark|illustration>] [--model <model>] [--ink <#rgb>]
+        [--rounds <1-4>] [--critique-model <model>] [--keep-raster] [--json]
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
