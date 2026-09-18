@@ -2,8 +2,8 @@ import { z } from "zod";
 import { deepFreezeJson } from "../code/json-snapshot.js";
 import { parseSpatialValue, SpatialSceneError, spatialValueSha256 } from "./identity.js";
 
-const positiveDimension = z.number().finite().min(0);
-const unit = z.number().finite().min(0).max(1);
+export const positiveDimension = z.number().finite().min(0);
+export const unit = z.number().finite().min(0).max(1);
 
 /**
  * Bounded post-processing and render-quality contracts for Phase 7.

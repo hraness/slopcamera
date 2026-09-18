@@ -4228,6 +4228,77 @@ function parseSpatialRenderPlan(input) {
 function spatialRenderPlanSha256(plan) {
   return spatialValueSha256(plan);
 }
+
+// src/spatial-scene/particle.ts
+import { z as z11 } from "zod";
+var SPATIAL_PARTICLE_LIMITS = {
+  emitters: 64,
+  forces: 16,
+  killVolumes: 16,
+  preview: 1e5,
+  final: 1e6
+};
+var SpatialParticleEmitterShapeSchema = z11.discriminatedUnion("kind", [
+  z11.strictObject({ kind: z11.literal("point") }),
+  z11.strictObject({ kind: z11.literal("sphere"), radius: positiveDimension2 }),
+  z11.strictObject({ kind: z11.literal("box"), size: z11.tuple([positiveDimension2, positiveDimension2, positiveDimension2]) }),
+  z11.strictObject({ kind: z11.literal("disc"), radius: positiveDimension2 }),
+  z11.strictObject({ kind: z11.literal("surface"), assetId: z11.string().min(1).max(128) }),
+  z11.strictObject({ kind: z11.literal("spline"), controlPoints: z11.array(z11.tuple([positiveDimension2, positiveDimension2, positiveDimension2])).min(2).max(64) })
+]);
+var SpatialParticleForceSchema = z11.discriminatedUnion("kind", [
+  z11.strictObject({ kind: z11.literal("gravity"), direction: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]) }),
+  z11.strictObject({ kind: z11.literal("drag"), coefficient: unit2 }),
+  z11.strictObject({ kind: z11.literal("vortex"), axis: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]), strength: z11.number().finite() }),
+  z11.strictObject({ kind: z11.literal("turbulence"), seed: z11.number().int().min(0).max(2147483647), scale: positiveDimension2, strength: positiveDimension2 })
+]);
+var SpatialParticleKillVolumeSchema = z11.discriminatedUnion("kind", [
+  z11.strictObject({ kind: z11.literal("box"), min: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]), max: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]) }),
+  z11.strictObject({ kind: z11.literal("sphere"), center: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]), radius: positiveDimension2 })
+]);
+var SpatialParticleCurveSchema = z11.strictObject({
+  keys: z11.array(z11.strictObject({ t: unit2, value: unit2 })).min(1).max(16)
+});
+var SpatialParticleEmitterSchema = z11.strictObject({
+  id: z11.string().min(1).max(64),
+  enabled: z11.boolean().default(true),
+  seed: z11.number().int().min(0).max(2147483647),
+  rate: z11.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
+  burst: z11.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final).optional(),
+  lifetimeUs: z11.tuple([z11.number().int().min(0), z11.number().int().min(0)]),
+  shape: SpatialParticleEmitterShapeSchema,
+  velocity: z11.tuple([z11.number().finite(), z11.number().finite(), z11.number().finite()]),
+  velocitySpread: z11.tuple([unit2, unit2, unit2]),
+  sizeOverLife: SpatialParticleCurveSchema,
+  colorOverLife: z11.array(z11.tuple([unit2, unit2, unit2, unit2])).min(1).max(16),
+  opacityOverLife: SpatialParticleCurveSchema
+});
+var SpatialParticleSystemSchema = z11.strictObject({
+  kind: z11.literal("slopcamera.spatial-particle-system"),
+  schemaVersion: z11.literal(1),
+  entityId: z11.string().min(1).max(128),
+  countTier: z11.enum(["preview", "final"]),
+  maxCount: z11.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
+  emitters: z11.array(SpatialParticleEmitterSchema).max(SPATIAL_PARTICLE_LIMITS.emitters),
+  forces: z11.array(SpatialParticleForceSchema).max(SPATIAL_PARTICLE_LIMITS.forces),
+  killVolumes: z11.array(SpatialParticleKillVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.killVolumes),
+  preBake: z11.boolean().default(false)
+});
+function parseSpatialParticleSystem(input) {
+  const system = parseSpatialValue(SpatialParticleSystemSchema, input, "particle system");
+  const tierLimit = system.countTier === "preview" ? SPATIAL_PARTICLE_LIMITS.preview : SPATIAL_PARTICLE_LIMITS.final;
+  if (system.maxCount > tierLimit) {
+    throw new TypeError(`Particle system ${system.entityId} requests ${system.maxCount} particles, exceeding the ${system.countTier} tier limit of ${tierLimit}.`);
+  }
+  const maxRate = system.emitters.reduce((sum, e) => sum + e.rate + (e.burst ?? 0), 0);
+  if (maxRate > system.maxCount) {
+    throw new TypeError(`Particle system ${system.entityId} peak emission rate (${maxRate}) exceeds maxCount (${system.maxCount}).`);
+  }
+  return deepFreezeJson(system);
+}
+function spatialParticleSystemSha256(system) {
+  return spatialValueSha256(system);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -4245,6 +4316,7 @@ export {
   validatePerformanceBakeReceipt,
   validatePbrMaterial,
   unprojectPixel,
+  unit2 as unit,
   transformPoint,
   transformDirection,
   transformBounds,
@@ -4256,6 +4328,7 @@ export {
   spatialReviewDefaultTimesUs,
   spatialRenderPlanSha256,
   spatialPropertySupported,
+  spatialParticleSystemSha256,
   spatialOutputDuration,
   spatialGlbBounds,
   spatialGeneratorParametersSha256,
@@ -4284,6 +4357,7 @@ export {
   projectPreparedPoint,
   projectPoint,
   prepareCameraView,
+  positiveDimension2 as positiveDimension,
   poseFromMatrix,
   planMaterialProbeGallery,
   pixelRay,
@@ -4300,6 +4374,7 @@ export {
   parseSpatialPerformanceBakeRequest,
   parseSpatialPerformanceBakeReceipt,
   parseSpatialPerformanceAuditOptions,
+  parseSpatialParticleSystem,
   parseSpatialGlb,
   parseSpatialGeneratorParameters,
   parseSpatialCameraTrack,
@@ -4459,6 +4534,12 @@ export {
   SpatialPbrAnisotropySchema,
   SpatialPayloadSchema,
   SpatialPatchOperationSchema,
+  SpatialParticleSystemSchema,
+  SpatialParticleKillVolumeSchema,
+  SpatialParticleForceSchema,
+  SpatialParticleEmitterShapeSchema,
+  SpatialParticleEmitterSchema,
+  SpatialParticleCurveSchema,
   SpatialOverrideSchema,
   SpatialOriginSchema,
   SpatialMotionBlurSchema,
@@ -4541,6 +4622,7 @@ export {
   SPATIAL_PERFORMANCE_LIMITS,
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,
+  SPATIAL_PARTICLE_LIMITS,
   SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
