@@ -374,12 +374,20 @@ function dropSpeckles(
     tail += 1
     seen[start] = 1
     const component: number[] = []
+    let minimumX = width
+    let maximumX = -1
+    let minimumY = height
+    let maximumY = -1
     while (head < tail) {
       const pixel = queue[head]!
       head += 1
       component.push(pixel)
       const x = pixel % width
       const y = Math.floor(pixel / width)
+      minimumX = Math.min(minimumX, x)
+      maximumX = Math.max(maximumX, x)
+      minimumY = Math.min(minimumY, y)
+      maximumY = Math.max(maximumY, y)
       const neighbors = [
         x > 0 ? pixel - 1 : -1,
         x < width - 1 ? pixel + 1 : -1,
@@ -398,7 +406,14 @@ function dropSpeckles(
         }
       }
     }
-    if (component.length < minimumComponent) {
+    const componentWidth = maximumX - minimumX + 1
+    const componentHeight = maximumY - minimumY + 1
+    const spansWidth = minimumX === 0 && maximumX === width - 1
+    const spansHeight = minimumY === 0 && maximumY === height - 1
+    const elongatedBorderArtifact =
+      (spansWidth || spansHeight) &&
+      Math.max(componentWidth / componentHeight, componentHeight / componentWidth) > 8
+    if (component.length < minimumComponent || elongatedBorderArtifact) {
       removed += 1
       for (const pixel of component) alpha[pixel] = 0
     }

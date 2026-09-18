@@ -118,6 +118,23 @@ describe("icon line-art extraction", () => {
     expect(result.removedComponents).toBe(1)
   })
 
+  test("drops elongated extraction artifacts that span a raster boundary", () => {
+    const width = 64
+    const height = 64
+    const pixels = solidRgba(width, height, [252, 252, 252, 255])
+    for (let y = 0; y < height; y += 1) {
+      setPixel(pixels, width, 0, y, [36, 116, 212, 255])
+    }
+    for (let x = 20; x <= 44; x += 1) {
+      for (let y = 24; y <= 40; y += 1) {
+        setPixel(pixels, width, x, y, [36, 116, 212, 255])
+      }
+    }
+    const result = extractIconLineArt(pixels, width, height)
+    expect(result.removedComponents).toBe(1)
+    expect(result.width).toBeLessThan(width)
+  })
+
   test("rejects a raster with no ink strokes", () => {
     const pixels = solidRgba(32, 32, [252, 252, 252, 255])
     expect(() => extractIconLineArt(pixels, 32, 32)).toThrow(
