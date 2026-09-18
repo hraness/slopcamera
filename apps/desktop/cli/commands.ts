@@ -56,6 +56,9 @@ import {
   AnalyzerEvidenceV1Schema,
   AlignmentCandidateIdSchema,
   AudioAlignmentAnalysisV1Schema,
+  CinemaContinuityReportSchema,
+  CinemaPlanIdSchema,
+  CinemaRenderReceiptV1Schema,
   EventKindSchema,
   MusicAnalysisV1Schema,
   OverlayOperationSchema,
@@ -85,12 +88,17 @@ import {
   applyProjectInactivityPlan,
   analyzeAudioAlignment,
   applyAudioAlignmentCandidate,
+  analyzeCinemaPlan,
   addZoom,
+  assertCinemaPlanComposition,
+  auditCinemaContinuity,
   buildProjectOutputTimeMap,
   buildSourceTimeMap,
   canonicalSlopcameraPersistenceDocument,
   canonicalJson,
+  compileCinemaSequence,
   compileProjectRenderPlan,
+  createCinemaPlanScaffold,
   compileRenderPlan,
   createNodeBundleFileSystem,
   createDefaultEditPlan,
@@ -110,6 +118,11 @@ import {
   removeZoom,
   saveEditPlan,
   saveAnalysisArtifact,
+  saveImmutableText,
+  loadProjectCinemaPlan,
+  projectCinemaRenderPlanPath,
+  saveProjectCinemaPlan,
+  saveProjectCinemaRevision,
   saveProjectEditPlan,
   setSpeed,
   rebaseProjectEditPlan,
@@ -213,6 +226,7 @@ import {
 } from "./project-service";
 import { resolveVerifiedProjectMedia } from "./project-media-integrity";
 import { buildFfmpegInvocation, prepareOverlaySources } from "./renderer";
+import { buildCinemaFfmpegInvocation } from "./cinema-renderer";
 import { buildProjectFfmpegInvocation } from "./project-renderer";
 import {
   DEFAULT_PROJECT_INACTIVITY_CONFIG,
@@ -2485,6 +2499,191 @@ async function handleProjectRender(
   });
   const completed = { ...output, output: outputIntegrity };
   writeValue(context.io, command.json, completed, () => `rendered ${outputRelative}; plan=${planArtifactPath}`);
+}
+
+async function handleProjectCinema(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "project-cinema" }>,
+): Promise<void> {
+  const project = await openProject(context.paths.projectRoot, command.project);
+  const edit = await loadCurrentProjectPlan(project);
+  const timestamp = context.io.now().toISOString();
+
+  if (command.action === "init") {
+    const existing = await loadProjectCinemaPlan(project.fileSystem);
+    if (existing !== null && !command.force) {
+      throw new CliError(
+        "conflict",
+        "Project already has a cinema sidecar. Pass --force to replace it.",
+      );
+    }
+    let plan;
+    try {
+      plan = createCinemaPlanScaffold(
+        project.project,
+        edit,
+        CinemaPlanIdSchema.parse(`cinema_${randomUUID().replaceAll("-", "").slice(0, 16)}`),
+        timestamp,
+      );
+    } catch (error) {
+      if (error instanceof TypeError) throw new CliError("conflict", error.message);
+      throw error;
+    }
+    const contents = `${canonicalJson(plan)}\n`;
+    await saveProjectCinemaPlan(project.fileSystem, plan);
+    const revisionPath = await saveProjectCinemaRevision(
+      project.fileSystem,
+      contents,
+      sha256Hex(contents),
+    );
+    writeValue(context.io, command.json, {
+      cinemaPlanSha256: plan.cinemaPlanSha256,
+      plan,
+      planPath: "cinema/current.json",
+      revisionPath,
+      shots: plan.shots.length,
+    }, () => `cinema sidecar ${plan.cinemaPlanSha256} with ${plan.shots.length} shots; revision=${revisionPath}`);
+    return;
+  }
+
+  const cinema = await loadProjectCinemaPlan(project.fileSystem);
+  if (cinema === null) {
+    throw new CliError(
+      "not-found",
+      "Project has no cinema sidecar. Run slopcamera project cinema init first.",
+    );
+  }
+  try {
+    assertCinemaPlanComposition(cinema);
+  } catch (error) {
+    if (error instanceof TypeError) throw new CliError("conflict", error.message);
+    throw error;
+  }
+
+  if (command.action === "check") {
+    const analysis = analyzeCinemaPlan(cinema, project.project, edit);
+    const audit = auditCinemaContinuity(cinema);
+    const findings = [...analysis.findings, ...audit.findings].sort((left, right) => (
+      left.timeUs - right.timeUs
+      || left.code.localeCompare(right.code)
+      || left.shotIds.join("").localeCompare(right.shotIds.join(""))
+    ));
+    const report = CinemaContinuityReportSchema.parse({
+      cinemaPlanSha256: cinema.cinemaPlanSha256,
+      findings,
+      kind: "slopcamera.cinema-continuity-report",
+      schemaVersion: 1,
+    });
+    const contents = `${canonicalJson(report)}\n`;
+    const auditPath = `cinema/audits/${sha256Hex(contents)}.json`;
+    await saveImmutableText(project.fileSystem, auditPath, contents, sha256Hex(contents));
+    const errors = findings.filter(finding => finding.severity === "error").length;
+    writeValue(context.io, command.json, {
+      auditPath,
+      findings,
+      ok: errors === 0,
+      stale: findings.some(finding => finding.code === "stale-sidecar"),
+    }, () => `${findings.length} findings (${errors} errors); audit=${auditPath}`);
+    if (errors > 0) {
+      throw new CliError(
+        "conflict",
+        `Cinema sidecar has ${errors} blocking findings; see ${auditPath}.`,
+      );
+    }
+    return;
+  }
+
+  const placeholders = command.action === "animatic" || command.allowPlaceholders
+    ? "allow" as const
+    : "reject" as const;
+  let renderPlan;
+  try {
+    renderPlan = compileCinemaSequence(cinema, project.project, edit, { placeholders });
+  } catch (error) {
+    if (error instanceof TypeError) throw new CliError("conflict", error.message);
+    throw error;
+  }
+  const planContents = `${canonicalJson(renderPlan)}\n`;
+  const planPath = projectCinemaRenderPlanPath(renderPlan.planSha256);
+  await saveImmutableText(
+    project.fileSystem,
+    planPath,
+    planContents,
+    sha256Hex(planContents),
+  );
+  const planDocumentSha256 = sha256Hex(planContents);
+
+  if (command.action === "plan") {
+    writeValue(context.io, command.json, {
+      advisories: renderPlan.advisories,
+      plan: renderPlan,
+      planPath,
+    }, () => (
+      `cinema render plan ${renderPlan.planSha256}; shots=${renderPlan.shots.length} cues=${renderPlan.audioCues.length} advisories=${renderPlan.advisories.length}`
+    ));
+    return;
+  }
+
+  const tier = command.action === "animatic" ? "preview" as const : "final" as const;
+  const requested = command.output
+    ?? `renders/cinema/${command.action}-${renderPlan.planSha256.slice(0, 16)}.mp4`;
+  const renderLeaf = await resolveProjectRenderLeaf(project.directory.path, requested, { videoOutput: true });
+  const receiptRelative = `${renderLeaf.relative}.cinema-receipt.json`;
+  const receiptLeaf = await resolveProjectRenderLeaf(project.directory.path, receiptRelative);
+  const ffmpeg = await requireRequestedCapability(context, "ffmpeg");
+  const built = await buildCinemaFfmpegInvocation(renderPlan, {
+    dryRun: command.dryRun,
+    ffmpeg,
+    outputPath: renderLeaf.absolute,
+    projectDirectory: project.directory.path,
+    repositoryRoot: context.paths.repositoryRoot,
+    tier,
+  });
+  const output = {
+    invocation: built.invocation,
+    planPath,
+    projectId: project.project.projectId,
+    receiptPath: command.dryRun ? null : receiptRelative,
+    tier,
+  };
+  if (command.dryRun) {
+    writeValue(context.io, command.json, output, () => `dry-run ${built.argv.join(" ")}`);
+    return;
+  }
+  const placeholderShotIds = renderPlan.shots
+    .filter(shot => shot.placeholder !== undefined)
+    .map(shot => shot.shotId);
+  const outputIntegrity = await executeAtomicRender({
+    argv: built.argv,
+    companion: {
+      finalPath: receiptLeaf.absolute,
+      publish: async integrity => await project.fileSystem.writeTextAtomic(
+        receiptRelative,
+        `${canonicalJson(CinemaRenderReceiptV1Schema.parse({
+          cinemaPlanSha256: cinema.cinemaPlanSha256,
+          createdAt: context.io.now().toISOString(),
+          kind: "slopcamera.cinema-render-receipt",
+          output: { ...integrity, path: renderLeaf.relative },
+          placeholders: placeholderShotIds,
+          plan: { path: planPath, sha256: planDocumentSha256 },
+          projectId: project.project.projectId,
+          schemaVersion: 1,
+          tier,
+        }))}\n`,
+      ),
+    },
+    failureLabel: "FFmpeg cinema render failed",
+    finalOutputPath: renderLeaf.absolute,
+    maximumOutputBytes: MAXIMUM_LEGACY_PROJECT_RENDER_OUTPUT_BYTES,
+    runner: context.runner,
+  });
+  const completed = { ...output, output: outputIntegrity };
+  writeValue(
+    context.io,
+    command.json,
+    completed,
+    () => `rendered ${renderLeaf.relative}; plan=${planPath}`,
+  );
 }
 
 function projectPlacement(
@@ -7342,6 +7541,7 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "project-metadata-edit": await handleProjectMetadataEdit(context, command); return;
     case "project-overlay-edit": await handleProjectOverlayEdit(context, command); return;
     case "project-render": await handleProjectRender(context, command); return;
+    case "project-cinema": await handleProjectCinema(context, command); return;
     case "align-analyze": await handleAlignAnalyze(context, command); return;
     case "align-apply": await handleAlignApply(context, command); return;
     case "inspect": {
@@ -7469,6 +7669,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "project-metadata-edit":
     case "project-overlay-edit":
     case "project-render":
+    case "project-cinema":
     case "align-analyze":
     case "align-apply":
     case "analyze-faces":
