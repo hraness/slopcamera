@@ -709,4 +709,252 @@ function canonicalJsonFingerprint(value, hashPrefix) {
   return boundedCanonicalJsonFingerprint(value, { maximumBytes: MAX_CANONICAL_JSON_BYTES }, hashPrefix);
 }
 
-export { SlopcameraCodeError, slopcameraCodeErrorMessage, asSlopcameraCodeError, utf8ByteLength, createSha256HexHasher, sha256Hex, captureJsonStructure, createBoundedJsonValueSnapshot, createBoundedJsonSnapshot, deepFreezeJson, compareUtf16Strings, boundedCanonicalJson, boundedCanonicalJsonSha256, boundedCanonicalJsonFingerprint, canonicalJson, canonicalJsonSha256, canonicalJsonSha256Prefixed, canonicalJsonFingerprint };
+// src/code/public-operations.ts
+import { z } from "zod";
+var MAX_PATH_CHARACTERS = 4096;
+var MAX_PROMPT_BYTES = 32 * 1024;
+var MAX_GENERATED_IMAGE_BYTES = 64 * 1024 * 1024;
+var MAX_VECTOR_INPUT_BYTES = 16 * 1024 * 1024;
+var MAX_VECTOR_OUTPUT_BYTES = 2000000;
+var MAX_DIAGRAM_ARTIFACT_BYTES = 64 * 1024 * 1024;
+var BoundedPathSchema = z.string().min(1).max(MAX_PATH_CHARACTERS).refine((value) => !value.includes("\x00"), "Paths must not contain NUL bytes.");
+var Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u);
+var BoundedVersionStringSchema = z.string().min(1).max(256);
+var NonnegativeSafeIntegerSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+var PositiveSafeIntegerSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+function schemaWithReadonlyOutput(schema) {
+  return schema;
+}
+var SlopcameraImageModelSchema = z.string().min(3).max(256).regex(/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu);
+var SlopcameraDiagramCheckInputSchema = z.strictObject({
+  path: BoundedPathSchema
+});
+var SlopcameraDiagramRenderInputSchema = schemaWithReadonlyOutput(z.strictObject({
+  outDirectory: BoundedPathSchema.optional(),
+  path: BoundedPathSchema,
+  scale: z.number().finite().positive().max(4).optional()
+}));
+var SlopcameraImageVectorizeInputSchema = schemaWithReadonlyOutput(z.strictObject({
+  alphaCutoff: z.number().int().min(1).max(64).optional(),
+  duotone: z.tuple([
+    z.string().regex(/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu),
+    z.string().regex(/^#[a-f0-9]{3}(?:[a-f0-9]{3})?$/iu)
+  ]).optional(),
+  inputPath: BoundedPathSchema,
+  outputPath: BoundedPathSchema.refine((value) => value.toLowerCase().endsWith(".svg"), "Vector output paths must end in .svg."),
+  timeoutMs: z.number().int().min(1).max(300000).optional()
+}));
+var PromptSchema = z.string().superRefine((value, context) => {
+  if (utf8ByteLength(value, MAX_PROMPT_BYTES) === undefined) {
+    context.addIssue({
+      code: "custom",
+      message: `Prompts must contain at most ${String(MAX_PROMPT_BYTES)} UTF-8 bytes.`
+    });
+    return;
+  }
+  if (value.trim().length === 0) {
+    context.addIssue({ code: "custom", message: "Prompts must not be blank." });
+    return;
+  }
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) {
+    context.addIssue({
+      code: "custom",
+      message: "Prompts must not contain control characters."
+    });
+  }
+});
+var SlopcameraImageGenerateInputSchema = schemaWithReadonlyOutput(z.strictObject({
+  model: SlopcameraImageModelSchema,
+  outputPath: BoundedPathSchema.refine((value) => /\.(?:jpe?g|png|webp)$/iu.test(value), "Generated image output paths must end in .png, .jpg, .jpeg, or .webp."),
+  prompt: PromptSchema
+}));
+var SlopcameraLintFindingSchema = z.strictObject({
+  code: z.string().min(1).max(160),
+  message: z.string().min(1).max(4096),
+  shapeIds: z.array(z.string().min(1).max(256)).max(4096)
+});
+var SlopcameraDiagramCheckOutputSchema = z.strictObject({
+  configPath: z.null(),
+  findings: z.array(SlopcameraLintFindingSchema).max(4096)
+});
+var SlopcameraRenderArtifactsSchema = z.strictObject({
+  darkPng: BoundedPathSchema,
+  darkSvg: BoundedPathSchema,
+  lightPng: BoundedPathSchema,
+  lightSvg: BoundedPathSchema,
+  spec: BoundedPathSchema,
+  tldr: BoundedPathSchema
+});
+var SlopcameraDiagramRenderOutputSchema = z.strictObject({
+  artifacts: SlopcameraRenderArtifactsSchema,
+  configPath: z.null(),
+  findings: z.array(SlopcameraLintFindingSchema).max(4096)
+});
+var SlopcameraVectorizeQualityReceiptSchema = z.strictObject({
+  alphaRmse: z.number().finite().nonnegative(),
+  colorRmse: z.number().finite().nonnegative(),
+  outsideAlphaRatio: z.number().finite().min(0).max(1),
+  sampleHeight: PositiveSafeIntegerSchema,
+  sampleWidth: PositiveSafeIntegerSchema,
+  supportRecall: z.number().finite().min(0).max(1)
+});
+var SlopcameraVectorizeProvenanceSchema = z.strictObject({
+  arch: BoundedVersionStringSchema,
+  platform: BoundedVersionStringSchema,
+  sharp: BoundedVersionStringSchema,
+  sharpVersions: z.record(z.string().min(1).max(128), BoundedVersionStringSchema),
+  vips: BoundedVersionStringSchema,
+  vtracerSha256: Sha256Schema,
+  vtracerSource: z.enum(["official-release", "override"]),
+  vtracerVersion: BoundedVersionStringSchema
+});
+var SlopcameraVectorizeReceiptSchema = z.strictObject({
+  alphaCutoff: z.number().int().min(1).max(64),
+  bytes: NonnegativeSafeIntegerSchema.max(MAX_VECTOR_OUTPUT_BYTES),
+  candidatesEvaluated: PositiveSafeIntegerSchema,
+  format: z.string().min(1).max(80),
+  height: PositiveSafeIntegerSchema.max(4096),
+  inputBytes: PositiveSafeIntegerSchema.max(MAX_VECTOR_INPUT_BYTES),
+  outputMode: z.enum(["color", "duotone"]),
+  pathCount: NonnegativeSafeIntegerSchema.max(12000),
+  profile: z.enum(["balanced", "detailed", "photo"]),
+  provenance: SlopcameraVectorizeProvenanceSchema,
+  quality: SlopcameraVectorizeQualityReceiptSchema,
+  receiptVersion: z.literal(1),
+  representation: z.enum(["color-paths", "alpha-mask"]),
+  sourceSha256: Sha256Schema,
+  svgSha256: Sha256Schema,
+  width: PositiveSafeIntegerSchema.max(4096)
+});
+var SlopcameraImageVectorizeOutputSchema = z.strictObject({
+  outputPath: BoundedPathSchema,
+  receipt: SlopcameraVectorizeReceiptSchema
+});
+var SlopcameraImageGenerateOutputSchema = z.strictObject({
+  bytes: PositiveSafeIntegerSchema.max(MAX_GENERATED_IMAGE_BYTES),
+  mediaType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  model: SlopcameraImageModelSchema,
+  outputPath: BoundedPathSchema,
+  provider: z.literal("vercel-ai-gateway"),
+  requestId: z.string().min(1).max(256).refine((value) => !/[\u0000-\u001f\u007f]/u.test(value), "Request ids must not contain control characters."),
+  sha256: Sha256Schema,
+  warnings: z.array(z.string().min(1).max(256)).max(100)
+});
+var PORTABLE_SLOPCAMERA_OPERATION_KINDS = Object.freeze([
+  "slopcamera.diagram.check",
+  "slopcamera.diagram.render",
+  "slopcamera.image.generate",
+  "slopcamera.image.vectorize"
+]);
+function freezePolicy(policy) {
+  const preparation = Object.freeze([...policy.preparation]);
+  const resources = Object.freeze(policy.resources.map((claim) => Object.freeze({ ...claim })));
+  return Object.freeze({ ...policy, preparation, resources });
+}
+function portableContract(contract) {
+  return Object.freeze({ ...contract, policy: freezePolicy(contract.policy) });
+}
+var PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS = Object.freeze({
+  "slopcamera.diagram.check": portableContract({
+    inputSchema: SlopcameraDiagramCheckInputSchema,
+    inputSchemaId: "slopcamera.operation.diagram.check.input/v2",
+    kind: "slopcamera.diagram.check",
+    lifecycle: "pure",
+    outputSchema: SlopcameraDiagramCheckOutputSchema,
+    outputSchemaId: "slopcamera.operation.diagram.check.output/v2",
+    policy: {
+      cache: "content-addressed",
+      cancellable: false,
+      effect: "local-read",
+      maxDurationMs: 30000,
+      maxFanOut: 0,
+      maxInputBytes: 4096,
+      maxOutputBytes: 256 * 1024,
+      preparation: ["local-media"],
+      resources: [
+        { amount: 1, resource: "cpu" },
+        { amount: 1, resource: "local-io" }
+      ],
+      resume: "deterministic"
+    },
+    version: 2
+  }),
+  "slopcamera.diagram.render": portableContract({
+    inputSchema: SlopcameraDiagramRenderInputSchema,
+    inputSchemaId: "slopcamera.operation.diagram.render.input/v2",
+    kind: "slopcamera.diagram.render",
+    lifecycle: "local-artifact",
+    outputSchema: SlopcameraDiagramRenderOutputSchema,
+    outputSchemaId: "slopcamera.operation.diagram.render.output/v2",
+    policy: {
+      cache: "none",
+      cancellable: false,
+      effect: "local-derived-write",
+      maxDurationMs: 120000,
+      maxFanOut: 5,
+      maxInputBytes: 8192,
+      maxOutputBytes: 5 * MAX_DIAGRAM_ARTIFACT_BYTES,
+      preparation: ["local-media"],
+      resources: [
+        { amount: 1, resource: "cpu" },
+        { amount: 1, resource: "local-io" }
+      ],
+      resume: "ambiguous-after-dispatch"
+    },
+    version: 2
+  }),
+  "slopcamera.image.generate": portableContract({
+    inputSchema: SlopcameraImageGenerateInputSchema,
+    inputSchemaId: "slopcamera.operation.image.generate.input/v2",
+    kind: "slopcamera.image.generate",
+    lifecycle: "paid-dispatch",
+    outputSchema: SlopcameraImageGenerateOutputSchema,
+    outputSchemaId: "slopcamera.operation.image.generate.output/v2",
+    policy: {
+      cache: "exact-run",
+      cancellable: false,
+      effect: "paid-cloud",
+      maxDurationMs: 120000,
+      maxFanOut: 1,
+      maxInputBytes: 16 * 1024,
+      maxOutputBytes: MAX_GENERATED_IMAGE_BYTES,
+      preparation: ["provider-options"],
+      resources: [
+        { amount: 1, resource: "local-io" },
+        { amount: 1, resource: "network" },
+        { amount: 1, resource: "paid-call" }
+      ],
+      resume: "ambiguous-after-dispatch"
+    },
+    version: 2
+  }),
+  "slopcamera.image.vectorize": portableContract({
+    inputSchema: SlopcameraImageVectorizeInputSchema,
+    inputSchemaId: "slopcamera.operation.image.vectorize.input/v2",
+    kind: "slopcamera.image.vectorize",
+    lifecycle: "local-artifact",
+    outputSchema: SlopcameraImageVectorizeOutputSchema,
+    outputSchemaId: "slopcamera.operation.image.vectorize.output/v2",
+    policy: {
+      cache: "none",
+      cancellable: false,
+      effect: "local-derived-write",
+      maxDurationMs: 300000,
+      maxFanOut: 1,
+      maxInputBytes: MAX_VECTOR_INPUT_BYTES,
+      maxOutputBytes: MAX_VECTOR_OUTPUT_BYTES,
+      preparation: ["local-media"],
+      resources: [
+        { amount: 1, resource: "cpu" },
+        { amount: 1, resource: "local-io" }
+      ],
+      resume: "ambiguous-after-dispatch"
+    },
+    version: 2
+  })
+});
+function isPortableSlopcameraOperationKind(value) {
+  return PORTABLE_SLOPCAMERA_OPERATION_KINDS.includes(value);
+}
+
+export { SlopcameraCodeError, slopcameraCodeErrorMessage, asSlopcameraCodeError, createSha256HexHasher, sha256Hex, captureJsonStructure, createBoundedJsonValueSnapshot, createBoundedJsonSnapshot, deepFreezeJson, compareUtf16Strings, boundedCanonicalJson, boundedCanonicalJsonSha256, boundedCanonicalJsonFingerprint, canonicalJson, canonicalJsonSha256, canonicalJsonSha256Prefixed, canonicalJsonFingerprint, SlopcameraImageModelSchema, SlopcameraDiagramCheckInputSchema, SlopcameraDiagramRenderInputSchema, SlopcameraImageVectorizeInputSchema, SlopcameraImageGenerateInputSchema, SlopcameraLintFindingSchema, SlopcameraDiagramCheckOutputSchema, SlopcameraRenderArtifactsSchema, SlopcameraDiagramRenderOutputSchema, SlopcameraVectorizeQualityReceiptSchema, SlopcameraVectorizeProvenanceSchema, SlopcameraVectorizeReceiptSchema, SlopcameraImageVectorizeOutputSchema, SlopcameraImageGenerateOutputSchema, PORTABLE_SLOPCAMERA_OPERATION_KINDS, PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS, isPortableSlopcameraOperationKind };

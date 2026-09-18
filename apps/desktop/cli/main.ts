@@ -46,7 +46,7 @@ export async function main(
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);
   if (portableExitCode !== undefined) return portableExitCode;
   const earlyCommand = parseCliArgs(unifiedArgv);
-  if (earlyCommand.kind === "help" || earlyCommand.kind === "version" || earlyCommand.kind === "complete") {
+  if (earlyCommand.kind === "help" || earlyCommand.kind === "version" || earlyCommand.kind === "complete" || earlyCommand.kind === "capabilities") {
     const intro = rootHelpIntro(unifiedArgv, {
       isTTY: process.stdout.isTTY === true, term: process.env.TERM, columns: process.stdout.columns,
     });

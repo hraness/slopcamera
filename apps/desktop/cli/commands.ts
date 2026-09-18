@@ -181,6 +181,7 @@ import {
 import { resolveEmojiAsset, searchEmojiAssets, inspectEmojiAssets } from "./emoji-assets";
 import { asCliError, CliError, EXIT_CODE } from "./errors";
 import { commandHelp, completions } from "./help";
+import { createLocalSlopcameraCapabilityManifest } from "./capability-manifest";
 import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
@@ -760,6 +761,16 @@ async function requireRequestedCapability(
 function writeValue(io: CliIo, json: boolean, value: unknown, human: () => string): void {
   if (json) writeJson(io, value);
   else writeLine(io, human());
+}
+
+function writeCapabilityManifest(io: CliIo, json: boolean, toolVersion: string): void {
+  const manifest = createLocalSlopcameraCapabilityManifest(
+    createApplicationOperationRegistry({ toolVersion }),
+    toolVersion,
+  );
+  writeValue(io, json, manifest, () => manifest.modules.map(module => (
+    `${module.moduleId}@${module.version}\t${module.trust}\toperations=${module.operations.length} workflows=${module.workflows.length} tools=${module.tools.length}\t${module.title}`
+  )).join("\n"));
 }
 
 function isWithin(root: string, candidate: string): boolean {
@@ -6891,6 +6902,7 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     }
     case "help": writeLine(context.io, commandHelp(command.topic)); return;
     case "version": writeLine(context.io, context.version); return;
+    case "capabilities": writeCapabilityManifest(context.io, command.json, context.version); return;
     case "operations-list": {
       const operations = operationDiscoveryList(
         createApplicationOperationRegistry({ toolVersion: context.version }),
@@ -7705,6 +7717,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "ai-transcribe": return undefined;
     case "help":
     case "version":
+    case "capabilities":
     case "operations-list":
     case "operations-show":
     case "diagram-check":
@@ -7812,6 +7825,10 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
     }
     if (command.kind === "complete") {
       for (const completion of completions(command.words)) writeLine(io, completion);
+      return 0;
+    }
+    if (command.kind === "capabilities") {
+      writeCapabilityManifest(io, command.json, dependencies.version ?? SLOPCAMERA_VERSION);
       return 0;
     }
     const paths = dependencies.paths ?? await resolveRepositoryPaths(io.cwd(), io.env);

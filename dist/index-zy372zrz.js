@@ -20,15 +20,18 @@ import {
   parseSpatialValue,
   spatialSceneSha256,
   spatialValueSha256
-} from "./index-px9vqrc7.js";
+} from "./index-yp5587bh.js";
 import {
+  PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS,
+  PORTABLE_SLOPCAMERA_OPERATION_KINDS,
   SlopcameraCodeError,
   boundedCanonicalJsonSha256,
   canonicalJson,
+  canonicalJsonSha256,
   compareUtf16Strings,
   createBoundedJsonValueSnapshot,
   deepFreezeJson
-} from "./index-8txs6fkn.js";
+} from "./index-ff4r9h6b.js";
 import {
   SlopcameraWorkflowError,
   defineSlopcameraWorkflow,
@@ -1877,8 +1880,390 @@ async function runMcpServer(options = {}) {
     }
   }
 }
-// src/scene-gallery.ts
+// src/capability-manifest.ts
 import { z } from "zod";
+var SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS = Object.freeze({
+  bytes: 4 * 1024 * 1024,
+  commands: 256,
+  evidence: 64,
+  modules: 64,
+  operations: 512,
+  profiles: 128,
+  requirements: 32,
+  tools: 128,
+  workflows: 128
+});
+var identifier = z.string().min(1).max(192).regex(/^[a-z][a-z0-9]*(?:[-_.:/@][a-z0-9]+)*$/u);
+var commandName = z.string().min(1).max(128).regex(/^[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*){0,3}$/u);
+var digest = z.string().regex(/^[a-f0-9]{64}$/u);
+var positiveSafeInteger = z.number().int().safe().positive();
+var nonnegativeSafeInteger = z.number().int().safe().nonnegative();
+var SlopcameraCapabilityEffectSchema = z.enum([
+  "pure",
+  "local-read",
+  "local-derived-write",
+  "project-mutation",
+  "paid-cloud",
+  "live-control"
+]);
+var SlopcameraCapabilityResumeSchema = z.enum([
+  "deterministic",
+  "verified-receipt",
+  "recoverable-transaction",
+  "ambiguous-after-dispatch",
+  "non-resumable-live"
+]);
+var SlopcameraCapabilityResourceSchema = z.enum([
+  "cpu",
+  "local-io",
+  "ffmpeg",
+  "vision",
+  "whisper",
+  "network",
+  "paid-call",
+  "project-render",
+  "project-publication",
+  "output-publication",
+  "capture-device",
+  "browser"
+]);
+var SlopcameraCapabilityPreparationSchema = z.enum([
+  "project-state",
+  "recording-metadata",
+  "screen-capture",
+  "camera",
+  "microphone",
+  "system-audio",
+  "typed-text",
+  "window-metadata",
+  "local-media",
+  "provider-options"
+]);
+var SlopcameraCapabilityOperationSchema = z.strictObject({
+  cache: z.enum(["none", "exact-run", "content-addressed"]),
+  cancellable: z.boolean(),
+  effect: SlopcameraCapabilityEffectSchema,
+  inputSchemaId: identifier,
+  key: z.string().min(3).max(256).regex(/^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*@[1-9][0-9]*$/u),
+  kind: z.string().min(3).max(192).regex(/^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*)+$/u),
+  lifecycle: z.enum(["pure", "local-artifact", "project-transaction", "paid-dispatch", "live-control"]),
+  maxDurationMs: positiveSafeInteger,
+  maxFanOut: nonnegativeSafeInteger,
+  maxInputBytes: nonnegativeSafeInteger,
+  maxOutputBytes: nonnegativeSafeInteger,
+  outputSchemaId: identifier,
+  preparation: z.array(SlopcameraCapabilityPreparationSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.requirements),
+  resources: z.array(z.strictObject({
+    amount: positiveSafeInteger,
+    resource: SlopcameraCapabilityResourceSchema
+  })).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.requirements),
+  resume: SlopcameraCapabilityResumeSchema,
+  version: positiveSafeInteger
+}).superRefine((operation, context) => {
+  if (operation.key !== `${operation.kind}@${operation.version}`) {
+    context.addIssue({ code: "custom", path: ["key"], message: "Operation key must match kind and version." });
+  }
+  if (new Set(operation.preparation).size !== operation.preparation.length) {
+    context.addIssue({ code: "custom", path: ["preparation"], message: "Operation preparation entries must be unique." });
+  }
+  const resources = operation.resources.map((claim) => claim.resource);
+  if (new Set(resources).size !== resources.length) {
+    context.addIssue({ code: "custom", path: ["resources"], message: "Operation resource claims must be unique by resource." });
+  }
+});
+var SlopcameraCapabilityWorkflowSchema = z.strictObject({
+  id: identifier,
+  inputSchemaId: identifier,
+  key: z.string().min(3).max(256).regex(/^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*@[1-9][0-9]*$/u),
+  version: positiveSafeInteger
+}).superRefine((workflow, context) => {
+  if (workflow.key !== `${workflow.id}@${workflow.version}`) {
+    context.addIssue({ code: "custom", path: ["key"], message: "Workflow key must match id and version." });
+  }
+});
+var SlopcameraCapabilityToolSchema = z.strictObject({
+  destructive: z.boolean(),
+  idempotent: z.boolean(),
+  name: z.string().min(1).max(128).regex(/^[a-z][a-z0-9_]*$/u),
+  openWorld: z.boolean(),
+  readOnly: z.boolean()
+}).superRefine((tool, context) => {
+  if (tool.readOnly && tool.destructive) {
+    context.addIssue({ code: "custom", message: "A read-only tool cannot be destructive." });
+  }
+});
+var SlopcameraCapabilityCommandSchema = z.strictObject({
+  effect: SlopcameraCapabilityEffectSchema,
+  name: commandName
+});
+var SlopcameraCapabilityQualificationSchema = z.strictObject({
+  evidence: z.array(z.string().min(1).max(512)).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.evidence),
+  level: z.enum(["unit", "fixture", "browser", "native", "provider"]),
+  status: z.enum(["qualified", "conditional", "not-qualified"])
+}).superRefine((qualification, context) => {
+  if (qualification.status !== "not-qualified" && qualification.evidence.length === 0) {
+    context.addIssue({ code: "custom", path: ["evidence"], message: "Qualified or conditional profiles require evidence references." });
+  }
+});
+var SlopcameraCapabilityProfileSchema = z.strictObject({
+  id: identifier,
+  kind: z.enum(["renderer", "native-adapter", "provider", "authoring", "interchange"]),
+  qualification: SlopcameraCapabilityQualificationSchema,
+  requirements: z.array(z.strictObject({
+    description: z.string().min(1).max(256),
+    id: identifier,
+    optional: z.boolean()
+  })).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.requirements)
+});
+var SlopcameraCapabilityModuleDeclarationSchema = z.strictObject({
+  commands: z.array(SlopcameraCapabilityCommandSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.commands),
+  description: z.string().min(1).max(1024),
+  moduleId: z.string().min(1).max(128).regex(/^slopcamera\.capability\.[a-z][a-z0-9-]*$/u),
+  operationKeys: z.array(z.string().min(3).max(256)).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.operations),
+  profiles: z.array(SlopcameraCapabilityProfileSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.profiles),
+  stability: z.enum(["stable", "experimental"]),
+  title: z.string().min(1).max(160),
+  toolNames: z.array(z.string().min(1).max(128)).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.tools),
+  trust: z.enum(["portable", "local-effects", "trusted-authoring", "native-adapter", "paid-provider"]),
+  version: positiveSafeInteger,
+  workflowKeys: z.array(z.string().min(3).max(256)).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.workflows)
+}).superRefine((module, context) => {
+  if (module.commands.length + module.operationKeys.length + module.profiles.length + module.toolNames.length + module.workflowKeys.length === 0) {
+    context.addIssue({ code: "custom", message: "A capability module must expose at least one command, operation, profile, tool, or workflow." });
+  }
+  for (const [name, values] of [["operationKeys", module.operationKeys], ["toolNames", module.toolNames], ["workflowKeys", module.workflowKeys]]) {
+    if (new Set(values).size !== values.length) {
+      context.addIssue({ code: "custom", path: [name], message: `${name} must be unique within a capability module.` });
+    }
+  }
+});
+var SlopcameraCapabilityModuleSchema = z.strictObject({
+  commands: z.array(SlopcameraCapabilityCommandSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.commands),
+  description: z.string().min(1).max(1024),
+  moduleId: z.string().min(1).max(128).regex(/^slopcamera\.capability\.[a-z][a-z0-9-]*$/u),
+  operations: z.array(SlopcameraCapabilityOperationSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.operations),
+  profiles: z.array(SlopcameraCapabilityProfileSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.profiles),
+  stability: z.enum(["stable", "experimental"]),
+  title: z.string().min(1).max(160),
+  tools: z.array(SlopcameraCapabilityToolSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.tools),
+  trust: z.enum(["portable", "local-effects", "trusted-authoring", "native-adapter", "paid-provider"]),
+  version: positiveSafeInteger,
+  workflows: z.array(SlopcameraCapabilityWorkflowSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.workflows)
+}).superRefine((module, context) => {
+  const identities = [
+    ["commands", module.commands.map((value) => value.name)],
+    ["operations", module.operations.map((value) => value.key)],
+    ["profiles", module.profiles.map((value) => value.id)],
+    ["tools", module.tools.map((value) => value.name)],
+    ["workflows", module.workflows.map((value) => value.key)]
+  ];
+  if (identities.every(([, values]) => values.length === 0)) {
+    context.addIssue({ code: "custom", message: "A capability module must expose at least one command, operation, profile, tool, or workflow." });
+  }
+  for (const [name, values] of identities) {
+    if (new Set(values).size !== values.length)
+      context.addIssue({ code: "custom", path: [name], message: `${name} must be unique within a capability module.` });
+  }
+});
+var manifestBodyBaseSchema = z.strictObject({
+  host: z.enum(["portable", "local"]),
+  kind: z.literal("slopcamera.capability-manifest"),
+  modules: z.array(SlopcameraCapabilityModuleSchema).min(1).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.modules),
+  schemaVersion: z.literal(1),
+  toolVersion: z.string().min(1).max(128)
+});
+function validateManifestOwnership(manifest, context) {
+  const ownership = new Map;
+  for (const [moduleIndex, module] of manifest.modules.entries()) {
+    for (const identity of [
+      module.moduleId,
+      ...module.commands.map((value) => `command:${value.name}`),
+      ...module.operations.map((value) => `operation:${value.key}`),
+      ...module.profiles.map((value) => `profile:${value.id}`),
+      ...module.tools.map((value) => `tool:${value.name}`),
+      ...module.workflows.map((value) => `workflow:${value.key}`)
+    ]) {
+      const owner = ownership.get(identity);
+      if (owner !== undefined)
+        context.addIssue({ code: "custom", path: ["modules", moduleIndex], message: `${identity} is owned by both ${owner} and ${module.moduleId}.` });
+      ownership.set(identity, module.moduleId);
+    }
+    if (manifest.host === "portable" && module.trust !== "portable") {
+      context.addIssue({ code: "custom", path: ["modules", moduleIndex, "trust"], message: "Portable manifests may contain only portable capability modules." });
+    }
+  }
+}
+var manifestBodySchema = manifestBodyBaseSchema.superRefine(validateManifestOwnership);
+var SlopcameraCapabilityManifestSchema = manifestBodyBaseSchema.extend({
+  manifestSha256: digest
+}).superRefine(validateManifestOwnership);
+var compilerInputSchema = z.strictObject({
+  host: z.enum(["portable", "local"]),
+  modules: z.array(SlopcameraCapabilityModuleDeclarationSchema).min(1).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.modules),
+  operations: z.array(SlopcameraCapabilityOperationSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.operations),
+  tools: z.array(SlopcameraCapabilityToolSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.tools),
+  toolVersion: z.string().min(1).max(128),
+  workflows: z.array(SlopcameraCapabilityWorkflowSchema).max(SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.workflows)
+});
+function compareBy(key) {
+  return (left, right) => left[key].localeCompare(right[key]);
+}
+function indexed(values, key, label) {
+  const result = new Map;
+  for (const value of values) {
+    const identity = key(value);
+    if (result.has(identity))
+      throw new TypeError(`Duplicate ${label}: ${identity}.`);
+    result.set(identity, value);
+  }
+  return result;
+}
+function assertExactOwnership(label, available, owners) {
+  for (const key of available.keys()) {
+    if (!owners.has(key))
+      throw new TypeError(`Unowned ${label}: ${key}.`);
+  }
+  for (const key of owners.keys()) {
+    if (!available.has(key))
+      throw new TypeError(`Unknown ${label} declared by a capability module: ${key}.`);
+  }
+}
+function defineSlopcameraCapabilityModule(input) {
+  return deepFreezeJson(SlopcameraCapabilityModuleDeclarationSchema.parse(createBoundedJsonValueSnapshot(input, SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.bytes, "capability module").value));
+}
+function compileSlopcameraCapabilityManifest(input) {
+  const parsed = compilerInputSchema.parse(createBoundedJsonValueSnapshot(input, SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.bytes, "capability manifest compiler input").value);
+  const operations = indexed(parsed.operations, (value) => value.key, "operation inventory key");
+  const workflows = indexed(parsed.workflows, (value) => value.key, "workflow inventory key");
+  const tools = indexed(parsed.tools, (value) => value.name, "tool inventory name");
+  const operationOwners = new Map;
+  const workflowOwners = new Map;
+  const toolOwners = new Map;
+  const moduleIds = new Set;
+  const commandOwners = new Map;
+  const profileOwners = new Map;
+  const claim = (owners, key, moduleId, label) => {
+    const owner = owners.get(key);
+    if (owner !== undefined)
+      throw new TypeError(`${label} ${key} is owned by both ${owner} and ${moduleId}.`);
+    owners.set(key, moduleId);
+  };
+  const modules = [...parsed.modules].sort(compareBy("moduleId")).map((module) => {
+    if (moduleIds.has(module.moduleId))
+      throw new TypeError(`Duplicate capability module: ${module.moduleId}.`);
+    moduleIds.add(module.moduleId);
+    for (const command of module.commands)
+      claim(commandOwners, command.name, module.moduleId, "Command");
+    for (const profile of module.profiles)
+      claim(profileOwners, profile.id, module.moduleId, "Profile");
+    const resolvedOperations = module.operationKeys.map((key) => {
+      claim(operationOwners, key, module.moduleId, "Operation");
+      const value = operations.get(key);
+      if (value === undefined)
+        throw new TypeError(`Unknown operation declared by ${module.moduleId}: ${key}.`);
+      return value;
+    }).sort(compareBy("key"));
+    const resolvedWorkflows = module.workflowKeys.map((key) => {
+      claim(workflowOwners, key, module.moduleId, "Workflow");
+      const value = workflows.get(key);
+      if (value === undefined)
+        throw new TypeError(`Unknown workflow declared by ${module.moduleId}: ${key}.`);
+      return value;
+    }).sort(compareBy("key"));
+    const resolvedTools = module.toolNames.map((name) => {
+      claim(toolOwners, name, module.moduleId, "Tool");
+      const value = tools.get(name);
+      if (value === undefined)
+        throw new TypeError(`Unknown tool declared by ${module.moduleId}: ${name}.`);
+      return value;
+    }).sort(compareBy("name"));
+    const { operationKeys: _operationKeys, toolNames: _toolNames, workflowKeys: _workflowKeys, ...metadata } = module;
+    return {
+      ...metadata,
+      commands: [...module.commands].sort(compareBy("name")),
+      operations: resolvedOperations,
+      profiles: [...module.profiles].sort(compareBy("id")),
+      tools: resolvedTools,
+      workflows: resolvedWorkflows
+    };
+  });
+  assertExactOwnership("operation", operations, operationOwners);
+  assertExactOwnership("workflow", workflows, workflowOwners);
+  assertExactOwnership("tool", tools, toolOwners);
+  const body = manifestBodySchema.parse({
+    host: parsed.host,
+    kind: "slopcamera.capability-manifest",
+    modules,
+    schemaVersion: 1,
+    toolVersion: parsed.toolVersion
+  });
+  return deepFreezeJson(SlopcameraCapabilityManifestSchema.parse({
+    ...body,
+    manifestSha256: canonicalJsonSha256(body)
+  }));
+}
+function parseSlopcameraCapabilityManifest(input) {
+  const manifest = SlopcameraCapabilityManifestSchema.parse(createBoundedJsonValueSnapshot(input, SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS.bytes, "capability manifest").value);
+  const { manifestSha256, ...body } = manifest;
+  const actual = canonicalJsonSha256(body);
+  if (actual !== manifestSha256)
+    throw new TypeError(`Capability manifest digest mismatch: expected ${manifestSha256}, received ${actual}.`);
+  return deepFreezeJson(manifest);
+}
+// src/portable-capability-manifest.ts
+var SLOPCAMERA_PORTABLE_CAPABILITY_VERSION = "slopcamera-portable-v1";
+var portableModule = defineSlopcameraCapabilityModule({
+  commands: [],
+  description: "The fixed portable diagram and image operation projection for Bun SDK consumers.",
+  moduleId: "slopcamera.capability.portable-diagram-image",
+  operationKeys: PORTABLE_SLOPCAMERA_OPERATION_KINDS.map((kind) => `${kind}@2`),
+  profiles: [{
+    id: "portable-bun-v1",
+    kind: "authoring",
+    qualification: { evidence: ["src/code/public-operations.ts"], level: "unit", status: "qualified" },
+    requirements: [{ description: "Bun 1.3.14 or newer.", id: "bun", optional: false }]
+  }],
+  stability: "stable",
+  title: "Portable diagrams and images",
+  toolNames: [],
+  trust: "portable",
+  version: 1,
+  workflowKeys: []
+});
+function operationProjection(kind) {
+  const operation = PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS[kind];
+  return {
+    cache: operation.policy.cache,
+    cancellable: operation.policy.cancellable,
+    effect: operation.policy.effect,
+    inputSchemaId: operation.inputSchemaId,
+    key: `${operation.kind}@${operation.version}`,
+    kind: operation.kind,
+    lifecycle: operation.lifecycle,
+    maxDurationMs: operation.policy.maxDurationMs,
+    maxFanOut: operation.policy.maxFanOut,
+    maxInputBytes: operation.policy.maxInputBytes,
+    maxOutputBytes: operation.policy.maxOutputBytes,
+    outputSchemaId: operation.outputSchemaId,
+    preparation: [...operation.policy.preparation],
+    resources: operation.policy.resources.map((claim) => ({ ...claim })),
+    resume: operation.policy.resume,
+    version: operation.version
+  };
+}
+function createPortableSlopcameraCapabilityManifest() {
+  return compileSlopcameraCapabilityManifest({
+    host: "portable",
+    modules: [portableModule],
+    operations: PORTABLE_SLOPCAMERA_OPERATION_KINDS.map(operationProjection),
+    tools: [],
+    toolVersion: SLOPCAMERA_PORTABLE_CAPABILITY_VERSION,
+    workflows: []
+  });
+}
+var slopcameraPortableCapabilityManifest = createPortableSlopcameraCapabilityManifest();
+// src/scene-gallery.ts
+import { z as z2 } from "zod";
 var slopcameraSceneGalleryLimits = Object.freeze({
   variants: 16,
   variantsBytes: 1024 * 1024,
@@ -1886,22 +2271,22 @@ var slopcameraSceneGalleryLimits = Object.freeze({
   labelEdge: 256,
   summaryEdge: 256
 });
-var variantId = z.string().min(1).max(slopcameraSceneGalleryLimits.idEdge).regex(/^[a-z0-9][a-z0-9-]*$/u, "Variant ids are lowercase slugs like dusk or golden-hour-2.");
-var SceneVariantPatchSchema = z.strictObject({
-  kind: z.literal("slopcamera.spatial-scene-patch"),
-  schemaVersion: z.literal(1),
+var variantId = z2.string().min(1).max(slopcameraSceneGalleryLimits.idEdge).regex(/^[a-z0-9][a-z0-9-]*$/u, "Variant ids are lowercase slugs like dusk or golden-hour-2.");
+var SceneVariantPatchSchema = z2.strictObject({
+  kind: z2.literal("slopcamera.spatial-scene-patch"),
+  schemaVersion: z2.literal(1),
   expectedSceneSha256: SpatialDigestSchema.optional(),
-  operations: z.array(SpatialPatchOperationSchema).min(1).max(SPATIAL_SCENE_LIMITS.patchOperations)
+  operations: z2.array(SpatialPatchOperationSchema).min(1).max(SPATIAL_SCENE_LIMITS.patchOperations)
 });
-var SceneGalleryVariantSchema = z.strictObject({
+var SceneGalleryVariantSchema = z2.strictObject({
   id: variantId,
-  label: z.string().min(1).max(slopcameraSceneGalleryLimits.labelEdge).optional(),
+  label: z2.string().min(1).max(slopcameraSceneGalleryLimits.labelEdge).optional(),
   patch: SceneVariantPatchSchema
 });
-var SlopcameraSceneVariantsSchema = z.strictObject({
-  kind: z.literal("slopcamera.scene-variants"),
-  schemaVersion: z.literal(1),
-  variants: z.array(SceneGalleryVariantSchema).min(1).max(slopcameraSceneGalleryLimits.variants)
+var SlopcameraSceneVariantsSchema = z2.strictObject({
+  kind: z2.literal("slopcamera.scene-variants"),
+  schemaVersion: z2.literal(1),
+  variants: z2.array(SceneGalleryVariantSchema).min(1).max(slopcameraSceneGalleryLimits.variants)
 });
 function summarizeSceneVariantPatch(operations) {
   const parts = operations.map((operation) => {
@@ -1948,10 +2333,10 @@ function planSlopcameraSceneGallery(input) {
   return { baseSceneSha256, scene, variants };
 }
 // src/studio/contracts.ts
-import { z as z3 } from "zod";
+import { z as z4 } from "zod";
 
 // src/studio/shared.ts
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 var STUDIO_LIMITS = Object.freeze({
   documentBytes: 32 * 1024 * 1024,
   documentDepth: 32,
@@ -1971,7 +2356,7 @@ var STUDIO_LIMITS = Object.freeze({
   parameterValues: 20000
 });
 function studioDocument(schema, name) {
-  return z2.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.documentBytes, name, { maximumDepth: STUDIO_LIMITS.documentDepth, maximumValues: STUDIO_LIMITS.documentValues }).value, schema);
+  return z3.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.documentBytes, name, { maximumDepth: STUDIO_LIMITS.documentDepth, maximumValues: STUDIO_LIMITS.documentValues }).value, schema);
 }
 function parseStudioValue(schema, input) {
   try {
@@ -1979,7 +2364,7 @@ function parseStudioValue(schema, input) {
   } catch (error) {
     if (error instanceof SlopcameraCodeError)
       throw error;
-    throw new SlopcameraCodeError("invalid-data", error instanceof z2.ZodError ? error.issues[0]?.message ?? "Invalid studio document." : "Invalid studio document.");
+    throw new SlopcameraCodeError("invalid-data", error instanceof z3.ZodError ? error.issues[0]?.message ?? "Invalid studio document." : "Invalid studio document.");
   }
 }
 function studioHash(domain, value) {
@@ -2004,18 +2389,18 @@ function assertDistinctPaths(paths) {
 }
 
 // src/studio/contracts.ts
-var StudioDigestSchema = z3.string().regex(/^[a-f0-9]{64}$/u);
-var StudioEngineSchema = z3.enum(["blender", "manim", "cadquery"]);
-var StudioPathSchema = z3.string().min(1).max(1024).refine((path) => path.normalize("NFC") === path && !path.startsWith("/") && !/[\\:\u0000-\u001f\u007f]/u.test(path) && path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[. ]$/u.test(part)), "Studio paths must be normalized, contained POSIX-relative names.");
-var identifier = z3.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u);
-var stableId = z3.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/u);
-var sourceFile = z3.strictObject({ path: StudioPathSchema, sha256: StudioDigestSchema, bytes: z3.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes) });
-var sourceBundleShape = z3.strictObject({
-  kind: z3.literal("slopcamera.studio-source-bundle"),
-  schemaVersion: z3.literal(1),
+var StudioDigestSchema = z4.string().regex(/^[a-f0-9]{64}$/u);
+var StudioEngineSchema = z4.enum(["blender", "manim", "cadquery"]);
+var StudioPathSchema = z4.string().min(1).max(1024).refine((path) => path.normalize("NFC") === path && !path.startsWith("/") && !/[\\:\u0000-\u001f\u007f]/u.test(path) && path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[. ]$/u.test(part)), "Studio paths must be normalized, contained POSIX-relative names.");
+var identifier2 = z4.string().regex(/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u);
+var stableId = z4.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/u);
+var sourceFile = z4.strictObject({ path: StudioPathSchema, sha256: StudioDigestSchema, bytes: z4.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes) });
+var sourceBundleShape = z4.strictObject({
+  kind: z4.literal("slopcamera.studio-source-bundle"),
+  schemaVersion: z4.literal(1),
   engine: StudioEngineSchema,
-  entrypoint: z3.discriminatedUnion("kind", [z3.strictObject({ kind: z3.literal("python"), path: StudioPathSchema.refine((path) => path.endsWith(".py")) }), z3.strictObject({ kind: z3.literal("blend"), path: StudioPathSchema.refine((path) => path.endsWith(".blend")) })]),
-  files: z3.array(sourceFile).min(1).max(STUDIO_LIMITS.sourceFiles)
+  entrypoint: z4.discriminatedUnion("kind", [z4.strictObject({ kind: z4.literal("python"), path: StudioPathSchema.refine((path) => path.endsWith(".py")) }), z4.strictObject({ kind: z4.literal("blend"), path: StudioPathSchema.refine((path) => path.endsWith(".blend")) })]),
+  files: z4.array(sourceFile).min(1).max(STUDIO_LIMITS.sourceFiles)
 }).superRefine((value, context) => {
   const issue = (message) => context.addIssue({ code: "custom", message });
   try {
@@ -2033,17 +2418,17 @@ var sourceBundleShape = z3.strictObject({
 var sourceBundle = sourceBundleShape.transform((value) => ({ ...value, files: [...value.files].sort((a, b) => studioCompare(a.path, b.path)) })).pipe(sourceBundleShape);
 var StudioSourceBundleSchema = studioDocument(sourceBundle, "studio source bundle");
 var parseStudioSourceBundle = (input) => parseStudioValue(StudioSourceBundleSchema, input);
-var StudioSourceSpaceSchema = z3.strictObject({ units: z3.enum(["meters", "millimeters", "centimeters"]), upAxis: z3.enum(["x", "y", "z"]), handedness: z3.enum(["right", "left"]) });
-var StudioOutputRoleSchema = z3.enum(["native-source", "model", "beauty", "auxiliary", "simulation-cache", "audio"]);
-var StudioOutputFormatSchema = z3.enum(["py", "blend", "usd", "usda", "usdc", "glb", "step", "png", "exr", "mp4", "mov", "webm", "wav", "flac", "mp3", "cache"]);
-var raster = z3.strictObject({
-  kind: z3.literal("raster"),
-  colorSpace: z3.enum(["srgb", "linear-rec709", "data", "unspecified"]),
-  alpha: z3.enum(["opaque", "straight", "premultiplied", "none"]),
-  dataType: z3.enum(["uint8", "uint16", "float16", "float32"]),
-  channels: z3.array(z3.string().regex(/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u)).min(1).max(32),
-  semantic: z3.enum(["color", "depth", "normal", "object-id", "mask", "custom"]),
-  unit: z3.enum(["unitless", "meters", "millimeters", "centimeters"])
+var StudioSourceSpaceSchema = z4.strictObject({ units: z4.enum(["meters", "millimeters", "centimeters"]), upAxis: z4.enum(["x", "y", "z"]), handedness: z4.enum(["right", "left"]) });
+var StudioOutputRoleSchema = z4.enum(["native-source", "model", "beauty", "auxiliary", "simulation-cache", "audio"]);
+var StudioOutputFormatSchema = z4.enum(["py", "blend", "usd", "usda", "usdc", "glb", "step", "png", "exr", "mp4", "mov", "webm", "wav", "flac", "mp3", "cache"]);
+var raster = z4.strictObject({
+  kind: z4.literal("raster"),
+  colorSpace: z4.enum(["srgb", "linear-rec709", "data", "unspecified"]),
+  alpha: z4.enum(["opaque", "straight", "premultiplied", "none"]),
+  dataType: z4.enum(["uint8", "uint16", "float16", "float32"]),
+  channels: z4.array(z4.string().regex(/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u)).min(1).max(32),
+  semantic: z4.enum(["color", "depth", "normal", "object-id", "mask", "custom"]),
+  unit: z4.enum(["unitless", "meters", "millimeters", "centimeters"])
 }).superRefine((value, context) => {
   if (new Set(value.channels).size !== value.channels.length)
     context.addIssue({ code: "custom", message: "Raster channels must be unique." });
@@ -2054,15 +2439,15 @@ var raster = z3.strictObject({
   if (value.semantic !== "depth" && value.unit !== "unitless")
     context.addIssue({ code: "custom", message: "Only depth passes declare distance units." });
 });
-var StudioOutputInterpretationSchema = z3.discriminatedUnion("kind", [
+var StudioOutputInterpretationSchema = z4.discriminatedUnion("kind", [
   raster,
-  z3.strictObject({ kind: z3.literal("model"), sourceSpace: StudioSourceSpaceSchema }),
-  z3.strictObject({ kind: z3.literal("native-source") }),
-  z3.strictObject({ kind: z3.literal("cache"), semantics: z3.literal("opaque-native") }),
-  z3.strictObject({ kind: z3.literal("audio"), sampleRate: z3.number().int().min(8000).max(384000), channels: z3.number().int().min(1).max(32) })
+  z4.strictObject({ kind: z4.literal("model"), sourceSpace: StudioSourceSpaceSchema }),
+  z4.strictObject({ kind: z4.literal("native-source") }),
+  z4.strictObject({ kind: z4.literal("cache"), semantics: z4.literal("opaque-native") }),
+  z4.strictObject({ kind: z4.literal("audio"), sampleRate: z4.number().int().min(8000).max(384000), channels: z4.number().int().min(1).max(32) })
 ]);
 var outputCommon = { id: stableId, role: StudioOutputRoleSchema, format: StudioOutputFormatSchema, interpretation: StudioOutputInterpretationSchema };
-var pattern = z3.string().max(1024).refine((value) => value.split("%06d").length === 2 && !value.replace("%06d", "").includes("%") && StudioPathSchema.safeParse(value.replace("%06d", "000000")).success, "Sequence paths require exactly one %06d placeholder in a safe relative path.");
+var pattern = z4.string().max(1024).refine((value) => value.split("%06d").length === 2 && !value.replace("%06d", "").includes("%") && StudioPathSchema.safeParse(value.replace("%06d", "000000")).success, "Sequence paths require exactly one %06d placeholder in a safe relative path.");
 function compatibleOutput(value) {
   if (value.role === "native-source")
     return ["py", "blend"].includes(value.format) && value.interpretation.kind === "native-source";
@@ -2074,10 +2459,10 @@ function compatibleOutput(value) {
     return ["wav", "flac", "mp3"].includes(value.format) && value.interpretation.kind === "audio";
   return ["png", "exr", "mp4", "mov", "webm"].includes(value.format) && value.interpretation.kind === "raster" && (value.role !== "beauty" || value.interpretation.semantic === "color");
 }
-var StudioOutputSpecSchema = z3.discriminatedUnion("kind", [
-  z3.strictObject({ ...outputCommon, kind: z3.literal("file"), path: StudioPathSchema }),
-  z3.strictObject({ ...outputCommon, kind: z3.literal("sequence"), pathPattern: pattern }),
-  z3.strictObject({ ...outputCommon, kind: z3.literal("directory"), path: StudioPathSchema })
+var StudioOutputSpecSchema = z4.discriminatedUnion("kind", [
+  z4.strictObject({ ...outputCommon, kind: z4.literal("file"), path: StudioPathSchema }),
+  z4.strictObject({ ...outputCommon, kind: z4.literal("sequence"), pathPattern: pattern }),
+  z4.strictObject({ ...outputCommon, kind: z4.literal("directory"), path: StudioPathSchema })
 ]).superRefine((value, context) => {
   const issue = (message) => context.addIssue({ code: "custom", message });
   if (!compatibleOutput(value))
@@ -2098,7 +2483,7 @@ var StudioOutputSpecSchema = z3.discriminatedUnion("kind", [
       issue("The admitted EXR profile declares floating point sample data.");
   }
 });
-var frameRateShape = z3.strictObject({ numerator: z3.number().int().min(1).max(1e6), denominator: z3.number().int().min(1).max(1e6) }).refine((value) => value.numerator / value.denominator <= 240, "Studio cadence exceeds 240 fps.");
+var frameRateShape = z4.strictObject({ numerator: z4.number().int().min(1).max(1e6), denominator: z4.number().int().min(1).max(1e6) }).refine((value) => value.numerator / value.denominator <= 240, "Studio cadence exceeds 240 fps.");
 var frameRate = frameRateShape.transform((value) => {
   let { numerator: a, denominator: b } = value;
   while (b !== 0) {
@@ -2108,31 +2493,31 @@ var frameRate = frameRateShape.transform((value) => {
   }
   return { numerator: value.numerator / a, denominator: value.denominator / a };
 }).pipe(frameRateShape);
-var StudioRenderSchema = z3.strictObject({
-  width: z3.number().int().min(1).max(STUDIO_LIMITS.dimension),
-  height: z3.number().int().min(1).max(STUDIO_LIMITS.dimension),
+var StudioRenderSchema = z4.strictObject({
+  width: z4.number().int().min(1).max(STUDIO_LIMITS.dimension),
+  height: z4.number().int().min(1).max(STUDIO_LIMITS.dimension),
   frameRate,
-  startFrame: z3.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1),
-  endFrameExclusive: z3.number().int().positive().max(STUDIO_LIMITS.frameIndexExclusive)
+  startFrame: z4.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1),
+  endFrameExclusive: z4.number().int().positive().max(STUDIO_LIMITS.frameIndexExclusive)
 }).refine((value) => value.endFrameExclusive > value.startFrame && value.endFrameExclusive - value.startFrame <= STUDIO_LIMITS.frames && value.width * value.height <= STUDIO_LIMITS.pixels, "Render requires a bounded, nonempty half-open frame interval and pixel area.");
-var StudioEngineOptionsSchema = z3.discriminatedUnion("engine", [
-  z3.strictObject({ engine: z3.literal("blender"), renderer: z3.enum(["cycles", "eevee"]), device: z3.enum(["cpu", "gpu"]), samples: z3.number().int().min(1).max(4096), transparent: z3.boolean(), viewTransform: z3.enum(["AgX", "Standard"]), denoise: z3.boolean(), seed: z3.number().int().min(0).max(4294967295) }),
-  z3.strictObject({ engine: z3.literal("manim"), scene: identifier, renderer: z3.literal("cairo"), transparent: z3.boolean() }),
-  z3.strictObject({ engine: z3.literal("cadquery"), exportVariable: identifier, tolerance: z3.number().finite().positive().max(1), angularTolerance: z3.number().finite().positive().max(Math.PI) })
+var StudioEngineOptionsSchema = z4.discriminatedUnion("engine", [
+  z4.strictObject({ engine: z4.literal("blender"), renderer: z4.enum(["cycles", "eevee"]), device: z4.enum(["cpu", "gpu"]), samples: z4.number().int().min(1).max(4096), transparent: z4.boolean(), viewTransform: z4.enum(["AgX", "Standard"]), denoise: z4.boolean(), seed: z4.number().int().min(0).max(4294967295) }),
+  z4.strictObject({ engine: z4.literal("manim"), scene: identifier2, renderer: z4.literal("cairo"), transparent: z4.boolean() }),
+  z4.strictObject({ engine: z4.literal("cadquery"), exportVariable: identifier2, tolerance: z4.number().finite().positive().max(1), angularTolerance: z4.number().finite().positive().max(Math.PI) })
 ]);
-var parameters = z3.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.parameterBytes, "studio parameters", { maximumDepth: STUDIO_LIMITS.parameterDepth, maximumValues: STUDIO_LIMITS.parameterValues }).value, z3.record(z3.string(), z3.unknown()));
-var StudioExecutionProfileSchema = z3.strictObject({ trust: z3.literal("trusted-current-user"), isolation: z3.literal("none"), hermetic: z3.literal(false) });
-var jobShape = z3.strictObject({
-  kind: z3.literal("slopcamera.studio-job"),
-  schemaVersion: z3.literal(1),
-  jobId: z3.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+var parameters = z4.preprocess((value) => value === undefined ? undefined : createBoundedJsonValueSnapshot(value, STUDIO_LIMITS.parameterBytes, "studio parameters", { maximumDepth: STUDIO_LIMITS.parameterDepth, maximumValues: STUDIO_LIMITS.parameterValues }).value, z4.record(z4.string(), z4.unknown()));
+var StudioExecutionProfileSchema = z4.strictObject({ trust: z4.literal("trusted-current-user"), isolation: z4.literal("none"), hermetic: z4.literal(false) });
+var jobShape = z4.strictObject({
+  kind: z4.literal("slopcamera.studio-job"),
+  schemaVersion: z4.literal(1),
+  jobId: z4.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
   bundleSha256: StudioDigestSchema,
-  stage: z3.enum(["build", "bake", "render"]),
+  stage: z4.enum(["build", "bake", "render"]),
   parameters,
   engine: StudioEngineOptionsSchema,
   render: StudioRenderSchema.optional(),
-  outputs: z3.array(StudioOutputSpecSchema).min(1).max(STUDIO_LIMITS.outputSpecifications),
-  limits: z3.strictObject({ timeoutSeconds: z3.number().int().min(1).max(STUDIO_LIMITS.timeoutSeconds), maximumOutputBytes: z3.number().int().safe().min(1).max(STUDIO_LIMITS.outputBytes), maximumOutputFiles: z3.number().int().min(1).max(STUDIO_LIMITS.outputFiles) }),
+  outputs: z4.array(StudioOutputSpecSchema).min(1).max(STUDIO_LIMITS.outputSpecifications),
+  limits: z4.strictObject({ timeoutSeconds: z4.number().int().min(1).max(STUDIO_LIMITS.timeoutSeconds), maximumOutputBytes: z4.number().int().safe().min(1).max(STUDIO_LIMITS.outputBytes), maximumOutputFiles: z4.number().int().min(1).max(STUDIO_LIMITS.outputFiles) }),
   execution: StudioExecutionProfileSchema
 }).superRefine((value, context) => {
   if (value.render === undefined && (value.stage === "render" && value.engine.engine !== "cadquery" || value.outputs.some((output) => output.kind === "sequence" || output.interpretation.kind === "raster")))
@@ -2146,32 +2531,32 @@ var jobShape = z3.strictObject({
 var job = jobShape.transform((value) => ({ ...value, outputs: [...value.outputs].sort((a, b) => studioCompare(a.id, b.id)) })).pipe(jobShape);
 var StudioJobSchema = studioDocument(job, "studio job");
 var parseStudioJob = (input) => parseStudioValue(StudioJobSchema, input);
-var StudioCapabilityNameSchema = z3.enum(["python-authoring", "blend-authoring", "build", "bake", "render", "gpu-render", "image-sequence", "beauty-video", "model-export", "auxiliary-passes", "native-cache", "audio-output"]);
-var capability = z3.strictObject({ name: StudioCapabilityNameSchema, support: z3.enum(["available", "unavailable", "unverified"]), evidence: z3.enum(["probe", "qualification"]), receiptSha256: StudioDigestSchema.optional() }).refine((value) => value.evidence !== "qualification" || value.receiptSha256 !== undefined, "Qualification evidence requires a retained receipt digest.");
-var runtimeShape = z3.strictObject({
-  kind: z3.literal("slopcamera.studio-runtime"),
-  schemaVersion: z3.literal(1),
+var StudioCapabilityNameSchema = z4.enum(["python-authoring", "blend-authoring", "build", "bake", "render", "gpu-render", "image-sequence", "beauty-video", "model-export", "auxiliary-passes", "native-cache", "audio-output"]);
+var capability = z4.strictObject({ name: StudioCapabilityNameSchema, support: z4.enum(["available", "unavailable", "unverified"]), evidence: z4.enum(["probe", "qualification"]), receiptSha256: StudioDigestSchema.optional() }).refine((value) => value.evidence !== "qualification" || value.receiptSha256 !== undefined, "Qualification evidence requires a retained receipt digest.");
+var runtimeShape = z4.strictObject({
+  kind: z4.literal("slopcamera.studio-runtime"),
+  schemaVersion: z4.literal(1),
   engine: StudioEngineSchema,
-  tool: z3.strictObject({ name: z3.string().min(1).max(128), version: z3.string().min(1).max(512), executableSha256: StudioDigestSchema }),
+  tool: z4.strictObject({ name: z4.string().min(1).max(128), version: z4.string().min(1).max(512), executableSha256: StudioDigestSchema }),
   driverSha256: StudioDigestSchema,
-  environment: z3.strictObject({ fingerprintSha256: StudioDigestSchema, evidence: z3.literal("observed-package-environment"), hermetic: z3.literal(false) }),
-  capabilities: z3.array(capability).max(12)
+  environment: z4.strictObject({ fingerprintSha256: StudioDigestSchema, evidence: z4.literal("observed-package-environment"), hermetic: z4.literal(false) }),
+  capabilities: z4.array(capability).max(12)
 }).refine((value) => new Set(value.capabilities.map((item) => item.name)).size === value.capabilities.length, "Runtime capability names must be unique.");
 var runtime = runtimeShape.transform((value) => ({ ...value, capabilities: [...value.capabilities].sort((a, b) => studioCompare(a.name, b.name)) })).pipe(runtimeShape);
 var StudioRuntimeIdentitySchema = studioDocument(runtime, "studio runtime identity");
 var parseStudioRuntimeIdentity = (input) => parseStudioValue(StudioRuntimeIdentitySchema, input);
-var StudioOutputArtifactSchema = z3.strictObject({
+var StudioOutputArtifactSchema = z4.strictObject({
   outputId: stableId,
   path: StudioPathSchema,
   sha256: StudioDigestSchema,
-  bytes: z3.number().int().safe().positive().max(STUDIO_LIMITS.outputBytes),
+  bytes: z4.number().int().safe().positive().max(STUDIO_LIMITS.outputBytes),
   role: StudioOutputRoleSchema,
   format: StudioOutputFormatSchema,
-  frame: z3.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1).optional()
+  frame: z4.number().int().nonnegative().max(STUDIO_LIMITS.frameIndexExclusive - 1).optional()
 });
 
 // src/studio/plan.ts
-import { z as z4 } from "zod";
+import { z as z5 } from "zod";
 var studioSourceBundleSha256 = (input) => studioHash("slopcamera.studio-source-bundle/v1", parseStudioSourceBundle(input));
 var studioJobSha256 = (input) => studioHash("slopcamera.studio-job/v1", parseStudioJob(input));
 var studioRuntimeSha256 = (input) => studioHash("slopcamera.studio-runtime/v1", parseStudioRuntimeIdentity(input));
@@ -2247,9 +2632,9 @@ function derivePlan(input) {
   };
   return { ...body, planSha256: studioHash("slopcamera.studio-plan/v1", body) };
 }
-var plan = z4.strictObject({
-  kind: z4.literal("slopcamera.studio-plan"),
-  schemaVersion: z4.literal(1),
+var plan = z5.strictObject({
+  kind: z5.literal("slopcamera.studio-plan"),
+  schemaVersion: z5.literal(1),
   bundle: StudioSourceBundleSchema,
   job: StudioJobSchema,
   runtime: StudioRuntimeIdentitySchema.optional(),
@@ -2257,12 +2642,12 @@ var plan = z4.strictObject({
   bundleSha256: StudioDigestSchema,
   jobSha256: StudioDigestSchema,
   planSha256: StudioDigestSchema,
-  sourceBytes: z4.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes),
-  frameCount: z4.number().int().nonnegative().max(STUDIO_LIMITS.frames),
-  outputCount: z4.strictObject({ minimum: z4.number().int().positive().max(STUDIO_LIMITS.outputFiles), maximum: z4.number().int().positive().max(STUDIO_LIMITS.outputFiles) }),
-  requiredCapabilities: z4.array(StudioCapabilityNameSchema).min(1).max(12),
-  capabilityChecks: z4.array(z4.strictObject({ name: StudioCapabilityNameSchema, support: z4.enum(["available", "unavailable", "unverified", "unbound"]) })).min(1).max(12),
-  readiness: z4.enum(["runtime-unbound", "capability-unavailable", "capability-unverified", "authorization-required"])
+  sourceBytes: z5.number().int().safe().nonnegative().max(STUDIO_LIMITS.sourceBytes),
+  frameCount: z5.number().int().nonnegative().max(STUDIO_LIMITS.frames),
+  outputCount: z5.strictObject({ minimum: z5.number().int().positive().max(STUDIO_LIMITS.outputFiles), maximum: z5.number().int().positive().max(STUDIO_LIMITS.outputFiles) }),
+  requiredCapabilities: z5.array(StudioCapabilityNameSchema).min(1).max(12),
+  capabilityChecks: z5.array(z5.strictObject({ name: StudioCapabilityNameSchema, support: z5.enum(["available", "unavailable", "unverified", "unbound"]) })).min(1).max(12),
+  readiness: z5.enum(["runtime-unbound", "capability-unavailable", "capability-unverified", "authorization-required"])
 }).superRefine((value, context) => {
   try {
     const derived = derivePlan({ bundle: value.bundle, job: value.job, ...value.runtime === undefined ? {} : { runtime: value.runtime } });
@@ -2275,28 +2660,28 @@ var plan = z4.strictObject({
 var StudioPlanSchema = studioDocument(plan, "studio plan");
 var parseStudioPlan = (input) => parseStudioValue(StudioPlanSchema, input);
 function planStudioJob(input) {
-  const captured = parseStudioValue(studioDocument(z4.strictObject({ bundle: StudioSourceBundleSchema, job: StudioJobSchema, runtime: StudioRuntimeIdentitySchema.optional() }), "studio planning input"), input);
+  const captured = parseStudioValue(studioDocument(z5.strictObject({ bundle: StudioSourceBundleSchema, job: StudioJobSchema, runtime: StudioRuntimeIdentitySchema.optional() }), "studio planning input"), input);
   return parseStudioPlan(derivePlan(captured));
 }
-var failure2 = z4.strictObject({ code: z4.enum(["subprocess", "cancelled", "deadline", "validation", "custody", "publication", "unavailable"]), message: z4.string().min(1).max(2048) });
+var failure2 = z5.strictObject({ code: z5.enum(["subprocess", "cancelled", "deadline", "validation", "custody", "publication", "unavailable"]), message: z5.string().min(1).max(2048) });
 var receiptCommon = {
-  kind: z4.literal("slopcamera.studio-receipt"),
-  schemaVersion: z4.literal(1),
-  jobId: z4.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
-  attemptId: z4.string().regex(/^attempt_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+  kind: z5.literal("slopcamera.studio-receipt"),
+  schemaVersion: z5.literal(1),
+  jobId: z5.string().regex(/^studio_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
+  attemptId: z5.string().regex(/^attempt_[a-zA-Z0-9][a-zA-Z0-9_-]{0,120}$/u),
   planSha256: StudioDigestSchema,
   bundleSha256: StudioDigestSchema,
   jobSha256: StudioDigestSchema,
   runtime: StudioRuntimeIdentitySchema,
   runtimeSha256: StudioDigestSchema,
-  startedAt: z4.iso.datetime({ offset: true }),
-  finishedAt: z4.iso.datetime({ offset: true }),
-  outputs: z4.array(StudioOutputArtifactSchema).max(STUDIO_LIMITS.outputFiles)
+  startedAt: z5.iso.datetime({ offset: true }),
+  finishedAt: z5.iso.datetime({ offset: true }),
+  outputs: z5.array(StudioOutputArtifactSchema).max(STUDIO_LIMITS.outputFiles)
 };
-var receiptShape = z4.discriminatedUnion("state", [
-  z4.strictObject({ ...receiptCommon, state: z4.literal("succeeded"), custody: z4.literal("closed"), exitCode: z4.literal(0) }),
-  z4.strictObject({ ...receiptCommon, state: z4.literal("failed"), custody: z4.literal("closed"), exitCode: z4.number().int().min(-255).max(255).nullable(), failure: failure2 }),
-  z4.strictObject({ ...receiptCommon, state: z4.literal("unknown-custody"), custody: z4.literal("unknown"), exitCode: z4.number().int().min(-255).max(255).nullable(), failure: failure2 })
+var receiptShape = z5.discriminatedUnion("state", [
+  z5.strictObject({ ...receiptCommon, state: z5.literal("succeeded"), custody: z5.literal("closed"), exitCode: z5.literal(0) }),
+  z5.strictObject({ ...receiptCommon, state: z5.literal("failed"), custody: z5.literal("closed"), exitCode: z5.number().int().min(-255).max(255).nullable(), failure: failure2 }),
+  z5.strictObject({ ...receiptCommon, state: z5.literal("unknown-custody"), custody: z5.literal("unknown"), exitCode: z5.number().int().min(-255).max(255).nullable(), failure: failure2 })
 ]).superRefine((value, context) => {
   if (studioRuntimeSha256(value.runtime) !== value.runtimeSha256)
     context.addIssue({ code: "custom", message: "Receipt runtime digest differs from its evidence." });
@@ -2314,7 +2699,7 @@ var receipt = receiptShape.transform((value) => ({ ...value, outputs: [...value.
 var StudioReceiptSchema = studioDocument(receipt, "studio receipt");
 var parseStudioReceipt = (input) => parseStudioValue(StudioReceiptSchema, input);
 function validateStudioReceipt(input) {
-  const captured = parseStudioValue(studioDocument(z4.strictObject({ plan: StudioPlanSchema, receipt: StudioReceiptSchema }), "studio receipt validation input"), input);
+  const captured = parseStudioValue(studioDocument(z5.strictObject({ plan: StudioPlanSchema, receipt: StudioReceiptSchema }), "studio receipt validation input"), input);
   const { plan: plan2, receipt: receipt2 } = captured;
   studioRequire(receipt2.jobId === plan2.job.jobId && receipt2.planSha256 === plan2.planSha256 && receipt2.jobSha256 === plan2.jobSha256 && receipt2.bundleSha256 === plan2.bundleSha256, "Receipt identity differs from the exact planned job.");
   studioRequire(plan2.runtime !== undefined && receipt2.runtimeSha256 === plan2.runtimeSha256 && canonicalJson(receipt2.runtime) === canonicalJson(plan2.runtime), "Execution receipt requires the exact planned runtime binding.");
@@ -2417,4 +2802,4 @@ var slopcameraApi = Object.freeze({
   executeSlopcameraOperation
 });
 var diagramApi = slopcameraApi;
-export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, slopcameraSceneGalleryLimits, SlopcameraSceneVariantsSchema, summarizeSceneVariantPatch, parseSlopcameraSceneVariants, planSlopcameraSceneGallery, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };
+export { readDiagramFile, checkDiagramFile, renderDiagramFile, artifactSummary, mcpSourceByteLimit, WorkspaceBoundaryError, WorkspaceBoundary, mcpMaximumScale, mcpMaximumRenderedPixels, slopcameraMcpTools, SlopcameraMcpToolRuntime, SLOPCAMERA_VERSION, slopcameraMcpProtocolVersion, slopcameraMcpServerName, runMcpServer, SLOPCAMERA_CAPABILITY_MANIFEST_LIMITS, SlopcameraCapabilityEffectSchema, SlopcameraCapabilityResumeSchema, SlopcameraCapabilityResourceSchema, SlopcameraCapabilityPreparationSchema, SlopcameraCapabilityOperationSchema, SlopcameraCapabilityWorkflowSchema, SlopcameraCapabilityToolSchema, SlopcameraCapabilityCommandSchema, SlopcameraCapabilityQualificationSchema, SlopcameraCapabilityProfileSchema, SlopcameraCapabilityModuleDeclarationSchema, SlopcameraCapabilityModuleSchema, SlopcameraCapabilityManifestSchema, defineSlopcameraCapabilityModule, compileSlopcameraCapabilityManifest, parseSlopcameraCapabilityManifest, SLOPCAMERA_PORTABLE_CAPABILITY_VERSION, createPortableSlopcameraCapabilityManifest, slopcameraPortableCapabilityManifest, slopcameraSceneGalleryLimits, SlopcameraSceneVariantsSchema, summarizeSceneVariantPatch, parseSlopcameraSceneVariants, planSlopcameraSceneGallery, STUDIO_LIMITS, StudioDigestSchema, StudioEngineSchema, StudioPathSchema, StudioSourceBundleSchema, parseStudioSourceBundle, StudioSourceSpaceSchema, StudioOutputRoleSchema, StudioOutputFormatSchema, StudioOutputInterpretationSchema, StudioOutputSpecSchema, StudioRenderSchema, StudioEngineOptionsSchema, StudioExecutionProfileSchema, StudioJobSchema, parseStudioJob, StudioCapabilityNameSchema, StudioRuntimeIdentitySchema, parseStudioRuntimeIdentity, StudioOutputArtifactSchema, studioSourceBundleSha256, studioJobSha256, studioRuntimeSha256, studioOutputPath, StudioPlanSchema, parseStudioPlan, planStudioJob, StudioReceiptSchema, parseStudioReceipt, validateStudioReceipt, inspectStudioBundle, inspectStudioPlan, slopcameraApi, diagramApi };
