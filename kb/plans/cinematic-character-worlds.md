@@ -180,7 +180,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 6: Geometry construction grammar and asset preparation
 
-- **Status:** PR open (merge-forward `c4699ab`)
+- **Status:** Merged (PR #156, `63acd80`)
 - **Depends on:** Phase 0
 - **Objective:** Construct editable detailed objects and architecture from bounded parametric intent, with retained mesh/UV/LOD/collision artifacts for heavy operations.
 - **Scope:** new portable geometry/parametric modules, generator contracts/runtime, desktop preparation/native adapters, asset facts/audits, tests.
@@ -199,7 +199,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 7: Particles, post-processing, and deterministic simulation bakes
 
-- **Status:** Draft PR open
+- **Status:** PR open (PR #157, auto-merge enabled)
 - **Depends on:** Phases 4 and 6
 - **Objective:** Add impressive but bounded particles, atmosphere, finishing passes, rigid-body motion, and secondary-motion bakes while preserving deterministic evidence passes.
 - **Scope:** effect/simulation contracts, render quality request, locked Three.js post-processing modules, renderer lowering, retained Studio bake adapter, tests.
@@ -284,3 +284,4 @@ Parallel architecture spikes established four implementation boundaries:
 - 2026-09-19 — Phase 4 merged at `1303fdd` (PR #153) after final merge-forward and bundle/identity regeneration; all `Required` checks passed. Phase 2 merged at `c953123` (PR #152) after the canonical package-bounds release. Phase 5 implemented the `slopcamera.project-cinema-plan` sidecar, sequence compiler for cuts/dissolve/wipe/dip/flash/whip-pan/spatial/constrained match-cut, animatic preview with placeholder handling, and deterministic continuity audits; 22 focused contract/core tests pass, desktop lint/typecheck and package smoke pass, published as PR #155. Phase 6 implemented bounded geometry DAG, parametric architecture generators, and retained native-geometry adapter contract; 308 focused spatial tests pass, package smoke and standalone pass, published as PR #156. Phase 7 started with a bounded `SpatialRenderPlan` and closed post-process stack contracts; 6 focused parser/policy tests pass, draft PR #157.
 - 2026-09-19 — Rebuilt and re-committed `apps/desktop/dist/cli/main.js` and `scripts/legacy-identity.inventory.json` for PRs #155 and #156 after the local-runtime/standalone check caught identity-bearing line drift. Phase 7 extended to `SpatialParticleSystem` (5 tests) and `SpatialSimulationPlan` (3 tests), giving seeded bounded emitters, forces, kill volumes, preview/final tiers, and deterministic rigid-body/constraint bake plans with cache and source-digest binding; 14 focused tests pass and the draft PR is updated.
 - 2026-09-19 — Phase 5 merged at `78bcb9a` (PR #155); all `Required` checks passed. Phase 6 had to merge-forward past the p5 merge because of generated bundle/identity inventory conflicts; the merge-forward `c4699ab` was pushed and fresh exact-head CI is running.
+- 2026-09-19 — Phase 6 merged at `63acd80` (PR #156) after the merge-forward; all `Required` checks passed. Phase 7 was merged-forward past both p5 and p6, fixed lint casts, and promoted from draft to ready; `gh pr merge --auto` is active on PR #157. The phase now contains contracts for `SpatialRenderPlan`, post-processing, particle systems, simulation-bake plans, and motion evidence; renderer lowering, bake adapter, and browser qualifications remain out of scope for this workstream.
