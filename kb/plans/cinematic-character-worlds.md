@@ -161,7 +161,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 5: Shot sequences, transitions, and animatics
 
-- **Status:** PR open
+- **Status:** Merged (PR #155, `78bcb9a`)
 - **Depends on:** Phase 3
 - **Objective:** Assemble spatial shots into content-addressed cinematic sequences with bounded transitions, audio/action synchronization, animatics, and continuity evidence.
 - **Scope:** new desktop cinema contracts/core compiler, project render-plan sidecar integration, FFmpeg invocation builder, CLI, tests.
@@ -180,7 +180,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 6: Geometry construction grammar and asset preparation
 
-- **Status:** PR open
+- **Status:** PR open (merge-forward `c4699ab`)
 - **Depends on:** Phase 0
 - **Objective:** Construct editable detailed objects and architecture from bounded parametric intent, with retained mesh/UV/LOD/collision artifacts for heavy operations.
 - **Scope:** new portable geometry/parametric modules, generator contracts/runtime, desktop preparation/native adapters, asset facts/audits, tests.
@@ -283,3 +283,4 @@ Parallel architecture spikes established four implementation boundaries:
 - 2026-09-18 — Phase 3 completed and merged through PR #151 at `5592376` after a bounded cross-platform package-capacity fix (`bf9068d`, 4.32 MB packed cap for Linux archive variance); every lane including `Required` passed on the exact head. Phase 2 closed its remaining scope — analytic two-bone IK with pole/stretch/preserve policies, additive clip layers with canonical body masks, content-addressed take galleries with stale-digest rejection, and retained-native bake request/receipt contracts — plus a review-found attachment world-position fix, and was published as PR #152 (implementation `8bc1c26`, merge-forward `432d658`, 64 focused tests, package smoke inside raised bounds). Phase 4 added the reviewed completion scope — closed KHR extension allowlist, deterministic derivation executor bound to exact source bytes, content-addressed probe galleries with hero manifest binding, complete map preparation/MeshPhysicalMaterial lowering, and linear fog with explicit height-fog rejection — and was published as PR #153 (`ca492c9`, merge-forward `773c70f`, 264 focused tests). Exact-head CI is pending on both PRs. Phase 5 sequence/transition work started against merged Phase 3.
 - 2026-09-19 — Phase 4 merged at `1303fdd` (PR #153) after final merge-forward and bundle/identity regeneration; all `Required` checks passed. Phase 2 merged at `c953123` (PR #152) after the canonical package-bounds release. Phase 5 implemented the `slopcamera.project-cinema-plan` sidecar, sequence compiler for cuts/dissolve/wipe/dip/flash/whip-pan/spatial/constrained match-cut, animatic preview with placeholder handling, and deterministic continuity audits; 22 focused contract/core tests pass, desktop lint/typecheck and package smoke pass, published as PR #155. Phase 6 implemented bounded geometry DAG, parametric architecture generators, and retained native-geometry adapter contract; 308 focused spatial tests pass, package smoke and standalone pass, published as PR #156. Phase 7 started with a bounded `SpatialRenderPlan` and closed post-process stack contracts; 6 focused parser/policy tests pass, draft PR #157.
 - 2026-09-19 — Rebuilt and re-committed `apps/desktop/dist/cli/main.js` and `scripts/legacy-identity.inventory.json` for PRs #155 and #156 after the local-runtime/standalone check caught identity-bearing line drift. Phase 7 extended to `SpatialParticleSystem` (5 tests) and `SpatialSimulationPlan` (3 tests), giving seeded bounded emitters, forces, kill volumes, preview/final tiers, and deterministic rigid-body/constraint bake plans with cache and source-digest binding; 14 focused tests pass and the draft PR is updated.
+- 2026-09-19 — Phase 5 merged at `78bcb9a` (PR #155); all `Required` checks passed. Phase 6 had to merge-forward past the p5 merge because of generated bundle/identity inventory conflicts; the merge-forward `c4699ab` was pushed and fresh exact-head CI is running.
