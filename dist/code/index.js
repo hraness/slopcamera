@@ -4362,6 +4362,41 @@ function parseSpatialSimulationPlan(input) {
 function spatialSimulationPlanSha256(plan) {
   return spatialValueSha256(plan);
 }
+
+// src/spatial-scene/motion-evidence.ts
+import { z as z13 } from "zod";
+var SPATIAL_MOTION_EVIDENCE_LIMITS = {
+  pixels: 4096 * 4096,
+  samples: 16
+};
+var SpatialMotionSampleSchema = z13.strictObject({
+  id: z13.string().min(1).max(64),
+  entityId: z13.string().min(1).max(128),
+  viewport: z13.tuple([z13.number().int().min(0), z13.number().int().min(0), z13.number().int().min(0), z13.number().int().min(0)]),
+  width: z13.number().int().min(0).max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels),
+  height: z13.number().int().min(0).max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels),
+  samplesPerPixel: z13.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samples),
+  motionScale: positiveDimension2,
+  exposureUs: z13.number().int().min(0)
+});
+var SpatialMotionEvidenceSchema = z13.strictObject({
+  kind: z13.literal("slopcamera.spatial-motion-evidence"),
+  schemaVersion: z13.literal(1),
+  entityId: z13.string().min(1).max(128),
+  samples: z13.array(SpatialMotionSampleSchema).max(4)
+});
+function parseSpatialMotionEvidence(input) {
+  const ev = parseSpatialValue(SpatialMotionEvidenceSchema, input, "motion evidence");
+  for (const s of ev.samples) {
+    if (s.width * s.height > SPATIAL_MOTION_EVIDENCE_LIMITS.pixels) {
+      throw new TypeError(`Motion sample ${s.id} viewport ${s.width}x${s.height} exceeds pixel budget.`);
+    }
+  }
+  return deepFreezeJson(ev);
+}
+function spatialMotionEvidenceSha256(ev) {
+  return spatialValueSha256(ev);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -4394,6 +4429,7 @@ export {
   spatialPropertySupported,
   spatialParticleSystemSha256,
   spatialOutputDuration,
+  spatialMotionEvidenceSha256,
   spatialGlbBounds,
   spatialGeneratorParametersSha256,
   spatialGeneratorOutputSha256,
@@ -4440,6 +4476,7 @@ export {
   parseSpatialPerformanceBakeReceipt,
   parseSpatialPerformanceAuditOptions,
   parseSpatialParticleSystem,
+  parseSpatialMotionEvidence,
   parseSpatialGlb,
   parseSpatialGeneratorParameters,
   parseSpatialCameraTrack,
@@ -4609,6 +4646,8 @@ export {
   SpatialParticleCurveSchema,
   SpatialOverrideSchema,
   SpatialOriginSchema,
+  SpatialMotionSampleSchema,
+  SpatialMotionEvidenceSchema,
   SpatialMotionBlurSchema,
   SpatialMatrixSchema,
   SpatialMaterialSchema,
@@ -4692,6 +4731,7 @@ export {
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,
   SPATIAL_PARTICLE_LIMITS,
+  SPATIAL_MOTION_EVIDENCE_LIMITS,
   SPATIAL_GLB_RIGGED_PROFILE,
   SPATIAL_GLB_PROFILE_V1,
   SPATIAL_GLB_PROFILE,
