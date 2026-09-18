@@ -71,6 +71,8 @@ export interface SpatialAssetPreparationPorts {
 export interface SpatialAssetPreparationInput {
   readonly snapshots: readonly EvaluatedSpatialScene[];
   readonly exactSceneTimesUs?: readonly { readonly numerator: string; readonly denominator: string }[];
+  /** Beauty lut-grade assets not bound by any entity; decoded like other image rasters. */
+  readonly lutAssetIds?: readonly string[];
   /** Adapter-owned contained source root and private temporary workspace parent. */
   readonly assetRoot: string;
   readonly workspaceParent: string;
@@ -94,6 +96,7 @@ export interface PreparedSpatialAssets {
 const inputSchema = z.strictObject({
   snapshots: z.array(EvaluatedSpatialSceneSchema).min(1).max(SPATIAL_OVERLAY_LIMITS.frames),
   exactSceneTimesUs: z.array(z.strictObject({ numerator: z.string().regex(/^(?:0|[1-9]\d{0,23})$/u), denominator: z.string().regex(/^[1-9]\d{0,8}$/u) })).min(1).max(SPATIAL_OVERLAY_LIMITS.frames).optional(),
+  lutAssetIds: z.array(z.string().min(1).max(256)).max(64).optional(),
   assetRoot: z.string().min(1).max(4_096), workspaceParent: z.string().min(1).max(4_096),
 });
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
@@ -772,6 +775,15 @@ export async function withPreparedSpatialAssets<Result>(
         ...(entity.kind === "text" ? { entityContentSha256: spatialTextRasterContentSha256(entity) } : {}),
         ...(entity.kind === "video" ? { entityContentSha256: spatialVideoRasterContentSha256(entity) } : {}),
       }));
+    }
+    for (const assetId of request.lutAssetIds ?? []) {
+      const key = `lut:${assetId}`;
+      if (preparedAssets.has(key)) continue;
+      const asset = verified.get(assetId);
+      if (asset === undefined) throw new RangeError(`Missing manifest for LUT asset ${assetId}.`);
+      const output = await decodeImageRaster(asset, `LUT asset ${assetId}`);
+      preparedAssets.set(key, PreparedSpatialAssetSchema.parse({ kind: "lut", assetId, assetManifestSha256: asset.manifestSha256, ...output }));
+      aborted(signal);
     }
     aborted(signal);
     const prepared = [...preparedAssets.values()];

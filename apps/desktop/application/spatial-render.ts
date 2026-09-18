@@ -12,18 +12,23 @@ import {
   SpatialTimeUsSchema, SpatialShotV1Schema, type SpatialSceneV1,
 } from "../../../src/spatial-scene/contracts";
 import { evaluateSpatialScene } from "../../../src/spatial-scene/evaluate";
+import { parseSpatialMotionEvidence, spatialMotionEvidenceSha256, SPATIAL_MOTION_EVIDENCE_LIMITS } from "../../../src/spatial-scene/motion-evidence";
+import { SpatialRenderEffectsBindingSchema, spatialRenderEffectsAssetIds } from "../../../src/spatial-scene/render-effects";
+import { prepareSpatialParticleInstances } from "../../../src/spatial-scene/particle-preparation";
+import type { SpatialParticleSystem } from "../../../src/spatial-scene/particle";
 import { parseSpatialScene, parseSpatialValue, spatialAssetClosureDigests, spatialSceneSha256 } from "../../../src/spatial-scene/identity";
 import { reduceSpatialFrameRate, spatialFrameCount, spatialFrameSample, spatialOutputDuration, type SpatialRational } from "../../../src/spatial-scene/time";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { createNodeSpatialDurability, type SpatialDurabilityPort } from "../core/spatial-durability";
 import { SpatialShotRenderClockSchema, spatialShotSceneTime } from "../core/spatial-shot-clock";
 import { createSpatialOverlayBatch, SpatialRenderModeSchema, SPATIAL_OVERLAY_LIMITS, type SpatialOverlayBatchInput, type PreparedSpatialAsset } from "../html-overlay/spatial";
-import { HTML_OVERLAY_MAX_HTML_BYTES } from "../html-overlay/contracts";
+import { HTML_OVERLAY_MAX_HTML_BYTES, HTML_OVERLAY_MAX_RESOURCES, HTML_OVERLAY_MAX_TOTAL_RESOURCE_BYTES } from "../html-overlay/contracts";
 import { assertHtmlOverlayGpuEvidenceProfile, HtmlOverlayExecutionProfileSchema, HtmlOverlayGpuEvidenceSchema, type HtmlOverlayExecutionProfile, type HtmlOverlayGpuEvidence } from "../html-overlay/execution-profile";
 import { exactCapabilityByName } from "./capability-binding";
 import { ApplicationError } from "./errors";
 import { bindHtmlOverlayBrowserRuntime, HtmlOverlayBrowserRuntimeBindingSchema, type HtmlOverlayBrowserRuntimeBinding } from "./html-overlay-browser-runtime";
 import { createHtmlOverlayExecutionBundle, HtmlOverlayExecutionIntegritySchema } from "./html-overlay-integrity";
+import type { BoundHtmlOverlayResource } from "./html-overlay-renderer";
 import type { OperationExecutionContext } from "./operation";
 import { assertMediaCapabilities, bindExpectedMediaCapabilities, MediaCapabilityBindingsSchema, mediaCapabilityCommand, mediaCapabilityRunner, type MediaCapabilityName } from "./operations/media/capabilities";
 import { AbortBoundApplicationRunner, createMediaOperationWorkspace, MediaArtifactReferenceSchema, publishContentAddressedMedia, publishContentAddressedReceipt, type MediaArtifactReference } from "./operations/media/shared";
@@ -41,9 +46,14 @@ export const SPATIAL_RENDER_LIMITS = Object.freeze({
 });
 
 export function spatialBatchSerializationLimit(error: unknown): boolean {
-  if (error instanceof z.ZodError) return error.issues.length > 0 && error.issues.every(issue => issue.path.length === 1 && issue.path[0] === "html"
-    && (issue.code === "too_big" && issue.maximum === HTML_OVERLAY_MAX_HTML_BYTES
-      || issue.code === "custom" && issue.message === `HTML overlay documents may not exceed ${HTML_OVERLAY_MAX_HTML_BYTES} UTF-8 bytes.`));
+  if (error instanceof z.ZodError) return error.issues.length > 0 && error.issues.every(issue => (
+    issue.path.length === 1 && issue.path[0] === "html"
+      && (issue.code === "too_big" && issue.maximum === HTML_OVERLAY_MAX_HTML_BYTES
+        || issue.code === "custom" && issue.message === `HTML overlay documents may not exceed ${HTML_OVERLAY_MAX_HTML_BYTES} UTF-8 bytes.`)
+    || issue.path.length === 1 && issue.path[0] === "resources"
+      && (issue.code === "too_big" && issue.maximum === HTML_OVERLAY_MAX_RESOURCES
+        || issue.code === "custom" && issue.message === `HTML overlay resources exceed ${HTML_OVERLAY_MAX_TOTAL_RESOURCE_BYTES} total bytes.`)
+  ));
   return error instanceof Error && ["Spatial overlay request", "Spatial overlay metadata"].some(name => error.message === `${name} contains more than ${SPATIAL_OVERLAY_LIMITS.requestBytes} bytes.`);
 }
 
@@ -51,13 +61,16 @@ export function spatialBatchSerializationLimit(error: unknown): boolean {
 export function partitionSpatialRenderWindow(input: SpatialOverlayBatchInput) {
   type Partition = { readonly offset: number; readonly length: number; readonly preparedAssets: readonly PreparedSpatialAsset[]; readonly batch: ReturnType<typeof createSpatialOverlayBatch> };
   const partitions: Partition[] = [];
+  const needsVelocity = input.mode.kind === "motion"
+    || input.effects?.document.renderPlan.postProcess?.steps.some(step => step.kind === "motion-blur") === true;
   const visit = (offset: number, length: number): void => {
     const snapshots = input.snapshots.slice(offset, offset + length);
     const times = new Set(snapshots.map(snapshot => snapshot.timeUs));
     const preparedAssets = input.executionProfile === undefined ? input.preparedAssets ?? []
-      : (input.preparedAssets ?? []).filter(asset => asset.kind === "splat" || asset.timeUs === null || times.has(asset.timeUs));
+      : (input.preparedAssets ?? []).filter(asset => asset.kind === "splat" || asset.kind === "lut" || asset.timeUs === null || times.has(asset.timeUs));
     try {
-      const batch = createSpatialOverlayBatch({ ...input, snapshots, preparedAssets });
+      const batch = createSpatialOverlayBatch({ ...input, snapshots, preparedAssets,
+        ...(needsVelocity && offset > 0 ? { previousSnapshot: input.snapshots[offset - 1]! } : {}) });
       partitions.push({ offset, length, preparedAssets, batch });
     } catch (error) {
       if (input.executionProfile === undefined || length <= 1 || !spatialBatchSerializationLimit(error)) throw error;
@@ -72,6 +85,7 @@ export function partitionSpatialRenderWindow(input: SpatialOverlayBatchInput) {
 
 export const SpatialRenderRequestSchema = z.strictObject({
   executionProfile: HtmlOverlayExecutionProfileSchema.optional(),
+  effects: SpatialRenderEffectsBindingSchema.optional(),
   cameraId: SpatialCameraIdSchema,
   overrides: z.array(SpatialOverrideSchema).max(4_096).optional(),
   cameraPoseOverride: SpatialPoseSchema.optional(),
@@ -124,7 +138,20 @@ export interface SpatialRenderPlan {
   readonly outputWidth: number;
   readonly outputHeight: number;
   readonly outputDurationUs?: SpatialRational;
-  readonly costs: { readonly sourceBytes: number; readonly renderPixels: number; readonly pngBytesBound: number; readonly outputBytesBound: number; readonly stagingBytesBound: number };
+  readonly costs: {
+    readonly sourceBytes: number;
+    readonly renderPixels: number;
+    readonly renderTargetPixels: number;
+    readonly renderTargetBytes: number;
+    readonly texturePixels: number;
+    readonly particleStates: number;
+    readonly particleStateBytes: number;
+    readonly particleBufferBytesBound: number;
+    readonly simulationSteps: number;
+    readonly pngBytesBound: number;
+    readonly outputBytesBound: number;
+    readonly stagingBytesBound: number;
+  };
 }
 
 function rational(numerator: bigint, denominator: bigint): SpatialRational {
@@ -137,6 +164,38 @@ function checked(condition: boolean, message: string): asserts condition {
 }
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+function particleSurfaceInputs(system: SpatialParticleSystem, preparedAssets: readonly PreparedSpatialAsset[]) {
+  const surfaceIds = new Set(system.emitters.flatMap(emitter => emitter.shape.kind === "surface" ? [emitter.shape.assetId] : []));
+  return [...surfaceIds].map(assetId => {
+    const triangles: number[][][] = [];
+    for (const asset of preparedAssets) {
+      if (asset.kind !== "geometry" || asset.assetId !== assetId) continue;
+      for (const primitive of asset.primitives) {
+        const indices = primitive.indices ?? Array.from({ length: primitive.positions.length / 3 }, (_, index) => index);
+        for (let index = 0; index < indices.length; index += 3) triangles.push([indices[index]!, indices[index + 1]!, indices[index + 2]!].map(vertex => (
+          [primitive.positions[vertex * 3]!, primitive.positions[vertex * 3 + 1]!, primitive.positions[vertex * 3 + 2]!]
+        )));
+      }
+    }
+    return { assetId, triangles };
+  });
+}
+
+function postProcessRenderTargets(kind: string): number {
+  switch (kind) {
+    case "bloom": return 3;
+    case "depth-of-field":
+    case "motion-blur": return 2;
+    case "flare": return 3;
+    case "tone-map":
+    case "vignette":
+    case "chromatic-aberration":
+    case "grain":
+    case "lut-grade": return 1;
+    default: throw new ApplicationError("invalid-data", `Unsupported post-process step ${kind}.`);
+  }
+}
+
 /** Source-clock samples are computed independently in BigInt and quantized exactly once. */
 export function planSpatialRender(sceneInput: unknown, requestInput: unknown): SpatialRenderPlan {
   const scene = parseSpatialScene(sceneInput);
@@ -145,8 +204,50 @@ export function planSpatialRender(sceneInput: unknown, requestInput: unknown): S
   checked(request.executionProfile !== "three-spark-webgl2-hardware-v1" || request.mode.kind === "beauty", "The Three/Spark hardware profile supports beauty rendering only; splat selection and depth semantics are not qualified.");
   const camera = scene.cameras.find(item => item.cameraId === request.cameraId);
   checked(camera !== undefined, "Spatial render camera is absent from the scene.");
+  const requestMode = request.mode;
+  if (requestMode.kind === "motion") {
+    const entityId = requestMode.entityId;
+    checked(scene.entities.some(entity => entity.entityId === entityId), "Motion target is absent from the scene.");
+    checked(request.executionProfile === undefined, "Motion evidence renders through the deterministic snapshot renderer only.");
+  }
   const { width, height } = camera.projection;
   checked(width <= SPATIAL_RENDER_LIMITS.dimension && height <= SPATIAL_RENDER_LIMITS.dimension, "Spatial render dimensions exceed the renderer profile.");
+  const sceneDigest = spatialSceneSha256(scene);
+  const effects = request.effects?.document;
+  const texturePixels = scene.assets.reduce((sum, asset) => (
+    asset.interpretation.kind === "image" || asset.interpretation.kind === "video"
+      ? sum + asset.interpretation.width * asset.interpretation.height
+      : sum
+  ), 0);
+  let particleStates = 0, simulationSteps = 0, renderTargetCount = request.mode.kind === "motion" ? 3 : 1;
+  if (effects !== undefined) {
+    checked(effects.sceneSha256 === sceneDigest, "Render effects belong to a different scene source.");
+    const assets = new Map(scene.assets.map(asset => [asset.assetId, asset]));
+    for (const assetId of spatialRenderEffectsAssetIds(effects)) checked(assets.has(assetId), `Render effects reference missing asset ${assetId}.`);
+    for (const step of effects.renderPlan.postProcess?.steps ?? []) {
+      if (step.kind === "lut-grade") checked(assets.get(step.assetId)?.interpretation.kind === "image", `LUT ${step.assetId} must bind an image asset.`);
+      if (request.mode.kind === "beauty") renderTargetCount += postProcessRenderTargets(step.kind);
+    }
+    for (const binding of effects.particleSystems) {
+      checked(scene.entities.some(entity => entity.entityId === binding.system.entityId), `Particle system target ${binding.system.entityId} is absent from the scene.`);
+      const renderer = binding.system.renderer;
+      if (renderer.assetId !== undefined) {
+        const interpretation = assets.get(renderer.assetId)?.interpretation.kind;
+        checked(renderer.kind === "sprite" ? interpretation === "image" : interpretation === "gltf", `Particle renderer asset ${renderer.assetId} has an incompatible interpretation.`);
+      }
+      for (const emitter of binding.system.emitters) {
+        if (emitter.shape.kind === "surface") checked(assets.get(emitter.shape.assetId)?.interpretation.kind === "gltf", `Particle surface ${emitter.shape.assetId} must bind a glTF asset.`);
+      }
+    }
+    particleStates = effects.renderPlan.quality.particleCount;
+    simulationSteps = effects.renderPlan.quality.simulationSteps;
+    checked(width * height <= effects.renderPlan.quality.pixelBudget, "Render dimensions exceed the effect pixel budget.");
+    checked(texturePixels <= effects.renderPlan.quality.texturePixelBudget, "Scene textures exceed the effect texture-pixel budget.");
+  }
+  const renderTargetPixels = width * height * renderTargetCount;
+  const renderTargetBytes = renderTargetPixels * (request.mode.kind === "object-id" || request.mode.kind === "axial-depth" ? 4 : 8) + width * height * 4;
+  const particleStateBytes = particleStates * 64;
+  checked(renderTargetBytes + particleStateBytes <= SPATIAL_RENDER_LIMITS.stagingBytes, "Effect GPU working-set estimate exceeds its byte budget.");
   const selection = request.selection;
   let samples: SpatialRenderSample[], outputDurationUs: SpatialRational | undefined;
   if (selection.kind === "video") {
@@ -173,6 +274,14 @@ export function planSpatialRender(sceneInput: unknown, requestInput: unknown): S
     checked(times.every(time => time <= scene.durationUs), "A selected frame is outside the scene clock.");
     samples = times.map((timeUs, index) => ({ index, timeUs, exactTimeUs: { numerator: String(timeUs), denominator: "1" } }));
   }
+  if (request.mode.kind === "motion") {
+    checked(samples.length >= 2, "Motion evidence requires at least two ordered samples.");
+    checked(samples.length - 1 <= SPATIAL_MOTION_EVIDENCE_LIMITS.evidenceSamples, "Motion evidence exceeds its published sample budget.");
+    for (let index = 1; index < samples.length; index++) {
+      const gap = samples[index]!.timeUs - samples[index - 1]!.timeUs;
+      checked(gap >= 1 && gap <= 1_000_000, "Motion evidence requires strictly increasing samples within the one-second exposure bound.");
+    }
+  }
   const outputWidth = selection.kind === "contact-sheet" ? selection.columns * selection.cellWidth : width;
   const outputHeight = selection.kind === "contact-sheet" ? Math.ceil(samples.length / selection.columns) * selection.cellHeight : height;
   checked(outputWidth <= SPATIAL_RENDER_LIMITS.dimension && outputHeight <= SPATIAL_RENDER_LIMITS.dimension
@@ -186,18 +295,21 @@ export function planSpatialRender(sceneInput: unknown, requestInput: unknown): S
   // not a promise that every admitted scene compresses below it. A truncated
   // encode cannot publish: complete encoded count/timestamps are verified.
   const outputBytesBound = selection.kind === "video" ? Math.min(SPATIAL_RENDER_LIMITS.outputBytes, pngBytesBound + 1024 * 1024) : outputWidth * outputHeight * 5 + outputHeight * 8 + 65_536;
-  const stagingBytesBound = sourceBytes + pngBytesBound + outputBytesBound + SPATIAL_RENDER_LIMITS.metadataBytes;
+  const particleBufferBytesBound = particleStateBytes * samples.length;
+  const stagingBytesBound = sourceBytes + pngBytesBound + particleBufferBytesBound + outputBytesBound + SPATIAL_RENDER_LIMITS.metadataBytes;
   checked(sourceBytes <= SPATIAL_RENDER_LIMITS.sourceBytes, "Spatial source closure exceeds its byte budget.");
   checked(renderPixels <= SPATIAL_RENDER_LIMITS.totalPixels && pngBytesBound <= SPATIAL_RENDER_LIMITS.pngBytes, "Spatial frame staging exceeds its pixel or byte budget; reduce resolution or range.");
   checked(outputBytesBound <= SPATIAL_RENDER_LIMITS.outputBytes && stagingBytesBound <= SPATIAL_RENDER_LIMITS.stagingBytes, "Spatial output exceeds its conservative byte budget.");
+  if (effects !== undefined) checked(outputBytesBound <= effects.renderPlan.quality.outputBytes, "Spatial output exceeds the effect output-byte budget.");
   // Semantic override validation is pure and precedes capability or resource admission.
   evaluateSpatialScene(scene, { cameraId: request.cameraId, timeUs: samples[0]!.timeUs,
     ...(request.overrides === undefined ? {} : { overrides: request.overrides }),
     ...(request.cameraPoseOverride === undefined ? {} : { cameraPoseOverride: request.cameraPoseOverride }),
   });
-  return deepFreezeJson({ scene, sceneSha256: spatialSceneSha256(scene), request, requestSha256: canonicalJsonSha256(request), samples,
+  return deepFreezeJson({ scene, sceneSha256: sceneDigest, request, requestSha256: canonicalJsonSha256(request), samples,
     width, height, outputWidth, outputHeight, ...(outputDurationUs === undefined ? {} : { outputDurationUs }),
-    costs: { sourceBytes, renderPixels, pngBytesBound, outputBytesBound, stagingBytesBound },
+    costs: { sourceBytes, renderPixels, renderTargetPixels, renderTargetBytes, texturePixels, particleStates, particleStateBytes, particleBufferBytesBound, simulationSteps,
+      pngBytesBound, outputBytesBound, stagingBytesBound },
   });
 }
 
@@ -272,6 +384,9 @@ export const SpatialRenderReceiptSchema = z.strictObject({
   source: z.strictObject({ canonicalScene: MediaArtifactReferenceSchema, canonicalization: z.literal("parsed-spatial-scene-v1"),
     originalSceneArtifact: MediaArtifactReferenceSchema.optional(), retainedAssets: z.array(retainedAssetSchema).max(128), sourceManifests: z.record(SpatialAssetIdSchema, SpatialDigestSchema) }),
   request: SpatialRenderRequestSchema, requestSha256: SpatialDigestSchema,
+  effects: z.strictObject({ appliedToBeauty: z.boolean(), documentSha256: SpatialDigestSchema, renderPlanSha256: SpatialDigestSchema,
+    particleSystemSha256s: z.array(SpatialDigestSchema).max(64), simulationBakeReceiptSha256s: z.array(SpatialDigestSchema).max(64) }).optional(),
+  motionEvidence: z.strictObject({ artifact: MediaArtifactReferenceSchema, evidenceSha256: SpatialDigestSchema }).optional(),
   samples: z.array(z.strictObject({ sample: z.strictObject({ index: z.number().int().min(0).max(SPATIAL_RENDER_LIMITS.frames - 1), timeUs: SpatialTimeUsSchema, exactTimeUs: rationalSchema }),
     stateSha256: SpatialDigestSchema, viewSha256: SpatialDigestSchema, pngSha256: SpatialDigestSchema, pngBytes: byteCountSchema })).min(1).max(SPATIAL_RENDER_LIMITS.frames),
   render: renderSummarySchema, output: MediaArtifactReferenceSchema,
@@ -287,9 +402,26 @@ export const SpatialRenderReceiptSchema = z.strictObject({
   contactSheet: z.strictObject({ fit: z.literal("contain"), resampling: z.enum(["lanczos3", "nearest-data"]), calibratedProjectionResized: z.literal(false) }).optional(),
   encodedProbe: MediaArtifactReferenceSchema.optional(),
   workflow: z.strictObject({ nodeKey: z.string().min(1).max(255), nodePlanSha256: SpatialDigestSchema, runId: z.string().min(1).max(128) }).optional(),
-  costs: z.strictObject({ sourceBytes: byteCountSchema, renderPixels: z.number().int().min(1).max(SPATIAL_RENDER_LIMITS.totalPixels), pngBytesBound: byteCountSchema,
+  costs: z.strictObject({ sourceBytes: byteCountSchema, renderPixels: z.number().int().min(1).max(SPATIAL_RENDER_LIMITS.totalPixels),
+    renderTargetPixels: z.number().int().safe().min(1).max(SPATIAL_RENDER_LIMITS.totalPixels * 32).optional(), renderTargetBytes: byteCountSchema.optional(),
+    texturePixels: z.number().int().safe().min(0).max(SPATIAL_RENDER_LIMITS.totalPixels).optional(), particleStates: z.number().int().safe().min(0).max(1_000_000).optional(),
+    particleStateBytes: byteCountSchema.optional(), particleBufferBytesBound: byteCountSchema.optional(), simulationSteps: z.number().int().safe().min(0).max(10_000).optional(), pngBytesBound: byteCountSchema,
     outputBytesBound: byteCountSchema, stagingBytesBound: byteCountSchema, actualPngBytes: byteCountSchema, actualBatchMetadataBytes: byteCountSchema }),
 }).superRefine((receipt, context) => {
+  const expectedEffects = receipt.request.effects === undefined ? undefined : {
+    appliedToBeauty: receipt.request.mode.kind === "beauty",
+    documentSha256: receipt.request.effects.documentSha256,
+    renderPlanSha256: receipt.request.effects.document.renderPlanSha256,
+    particleSystemSha256s: receipt.request.effects.document.particleSystems.map(binding => binding.systemSha256),
+    simulationBakeReceiptSha256s: receipt.request.effects.document.simulationBakes.map(item => item.receiptSha256),
+  };
+  if (expectedEffects === undefined ? receipt.effects !== undefined
+    : receipt.effects === undefined || canonicalJson(receipt.effects) !== canonicalJson(expectedEffects)) {
+    context.addIssue({ code: "custom", path: ["effects"], message: "Spatial receipt must bind the exact requested effects and diagnostic bypass state." });
+  }
+  if ((receipt.request.mode.kind === "motion") !== (receipt.motionEvidence !== undefined)) {
+    context.addIssue({ code: "custom", path: ["motionEvidence"], message: "Spatial receipt must bind motion evidence exactly when its mode is motion." });
+  }
   if (receipt.batches.length > (receipt.request.executionProfile === undefined ? Math.ceil(SPATIAL_RENDER_LIMITS.frames / SPATIAL_RENDER_LIMITS.batchFrames) : receipt.samples.length)) {
     context.addIssue({ code: "custom", path: ["batches"], message: "Spatial batch count exceeds its selected profile's bounded sample partitions." });
   }
@@ -484,6 +616,8 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
     const ports = { runner, ...(names.includes("ffmpeg") ? { ffmpegCommand: mediaCapabilityCommand(capabilities, "ffmpeg"), ffprobeCommand: mediaCapabilityCommand(capabilities, "ffprobe") } : {}) };
     const retainedSources: { assetId: string; manifestSha256: string; originalPath: string; stagedPath: string; bytes: number }[] = [];
     const batchFiles: string[] = [], sampleEvidence: { sample: SpatialRenderSample; stateSha256: string; viewSha256: string; pngSha256: string; pngBytes: number }[] = [];
+    const motionSamples: { id: string; entityId: string; exposureUs: number; previousTimeUs: number; sampleTimeUs: number; width: number; height: number;
+      viewport: readonly [number, number, number, number]; byteLength: number; encoding: "rg16un"; motionSha256: string; motionScale: number; samplesPerPixel: number }[] = [];
     let pngBytes = 0, metadataBytes = 0;
     let gpuEvidence: HtmlOverlayGpuEvidence | undefined;
     for (let offset = 0; offset < plan.samples.length; offset += SPATIAL_RENDER_LIMITS.batchFrames) {
@@ -494,7 +628,35 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
         ...(plan.request.cameraPoseOverride === undefined ? {} : { cameraPoseOverride: plan.request.cameraPoseOverride }),
       }));
       stage = "preparation";
-      await withPreparedSpatialAssets({ snapshots, exactSceneTimesUs: samples.map(sample => sample.exactTimeUs), assetRoot, workspaceParent: directory }, ports, context.abortSignal, async prepared => {
+      const lutAssetIds = plan.request.mode.kind === "beauty" && plan.request.effects !== undefined
+        ? plan.request.effects.document.renderPlan.postProcess?.steps.flatMap(step => step.kind === "lut-grade" ? [step.assetId] : []) : undefined;
+      await withPreparedSpatialAssets({ snapshots, exactSceneTimesUs: samples.map(sample => sample.exactTimeUs), assetRoot, workspaceParent: directory,
+        ...(lutAssetIds === undefined || lutAssetIds.length === 0 ? {} : { lutAssetIds }) }, ports, context.abortSignal, async prepared => {
+        const particleAssets = new Map<string, PreparedSpatialAsset>();
+        const particleResources = new Map<string, BoundHtmlOverlayResource>();
+        if (plan.request.mode.kind === "beauty" && plan.request.effects !== undefined) {
+          for (const binding of plan.request.effects.document.particleSystems) {
+            const surfaces = particleSurfaceInputs(binding.system, prepared.preparedAssets);
+            for (const sample of samples) {
+              const key = `${binding.systemSha256}:${binding.system.entityId}:${sample.timeUs}`;
+              if (particleAssets.has(key)) continue;
+              const instances = prepareSpatialParticleInstances({ sampleTimeUs: sample.timeUs, surfaces, system: binding.system });
+              const name = `particles-${instances.sha256.slice(0, 40)}`;
+              const path = join(directory!, `${name}.bin`);
+              if (!particleResources.has(name)) {
+                await stageBytes(path, instances.bytes);
+                const resource = { name, sha256: instances.sha256, bytes: instances.byteLength, mediaType: "application/octet-stream", transport: "fetch" as const, urlPath: `${name}.bin` };
+                particleResources.set(name, { ...resource, absolutePath: path });
+              }
+              particleAssets.set(key, { kind: "particle-instances", entityId: binding.system.entityId, instanceCount: instances.instanceCount,
+                resource: { name, sha256: instances.sha256, bytes: instances.byteLength, mediaType: "application/octet-stream", transport: "fetch", urlPath: `${name}.bin` },
+                strideBytes: instances.strideBytes, systemSha256: instances.systemSha256, timeUs: sample.timeUs });
+            }
+          }
+        }
+        const allPreparedAssets = [...prepared.preparedAssets, ...particleAssets.values()];
+        const allResources = [...prepared.resources, ...particleResources.values()];
+        checked(allResources.reduce((sum, resource) => sum + resource.bytes, 0) <= plan.costs.stagingBytesBound, "Prepared particle resources exceeded the admitted staging budget.");
         checked(canonicalJson(prepared.receipt.sourceManifests) === canonicalJson(sourceManifests), "Asset preparation did not bind the complete source closure.");
         if (offset === 0) {
           for (const source of prepared.sources) {
@@ -507,17 +669,23 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
           }
           checked(retainedSources.length === plan.scene.assets.length && new Set(retainedSources.map(source => source.assetId)).size === retainedSources.length, "Retained source closure is incomplete or duplicated.");
         }
+        const needsVelocity = plan.request.mode.kind === "motion"
+          || plan.request.effects?.document.renderPlan.postProcess?.steps.some(step => step.kind === "motion-blur") === true;
         const partitions = partitionSpatialRenderWindow({ snapshots, mode: plan.request.mode,
+          ...(plan.request.effects === undefined ? {} : { effects: plan.request.effects }),
           ...(plan.request.executionProfile === undefined ? {} : { executionProfile: plan.request.executionProfile }),
-          frameRate: plan.request.selection.kind === "video" ? plan.request.selection.frameRate : { numerator: 1, denominator: 1 }, preparedAssets: prepared.preparedAssets });
+          ...(needsVelocity && offset > 0 ? { previousSnapshot: evaluateSpatialScene(plan.scene, { cameraId: plan.request.cameraId, timeUs: plan.samples[offset - 1]!.timeUs,
+            ...(plan.request.overrides === undefined ? {} : { overrides: plan.request.overrides }),
+            ...(plan.request.cameraPoseOverride === undefined ? {} : { cameraPoseOverride: plan.request.cameraPoseOverride }) }) } : {}),
+          frameRate: plan.request.selection.kind === "video" ? plan.request.selection.frameRate : { numerator: 1, denominator: 1 }, preparedAssets: allPreparedAssets });
         for (const partition of partitions) {
           const batchOffset = offset + partition.offset;
           const batchSamples = samples.slice(partition.offset, partition.offset + partition.length);
           const batchSnapshots = snapshots.slice(partition.offset, partition.offset + partition.length);
           const batch = partition.batch;
           const resourceNames = new Set(batch.authoring.resources.map(resource => resource.name));
-          const batchResources = plan.request.executionProfile === undefined ? prepared.resources : prepared.resources.filter(resource => resourceNames.has(resource.name));
-          const batchPreparation = plan.request.executionProfile === undefined ? prepared.receipt : { ...prepared.receipt,
+          const batchResources = allResources.filter(resource => resourceNames.has(resource.name));
+          const batchPreparation = particleAssets.size === 0 && plan.request.executionProfile === undefined ? prepared.receipt : { ...prepared.receipt,
             preparedSha256: canonicalJsonSha256(partition.preparedAssets), outputBytes: batchResources.reduce((sum, resource) => sum + resource.bytes, 0) };
           const batchDirectory = join(directory!, `batch-${batchOffset}`);
           await mkdir(batchDirectory, { mode: 0o700 });
@@ -543,7 +711,15 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
             const bytes = await readPhysical(join(batchDirectory, "frames", frameName(index)), plan.costs.pngBytesBound, context.abortSignal);
             pngBytes += bytes.length;
             checked(pngBytes <= plan.costs.pngBytesBound, "Rendered PNG bytes exceeded the admitted staging estimate.");
-            await verifyPng(bytes, plan.width, plan.height);
+            const decoded = await verifyPng(bytes, plan.width, plan.height);
+            if (plan.request.mode.kind === "motion" && sample.index > 0) {
+              const previous = plan.samples[sample.index - 1]!;
+              motionSamples.push({ id: `sample_${sample.index}`, entityId: plan.request.mode.entityId,
+                exposureUs: sample.timeUs - previous.timeUs, previousTimeUs: previous.timeUs, sampleTimeUs: sample.timeUs,
+                width: plan.width, height: plan.height, viewport: [0, 0, plan.width, plan.height],
+                byteLength: decoded.length, encoding: "rg16un", motionSha256: sha256(decoded),
+                motionScale: plan.request.mode.motionScale, samplesPerPixel: 1 });
+            }
             await stageBytes(join(frameDirectory, frameName(sample.index)), bytes);
             sampleEvidence.push({ sample, stateSha256: batchSnapshots[index]!.stateSha256, viewSha256: batchSnapshots[index]!.viewSha256, pngSha256: sha256(bytes), pngBytes: bytes.length });
           }
@@ -597,6 +773,13 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
     const scenePath = join(directory, "scene.json"), runtimePath = join(directory, "runtime.json");
     const sceneBytes = await stageJson(scenePath, plan.scene, 2_097_153);
     const runtimeBytes = await stageJson(runtimePath, runtime, SPATIAL_RENDER_LIMITS.metadataBytes);
+    let motionEvidence: { evidence: ReturnType<typeof parseSpatialMotionEvidence>; path: string } | undefined;
+    if (plan.request.mode.kind === "motion") {
+      motionEvidence = { evidence: parseSpatialMotionEvidence({ kind: "slopcamera.spatial-motion-evidence", schemaVersion: 1,
+        entityId: plan.request.mode.entityId, renderRequestSha256: plan.requestSha256,
+        rendererSha256: runtime.manifest.rootSha256, samples: motionSamples }), path: join(directory, "motion-evidence.json") };
+      metadataBytes += (await stageJson(motionEvidence.path, motionEvidence.evidence, SPATIAL_RENDER_LIMITS.metadataBytes)).length;
+    }
     checked(metadataBytes + sceneBytes.length + runtimeBytes.length <= SPATIAL_RENDER_LIMITS.metadataBytes, "Combined spatial source/runtime/batch evidence exceeds the admitted metadata budget.");
     stage = "publication";
     const publish = async (stagedPath: string, extension: string, maximumBytes: number): Promise<MediaArtifactReference> => {
@@ -623,6 +806,9 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
     const batches: MediaArtifactReference[] = [];
     for (const path of batchFiles) batches.push(await publish(path, ".json", SPATIAL_RENDER_LIMITS.metadataBytes));
     const encodedProbe = probePath === undefined ? undefined : await publish(probePath, ".json", SPATIAL_RENDER_LIMITS.probeBytes);
+    const motionEvidenceArtifact = motionEvidence === undefined ? undefined : {
+      artifact: await publish(motionEvidence.path, ".json", SPATIAL_RENDER_LIMITS.metadataBytes),
+      evidenceSha256: spatialMotionEvidenceSha256(motionEvidence.evidence) };
     const artifact = await publish(outputPath, plan.request.selection.kind === "video" ? ".mov" : ".png", plan.costs.outputBytesBound);
     const frameArtifacts: MediaArtifactReference[] = [];
     if (plan.request.selection.kind === "frame") frameArtifacts.push(artifact);
@@ -634,7 +820,16 @@ export async function renderSpatialScene(context: OperationExecutionContext, inp
     const receiptValue = SpatialRenderReceiptSchema.parse({
       kind: "slopcamera.spatial-render-receipt", schemaVersion: 1, attemptId, sceneSha256: plan.sceneSha256,
       source: { canonicalScene: sceneSource, canonicalization: "parsed-spatial-scene-v1", ...(originalSceneArtifact === undefined ? {} : { originalSceneArtifact }), retainedAssets, sourceManifests },
-      request: plan.request, requestSha256: plan.requestSha256, samples: sampleEvidence, render, output: artifact, batches, frameArtifacts,
+      request: plan.request, requestSha256: plan.requestSha256,
+      ...(plan.request.effects === undefined ? {} : { effects: {
+        appliedToBeauty: plan.request.mode.kind === "beauty",
+        documentSha256: plan.request.effects.documentSha256,
+        renderPlanSha256: plan.request.effects.document.renderPlanSha256,
+        particleSystemSha256s: plan.request.effects.document.particleSystems.map(binding => binding.systemSha256),
+        simulationBakeReceiptSha256s: plan.request.effects.document.simulationBakes.map(item => item.receiptSha256),
+      } }),
+      ...(motionEvidenceArtifact === undefined ? {} : { motionEvidence: motionEvidenceArtifact }),
+      samples: sampleEvidence, render, output: artifact, batches, frameArtifacts,
       runtime: { artifact: runtimeArtifact, rootSha256: runtime.manifest.rootSha256, capabilities, renderer: "three-webgl2-snapshot-v1", threeVersion: "0.185.1",
         ...(gpuEvidence === undefined ? {} : { gpuEvidence }) },
       color: { output: plan.request.mode.kind === "beauty" ? "srgb" : "rgba8-data", alpha: plan.request.mode.kind === "beauty" ? "straight" : "binary-validity", toneMapping: "none" },

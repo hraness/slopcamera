@@ -6,7 +6,13 @@ import { normalizeSpatialAuditAssetBounds, spatialEntityLocalBounds } from "../.
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
 import { SPATIAL_SCENE_LIMITS, SpatialCameraIdSchema } from "../../../src/spatial-scene/contracts";
+import { checkSpatialDirection, compileSpatialDirection, spatialDirectionCompilationSha256 } from "../../../src/spatial-scene/direction-compile";
+import { createSpatialEvaluationContext, evaluateSpatialSceneInContext } from "../../../src/spatial-scene/evaluate";
+import { planSpatialDirectionGallery, spatialGalleryPlanSha256 } from "../../../src/spatial-scene/gallery";
+import { checkSpatialRenderEffects, planSpatialRenderEffects } from "../../../src/spatial-scene/render-effects";
 import { SPATIAL_REVIEW_LIMITS } from "../../../src/spatial-scene/review";
+import { bakeSpatialSimulation, spatialSimulationBakeSha256 } from "../../../src/spatial-scene/simulation-bake";
+import { auditSpatialTemporalEvidence, SpatialTemporalContactsFileSchema, spatialTemporalAuditReportSha256 } from "../../../src/spatial-scene/temporal-audit";
 import { parseSpatialScene, parseSpatialValue, spatialSceneSha256 } from "../../../src/spatial-scene/index";
 import { diffSpatialScenes } from "../../../src/spatial-scene/patch";
 import { SpatialSolveError, SpatialSolveGoalsFileSchema, solveSpatialRelations, type SpatialSolveResult } from "../../../src/spatial-scene/solve";
@@ -78,7 +84,7 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     throw new CliError("authorization-required", "scene review uploads bounded rendered beauty frames to a vision model and requires --allow-cloud-upload on this invocation.", { command: "scene review" });
   }
   if (command.action === "camera-track") assertCameraTrackActive(signal);
-  const sourcePath = resolve(application.paths.repositoryRoot, command.path);
+  const sourcePath = resolve(application.paths.repositoryRoot, "path" in command ? command.path : command.scene);
   if (command.action === "init") {
     const scene = createSpatialSceneStarter();
     await publishSpatialSource(sourcePath, scene);
@@ -225,6 +231,63 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     await publishSpatialSource(output, track, fence);
     await fence();
     return { path: output, sceneSha256: track.sceneSha256, cameraId: track.cameraId, clock: track.clock, executed: false };
+  }
+  if (command.action === "direction-check") {
+    const direction = await readSpatialJson(resolve(application.paths.repositoryRoot, command.direction));
+    return checkSpatialDirection({ direction, scene });
+  }
+  if (command.action === "direction-plan") {
+    const direction = await readSpatialJson(resolve(application.paths.repositoryRoot, command.direction));
+    const compilation = compileSpatialDirection({ direction, scene, ...(command.camera === undefined ? {} : { cameraId: command.camera }) });
+    if (command.output === undefined) return compilation;
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, compilation);
+    return { path: output, compilationSha256: spatialDirectionCompilationSha256(compilation), proposals: compilation.proposals, advisories: compilation.advisories };
+  }
+  if (command.action === "direction-gallery") {
+    const direction = await readSpatialJson(resolve(application.paths.repositoryRoot, command.direction));
+    const plan = planSpatialDirectionGallery({ axis: command.axis, direction, scene, ...(command.camera === undefined ? {} : { cameraId: command.camera }) });
+    if (command.output === undefined) return plan;
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, plan);
+    return { path: output, galleryPlanSha256: spatialGalleryPlanSha256(plan), candidates: plan.candidates.map(candidate => ({ candidateId: candidate.candidateId, documentSha256: candidate.documentSha256 })) };
+  }
+  if (command.action === "effects-check") {
+    const effects = await readSpatialJson(resolve(application.paths.repositoryRoot, command.effects));
+    return checkSpatialRenderEffects({ effects, scene });
+  }
+  if (command.action === "effects-plan") {
+    const draft = await readSpatialJson(resolve(application.paths.repositoryRoot, command.draft));
+    if (typeof draft !== "object" || draft === null || Array.isArray(draft)) throw new CliError("invalid-data", "An effects draft must be a JSON object with renderPlan, particleSystems, and simulationBakes fields.");
+    const binding = planSpatialRenderEffects({ ...draft, scene });
+    if (command.output === undefined) return binding;
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, binding);
+    return { path: output, documentSha256: binding.documentSha256 };
+  }
+  if (command.action === "effects-bake") {
+    const plan = await readSpatialJson(resolve(application.paths.repositoryRoot, command.simulation));
+    const result = bakeSpatialSimulation(plan);
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, result.document);
+    return { path: output, documentSha256: spatialSimulationBakeSha256(result.document), receipt: result.receipt };
+  }
+  if (command.action === "temporal-audit") {
+    const times = command.timesUs ?? (() => {
+      const count = Math.min(17, Math.max(2, Math.ceil(scene.durationUs / 1_000_000) + 1));
+      return Array.from({ length: count }, (_, index) => Math.floor((scene.durationUs * index) / (count - 1)));
+    })();
+    if (times.length < 2) throw new CliError("invalid-data", "scene temporal-audit requires at least two sample times.");
+    const contacts = command.contacts === undefined
+      ? []
+      : parseSpatialValue(SpatialTemporalContactsFileSchema, await readSpatialJson(resolve(application.paths.repositoryRoot, command.contacts)), "temporal contacts").contacts;
+    const context = createSpatialEvaluationContext(scene);
+    const snapshots = [...times].sort((left, right) => left - right).map(timeUs => evaluateSpatialSceneInContext(context, { cameraId: command.camera, timeUs }));
+    const report = auditSpatialTemporalEvidence({
+      snapshots,
+      options: { contacts, ...(command.cutBeforeUs === undefined ? {} : { cutBeforeUs: [...command.cutBeforeUs] }) },
+    });
+    return { ...report, reportSha256: spatialTemporalAuditReportSha256(report) };
   }
   if (command.action === "plan" || command.action === "render") {
     const request = bindSpatialCliExecutionProfile(await readSpatialJson(resolve(application.paths.repositoryRoot, command.request)), command.executionProfile);

@@ -462,7 +462,7 @@ jobs:
           const maximumFiles = 520;
           const maximumMetadataBytes = 1_000_000;
           const maximumPackedBytes = 4_800_000;
-          const maximumUnpackedBytes = 13_000_000;
+          const maximumUnpackedBytes = 14_000_000;
           const expectedName = "@hraness/slopcamera";
           const expectedVersion = process.env.EXPECTED_VERSION;
           const expectedFilename = process.env.EXPECTED_TARBALL_NAME;

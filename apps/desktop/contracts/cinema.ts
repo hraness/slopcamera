@@ -657,3 +657,80 @@ export const CinemaContinuityReportSchema = z.strictObject({
 
 export type CinemaContinuityFinding = ReadonlyInferred<typeof CinemaContinuityFindingSchema>;
 export type CinemaContinuityReport = ReadonlyInferred<typeof CinemaContinuityReportSchema>;
+
+export const CINEMA_TEMPORAL_FINDING_CODES = [
+  "cue-concurrency",
+  "pacing-collapse",
+  "transition-overrun",
+  "uniform-pacing",
+] as const;
+
+export const CinemaTemporalFindingSchema = z.strictObject({
+  code: z.enum(CINEMA_TEMPORAL_FINDING_CODES),
+  message: z.string().min(1).max(2_048),
+  severity: z.enum(CINEMA_FINDING_SEVERITIES),
+  shotIds: z.array(CinemaShotIdSchema).min(1).max(4),
+  timeUs: MicrosecondsSchema,
+  transitionIndex: z.number().int().safe().nonnegative().optional(),
+});
+
+/**
+ * Layout-derived temporal metrics for one compiled cinema plan. Durations are
+ * integer microseconds; ratios are exact plan arithmetic, never pixel-derived.
+ */
+export const CinemaTemporalReportSchema = z.strictObject({
+  cinemaPlanSha256: Sha256Schema,
+  findings: z.array(CinemaTemporalFindingSchema).max(4_096),
+  kind: z.literal("slopcamera.cinema-temporal-report"),
+  metrics: z.strictObject({
+    audioCueCount: z.number().int().min(0).max(CINEMA_LIMITS.audioCues),
+    maxConcurrentCues: z.number().int().min(0).max(CINEMA_LIMITS.audioCues),
+    maxShotUs: MicrosecondsSchema,
+    medianShotUs: MicrosecondsSchema,
+    minShotUs: MicrosecondsSchema,
+    shotCount: z.number().int().min(1).max(CINEMA_LIMITS.shots),
+    totalDurationUs: MicrosecondsSchema,
+    transitionCount: z.number().int().min(0).max(CINEMA_LIMITS.shots),
+    transitionOverheadRatio: z.number().finite().min(0).max(1),
+  }),
+  schemaVersion: z.literal(1),
+});
+
+export const CINEMA_GALLERY_AXES = [
+  "audio",
+  "looks",
+  "mixed",
+  "pacing",
+  "structure",
+  "transitions",
+] as const;
+
+export const CinemaGalleryAxisSchema = z.enum(CINEMA_GALLERY_AXES);
+
+export const CinemaGalleryCandidateSchema = z.strictObject({
+  candidateId: z.string().min(1).max(256),
+  cinemaPlanSha256: Sha256Schema,
+  label: z.string().min(1).max(256),
+  parameter: z.string().min(1).max(128),
+  plan: ProjectCinemaPlanV1Schema,
+});
+
+/**
+ * A bounded gallery of candidate cinema plans. Every candidate re-validates
+ * and re-hashes through the canonical composition digest; `selection` stays
+ * null because the planner never promotes a candidate.
+ */
+export const CinemaGalleryPlanSchema = z.strictObject({
+  axis: CinemaGalleryAxisSchema,
+  candidates: z.array(CinemaGalleryCandidateSchema).min(1).max(CINEMA_LIMITS.shots),
+  cinemaPlanSha256: Sha256Schema,
+  kind: z.literal("slopcamera.cinema-gallery-plan"),
+  schemaVersion: z.literal(1),
+  selection: z.null(),
+});
+
+export type CinemaTemporalFinding = ReadonlyInferred<typeof CinemaTemporalFindingSchema>;
+export type CinemaTemporalReport = ReadonlyInferred<typeof CinemaTemporalReportSchema>;
+export type CinemaGalleryAxis = ReadonlyInferred<typeof CinemaGalleryAxisSchema>;
+export type CinemaGalleryCandidate = ReadonlyInferred<typeof CinemaGalleryCandidateSchema>;
+export type CinemaGalleryPlan = ReadonlyInferred<typeof CinemaGalleryPlanSchema>;

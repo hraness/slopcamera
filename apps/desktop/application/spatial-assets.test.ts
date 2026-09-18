@@ -73,6 +73,30 @@ describe("contained spatial asset preparation", () => {
     });
   });
 
+  test("prepares unbound LUT strip assets under the same verified custody", async () => {
+    await workspace(async (assetRoot, workspaceParent) => {
+      const bytes = await sharp(Uint8Array.from(Array.from({ length: 4 * 2 * 4 }, (_, index) => (index * 37) % 256)), { raw: { width: 4, height: 2, channels: 4 } }).png().toBuffer();
+      await writeFile(join(assetRoot, "lut.bin"), bytes);
+      const lutManifest: SpatialAssetManifest = { assetId: "asset_lut", payload: { path: "lut.bin", sha256: sha(bytes), bytes: bytes.length }, dependencies: [],
+        provenance: { source: "authored", description: "Original LUT fixture" },
+        interpretation: { kind: "image", width: 4, height: 2, colorSpace: "srgb", alpha: "opaque", mimeType: "image/png" } };
+      const plainMesh = { ...surface, kind: "mesh", geometry: { kind: "box", size: [1, 1, 1] }, material: { kind: "unlit", color: "#ffffff", opacity: 1 } } as SpatialEntity;
+      const frame = snapshot([lutManifest], plainMesh);
+      const result = await withPreparedSpatialAssets({ assetRoot, workspaceParent, snapshots: [frame], lutAssetIds: ["asset_lut"] }, { runner }, new AbortController().signal, async prepared => {
+        expect(prepared.preparedAssets).toHaveLength(1);
+        const lut = prepared.preparedAssets[0]!;
+        if (lut.kind !== "lut") throw new Error("Expected a prepared LUT asset.");
+        expect(lut).toMatchObject({ assetId: "asset_lut", width: 4, height: 2 });
+        expect(prepared.resources.map(resource => resource.name)).toEqual([lut.resource.name]);
+        expect(sha(await readFile(prepared.resources[0]!.absolutePath))).toBe(lut.resource.sha256);
+        return lut;
+      });
+      expect(result).toMatchObject({ kind: "lut" });
+      await expect(withPreparedSpatialAssets({ assetRoot, workspaceParent, snapshots: [frame], lutAssetIds: ["asset_missing"] }, { runner }, new AbortController().signal, async () => undefined)).rejects.toThrow("Missing manifest for LUT asset");
+      expect(await readdir(workspaceParent)).toEqual([]);
+    });
+  });
+
   test("rejects source substitution, final symlink, and parent symlink without publication", async () => {
     await workspace(async (assetRoot, workspaceParent) => {
       const bytes = await png(), source = manifest(bytes), request = { assetRoot, workspaceParent, snapshots: [snapshot([source])] };

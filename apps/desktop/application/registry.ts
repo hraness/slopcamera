@@ -125,7 +125,7 @@ function eraseDefinition<Input, Output>(
     describe: (): OperationDescription => ({
       ...discovery,
       inputJsonSchema: {
-        ...z.toJSONSchema(definition.inputSchema),
+        ...z.toJSONSchema(definition.inputSchema, { io: "input" }),
         $id: definition.inputSchemaId,
       },
       outputJsonSchema: {

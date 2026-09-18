@@ -43,6 +43,12 @@ export interface McpToolDefinition {
     | "audit_scene"
     | "diff_scenes"
     | "evaluate_scene"
+    | "check_scene_direction"
+    | "plan_scene_direction"
+    | "plan_scene_gallery"
+    | "check_scene_effects"
+    | "plan_scene_effects"
+    | "audit_scene_temporal"
   readonly title: string
   readonly description: string
   readonly inputSchema: Readonly<Record<string, unknown>>
