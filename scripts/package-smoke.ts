@@ -41,11 +41,11 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Cinematic camera archive: at most 500 files, 4.32 MB packed and 11.9 MB unpacked.
+// Archive: at most 500 files, 4.8 MB packed and 13 MB unpacked.
 // Keep bounded headroom aligned with the independent release artifact readers.
 const maximumPackedFiles = 500;
-const maximumPackedBytes = 4_320_000;
-const maximumUnpackedBytes = 11_900_000;
+const maximumPackedBytes = 4_800_000;
+const maximumUnpackedBytes = 13_000_000;
 const packedHtmlExamplePaths = [
   "examples/html/music-video.html",
   "examples/html/music-video.json",

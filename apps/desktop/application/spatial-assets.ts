@@ -17,6 +17,7 @@ import {
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
 import { evaluateSpatialGlb, parseSpatialGlb, type SpatialGlbModel } from "../../../src/spatial-scene/gltf";
 import { transformBounds } from "../../../src/spatial-scene/math";
+import { SpatialDerivationCandidateSchema, pbrMaterialMapAssetIds, type SpatialDerivationCandidate } from "../../../src/spatial-scene/material-lighting";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { SpatialWorldImportManifestSchema, SPATIAL_SPLAT_LIMITS } from "../contracts/spatial-world";
 import { SpatialAssetFactsV1Schema } from "../contracts/spatial-asset";
@@ -96,6 +97,39 @@ const inputSchema = z.strictObject({
   assetRoot: z.string().min(1).max(4_096), workspaceParent: z.string().min(1).max(4_096),
 });
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
+export interface SpatialMaterialDerivationReceipt {
+  readonly kind: "slopcamera.spatial-material-derivation";
+  readonly schemaVersion: 1;
+  readonly candidate: SpatialDerivationCandidate;
+  readonly sourceSha256: string;
+  readonly outputSha256: string;
+  readonly provenanceSha256: string;
+  readonly width: number;
+  readonly height: number;
+  readonly output: Uint8Array;
+}
+
+/** Deterministic, local-only raster derivation. Output is an opaque PNG bound to exact source bytes and candidate provenance. */
+export async function deriveSpatialMaterialRaster(input: { readonly candidate: SpatialDerivationCandidate; readonly source: Uint8Array; readonly sourceSha256: string }): Promise<SpatialMaterialDerivationReceipt> {
+  const candidate = SpatialDerivationCandidateSchema.parse(input.candidate);
+  if (!(input.source instanceof Uint8Array) || input.source.byteLength < 1 || input.source.byteLength > SPATIAL_ASSET_PREPARATION_LIMITS.sourceBytes || digest(input.source) !== input.sourceSha256) throw new RangeError("Material derivation source bytes must match their exact bounded digest.");
+  const image = sharp(input.source, { failOn: "error", limitInputPixels: SPATIAL_ASSET_PREPARATION_LIMITS.rasterPixels, sequentialRead: true }).removeAlpha().toColourspace("b-w");
+  const metadata = await image.metadata();
+  if (metadata.width === undefined || metadata.height === undefined || metadata.width * metadata.height > SPATIAL_ASSET_PREPARATION_LIMITS.rasterPixels) throw new RangeError("Material derivation exceeds the decoded pixel budget.");
+  let output: Buffer;
+  if (candidate.method === "sobel-normal-from-height") {
+    const raw = await image.raw().toBuffer(); const rgba = Buffer.alloc(metadata.width * metadata.height * 4); const sample = (x: number, y: number) => raw[Math.max(0, Math.min(metadata.height - 1, y)) * metadata.width + Math.max(0, Math.min(metadata.width - 1, x))]! / 255;
+    for (let y = 0; y < metadata.height; y++) for (let x = 0; x < metadata.width; x++) { const gx = sample(x + 1, y) - sample(x - 1, y), gy = sample(x, y + 1) - sample(x, y - 1), length = Math.hypot(gx, gy, 1), at = (y * metadata.width + x) * 4; rgba[at] = Math.round((-.5 * gx / length + .5) * 255); rgba[at + 1] = Math.round((-.5 * gy / length + .5) * 255); rgba[at + 2] = Math.round((1 / length * .5 + .5) * 255); rgba[at + 3] = 255; }
+    output = await sharp(rgba, { raw: { width: metadata.width, height: metadata.height, channels: 4 } }).png({ compressionLevel: 9, adaptiveFiltering: false, palette: false }).toBuffer();
+  } else {
+    const raw = await image.raw().toBuffer();
+    if (candidate.method === "average-luminance-roughness") for (let index = 0; index < raw.length; index++) raw[index] = 255 - raw[index]!;
+    output = await sharp(raw, { raw: { width: metadata.width, height: metadata.height, channels: 1 } }).png({ compressionLevel: 9, adaptiveFiltering: false, palette: false }).toBuffer();
+  }
+  const outputBytes = Uint8Array.from(output), outputSha256 = digest(outputBytes);
+  const provenanceSha256 = canonicalJsonSha256({ domain: "slopcamera.spatial-material-derivation/v1", candidate, sourceSha256: input.sourceSha256, outputSha256, width: metadata.width, height: metadata.height });
+  return Object.freeze({ kind: "slopcamera.spatial-material-derivation", schemaVersion: 1, candidate, sourceSha256: input.sourceSha256, outputSha256, provenanceSha256, width: metadata.width, height: metadata.height, output: outputBytes });
+}
 function capability(name: string, message: string): never { throw new SpatialOverlayCapabilityError(name, message); }
 function aborted(signal: AbortSignal): void { if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Spatial asset preparation was cancelled."); }
 function utf8(bytes: Uint8Array): string { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
@@ -479,14 +513,27 @@ export async function withPreparedSpatialAssets<Result>(
       const entity = entry.entity;
       // A procedural mesh's material map is a secondary binding: the entity
       // still has no primary asset, so it bypasses the per-entity asset path.
-      if (entity.kind === "mesh" && entity.geometry.kind !== "asset" && entity.material.map !== undefined) {
-        const mapAsset = verified.get(entity.material.map);
-        if (mapAsset === undefined) throw new RangeError(`Missing manifest for spatial asset ${entity.material.map}.`);
-        const mapKey = `${entity.material.map}:${entity.entityId}:static`;
-        if (!preparedAssets.has(mapKey)) {
-          const output = await decodeImageRaster(mapAsset, `Material map on ${entity.entityId}`);
-          preparedAssets.set(mapKey, PreparedSpatialAssetSchema.parse({ kind: "raster", assetId: entity.material.map,
-            assetManifestSha256: mapAsset.manifestSha256, entityId: entity.entityId, timeUs: null, ...output }));
+      const materialMaps = entity.kind !== "mesh" ? [] : entity.material.kind === "pbr"
+        ? pbrMaterialMapAssetIds(entity.material) : entity.material.map === undefined ? [] : [entity.material.map];
+      if (entity.kind === "mesh" && entity.geometry.kind !== "asset" && materialMaps.length > 0) {
+        let expectedDimensions: readonly [number, number] | undefined;
+        for (const materialMap of materialMaps) {
+          const mapAsset = verified.get(materialMap);
+          if (mapAsset === undefined) throw new RangeError(`Missing manifest for spatial asset ${materialMap}.`);
+          const mapKey = `${materialMap}:${entity.entityId}:static`;
+          let prepared = preparedAssets.get(mapKey);
+          if (prepared === undefined) {
+            const output = await decodeImageRaster(mapAsset, `Material map on ${entity.entityId}`);
+            prepared = PreparedSpatialAssetSchema.parse({ kind: "raster", assetId: materialMap,
+              assetManifestSha256: mapAsset.manifestSha256, entityId: entity.entityId, timeUs: null, ...output });
+            preparedAssets.set(mapKey, prepared);
+          }
+          if (prepared.kind !== "raster") throw new RangeError("PBR maps require exact prepared rasters.");
+          const current = [prepared.width, prepared.height] as const;
+          if (expectedDimensions !== undefined && (current[0] !== expectedDimensions[0] || current[1] !== expectedDimensions[1])) {
+            throw new RangeError(`PBR maps on ${entity.entityId} must have identical decoded dimensions.`);
+          }
+          expectedDimensions = current;
         }
       }
       if (entity.kind === "group" || entity.kind === "light" || entity.kind === "mesh" && entity.geometry.kind !== "asset") continue;
@@ -538,7 +585,7 @@ export async function withPreparedSpatialAssets<Result>(
             images.set(image.resourceName, await publishRaster(await raster(image.bytes, image.opaque), image.resourceName));
           }
           const used = new Set<string>();
-          const textureSlots = ["texture", "normalTexture", "metallicRoughnessTexture", "occlusionTexture", "emissiveTexture"] as const;
+          const textureSlots = ["texture", "normalTexture", "metallicRoughnessTexture", "occlusionTexture", "emissiveTexture", "clearcoatTexture", "clearcoatRoughnessTexture", "clearcoatNormalTexture", "transmissionTexture", "sheenColorTexture", "sheenRoughnessTexture", "anisotropyTexture"] as const;
           const primitives = geometry.primitives.map(primitive => {
             const resolved: Record<string, unknown> = { ...primitive };
             for (const slot of textureSlots) {
@@ -565,11 +612,11 @@ export async function withPreparedSpatialAssets<Result>(
             ...(entity.geometry.clip === undefined ? {} : { clip: entity.geometry.clip }),
             ...(entity.geometry.morphWeights === undefined ? {} : { morphWeights: entity.geometry.morphWeights }),
           });
-          const publishTexture = async (reference: { readonly imageIndex: number; readonly sampler: unknown } | undefined, opaque: boolean) => {
+          const publishTexture = async (reference: { readonly imageIndex: number; readonly sampler: unknown; readonly transform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] } } | undefined, opaque: boolean) => {
             if (reference === undefined) return undefined;
             const image = geometry.images.find(image => image.imageIndex === reference.imageIndex);
             if (image === undefined) throw new RangeError("GLB texture image is missing.");
-            return { ...await publishRaster(await raster(image.bytes, opaque)), flipY: false, sampler: reference.sampler };
+            return { ...await publishRaster(await raster(image.bytes, opaque)), flipY: false, sampler: reference.sampler, ...(reference.transform === undefined ? {} : { uvTransform: reference.transform }) };
           };
           const primitives: unknown[] = [];
           for (const primitive of geometry.primitives) {
@@ -579,6 +626,9 @@ export async function withPreparedSpatialAssets<Result>(
             const normalTexture = await publishTexture(sourceMaterial?.normalTexture, false);
             const occlusionTexture = await publishTexture(sourceMaterial?.occlusionTexture, false);
             const emissiveTexture = await publishTexture(sourceMaterial?.emissiveTexture, false);
+            const clearcoatTexture = await publishTexture(sourceMaterial?.clearcoat?.texture, false), clearcoatRoughnessTexture = await publishTexture(sourceMaterial?.clearcoat?.roughnessTexture, false), clearcoatNormalTexture = await publishTexture(sourceMaterial?.clearcoat?.normalTexture, false);
+            const transmissionTexture = await publishTexture(sourceMaterial?.transmission?.texture, false), sheenColorTexture = await publishTexture(sourceMaterial?.sheen?.colorTexture, false), sheenRoughnessTexture = await publishTexture(sourceMaterial?.sheen?.roughnessTexture, false), anisotropyTexture = await publishTexture(sourceMaterial?.anisotropy?.texture, false);
+            const physical = sourceMaterial === undefined ? undefined : { ...(sourceMaterial.emissiveLinear === undefined ? {} : { emissiveLinear: sourceMaterial.emissiveLinear }), ...(sourceMaterial.emissiveStrength === undefined ? {} : { emissiveStrength: sourceMaterial.emissiveStrength }), ...(sourceMaterial.clearcoat === undefined ? {} : { clearcoat: { factor: sourceMaterial.clearcoat.factor, roughness: sourceMaterial.clearcoat.roughness } }), ...(sourceMaterial.transmission === undefined ? {} : { transmission: sourceMaterial.transmission.factor }), ...(sourceMaterial.sheen === undefined ? {} : { sheen: { colorLinear: sourceMaterial.sheen.colorLinear, roughness: sourceMaterial.sheen.roughness } }), ...(sourceMaterial.anisotropy === undefined ? {} : { anisotropy: { strength: sourceMaterial.anisotropy.strength, rotation: sourceMaterial.anisotropy.rotation } }), ...(sourceMaterial.ior === undefined ? {} : { ior: sourceMaterial.ior }) };
             primitives.push({ ...base,
               ...(sourceMaterial === undefined ? {} : { material: { kind: "standard", color: "#ffffff", opacity: sourceMaterial.alphaMode === "OPAQUE" ? 1 : sourceMaterial.baseColorLinear[3], metalness: sourceMaterial.metalness, roughness: sourceMaterial.roughness },
                 linearColor: sourceMaterial.baseColorLinear.slice(0, 3), doubleSided: sourceMaterial.doubleSided, alphaMode: sourceMaterial.alphaMode,
@@ -588,7 +638,9 @@ export async function withPreparedSpatialAssets<Result>(
               ...(normalTexture === undefined ? {} : { normalTexture, ...(sourceMaterial?.normalTexture?.scale === undefined ? {} : { normalScale: sourceMaterial.normalTexture.scale }) }),
               ...(occlusionTexture === undefined ? {} : { occlusionTexture, ...(sourceMaterial?.occlusionTexture?.strength === undefined ? {} : { occlusionStrength: sourceMaterial.occlusionTexture.strength }) }),
               ...(emissiveTexture === undefined ? {} : { emissiveTexture }),
-              ...(sourceMaterial?.emissiveLinear === undefined ? {} : { emissiveLinear: sourceMaterial.emissiveLinear }),
+              ...(clearcoatTexture === undefined ? {} : { clearcoatTexture }), ...(clearcoatRoughnessTexture === undefined ? {} : { clearcoatRoughnessTexture }), ...(clearcoatNormalTexture === undefined ? {} : { clearcoatNormalTexture }),
+              ...(transmissionTexture === undefined ? {} : { transmissionTexture }), ...(sheenColorTexture === undefined ? {} : { sheenColorTexture }), ...(sheenRoughnessTexture === undefined ? {} : { sheenRoughnessTexture }), ...(anisotropyTexture === undefined ? {} : { anisotropyTexture }),
+              ...(physical === undefined ? {} : { physical }),
             });
           }
           const resolved = PreparedSpatialAssetSchema.parse({ kind: "geometry", assetId, entityId: entity.entityId,

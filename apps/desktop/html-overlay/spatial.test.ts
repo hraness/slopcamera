@@ -61,6 +61,23 @@ function embedded(batch: ReturnType<typeof createSpatialOverlayBatch>): Record<s
   return JSON.parse(text) as Record<string, unknown>;
 }
 
+describe("physical material lowering qualification", () => {
+  test("binds every Three physical slot, shadows, environment interaction, and linear fog while rejecting height fog", () => {
+    const baseMesh = mesh(); if (baseMesh.kind !== "mesh") throw new Error("Fixture must be a mesh")
+    const physical: SpatialEntity = { ...baseMesh, material: { kind: "pbr", color: "#ffffff", opacity: 1, roughness: .4, metalness: .3, emissive: { color: "#ff2200", intensity: 2 }, clearcoat: { factor: .8, roughness: .2 }, transmission: { factor: .5 }, sheen: { color: "#336699", roughness: .6 }, anisotropy: { strength: .7, rotation: 1 }, ior: 1.45 }, castShadow: true, receiveShadow: true }
+    const light: SpatialEntity = { kind: "light", entityId: "entity_light", name: "Key", parentId: null, transform, placement: { kind: "world" }, origin: { kind: "authored" }, visible: true, light: "directional", color: "#ffffff", intensity: 2, shadow: true }
+    const base = snapshot(physical), scene = EvaluatedSpatialSceneSchema.parse({ ...base, fog: { kind: "linear", color: "#778899", near: 1, far: 20 }, entities: [...base.entities, { entity: light, worldMatrix: IDENTITY_MATRIX, selectionId: 18, visible: true }] })
+    const html = createSpatialOverlayBatch(request([scene])).authoring.html
+    for (const slot of ["normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "displacementMap", "clearcoatMap", "clearcoatRoughnessMap", "clearcoatNormalMap", "transmissionMap", "sheenColorMap", "sheenRoughnessMap", "anisotropyMap"]) expect(html).toContain(`physical.${slot}`)
+    expect(html).toContain("mesh.castShadow=object.castShadow===true")
+    expect(html).toContain("light.castShadow=object.shadow===true")
+    expect(html).toContain("world.environment=equirect")
+    expect(html).toContain("world.fog=new THREE.Fog")
+    const height = EvaluatedSpatialSceneSchema.parse({ ...scene, fog: { kind: "height", color: "#778899", density: .1, heightFalloff: 1, baseHeight: 0 } })
+    expect(() => createSpatialOverlayBatch(request([height]))).toThrow("Height-dependent fog")
+  })
+})
+
 describe("immutable spatial snapshot lowering", () => {
   test("preserves rational delivery rate and explicit times through index-only transport", () => {
     const frames = [snapshot(), { ...snapshot(), timeUs: 33_366 }, { ...snapshot(), timeUs: 66_733 }];
