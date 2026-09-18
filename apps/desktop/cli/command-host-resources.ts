@@ -168,6 +168,16 @@ export function commandHostResourceClaims(
             "project-render",
           ])
         : claims(coordinator, ["cpu", "local-io"]);
+    case "project-cinema":
+      return command.action === "animatic" || command.action === "run"
+        ? claims(coordinator, [
+            "cpu",
+            "ffmpeg",
+            "local-io",
+            "output-publication",
+            "project-render",
+          ])
+        : claims(coordinator, ["cpu", "local-io"]);
     case "analyze-faces":
       return claims(coordinator, ["cpu", "local-io", "vision"]);
     case "analyze-zooms":

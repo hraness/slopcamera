@@ -1,4 +1,5 @@
 export * from "./analysis";
+export * from "./cinema";
 export * from "./edit";
 export * from "./media-effects";
 export * from "./project";
