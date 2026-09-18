@@ -318,6 +318,7 @@ export const ProjectCinemaPlanV1Schema = z.strictObject({
   }
 });
 
+export type CinemaShotId = z.infer<typeof CinemaShotIdSchema>;
 export type CinemaFit = z.infer<typeof CinemaFitSchema>;
 export type CinemaClipArtifact = ReadonlyInferred<typeof CinemaClipArtifactSchema>;
 export type CinemaShotSource = ReadonlyInferred<typeof CinemaShotSourceSchema>;

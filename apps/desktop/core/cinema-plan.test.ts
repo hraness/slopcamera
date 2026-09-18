@@ -6,6 +6,8 @@ import {
   ProjectCinemaPlanV1Schema,
   VideoProjectV1Schema,
   type ProjectCinemaPlanV1,
+  type ProjectPlacementId,
+  type ProjectStreamId,
   type VideoProjectV1,
 } from "../contracts";
 import { canonicalJson, canonicalJsonSha256 } from "./canonical-json";
@@ -181,9 +183,9 @@ describe("cinema sidecar scaffold", () => {
     expect(scaffold.shots).toHaveLength(1);
     expect(scaffold.shots[0]!.source).toEqual({
       kind: "placement",
-      placementId: "placement_cinema001",
+      placementId: "placement_cinema001" as ProjectPlacementId,
       range: { endUs: ASSET_DURATION_US, startUs: 0 },
-      streamId: "stream_cinema_video",
+      streamId: "stream_cinema_video" as ProjectStreamId,
     });
     expect(scaffold.transitions).toEqual([]);
     expect(scaffold.cinemaPlanSha256).toBe(hashCinemaPlanComposition(scaffold));

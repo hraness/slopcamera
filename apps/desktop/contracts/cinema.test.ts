@@ -7,6 +7,7 @@ import {
   CinemaRenderPlanV1Schema,
   CinemaRenderReceiptV1Schema,
   ProjectCinemaPlanV1Schema,
+  type CinemaShotId,
 } from "./cinema";
 
 const HASH = "a".repeat(64);
@@ -310,7 +311,7 @@ describe("cinema render plan schema", () => {
       schemaVersion: 1,
       tier: "preview",
     });
-    expect(receipt.placeholders).toEqual(["cshot_00000002"]);
+    expect(receipt.placeholders).toEqual(["cshot_00000002" as CinemaShotId]);
     const report = CinemaContinuityReportSchema.parse({
       cinemaPlanSha256: HASH,
       findings: [{
