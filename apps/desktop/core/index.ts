@@ -2,6 +2,7 @@ export * from "./auto-zoom";
 export * from "./audio-alignment";
 export * from "./alignment-apply";
 export * from "./canonical-json";
+export * from "./cinema-plan";
 export * from "./emoji";
 export * from "./events";
 export * from "./face-framing";

@@ -18,6 +18,7 @@ import {
   FaceAnalysisV1Schema,
   MusicAnalysisV1Schema,
   ProjectInactivityAnalysisV1Schema,
+  ProjectCinemaPlanV1Schema,
   ProjectEditPlanV1Schema,
   RecordingManifestV1Schema,
   RepositoryRelativePathSchema,
@@ -30,6 +31,7 @@ import {
   type FaceAnalysisV1,
   type MusicAnalysisV1,
   type ProjectInactivityAnalysisV1,
+  type ProjectCinemaPlanV1,
   type ProjectEditPlanV1,
   type RecordingManifestV1,
   type SceneAnalysisV1,
@@ -41,6 +43,7 @@ import { canonicalJson, sha256Hex } from "./canonical-json";
 export const RECORDING_MANIFEST_PATH = "manifest.json";
 export const VIDEO_PROJECT_PATH = "project.json";
 export const CURRENT_PROJECT_EDIT_PLAN_PATH = "edits/current.json";
+export const CURRENT_PROJECT_CINEMA_PLAN_PATH = "cinema/current.json";
 const MAXIMUM_STRUCTURED_FILE_BYTES = 256 * 1024 * 1024;
 const IMMUTABLE_COPY_TEMP_PREFIX = ".slopcamera-copy-";
 
@@ -89,6 +92,7 @@ export interface BundleFileIntegrity {
 export type SlopcameraPersistenceDocument =
   | AnalysisArtifact
   | EditPlanV1
+  | ProjectCinemaPlanV1
   | ProjectEditPlanV1
   | RecordingManifestV1
   | VideoProjectV1;
@@ -259,6 +263,77 @@ export async function saveProjectEditRevision(
       disposition === "exists"
         ? `Project edit revision path already contains different bytes: ${path}`
         : `Published project edit revision failed read-back verification: ${path}`,
+    );
+  }
+  return path;
+}
+
+export function projectCinemaRevisionPath(artifactSha256: string): string {
+  const sha256 = Sha256Schema.parse(artifactSha256);
+  return RepositoryRelativePathSchema.parse(`cinema/revisions/${sha256}.json`);
+}
+
+export function projectCinemaRenderPlanPath(planSha256: string): string {
+  const sha256 = Sha256Schema.parse(planSha256);
+  return RepositoryRelativePathSchema.parse(`cinema/plans/${sha256}.json`);
+}
+
+/**
+ * Load the live cinema sidecar, or null when the project has none. Its absence
+ * is meaningful: project render planning must stay byte-identical without it.
+ */
+export async function loadProjectCinemaPlan(
+  fileSystem: BundleFileSystem,
+  path = CURRENT_PROJECT_CINEMA_PLAN_PATH,
+): Promise<ProjectCinemaPlanV1 | null> {
+  RepositoryRelativePathSchema.parse(path);
+  let text: string;
+  try {
+    text = await fileSystem.readText(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+  const input: unknown = JSON.parse(text);
+  return ProjectCinemaPlanV1Schema.parse(input);
+}
+
+export async function saveProjectCinemaPlan(
+  fileSystem: BundleFileSystem,
+  plan: ProjectCinemaPlanV1,
+  path = CURRENT_PROJECT_CINEMA_PLAN_PATH,
+): Promise<void> {
+  RepositoryRelativePathSchema.parse(path);
+  const parsed = ProjectCinemaPlanV1Schema.parse(canonicalSlopcameraPersistenceDocument(
+    ProjectCinemaPlanV1Schema.parse(plan),
+  ));
+  await fileSystem.writeTextAtomic(path, `${canonicalJson(parsed)}\n`);
+}
+
+/** Publish one content-addressed cinema sidecar revision without replacement. */
+export async function saveProjectCinemaRevision(
+  fileSystem: BundleFileSystem,
+  contents: string,
+  expectedArtifactSha256: string,
+): Promise<string> {
+  const sha256 = Sha256Schema.parse(expectedArtifactSha256);
+  const actualSha256 = sha256Hex(contents);
+  if (actualSha256 !== sha256) {
+    throw new Error(
+      `Project cinema revision artifact hash mismatch: expected ${sha256}, received ${actualSha256}.`,
+    );
+  }
+  if (fileSystem.writeTextNoReplace === undefined) {
+    throw new Error("Bundle file system does not support immutable no-replace publication.");
+  }
+  const path = projectCinemaRevisionPath(sha256);
+  const disposition = await fileSystem.writeTextNoReplace(path, contents);
+  const installed = await fileSystem.readText(path);
+  if (installed !== contents) {
+    throw new Error(
+      disposition === "exists"
+        ? `Project cinema revision path already contains different bytes: ${path}`
+        : `Published project cinema revision failed read-back verification: ${path}`,
     );
   }
   return path;

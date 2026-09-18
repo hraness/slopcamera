@@ -536,6 +536,17 @@ Face track IDs describe local geometry continuity inside one immutable analysis.
   slopcamera project edit <project> overlay remove <id> [--json]
   slopcamera project render <plan|run> <project> [--width <px>] [--height <px>] [--fps <n>]
                        [--output <renders/path.mp4>] [--dry-run] [--allow-unverified-sync] [--json]
+  slopcamera project cinema init <project> [--force] [--json]
+  slopcamera project cinema check <project> [--json]
+  slopcamera project cinema plan <project> [--allow-placeholders] [--json]
+  slopcamera project cinema animatic <project> [--output <renders/path.mp4>] [--dry-run] [--json]
+  slopcamera project cinema run <project> [--output <renders/path.mp4>] [--allow-placeholders] [--dry-run] [--json]
+
+Cinema commands drive the content-addressed cinema sidecar (cinema/current.json), which binds exact
+project structure and edit-plan digests. Any project or edit change makes the sidecar stale until it is
+re-authorized. Animatics always allow deterministic placeholder frames for missing spatial artifacts;
+final runs require materialized media unless --allow-placeholders is explicit. Cinema never alters the
+project render plan or its identity.
 
 Imported media starts unverified. Align its audio before relying on synchronization. Structural edits are project-time operations and affect every placement. Camera moves address any placed video stream; metadata-driven screen zooms still require a recording-backed source placement. Face analysis and geometry tracks remain local. --select largest follows the largest currently visible prepared-layer face per frame. --require-all-selected makes a missing explicit/all-selected face invoke the chosen gap policy.`,
   render: `Usage: slopcamera render <plan|run> <recording> [--display <id|primary>] [--output <path>] [--dry-run] [--keep-inactivity] [--json]
@@ -566,7 +577,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
   if (command === "recordings") return ["list"];
   if (command === "projects") return ["list", "create"];
-  if (command === "project") return ["inspect", "add", "edit", "render"];
+  if (command === "project") return ["inspect", "add", "edit", "render", "cinema"];
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];
   if (command === "faces") return ["list"];
