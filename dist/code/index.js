@@ -5108,6 +5108,9 @@ function spatialRenderPlanSha256(plan) {
   return spatialValueSha256(plan);
 }
 
+// src/spatial-scene/render-effects.ts
+import { z as z15 } from "zod";
+
 // src/spatial-scene/particle.ts
 import { z as z13 } from "zod";
 var SPATIAL_PARTICLE_LIMITS = Object.freeze({
@@ -5411,13 +5414,17 @@ function createSpatialSimulationBakeReceipt(input) {
   const body = simulationBakeReceiptBodySchema.parse(input);
   return deepFreezeJson(SpatialSimulationBakeReceiptSchema.parse({ ...body, receiptSha256: canonicalJsonSha256(body) }));
 }
-function reconcileSpatialSimulationBakeReceipt(planInput, receiptInput) {
-  const plan = parseSpatialSimulationPlan(planInput);
-  const receipt = parseSpatialValue(SpatialSimulationBakeReceiptSchema, receiptInput, "simulation bake receipt");
+function parseSpatialSimulationBakeReceipt(input) {
+  const receipt = parseSpatialValue(SpatialSimulationBakeReceiptSchema, input, "simulation bake receipt");
   const { receiptSha256, ...body } = receipt;
   if (canonicalJsonSha256(body) !== receiptSha256) {
     throw new SpatialSceneError("conflict", "Simulation bake receipt digest does not match its body.", "simulation-bake");
   }
+  return deepFreezeJson(receipt);
+}
+function reconcileSpatialSimulationBakeReceipt(planInput, receiptInput) {
+  const plan = parseSpatialSimulationPlan(planInput);
+  const receipt = parseSpatialSimulationBakeReceipt(receiptInput);
   const planSha256 = spatialSimulationPlanSha256(plan);
   if (receipt.planSha256 !== planSha256 || receipt.cacheId !== plan.cacheId || receipt.sourceDigest !== plan.sourceDigest || receipt.engine.profile !== plan.engine.profile || receipt.engine.identitySha256 !== plan.engine.identitySha256 || receipt.seed !== plan.seed || receipt.stepCount !== plan.stepCount || receipt.timeStepUs !== plan.timeStepUs) {
     throw new SpatialSceneError("conflict", "Simulation bake receipt is stale or belongs to a different plan, cache, source, engine, seed, or clock.", "simulation-bake");
@@ -5428,8 +5435,259 @@ function reconcileSpatialSimulationBakeReceipt(planInput, receiptInput) {
   return deepFreezeJson(receipt);
 }
 
+// src/spatial-scene/render-effects.ts
+var SPATIAL_RENDER_EFFECTS_LIMITS = Object.freeze({
+  particleSystems: 64,
+  simulationBakes: 64
+});
+var particleBindingSchema = z15.strictObject({
+  system: SpatialParticleSystemSchema,
+  systemSha256: SpatialDigestSchema
+});
+var SpatialRenderEffectsDocumentSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-render-effects"),
+  particleSystems: z15.array(particleBindingSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.particleSystems),
+  renderPlan: SpatialRenderPlanSchema,
+  renderPlanSha256: SpatialDigestSchema,
+  sceneSha256: SpatialDigestSchema,
+  schemaVersion: z15.literal(1),
+  simulationBakes: z15.array(SpatialSimulationBakeReceiptSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.simulationBakes)
+}).superRefine((document, context) => {
+  if (spatialRenderPlanSha256(document.renderPlan) !== document.renderPlanSha256) {
+    context.addIssue({ code: "custom", path: ["renderPlanSha256"], message: "Render-plan digest does not match the canonical render plan." });
+  }
+  const particleEntities = new Set;
+  for (const [index, binding] of document.particleSystems.entries()) {
+    if (spatialParticleSystemSha256(binding.system) !== binding.systemSha256) {
+      context.addIssue({ code: "custom", path: ["particleSystems", index, "systemSha256"], message: "Particle-system digest does not match its canonical system." });
+    }
+    if (particleEntities.has(binding.system.entityId)) {
+      context.addIssue({ code: "custom", path: ["particleSystems", index, "system", "entityId"], message: `Duplicate particle-system entity ${binding.system.entityId}.` });
+    }
+    particleEntities.add(binding.system.entityId);
+  }
+  const caches = new Set;
+  for (const [index, receipt] of document.simulationBakes.entries()) {
+    const { receiptSha256, ...body } = receipt;
+    if (canonicalJsonSha256(body) !== receiptSha256) {
+      context.addIssue({ code: "custom", path: ["simulationBakes", index, "receiptSha256"], message: "Simulation bake receipt digest does not match its canonical body." });
+    }
+    if (receipt.sourceDigest !== document.sceneSha256) {
+      context.addIssue({ code: "custom", path: ["simulationBakes", index, "sourceDigest"], message: "Simulation bake receipt belongs to a different scene source." });
+    }
+    if (caches.has(receipt.cacheId)) {
+      context.addIssue({ code: "custom", path: ["simulationBakes", index, "cacheId"], message: `Duplicate simulation cache ${receipt.cacheId}.` });
+    }
+    caches.add(receipt.cacheId);
+  }
+  const particleCount = document.particleSystems.reduce((sum, binding) => sum + binding.system.maxCount, 0);
+  if (document.renderPlan.quality.particleCount !== particleCount) {
+    context.addIssue({ code: "custom", path: ["renderPlan", "quality", "particleCount"], message: "Render quality must declare the exact aggregate particle-state count." });
+  }
+  const simulationSteps = document.simulationBakes.reduce((sum, receipt) => sum + receipt.stepCount, 0);
+  if (document.renderPlan.quality.simulationSteps !== simulationSteps) {
+    context.addIssue({ code: "custom", path: ["renderPlan", "quality", "simulationSteps"], message: "Render quality must declare the exact aggregate simulation-step count." });
+  }
+});
+var SpatialRenderEffectsBindingSchema = z15.strictObject({
+  document: SpatialRenderEffectsDocumentSchema,
+  documentSha256: SpatialDigestSchema
+}).superRefine((binding, context) => {
+  if (spatialRenderEffectsSha256(binding.document) !== binding.documentSha256) {
+    context.addIssue({ code: "custom", path: ["documentSha256"], message: "Render-effects digest does not match the canonical document." });
+  }
+});
+function parseSpatialRenderEffectsDocument(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialRenderEffectsDocumentSchema, input, "render effects"));
+}
+function spatialRenderEffectsAssetIds(document) {
+  return Object.freeze([...new Set([
+    ...spatialRenderPlanAssetIds(document.renderPlan),
+    ...document.particleSystems.flatMap((binding) => spatialParticleAssetIds(binding.system))
+  ])].sort());
+}
+function spatialRenderEffectsSha256(document) {
+  return spatialValueSha256(document);
+}
+
+// src/spatial-scene/particle-preparation.ts
+import { z as z16 } from "zod";
+var SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES = 64;
+var SPATIAL_PARTICLE_PREPARATION_LIMITS = Object.freeze({ surfaceSets: 64, trianglesPerSurface: 1e5 });
+var coordinate2 = z16.number().finite().min(-1e6).max(1e6);
+var vec33 = z16.tuple([coordinate2, coordinate2, coordinate2]);
+var surfaceSchema = z16.strictObject({
+  assetId: SpatialAssetIdSchema,
+  triangles: z16.array(z16.tuple([vec33, vec33, vec33])).min(1).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.trianglesPerSurface)
+});
+var inputSchema = z16.strictObject({
+  sampleTimeUs: SpatialTimeUsSchema,
+  surfaces: z16.array(surfaceSchema).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.surfaceSets).default([]),
+  system: z16.unknown()
+});
+function randomGenerator(seed) {
+  let state = seed >>> 0 || 1831565813;
+  return () => {
+    state = Math.imul(state ^ state >>> 15, state | 1);
+    state ^= state + Math.imul(state ^ state >>> 7, state | 61);
+    return ((state ^ state >>> 14) >>> 0) / 4294967296;
+  };
+}
+function particleSeed(seed, index) {
+  let value = (seed ^ Math.imul(index + 1, 2654435761)) >>> 0;
+  value = Math.imul(value ^ value >>> 16, 2246822507);
+  value = Math.imul(value ^ value >>> 13, 3266489909);
+  return (value ^ value >>> 16) >>> 0;
+}
+function interpolate(keys, t) {
+  const upper = keys.findIndex((key) => key.t >= t);
+  if (upper <= 0)
+    return keys[0].value;
+  const left = keys[upper - 1], right = keys[upper];
+  const amount = (t - left.t) / (right.t - left.t);
+  return left.value + (right.value - left.value) * amount;
+}
+function interpolateColor(keys, t) {
+  const upper = keys.findIndex((key) => key.t >= t);
+  if (upper <= 0)
+    return keys[0].color;
+  const left = keys[upper - 1], right = keys[upper];
+  const amount = (t - left.t) / (right.t - left.t);
+  return [0, 1, 2, 3].map((index) => left.color[index] + (right.color[index] - left.color[index]) * amount);
+}
+function normalize2(value) {
+  const length = Math.hypot(...value);
+  return length === 0 ? [0, 0, 0] : [value[0] / length, value[1] / length, value[2] / length];
+}
+function cross3(left, right) {
+  return [left[1] * right[2] - left[2] * right[1], left[2] * right[0] - left[0] * right[2], left[0] * right[1] - left[1] * right[0]];
+}
+function addScaled(target2, value, scale = 1) {
+  target2[0] += value[0] * scale;
+  target2[1] += value[1] * scale;
+  target2[2] += value[2] * scale;
+}
+function sampleSphere(random, radius, volume) {
+  const z17 = random() * 2 - 1;
+  const angle = random() * Math.PI * 2;
+  const radial = radius * (volume ? Math.cbrt(random()) : 1);
+  const planar = Math.sqrt(1 - z17 * z17);
+  return [radial * planar * Math.cos(angle), radial * z17, radial * planar * Math.sin(angle)];
+}
+function trianglePoint(triangle, random) {
+  const first = Math.sqrt(random()), second = random();
+  const a = 1 - first, b = first * (1 - second), c = first * second;
+  return [triangle[0][0] * a + triangle[1][0] * b + triangle[2][0] * c, triangle[0][1] * a + triangle[1][1] * b + triangle[2][1] * c, triangle[0][2] * a + triangle[1][2] * b + triangle[2][2] * c];
+}
+function shapePosition(shape, random, surfaces) {
+  if (shape.kind === "point")
+    return [0, 0, 0];
+  if (shape.kind === "sphere")
+    return sampleSphere(random, shape.radius, shape.volume);
+  if (shape.kind === "box") {
+    const point = [(random() - 0.5) * shape.size[0], (random() - 0.5) * shape.size[1], (random() - 0.5) * shape.size[2]];
+    if (shape.volume)
+      return point;
+    const axis = Math.floor(random() * 3), sign = random() < 0.5 ? -0.5 : 0.5;
+    return point.map((value, index) => index === axis ? shape.size[index] * sign : value);
+  }
+  if (shape.kind === "disc") {
+    const angle = random() * Math.PI * 2, radius = Math.sqrt(random()) * shape.radius;
+    return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
+  }
+  if (shape.kind === "spline") {
+    const scaled = random() * (shape.controlPoints.length - 1), index = Math.min(shape.controlPoints.length - 2, Math.floor(scaled)), amount = scaled - index;
+    const left = shape.controlPoints[index], right = shape.controlPoints[index + 1];
+    return [left[0] + (right[0] - left[0]) * amount, left[1] + (right[1] - left[1]) * amount, left[2] + (right[2] - left[2]) * amount];
+  }
+  const triangles = surfaces.get(shape.assetId);
+  if (triangles === undefined)
+    throw new RangeError(`Particle surface ${shape.assetId} has no prepared triangle set.`);
+  return trianglePoint(triangles[Math.floor(random() * triangles.length)], random);
+}
+function inside(position, volume) {
+  if (volume.kind === "box")
+    return position.every((value, index) => value >= volume.min[index] && value <= volume.max[index]);
+  return Math.hypot(position[0] - volume.center[0], position[1] - volume.center[1], position[2] - volume.center[2]) <= volume.radius;
+}
+function prepareSpatialParticleInstances(input) {
+  const parsed = parseSpatialValue(inputSchema, input, "particle preparation");
+  const system = parseSpatialParticleSystem(parsed.system);
+  const surfaces = new Map;
+  for (const surface of parsed.surfaces) {
+    if (surfaces.has(surface.assetId))
+      throw new RangeError(`Duplicate particle surface ${surface.assetId}.`);
+    surfaces.set(surface.assetId, surface.triangles);
+  }
+  const capacity = new Uint8Array(system.maxCount * SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES);
+  const view = new DataView(capacity.buffer);
+  let instanceCount = 0;
+  const sampleSeconds = parsed.sampleTimeUs / 1e6;
+  for (const [emitterIndex, emitter] of system.emitters.entries()) {
+    if (!emitter.enabled)
+      continue;
+    const maximumLifetimeSeconds = emitter.lifetimeUs[1] / 1e6;
+    const firstContinuous = Math.max(0, Math.floor((sampleSeconds - maximumLifetimeSeconds) * emitter.rate));
+    const lastContinuous = Math.floor(sampleSeconds * emitter.rate);
+    const births = [];
+    for (let index = firstContinuous;index < lastContinuous; index += 1)
+      births.push({ index, time: index / emitter.rate });
+    for (let index = 0;index < (emitter.burst ?? 0); index += 1)
+      births.push({ index: -(index + 1), time: 0 });
+    for (const birth of births) {
+      const random = randomGenerator(particleSeed(emitter.seed, birth.index));
+      const lifetimeSeconds = (emitter.lifetimeUs[0] + random() * (emitter.lifetimeUs[1] - emitter.lifetimeUs[0])) / 1e6;
+      const ageSeconds = sampleSeconds - birth.time;
+      if (ageSeconds < 0 || ageSeconds >= lifetimeSeconds)
+        continue;
+      const base2 = shapePosition(emitter.shape, random, surfaces);
+      const initialVelocity = emitter.velocity.map((value, index) => value + (random() * 2 - 1) * emitter.velocitySpread[index]);
+      const acceleration = [0, 0, 0];
+      let drag = 0;
+      for (const force of system.forces) {
+        if (force.kind === "gravity")
+          addScaled(acceleration, force.acceleration);
+        else if (force.kind === "drag")
+          drag += force.coefficient;
+        else if (force.kind === "vortex")
+          addScaled(acceleration, normalize2(cross3(normalize2(force.axis), base2)), force.strength);
+        else {
+          const turbulence = randomGenerator(particleSeed(force.seed, birth.index + Math.round(force.scale * 1000)));
+          addScaled(acceleration, normalize2([turbulence() * 2 - 1, turbulence() * 2 - 1, turbulence() * 2 - 1]), force.strength);
+        }
+      }
+      const damping = drag === 0 ? 1 : Math.exp(-drag * ageSeconds);
+      const position = base2.map((value, index) => value + initialVelocity[index] * ageSeconds * damping + 0.5 * acceleration[index] * ageSeconds * ageSeconds);
+      if (system.killVolumes.some((volume) => inside(position, volume)))
+        continue;
+      const velocity = initialVelocity.map((value, index) => value * damping + acceleration[index] * ageSeconds);
+      const normalizedAge = ageSeconds / lifetimeSeconds;
+      const color = interpolateColor(emitter.colorOverLife, normalizedAge);
+      if (instanceCount >= system.maxCount)
+        throw new RangeError(`Prepared particle count exceeds maxCount ${system.maxCount}.`);
+      const row2 = [
+        ...position,
+        ageSeconds,
+        ...velocity,
+        lifetimeSeconds,
+        interpolate(emitter.sizeOverLife.keys, normalizedAge),
+        interpolate(emitter.opacityOverLife.keys, normalizedAge),
+        ...color,
+        random(),
+        emitterIndex
+      ];
+      row2.forEach((value, column2) => view.setFloat32(instanceCount * SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES + column2 * 4, value, true));
+      instanceCount += 1;
+    }
+  }
+  const bytes = capacity.slice(0, instanceCount * SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES);
+  const hasher = createSha256HexHasher();
+  hasher.update(bytes);
+  return Object.freeze({ bytes, byteLength: bytes.length, instanceCount, sha256: hasher.digestHex(), strideBytes: SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES, systemSha256: spatialParticleSystemSha256(system), sampleTimeUs: parsed.sampleTimeUs });
+}
+
 // src/spatial-scene/motion-evidence.ts
-import { z as z15 } from "zod";
+import { z as z17 } from "zod";
 var SPATIAL_MOTION_EVIDENCE_LIMITS = Object.freeze({
   dimension: 16384,
   evidenceSamples: 64,
@@ -5438,22 +5696,22 @@ var SPATIAL_MOTION_EVIDENCE_LIMITS = Object.freeze({
   samples: 16,
   samplesPerPixel: 16
 });
-var positivePixels = z15.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.dimension);
-var SpatialMotionSampleSchema = z15.strictObject({
-  byteLength: z15.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels * 8),
-  encoding: z15.enum(["rg16f", "rg32f"]),
+var positivePixels = z17.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.dimension);
+var SpatialMotionSampleSchema = z17.strictObject({
+  byteLength: z17.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels * 8),
+  encoding: z17.enum(["rg16f", "rg32f", "rg16un"]),
   entityId: SpatialEntityIdSchema,
   exposureUs: SpatialTimeUsSchema.min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.exposureUs),
   height: positivePixels,
-  id: z15.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u),
+  id: z17.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u),
   motionScale: positiveDimension2,
   motionSha256: SpatialDigestSchema,
   previousTimeUs: SpatialTimeUsSchema,
   sampleTimeUs: SpatialTimeUsSchema,
-  samplesPerPixel: z15.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samplesPerPixel),
-  viewport: z15.tuple([
-    z15.number().int().safe().nonnegative(),
-    z15.number().int().safe().nonnegative(),
+  samplesPerPixel: z17.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samplesPerPixel),
+  viewport: z17.tuple([
+    z17.number().int().safe().nonnegative(),
+    z17.number().int().safe().nonnegative(),
     positivePixels,
     positivePixels
   ]),
@@ -5469,18 +5727,18 @@ var SpatialMotionSampleSchema = z15.strictObject({
   if (sample.previousTimeUs >= sample.sampleTimeUs) {
     context.addIssue({ code: "custom", path: ["previousTimeUs"], message: `Motion sample ${sample.id} requires previousTimeUs before sampleTimeUs.` });
   }
-  const bytesPerPixel = sample.encoding === "rg16f" ? 4 : 8;
+  const bytesPerPixel = sample.encoding === "rg32f" ? 8 : 4;
   if (sample.byteLength !== sample.width * sample.height * bytesPerPixel) {
     context.addIssue({ code: "custom", path: ["byteLength"], message: `Motion sample ${sample.id} byteLength does not match its dimensions and encoding.` });
   }
 });
-var SpatialMotionEvidenceSchema = z15.strictObject({
+var SpatialMotionEvidenceSchema = z17.strictObject({
   entityId: SpatialEntityIdSchema,
-  kind: z15.literal("slopcamera.spatial-motion-evidence"),
+  kind: z17.literal("slopcamera.spatial-motion-evidence"),
   renderRequestSha256: SpatialDigestSchema,
   rendererSha256: SpatialDigestSchema,
-  samples: z15.array(SpatialMotionSampleSchema).min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.evidenceSamples),
-  schemaVersion: z15.literal(1)
+  samples: z17.array(SpatialMotionSampleSchema).min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.evidenceSamples),
+  schemaVersion: z17.literal(1)
 }).superRefine((evidence, context) => {
   const ids = new Set;
   let previousTimeUs = -1;
@@ -5503,7 +5761,7 @@ function spatialMotionEvidenceSha256(evidence) {
 }
 
 // src/spatial-scene/direction.ts
-import { z as z16 } from "zod";
+import { z as z18 } from "zod";
 var SPATIAL_DIRECTION_LIMITS = Object.freeze({
   actions: 256,
   beats: 64,
@@ -5511,52 +5769,52 @@ var SPATIAL_DIRECTION_LIMITS = Object.freeze({
   durationUs: 3600000000,
   looks: 32
 });
-var directionId = z16.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
-var referenceId = z16.string().min(1).max(128).regex(/^[a-z][a-z0-9_-]*$/u);
+var directionId = z18.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
+var referenceId = z18.string().min(1).max(128).regex(/^[a-z][a-z0-9_-]*$/u);
 var intervalShape = {
   endUs: SpatialTimeUsSchema.max(SPATIAL_DIRECTION_LIMITS.durationUs),
   startUs: SpatialTimeUsSchema.max(SPATIAL_DIRECTION_LIMITS.durationUs)
 };
-var SpatialDramaticBeatSchema = z16.strictObject({
+var SpatialDramaticBeatSchema = z18.strictObject({
   id: directionId,
   ...intervalShape,
-  intent: z16.string().trim().min(1).max(256),
-  emotion: z16.string().trim().min(1).max(64),
-  verified: z16.boolean().default(false)
+  intent: z18.string().trim().min(1).max(256),
+  emotion: z18.string().trim().min(1).max(64),
+  verified: z18.boolean().default(false)
 });
-var SpatialCharacterActionSchema = z16.strictObject({
+var SpatialCharacterActionSchema = z18.strictObject({
   id: directionId,
   characterId: referenceId,
   ...intervalShape,
-  action: z16.enum(["idle", "walk", "run", "turn", "gesture", "interact", "morph"]),
+  action: z18.enum(["idle", "walk", "run", "turn", "gesture", "interact", "morph"]),
   targetId: referenceId.optional(),
-  verified: z16.boolean().default(false)
+  verified: z18.boolean().default(false)
 });
-var SpatialCameraCoverageSchema = z16.strictObject({
+var SpatialCameraCoverageSchema = z18.strictObject({
   id: directionId,
   ...intervalShape,
-  rigKind: z16.enum(["chase", "crane", "dolly", "handheld", "orbit", "rail", "target-tracking", "tripod"]),
-  framing: z16.enum(["extreme-close-up", "close-up", "medium-close-up", "medium", "medium-wide", "wide", "extreme-wide", "over-shoulder", "insert"]),
-  screenDirection: z16.enum(["left", "right", "neutral"]).optional(),
+  rigKind: z18.enum(["chase", "crane", "dolly", "handheld", "orbit", "rail", "target-tracking", "tripod"]),
+  framing: z18.enum(["extreme-close-up", "close-up", "medium-close-up", "medium", "medium-wide", "wide", "extreme-wide", "over-shoulder", "insert"]),
+  screenDirection: z18.enum(["left", "right", "neutral"]).optional(),
   subjectId: referenceId.optional(),
-  verified: z16.boolean().default(false)
+  verified: z18.boolean().default(false)
 });
-var SpatialLookIntentSchema = z16.strictObject({
+var SpatialLookIntentSchema = z18.strictObject({
   id: directionId,
   ...intervalShape,
-  lighting: z16.string().trim().min(1).max(128),
-  atmosphere: z16.string().trim().min(1).max(128),
-  verified: z16.boolean().default(false)
+  lighting: z18.string().trim().min(1).max(128),
+  atmosphere: z18.string().trim().min(1).max(128),
+  verified: z18.boolean().default(false)
 });
-var SpatialDirectionSchema = z16.strictObject({
-  kind: z16.literal("slopcamera.spatial-direction"),
-  schemaVersion: z16.literal(1),
+var SpatialDirectionSchema = z18.strictObject({
+  kind: z18.literal("slopcamera.spatial-direction"),
+  schemaVersion: z18.literal(1),
   entityId: referenceId,
   projectDigest: SpatialDigestSchema,
-  beats: z16.array(SpatialDramaticBeatSchema).max(SPATIAL_DIRECTION_LIMITS.beats),
-  actions: z16.array(SpatialCharacterActionSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
-  coverage: z16.array(SpatialCameraCoverageSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
-  looks: z16.array(SpatialLookIntentSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
+  beats: z18.array(SpatialDramaticBeatSchema).max(SPATIAL_DIRECTION_LIMITS.beats),
+  actions: z18.array(SpatialCharacterActionSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
+  coverage: z18.array(SpatialCameraCoverageSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
+  looks: z18.array(SpatialLookIntentSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
 }).superRefine((direction, context) => {
   const ids = new Set;
   for (const [collectionName, values] of [
@@ -5605,6 +5863,179 @@ function parseSpatialDirection(input) {
 function spatialDirectionSha256(direction) {
   return spatialValueSha256(direction);
 }
+
+// src/spatial-scene/simulation-bake.ts
+import { z as z19 } from "zod";
+var SPATIAL_SIMULATION_BAKE_LIMITS = Object.freeze({
+  channels: SPATIAL_SIMULATION_LIMITS.bodies,
+  keysPerChannel: SPATIAL_SIMULATION_LIMITS.steps
+});
+var transformKeySchema = z19.strictObject({
+  orientation: SpatialQuaternionSchema,
+  position: SpatialVec3Schema,
+  timeUs: SpatialTimeUsSchema
+});
+var SpatialSimulationBakeChannelSchema = z19.strictObject({
+  entityId: SpatialEntityIdSchema,
+  keys: z19.array(transformKeySchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.keysPerChannel),
+  kind: z19.literal("transform")
+});
+var SpatialSimulationBakeDocumentSchema = z19.strictObject({
+  cacheId: z19.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
+  channels: z19.array(SpatialSimulationBakeChannelSchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.channels),
+  engineProfile: z19.literal("slopcamera-rigid-body-reference-v1"),
+  kind: z19.literal("slopcamera.spatial-simulation-bake"),
+  planSha256: SpatialDigestSchema,
+  schemaVersion: z19.literal(1),
+  stepCount: z19.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
+  timeStepUs: SpatialTimeUsSchema.min(1).max(1e6)
+}).superRefine((document, context) => {
+  const entityIds = new Set;
+  for (const [index, channel] of document.channels.entries()) {
+    if (entityIds.has(channel.entityId))
+      context.addIssue({ code: "custom", path: ["channels", index, "entityId"], message: `Duplicate bake channel for ${channel.entityId}.` });
+    entityIds.add(channel.entityId);
+    let previous = -1;
+    for (const [keyIndex, key] of channel.keys.entries()) {
+      if (key.timeUs <= previous)
+        context.addIssue({ code: "custom", path: ["channels", index, "keys", keyIndex, "timeUs"], message: "Bake keys must be strictly ordered by timeUs." });
+      previous = key.timeUs;
+    }
+    if (channel.keys.length !== document.stepCount) {
+      context.addIssue({ code: "custom", path: ["channels", index, "keys"], message: `Bake channel must carry exactly ${document.stepCount} ordered keys.` });
+    }
+  }
+});
+function parseSpatialSimulationBakeDocument(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialSimulationBakeDocumentSchema, input, "simulation bake"));
+}
+function spatialSimulationBakeSha256(document) {
+  return spatialValueSha256(document);
+}
+var round = (value) => Object.is(value, -0) ? 0 : value;
+function bakeSpatialSimulation(planInput) {
+  const plan = parseSpatialSimulationPlan(planInput);
+  if (plan.engine.profile !== "slopcamera-rigid-body-reference-v1" || plan.simulationKind !== "rigid-body") {
+    throw new SpatialSceneError("invalid-data", `Simulation engine ${plan.engine.profile} is not qualified for portable deterministic baking.`, "simulation-bake");
+  }
+  for (const constraint of plan.constraints) {
+    if (constraint.kind === "hinge") {
+      throw new SpatialSceneError("invalid-data", `Hinge constraint ${constraint.constraintId} is not qualified in the reference integrator.`, "simulation-bake");
+    }
+  }
+  const dt = plan.timeStepUs / 1e6;
+  const states = plan.bodies.map((body) => ({
+    position: [...body.initialPosition],
+    velocity: [...body.initialVelocity],
+    orientation: [...body.initialOrientation],
+    angular: [...body.initialAngularVelocity]
+  }));
+  const indexByBodyId = new Map(plan.bodies.map((body, index) => [body.id, index]));
+  const springs = plan.constraints.filter((constraint) => constraint.kind === "spring").map((constraint) => {
+    const a = states[indexByBodyId.get(constraint.bodyA)], b = states[indexByBodyId.get(constraint.bodyB)];
+    const dx = b.position[0] - a.position[0], dy = b.position[1] - a.position[1], dz = b.position[2] - a.position[2];
+    return { a: indexByBodyId.get(constraint.bodyA), b: indexByBodyId.get(constraint.bodyB), damping: constraint.damping, restLength: Math.sqrt(dx * dx + dy * dy + dz * dz), stiffness: constraint.stiffness };
+  });
+  const fixed = plan.constraints.filter((constraint) => constraint.kind === "fixed").map((constraint) => {
+    const a = states[indexByBodyId.get(constraint.bodyA)], b = states[indexByBodyId.get(constraint.bodyB)];
+    return {
+      a: indexByBodyId.get(constraint.bodyA),
+      b: indexByBodyId.get(constraint.bodyB),
+      offset: [b.position[0] - a.position[0], b.position[1] - a.position[1], b.position[2] - a.position[2]]
+    };
+  });
+  const keys = plan.bodies.map(() => []);
+  for (let step = 0;step < plan.stepCount; step++) {
+    const forces = plan.bodies.map((body) => [
+      body.pinned || body.mass <= 0 ? 0 : plan.gravity[0] * body.mass,
+      body.pinned || body.mass <= 0 ? 0 : plan.gravity[1] * body.mass,
+      body.pinned || body.mass <= 0 ? 0 : plan.gravity[2] * body.mass
+    ]);
+    for (const spring of springs) {
+      const a = states[spring.a], b = states[spring.b];
+      const dx = b.position[0] - a.position[0], dy = b.position[1] - a.position[1], dz = b.position[2] - a.position[2];
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const nx = distance > 0 ? dx / distance : 0, ny = distance > 0 ? dy / distance : 0, nz = distance > 0 ? dz / distance : 0;
+      const stretch = distance - spring.restLength;
+      const relative = (b.velocity[0] - a.velocity[0]) * nx + (b.velocity[1] - a.velocity[1]) * ny + (b.velocity[2] - a.velocity[2]) * nz;
+      const magnitude = spring.stiffness * stretch + spring.damping * relative;
+      const fa = forces[spring.a], fb = forces[spring.b];
+      fa[0] += magnitude * nx;
+      fa[1] += magnitude * ny;
+      fa[2] += magnitude * nz;
+      fb[0] -= magnitude * nx;
+      fb[1] -= magnitude * ny;
+      fb[2] -= magnitude * nz;
+    }
+    for (const [index, body] of plan.bodies.entries()) {
+      if (body.pinned || body.mass <= 0)
+        continue;
+      const state = states[index], force = forces[index];
+      state.velocity[0] += force[0] / body.mass * dt;
+      state.velocity[1] += force[1] / body.mass * dt;
+      state.velocity[2] += force[2] / body.mass * dt;
+      state.position[0] += state.velocity[0] * dt;
+      state.position[1] += state.velocity[1] * dt;
+      state.position[2] += state.velocity[2] * dt;
+      const [wx, wy, wz] = state.angular;
+      if (wx !== 0 || wy !== 0 || wz !== 0) {
+        const [qx, qy, qz, qw] = state.orientation;
+        const hx = 0.5 * dt * (wx * qw + wy * qz - wz * qy);
+        const hy = 0.5 * dt * (wy * qw + wz * qx - wx * qz);
+        const hz = 0.5 * dt * (wz * qw + wx * qy - wy * qx);
+        const hw = 0.5 * dt * (-wx * qx - wy * qy - wz * qz);
+        const nx = qx + hx, ny = qy + hy, nz = qz + hz, nw = qw + hw;
+        const length = Math.sqrt(nx * nx + ny * ny + nz * nz + nw * nw);
+        state.orientation = [nx / length, ny / length, nz / length, nw / length];
+      }
+    }
+    for (const constraint of fixed) {
+      const a = states[constraint.a], b = states[constraint.b];
+      b.position[0] = a.position[0] + constraint.offset[0];
+      b.position[1] = a.position[1] + constraint.offset[1];
+      b.position[2] = a.position[2] + constraint.offset[2];
+      b.velocity[0] = a.velocity[0];
+      b.velocity[1] = a.velocity[1];
+      b.velocity[2] = a.velocity[2];
+    }
+    const timeUs2 = step * plan.timeStepUs;
+    for (const [index, state] of states.entries()) {
+      keys[index].push({
+        orientation: [round(state.orientation[0]), round(state.orientation[1]), round(state.orientation[2]), round(state.orientation[3])],
+        position: [round(state.position[0]), round(state.position[1]), round(state.position[2])],
+        timeUs: timeUs2
+      });
+    }
+  }
+  const document = parseSpatialSimulationBakeDocument({
+    cacheId: plan.cacheId,
+    channels: plan.bodies.map((body, index) => ({ entityId: body.entityId, keys: keys[index], kind: "transform" })),
+    engineProfile: "slopcamera-rigid-body-reference-v1",
+    kind: "slopcamera.spatial-simulation-bake",
+    planSha256: spatialSimulationPlanSha256(plan),
+    schemaVersion: 1,
+    stepCount: plan.stepCount,
+    timeStepUs: plan.timeStepUs
+  });
+  const bytes = new TextEncoder().encode(`${canonicalJson(document)}
+`).byteLength;
+  if (bytes > plan.maximumOutputBytes) {
+    throw new SpatialSceneError("invalid-data", `Simulation bake output (${bytes} bytes) exceeds the plan output-byte budget (${plan.maximumOutputBytes}).`, "simulation-bake");
+  }
+  const receipt = createSpatialSimulationBakeReceipt({
+    cacheId: plan.cacheId,
+    engine: plan.engine,
+    kind: "slopcamera.spatial-simulation-bake-receipt",
+    output: { animationSha256: spatialSimulationBakeSha256(document), bytes, channelCount: document.channels.length, keyCount: document.channels.reduce((sum, channel) => sum + channel.keys.length, 0) },
+    planSha256: spatialSimulationPlanSha256(plan),
+    schemaVersion: 1,
+    seed: plan.seed,
+    sourceDigest: plan.sourceDigest,
+    stepCount: plan.stepCount,
+    timeStepUs: plan.timeStepUs
+  });
+  return { document, receipt };
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -5633,10 +6064,13 @@ export {
   spatialTopologicalIds,
   spatialStateValueSha256,
   spatialSimulationPlanSha256,
+  spatialSimulationBakeSha256,
   spatialSceneSha256,
   spatialReviewDefaultTimesUs,
   spatialRenderPlanSha256,
   spatialRenderPlanAssetIds,
+  spatialRenderEffectsSha256,
+  spatialRenderEffectsAssetIds,
   spatialPropertySupported,
   spatialParticleSystemSha256,
   spatialParticleAssetIds,
@@ -5674,6 +6108,7 @@ export {
   reconcileSpatialSimulationBakeReceipt,
   projectPreparedPoint,
   projectPoint,
+  prepareSpatialParticleInstances,
   prepareCameraView,
   positiveDimension2 as positiveDimension,
   poseFromMatrix,
@@ -5684,8 +6119,11 @@ export {
   pbrDerivationCandidates,
   parseSpatialValue,
   parseSpatialSimulationPlan,
+  parseSpatialSimulationBakeReceipt,
+  parseSpatialSimulationBakeDocument,
   parseSpatialScene,
   parseSpatialRenderPlan,
+  parseSpatialRenderEffectsDocument,
   parseSpatialPerformanceSources,
   parseSpatialPerformancePlan,
   parseSpatialPerformanceGallerySelection,
@@ -5766,6 +6204,7 @@ export {
   buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  bakeSpatialSimulation,
   auditSpatialSceneRenderedInContext,
   auditSpatialSceneRendered,
   auditSpatialSceneInContext,
@@ -5805,6 +6244,8 @@ export {
   SpatialSimulationPlanSchema,
   SpatialSimulationEngineSchema,
   SpatialSimulationBakeReceiptSchema,
+  SpatialSimulationBakeDocumentSchema,
+  SpatialSimulationBakeChannelSchema,
   SpatialShotV1Schema,
   SpatialShotIdSchema,
   SpatialSceneV1Schema,
@@ -5831,6 +6272,8 @@ export {
   SpatialRenderedAuditCoverageSchema,
   SpatialRenderQualitySchema,
   SpatialRenderPlanSchema,
+  SpatialRenderEffectsDocumentSchema,
+  SpatialRenderEffectsBindingSchema,
   SpatialRackFocusSchema,
   SpatialQuaternionSchema,
   SpatialPublishedArtifactSchema,
@@ -5967,6 +6410,7 @@ export {
   SPATIAL_SOLVE_PENDING_SCENE_SHA256,
   SPATIAL_SOLVE_LIMITS,
   SPATIAL_SIMULATION_LIMITS,
+  SPATIAL_SIMULATION_BAKE_LIMITS,
   SPATIAL_SCENE_LIMITS,
   SPATIAL_REVIEW_UPLOAD_POLICY,
   SPATIAL_REVIEW_SEVERITIES,
@@ -5976,12 +6420,15 @@ export {
   SPATIAL_REVIEW_LIMITS,
   SPATIAL_REVIEW_GATEWAY_ORIGIN,
   SPATIAL_REVIEW_CATEGORIES,
+  SPATIAL_RENDER_EFFECTS_LIMITS,
   SPATIAL_RENDERED_AUDIT_LIMITS,
   SPATIAL_RENDERED_AUDIT_COVERAGE,
   SPATIAL_PERFORMANCE_LIMITS,
   SPATIAL_PERFORMANCE_COMPILER_ID,
   SPATIAL_PERFORMANCE_BODY_MASKS,
+  SPATIAL_PARTICLE_PREPARATION_LIMITS,
   SPATIAL_PARTICLE_LIMITS,
+  SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES,
   SPATIAL_PARAMETRIC_LIMITS,
   SPATIAL_MOTION_EVIDENCE_LIMITS,
   SPATIAL_GLB_RIGGED_PROFILE,

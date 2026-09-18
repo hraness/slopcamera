@@ -9,6 +9,10 @@ import sharp from "sharp";
 import type { SpatialSceneV1 } from "../../../src/spatial-scene/contracts";
 import { fixtureAsset, fixtureCamera, fixtureEntity, fixtureScene } from "../../../src/spatial-scene/test-fixture";
 import { spatialAssetClosureDigests, spatialSceneSha256 } from "../../../src/spatial-scene/identity";
+import { parseSpatialRenderEffectsDocument, spatialRenderEffectsSha256 } from "../../../src/spatial-scene/render-effects";
+import { parseSpatialRenderPlan, spatialRenderPlanSha256 } from "../../../src/spatial-scene/effects";
+import { parseSpatialMotionEvidence } from "../../../src/spatial-scene/motion-evidence";
+import { parseSpatialParticleSystem, spatialParticleSystemSha256 } from "../../../src/spatial-scene/particle";
 import { createNodeSpatialDurability } from "../core/spatial-durability";
 import type { ApplicationContext } from "./context";
 import { bindHtmlOverlayBrowserRuntime } from "./html-overlay-browser-runtime";
@@ -30,6 +34,31 @@ function scene(): SpatialSceneV1 {
 }
 const frameRequest = { cameraId: "camera_main", selection: { kind: "frame", timeUs: 0 }, mode: { kind: "beauty" } } as const;
 const videoRequest = { cameraId: "camera_main", selection: { kind: "video", range: { startUs: 0, endUs: 100_000 }, frameRate: { numerator: 30_000, denominator: 1_001 } }, mode: { kind: "beauty" } } as const;
+function effectsBinding(source: SpatialSceneV1, qualityOverrides: Record<string, unknown> = {}) {
+  const renderPlan = parseSpatialRenderPlan({
+    kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+    quality: { tier: "preview", pixelBudget: 32, texturePixelBudget: 1, particleCount: 0, simulationSteps: 0, outputBytes: 1_000_000, ...qualityOverrides },
+    postProcess: { kind: "slopcamera.spatial-post-process", schemaVersion: 1, steps: [{ kind: "bloom", threshold: 0.8, intensity: 0.2, radius: 2 }] },
+  });
+  const document = parseSpatialRenderEffectsDocument({
+    kind: "slopcamera.spatial-render-effects", schemaVersion: 1, sceneSha256: spatialSceneSha256(source),
+    renderPlan, renderPlanSha256: spatialRenderPlanSha256(renderPlan), particleSystems: [], simulationBakes: [],
+  });
+  return { document, documentSha256: spatialRenderEffectsSha256(document) };
+}
+function particleEffectsBinding(source: SpatialSceneV1) {
+  const target = source.entities[0]!.entityId;
+  const system = parseSpatialParticleSystem({
+    kind: "slopcamera.spatial-particle-system", schemaVersion: 1, entityId: target, countTier: "preview", maxCount: 1,
+    emitters: [{ id: "emitter_01", seed: 1, rate: 0, burst: 1, lifetimeUs: [1_000_000, 1_000_000], shape: { kind: "point" }, velocity: [0, 0, 0], velocitySpread: [0, 0, 0], sizeOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] }, colorOverLife: [[1, 1, 1, 1], [1, 1, 1, 0]], opacityOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] } }],
+    forces: [], killVolumes: [],
+  });
+  const renderPlan = parseSpatialRenderPlan({ kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+    quality: { tier: "preview", pixelBudget: 32, texturePixelBudget: 1, particleCount: 1, simulationSteps: 0, outputBytes: 1_000_000 } });
+  const document = parseSpatialRenderEffectsDocument({ kind: "slopcamera.spatial-render-effects", schemaVersion: 1, sceneSha256: spatialSceneSha256(source),
+    renderPlan, renderPlanSha256: spatialRenderPlanSha256(renderPlan), particleSystems: [{ system, systemSha256: spatialParticleSystemSha256(system) }], simulationBakes: [] });
+  return { document, documentSha256: spatialRenderEffectsSha256(document) };
+}
 const dependencies: SpatialRenderDependencies = {
   bindBrowserRuntime: async (capability, signal) => await bindHtmlOverlayBrowserRuntime(capability, signal, { allowUnverifiedRuntimeForTesting: true }),
 };
@@ -130,9 +159,110 @@ describe("spatial render planning", () => {
     expect(host.calls).toHaveLength(0);
     expect(await generatedFiles(host.root)).toEqual([]);
   });
+
+  test("binds effect identity and plans exact beauty working sets while diagnostics bypass the stack", () => {
+    const source = scene();
+    const effects = effectsBinding(source);
+    const beauty = planSpatialRender(source, { ...frameRequest, effects });
+    expect(beauty.requestSha256).not.toBe(planSpatialRender(source, frameRequest).requestSha256);
+    expect(beauty.costs).toMatchObject({ renderTargetPixels: 128, renderTargetBytes: 1_152, texturePixels: 0, particleStates: 0, particleStateBytes: 0, simulationSteps: 0 });
+    const diagnostic = planSpatialRender(source, { ...frameRequest, effects, mode: { kind: "object-id", coverage: { kind: "opaque" } } });
+    expect(diagnostic.costs).toMatchObject({ renderTargetPixels: 32, renderTargetBytes: 256 });
+
+    const staleDocument = parseSpatialRenderEffectsDocument({ ...effects.document, sceneSha256: "f".repeat(64) });
+    expect(() => planSpatialRender(source, { ...frameRequest, effects: { document: staleDocument, documentSha256: spatialRenderEffectsSha256(staleDocument) } })).toThrow(/different scene source/);
+    expect(() => planSpatialRender(source, { ...frameRequest, effects: effectsBinding(source, { pixelBudget: 31 }) })).toThrow(/effect pixel budget/);
+  });
 });
 
 describe("spatial render execution", () => {
+  test("threads effects only into beauty HTML and receipts diagnostic bypass explicitly", async () => {
+    const html: string[] = [];
+    const host = await fixture({ renderer: base => ({ async renderFrames(request, signal) {
+      html.push(request.authoring.html);
+      return await base.renderFrames(request, signal);
+    } }) });
+    const source = scene();
+    const effects = effectsBinding(source);
+    const beauty = await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: { ...frameRequest, effects } }, dependencies);
+    const beautyReceipt = SpatialRenderReceiptSchema.parse(JSON.parse(await readFile(join(host.root, beauty.receipt.path), "utf8")));
+    expect(beautyReceipt.effects).toEqual({ appliedToBeauty: true, documentSha256: effects.documentSha256, renderPlanSha256: effects.document.renderPlanSha256, particleSystemSha256s: [], simulationBakeReceiptSha256s: [] });
+    expect(html[0]).toContain(effects.documentSha256);
+
+    const diagnostic = await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: { ...frameRequest, effects, mode: { kind: "object-id", coverage: { kind: "opaque" } } } }, dependencies);
+    const diagnosticReceipt = SpatialRenderReceiptSchema.parse(JSON.parse(await readFile(join(host.root, diagnostic.receipt.path), "utf8")));
+    expect(diagnosticReceipt.effects?.appliedToBeauty).toBe(false);
+    expect(html[1]).not.toContain(effects.documentSha256);
+    const diagnosticBatch = JSON.parse(await readFile(join(host.root, diagnosticReceipt.batches[0]!.path), "utf8"));
+    expect(diagnosticBatch.metadata.effects).toEqual({ applied: false, documentSha256: effects.documentSha256, renderPlanSha256: effects.document.renderPlanSha256, stepKinds: ["bloom"] });
+  });
+
+  test("stages hash-bound CPU particle buffers only for beauty", async () => {
+    const observed: Array<{ bytes: number; sha256: string }[]> = [];
+    const host = await fixture({ renderer: base => ({ async renderFrames(request, signal) {
+      const resources = [];
+      for (const resource of request.resources.filter(item => item.name.startsWith("particles-"))) {
+        const bytes = await readFile(resource.absolutePath);
+        resources.push({ bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+        expect(bytes.length).toBe(resource.bytes);
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(resource.sha256);
+      }
+      observed.push(resources);
+      return await base.renderFrames(request, signal);
+    } }) });
+    const source = scene();
+    const effects = particleEffectsBinding(source);
+    const beauty = await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: { ...frameRequest, effects } }, dependencies);
+    const receipt = SpatialRenderReceiptSchema.parse(JSON.parse(await readFile(join(host.root, beauty.receipt.path), "utf8")));
+    expect(observed[0]).toHaveLength(1);
+    expect(observed[0]![0]).toMatchObject({ bytes: 64 });
+    expect(receipt.costs).toMatchObject({ particleStates: 1, particleStateBytes: 64, particleBufferBytesBound: 64 });
+    expect(receipt.effects?.particleSystemSha256s).toEqual([effects.document.particleSystems[0]!.systemSha256]);
+
+    await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: { ...frameRequest, effects, mode: { kind: "object-id", coverage: { kind: "opaque" } } } }, dependencies);
+    expect(observed[1]).toEqual([]);
+  });
+
+  test("motion mode publishes exact packed velocity evidence bound to request and renderer", async () => {
+    const html: string[] = [];
+    const host = await fixture({ renderer: base => ({ async renderFrames(request, signal) {
+      html.push(request.authoring.html);
+      return await base.renderFrames(request, signal);
+    } }) });
+    const source = scene();
+    const motionRequest = { cameraId: "camera_main",
+      selection: { kind: "contact-sheet", timesUs: [0, 16_666, 33_332], columns: 3, cellWidth: 8, cellHeight: 4 },
+      mode: { kind: "motion", entityId: "entity_box", motionScale: 4, coverage: { kind: "opaque" } } } as const;
+    const result = await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: motionRequest }, dependencies);
+    const receipt = SpatialRenderReceiptSchema.parse(JSON.parse(await readFile(join(host.root, result.receipt.path), "utf8")));
+    expect(receipt.motionEvidence?.evidenceSha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(receipt.color).toMatchObject({ output: "rgba8-data", alpha: "binary-validity" });
+    const evidence = parseSpatialMotionEvidence(JSON.parse(await readFile(join(host.root, receipt.motionEvidence!.artifact.path), "utf8")));
+    expect(evidence.entityId).toBe("entity_box");
+    expect(evidence.renderRequestSha256).toBe(receipt.requestSha256);
+    expect(evidence.rendererSha256).toBe(receipt.runtime.rootSha256);
+    expect(evidence.samples).toHaveLength(2);
+    expect(evidence.samples[0]).toMatchObject({ encoding: "rg16un", entityId: "entity_box", exposureUs: 16_666,
+      previousTimeUs: 0, sampleTimeUs: 16_666, width: 8, height: 4, byteLength: 8 * 4 * 4, motionScale: 4, samplesPerPixel: 1 });
+    expect(evidence.samples[1]!.previousTimeUs).toBe(16_666);
+    expect(evidence.samples[1]!.sampleTimeUs).toBe(33_332);
+    expect(html[0]).toContain("\"kind\":\"motion\"");
+    expect(html[0]).toContain("previousMatrix");
+    expect(html[0]).toContain("65535.0");
+    // The evidence artifact verifies against its own content address.
+    const artifactBytes = await readFile(join(host.root, receipt.motionEvidence!.artifact.path));
+    expect(createHash("sha256").update(artifactBytes).digest("hex")).toBe(receipt.motionEvidence!.artifact.sha256);
+    // Non-motion receipts must not carry the field; tampered receipts reject.
+    const beauty = await renderSpatialScene(host.context, { scene: source, assetRoot: host.root, request: frameRequest }, dependencies);
+    const beautyReceipt = SpatialRenderReceiptSchema.parse(JSON.parse(await readFile(join(host.root, beauty.receipt.path), "utf8")));
+    expect(beautyReceipt.motionEvidence).toBeUndefined();
+    expect(SpatialRenderReceiptSchema.safeParse({ ...beautyReceipt, motionEvidence: receipt.motionEvidence }).success).toBe(false);
+    await expect(renderSpatialScene(host.context, { scene: source, assetRoot: host.root,
+      request: { cameraId: "camera_main", selection: { kind: "frame", timeUs: 0 }, mode: motionRequest.mode } }, dependencies)).rejects.toThrow(/at least two|ordered samples/);
+    await expect(renderSpatialScene(host.context, { scene: source, assetRoot: host.root,
+      request: { ...motionRequest, selection: { kind: "contact-sheet", timesUs: [33_332, 16_666, 0], columns: 3, cellWidth: 8, cellHeight: 4 } } }, dependencies)).rejects.toThrow(/strictly increasing|ordered samples|exposure/);
+  });
+
   test("hardware render binds its synthetic adapter evidence in the receipt and every retained batch", async () => {
     const host = await fixture();
     const request = { ...frameRequest, executionProfile: "three-webgl2-hardware-v1" } as const;

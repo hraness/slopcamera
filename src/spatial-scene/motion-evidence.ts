@@ -24,7 +24,7 @@ const positivePixels = z.number().int().safe().positive().max(SPATIAL_MOTION_EVI
 
 export const SpatialMotionSampleSchema = z.strictObject({
   byteLength: z.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels * 8),
-  encoding: z.enum(["rg16f", "rg32f"]),
+  encoding: z.enum(["rg16f", "rg32f", "rg16un"]),
   entityId: SpatialEntityIdSchema,
   exposureUs: SpatialTimeUsSchema.min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.exposureUs),
   height: positivePixels,
@@ -52,7 +52,7 @@ export const SpatialMotionSampleSchema = z.strictObject({
   if (sample.previousTimeUs >= sample.sampleTimeUs) {
     context.addIssue({ code: "custom", path: ["previousTimeUs"], message: `Motion sample ${sample.id} requires previousTimeUs before sampleTimeUs.` })
   }
-  const bytesPerPixel = sample.encoding === "rg16f" ? 4 : 8
+  const bytesPerPixel = sample.encoding === "rg32f" ? 8 : 4
   if (sample.byteLength !== sample.width * sample.height * bytesPerPixel) {
     context.addIssue({ code: "custom", path: ["byteLength"], message: `Motion sample ${sample.id} byteLength does not match its dimensions and encoding.` })
   }

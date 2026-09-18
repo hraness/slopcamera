@@ -162,13 +162,18 @@ export function createSpatialSimulationBakeReceipt(input: z.input<typeof simulat
   return deepFreezeJson(SpatialSimulationBakeReceiptSchema.parse({ ...body, receiptSha256: canonicalJsonSha256(body) }))
 }
 
-export function reconcileSpatialSimulationBakeReceipt(planInput: unknown, receiptInput: unknown): SpatialSimulationBakeReceipt {
-  const plan = parseSpatialSimulationPlan(planInput)
-  const receipt = parseSpatialValue(SpatialSimulationBakeReceiptSchema, receiptInput, "simulation bake receipt")
+export function parseSpatialSimulationBakeReceipt(input: unknown): SpatialSimulationBakeReceipt {
+  const receipt = parseSpatialValue(SpatialSimulationBakeReceiptSchema, input, "simulation bake receipt")
   const { receiptSha256, ...body } = receipt
   if (canonicalJsonSha256(body) !== receiptSha256) {
     throw new SpatialSceneError("conflict", "Simulation bake receipt digest does not match its body.", "simulation-bake")
   }
+  return deepFreezeJson(receipt)
+}
+
+export function reconcileSpatialSimulationBakeReceipt(planInput: unknown, receiptInput: unknown): SpatialSimulationBakeReceipt {
+  const plan = parseSpatialSimulationPlan(planInput)
+  const receipt = parseSpatialSimulationBakeReceipt(receiptInput)
   const planSha256 = spatialSimulationPlanSha256(plan)
   if (receipt.planSha256 !== planSha256 || receipt.cacheId !== plan.cacheId || receipt.sourceDigest !== plan.sourceDigest
     || receipt.engine.profile !== plan.engine.profile || receipt.engine.identitySha256 !== plan.engine.identitySha256
