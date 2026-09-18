@@ -25,9 +25,9 @@ export const HUMANOID_BONE_NAMES = [
 ] as const
 
 export const CORE_HUMANOID_BONE_NAMES = [
-  "hips", "spine", "head",
-  "leftUpperArm", "leftLowerArm", "leftHand",
-  "rightUpperArm", "rightLowerArm", "rightHand",
+  "hips", "spine", "chest", "upperChest", "neck", "head",
+  "leftShoulder", "leftUpperArm", "leftLowerArm", "leftHand",
+  "rightShoulder", "rightUpperArm", "rightLowerArm", "rightHand",
   "leftUpperLeg", "leftLowerLeg", "leftFoot",
   "rightUpperLeg", "rightLowerLeg", "rightFoot",
 ] as const
