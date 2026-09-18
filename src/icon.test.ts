@@ -329,6 +329,33 @@ describe("icon generation pipeline", () => {
     }
   })
 
+  test("does not publish when every completed design critique fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-icon-critique-fail-"))
+    try {
+      const output = join(root, "rejected.svg")
+      const raster = await lineArtPng()
+      const vectorize = vectorizeStub()
+      await expect(generateSlopcameraIcon(
+        { subject: "a cube", outputPath: output, rounds: 2 },
+        {
+          critique: critiqueStub(40, false).critique,
+          generate: async () => ({
+            image: { base64: raster, mediaType: "image/png" },
+            model: "recraft/recraft-v4.1-utility",
+            provider: "vercel-ai-gateway",
+            requestId: "req_rejected",
+            warnings: [],
+          }),
+          rasterize: async () => Uint8Array.from([1]),
+          vectorize: vectorize.vectorize,
+        },
+      )).rejects.toThrow("Every generated illustration failed its design critique")
+      expect(await Bun.file(output).exists()).toBe(false)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test("stops after one round when rounds is 1 and never critiques", async () => {
     const root = await mkdtemp(join(tmpdir(), "slopcamera-icon-single-"))
     try {

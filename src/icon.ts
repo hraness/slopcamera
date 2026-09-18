@@ -66,7 +66,7 @@ Judge the attached rendered mark against the contract and whether it clearly dep
 const ILLUSTRATION_CRITIQUE_SYSTEM = `You are a strict design reviewer for product-brand illustrations.
 
 Style contract:
-- A simple isometric illustration of the requested subject, visibly related to a small brand mark.
+- A simple isometric illustration of the requested subject that can belong to the same visual family as a separate brand mark. Do not require or include the brand mark inside the illustration.
 - Uniform medium-weight structure in exactly one ink color, with at most three large filled planes.
 - No hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, or stray background objects.
 - No important feature may disappear at 64 px. Center the subject with a modest clear margin.
@@ -862,11 +862,11 @@ async function writeAtomically(
 }
 
 /**
- * Generate one canonical isometric line-art icon: bounded Gateway raster →
- * local line-art normalization → supervised VTracer trace → optional vision
- * critique that revises the prompt across rounds. Only derived artifacts ever
- * leave the machine; the uploaded critique image is Slopcamera's own rendered
- * output, never user media.
+ * Generate one canonical product mark or marketing illustration: bounded
+ * Gateway raster → local normalization → supervised VTracer trace →
+ * deterministic purpose gate → optional purpose-specific vision critique.
+ * Only derived artifacts ever leave the machine; the uploaded critique image
+ * is Slopcamera's own rendered output, never user media.
  */
 export async function generateSlopcameraIcon(
   input: GenerateSlopcameraIconInput,
@@ -1041,7 +1041,16 @@ export async function generateSlopcameraIcon(
       "Every icon generation attempt failed.",
     )
   }
-  const selected = [...candidates].sort(
+  const eligibleCandidates = candidates.filter(
+    ({ critique: review }) => review === null || review.pass,
+  )
+  if (eligibleCandidates.length === 0) {
+    throw new SlopcameraCloudError(
+      "GENERATION_INVALID_RESPONSE",
+      `Every generated ${purpose} failed its design critique.`,
+    )
+  }
+  const selected = eligibleCandidates.sort(
     (left, right) =>
       (right.critique?.score ?? -1) - (left.critique?.score ?? -1) ||
       right.round - left.round,

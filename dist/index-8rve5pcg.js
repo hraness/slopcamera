@@ -1969,7 +1969,7 @@ Judge the attached rendered mark against the contract and whether it clearly dep
 var ILLUSTRATION_CRITIQUE_SYSTEM = `You are a strict design reviewer for product-brand illustrations.
 
 Style contract:
-- A simple isometric illustration of the requested subject, visibly related to a small brand mark.
+- A simple isometric illustration of the requested subject that can belong to the same visual family as a separate brand mark. Do not require or include the brand mark inside the illustration.
 - Uniform medium-weight structure in exactly one ink color, with at most three large filled planes.
 - No hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, or stray background objects.
 - No important feature may disappear at 64 px. Center the subject with a modest clear margin.
@@ -2555,7 +2555,11 @@ async function generateSlopcameraIcon(input, dependencies = {}) {
       throw lastError;
     throw new SlopcameraCloudError("GENERATION_FAILED", "Every icon generation attempt failed.");
   }
-  const selected = [...candidates].sort((left, right) => (right.critique?.score ?? -1) - (left.critique?.score ?? -1) || right.round - left.round)[0];
+  const eligibleCandidates = candidates.filter(({ critique: review }) => review === null || review.pass);
+  if (eligibleCandidates.length === 0) {
+    throw new SlopcameraCloudError("GENERATION_INVALID_RESPONSE", `Every generated ${purpose} failed its design critique.`);
+  }
+  const selected = eligibleCandidates.sort((left, right) => (right.critique?.score ?? -1) - (left.critique?.score ?? -1) || right.round - left.round)[0];
   const selectedAttempt = attempts.findIndex((attempt) => attempt.round === selected.round && attempt.status === "candidate");
   if (selectedAttempt >= 0) {
     attempts[selectedAttempt] = {
