@@ -60,7 +60,7 @@ test("canonical manifest rejects identity, bounds, override and path drift", () 
   expect(parseManifest(m)).toEqual(m);
   for (const change of [{ unexpected: true }, { repository: "other/slopcamera" }, { repositoryId: 1 }, { package: "slopcamera" }, { version: "3.2.3-beta.1" },
     { tag: "v3.2.4" }, { sourceSha: "main" }, { workflowSha: "main" }, { runId: 0 }, { runAttempt: 1.5 }, { workflow: ".github/workflows/ci.yml" },
-    { archive: { ...m.archive, name: "../package.tgz" } }, { archive: { ...m.archive, bytes: 4_300_001 } }, { archive: { ...m.archive, sha256: "0" } }]) {
+    { archive: { ...m.archive, name: "../package.tgz" } }, { archive: { ...m.archive, bytes: 4_800_001 } }, { archive: { ...m.archive, sha256: "0" } }]) {
     expect(() => parseManifest({ ...m, ...change })).toThrow();
   }
   expect(compareVersions("3.2.3", "3.2.2")).toBe(1);
