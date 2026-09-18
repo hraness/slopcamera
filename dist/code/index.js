@@ -5250,6 +5250,75 @@ function parseSpatialMotionEvidence(input) {
 function spatialMotionEvidenceSha256(ev) {
   return spatialValueSha256(ev);
 }
+
+// src/spatial-scene/direction.ts
+import { z as z16 } from "zod";
+var SPATIAL_DIRECTION_LIMITS = {
+  beats: 64,
+  actions: 256,
+  coverage: 64,
+  looks: 32
+};
+var SpatialDramaticBeatSchema = z16.strictObject({
+  id: z16.string().min(1).max(64),
+  startUs: z16.number().int().min(0),
+  endUs: z16.number().int().min(0),
+  intent: z16.string().min(1).max(256),
+  emotion: z16.string().min(1).max(64),
+  verified: z16.boolean().default(false)
+});
+var SpatialCharacterActionSchema = z16.strictObject({
+  id: z16.string().min(1).max(64),
+  characterId: z16.string().min(1).max(128),
+  startUs: z16.number().int().min(0),
+  endUs: z16.number().int().min(0),
+  action: z16.enum(["idle", "walk", "run", "turn", "gesture", "interact", "morph"]),
+  targetId: z16.string().min(1).max(128).optional(),
+  verified: z16.boolean().default(false)
+});
+var SpatialCameraCoverageSchema = z16.strictObject({
+  id: z16.string().min(1).max(64),
+  startUs: z16.number().int().min(0),
+  endUs: z16.number().int().min(0),
+  rigKind: z16.enum(["lockoff", "dolly", "crane", "handheld", "drone"]),
+  framing: z16.string().min(1).max(64),
+  screenDirection: z16.enum(["left", "right", "neutral"]).optional(),
+  verified: z16.boolean().default(false)
+});
+var SpatialLookIntentSchema = z16.strictObject({
+  id: z16.string().min(1).max(64),
+  startUs: z16.number().int().min(0),
+  endUs: z16.number().int().min(0),
+  lighting: z16.string().min(1).max(128),
+  atmosphere: z16.string().min(1).max(128),
+  verified: z16.boolean().default(false)
+});
+var SpatialDirectionSchema = z16.strictObject({
+  kind: z16.literal("slopcamera.spatial-direction"),
+  schemaVersion: z16.literal(1),
+  entityId: z16.string().min(1).max(128),
+  projectDigest: z16.string().length(64),
+  beats: z16.array(SpatialDramaticBeatSchema).max(SPATIAL_DIRECTION_LIMITS.beats),
+  actions: z16.array(SpatialCharacterActionSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
+  coverage: z16.array(SpatialCameraCoverageSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
+  looks: z16.array(SpatialLookIntentSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
+});
+function parseSpatialDirection(input) {
+  const dir = parseSpatialValue(SpatialDirectionSchema, input, "direction");
+  for (const b of dir.beats) {
+    if (b.startUs > b.endUs) {
+      throw new TypeError(`Beat ${b.id} has startUs > endUs.`);
+    }
+  }
+  const budgetedSeconds = positiveDimension2.parse(dir.beats.reduce((sum, b) => sum + (b.endUs - b.startUs), 0) / 1e6);
+  if (budgetedSeconds > 3600) {
+    throw new TypeError(`Direction ${dir.entityId} exceeds one-hour beat budget.`);
+  }
+  return deepFreezeJson(dir);
+}
+function spatialDirectionSha256(dir) {
+  return spatialValueSha256(dir);
+}
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -5295,6 +5364,7 @@ export {
   spatialFrameSample,
   spatialFrameCount,
   spatialEntityLocalBounds,
+  spatialDirectionSha256,
   spatialAuditDefaultTimesUs,
   spatialAssetManifestSha256,
   spatialAssetClosureDigests,
@@ -5340,6 +5410,7 @@ export {
   parseSpatialGeometryNativeRequest,
   parseSpatialGeometryGraph,
   parseSpatialGeneratorParameters,
+  parseSpatialDirection,
   parseSpatialCameraTrack,
   parseHumanoidMapping,
   parseHumanoidAttachment,
@@ -5526,6 +5597,7 @@ export {
   SpatialMapColorSpaceSchema,
   SpatialMapChannelSchema,
   SpatialLutGradeSchema,
+  SpatialLookIntentSchema,
   SpatialLightingRigTypeSchema,
   SpatialHumanoidMappingSchema,
   SpatialHumanoidAttachmentSchema,
@@ -5544,18 +5616,22 @@ export {
   SpatialEntitySchema,
   SpatialEntityIdSchema,
   SpatialEmissiveSchema,
+  SpatialDramaticBeatSchema,
+  SpatialDirectionSchema,
   SpatialDigestSchema,
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
   SpatialDepthOfFieldSchema,
   SpatialConstraintSchema,
   SpatialCollisionProxySchema,
+  SpatialCharacterActionSchema,
   SpatialChannelIdSchema,
   SpatialCameraTrackSchema,
   SpatialCameraSchema,
   SpatialCameraRigSchema,
   SpatialCameraLensSchema,
   SpatialCameraIdSchema,
+  SpatialCameraCoverageSchema,
   SpatialBoundsSchema,
   SpatialBloomSchema,
   SpatialAuditSampleSchema,
@@ -5623,6 +5699,7 @@ export {
   SPATIAL_GEOMETRY_GRAPH_KIND,
   SPATIAL_GENERATOR_LIMITS,
   SPATIAL_EFFECT_LIMITS,
+  SPATIAL_DIRECTION_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_AUDIT_LIMITS,
   RequirementEnvelopeSchema,
