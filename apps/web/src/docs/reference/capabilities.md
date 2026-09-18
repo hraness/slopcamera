@@ -11,7 +11,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 | TypeScript SDK | `@hraness/slopcamera` portable imports plus the complete-local-host `./local/*` surfaces; see [SDK surfaces](/docs/reference/sdk) |
 | MCP server | `slopcamera mcp --root <workspace>` exposes a fixed toolset inside one selected root; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp) |
 
-The portable `code search` and `code execute` surface and the MCP server share four operations: diagram check, diagram render, image generation, and vectorization. The complete local host has a larger closed registry. Neither surface allows a caller to register arbitrary operations.
+The portable `code search` and `code execute` surface carries six operation codes: diagram check, diagram render, image generation, vectorization, and the icon and gallery image recipes. The MCP server adds root-relative scene planning and audit tools beside those operations and the diagram compatibility tools. The complete local host has a larger closed registry. Neither surface allows a caller to register arbitrary operations.
 
 ## Install the release
 

@@ -27,6 +27,7 @@ Use the Slopcamera release installation or a source build for the commands below
 | Grammar for a command family | `slopcamera help project`, `slopcamera help studio`, `slopcamera help scene` |
 | Local tools and readiness | `slopcamera doctor --json` |
 | Closed local operation catalog and exact schemas | `slopcamera operations list --json`, `slopcamera operations show <kind>[@<version>] --json` |
+| Static capability modules, trust, and qualification metadata | `slopcamera capabilities --json` |
 | Built-in workflow input schema | `slopcamera workflows list --json`, `slopcamera workflows show <id> --json` |
 | Live Gateway model capabilities | `slopcamera ai models list --type <type> --json`, `slopcamera ai models show <id> --json` |
 | HTML profile locks | `slopcamera html catalog --json` |
@@ -34,7 +35,7 @@ Use the Slopcamera release installation or a source build for the commands below
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-The portable `code search/execute` and MCP surface has six operations: diagram check, diagram render, image generation, image candidate galleries, vectorization, and isometric line-art icon generation. The complete local host has a larger closed registry. Neither surface allows a caller to register arbitrary operations. See [SDK surfaces](sdk.md).
+The portable `code search/execute` surface carries six operation codes across the diagram and image recipes; `slopcamera capabilities --json` enumerates the exact portable and complete-host inventories without probing the runtime. The MCP surface adds root-relative scene tools — check, inspect, diff, evaluate, audit, direction check/plan/gallery, effects check/plan, and temporal audit — beside the diagram compatibility tools and bounded `search_slopcamera`/`execute_slopcamera`. The complete local host has a larger closed registry. No surface allows a caller to register arbitrary operations. See [SDK surfaces](sdk.md).
 
 ## Local execution profiles
 

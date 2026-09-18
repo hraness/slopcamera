@@ -19,6 +19,8 @@ These pages describe Slopcamera from current source. [Install that source](how-t
 - [Direct short generated clips](directing-video.md): budget, review takes, preserve endpoint continuity, and recover uncertain work.
 - [Author a native film](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
 - [Render and edit spatial scenes](spatial-scenes.md): patch named entities, use hardware rendering, import a saved world, or prepare a V2 shot composition.
+- [Build a directed cinematic character world](how-to/cinematic-character-worlds.md): admit a rigged world, direct it semantically, plan effects and galleries, and audit temporal evidence.
+- [Direct a cinematic world end to end](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
 - [Make an educational video](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
 - [Run or recover a workflow](how-to/run-workflows.md): use a built-in recipe or trusted Bun module and inspect its durable run.
 - [Configure Vercel](vercel.md) or [publish Slopcamera](publishing.md): provider and maintainer procedures.
@@ -32,6 +34,7 @@ These pages describe Slopcamera from current source. [Install that source](how-t
 ## Understand the design
 
 - [Source, representations, and projects](architecture.md): what stays editable, what a receipt proves, and how local and cloud work fit together.
+- [Extension architecture](extension-architecture.md): the closed registry, inert recipe packs, trusted workflows, and where authored code can and cannot go.
 - [Choose an HTML authoring surface](html-overlay-creative-toolkit.md): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs. Its ecosystem research is dated separately from its supported locks.
 
 ## Work with an agent

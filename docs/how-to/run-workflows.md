@@ -16,7 +16,7 @@ slopcamera workflows plan social-variants --input input.json --json
 slopcamera workflows run social-variants --input input.json --json
 ```
 
-The built-ins cover talking-head cleanup, polished screen demos, chaptered compositions, social variants, creative iteration/selection, and prepared directed-scene delivery. Their input schemas differ; do not reuse another recipe's JSON blindly.
+The built-ins cover talking-head cleanup, polished screen demos, chaptered compositions, social variants, creative iteration/selection, prepared directed-scene delivery, and the cinematic-world planning loop over an inert recipe pack. Their input schemas differ; do not reuse another recipe's JSON blindly.
 
 Planning does not execute registered media effects. It binds the relevant structure and policy; execution can still pause when a particular node needs an exact preparation or effect approval.
 
