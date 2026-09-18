@@ -31,10 +31,22 @@ const vec3 = z.tuple([finite, finite, finite])
 const signedUnit = z.number().finite().min(-1).max(1)
 const quaternion = z.tuple([signedUnit, signedUnit, signedUnit, signedUnit])
 const metadata = { name: z.string().max(1024).optional(), extras: z.unknown().optional(), extensions: z.never().optional() }
+const metadataWithoutExtensions = { name: z.string().max(1024).optional(), extras: z.unknown().optional() }
 const byteOffset = z.number().int().min(0).max(SPATIAL_GLB_LIMITS.bytes)
-const textureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional() })
-const normalTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), scale: finite.optional() })
-const occlusionTextureInfo = z.strictObject({ ...metadata, index, texCoord: z.literal(0).optional(), strength: unit.optional() })
+const textureTransform = z.strictObject({ offset: z.tuple([finite, finite]).default([0, 0]), rotation: z.number().finite().min(-Math.PI).max(Math.PI).default(0), scale: z.tuple([finite, finite]).default([1, 1]), texCoord: z.literal(0).optional() })
+const textureExtensions = z.strictObject({ KHR_texture_transform: textureTransform.optional() })
+const textureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), extensions: textureExtensions.optional() })
+const normalTextureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), scale: finite.optional(), extensions: textureExtensions.optional() })
+const occlusionTextureInfo = z.strictObject({ ...metadataWithoutExtensions, index, texCoord: z.literal(0).optional(), strength: unit.optional(), extensions: textureExtensions.optional() })
+const supportedExtension = z.enum(["KHR_texture_transform", "KHR_materials_clearcoat", "KHR_materials_transmission", "KHR_materials_sheen", "KHR_materials_anisotropy", "KHR_materials_ior", "KHR_materials_emissive_strength"])
+const materialExtensions = z.strictObject({
+  KHR_materials_clearcoat: z.strictObject({ clearcoatFactor: unit.default(0), clearcoatTexture: textureInfo.optional(), clearcoatRoughnessFactor: unit.default(0), clearcoatRoughnessTexture: textureInfo.optional(), clearcoatNormalTexture: normalTextureInfo.optional() }).optional(),
+  KHR_materials_transmission: z.strictObject({ transmissionFactor: unit.default(0), transmissionTexture: textureInfo.optional() }).optional(),
+  KHR_materials_sheen: z.strictObject({ sheenColorFactor: z.tuple([unit, unit, unit]).default([0, 0, 0]), sheenColorTexture: textureInfo.optional(), sheenRoughnessFactor: unit.default(0), sheenRoughnessTexture: textureInfo.optional() }).optional(),
+  KHR_materials_anisotropy: z.strictObject({ anisotropyStrength: unit.default(0), anisotropyRotation: z.number().finite().min(0).max(2 * Math.PI).default(0), anisotropyTexture: textureInfo.optional() }).optional(),
+  KHR_materials_ior: z.strictObject({ ior: z.number().finite().min(1).max(5).default(1.5) }).optional(),
+  KHR_materials_emissive_strength: z.strictObject({ emissiveStrength: z.number().finite().min(0).max(100_000).default(1) }).optional(),
+})
 const samplerSchema = z.strictObject({
   ...metadata, magFilter: z.union([z.literal(9728), z.literal(9729)]).optional(),
   minFilter: z.union([z.literal(9728), z.literal(9729), z.literal(9984), z.literal(9985), z.literal(9986), z.literal(9987)]).optional(),
@@ -55,7 +67,7 @@ const accessorSchema = z.strictObject({
 const gltfSchema = z.strictObject({
   ...metadata,
   asset: z.strictObject({ version: z.literal("2.0"), minVersion: z.literal("2.0").optional(), generator: z.string().max(1024).optional(), copyright: z.string().max(4096).optional(), extras: z.unknown().optional(), extensions: z.never().optional() }),
-  extensionsUsed: z.array(z.never()).optional(), extensionsRequired: z.array(z.never()).optional(),
+  extensionsUsed: z.array(supportedExtension).max(7).optional(), extensionsRequired: z.array(supportedExtension).max(7).optional(),
   buffers: z.array(z.strictObject({ ...metadata, byteLength: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes) })).length(1),
   bufferViews: z.array(z.strictObject({ ...metadata, buffer: z.literal(0), byteOffset: byteOffset.default(0), byteLength: z.number().int().min(1).max(SPATIAL_GLB_LIMITS.bytes), byteStride: z.number().int().min(4).max(252).optional(), target: z.union([z.literal(34962), z.literal(34963)]).optional() })).max(SPATIAL_GLB_LIMITS.bufferViews),
   accessors: z.array(accessorSchema).max(SPATIAL_GLB_LIMITS.accessors),
@@ -68,7 +80,7 @@ const gltfSchema = z.strictObject({
   })).min(1).max(SPATIAL_GLB_LIMITS.primitives), weights: z.array(unit).max(SPATIAL_GLB_LIMITS.morphTargetsPerPrimitive).optional() })).min(1).max(SPATIAL_GLB_LIMITS.meshes),
   skins: z.array(z.strictObject({ ...metadata, inverseBindMatrices: index, joints: z.array(index).min(1).max(SPATIAL_GLB_LIMITS.jointsPerSkin), skeleton: index.optional() })).max(SPATIAL_GLB_LIMITS.skins).optional(),
   materials: z.array(z.strictObject({
-    ...metadata, pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
+    ...metadataWithoutExtensions, extensions: materialExtensions.optional(), pbrMetallicRoughness: z.strictObject({ ...metadata, baseColorFactor: z.tuple([unit, unit, unit, unit]).default([1, 1, 1, 1]), metallicFactor: unit.default(1), roughnessFactor: unit.default(1), baseColorTexture: textureInfo.optional(), metallicRoughnessTexture: textureInfo.optional() }).optional(),
     normalTexture: normalTextureInfo.optional(),
     occlusionTexture: occlusionTextureInfo.optional(),
     emissiveTexture: textureInfo.optional(),
@@ -97,6 +109,7 @@ export interface SpatialGlbSampler {
 export interface SpatialGlbTextureRef {
   readonly imageIndex: number
   readonly sampler: SpatialGlbSampler
+  readonly transform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] }
 }
 export interface SpatialGlbMaterial {
   readonly baseColorLinear: readonly [number, number, number, number]
@@ -113,6 +126,12 @@ export interface SpatialGlbMaterial {
   readonly emissiveTexture?: SpatialGlbTextureRef
   /** Declared emissiveFactor, linear RGB in [0,1]. */
   readonly emissiveLinear?: readonly [number, number, number]
+  readonly emissiveStrength?: number
+  readonly clearcoat?: { readonly factor: number; readonly roughness: number; readonly texture?: SpatialGlbTextureRef; readonly roughnessTexture?: SpatialGlbTextureRef; readonly normalTexture?: SpatialGlbTextureRef & { readonly scale?: number } }
+  readonly transmission?: { readonly factor: number; readonly texture?: SpatialGlbTextureRef }
+  readonly sheen?: { readonly colorLinear: readonly [number, number, number]; readonly roughness: number; readonly colorTexture?: SpatialGlbTextureRef; readonly roughnessTexture?: SpatialGlbTextureRef }
+  readonly anisotropy?: { readonly strength: number; readonly rotation: number; readonly texture?: SpatialGlbTextureRef }
+  readonly ior?: number
 }
 /** One row of the material fact table published into asset facts. */
 export interface SpatialGlbMaterialFact {
@@ -120,8 +139,15 @@ export interface SpatialGlbMaterialFact {
   readonly alphaMode: "OPAQUE" | "MASK" | "BLEND"
   readonly doubleSided: boolean
   /** Declared texture slots, in fixed baseColor→emissive order. */
-  readonly maps: readonly ("baseColor" | "metallicRoughness" | "normal" | "occlusion" | "emissive")[]
+  readonly maps: readonly ("baseColor" | "metallicRoughness" | "normal" | "occlusion" | "emissive" | "clearcoat" | "clearcoatRoughness" | "clearcoatNormal" | "transmission" | "sheenColor" | "sheenRoughness" | "anisotropy")[]
+  readonly textureTransforms: readonly { readonly map: string; readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] }[]
   readonly emissiveLinear?: readonly [number, number, number]
+  readonly emissiveStrength?: number
+  readonly clearcoat?: { readonly factor: number; readonly roughness: number }
+  readonly transmission?: { readonly factor: number }
+  readonly sheen?: { readonly colorLinear: readonly [number, number, number]; readonly roughness: number }
+  readonly anisotropy?: { readonly strength: number; readonly rotation: number }
+  readonly ior?: number
 }
 export interface SpatialGlbPrimitive {
   readonly positions: readonly number[]
@@ -353,6 +379,23 @@ function validateViewRoles(document: Gltf): void {
   for (const [viewIndex, ids] of vertexAccessors) if (ids.size > 1 && at(document.bufferViews, viewIndex, "bufferViews").byteStride === undefined) fail("Shared vertex-attribute views require an explicit stride.", `bufferViews.${viewIndex}`)
 }
 
+function validateExtensions(document: Gltf): void {
+  const used = document.extensionsUsed ?? [], required = document.extensionsRequired ?? []
+  if (new Set(used).size !== used.length || new Set(required).size !== required.length) fail("Extension declarations must be unique.", "extensionsUsed")
+  for (const extension of required) if (!used.includes(extension)) fail("Every required extension must also be listed in extensionsUsed.", "extensionsRequired")
+  const present = new Set<string>()
+  const texture = (info: { readonly extensions?: { readonly KHR_texture_transform?: unknown } | undefined } | undefined) => { if (info?.extensions?.KHR_texture_transform !== undefined) present.add("KHR_texture_transform") }
+  for (const material of document.materials) {
+    for (const name of Object.keys(material.extensions ?? {})) present.add(name)
+    texture(material.pbrMetallicRoughness?.baseColorTexture); texture(material.pbrMetallicRoughness?.metallicRoughnessTexture)
+    texture(material.normalTexture); texture(material.occlusionTexture); texture(material.emissiveTexture)
+    const extensions = material.extensions
+    texture(extensions?.KHR_materials_clearcoat?.clearcoatTexture); texture(extensions?.KHR_materials_clearcoat?.clearcoatRoughnessTexture); texture(extensions?.KHR_materials_clearcoat?.clearcoatNormalTexture)
+    texture(extensions?.KHR_materials_transmission?.transmissionTexture); texture(extensions?.KHR_materials_sheen?.sheenColorTexture); texture(extensions?.KHR_materials_sheen?.sheenRoughnessTexture); texture(extensions?.KHR_materials_anisotropy?.anisotropyTexture)
+  }
+  for (const extension of present) if (!used.includes(extension as typeof used[number])) fail(`Used extension ${extension} is not declared.`, "extensionsUsed")
+}
+
 function cleanSampler(sampler: Sampler | undefined): SpatialGlbSampler {
   return Object.freeze({ wrapS: sampler?.wrapS ?? 10497, wrapT: sampler?.wrapT ?? 10497,
     ...(sampler?.magFilter === undefined ? {} : { magFilter: sampler.magFilter }), ...(sampler?.minFilter === undefined ? {} : { minFilter: sampler.minFilter }) })
@@ -362,18 +405,19 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
     at(document.images, texture.source, "textures.source")
     if (texture.sampler !== undefined) at(document.samplers, texture.sampler, "textures.sampler")
   }
-  const textureRef = (info: { readonly index: number } | undefined, path: string): SpatialGlbTextureRef | undefined => {
+  const textureRef = (info: { readonly index: number; readonly extensions?: { readonly KHR_texture_transform?: { readonly offset: readonly [number, number]; readonly rotation: number; readonly scale: readonly [number, number] } | undefined } | undefined } | undefined, path: string): SpatialGlbTextureRef | undefined => {
     if (info === undefined) return undefined
-    const texture = at(document.textures, info.index, path)
-    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]) }
+    const texture = at(document.textures, info.index, path), transform = info.extensions?.KHR_texture_transform
+    return { imageIndex: texture.source, sampler: cleanSampler(texture.sampler === undefined ? undefined : document.samplers[texture.sampler]), ...(transform === undefined ? {} : { transform: { offset: transform.offset, rotation: transform.rotation, scale: transform.scale } }) }
   }
   return deepFreezeJson(document.materials.map(material => {
-    const pbr = material.pbrMetallicRoughness
-    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture")
-    const metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture")
-    const normal = textureRef(material.normalTexture, "normalTexture")
-    const occlusion = textureRef(material.occlusionTexture, "occlusionTexture")
-    const emissive = textureRef(material.emissiveTexture, "emissiveTexture")
+    const pbr = material.pbrMetallicRoughness, extensions = material.extensions
+    const clearcoat = extensions?.KHR_materials_clearcoat, transmission = extensions?.KHR_materials_transmission
+    const sheen = extensions?.KHR_materials_sheen, anisotropy = extensions?.KHR_materials_anisotropy
+    const baseColor = textureRef(pbr?.baseColorTexture, "baseColorTexture"), metallicRoughness = textureRef(pbr?.metallicRoughnessTexture, "metallicRoughnessTexture")
+    const normal = textureRef(material.normalTexture, "normalTexture"), occlusion = textureRef(material.occlusionTexture, "occlusionTexture"), emissive = textureRef(material.emissiveTexture, "emissiveTexture")
+    const clearcoatTexture = textureRef(clearcoat?.clearcoatTexture, "clearcoatTexture"), clearcoatRoughnessTexture = textureRef(clearcoat?.clearcoatRoughnessTexture, "clearcoatRoughnessTexture"), clearcoatNormal = textureRef(clearcoat?.clearcoatNormalTexture, "clearcoatNormalTexture")
+    const transmissionTexture = textureRef(transmission?.transmissionTexture, "transmissionTexture"), sheenColorTexture = textureRef(sheen?.sheenColorTexture, "sheenColorTexture"), sheenRoughnessTexture = textureRef(sheen?.sheenRoughnessTexture, "sheenRoughnessTexture"), anisotropyTexture = textureRef(anisotropy?.anisotropyTexture, "anisotropyTexture")
     return {
       baseColorLinear: pbr?.baseColorFactor ?? [1, 1, 1, 1] as const, metalness: pbr?.metallicFactor ?? 1, roughness: pbr?.roughnessFactor ?? 1,
       alphaMode: material.alphaMode, alphaCutoff: material.alphaCutoff, doubleSided: material.doubleSided,
@@ -383,6 +427,12 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
       ...(occlusion === undefined ? {} : { occlusionTexture: { ...occlusion, ...(material.occlusionTexture!.strength === undefined ? {} : { strength: material.occlusionTexture!.strength }) } }),
       ...(emissive === undefined ? {} : { emissiveTexture: emissive }),
       ...(material.emissiveFactor === undefined ? {} : { emissiveLinear: material.emissiveFactor }),
+      ...(extensions?.KHR_materials_emissive_strength === undefined ? {} : { emissiveStrength: extensions.KHR_materials_emissive_strength.emissiveStrength }),
+      ...(clearcoat === undefined ? {} : { clearcoat: { factor: clearcoat.clearcoatFactor, roughness: clearcoat.clearcoatRoughnessFactor, ...(clearcoatTexture === undefined ? {} : { texture: clearcoatTexture }), ...(clearcoatRoughnessTexture === undefined ? {} : { roughnessTexture: clearcoatRoughnessTexture }), ...(clearcoatNormal === undefined ? {} : { normalTexture: { ...clearcoatNormal, ...(clearcoat.clearcoatNormalTexture?.scale === undefined ? {} : { scale: clearcoat.clearcoatNormalTexture.scale }) } }) } }),
+      ...(transmission === undefined ? {} : { transmission: { factor: transmission.transmissionFactor, ...(transmissionTexture === undefined ? {} : { texture: transmissionTexture }) } }),
+      ...(sheen === undefined ? {} : { sheen: { colorLinear: sheen.sheenColorFactor, roughness: sheen.sheenRoughnessFactor, ...(sheenColorTexture === undefined ? {} : { colorTexture: sheenColorTexture }), ...(sheenRoughnessTexture === undefined ? {} : { roughnessTexture: sheenRoughnessTexture }) } }),
+      ...(anisotropy === undefined ? {} : { anisotropy: { strength: anisotropy.anisotropyStrength, rotation: anisotropy.anisotropyRotation, ...(anisotropyTexture === undefined ? {} : { texture: anisotropyTexture }) } }),
+      ...(extensions?.KHR_materials_ior === undefined ? {} : { ior: extensions.KHR_materials_ior.ior }),
     }
   }))
 }
@@ -391,19 +441,30 @@ function materials(document: Gltf): readonly SpatialGlbMaterial[] {
 function materialFacts(document: Gltf, sources: readonly SpatialGlbMaterial[]): readonly SpatialGlbMaterialFact[] {
   return deepFreezeJson(document.materials.map((material, index) => {
     const resolved = sources[index]!
-    const maps = [
-      resolved.baseColorTexture === undefined ? undefined : "baseColor" as const,
-      resolved.metallicRoughnessTexture === undefined ? undefined : "metallicRoughness" as const,
-      resolved.normalTexture === undefined ? undefined : "normal" as const,
-      resolved.occlusionTexture === undefined ? undefined : "occlusion" as const,
-      resolved.emissiveTexture === undefined ? undefined : "emissive" as const,
-    ].filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+    const slots = [
+      ["baseColor", resolved.baseColorTexture], ["metallicRoughness", resolved.metallicRoughnessTexture], ["normal", resolved.normalTexture], ["occlusion", resolved.occlusionTexture], ["emissive", resolved.emissiveTexture],
+      ["clearcoat", resolved.clearcoat?.texture], ["clearcoatRoughness", resolved.clearcoat?.roughnessTexture], ["clearcoatNormal", resolved.clearcoat?.normalTexture], ["transmission", resolved.transmission?.texture], ["sheenColor", resolved.sheen?.colorTexture], ["sheenRoughness", resolved.sheen?.roughnessTexture], ["anisotropy", resolved.anisotropy?.texture],
+    ] as const
+    const maps = slots.filter((entry): entry is typeof entry & readonly [string, SpatialGlbTextureRef] => entry[1] !== undefined).map(entry => entry[0])
+    const textureTransforms = slots.flatMap(([map, texture]) => texture?.transform === undefined ? [] : [{ map, ...texture.transform }])
     return {
       ...(material.name === undefined ? {} : { name: material.name }),
-      alphaMode: resolved.alphaMode, doubleSided: resolved.doubleSided, maps,
+      alphaMode: resolved.alphaMode, doubleSided: resolved.doubleSided, maps, textureTransforms,
       ...(resolved.emissiveLinear === undefined ? {} : { emissiveLinear: resolved.emissiveLinear }),
+      ...(resolved.emissiveStrength === undefined ? {} : { emissiveStrength: resolved.emissiveStrength }),
+      ...(resolved.clearcoat === undefined ? {} : { clearcoat: { factor: resolved.clearcoat.factor, roughness: resolved.clearcoat.roughness } }),
+      ...(resolved.transmission === undefined ? {} : { transmission: { factor: resolved.transmission.factor } }),
+      ...(resolved.sheen === undefined ? {} : { sheen: { colorLinear: resolved.sheen.colorLinear, roughness: resolved.sheen.roughness } }),
+      ...(resolved.anisotropy === undefined ? {} : { anisotropy: { strength: resolved.anisotropy.strength, rotation: resolved.anisotropy.rotation } }),
+      ...(resolved.ior === undefined ? {} : { ior: resolved.ior }),
     }
   }))
+}
+
+function allMaterialTextures(material: SpatialGlbMaterial): readonly (SpatialGlbTextureRef | undefined)[] {
+  return [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture,
+    material.clearcoat?.texture, material.clearcoat?.roughnessTexture, material.clearcoat?.normalTexture, material.transmission?.texture,
+    material.sheen?.colorTexture, material.sheen?.roughnessTexture, material.anisotropy?.texture]
 }
 
 function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[], sources: readonly SpatialGlbMaterial[]): readonly (readonly PrimitiveData[])[] {
@@ -478,7 +539,7 @@ function readMeshes(document: Gltf, accessors: readonly DecodedAccessor[], sourc
       triangles += vertices / 3
       if (triangles > SPATIAL_GLB_LIMITS.triangles) fail("Source triangle budget exceeded.", path)
       const material = primitive.material === undefined ? defaultMaterial : at(sources, primitive.material, path)
-      if (uvs === undefined && [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture].some(texture => texture !== undefined)) {
+      if (uvs === undefined && allMaterialTextures(material).some(texture => texture !== undefined)) {
         fail("Material textures require TEXCOORD_0.", path)
       }
       const morphTargets: MorphTargetData[] = []
@@ -743,6 +804,7 @@ export class SpatialGlbModel {
     let json: unknown
     try { json = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(20, binHeader))) } catch { return fail("GLB JSON must be valid UTF-8 JSON.") }
     const document = schemaValue(gltfSchema, json, "gltf")
+    validateExtensions(document)
     const payloadLength = document.buffers[0]!.byteLength
     if (payloadLength > binLength || binLength - payloadLength > 3) fail("Declared BIN length does not match its padding.")
     const binary = bytes.subarray(binHeader + 8)
@@ -843,7 +905,7 @@ export class SpatialGlbModel {
         const deformed = deformPrimitive(primitive, morphWeights, skin, nodeWorld, matrices)
         const { material, positions: _positions, normals: _normals, morphTargets: _morphTargets, weights: _weights, jointIndices: _jointIndices, jointWeights: _jointWeights, ...geometry } = primitive
         if (options.materialMode === "source") {
-          for (const texture of [material.baseColorTexture, material.metallicRoughnessTexture, material.normalTexture, material.occlusionTexture, material.emissiveTexture]) {
+          for (const texture of allMaterialTextures(material)) {
             if (texture !== undefined) imageIds.add(texture.imageIndex)
           }
         }

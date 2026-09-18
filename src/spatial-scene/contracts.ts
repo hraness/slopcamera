@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { SpatialPbrMaterialSchema, SpatialFogSchema } from "./material-lighting.js"
 
 export const SPATIAL_SCENE_LIMITS = Object.freeze({
   sourceBytes: 2_097_152,
@@ -122,6 +123,7 @@ export const SpatialEmissiveSchema = z.strictObject({
 export const SpatialMaterialSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("unlit"), color, opacity: unit, map: SpatialAssetIdSchema.optional() }),
   z.strictObject({ kind: z.literal("standard"), color, opacity: unit, roughness: unit, metalness: unit, map: SpatialAssetIdSchema.optional(), emissive: SpatialEmissiveSchema.optional() }),
+  SpatialPbrMaterialSchema,
 ])
 export const SpatialGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("box"), size: z.tuple([positiveDimension, positiveDimension, positiveDimension]) }),
@@ -230,6 +232,7 @@ export const SpatialSceneV1Schema = z.strictObject({
   animations: z.array(SpatialAnimationSchema).max(SPATIAL_SCENE_LIMITS.channels),
   generators: z.array(SpatialGeneratorSchema).max(128),
   overrides: z.array(SpatialOverrideSchema).max(SPATIAL_SCENE_LIMITS.entities),
+  fog: SpatialFogSchema.optional(),
 })
 
 export const SpatialPatchOperationSchema = z.discriminatedUnion("kind", [
@@ -295,6 +298,7 @@ export const EvaluatedSpatialSceneSchema = z.strictObject({
     selectionId: z.number().int().min(1).max(SPATIAL_SCENE_LIMITS.entities),
   })).max(SPATIAL_SCENE_LIMITS.entities),
   assets: z.array(SpatialAssetManifestSchema).max(SPATIAL_SCENE_LIMITS.assets),
+  fog: SpatialFogSchema.optional(),
 })
 
 type DeepReadonly<T> = T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> } : T

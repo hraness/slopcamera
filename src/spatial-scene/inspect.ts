@@ -2,6 +2,7 @@ import { deepFreezeJson } from "../code/json-snapshot.js"
 import type { SpatialEntity, SpatialOverride, SpatialSceneV1 } from "./contracts.js"
 import { evaluateSpatialScene } from "./evaluate.js"
 import { parseSpatialScene, spatialAssetClosureDigests, spatialPropertySupported, spatialValueSha256 } from "./identity.js"
+import { pbrMaterialMapAssetIds } from "./material-lighting.js"
 import { composeTransform, multiplyTransforms, transformBounds, type Bounds, type Vec3 } from "./math.js"
 
 export type SpatialInspectedBounds =
@@ -61,7 +62,7 @@ export function inspectSpatialScene(input: unknown): SpatialSceneInspection {
         : [
             ...(["color", "opacity", "transform"] as const).filter(property => spatialPropertySupported(entity, property)),
             ...(entity.kind === "mesh" ? [
-              ...(entity.material.kind === "standard" && spatialPropertySupported(entity, "color") ? ["emissive" as const] : []),
+              ...((entity.material.kind === "standard" || entity.material.kind === "pbr") && spatialPropertySupported(entity, "color") ? ["emissive" as const] : []),
               "instances" as const, "castShadow" as const, "receiveShadow" as const,
             ] : []),
             ...(entity.kind === "light" ? [
@@ -83,8 +84,11 @@ export function inspectSpatialScene(input: unknown): SpatialSceneInspection {
           max: union.max.map((value, axis) => Math.max(value, next.max[axis]!)) as unknown as Bounds["max"],
         })),
       }
+      const meshMapIds = entity.kind === "mesh"
+        ? entity.material.kind === "pbr" ? pbrMaterialMapAssetIds(entity.material) : entity.material.map === undefined ? [] : [entity.material.map]
+        : []
       const assetIds = entity.kind === "mesh"
-        ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...entity.material.map === undefined ? [] : [entity.material.map]]
+        ? [...entity.geometry.kind === "asset" ? [entity.geometry.assetId] : [], ...meshMapIds]
         : entity.kind === "text" ? [entity.fontAssetId] : "assetId" in entity ? [entity.assetId] : []
       return { entityId: entity.entityId, name: entity.name, kind: entity.kind, origin, parentId: entity.parentId, placement: entity.placement, editableControls, animatedProperties, assetIds, bounds }
     }),
