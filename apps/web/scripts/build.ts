@@ -51,6 +51,20 @@ async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uin
   return icons
 }
 
+async function readBrandMarks(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
+  const directory = join(sourceDirectory, "marks")
+  const names = (await readdir(directory))
+    .filter(entry => entry.endsWith(".svg") && /^[a-z0-9-]+\.svg$/u.test(entry))
+    .sort()
+  const marks: { path: string; bytes: Uint8Array }[] = []
+  for (const name of names) {
+    const bytes = new Uint8Array(await readFile(join(directory, name)))
+    assert.ok(bytes.byteLength <= marketingIconMaxBytes, `Brand mark exceeds ${marketingIconMaxBytes} bytes: ${name}`)
+    marks.push({ path: `marks/${name}`, bytes })
+  }
+  return marks
+}
+
 async function docsMirrors(): Promise<Readonly<Record<string, string>>> {
   const files: Record<string, string> = {}
   const onDisk = new Set(
@@ -208,6 +222,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const preview = await buildPreview(appDirectory)
   const icons = await readPublicIcons(appDirectory)
   const marketingIcons = await readMarketingIcons()
+  const brandMarks = await readBrandMarks()
 
   await rm(outputDirectory, { force: true, recursive: true })
   await mkdir(join(outputDirectory, "assets"), { recursive: true })
@@ -225,7 +240,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const { path, bytes } of [...icons, ...marketingIcons]) {
+  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks]) {
     const destination = join(outputDirectory, path)
     await mkdir(dirname(destination), { recursive: true })
     await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })
