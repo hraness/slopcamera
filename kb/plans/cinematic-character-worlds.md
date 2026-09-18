@@ -199,7 +199,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 7: Particles, post-processing, and deterministic simulation bakes
 
-- **Status:** Merged (PR #157, `18f3abf`)
+- **Status:** Partial — contract foundation merged (PR #157, `18f3abf`); runtime completion moved to Phase 11
 - **Depends on:** Phases 4 and 6
 - **Objective:** Add impressive but bounded particles, atmosphere, finishing passes, rigid-body motion, and secondary-motion bakes while preserving deterministic evidence passes.
 - **Scope:** effect/simulation contracts, render quality request, locked Three.js post-processing modules, renderer lowering, retained Studio bake adapter, tests.
@@ -219,7 +219,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 8: Agent direction, galleries, temporal review, and integration
 
-- **Status:** Merged (PR #159, `e8561d3`)
+- **Status:** Partial — direction schema merged (PR #159, `e8561d3`); product completion moved to Phases 12–13
 - **Depends on:** Phases 2, 5, and 7
 - **Objective:** Expose the complete workflow as ergonomic typed agent tools that propose, render, audit, compare, and explicitly promote cinematic takes.
 - **Scope:** scene/cinema planners, CLI and MCP pure tools, galleries, temporal review/audits, operation routing, skill/docs tests.
@@ -238,7 +238,7 @@ Parallel architecture spikes established four implementation boundaries:
 
 ## Phase 9: Qualifications, documentation, final review, and delivery
 
-- **Status:** Merged (PR #160, `b5a5f47`)
+- **Status:** Partial — first guide merged (PR #160, `b5a5f47`); qualification and public-surface completion moved to Phases 14–15
 - **Depends on:** Phases 1–8
 - **Objective:** Prove the integrated system, document honest operating boundaries, and deliver it through protected current-head PRs.
 - **Scope:** qualification fixtures, docs, public skill, plan finalization, generated bundles/inventory, full review and CI.
@@ -255,6 +255,110 @@ Parallel architecture spikes established four implementation boundaries:
   - Documentation distinguishes fixture qualification, hardware qualification, native-runtime qualification, and live-provider qualification.
   - This plan ends `completed` with Result, Durable memory, exact validation evidence, commits, PRs, and remaining explicit limits.
 - **Validation:** `bun run check`, `bun run kb:check`, relevant browser/native qualification commands, package smoke, current-head CI, and post-merge `main` CI.
+
+## Completion audit and extension architecture
+
+The 2026-09-19 merge audit distinguishes merged commits from completed product behavior:
+
+- Phase 7 currently exports `SpatialRenderPlan`, `SpatialParticleSystem`, `SpatialSimulationPlan`, and `SpatialMotionEvidence`. The desktop render request, resource plan, HTML/Three lowering, retained native bake path, receipts, and browser qualifications do not consume them. Chromatic aberration and flare are absent. Several cross-field laws are incomplete: particle lifetimes and curves are not ordered, spline points incorrectly reject negative coordinates, simulation bodies are not unique, and cache receipts cannot be reconciled.
+- Phase 8 currently exports only `SpatialDirection`. It does not compile direction into performance/camera/cinema/effect plans, and it lacks strict time validation for actions, coverage, and looks. There are no corresponding CLI commands, operation definitions, MCP tools, sequence galleries, temporal audits, or integrated workflow.
+- Phase 9 currently adds one repository how-to file. It is not registered in the public website documentation, and some example commands do not match the installed CLI. No cinematic fixture bundle, complete qualification, README/skill update, public-site story, or final cross-feature review has occurred.
+
+Two external designs inform the extension boundary:
+
+- [GhostGet](https://ghostget.com/) demonstrates a strong local agent contract: each request selects one named, versioned action; capability discovery is authoritative; transport, risk, and account/runtime identity are bound before dispatch; contract drift fails closed; and uncertain mutations are not retried blindly. Slopcamera adopts those principles for media capabilities, resource admission, receipts, and discovery.
+- [pi.dev extensions](https://pi.dev/docs/latest/extensions) demonstrate excellent agent ergonomics: typed tools, lifecycle hooks, commands, UI, session state, explicit project trust, and packageable examples. Pi also states that extensions execute with full user permissions. Slopcamera therefore does not copy its hot-loaded operation registration into the portable or complete host; trusted TypeScript remains an explicit authoring surface, while production capabilities remain reviewed and statically assembled.
+
+The resulting four extension tiers are deliberate:
+
+1. **Declarative composition.** Users and agents compose the fixed operation catalog through graphs, built-in workflows, direction documents, patches, galleries, and recipes. These values are strict, bounded, inert, content-addressed, and capability-checked before effects.
+2. **Trusted authoring modules.** Explicitly selected Bun workflows and spatial generator closures may run as the current user. Their complete source closure is retained and hash-bound. They never register a new host operation, widen a renderer profile, or smuggle credentials/authority into serialized input.
+3. **Reviewed capability modules.** New host powers enter through a source-owned module descriptor that binds operation definitions, policy, schemas, resource claims, receipts, optional CLI/MCP projections, docs, and qualification status. The production catalog imports an explicit static list; there is no directory scan or ambient plugin discovery.
+4. **Native adapters.** Blender, CadQuery, Manim, and future native engines remain separately installed, pinned profiles behind retained request/receipt reconciliation and invocation-scoped trusted-current-user authorization.
+
+A canonical capability manifest will project the reviewed static catalog to CLI/SDK/Agent Skill consumers. It reports exact IDs and versions, effect/resume classes, resource claims, interface exposure, runtime requirements, and qualification status. CLI, MCP, docs, and site copy consume or test against that manifest instead of maintaining unverified parallel capability lists.
+
+## Phase 10: Contract hardening and capability-module foundation
+
+- **Status:** In progress
+- **Depends on:** Phases 0–9 merged foundations
+- **Objective:** Repair the incomplete cinematic contracts and establish one static, discoverable extension architecture without opening runtime registration.
+- **Scope:** strict contract laws, module/manifest contracts, static catalog projection, portable discovery, tests and architecture documentation.
+- **Approach:**
+  - Harden render/effect, particle, simulation, motion-evidence, and direction documents with unique IDs, ordered clocks/curves, reference closure, safe integer and byte limits, canonical digests, and structured error codes.
+  - Introduce a frozen `SlopcameraCapabilityModule` descriptor and manifest compiler. A module can describe only statically imported operation/workflow/tool/profile identities; registry assembly remains explicit and exhaustive.
+  - Project portable and complete-host manifests from the same source descriptors, including interface exposure and truthful qualification states (`unit`, `fixture`, `browser`, `native`, `provider`).
+  - Add a pure CLI-facing manifest command and SDK export. Do not dynamically load packages or workspace source.
+- **Acceptance criteria:** invalid cross-field/reference states reject before host work; manifest bytes are deterministic; duplicate IDs/versions/exposures reject; every registered production operation has exactly one manifest owner; adding a test-only module requires no central switch beyond the explicit catalog list.
+- **Validation:** parser/property tests, registry parity tests, SDK typecheck/lint/build, standalone and package smoke.
+
+## Phase 11: Executable effects, particles, simulation bakes, and diagnostic evidence
+
+- **Status:** Not started
+- **Depends on:** Phase 10
+- **Objective:** Complete Phase 7 from authored contracts through admitted resources, deterministic lowering, retained receipts, and honest qualification.
+- **Scope:** render request integration, resource planner, CPU-prepared particle simulation, locked beauty post-processing, motion evidence, deterministic rigid-body bake and native secondary-motion adapter.
+- **Approach:**
+  - Bind one optional render-effects document by digest into `SpatialRenderRequest`, render-plan identity, operation input/output, and receipt.
+  - Plan exact render-target pixels/bytes, texture pixels, particle states, simulation steps, and output bytes before browser/native admission; preview/final tier differences are explicit.
+  - Prepare seeded point/volume/surface/spline particles into canonical instance buffers on the host CPU. Renderer input is ordinary retained data, not live nondeterministic simulation.
+  - Lower bloom, depth of field, temporal sampling/motion blur, tone mapping/exposure, vignette, chromatic aberration, grain, flare, and bounded LUT grading only for beauty. Object-ID, axial-depth, and motion evidence bypass the stack byte-for-byte.
+  - Bake bounded rigid bodies/constraints through a deterministic fixed-step reference adapter. Route cloth/rope/complex secondary motion through a pinned native profile and reconcile exact request, engine, cache, source, output, and receipt digests.
+- **Acceptance criteria:** rain/embers/dust prepared bytes are stable; beauty effects visibly alter beauty but not diagnostic bytes; stale caches reject; preview/final costs differ truthfully; cancellation or mismatched native output publishes nothing.
+- **Validation:** unit/property/lowering tests, fake native tests, browser beauty/AOV fixture, available-native qualification where installed, package/standalone gates.
+
+## Phase 12: Direction compiler, temporal audit, cinematic galleries, CLI, and MCP
+
+- **Status:** Not started
+- **Depends on:** Phases 10–11
+- **Objective:** Turn semantic direction into inspectable deterministic plans and expose the complete pure planning/review loop to coding agents.
+- **Scope:** direction compiler, temporal review, sequence/take gallery plans, operation definitions, CLI commands, read-only MCP tools, tests.
+- **Approach:**
+  - Compile beats/actions/coverage/looks into proposed performance, camera, cinema, material-lighting, and effect documents. Outputs retain source digest, compiler identity, advisories, unresolved intents, and `verified: false`; they are never auto-applied.
+  - Audit sampled sequence evidence for flicker, clip/cut discontinuity, foot sliding, camera acceleration/jerk, exposure/focus jumps, and resource spikes with exact shot/time evidence.
+  - Build bounded six-variant galleries and preview-reel plans across performance, camera, lighting, materials, effects, and sequence structure. Keep source, render, audit, and selection identities separate.
+  - Add `scene direction check|plan`, `scene effects check|plan|bake`, `project cinema audit|gallery`, and `capabilities` CLI surfaces using the existing root-confined read and no-replace publication patterns.
+  - Add only pure/read-only MCP tools for direction/effects/cinema planning and temporal audit. Rendering, baking, provider calls, project mutation, and promotion remain CLI/workflow operations.
+- **Acceptance criteria:** all tools reject escaped paths, oversized data, stale digests, and unsupported capabilities before effects; outputs are deterministic; MCP annotations stay read-only/open-world false; no CLI prose duplicates schema authority.
+- **Validation:** focused CLI/MCP/operation tests, property laws, six-variant bounds, path/security tests, generated help tests.
+
+## Phase 13: Complete agent workflow and safe extension authoring kit
+
+- **Status:** Not started
+- **Depends on:** Phase 12
+- **Objective:** Give coding agents one ergonomic, durable, recoverable workflow from world construction through explicit take promotion, plus stable ways to extend composition.
+- **Scope:** built-in workflow, semantic builder, declarative recipe-pack contract, scaffold/examples for trusted workflows and Pi integration, receipts and recovery tests.
+- **Approach:**
+  - Add a `cinematic-world` built-in workflow that consumes already-admitted sources, compiles direction/camera/performance/effects, renders bounded previews/finals, audits, constructs a matrix, and requires a separate explicit selection/promotion operation.
+  - Add inert, content-addressed recipe packs that can parameterize and compose existing operations but cannot register executors, source paths, permissions, secrets, or runtime URLs.
+  - Publish source templates and a checked Pi extension example that shells only to fixed Slopcamera discovery/planning commands after explicit project trust. State clearly that the Pi process executes trusted TypeScript with user permissions.
+  - Preserve completed receipts on failure, serialize expensive renders by default, and retain ambiguous-effect custody.
+- **Acceptance criteria:** a checked credential-free fixture completes construct → direct → plan → preview → audit → compare → select → promote; six candidates obey concurrency/resource limits; interrupted work resumes without duplicating effects; recipe-pack capability drift rejects.
+- **Validation:** workflow graph tests, scheduler/failure-retention tests, package consumer tests, fixture end-to-end run.
+
+## Phase 14: Product documentation, Agent Skill, README, and marketing site
+
+- **Status:** Not started
+- **Depends on:** Phase 12; may develop in parallel with Phase 13 against frozen manifests
+- **Objective:** Explain and demonstrate the real product with high-polish, test-bound public surfaces and an honest extension model.
+- **Scope:** README, Diátaxis docs, public web docs and homepage, Agent Skill references, examples, structured metadata, screenshots/visual evidence where generated locally.
+- **Approach:**
+  - Replace nonexistent commands in the initial cinematic guide, register canonical docs on the website, and add tutorial/how-to/reference/explanation coverage for direction, cinematography, character performance, effects, galleries, promotion, qualification, and extension architecture.
+  - Expand README around the end-to-end cinematic agent loop while keeping released-vs-current-source availability explicit.
+  - Update the Agent Skill’s routing table and references with exact discovery-first commands, review gates, resource/trust boundaries, and recovery.
+  - Upgrade the homepage hero, cinematic proof flow, capability cards, extension story, trust model, and cross-links using current design-system primitives. No claim appears without a manifest/fixture/doc test.
+  - Add GhostGet/pi comparison only as architectural context, without implying integration, endorsement, or equivalent security.
+- **Acceptance criteria:** every command example parses or is fixture-tested; docs/site/skill capability lists agree with the manifest; site remains static, accessible, responsive, no-account, and production-only analytics; metadata and Markdown mirrors stay correct.
+- **Validation:** docs/skill validators, site contract/content/browser tests, accessibility/visual checks, README link/command checks, `bun run check:web`.
+
+## Phase 15: Qualification, independent review, and protected delivery
+
+- **Status:** Not started
+- **Depends on:** Phases 10–14
+- **Objective:** Prove the integrated system and close the plan without overstating hardware, native, or provider evidence.
+- **Scope:** redistributable fixtures, deterministic rebuild, beauty/diagnostic/temporal qualifications, final whole-feature review, generated outputs, KB completion and current-head CI.
+- **Acceptance criteria:** all focused and complete local gates pass; generated SDK/CLI/site outputs are clean; package smoke passes; browser evidence is recorded when available; unavailable native/provider qualifications remain explicit; independent review has no unresolved blocker; exact-head `Required` and post-merge main CI pass.
+- **Validation:** `bun run check`, `bun run kb:check`, fixture determinism runs, relevant browser/native qualifiers, package smoke, current-head and post-merge CI.
 
 ## Verification
 
