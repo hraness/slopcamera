@@ -150,6 +150,8 @@ describe("Slopcamera MCP stdio server", () => {
         "plan_scene_gallery",
         "check_scene_effects",
         "plan_scene_effects",
+        "check_scene_behavior",
+        "audit_scene_behavior",
         "audit_scene_temporal",
       ])
       expect(listed.tools[0]?.annotations).toMatchObject({
