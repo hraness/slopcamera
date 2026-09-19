@@ -19,7 +19,7 @@ The portable `code search` and `code execute` surface carries six operation code
 {{ARCHIVE_INSTALL_COMMAND}}
 ```
 
-The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 or newer on macOS, Linux, or Windows. [Build Slopcamera from source](/docs/how-to/install-from-source) for the complete capability set, or to follow `main`. The historical Atet v3.2.3 archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
+The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 or newer on macOS, Linux, or Windows. [Build Slopcamera from source](/docs/how-to/install-from-source) to develop Slopcamera or follow `main`. The historical Atet v3.2.3 archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
 
 ## Release availability
 
@@ -32,7 +32,12 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 | Blender, CadQuery, Manim, and acquisition: `studio` | Absent | Available |
 | Native output admission: `studio asset` | Absent | Available |
 | Calibrated camera samples: `scene camera-track` | Absent | Available |
+| Parametric architectural designs: `scene design` | Absent | Available |
 | External vgpu 0.4.1 native example | Absent | Explicit example runtime; not a new registered studio engine |
+
+## Parametric architectural designs
+
+Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named dimensions and constraints compile into retained geometry and ordinary scenes. Four original starters include materials, lights, and cameras. Inspection and compilation need no browser, Rhino, native engine, or cloud account; rendering uses the existing spatial browser runtime. Follow the [parametric design guide](https://github.com/hraness/slopcamera/blob/main/docs/how-to/parametric-design.md).
 
 ## What requires the source-backed distribution
 

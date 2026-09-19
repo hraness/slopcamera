@@ -1,6 +1,6 @@
 # Build and revise a parametric design
 
-Create an architectural study, change its dimensions, and render its generated model while retaining the rules that built it. Use a [current source installation](use-current-source.md), then check `slopcamera doctor --json` for the browser required by spatial rendering. Design inspection and compilation work without a browser, Rhino, a cloud account or paid generation.
+Create an architectural study, change its dimensions, and render its generated model while retaining the rules that built it. Install the [verified Slopcamera v3.3.1 release](../../README.md#install-slopcamera) or use a [source build](use-current-source.md), then check `slopcamera doctor --json` for the browser required by spatial rendering. Design inspection and compilation work without a browser, Rhino, a cloud account or paid generation.
 
 ## Create a study
 

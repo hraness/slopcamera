@@ -1449,9 +1449,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "236ab72fb1b957b97b24320b5b05a2003205a1485e0b967632397c6bad5711fc",
-    "occurrenceCount": 4,
+    "identityLineCount": 5,
+    "identityLinesSha256": "13af4c8fe08566ee6fc56a4f8c57a82428f8068c62228e2b0d3a41832f4bde82",
+    "occurrenceCount": 5,
     "path": "apps/web/scripts/site-copy-content.test.ts",
     "categories": [
       "test-fixture"
@@ -1468,7 +1468,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "8bb12f5bf2b82cd56b30522a6f761d81aacdb0c817bb2b342c2124c453efd299",
+    "identityLinesSha256": "a89e0d5031e14315bb8f10b326bea5d865147b4562b1f869c0ca84f62ae5596c",
     "occurrenceCount": 8,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
