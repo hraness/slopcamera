@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
-import { SPATIAL_SHADOW_POLICY, spatialShadowRuntimeSource } from "./spatial-shadows";
+import { SPATIAL_SHADOW_POLICY, spatialShadowRuntimeSource } from "./spatial";
 
 const three: unknown = createRequire(import.meta.url)("three");
 function run(script: string): Record<string, unknown> {

@@ -23,7 +23,7 @@ type Expression = number | { $param: string } | { $value: string } | { op: strin
 type Json = null | boolean | number | string | { [key: string]: Json } | Json[]
 /** Quantize authored constants so libm last-bit differences do not rewrite checked starters. */
 function canonicalTemplateNumbers(value: unknown): unknown {
-  if (typeof value === "number") return Number(value.toFixed(12))
+  if (typeof value === "number") return Math.abs(value) < 1e-12 ? 0 : Number(value.toPrecision(12))
   if (Array.isArray(value)) return value.map(canonicalTemplateNumbers)
   if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, canonicalTemplateNumbers(child)]))
   return value

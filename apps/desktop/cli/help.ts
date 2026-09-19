@@ -13,6 +13,8 @@ Commands:
   diagram init|check|render      Create, validate, or render portable diagram sources
   scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|behavior|temporal-audit
                                  Author and inspect editable directed 3D scene sources
+  scene design catalog|init|inspect|set|compile|gallery
+                                 Build and revise geometry from named parameters and constraints
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
   studio init|bundle|plan|probe|run|encode|asset|assemble|inspect|reconcile

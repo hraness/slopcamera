@@ -7,7 +7,7 @@ import { parseSpatialParticleSystem, spatialParticleSystemSha256 } from "../../.
 import { parseSpatialRenderPlan, spatialRenderPlanSha256 } from "../../../src/spatial-scene/effects";
 import { parseSpatialRenderEffectsDocument, spatialRenderEffectsSha256 } from "../../../src/spatial-scene/render-effects";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
-import { SPATIAL_SHADOW_POLICY } from "./spatial-shadows";
+import { SPATIAL_SHADOW_POLICY } from "./spatial";
 import { HTML_OVERLAY_MAX_HTML_BYTES, htmlOverlayFrameCount } from "./contracts";
 import {
   createSpatialOverlayBatch, decodeSpatialAxialDepth, spatialSelectionColor,

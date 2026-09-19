@@ -64,7 +64,7 @@ Generated entity IDs derive from the design and stage identities. Recompiling in
 
 ## Limits and identity
 
-The design compiler admits at most 128 parameters, 256 named values, 128 constraints and 32 stages. Source JSON is bounded to 1 MiB, scalar-expression depth to 16 and expression work to 8,192 nodes. Each existing geometry graph retains its own limits. Across stages, compilation checks estimates against 64 parts, 128 assets, 262,144 vertices, 400,000 triangles and 64 MiB before mesh emission. The CLI also bounds retained base assets and gallery output; galleries allow at most six candidates and 128 MiB.
+The design compiler admits at most 128 parameters, 256 named values, 128 constraints and 32 stages. Source JSON is bounded to 1 MiB, scalar-expression depth to 16 and expression work to 8,192 nodes. Each existing geometry graph retains its own limits. Across stages, compilation checks estimates against 64 parts, 128 assets, 262,144 vertices, 400,000 triangles and 64 MiB before mesh emission. The CLI allows at most 64 MiB of asset payloads per bundle and 128 MiB across up to six gallery candidates; retained design, scene and receipt JSON are additional files.
 
 Compilation receipts bind the normalized effective design, parameter values, input and output scene identities, stage specifications and emission receipts. Same-source compilation is deterministic within the declared compiler profile. A receipt establishes source and output identity; inspect actual geometry and render pixels separately.
 

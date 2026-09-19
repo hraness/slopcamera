@@ -5236,7 +5236,7 @@ function compileSpatialDesign(input, options = {}) {
 // src/spatial-scene/design-templates.ts
 function canonicalTemplateNumbers(value) {
   if (typeof value === "number")
-    return Number(value.toFixed(12));
+    return Math.abs(value) < 0.000000000001 ? 0 : Number(value.toPrecision(12));
   if (Array.isArray(value))
     return value.map(canonicalTemplateNumbers);
   if (value !== null && typeof value === "object")
