@@ -40,21 +40,20 @@ interface AccTickPorts {
   readonly emitted: string
 }
 
-const makeAccTickOrganism = (name: string, kernelFn: string, ports: AccTickPorts): SpatialBehaviorOrganism => deepFreezeJson({
+const makeAccTickOrganism = (name: string, kernelFn: string, ports: AccTickPorts): SpatialBehaviorOrganism => {
+  const inputOutputs: Record<string, { type: "json" }> = {
+    [ports.state]: { type: "json" },
+    acc: { type: "json" },
+    win: { type: "json" },
+    [ports.spec]: { type: "json" },
+    step: { type: "json" },
+  }
+  return deepFreezeJson({
   contract: "morphogen.organism.v1" as const,
   key: `organism:acc-tick-${name}`,
   name: `Acc tick ${name}`,
   cells: [
-    {
-      id: "in", kind: "input" as const,
-      outputs: {
-        [ports.state]: { type: "json" as const },
-        acc: { type: "json" as const },
-        win: { type: "json" as const },
-        [ports.spec]: { type: "json" as const },
-        step: { type: "json" as const },
-      },
-    },
+    { id: "in", kind: "input" as const, outputs: inputOutputs },
     { id: "adv", kind: "fn" as const, fn: "window.advance.v1" },
     { id: "tick", kind: "fn" as const, fn: kernelFn },
     { id: "ap", kind: "fn" as const, fn: "emitted.append.v1" },
@@ -84,6 +83,7 @@ const makeAccTickOrganism = (name: string, kernelFn: string, ports: AccTickPorts
     },
   },
 })
+}
 
 /**
  * Build the outer repeat-loop organism: carries `next→state`, `acc→acc`,
@@ -95,27 +95,24 @@ const makeAccLoopOrganism = (
   accTickDigest: string,
   specPort: string,
   statePort: string,
-): SpatialBehaviorOrganism => deepFreezeJson({
+): SpatialBehaviorOrganism => {
+  const loopInputOutputs: Record<string, { type: "json" }> = {
+    [statePort]: { type: "json" },
+    [specPort]: { type: "json" },
+    win: { type: "json" },
+    seed: { type: "json" },
+  }
+  const loopConstOutputs: Record<string, { type: "json"; value: unknown }> = {
+    step: { type: "json", value: 3 },
+    acc: { type: "json", value: [] },
+  }
+  return deepFreezeJson({
   contract: "morphogen.organism.v1" as const,
   key: `organism:acc-loop-${name}`,
   name: `Acc loop ${name}`,
   cells: [
-    {
-      id: "in", kind: "input" as const,
-      outputs: {
-        [statePort]: { type: "json" as const },
-        [specPort]: { type: "json" as const },
-        win: { type: "json" as const },
-        seed: { type: "json" as const },
-      },
-    },
-    {
-      id: "cfg", kind: "const" as const,
-      outputs: {
-        step: { type: "json" as const, value: 3 },
-        acc: { type: "json" as const, value: [] },
-      },
-    },
+    { id: "in", kind: "input" as const, outputs: loopInputOutputs },
+    { id: "cfg", kind: "const" as const, outputs: loopConstOutputs },
     {
       id: "loop", kind: "repeat" as const,
       manifest: accTickDigest,
@@ -141,6 +138,7 @@ const makeAccLoopOrganism = (
     outputs: { trace: { cell: "loop", port: "acc" } },
   },
 })
+}
 
 // ---------------------------------------------------------- locomotion fsm ---
 

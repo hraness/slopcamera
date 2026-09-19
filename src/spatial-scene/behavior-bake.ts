@@ -1,13 +1,10 @@
 import { z } from "zod"
 
-import {
-  MemoryStore,
-  parseOrganismManifest,
-  runOrganism,
-  type FnRegistry,
-  type JsonValue as AlgalJsonValue,
-  type OrganismManifest,
-  type PortMap as AlgalPortMap,
+import type {
+  FnRegistry,
+  JsonValue as AlgalJsonValue,
+  OrganismManifest,
+  PortMap as AlgalPortMap,
 } from "@hraness/algal"
 
 import { deepFreezeJson } from "../code/json-snapshot.js"
@@ -70,7 +67,10 @@ const algalRegistry = (): FnRegistry => {
   return registry
 }
 
-const parseEntryManifest = (behavior: SpatialBehavior): OrganismManifest => {
+const parseEntryManifest = (
+  behavior: SpatialBehavior,
+  parseOrganismManifest: (input: unknown) => OrganismManifest,
+): OrganismManifest => {
   const organism = behavior.organisms[behavior.entry]
   if (organism === undefined) {
     throw new SpatialSceneError("invalid-data", `unresolved-entry: entry digest ${behavior.entry.slice(0, 24)}… is absent from the organisms closure.`, "behavior-bake")
@@ -128,6 +128,8 @@ export async function bakeSpatialBehavior(input: unknown): Promise<SpatialBehavi
     }
   }
 
+  const { MemoryStore, parseOrganismManifest, runOrganism } = await import("@hraness/algal")
+
   // Populate the CAS closure through ALGAL's own parser and digest: the
   // stored digest must equal the closure key, proving runtime parity.
   const store = new MemoryStore()
@@ -144,7 +146,7 @@ export async function bakeSpatialBehavior(input: unknown): Promise<SpatialBehavi
     }
   }
 
-  const manifest = parseEntryManifest(behavior)
+  const manifest = parseEntryManifest(behavior, parseOrganismManifest)
   const args = entryRunArgs(behavior, manifest)
   const receipt = await runOrganism({
     manifest,
