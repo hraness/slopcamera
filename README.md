@@ -134,9 +134,29 @@ GPU path. Spark admits saved splat worlds for local camera direction.
 > mount the product diagram on a screen in the scene, and show me contact frames
 > before rendering the video.
 
-The portable GLB profile has a defined geometry and material subset. Saved splats
+The portable GLB profile has a defined geometry and material subset; the
+additive rigged profile admits bounded skins and morph targets. Saved splats
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
+
+Current source adds the cinematic planning loop: a `slopcamera.spatial-direction`
+document describes beats, actions, camera coverage, and look intents, compiles
+into proposed performance/camera/cinema/material-lighting/shot documents, and
+fans out into bounded galleries per axis. Declared effects bind into renders,
+and a temporal audit samples evidence at explicit times — all deterministic,
+all reviewable before anything is selected.
+
+```sh
+slopcamera scene direction check direction.json --scene world.json --json
+slopcamera scene direction gallery direction.json --scene world.json --axis camera --output gallery.json --json
+slopcamera workflows plan cinematic-world --input pack-input.json --json
+```
+
+The `cinematic-world` workflow consumes one inert recipe pack — a bounded,
+content-addressed JSON document an agent can author — and stops before
+selection. Registration and selection stay explicit `scene project` operations.
+See [Direct a cinematic world](docs/how-to/direct-cinematic-worlds.md) and the
+[extension architecture](docs/extension-architecture.md).
 
 ### Film native worlds and educational animation
 
@@ -254,8 +274,9 @@ declarative graphs, approvals, and resuming work.
 - **Trusted code is not sandboxed.** Native Python and caller-authored Bun
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
-- **MCP is a subset.** Its fixed tools check and render diagrams, vectorize
-  images, and generate images. It does not expose every local CLI operation.
+- **MCP is a subset.** Its fixed tools check and render diagrams, plan and audit
+  scenes, and run the bounded portable operations. It does not expose every
+  local CLI operation and never mutates project state.
 
 ## Design and trust
 
@@ -279,9 +300,9 @@ See [Architecture](docs/architecture.md), [`SECURITY.md`](SECURITY.md),
 ## Documentation
 
 - **Learn:** [Your first diagram](docs/tutorials/first-diagram.md) · [Your first native film](docs/tutorials/first-native-film.md).
-- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md).
+- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md) · [Direct a cinematic world](docs/how-to/direct-cinematic-worlds.md).
 - **Look up support:** [Capabilities and release availability](docs/reference/capabilities.md) · [SDK entrypoints](docs/reference/sdk.md) · [Creative tools](docs/html-overlay-creative-toolkit.md).
-- **Understand the system:** [Architecture](docs/architecture.md) · [Native studio](docs/studio.md) · [Directed scenes](docs/spatial-scenes.md).
+- **Understand the system:** [Architecture](docs/architecture.md) · [Native studio](docs/studio.md) · [Directed scenes](docs/spatial-scenes.md) · [Extension architecture](docs/extension-architecture.md).
 
 The [documentation index](docs/README.md) connects these paths.
 

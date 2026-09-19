@@ -34,6 +34,7 @@ Then give your coding agent the matching guidance:
 - [Make an educational video](/docs/how-to/educational-video): keep mathematical visuals, narration, and timing evidence revisable.
 - [Make a music video](/docs/how-to/music-video): render authored HTML visuals with a local track.
 - [Render and edit spatial scenes](/docs/how-to/direct-scenes): patch named entities, use hardware rendering, or import a saved world.
+- [Direct a cinematic world](/docs/how-to/cinematic-worlds): pack direction, galleries, effects, and an audit into the cinematic-world workflow.
 - [Author a native film](/docs/how-to/native-films): use Blender, CadQuery, or Manim and share assets across renderers.
 - [Direct short generated clips](/docs/how-to/direct-takes): budget, review takes, and preserve endpoint continuity.
 - [Run or recover a workflow](/docs/how-to/run-workflows): use a built-in recipe or trusted Bun module and inspect its durable run.

@@ -7,20 +7,31 @@ import {
 import {
   SPATIAL_AUDIT_LIMITS,
   SPATIAL_SCENE_LIMITS,
+  SPATIAL_TEMPORAL_AUDIT_LIMITS,
   SpatialDigestSchema,
+  SpatialGalleryAxisSchema,
   SpatialPatchOperationSchema,
   SpatialSceneError,
+  SpatialTemporalContactsFileSchema,
   applySpatialScenePatch,
   auditSpatialScene,
+  auditSpatialTemporalEvidence,
+  checkSpatialDirection,
+  checkSpatialRenderEffects,
+  compileSpatialDirection,
+  createSpatialEvaluationContext,
   diffSpatialScenes,
   evaluateSpatialScene,
+  evaluateSpatialSceneInContext,
   inspectSpatialScene,
   normalizeSpatialAuditAssetBounds,
   parseSpatialScene,
   parseSpatialValue,
+  planSpatialDirectionGallery,
+  planSpatialRenderEffects,
   spatialSceneSha256,
   spatialValueSha256
-} from "./index-yp5587bh.js";
+} from "./index-pgzk6ndh.js";
 import {
   PORTABLE_SLOPCAMERA_OPERATION_CONTRACTS,
   PORTABLE_SLOPCAMERA_OPERATION_KINDS,
@@ -1043,6 +1054,284 @@ var slopcameraMcpTools = deepFreeze([
       idempotentHint: true,
       openWorldHint: false
     }
+  },
+  {
+    name: "check_scene_direction",
+    title: "Check scene direction",
+    description: "Validate one authored direction document against one root-relative spatial scene: stale project digests, unresolved entity references, and intervals outside scene duration report as errors without compiling or changing files.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["scene", "direction"],
+      properties: {
+        scene: { ...scenePathSchema, description: "Root-relative path to the spatial scene JSON source (1 MiB maximum)." },
+        direction: { type: "string", description: "Root-relative path to the slopcamera.spatial-direction JSON document." }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["findingCount", "returnedFindingCount", "findingsTruncated", "errorCount", "warningCount"],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            errorCount: { type: "integer", minimum: 0 },
+            warningCount: { type: "integer", minimum: 0 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Check scene direction",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "plan_scene_direction",
+    title: "Plan scene direction",
+    description: "Compile one authored direction document into a deterministic, unverified proposal document \u2014 performance actions, camera rigs, shots and looks bound to the actual scene digest. Proposals are advisory only; nothing is applied to the scene.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["scene", "direction"],
+      properties: {
+        scene: { ...scenePathSchema, description: "Root-relative path to the spatial scene JSON source (1 MiB maximum)." },
+        direction: { type: "string", description: "Root-relative path to the slopcamera.spatial-direction JSON document." },
+        camera_id: { ...sceneCameraIdSchema, description: "Optional camera used to resolve coverage; defaults to the sole or first sorted scene camera." }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "compilation", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        compilation: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["advisoryCount", "unresolvedIntentCount", "proposalCounts"],
+          properties: {
+            advisoryCount: { type: "integer", minimum: 0 },
+            unresolvedIntentCount: { type: "integer", minimum: 0 },
+            proposalCounts: {
+              type: "object",
+              additionalProperties: false,
+              required: ["performance", "cameraRigs", "shots", "lookIntents"],
+              properties: {
+                performance: { type: "integer", minimum: 0 },
+                cameraRigs: { type: "integer", minimum: 0 },
+                shots: { type: "integer", minimum: 0 },
+                lookIntents: { type: "integer", minimum: 0 }
+              }
+            }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Plan scene direction",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "plan_scene_gallery",
+    title: "Plan scene gallery",
+    description: "Compile a bounded set of single-axis direction variants into separate content-addressed candidate compilations plus a preview-reel plan. The planner never selects or promotes a candidate.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["scene", "direction", "axis"],
+      properties: {
+        scene: { ...scenePathSchema, description: "Root-relative path to the spatial scene JSON source (1 MiB maximum)." },
+        direction: { type: "string", description: "Root-relative path to the slopcamera.spatial-direction JSON document." },
+        axis: { type: "string", enum: [...SpatialGalleryAxisSchema.options], description: "Variation axis for the bounded candidate set." },
+        camera_id: { ...sceneCameraIdSchema, description: "Optional camera used to resolve coverage." }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "gallery", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        gallery: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["axis", "candidateCount", "selected"],
+          properties: {
+            axis: { type: "string" },
+            candidateCount: { type: "integer", minimum: 0 },
+            selected: { const: false }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Plan scene gallery",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "check_scene_effects",
+    title: "Check scene effects",
+    description: "Validate one slopcamera.spatial-render-effects document or {document, documentSha256} binding against one scene: scene-digest bindings, entity and asset closure, and nested plan/particle/simulation digests report as findings before any host work.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["scene", "effects"],
+      properties: {
+        scene: { ...scenePathSchema, description: "Root-relative path to the spatial scene JSON source (1 MiB maximum)." },
+        effects: { type: "string", description: "Root-relative path to the render-effects document or binding JSON." }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["findingCount", "returnedFindingCount", "findingsTruncated", "errorCount", "warningCount"],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            errorCount: { type: "integer", minimum: 0 },
+            warningCount: { type: "integer", minimum: 0 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Check scene effects",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "plan_scene_effects",
+    title: "Plan scene effects",
+    description: "Assemble a canonical {document, documentSha256} render-effects binding for one scene from a draft JSON naming renderPlan, particleSystems and simulationBakes. Entity and asset closure rejects before the document is formed; the scene digest binds here, never by caller assertion.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["scene", "draft"],
+      properties: {
+        scene: { ...scenePathSchema, description: "Root-relative path to the spatial scene JSON source (1 MiB maximum)." },
+        draft: { type: "string", description: "Root-relative path to the effects draft JSON ({renderPlan, particleSystems?, simulationBakes?})." }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "binding", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        binding: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["documentSha256", "particleSystemCount", "simulationBakeCount"],
+          properties: {
+            documentSha256: { type: "string" },
+            particleSystemCount: { type: "integer", minimum: 0 },
+            simulationBakeCount: { type: "integer", minimum: 0 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Plan scene effects",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
+  {
+    name: "audit_scene_temporal",
+    title: "Audit scene temporal evidence",
+    description: "Evaluate one root-relative spatial scene at bounded sample times under one camera and report deterministic temporal findings: visibility flicker, transform discontinuity, foot-slide against declared contact windows, camera acceleration/jerk/angular velocity, exposure and focus jumps, and resource spikes.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "camera_id"],
+      properties: {
+        path: scenePathSchema,
+        camera_id: sceneCameraIdSchema,
+        times_us: {
+          type: "array",
+          items: { type: "integer", minimum: 0, maximum: SPATIAL_SCENE_LIMITS.durationUs },
+          minItems: 2,
+          maxItems: SPATIAL_TEMPORAL_AUDIT_LIMITS.samples,
+          description: "Optional sample times in microseconds (2\u2013256). Defaults to evenly spaced coverage of the scene duration."
+        },
+        contacts: { type: "string", description: "Optional root-relative path to a {contacts: [...]} ground-contact evidence JSON." },
+        cut_before_us: {
+          type: "array",
+          items: { type: "integer", minimum: 0, maximum: SPATIAL_SCENE_LIMITS.durationUs },
+          maxItems: SPATIAL_TEMPORAL_AUDIT_LIMITS.cutBoundaries,
+          description: "Optional intentional cut boundaries; discontinuities exactly at a cut are not findings."
+        }
+      }
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["findingCount", "returnedFindingCount", "findingsTruncated", "sampleCount"],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            returnedFindingCount: { type: "integer", minimum: 0 },
+            findingsTruncated: { type: "boolean" },
+            sampleCount: { type: "integer", minimum: 2 }
+          }
+        }
+      }
+    },
+    annotations: {
+      title: "Audit scene temporal evidence",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
   }
 ]);
 
@@ -1199,6 +1488,61 @@ function parseEvaluateSceneArguments(value) {
     timeUs
   };
 }
+function parseSceneDirectionArguments(value, requireAxis) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["scene", "direction", "camera_id", "axis"]));
+  if (requireAxis && !SpatialGalleryAxisSchema.safeParse(value.axis).success) {
+    throw new ToolFailure("INVALID_ARGUMENTS", `axis must be one of ${SpatialGalleryAxisSchema.options.join(", ")}.`);
+  }
+  if (!requireAxis && value.axis !== undefined) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "axis is only valid for plan_scene_gallery.");
+  }
+  return {
+    scene: parseScenePath(value.scene, "scene"),
+    direction: parseScenePath(value.direction, "direction"),
+    ...value.camera_id === undefined ? {} : { cameraId: parseSceneCameraId(value.camera_id) },
+    ...value.axis === undefined ? {} : { axis: value.axis }
+  };
+}
+function parseSceneEffectsArguments(value, effectsKey) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["scene", effectsKey]));
+  return {
+    scene: parseScenePath(value.scene, "scene"),
+    effects: parseScenePath(value[effectsKey], effectsKey)
+  };
+}
+function parseSceneTemporalArguments(value) {
+  if (!isRecord2(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.");
+  }
+  rejectUnknownKeys(value, new Set(["path", "camera_id", "times_us", "contacts", "cut_before_us"]));
+  const boundedTimes = (key, maximum) => {
+    const entries = value[key];
+    if (entries === undefined)
+      return;
+    if (!Array.isArray(entries) || entries.length === 0 || entries.length > maximum || entries.some((timeUs) => !Number.isSafeInteger(timeUs) || timeUs < 0 || timeUs > SPATIAL_SCENE_LIMITS.durationUs)) {
+      throw new ToolFailure("INVALID_ARGUMENTS", `${key} must be an array of 1\u2013${maximum} integer microsecond times within the scene duration bound.`);
+    }
+    return [...entries];
+  };
+  const timesUs = boundedTimes("times_us", SPATIAL_TEMPORAL_AUDIT_LIMITS.samples);
+  const cutBeforeUs = boundedTimes("cut_before_us", SPATIAL_TEMPORAL_AUDIT_LIMITS.cutBoundaries);
+  if (timesUs !== undefined && timesUs.length < 2) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "times_us must contain at least 2 sample times.");
+  }
+  return {
+    path: parseScenePath(value.path, "path"),
+    cameraId: parseSceneCameraId(value.camera_id),
+    ...timesUs === undefined ? {} : { timesUs },
+    ...value.contacts === undefined ? {} : { contacts: parseScenePath(value.contacts, "contacts") },
+    ...cutBeforeUs === undefined ? {} : { cutBeforeUs }
+  };
+}
 function assertBuiltInIcons(spec) {
   for (const shape of spec.shapes) {
     if ((shape.type === "rect" || shape.type === "ellipse") && shape.icon !== undefined && !Object.hasOwn(builtInIcons, shape.icon)) {
@@ -1337,12 +1681,7 @@ async function loadDiagram(boundary, path) {
 }
 async function loadScene(boundary, path) {
   const source = await boundary.readSource(path, "Scene source");
-  let parsed;
-  try {
-    parsed = JSON.parse(source.text);
-  } catch {
-    throw new ToolFailure("INVALID_JSON", "Scene source is not valid JSON.");
-  }
+  const parsed = parseJsonText(source.text);
   try {
     return { source, scene: parseSpatialScene(parsed) };
   } catch (error) {
@@ -1352,6 +1691,17 @@ async function loadScene(boundary, path) {
     }
     throw error;
   }
+}
+function parseJsonText(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new ToolFailure("INVALID_JSON", "Source is not valid JSON.");
+  }
+}
+async function loadJson(boundary, path, label) {
+  const source = await boundary.readSource(path, label);
+  return { source, value: parseJsonText(source.text) };
 }
 
 class SlopcameraMcpToolRuntime {
@@ -1428,6 +1778,30 @@ class SlopcameraMcpToolRuntime {
       if (name === "evaluate_scene") {
         const options = parseEvaluateSceneArguments(argumentsValue);
         return await this.withSceneAdmission(async () => await this.evaluateScene(options));
+      }
+      if (name === "check_scene_direction") {
+        const options = parseSceneDirectionArguments(argumentsValue, false);
+        return await this.withSceneAdmission(async () => await this.checkSceneDirection(options));
+      }
+      if (name === "plan_scene_direction") {
+        const options = parseSceneDirectionArguments(argumentsValue, false);
+        return await this.withSceneAdmission(async () => await this.planSceneDirection(options));
+      }
+      if (name === "plan_scene_gallery") {
+        const options = parseSceneDirectionArguments(argumentsValue, true);
+        return await this.withSceneAdmission(async () => await this.planSceneGallery(options));
+      }
+      if (name === "check_scene_effects") {
+        const options = parseSceneEffectsArguments(argumentsValue, "effects");
+        return await this.withSceneAdmission(async () => await this.checkSceneEffects(options));
+      }
+      if (name === "plan_scene_effects") {
+        const options = parseSceneEffectsArguments(argumentsValue, "draft");
+        return await this.withSceneAdmission(async () => await this.planSceneEffects(options));
+      }
+      if (name === "audit_scene_temporal") {
+        const options = parseSceneTemporalArguments(argumentsValue);
+        return await this.withSceneAdmission(async () => await this.auditSceneTemporal(options));
       }
       throw new ToolFailure("UNKNOWN_TOOL", "Requested tool is not available.");
     } catch (error) {
@@ -1686,6 +2060,140 @@ class SlopcameraMcpToolRuntime {
       ok: true,
       source: source.relativePath,
       snapshot: { ...snapshot, entities },
+      summary
+    });
+  }
+  async checkSceneDirection(options) {
+    const { source, scene } = await loadScene(this.boundary, options.scene);
+    const direction = await loadJson(this.boundary, options.direction, "Direction source");
+    const report = checkSpatialDirection({ direction: direction.value, scene });
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings);
+    const summary = {
+      findingCount: report.findings.length,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < report.findings.length,
+      errorCount: report.counts.errors,
+      warningCount: report.counts.warnings
+    };
+    return successResult(`Checked direction ${direction.source.relativePath} against ${source.relativePath}: ${summary.findingCount} finding${summary.findingCount === 1 ? "" : "s"} (${summary.errorCount} errors).`, {
+      ok: summary.errorCount === 0,
+      source: source.relativePath,
+      report: { ...report, findings },
+      summary
+    });
+  }
+  async planSceneDirection(options) {
+    const { source, scene } = await loadScene(this.boundary, options.scene);
+    const direction = await loadJson(this.boundary, options.direction, "Direction source");
+    const compilation = compileSpatialDirection({
+      direction: direction.value,
+      scene,
+      ...options.cameraId === undefined ? {} : { cameraId: options.cameraId }
+    });
+    const summary = {
+      advisoryCount: compilation.advisories.length,
+      unresolvedIntentCount: compilation.unresolvedIntents.length,
+      proposalCounts: {
+        performance: compilation.proposals.performance.length,
+        cameraRigs: compilation.proposals.cameraRigs.length,
+        shots: compilation.proposals.shots.length,
+        lookIntents: compilation.proposals.lookIntents.length
+      }
+    };
+    return successResult(`Compiled direction ${direction.source.relativePath}: ${compilation.proposals.shots.length} shot proposals, ${compilation.advisories.length} advisories; all proposals remain unverified.`, {
+      ok: true,
+      source: source.relativePath,
+      compilation,
+      summary
+    });
+  }
+  async planSceneGallery(options) {
+    const { source, scene } = await loadScene(this.boundary, options.scene);
+    const direction = await loadJson(this.boundary, options.direction, "Direction source");
+    const gallery = planSpatialDirectionGallery({
+      axis: options.axis,
+      direction: direction.value,
+      scene,
+      ...options.cameraId === undefined ? {} : { cameraId: options.cameraId }
+    });
+    const summary = {
+      axis: gallery.axis,
+      candidateCount: gallery.candidates.length,
+      selected: false
+    };
+    return successResult(`Planned a ${gallery.axis} gallery from ${direction.source.relativePath}: ${gallery.candidates.length} content-addressed candidates; none selected.`, {
+      ok: true,
+      source: source.relativePath,
+      gallery,
+      summary
+    });
+  }
+  async checkSceneEffects(options) {
+    const { source, scene } = await loadScene(this.boundary, options.scene);
+    const effects = await loadJson(this.boundary, options.effects, "Effects source");
+    const report = checkSpatialRenderEffects({ effects: effects.value, scene });
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings);
+    const summary = {
+      findingCount: report.findings.length,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < report.findings.length,
+      errorCount: report.counts.errors,
+      warningCount: report.counts.warnings
+    };
+    return successResult(`Checked effects ${effects.source.relativePath} against ${source.relativePath}: ${summary.findingCount} finding${summary.findingCount === 1 ? "" : "s"} (${summary.errorCount} errors).`, {
+      ok: summary.errorCount === 0,
+      source: source.relativePath,
+      report: { ...report, findings },
+      summary
+    });
+  }
+  async planSceneEffects(options) {
+    const { source, scene } = await loadScene(this.boundary, options.scene);
+    const draft = await loadJson(this.boundary, options.effects, "Effects draft");
+    if (!isRecord2(draft.value)) {
+      throw new ToolFailure("INVALID_ARGUMENTS", "Effects draft must be a JSON object with renderPlan, particleSystems and simulationBakes fields.");
+    }
+    const binding = planSpatialRenderEffects({ ...draft.value, scene });
+    const summary = {
+      documentSha256: binding.documentSha256,
+      particleSystemCount: binding.document.particleSystems.length,
+      simulationBakeCount: binding.document.simulationBakes.length
+    };
+    return successResult(`Bound effects draft ${draft.source.relativePath} to scene ${summary.documentSha256.slice(0, 16)}\u2026: ${summary.particleSystemCount} particle systems, ${summary.simulationBakeCount} simulation bakes.`, {
+      ok: true,
+      source: source.relativePath,
+      binding,
+      summary
+    });
+  }
+  async auditSceneTemporal(options) {
+    const { source, scene } = await loadScene(this.boundary, options.path);
+    const times = options.timesUs ?? (() => {
+      const count = Math.min(17, Math.max(2, Math.ceil(scene.durationUs / 1e6) + 1));
+      return Array.from({ length: count }, (_value, index) => Math.floor(scene.durationUs * index / (count - 1)));
+    })();
+    const contacts = options.contacts === undefined ? [] : parseSpatialValue(SpatialTemporalContactsFileSchema, (await loadJson(this.boundary, options.contacts, "Contacts source")).value, "temporal contacts").contacts;
+    const context = createSpatialEvaluationContext(scene);
+    const snapshots = [...times].sort((left, right) => left - right).map((timeUs) => evaluateSpatialSceneInContext(context, { cameraId: options.cameraId, timeUs }));
+    const report = auditSpatialTemporalEvidence({
+      snapshots,
+      options: {
+        contacts,
+        ...options.cutBeforeUs === undefined ? {} : { cutBeforeUs: [...options.cutBeforeUs] }
+      }
+    });
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings);
+    const findingCount = report.findings.length + report.omittedFindings;
+    const summary = {
+      findingCount,
+      returnedFindingCount: findings.length,
+      findingsTruncated: findings.length < findingCount,
+      sampleCount: report.sampleCount
+    };
+    return successResult(`Audited ${source.relativePath} over ${report.sampleCount} samples under ${options.cameraId}: ${findingCount} temporal finding${findingCount === 1 ? "" : "s"}${summary.findingsTruncated ? " (truncated)" : ""}.`, {
+      ok: true,
+      source: source.relativePath,
+      report: { ...report, findings },
       summary
     });
   }

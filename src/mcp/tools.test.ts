@@ -17,6 +17,7 @@ import type {
   HostResourceCoordinator,
 } from "../host-resources.ts"
 import { createSpatialSceneStarter } from "../spatial-scene/authoring.ts"
+import { spatialValueSha256 } from "../spatial-scene/identity.ts"
 import { fixtureAsset } from "../spatial-scene/test-fixture.ts"
 import {
   SlopcameraMcpToolRuntime,
@@ -639,6 +640,120 @@ describe("Slopcamera MCP scene tools", () => {
         ])
       }
       expect(admission.claims).toHaveLength(5)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("checks, plans, and audits direction, effects, and temporal evidence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-mcp-direction-"))
+    try {
+      const scene = createSpatialSceneStarter()
+      const sceneSha256 = spatialValueSha256(scene)
+      await writeFile(join(root, "scene.json"), JSON.stringify(scene))
+      const direction = {
+        kind: "slopcamera.spatial-direction",
+        schemaVersion: 1,
+        entityId: "entity_product",
+        projectDigest: sceneSha256,
+        beats: [{ id: "beat_intro", startUs: 0, endUs: 4_000_000, intent: "Introduce the product", emotion: "calm" }],
+        actions: [{ id: "act_turn", characterId: "entity_product", startUs: 0, endUs: 2_000_000, action: "turn" }],
+        coverage: [{ id: "cov_orbit", startUs: 0, endUs: 2_000_000, rigKind: "orbit", framing: "medium", subjectId: "entity_product" }],
+        looks: [{ id: "look_cold", startUs: 0, endUs: 4_000_000, lighting: "cool key", atmosphere: "clear" }],
+      }
+      await writeFile(join(root, "direction.json"), JSON.stringify(direction))
+      const draft = {
+        renderPlan: {
+          kind: "slopcamera.spatial-render-plan",
+          schemaVersion: 1,
+          quality: {
+            outputBytes: 8_000_000, particleCount: 0, pixelBudget: 640 * 480,
+            simulationSteps: 0, texturePixelBudget: 1_000_000, tier: "final",
+          },
+          postProcess: {
+            kind: "slopcamera.spatial-post-process", schemaVersion: 1,
+            steps: [{ kind: "tone-map", exposure: 1, whitePoint: 4 }],
+          },
+        },
+      }
+      await writeFile(join(root, "draft.json"), JSON.stringify(draft))
+      const admission = { assertions: 0, claims: [] as HostResourceClaim[][] }
+      const runtime = await SlopcameraMcpToolRuntime.create(
+        root, {}, recordingCoordinator(admission),
+      )
+
+      const directionCheck = await runtime.call("check_scene_direction", {
+        scene: "scene.json", direction: "direction.json",
+      })
+      expect(directionCheck.isError).toBeUndefined()
+      expect(directionCheck.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        summary: { errorCount: 0 },
+      })
+
+      const planned = await runtime.call("plan_scene_direction", {
+        scene: "scene.json", direction: "direction.json",
+      })
+      expect(planned.isError).toBeUndefined()
+      const compilation = (planned.structuredContent as {
+        compilation: {
+          sceneSha256: string
+          verified: boolean
+          proposals: { shots: readonly { shotId: string }[]; cameraRigs: readonly unknown[] }
+        }
+      }).compilation
+      expect(compilation.sceneSha256).toBe(sceneSha256)
+      expect(compilation.verified).toBe(false)
+      expect(compilation.proposals.shots.length).toBeGreaterThan(0)
+      expect(compilation.proposals.cameraRigs.length).toBeGreaterThan(0)
+
+      const gallery = await runtime.call("plan_scene_gallery", {
+        scene: "scene.json", direction: "direction.json", axis: "camera",
+      })
+      expect(gallery.isError).toBeUndefined()
+      const galleryPlan = (gallery.structuredContent as {
+        gallery: { candidates: readonly { documentSha256: string }[]; selection?: unknown }
+      }).gallery
+      expect(galleryPlan.candidates.length).toBeGreaterThan(1)
+      expect(galleryPlan).not.toHaveProperty("selection")
+      expect(new Set(galleryPlan.candidates.map((c) => c.documentSha256)).size).toBe(galleryPlan.candidates.length)
+
+      const bound = await runtime.call("plan_scene_effects", {
+        scene: "scene.json", draft: "draft.json",
+      })
+      expect(bound.isError).toBeUndefined()
+      const binding = (bound.structuredContent as { binding: { document: unknown; documentSha256: string } }).binding
+      expect(binding.documentSha256).toMatch(/^[a-f0-9]{64}$/u)
+      await writeFile(join(root, "effects.json"), JSON.stringify(binding.document))
+
+      const effectsCheck = await runtime.call("check_scene_effects", {
+        scene: "scene.json", effects: "effects.json",
+      })
+      expect(effectsCheck.isError).toBeUndefined()
+      expect(effectsCheck.structuredContent).toMatchObject({
+        ok: true,
+        summary: { errorCount: 0 },
+      })
+
+      const temporal = await runtime.call("audit_scene_temporal", {
+        path: "scene.json", camera_id: "camera_hero", times_us: [0, 2_000_000],
+      })
+      expect(temporal.isError).toBeUndefined()
+      const temporalReport = (temporal.structuredContent as {
+        report: { sampleCount: number; findings: readonly { kind: string }[] }
+        summary: { sampleCount: number }
+      })
+      expect(temporalReport.report.sampleCount).toBe(2)
+      expect(temporalReport.summary.sampleCount).toBe(2)
+
+      for (const claims of admission.claims) {
+        expect(claims).toEqual([
+          { resource: "cpu", amount: 1 },
+          { resource: "local-io", amount: 1 },
+        ])
+      }
+      expect(admission.claims).toHaveLength(6)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

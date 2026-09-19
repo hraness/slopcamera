@@ -2,6 +2,12 @@ import { describe, expect, test } from "bun:test";
 
 import { z } from "zod";
 
+import {
+  parseSpatialScene,
+  perspectiveFromFov,
+  spatialSceneSha256,
+} from "../../../src/spatial-scene";
+
 import { createApplicationOperationRegistry } from "../application/default-registry";
 import { OPERATION_KINDS, type OperationKind } from "../application/operation";
 import {
@@ -35,6 +41,7 @@ describe("built-in workflow catalog", () => {
   test("is explicit, sorted, and versioned", () => {
     expect(BUILT_IN_WORKFLOWS.map(workflow => workflow.id)).toEqual([
       "chaptered-demo",
+      "cinematic-world",
       "creative-iteration",
       "creative-selection",
       "directed-scene",
@@ -45,6 +52,7 @@ describe("built-in workflow catalog", () => {
     expect(builtInWorkflow("missing")).toBeUndefined();
     expect(BUILT_IN_WORKFLOWS.map(workflow => workflow.version)).toEqual([
       3,
+      1,
       1,
       1,
       1,
@@ -932,5 +940,262 @@ describe("built-in workflow catalog", () => {
       amount: 4,
       resource: "project-publication",
     });
+  });
+});
+
+describe("cinematic world", () => {
+  const cinematicScene = (): Record<string, unknown> => ({
+    animations: [],
+    assets: [],
+    cameras: [{
+      cameraId: "camera_main",
+      name: "Main",
+      pose: { position: [0, 1.6, 6], rotation: [0, 0, 0, 1] },
+      projection: perspectiveFromFov({
+        far: 200,
+        fovDeg: 50,
+        height: 1080,
+        near: 0.1,
+        width: 1920,
+      }),
+    }],
+    coordinates: "right-handed-y-up-meters",
+    durationUs: 10_000_000,
+    entities: [
+      {
+        entityId: "entity_hero",
+        geometry: { kind: "box", size: [0.6, 1.8, 0.4] },
+        kind: "mesh",
+        material: { color: "#224466", kind: "unlit", opacity: 1 },
+        name: "Hero",
+        origin: { kind: "authored" },
+        parentId: null,
+        placement: { kind: "world" },
+        transform: {
+          position: [0, 0.9, 0],
+          rotation: [0, 0, 0, 1],
+          scale: [1, 1, 1],
+        },
+        visible: true,
+      },
+    ],
+    generators: [],
+    kind: "slopcamera.spatial-scene",
+    overrides: [],
+    sceneId: "scene_directed",
+    schemaVersion: 1,
+  });
+
+  const sceneSha256 = (scene: Record<string, unknown>): string => (
+    spatialSceneSha256(parseSpatialScene(scene))
+  );
+
+  const cinematicDirection = (digest: string): Record<string, unknown> => ({
+    actions: [
+      {
+        action: "walk",
+        characterId: "hero",
+        endUs: 3_000_000,
+        id: "action_walk",
+        startUs: 0,
+      },
+    ],
+    beats: [{
+      emotion: "curious",
+      endUs: 6_000_000,
+      id: "beat_arrival",
+      intent: "Hero crosses the room.",
+      startUs: 0,
+    }],
+    coverage: [{
+      endUs: 2_000_000,
+      framing: "wide",
+      id: "coverage_wide",
+      rigKind: "dolly",
+      startUs: 0,
+      subjectId: "hero",
+    }],
+    entityId: "hero",
+    kind: "slopcamera.spatial-direction",
+    looks: [{
+      atmosphere: "quiet evening interior",
+      endUs: 6_000_000,
+      id: "look_dusk",
+      lighting: "low warm key from the left",
+      startUs: 0,
+    }],
+    projectDigest: digest,
+    schemaVersion: 1,
+  });
+
+  const cinematicPack = (digest: string, overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    axes: ["camera", "lighting"],
+    cameraId: "camera_main",
+    direction: cinematicDirection(digest),
+    kind: "slopcamera.spatial-recipe-pack",
+    packId: "recipe_test",
+    previews: [{
+      name: "reel",
+      request: {
+        cameraId: "camera_main",
+        mode: { kind: "beauty" },
+        selection: { kind: "frame", timeUs: 0 },
+      },
+    }],
+    sceneSha256: digest,
+    schemaVersion: 1,
+    temporalAudit: { timesUs: [0, 2_000_000, 4_000_000] },
+    ...overrides,
+  });
+
+  const cinematicInput = (overrides: Record<string, unknown> = {}) => {
+    const scene = cinematicScene();
+    return {
+      pack: cinematicPack(sceneSha256(scene)),
+      scene,
+      source: { path: "scenes/scene_directed.json" },
+      ...overrides,
+    };
+  };
+
+  const compileCinematic = (input: Record<string, unknown>) => {
+    const registry = createApplicationOperationRegistry();
+    const built = builtInWorkflow("cinematic-world")!.build(registry, input);
+    return {
+      plan: compileGraphPlan({
+        bundle: TESTING_WORKFLOW_BUNDLE,
+        graph: built.graph,
+        registry,
+        runtime: TESTING_WORKFLOW_RUNTIME,
+        workflowInput: built.input,
+      }),
+      registry,
+    };
+  };
+
+  test("composes the full plan, gallery, effects, audit, and render loop without selection", () => {
+    const { plan } = compileCinematic(cinematicInput({
+      pack: cinematicPack(sceneSha256(cinematicScene()), {
+        effects: {
+          particleSystems: [],
+          renderPlan: {
+            kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+            postProcess: {
+              kind: "slopcamera.spatial-post-process", schemaVersion: 1,
+              steps: [{ exposure: 0, kind: "tone-map", whitePoint: 1 }],
+            },
+            quality: {
+              outputBytes: 8_000_000, particleCount: 0, pixelBudget: 2_073_600,
+              simulationSteps: 0, texturePixelBudget: 2_073_600, tier: "preview",
+            },
+          },
+          simulationBakes: [],
+        },
+      }),
+    }));
+
+    expect(plan.topologicalWaves).toEqual([
+      [
+        "galleries/camera",
+        "galleries/lighting",
+        "planning/direction-check",
+        "planning/direction-compile",
+        "planning/inspect",
+        "planning/temporal-audit",
+        "previews/reel/effects",
+      ],
+      ["previews/reel/render"],
+    ]);
+    expect(plan.envelope.operationKinds).toEqual([
+      "scene.direction.check",
+      "scene.direction.compile",
+      "scene.direction.gallery",
+      "scene.effects.plan",
+      "scene.inspect",
+      "scene.render",
+      "scene.temporal-audit",
+    ]);
+    expect(plan.envelope.operationKinds).not.toContain("iteration.select");
+    expect(plan.envelope.operationKinds).not.toContain("project.promote-selection");
+    expect(plan.envelope.operationKinds).not.toContain("spatial.project.select-candidate");
+    const nodes = new Map(plan.graph.nodes.map(node => [node.key, node]));
+    expect(nodes.get("planning/direction-compile")?.input).toMatchObject({
+      cameraId: "camera_main",
+      direction: { projectDigest: sceneSha256(cinematicScene()) },
+    });
+    expect(nodes.get("previews/reel/render")?.dependencies).toEqual([
+      "previews/reel/effects",
+    ]);
+    expect(nodes.get("previews/reel/render")?.input).toMatchObject({
+      request: {
+        cameraId: "camera_main",
+        effects: {
+          $ref: { nodeKey: "previews/reel/effects" },
+        },
+        selection: { kind: "frame", timeUs: 0 },
+      },
+      sceneSha256: sceneSha256(cinematicScene()),
+      source: { path: "scenes/scene_directed.json" },
+    });
+    expect(nodes.get("planning/temporal-audit")?.input).toMatchObject({
+      cameraId: "camera_main",
+      timesUs: [0, 2_000_000, 4_000_000],
+    });
+    expect(plan.graph.outputs).toMatchObject({
+      compilation: { $ref: { nodeKey: "planning/direction-compile" } },
+      directionCheck: { $ref: { nodeKey: "planning/direction-check" } },
+      galleries: {
+        camera: { $ref: { nodeKey: "galleries/camera" } },
+        lighting: { $ref: { nodeKey: "galleries/lighting" } },
+      },
+      inspect: { $ref: { nodeKey: "planning/inspect" } },
+      previews: {
+        reel: {
+          effects: { $ref: { nodeKey: "previews/reel/effects" } },
+          render: { $ref: { nodeKey: "previews/reel/render" } },
+        },
+      },
+      temporalAudit: { $ref: { nodeKey: "planning/temporal-audit" } },
+    });
+  });
+
+  test("keeps a minimal pack to planning nodes only and deterministic identity", () => {
+    const input = cinematicInput({
+      pack: cinematicPack(sceneSha256(cinematicScene()), {
+        axes: ["sequence"],
+        previews: [],
+      }),
+    });
+    delete (input.pack as Record<string, unknown>).temporalAudit;
+    const { plan } = compileCinematic(input);
+    const { plan: again } = compileCinematic(input);
+
+    expect(plan.topologicalWaves).toEqual([[
+      "galleries/sequence",
+      "planning/direction-check",
+      "planning/direction-compile",
+      "planning/inspect",
+    ]]);
+    expect(plan.envelope.operationKinds).toEqual([
+      "scene.direction.check",
+      "scene.direction.compile",
+      "scene.direction.gallery",
+      "scene.inspect",
+    ]);
+    expect(plan.graph.outputs).not.toHaveProperty("temporalAudit");
+    expect(plan.graphPlanSha256).toEqual(again.graphPlanSha256);
+  });
+
+  test("rejects a pack bound to another scene or a malformed preview request", () => {
+    const registry = createApplicationOperationRegistry();
+    const workflow = builtInWorkflow("cinematic-world")!;
+    expect(() => workflow.build(registry, cinematicInput({
+      pack: cinematicPack("f".repeat(64)),
+    }))).toThrow(/sceneSha256/u);
+    expect(() => workflow.build(registry, cinematicInput({
+      pack: cinematicPack(sceneSha256(cinematicScene()), {
+        previews: [{ name: "broken", request: { kind: "not-a-request" } }],
+      }),
+    }))).toThrow(/valid spatial render request/u);
   });
 });

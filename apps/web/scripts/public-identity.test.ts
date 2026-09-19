@@ -18,9 +18,9 @@ async function fixture() {
   return { root, icons }
 }
 
-test("the public camera-with-flash identity admits only its exact PNG derivatives", async () => {
+test("the public Slopcamera mark identity admits only its exact PNG derivatives", async () => {
   const icons = await readPublicIcons(app)
-  expect(publicIdentity).toMatchObject({ emoji: "📸", nativeId: "1f4f8", domain: "slopcamera.com" })
+  expect(publicIdentity).toMatchObject({ mark: "slopcamera", domain: "slopcamera.com" })
   expect(icons.map(icon => icon.path)).toEqual(["icon.png", "apple-touch-icon.png"])
   for (const [index, icon] of icons.entries()) {
     expect([...icon.bytes.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])

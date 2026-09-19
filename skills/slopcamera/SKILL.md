@@ -27,6 +27,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Review alternative textures, skyboxes, backdrops, design candidates or whole-scene variants | [Image galleries](references/image-galleries.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |
+| Semantic direction, galleries, bounded effects, temporal audit or the cinematic-world recipe pack | [Directed scenes](references/directed-scenes.md#direct-cinematic-worlds) |
 | Author a scene from code, generate procedural entities, or audit framing | [Scene building](references/scene-building.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |

@@ -20,6 +20,7 @@ import {
 import { cameraMathView, composeTransform, invertTransform, multiplyTransforms, type Mat4 } from "../../../src/spatial-scene/math";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
 import { pbrMaterialMapAssetIds } from "../../../src/spatial-scene/material-lighting";
+import { SpatialRenderEffectsBindingSchema } from "../../../src/spatial-scene/render-effects";
 import { SpatialAuditBoundsSchema } from "../../../src/spatial-scene/audit";
 import { SPATIAL_SPLAT_PROXY_REPRESENTATION } from "../../../src/spatial-scene/audit-rendered";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
@@ -129,6 +130,21 @@ export const PreparedSpatialAssetSchema = z.discriminatedUnion("kind", [
     ...textureShape,
   }),
   z.strictObject({
+    kind: z.literal("lut"),
+    assetId: SpatialAssetIdSchema,
+    assetManifestSha256: SpatialDigestSchema,
+    ...textureShape,
+  }),
+  z.strictObject({
+    kind: z.literal("particle-instances"),
+    entityId: SpatialEntityIdSchema,
+    instanceCount: z.number().int().min(0).max(1_000_000),
+    resource: HtmlOverlayDeclaredResourceSchema,
+    strideBytes: z.literal(64),
+    systemSha256: SpatialDigestSchema,
+    timeUs: SpatialTimeUsSchema,
+  }),
+  z.strictObject({
     kind: z.literal("geometry"),
     assetId: SpatialAssetIdSchema,
     entityId: SpatialEntityIdSchema,
@@ -150,11 +166,21 @@ export const SpatialRenderModeSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("beauty") }),
   z.strictObject({ kind: z.literal("object-id"), coverage: SpatialCoverageSchema }),
   z.strictObject({ kind: z.literal("axial-depth"), coverage: SpatialCoverageSchema }),
+  z.strictObject({ kind: z.literal("motion"), coverage: SpatialCoverageSchema, entityId: SpatialEntityIdSchema,
+    /** Pixels per frame interval mapped to the packed evidence midpoint range. */
+    motionScale: z.number().finite().positive().max(1_000_000) }),
 ]);
 
 export const SpatialOverlayBatchInputSchema = z.strictObject({
   snapshots: z.array(EvaluatedSpatialSceneSchema).min(1).max(SPATIAL_OVERLAY_LIMITS.frames),
+  /**
+   * The immediately preceding evaluated sample, retained only to derive exact
+   * screen-space velocity for the first frame of this batch. It is never
+   * rendered, and its scene digest must match the rendered snapshots.
+   */
+  previousSnapshot: EvaluatedSpatialSceneSchema.optional(),
   frameRate: SpatialFrameRateSchema,
+  effects: SpatialRenderEffectsBindingSchema.optional(),
   mode: SpatialRenderModeSchema,
   executionProfile: HtmlOverlayExecutionProfileSchema.optional(),
   preparedAssets: z.array(PreparedSpatialAssetSchema).max(SPATIAL_OVERLAY_LIMITS.preparedAssets).default([]),
@@ -165,6 +191,7 @@ export type SpatialRenderMode = DeepReadonly<z.infer<typeof SpatialRenderModeSch
 export type SpatialOverlayBatchInput = DeepReadonly<z.input<typeof SpatialOverlayBatchInputSchema>>;
 type PreparedRaster = Extract<PreparedSpatialAsset, { kind: "raster" }>;
 type PreparedGeometry = Extract<PreparedSpatialAsset, { kind: "geometry" }>;
+type PreparedParticleInstances = Extract<PreparedSpatialAsset, { kind: "particle-instances" }>;
 type PreparedSplat = Extract<PreparedSpatialAsset, { kind: "splat" }>;
 type LoweredSplat = Readonly<{ kind: "splat"; entityId: string; key: string; matrix: Mat4 }>;
 type Material = DeepReadonly<z.infer<typeof SpatialMaterialSchema>>;
@@ -248,6 +275,8 @@ type LoweredMesh = Readonly<{
   entityId: string;
   selectionId: number;
   matrix: Mat4;
+  /** Exact previous-sample model matrix for screen-space velocity; present only when the batch derives motion. */
+  previousMatrix?: Mat4;
   placement: SpatialEntity["placement"];
   geometry: Exclude<Extract<SpatialEntity, { kind: "mesh" }>["geometry"], { kind: "asset" }> | { readonly kind: "prepared"; readonly key: string; readonly primitive: number };
   material: Material;
@@ -296,6 +325,8 @@ function unsupported(capability: string, message: string): never {
 
 function preparedKey(asset: PreparedSpatialAsset): string {
   if (asset.kind === "splat") return `${asset.assetId}:${asset.entityId}:splat`;
+  if (asset.kind === "lut") return `lut:${asset.assetId}`;
+  if (asset.kind === "particle-instances") return `${asset.systemSha256}:${asset.entityId}:${asset.timeUs}`;
   return asset.kind === "raster"
     ? `${asset.assetId}:${asset.entityId}:${asset.timeUs === null ? "static" : String(asset.timeUs)}`
     : `${asset.assetId}:${asset.entityId}:${asset.nodeIndex === undefined ? "all" : String(asset.nodeIndex)}:${asset.timeUs === null ? "static" : String(asset.timeUs)}`;
@@ -370,14 +401,36 @@ export function createSpatialOverlayBatch(input: unknown) {
   const first = request.snapshots[0]!;
   const width = first.camera.projection.width;
   const height = first.camera.projection.height;
+  if (request.effects !== undefined && request.snapshots.some(snapshot => snapshot.sceneSha256 !== request.effects!.document.sceneSha256)) {
+    throw new RangeError("Render effects belong to a different evaluated scene source.");
+  }
+  const activeEffects = request.mode.kind === "beauty" ? request.effects : undefined;
+  const effectSteps = activeEffects?.document.renderPlan.postProcess?.steps ?? [];
+  const needsVelocity = request.mode.kind === "motion" || effectSteps.some(step => step.kind === "motion-blur");
+  const needsDepth = effectSteps.some(step => step.kind === "depth-of-field");
+  if (request.previousSnapshot !== undefined) {
+    if (!needsVelocity) throw new RangeError("A previous snapshot is only meaningful when the batch derives motion.");
+    if (request.previousSnapshot.sceneSha256 !== first.sceneSha256 || request.previousSnapshot.stateSha256 === first.stateSha256
+      || request.previousSnapshot.timeUs >= first.timeUs) {
+      throw new RangeError("The previous snapshot must precede this batch on the same scene source.");
+    }
+  }
+  if (request.mode.kind === "motion" && request.snapshots.length < 2 && request.previousSnapshot === undefined) {
+    throw new RangeError("Motion evidence requires a leading sample or at least two rendered samples.");
+  }
   const prepared = new Map<string, PreparedSpatialAsset>();
   const geometries = new Map<string, PreparedGeometry>();
+  const particles = new Map<string, PreparedParticleInstances>();
   const splats = new Map<string, PreparedSplat>();
   const splatResources = new Map<string, HtmlOverlayDeclaredResource>();
   const resources = new Map<string, HtmlOverlayDeclaredResource>();
   const textures = new Map<string, { readonly width: number; readonly height: number; readonly alpha: "straight" | "opaque" }>();
+  const lutBindings = new Map<string, { readonly resourceName: string; readonly size: number }>();
   const usedPrepared = new Set<string>();
   const bindTexture = (texture: NonNullable<Texture>): void => {
+    // Motion evidence draws velocity only; prepared raster bindings still count
+    // as used through bindAsset, but their pixels are never declared or served.
+    if (request.mode.kind === "motion") return;
     assertRasterResource(texture);
     const existing = resources.get(texture.resource.name);
     if (existing !== undefined && canonicalJson(existing) !== canonicalJson(texture.resource)) {
@@ -408,6 +461,32 @@ export function createSpatialOverlayBatch(input: unknown) {
         resources.set(asset.resource.name, asset.resource);
       }
     }
+    if (asset.kind === "lut") {
+      if (activeEffects === undefined || !activeEffects.document.renderPlan.postProcess?.steps.some(step => step.kind === "lut-grade" && step.assetId === asset.assetId)) {
+        throw new RangeError(`Prepared LUT ${asset.assetId} does not bind an active lut-grade step.`);
+      }
+      const size = asset.height;
+      if (asset.width !== size * size || size < 2 || size > 256) {
+        throw new RangeError(`Prepared LUT ${asset.assetId} must be an s²×s strip image encoding an s³ grid, with 2 ≤ s ≤ 256.`);
+      }
+      bindTexture(asset);
+      lutBindings.set(asset.assetId, { resourceName: asset.resource.name, size });
+      usedPrepared.add(key);
+      continue;
+    }
+    if (asset.kind === "particle-instances") {
+      if (activeEffects === undefined || asset.resource.transport !== "fetch" || asset.resource.mediaType !== "application/octet-stream"
+        || asset.resource.bytes !== asset.instanceCount * asset.strideBytes
+        || !request.snapshots.some(snapshot => snapshot.timeUs === asset.timeUs)
+        || !activeEffects.document.particleSystems.some(binding => binding.systemSha256 === asset.systemSha256 && binding.system.entityId === asset.entityId)) {
+        throw new RangeError("Prepared particle instances must bind an active system, exact sample, fixed layout, and immutable binary resource.");
+      }
+      const previous = resources.get(asset.resource.name);
+      if (previous !== undefined && canonicalJson(previous) !== canonicalJson(asset.resource)) throw new RangeError("Particle resource names must identify exact immutable bytes.");
+      particles.set(key, asset);
+      resources.set(asset.resource.name, asset.resource);
+      usedPrepared.add(key);
+    }
     if (asset.kind === "splat") {
       const expected = spatialSpzAllocationBounds(asset.facts.splats, asset.resource.bytes, asset.facts.decompressedBytes);
       if (asset.resource.mediaType !== "application/octet-stream" || asset.resource.bytes < 18 || expected.gpuBytesBound !== asset.facts.gpuBytesBound || expected.hostBytesBound !== asset.facts.hostBytesBound) throw new RangeError("Prepared SPZ allocation or binary resource evidence is invalid.");
@@ -422,12 +501,37 @@ export function createSpatialOverlayBatch(input: unknown) {
       if (request.mode.kind === "beauty") resources.set(asset.resource.name, asset.resource);
     }
   }
+  if (activeEffects !== undefined) {
+    for (const binding of activeEffects.document.particleSystems) {
+      for (const snapshot of request.snapshots) {
+        const key = `${binding.systemSha256}:${binding.system.entityId}:${snapshot.timeUs}`;
+        if (!particles.has(key)) throw new RangeError(`Particle system ${binding.system.entityId} has no exact prepared buffer at ${snapshot.timeUs}.`);
+      }
+    }
+    for (const step of effectSteps) {
+      if (step.kind === "lut-grade" && !lutBindings.has(step.assetId)) {
+        throw new RangeError(`lut-grade step has no exact prepared LUT for ${step.assetId}.`);
+      }
+    }
+  }
+  /** Screen-space velocity derives from exact per-sample transforms; the first frame of a batch falls back to its leading snapshot, then to zero motion. */
+  const previousModelMatrix = (entityId: string, currentWorld: Mat4, previousSnapshot: EvaluatedSpatialScene | undefined, local?: Mat4, previousLocal?: Mat4): Mat4 => {
+    const world = previousSnapshot === undefined ? currentWorld
+      : previousSnapshot.entities.find(entry => entry.entity.entityId === entityId)?.worldMatrix ?? currentWorld;
+    return local === undefined ? world : multiplyTransforms(world, previousLocal ?? local);
+  };
+  const previousPrimitiveMatrix = (baseKey: string, primitive: number, previousTimeUs: number | undefined, fallback: Mat4): Mat4 => {
+    if (previousTimeUs === undefined) return fallback;
+    const asset = prepared.get(`${baseKey}:${previousTimeUs}`);
+    return asset?.kind === "geometry" && asset.primitives[primitive] !== undefined ? asset.primitives[primitive].matrix : fallback;
+  };
   const frameEvidence: Array<{
     readonly sceneSha256: string; readonly stateSha256: string; readonly viewSha256: string; readonly timeUs: number;
     readonly camera: SpatialCamera;
     readonly objects: ReadonlyArray<{ readonly entityId: string; readonly selectionId: number; readonly representation: string; readonly placement: "world" | "view"; readonly assetManifestSha256?: string }>;
   }> = [];
-  const frames = request.snapshots.map((snapshot: EvaluatedSpatialScene) => {
+  const frames = request.snapshots.map((snapshot: EvaluatedSpatialScene, snapshotIndex: number) => {
+    const previousSnapshot = snapshotIndex > 0 ? request.snapshots[snapshotIndex - 1]! : request.previousSnapshot;
     if (snapshot.fog?.kind === "height") unsupported("height-fog", "Height-dependent fog is not representable by Three FogExp2; use linear fog until a qualified height-fog lowering exists.");
     if (snapshot.camera.projection.width !== width || snapshot.camera.projection.height !== height) {
       throw new RangeError("A spatial overlay batch requires identical calibrated output dimensions.");
@@ -444,6 +548,7 @@ export function createSpatialOverlayBatch(input: unknown) {
       if (manifest === undefined) throw new RangeError(`Snapshot has no manifest for ${assetId}.`);
       const asset = prepared.get(key);
       if (asset === undefined) unsupported(`prepare-${manifest.interpretation.kind}`, `No exact prepared representation for ${key}.`);
+      if (asset.kind === "particle-instances") throw new RangeError(`Prepared particle binding cannot substitute scene asset ${assetId}.`);
       if (asset.assetManifestSha256 !== manifestDigests[assetId]) {
         throw new RangeError(`Prepared asset manifest identity is stale for ${assetId}.`);
       }
@@ -469,11 +574,11 @@ export function createSpatialOverlayBatch(input: unknown) {
           evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation: "spz-static-radiance; authored-wrapper-id; no-depth-or-object-id", placement: "world", assetManifestSha256: preparedSplat.assetManifestSha256 });
           continue;
         }
-        if (request.mode.kind !== "object-id") unsupported("splat-aov", "Splat axial-depth is unsupported; retained colliders are approximate evidence, not pixel truth.");
-        // Object-ID lowers the splat's bounding-box proxy under its normal
-        // selection code — approximate coverage, never splat pixel truth. The
-        // box derives from the prepared decoded-position bounds, so a splat
-        // without trusted bounds has no representation to bind.
+        if (request.mode.kind !== "object-id" && request.mode.kind !== "motion") unsupported("splat-aov", "Splat axial-depth is unsupported; retained colliders are approximate evidence, not pixel truth.");
+        // Object-ID and motion lower the splat's bounding-box proxy under its
+        // normal selection code — approximate coverage, never splat pixel
+        // truth. The box derives from the prepared decoded-position bounds, so
+        // a splat without trusted bounds has no representation to bind.
         const preparedSplat = bindAsset(entity.assetId, key), manifest = manifests.get(entity.assetId)!;
         if (preparedSplat.kind !== "splat" || manifest.interpretation.kind !== "splat" || manifest.interpretation.format !== "spz" || preparedSplat.resource.sha256 !== manifest.payload.sha256 || preparedSplat.resource.bytes !== manifest.payload.bytes) throw new RangeError("Splat resource does not match the exact source payload.");
         if (entry.visible && entity.placement.kind === "world") {
@@ -482,8 +587,10 @@ export function createSpatialOverlayBatch(input: unknown) {
           const size: [number, number, number] = [bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1], bounds.max[2] - bounds.min[2]];
           const material: Material = { kind: "unlit", color: "#ffffff", opacity: 1 };
           assertCoverage(request.mode, material, undefined);
+          const proxyLocal = composeTransform({ position: center, rotation: [0, 0, 0, 1], scale: [1, 1, 1] });
           objects.push({ kind: "mesh", entityId: entity.entityId, selectionId: entry.selectionId,
-            matrix: multiplyTransforms(entry.worldMatrix, composeTransform({ position: center, rotation: [0, 0, 0, 1], scale: [1, 1, 1] })),
+            matrix: multiplyTransforms(entry.worldMatrix, proxyLocal),
+            ...(needsVelocity ? { previousMatrix: previousModelMatrix(entity.entityId, entry.worldMatrix, previousSnapshot, proxyLocal) } : {}),
             placement: entity.placement, geometry: { kind: "box", size }, material,
             uvScale: [1, 1], uvOffset: [0, 0], surfaceScale: [1, 1], flipViewUv: false, doubleSided: true, alphaCutoff: 0 });
           evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation: SPATIAL_SPLAT_PROXY_REPRESENTATION, placement: "world", assetManifestSha256: preparedSplat.assetManifestSha256 });
@@ -516,6 +623,7 @@ export function createSpatialOverlayBatch(input: unknown) {
       // Capability checks include invisible/off-camera entities, so changing
       // visibility or cameras cannot discover an unplanned loader during render.
       const base = { kind: "mesh" as const, entityId: entity.entityId, selectionId: entry.selectionId, matrix: entry.worldMatrix, placement: entity.placement,
+        ...(needsVelocity ? { previousMatrix: previousModelMatrix(entity.entityId, entry.worldMatrix, previousSnapshot) } : {}),
         ...(entity.kind === "mesh" && entity.castShadow !== undefined ? { castShadow: entity.castShadow } : {}),
         ...(entity.kind === "mesh" && entity.receiveShadow !== undefined ? { receiveShadow: entity.receiveShadow } : {}) };
       const unitFit = { uvScale: [1, 1] as const, uvOffset: [0, 0] as const, surfaceScale: [1, 1] as const, flipViewUv: false, doubleSided: true, alphaCutoff: 0 };
@@ -548,6 +656,8 @@ export function createSpatialOverlayBatch(input: unknown) {
             }
             assertCoverage(request.mode, material, primitive.texture, primitive.alphaMode);
             return { ...base, ...unitFit, geometry: { kind: "prepared", key, primitive: index }, material,
+              ...(needsVelocity ? { previousMatrix: previousModelMatrix(entity.entityId, entry.worldMatrix, previousSnapshot, primitive.matrix,
+                previousPrimitiveMatrix(baseKey, index, previousSnapshot?.timeUs, primitive.matrix)) } : {}),
               doubleSided: primitive.doubleSided ?? true, alphaCutoff: primitive.alphaCutoff ?? 0,
               ...(primitive.alphaMode === undefined ? {} : { alphaMode: primitive.alphaMode }),
               ...(primitive.linearColor === undefined ? {} : { linearColor: primitive.linearColor }),
@@ -613,6 +723,15 @@ export function createSpatialOverlayBatch(input: unknown) {
       evidence.push({ entityId: entity.entityId, selectionId: entry.selectionId, representation, placement: entity.placement.kind,
         ...(assetManifestSha256 === undefined ? {} : { assetManifestSha256 }) });
     }
+    const frameParticles = activeEffects?.document.particleSystems.flatMap(binding => {
+      const target = snapshot.entities.find(entry => entry.entity.entityId === binding.system.entityId);
+      if (target === undefined) throw new RangeError(`Particle system target ${binding.system.entityId} is absent from the evaluated scene.`);
+      if (target.entity.placement.kind !== "world") unsupported("particle-placement", "Particle systems require world-placed target entities.");
+      const key = `${binding.systemSha256}:${binding.system.entityId}:${snapshot.timeUs}`;
+      const preparedInstances = particles.get(key)!;
+      return target.visible && preparedInstances.instanceCount > 0 ? [{ key, entityId: binding.system.entityId, matrix: target.worldMatrix,
+        ...(needsVelocity ? { previousMatrix: previousModelMatrix(binding.system.entityId, target.worldMatrix, previousSnapshot) } : {}) }] : [];
+    }) ?? [];
     if (objects.reduce((count, object) => count + (object.kind === "environment" ? 1 : 0), 0) > 1) {
       throw new RangeError("A frame may show at most one visible environment entity; gate alternates through authored visibility.");
     }
@@ -624,9 +743,17 @@ export function createSpatialOverlayBatch(input: unknown) {
     if (meshes.length > SPATIAL_OVERLAY_LIMITS.drawCallsPerFrame || triangles > SPATIAL_OVERLAY_LIMITS.trianglesPerFrame) {
       throw new RangeError("Spatial overlay exceeds its per-frame draw-call or triangle budget.");
     }
+    if (request.mode.kind === "motion") {
+      const entityId = request.mode.entityId;
+      if (!meshes.some(mesh => mesh.entityId === entityId) && !frameParticles.some(item => item.entityId === entityId)) {
+        throw new RangeError(`Motion target ${entityId} has no renderable velocity representation at ${snapshot.timeUs}.`);
+      }
+    }
     frameEvidence.push({ sceneSha256: snapshot.sceneSha256, stateSha256: snapshot.stateSha256, viewSha256: snapshot.viewSha256,
       timeUs: snapshot.timeUs, camera: snapshot.camera, objects: evidence });
-    return { camera: calibratedCamera(snapshot.camera), objects, ...(request.executionProfile === "three-spark-webgl2-hardware-v1" ? { timeUs: snapshot.timeUs } : {}), ...(snapshot.fog === undefined ? {} : { fog: snapshot.fog }) };
+    return { camera: calibratedCamera(snapshot.camera), timeUs: snapshot.timeUs,
+      ...(needsVelocity ? { previousCamera: previousSnapshot === undefined ? calibratedCamera(snapshot.camera) : calibratedCamera(previousSnapshot.camera) } : {}),
+      objects, particles: frameParticles, ...(snapshot.fog === undefined ? {} : { fog: snapshot.fog }) };
   });
   if (usedPrepared.size !== prepared.size) throw new RangeError("Prepared assets must be referenced by this exact batch; unused bindings are rejected.");
   const declaredResources = HtmlOverlayDeclaredResourcesSchema.parse([...resources.values()]);
@@ -641,8 +768,14 @@ export function createSpatialOverlayBatch(input: unknown) {
   const payload = {
     mode: request.mode,
     frames,
+    ...(activeEffects === undefined ? {} : { effects: {
+      documentSha256: activeEffects.documentSha256,
+      renderPlanSha256: activeEffects.document.renderPlanSha256,
+      steps: effectSteps.map(step => step.kind === "lut-grade" ? { ...step, lut: lutBindings.get(step.assetId)! } : step),
+    } }),
     geometry: Object.fromEntries([...geometries].filter(([, asset]) => asset.resource === undefined).map(([key, asset]) => [key, asset.primitives])),
     geometryResources: [...geometries].filter(([, asset]) => asset.resource !== undefined).map(([key, asset]) => ({ key, resource: asset.resource!, url: htmlOverlayAssetLocalUrl(asset.resource!) })),
+    particleBuffers: [...particles].map(([key, asset]) => ({ key, instanceCount: asset.instanceCount, resource: asset.resource, strideBytes: asset.strideBytes, url: htmlOverlayAssetLocalUrl(asset.resource) })),
     textures: declaredResources.filter(resource => textures.has(resource.name)).map(resource => ({ ...textures.get(resource.name)!, name: resource.name, url: htmlOverlayAssetLocalUrl(resource) })),
     ...(request.executionProfile === "three-spark-webgl2-hardware-v1" ? { splatKernel, splats: [...splats].map(([key, asset]) => ({ key, ...asset, url: htmlOverlayAssetLocalUrl(asset.resource) })) } : {}),
   };
@@ -663,9 +796,44 @@ export function createSpatialOverlayBatch(input: unknown) {
     html, libraries, parameters: {}, resources: declaredResources, seed: 0,
     timing: { fps: 1, durationUs: frames.length * 1_000_000 },
   });
+  const preparation: Array<{
+    key: string; assetManifestSha256?: string; instanceCount?: number; resourceSha256?: string; systemSha256?: string; timeUs?: number;
+    sourceTimeUs?: number; sourceFrameIndex?: number; sourcePresentationTimeUs?: number; sourcePts?: number;
+    sourceTimeBase?: { numerator: string; denominator: string }; sourceTimestamp?: string; sourceExactTimeUs?: { numerator: string; denominator: string };
+  }> = request.preparedAssets.map(asset => asset.kind === "particle-instances" ? {
+    key: preparedKey(asset), instanceCount: asset.instanceCount, resourceSha256: asset.resource.sha256,
+    systemSha256: asset.systemSha256, timeUs: asset.timeUs,
+  } : { key: preparedKey(asset), assetManifestSha256: asset.assetManifestSha256,
+    ...(asset.kind === "raster" && asset.sourceTimeUs !== undefined ? { sourceTimeUs: asset.sourceTimeUs } : {}),
+    ...(asset.kind === "raster" && asset.sourceFrameIndex !== undefined ? { sourceFrameIndex: asset.sourceFrameIndex } : {}),
+    ...(asset.kind === "raster" && asset.sourcePresentationTimeUs !== undefined ? { sourcePresentationTimeUs: asset.sourcePresentationTimeUs } : {}),
+    ...(asset.kind === "raster" && asset.sourcePts !== undefined ? { sourcePts: asset.sourcePts } : {}),
+    ...(asset.kind === "raster" && asset.sourceTimeBase !== undefined ? { sourceTimeBase: asset.sourceTimeBase } : {}),
+    ...(asset.kind === "raster" && asset.sourceTimestamp !== undefined ? { sourceTimestamp: asset.sourceTimestamp } : {}),
+    ...(asset.kind === "raster" && asset.sourceExactTimeUs !== undefined ? { sourceExactTimeUs: asset.sourceExactTimeUs } : {}),
+  });
   const metadataValue = {
     kind: "slopcamera.spatial-overlay-batch", schemaVersion: 1,
     renderer: "three-webgl2-snapshot-v1", mode: request.mode,
+    ...(request.effects === undefined ? {} : { effects: {
+      applied: activeEffects !== undefined,
+      documentSha256: request.effects.documentSha256,
+      renderPlanSha256: request.effects.document.renderPlanSha256,
+      stepKinds: request.effects.document.renderPlan.postProcess?.steps.map(step => step.kind) ?? [],
+      ...(activeEffects === undefined ? {} : { postProcess: {
+        pipeline: "ordered-fullscreen-passes; premultiplied-linear-half-float-source; straight-alpha-working-domain; srgb-premultiplied-output",
+        ...(lutBindings.size === 0 ? {} : { lutDomain: "linear-clamped-0..1; strip-s2-by-s-3d-lut; two-slice-linear",
+          luts: Object.fromEntries([...lutBindings].map(([assetId, binding]) => [assetId, binding])) }),
+        ...(needsDepth ? { depthSource: "beauty-depth-buffer; world-surfaces-only; view-overlays-unchanged" } : {}),
+        ...(needsVelocity ? { velocitySource: "per-sample-rigid-transform-delta; previous-sample-or-leading-snapshot; first-sample-zero" } : {}),
+      } }),
+    } }),
+    ...(request.mode.kind === "motion" ? { motion: {
+      entityId: request.mode.entityId, motionScale: request.mode.motionScale,
+      encoding: "rg16un; R,G=x hi/lo; B,A=y hi/lo; alpha=hit",
+      source: "per-sample-rigid-transform-delta; previous-sample-or-leading-snapshot; first-sample-zero",
+      packing: "velocity_px/motionScale*0.5+0.5 clamped to [0,1]; 16-bit unsigned per axis",
+    } } : {}),
     ...(request.executionProfile === undefined ? {} : { executionProfile: request.executionProfile }),
     ...(sparkProfile ? { splatProfile: { adapter: "spark-2.1.0-spz-v2-v3-ext-v1", kernel: splatKernel, lod: false, sorting: "await-explicit-camera-update", readback: "synchronous-exact-MRT-buffer-before-worker-sort", color: "srgb-radiance-to-linear", depth: "unsupported", objectId: "unsupported", collider: "approximate-retained-only", splats: totalSplats } } : {}),
     frameRate: request.frameRate,
@@ -683,15 +851,7 @@ export function createSpatialOverlayBatch(input: unknown) {
     },
     cameraConvention: "camera-to-world; column-major; XYZW; local-minus-Z; top-left-image-boundary; pixel-centers-i+0.5,j+0.5",
     viewConvention: "top-left-image-boundary; X-right,Y-down; normalized-XY-scaled-by-output-dimensions; order-after-world",
-    preparation: request.preparedAssets.map(asset => ({ key: preparedKey(asset), assetManifestSha256: asset.assetManifestSha256,
-      ...(asset.kind === "raster" && asset.sourceTimeUs !== undefined ? { sourceTimeUs: asset.sourceTimeUs } : {}),
-      ...(asset.kind === "raster" && asset.sourceFrameIndex !== undefined ? { sourceFrameIndex: asset.sourceFrameIndex } : {}),
-      ...(asset.kind === "raster" && asset.sourcePresentationTimeUs !== undefined ? { sourcePresentationTimeUs: asset.sourcePresentationTimeUs } : {}),
-      ...(asset.kind === "raster" && asset.sourcePts !== undefined ? { sourcePts: asset.sourcePts } : {}),
-      ...(asset.kind === "raster" && asset.sourceTimeBase !== undefined ? { sourceTimeBase: asset.sourceTimeBase } : {}),
-      ...(asset.kind === "raster" && asset.sourceTimestamp !== undefined ? { sourceTimestamp: asset.sourceTimestamp } : {}),
-      ...(asset.kind === "raster" && asset.sourceExactTimeUs !== undefined ? { sourceExactTimeUs: asset.sourceExactTimeUs } : {}),
-    })),
+    preparation,
     costs: { requestBytes: captured.bytes, htmlBytes: new TextEncoder().encode(html).byteLength,
       decodedTexturePixels, resourceBytes: declaredResources.reduce((sum, resource) => sum + resource.bytes, 0),
       note: sparkProfile ? "One isolated browser per batch; retained SPZ sources load once, each exact camera sample awaits full-resolution sort. Admission bounds are not measured GPU performance." : "Each batch uses one isolated browser render; scenes and frame-local GPU objects are rebuilt for every selected snapshot. These are admission counts, not measured GPU performance." },
@@ -700,6 +860,14 @@ export function createSpatialOverlayBatch(input: unknown) {
   const metadata = createBoundedJsonSnapshot(metadataValue, SPATIAL_OVERLAY_LIMITS.requestBytes, "Spatial overlay metadata");
   return Object.freeze({ authoring: Object.freeze(authoring), metadata: metadata.value as unknown as DeepReadonly<typeof metadataValue>, metadataSha256: metadata.sha256 });
 }
+
+/** Fixed golden-spiral gather taps; computed on the host so generated shaders contain no transcendentals. */
+const DOF_TAPS = Object.freeze(Array.from({ length: 16 }, (_, index) => {
+  const angle = index * 2.399_963_229_728_653;
+  const radius = Math.sqrt((index + 0.5) / 16);
+  return `vec2(${(Math.cos(angle) * radius).toFixed(7)},${(Math.sin(angle) * radius).toFixed(7)})`;
+}).join(","));
+const BLOOM_WEIGHTS = Object.freeze([0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162].map(weight => weight.toFixed(10)).join(","));
 
 function spatialDocument(payload: string): string {
   return `<!doctype html>
@@ -713,19 +881,41 @@ const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:false,premul
 renderer.setPixelRatio(1);renderer.setSize(SlopcameraOverlay.width,SlopcameraOverlay.height,false);
 renderer.setClearColor(0x000000,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.NoToneMapping;renderer.autoClear=false;renderer.shadowMap.enabled=input.mode.kind==="beauty";renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-let beautyTarget=null,outputScene=null,outputCamera=null,outputGeometry=null,outputMaterial=null;
-if(input.mode.kind==="beauty"){
-  if(!renderer.extensions.has("EXT_color_buffer_float"))throw new Error("Spatial SDR beauty requires renderable half-float linear color for correct alpha compositing.");
-  beautyTarget=new THREE.WebGLRenderTarget(SlopcameraOverlay.width,SlopcameraOverlay.height,{type:THREE.HalfFloatType,format:THREE.RGBAFormat,colorSpace:THREE.LinearSRGBColorSpace,minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:true,stencilBuffer:false});
+const mode=input.mode;const postSteps=input.effects?input.effects.steps:[];
+const isMotion=mode.kind==="motion";
+const needsVelocity=isMotion||postSteps.some(step=>step.kind==="motion-blur");
+const needsDepth=postSteps.some(step=>step.kind==="depth-of-field");
+const needsBright=postSteps.some(step=>step.kind==="bloom"||step.kind==="flare");
+const hasPost=postSteps.length>0;
+let beautyTarget=null,velocityTarget=null,postA=null,postB=null,brightA=null,brightB=null,outputScene=null,outputCamera=null,outputGeometry=null,outputMaterial=null,postScene=null,postMesh=null,postOutputMaterial=null;
+const resolution=new THREE.Vector2(SlopcameraOverlay.width,SlopcameraOverlay.height);
+const postVertex="precision highp float;attribute vec3 position;attribute vec2 uv;varying vec2 sampleUv;void main(){sampleUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}";
+const toSrgbFn="vec3 toSrgb(vec3 v){return mix(12.92*v,1.055*pow(max(v,vec3(0.0)),vec3(1.0/2.4))-0.055,step(vec3(0.0031308),v));}";
+const postHeader="precision highp float;uniform sampler2D source;uniform vec2 resolution;varying vec2 sampleUv;";
+const makePostTarget=(w,h,depth)=>new THREE.WebGLRenderTarget(w,h,{type:THREE.HalfFloatType,format:THREE.RGBAFormat,colorSpace:THREE.LinearSRGBColorSpace,minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:depth,stencilBuffer:false});
+if(mode.kind==="beauty"||isMotion){
+  if(!renderer.extensions.has("EXT_color_buffer_float"))throw new Error("Spatial floating-point passes require renderable half-float color.");
+  if(mode.kind==="beauty"){
+    beautyTarget=makePostTarget(SlopcameraOverlay.width,SlopcameraOverlay.height,true);
+    if(needsDepth){beautyTarget.depthTexture=new THREE.DepthTexture(SlopcameraOverlay.width,SlopcameraOverlay.height);beautyTarget.depthTexture.type=THREE.UnsignedIntType;}
+  }
+  if(needsVelocity)velocityTarget=makePostTarget(SlopcameraOverlay.width,SlopcameraOverlay.height,true);
+  if(hasPost){postA=makePostTarget(SlopcameraOverlay.width,SlopcameraOverlay.height,false);postB=makePostTarget(SlopcameraOverlay.width,SlopcameraOverlay.height,false);}
+  if(needsBright){const hw=Math.max(1,SlopcameraOverlay.width>>1),hh=Math.max(1,SlopcameraOverlay.height>>1);brightA=makePostTarget(hw,hh,false);brightB=makePostTarget(hw,hh,false);}
   outputGeometry=new THREE.PlaneGeometry(2,2);
   outputMaterial=new THREE.RawShaderMaterial({depthTest:false,depthWrite:false,blending:THREE.NoBlending,transparent:false,toneMapped:false,dithering:false,
-    uniforms:{linearPremultiplied:{value:beautyTarget.texture}},
-    vertexShader:"precision highp float;attribute vec3 position;attribute vec2 uv;varying vec2 sampleUv;void main(){sampleUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}",
-    fragmentShader:"precision highp float;uniform sampler2D linearPremultiplied;varying vec2 sampleUv;vec3 toSrgb(vec3 v){return mix(12.92*v,1.055*pow(max(v,vec3(0.0)),vec3(1.0/2.4))-0.055,step(vec3(0.0031308),v));}void main(){vec4 c=texture2D(linearPremultiplied,sampleUv);if(c.a<=0.0){gl_FragColor=vec4(0.0);return;}gl_FragColor=vec4(toSrgb(c.rgb/c.a)*c.a,c.a);}",
+    uniforms:{linearPremultiplied:{value:beautyTarget?beautyTarget.texture:null}},
+    vertexShader:postVertex,
+    fragmentShader:"precision highp float;uniform sampler2D linearPremultiplied;varying vec2 sampleUv;"+toSrgbFn+"void main(){vec4 c=texture2D(linearPremultiplied,sampleUv);if(c.a<=0.0){gl_FragColor=vec4(0.0);return;}gl_FragColor=vec4(toSrgb(c.rgb/c.a)*c.a,c.a);}",
+  });
+  postOutputMaterial=new THREE.RawShaderMaterial({depthTest:false,depthWrite:false,blending:THREE.NoBlending,transparent:false,toneMapped:false,dithering:false,
+    uniforms:{source:{value:null},resolution:{value:resolution}},vertexShader:postVertex,
+    fragmentShader:postHeader+toSrgbFn+"void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(toSrgb(max(c.rgb,vec3(0.0)))*c.a,c.a);}",
   });
   outputScene=new THREE.Scene();const outputMesh=new THREE.Mesh(outputGeometry,outputMaterial);outputMesh.frustumCulled=false;outputScene.add(outputMesh);outputCamera=new THREE.Camera();
+  postScene=new THREE.Scene();postMesh=new THREE.Mesh(outputGeometry);postMesh.frustumCulled=false;postScene.add(postMesh);
 }
-const textures=new Map();let disposed=false;let contextFailure=null;
+const textures=new Map();const particleBuffers=new Map();let disposed=false;let contextFailure=null;
 const loseContext=event=>{event.preventDefault();contextFailure=new Error("Spatial WebGL context was lost.");};
 canvas.addEventListener("webglcontextlost",loseContext);
 const initialization=(async()=>{
@@ -744,6 +934,17 @@ const initialization=(async()=>{
     }
     if(disposed)throw new Error("Spatial renderer was disposed during geometry preparation.");
     input.geometry[item.key]=primitives;
+  }
+  for(const item of input.particleBuffers){
+    const response=await fetch(item.url);if(!response.ok)throw new Error("Prepared particle buffer is unavailable.");
+    const bytes=await response.arrayBuffer();
+    if(bytes.byteLength!==item.resource.bytes||bytes.byteLength!==item.instanceCount*item.strideBytes)throw new Error("Prepared particle buffer length changed.");
+    const hash=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+    const sha256=Array.from(hash,value=>value.toString(16).padStart(2,"0")).join("");
+    if(sha256!==item.resource.sha256)throw new Error("Prepared particle buffer digest changed.");
+    const view=new DataView(bytes);const positions=new Float32Array(item.instanceCount*3);const colors=new Float32Array(item.instanceCount*3);const sizes=new Float32Array(item.instanceCount);const opacity=new Float32Array(item.instanceCount);
+    for(let index=0;index<item.instanceCount;index++){const offset=index*item.strideBytes;positions.set([view.getFloat32(offset,true),view.getFloat32(offset+4,true),view.getFloat32(offset+8,true)],index*3);sizes[index]=view.getFloat32(offset+32,true);opacity[index]=view.getFloat32(offset+36,true);colors.set([view.getFloat32(offset+40,true),view.getFloat32(offset+44,true),view.getFloat32(offset+48,true)],index*3);}
+    particleBuffers.set(item.key,{colors,opacity,positions,sizes});
   }
   for(const item of input.textures){
     const texture=await new THREE.TextureLoader().loadAsync(item.url);
@@ -850,11 +1051,108 @@ function makeCamera(data){
   if(data.lens){camera.filmGauge=data.lens.sensorWidthMm;camera.focus=data.lens.focusDistanceM??10;camera.userData.slopcameraLens=Object.freeze({...data.lens});}
   camera.updateMatrixWorld(true);return camera;
 }
+const postMaterial=(fragment,uniforms)=>new THREE.RawShaderMaterial({depthTest:false,depthWrite:false,blending:THREE.NoBlending,transparent:false,toneMapped:false,dithering:false,vertexShader:postVertex,fragmentShader:fragment,uniforms});
+const velocityVertex="precision highp float;uniform mat4 currentMvp;uniform mat4 previousMvp;uniform vec2 resolution;attribute vec3 position;varying vec2 vPx;void main(){vec4 c=currentMvp*vec4(position,1.0);vec4 p=previousMvp*vec4(position,1.0);vPx=(c.xy/max(c.w,0.000001)-p.xy/max(p.w,0.000001))*resolution*0.5;gl_Position=c;}";
+const velocityPointVertex="precision highp float;uniform mat4 currentMvp;uniform mat4 previousMvp;uniform mat4 currentMv;uniform mat4 projection;uniform vec2 resolution;uniform float viewportHeight;uniform bool perspective;attribute vec3 position;attribute float particleSize;varying vec2 vPx;void main(){vec4 c=currentMvp*vec4(position,1.0);vec4 p=previousMvp*vec4(position,1.0);vPx=(c.xy/max(c.w,0.000001)-p.xy/max(p.w,0.000001))*resolution*0.5;gl_Position=c;vec4 mv=currentMv*vec4(position,1.0);float scale=0.5*viewportHeight*projection[1][1];gl_PointSize=max(1.0,particleSize*scale/(perspective?max(0.000001,-mv.z):1.0));}";
+const velocityFragment="precision highp float;varying vec2 vPx;void main(){gl_FragColor=vec4(vPx,0.0,1.0);}";
+const velocityPointFragment="precision highp float;varying vec2 vPx;void main(){vec2 p=gl_PointCoord*2.0-1.0;float coverage=clamp((1.0-dot(p,p))*8.0,0.0,1.0);if(coverage<=0.0)discard;gl_FragColor=vec4(vPx,0.0,coverage);}";
+const viewProjection=cam=>new THREE.Matrix4().fromArray(cam.projection).multiply(new THREE.Matrix4().fromArray(cam.cameraToWorld).invert());
+const buildVelocityScene=(frame,track)=>{
+  const scene=new THREE.Scene();
+  const curVP=viewProjection(frame.camera),prevVP=viewProjection(frame.previousCamera);
+  const curView=new THREE.Matrix4().fromArray(frame.camera.cameraToWorld).invert();
+  const projection=new THREE.Matrix4().fromArray(frame.camera.projection);
+  const add=(geometry,matrix,previous,points)=>{
+    const model=new THREE.Matrix4().fromArray(matrix),previousModel=new THREE.Matrix4().fromArray(previous??matrix);
+    const uniforms={resolution:{value:resolution},currentMvp:{value:curVP.clone().multiply(model)},previousMvp:{value:prevVP.clone().multiply(previousModel)}};
+    const material=points?track(new THREE.RawShaderMaterial({vertexShader:velocityPointVertex,fragmentShader:velocityPointFragment,depthTest:true,depthWrite:true,transparent:false,blending:THREE.NoBlending,toneMapped:false,dithering:false,
+      uniforms:{...uniforms,currentMv:{value:curView.clone().multiply(model)},projection:{value:projection},viewportHeight:{value:SlopcameraOverlay.height},perspective:{value:frame.camera.kind==="perspective"}}}))
+      :track(new THREE.RawShaderMaterial({vertexShader:velocityVertex,fragmentShader:velocityFragment,depthTest:true,depthWrite:true,transparent:false,blending:THREE.NoBlending,toneMapped:false,dithering:false,side:THREE.DoubleSide,uniforms}));
+    const drawable=points?new THREE.Points(geometry,material):new THREE.Mesh(geometry,material);
+    drawable.frustumCulled=false;scene.add(drawable);
+  };
+  for(const object of frame.objects){
+    if(object.kind!=="mesh"||object.placement.kind!=="world")continue;
+    if(isMotion&&object.entityId!==mode.entityId)continue;
+    // Prepared primitives apply their local matrix after the world transform in
+    // the beauty path, while previousMatrix already carries prevWorld*prevPrimitive.
+    const primitive=object.geometry.kind==="prepared"?new THREE.Matrix4().fromArray(input.geometry[object.geometry.key][object.geometry.primitive].matrix):null;
+    const current=primitive===null?object.matrix:new THREE.Matrix4().fromArray(object.matrix).multiply(primitive).toArray();
+    add(makeGeometry(object,track),current,object.previousMatrix??current,false);
+  }
+  for(const item of frame.particles){
+    if(isMotion&&item.entityId!==mode.entityId)continue;
+    const data=particleBuffers.get(item.key);if(!data)continue;
+    const geometry=track(new THREE.BufferGeometry());
+    geometry.setAttribute("position",new THREE.BufferAttribute(data.positions,3));
+    geometry.setAttribute("particleSize",new THREE.BufferAttribute(data.sizes,1));
+    add(geometry,item.matrix,item.previousMatrix,true);
+  }
+  return scene;
+};
+const unpremultiplyFragment=postHeader+"void main(){vec4 c=texture2D(source,sampleUv);if(c.a<=0.0){gl_FragColor=vec4(0.0);return;}gl_FragColor=vec4(c.rgb/c.a,c.a);}";
+const buildStepPasses=(step,frame,index,track,read)=>{
+  const base={source:{value:read},resolution:{value:resolution}};
+  const u=extra=>Object.assign(base,extra);
+  switch(step.kind){
+    case "tone-map":return[{target:"write",material:track(postMaterial(postHeader+"uniform float exposure;uniform float whitePoint;void main(){vec4 c=texture2D(source,sampleUv);vec3 x=max(c.rgb,vec3(0.0))*exp2(exposure);float w2=whitePoint*whitePoint;gl_FragColor=vec4(x*(1.0+x/w2)/(1.0+x),c.a);}",u({exposure:{value:step.exposure},whitePoint:{value:step.whitePoint}})))}];
+    case "vignette":return[{target:"write",material:track(postMaterial(postHeader+"uniform float intensity;uniform float radius;void main(){vec4 c=texture2D(source,sampleUv);float d=length((sampleUv-0.5)*1.41421356);gl_FragColor=vec4(c.rgb*(1.0-intensity*smoothstep(radius,1.0,d)),c.a);}",u({intensity:{value:step.intensity},radius:{value:step.radius}})))}];
+    case "chromatic-aberration":return[{target:"write",material:track(postMaterial(postHeader+"uniform float offsetPixels;uniform float radialFalloff;void main(){vec2 dir=sampleUv-0.5;float len=max(length(dir),0.000001);vec2 off=dir/len*offsetPixels*pow(len*1.41421356,radialFalloff)/resolution;vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(texture2D(source,sampleUv+off).r,c.g,texture2D(source,sampleUv-off).b,c.a);}",u({offsetPixels:{value:step.offsetPixels},radialFalloff:{value:step.radialFalloff}})))}];
+    case "grain":return[{target:"write",material:track(postMaterial(postHeader+"uniform float intensity;uniform float seed;float grainHash(vec2 p){vec3 q=fract(vec3(p.xyx)*0.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}void main(){vec4 c=texture2D(source,sampleUv);float n=grainHash(floor(sampleUv*resolution)+vec2(seed,seed*1.618034));gl_FragColor=vec4(max(c.rgb+vec3((n-0.5)*intensity),vec3(0.0)),c.a);}",u({intensity:{value:step.intensity},seed:{value:step.seed+frame.timeUs%7919}})))}];
+    case "depth-of-field":return[{target:"write",material:track(postMaterial(postHeader+"uniform sampler2D depthTex;uniform float nearClip;uniform float farClip;uniform float focusDistance;uniform float aperture;uniform float focalLength;uniform float sensorWidth;uniform bool isPerspective;const vec2 dofTaps[16]=vec2[16](${DOF_TAPS});float viewZ(float d){return isPerspective?nearClip*farClip/max(farClip-d*(farClip-nearClip),0.000001):nearClip+d*(farClip-nearClip);}void main(){vec4 c=texture2D(source,sampleUv);float z=viewZ(texture2D(depthTex,sampleUv).x);float coc=clamp(aperture*focalLength*abs(focusDistance-z)/(focusDistance*max(z,0.0001))*resolution.x/sensorWidth,0.0,32.0);vec3 acc=c.rgb;for(int i=0;i<16;i++){acc+=texture2D(source,sampleUv+dofTaps[i]*coc/resolution).rgb;}gl_FragColor=vec4(acc/17.0,c.a);}",u({depthTex:{value:beautyTarget.depthTexture},nearClip:{value:frame.camera.near},farClip:{value:frame.camera.far},focusDistance:{value:step.focusDistance},aperture:{value:step.aperture},focalLength:{value:step.focalLength},sensorWidth:{value:frame.camera.lens?frame.camera.lens.sensorWidthMm:36},isPerspective:{value:frame.camera.kind==="perspective"}})))}];
+    case "motion-blur":return[{target:"write",material:track(postMaterial(postHeader+"uniform sampler2D velocityTex;uniform int samples;uniform float shutter;void main(){vec4 c=texture2D(source,sampleUv);vec2 v=texture2D(velocityTex,sampleUv).xy*shutter/resolution;vec3 acc=c.rgb;float n=1.0;for(int i=1;i<64;i++){if(i>=samples)break;float t=float(i)/float(samples-1)-0.5;acc+=texture2D(source,sampleUv+v*t).rgb;n+=1.0;}gl_FragColor=vec4(acc/n,c.a);}",u({velocityTex:{value:velocityTarget.texture},samples:{value:step.samples},shutter:{value:step.shutterAngle/360}})))}];
+    case "bloom":{
+      const bright=postHeader+"uniform float threshold;void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(max(c.rgb-vec3(threshold),vec3(0.0)),1.0);}";
+      const blur=postHeader+"uniform vec2 texel;uniform float spread;uniform vec2 direction;const float bloomW[5]=float[5](${BLOOM_WEIGHTS});void main(){vec3 acc=texture2D(source,sampleUv).rgb*bloomW[0];for(int i=1;i<5;i++){vec2 o=direction*float(i)*spread*0.125*texel;acc+=(texture2D(source,sampleUv+o).rgb+texture2D(source,sampleUv-o).rgb)*bloomW[i];}gl_FragColor=vec4(acc,1.0);}";
+      const composite=postHeader+"uniform sampler2D bright;uniform float intensity;void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(c.rgb+texture2D(bright,sampleUv).rgb*intensity,c.a);}";
+      const halfTexel=new THREE.Vector2(1/brightA.width,1/brightA.height);
+      return[{target:brightA,material:track(postMaterial(bright,u({threshold:{value:step.threshold}})))},
+        {target:brightB,material:track(postMaterial(blur,{source:{value:brightA.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(1,0)}}))},
+        {target:brightA,material:track(postMaterial(blur,{source:{value:brightB.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(0,1)}}))},
+        {target:"write",material:track(postMaterial(composite,u({bright:{value:brightA.texture},intensity:{value:step.intensity}})))}];
+    }
+    case "flare":{
+      const bright=postHeader+"uniform float threshold;void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(max(c.rgb-vec3(threshold),vec3(0.0)),1.0);}";
+      const ghosts=postHeader+"uniform sampler2D bright;uniform int ghosts;uniform float haloWidth;uniform float intensity;void main(){vec4 c=texture2D(source,sampleUv);vec3 g=vec3(0.0);float n=0.0;for(int i=0;i<16;i++){if(i>=ghosts)break;float t=float(i)/max(float(ghosts-1),1.0);vec2 guv=vec2(0.5)-(sampleUv-0.5)*mix(0.25,1.5,t);g+=texture2D(bright,guv).rgb*(1.0-t)*(1.0-t);n+=1.0;}vec2 dir=sampleUv-0.5;float len=max(length(dir),0.000001);vec3 h=texture2D(bright,sampleUv-dir/len*haloWidth*0.5).rgb;gl_FragColor=vec4(c.rgb+(g/max(n,1.0)+h)*intensity,c.a);}";
+      return[{target:brightA,material:track(postMaterial(bright,u({threshold:{value:step.threshold}})))},
+        {target:"write",material:track(postMaterial(ghosts,u({bright:{value:brightA.texture},ghosts:{value:step.ghosts},haloWidth:{value:step.haloWidth},intensity:{value:step.intensity}})))}];
+    }
+    case "lut-grade":{
+      const lutTexture=track(textures.get(step.lut.resourceName).clone());
+      lutTexture.flipY=false;lutTexture.colorSpace=THREE.NoColorSpace;lutTexture.needsUpdate=true;
+      const fragment=postHeader+"uniform sampler2D lutTex;uniform float lutSize;uniform float intensity;vec3 lutLookup(vec3 c){float s=lutSize;vec3 cl=clamp(c,0.0,1.0);float b=cl.b*(s-1.0);float b0=floor(b);float b1=min(b0+1.0,s-1.0);vec2 rg=cl.rg*(s-1.0)+0.5;vec3 c0=texture2D(lutTex,vec2((b0*s+rg.x)/(s*s),rg.y/s)).rgb;vec3 c1=texture2D(lutTex,vec2((b1*s+rg.x)/(s*s),rg.y/s)).rgb;return mix(c0,c1,b-b0);}void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(mix(c.rgb,lutLookup(c.rgb),intensity),c.a);}";
+      return[{target:"write",material:track(postMaterial(fragment,u({lutTex:{value:lutTexture},lutSize:{value:step.lut.size},intensity:{value:step.intensity}})))}];
+    }
+    default:throw new Error("Unsupported post-process step "+String(step&&step.kind)+".");
+  }
+};
+const runPostChain=(frame,index,track)=>{
+  let read=beautyTarget.texture;let written=0;
+  const targets=[postA,postB];
+  const run=(material,target)=>{postMesh.material=material;renderer.setRenderTarget(target);renderer.clear(true,true,true);renderer.render(postScene,outputCamera);};
+  run(track(postMaterial(unpremultiplyFragment,{source:{value:read},resolution:{value:resolution}})),postA);
+  read=postA.texture;
+  for(const step of postSteps)for(const item of buildStepPasses(step,frame,index,track,read)){
+    const target=item.target==="write"?targets[1-written]:item.target;
+    run(item.material,target);
+    if(item.target==="write"){read=targets[1-written].texture;written=1-written;}
+  }
+  return read;
+};
 SlopcameraOverlay.onFrame(({frame:index})=>{
   if(disposed)throw new Error("Spatial renderer is disposed.");if(contextFailure)throw contextFailure;
   const frame=input.frames[index];if(!frame)throw new Error("Spatial frame index is outside the immutable batch.");
   const disposable=[];const track=value=>(disposable.push(value),value);
   try{
+    if(isMotion){
+      renderer.setRenderTarget(velocityTarget);renderer.clear(true,true,true);
+      renderer.render(buildVelocityScene(frame,track),outputCamera);
+      postMesh.material=track(postMaterial(postHeader+"uniform float motionScale;uniform float threshold;void main(){vec4 v=texture2D(source,sampleUv);if(v.a<threshold){gl_FragColor=vec4(0.0);return;}vec2 e=clamp(v.xy/motionScale*0.5+0.5,0.0,1.0)*65535.0;vec2 hi=floor(e/256.0);vec2 lo=e-hi*256.0;gl_FragColor=vec4(hi.x/255.0,lo.x/255.0,hi.y/255.0,lo.y/255.0,1.0);}",
+        {source:{value:velocityTarget.texture},resolution:{value:resolution},motionScale:{value:mode.motionScale},threshold:{value:mode.coverage.kind==="opaque"?1:mode.coverage.threshold}}));
+      renderer.setRenderTarget(null);renderer.clear(true,true,true);renderer.render(postScene,outputCamera);
+      if(contextFailure)throw contextFailure;
+      return;
+    }
     const world=new THREE.Scene();const view=new THREE.Scene();const camera=makeCamera(frame.camera);
     const viewCamera=new THREE.OrthographicCamera(0,SlopcameraOverlay.width,0,SlopcameraOverlay.height,0.01,2000002);viewCamera.position.z=1000001;viewCamera.updateMatrixWorld(true);
     if(frame.fog&&input.mode.kind==="beauty"){
@@ -868,6 +1166,15 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
       const skyRotation=new THREE.Quaternion(...environment.rotation);
       if(environment.role!=="environment"){world.background=equirect;world.backgroundRotation.setFromQuaternion(skyRotation);world.backgroundIntensity=environment.intensity;}
       if(environment.role!=="background"){world.environment=equirect;world.environmentRotation.setFromQuaternion(skyRotation);world.environmentIntensity=environment.intensity;}
+    }
+    for(const item of frame.particles){
+      const data=particleBuffers.get(item.key);if(!data)throw new Error("Prepared particle frame buffer is absent.");
+      const geometry=track(new THREE.BufferGeometry());geometry.setAttribute("position",new THREE.BufferAttribute(data.positions,3));geometry.setAttribute("particleColor",new THREE.BufferAttribute(data.colors,3));geometry.setAttribute("particleSize",new THREE.BufferAttribute(data.sizes,1));geometry.setAttribute("particleOpacity",new THREE.BufferAttribute(data.opacity,1));
+      const material=track(new THREE.RawShaderMaterial({transparent:true,depthTest:true,depthWrite:false,blending:THREE.NormalBlending,toneMapped:false,dithering:false,
+        uniforms:{viewportHeight:{value:SlopcameraOverlay.height},perspective:{value:frame.camera.kind==="perspective"}},
+        vertexShader:"precision highp float;uniform mat4 projectionMatrix;uniform mat4 modelViewMatrix;uniform float viewportHeight;uniform bool perspective;attribute vec3 position;attribute vec3 particleColor;attribute float particleSize;attribute float particleOpacity;varying vec3 color;varying float opacity;void main(){vec4 p=modelViewMatrix*vec4(position,1.0);gl_Position=projectionMatrix*p;float scale=0.5*viewportHeight*projectionMatrix[1][1];gl_PointSize=max(1.0,particleSize*scale/(perspective?max(0.000001,-p.z):1.0));color=particleColor;opacity=particleOpacity;}",
+        fragmentShader:"precision highp float;varying vec3 color;varying float opacity;void main(){vec2 p=gl_PointCoord*2.0-1.0;float coverage=clamp((1.0-dot(p,p))*8.0,0.0,1.0);float alpha=opacity*coverage;if(alpha<=0.0)discard;gl_FragColor=vec4(color*alpha,alpha);}"}));
+      const points=new THREE.Points(geometry,material);points.matrixAutoUpdate=false;points.matrix.fromArray(item.matrix);world.add(points);
     }
     for(const object of frame.objects){
       if(object.kind==="light"){
@@ -887,10 +1194,17 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
       }else world.add(mesh);
     }
     renderer.setRenderTarget(beautyTarget);renderer.clear(true,true,true);renderer.render(world,camera);renderer.clearDepth();renderer.render(view,viewCamera);
-    if(beautyTarget){renderer.setRenderTarget(null);renderer.clear(true,true,true);renderer.render(outputScene,outputCamera);}
+    if(beautyTarget){
+      if(velocityTarget){renderer.setRenderTarget(velocityTarget);renderer.clear(true,true,true);renderer.render(buildVelocityScene(frame,track),outputCamera);}
+      renderer.setRenderTarget(null);renderer.clear(true,true,true);
+      if(hasPost){
+        postOutputMaterial.uniforms.source.value=runPostChain(frame,index,track);
+        postMesh.material=postOutputMaterial;renderer.render(postScene,outputCamera);
+      }else renderer.render(outputScene,outputCamera);
+    }
     if(contextFailure)throw contextFailure;
   }finally{for(const resource of disposable)resource.dispose();}
 });
-addEventListener("pagehide",()=>{disposed=true;canvas.removeEventListener("webglcontextlost",loseContext);for(const texture of textures.values())texture.dispose();textures.clear();beautyTarget?.dispose();outputGeometry?.dispose();outputMaterial?.dispose();renderer.dispose();renderer.forceContextLoss();});
+addEventListener("pagehide",()=>{disposed=true;canvas.removeEventListener("webglcontextlost",loseContext);for(const texture of textures.values())texture.dispose();textures.clear();beautyTarget?.dispose();beautyTarget?.depthTexture?.dispose();velocityTarget?.dispose();postA?.dispose();postB?.dispose();brightA?.dispose();brightB?.dispose();outputGeometry?.dispose();outputMaterial?.dispose();postOutputMaterial?.dispose();renderer.dispose();renderer.forceContextLoss();});
 </script></body></html>`;
 }

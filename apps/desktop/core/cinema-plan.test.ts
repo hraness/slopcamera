@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  CINEMA_GALLERY_AXES,
   CinemaRenderPlanV1Schema,
   EditPlanIdSchema,
   ProjectCinemaPlanV1Schema,
@@ -15,10 +16,12 @@ import {
   analyzeCinemaPlan,
   assertCinemaPlanComposition,
   auditCinemaContinuity,
+  auditCinemaTemporal,
   cinemaSequenceLayout,
   compileCinemaSequence,
   createCinemaPlanScaffold,
   hashCinemaPlanComposition,
+  planCinemaGallery,
 } from "./cinema-plan";
 import {
   createDefaultProjectEditPlan,
@@ -475,5 +478,204 @@ describe("project render regression", () => {
     const withCinema = compileProjectRenderPlan(project, edit, options);
     expect(withCinema.planSha256).toBe(withoutCinema.planSha256);
     expect(canonicalJson(withCinema)).toBe(canonicalJson(withoutCinema));
+  });
+});
+
+describe("cinema temporal audit", () => {
+  test("derives deterministic layout metrics from the plan clock", () => {
+    const project = cinemaProject();
+    const edit = editPlan(project);
+    const cinema = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 3_000_000, startUs: 0 }),
+        placementShot("cshot_00000002", { endUs: 8_000_000, startUs: 4_000_000 }),
+      ],
+      [{ durationUs: 500_000, kind: "dissolve" }],
+    );
+    const first = auditCinemaTemporal(cinema, project, edit);
+    const second = auditCinemaTemporal(cinema, project, edit);
+    expect(canonicalJson(first)).toBe(canonicalJson(second));
+    expect(first.metrics).toEqual({
+      audioCueCount: 0,
+      maxConcurrentCues: 0,
+      maxShotUs: 4_000_000,
+      medianShotUs: 4_000_000,
+      minShotUs: 3_000_000,
+      shotCount: 2,
+      totalDurationUs: 7_500_000,
+      transitionCount: 1,
+      transitionOverheadRatio: 500_000 / 7_000_000,
+    });
+    expect(first.findings).toHaveLength(0);
+  });
+
+  test("flags transition overruns and pacing collapse with shot references", () => {
+    const project = cinemaProject();
+    const edit = editPlan(project);
+    const cinema = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 500_000, startUs: 0 }),
+        placementShot("cshot_00000002", { endUs: 6_000_000, startUs: 2_000_000 }),
+        placementShot("cshot_00000003", { endUs: 6_200_000, startUs: 6_000_000 }),
+      ],
+      [{ durationUs: 1_000_000, kind: "dissolve" }, { kind: "cut" }],
+    );
+    const report = auditCinemaTemporal(cinema, project, edit);
+    const overrun = report.findings.find(finding => finding.code === "transition-overrun");
+    expect(overrun).toBeDefined();
+    expect(overrun!.transitionIndex).toBe(0);
+    expect(overrun!.shotIds.map(String)).toEqual(["cshot_00000001", "cshot_00000002"]);
+    const collapse = report.findings.find(finding => finding.code === "pacing-collapse");
+    expect(collapse).toBeDefined();
+    expect(collapse!.shotIds.map(String)).toEqual(["cshot_00000003"]);
+    expect(report.metrics.minShotUs).toBe(200_000);
+  });
+
+  test("bounds concurrent audio cues and flags uniform pacing only past the shot floor", () => {
+    const project = cinemaProject();
+    const edit = editPlan(project);
+    const cue = (cueId: string, offsetUs: number) => ({
+      assetId: "asset_cinema00001",
+      assetRange: { endUs: 2_000_000, startUs: 0 },
+      at: { kind: "shot", offsetUs, shotId: "cshot_00000001" },
+      cueId,
+      role: "music",
+      streamId: "stream_cinema_audio",
+    });
+    const cinema = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 4_000_000, startUs: 0 }),
+        placementShot("cshot_00000002", { endUs: 8_000_000, startUs: 4_000_000 }),
+      ],
+      [{ kind: "cut" }],
+      {
+        audioCues: [
+          cue("ccue_00000001", 0), cue("ccue_00000002", 0),
+          cue("ccue_00000003", 0), cue("ccue_00000004", 0),
+        ],
+      },
+    );
+    const report = auditCinemaTemporal(cinema, project, edit);
+    expect(report.metrics.audioCueCount).toBe(4);
+    expect(report.metrics.maxConcurrentCues).toBe(4);
+    const concurrency = report.findings.find(finding => finding.code === "cue-concurrency");
+    expect(concurrency).toBeDefined();
+    expect(concurrency!.severity).toBe("warning");
+
+    const uniform = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 2_000_000, startUs: 0 }),
+        placementShot("cshot_00000002", { endUs: 4_000_000, startUs: 2_000_000 }),
+        placementShot("cshot_00000003", { endUs: 6_000_000, startUs: 4_000_000 }),
+        placementShot("cshot_00000004", { endUs: 8_000_000, startUs: 6_000_000 }),
+      ],
+      [{ kind: "cut" }, { kind: "cut" }, { kind: "cut" }],
+    );
+    const uniformReport = auditCinemaTemporal(uniform, project, edit);
+    expect(uniformReport.findings.some(finding => finding.code === "uniform-pacing"
+      && finding.severity === "advisory")).toBe(true);
+    const varied = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 1_000_000, startUs: 0 }),
+        placementShot("cshot_00000002", { endUs: 6_000_000, startUs: 2_000_000 }),
+        placementShot("cshot_00000003", { endUs: 7_000_000, startUs: 6_500_000 }),
+        placementShot("cshot_00000004", { endUs: 10_000_000, startUs: 8_000_000 }),
+      ],
+      [{ kind: "cut" }, { kind: "cut" }, { kind: "cut" }],
+    );
+    expect(auditCinemaTemporal(varied, project, edit)
+      .findings.some(finding => finding.code === "uniform-pacing")).toBe(false);
+  });
+});
+
+describe("cinema gallery", () => {
+  const look = (lookId: string, preset: string) => ({
+    grade: { kind: "preset", preset },
+    lookId,
+  });
+  const galleryCue = {
+    assetId: "asset_cinema00001",
+    assetRange: { endUs: 2_000_000, startUs: 0 },
+    at: { kind: "shot", offsetUs: 0, shotId: "cshot_00000001" },
+    cueId: "ccue_00000001",
+    fadeInUs: 0,
+    fadeOutUs: 0,
+    gainDb: 0,
+    role: "music",
+    streamId: "stream_cinema_audio",
+  };
+  const galleryCinema = (overrides: Record<string, unknown> = {}): ProjectCinemaPlanV1 => {
+    const draft = cinemaSidecar(
+      [
+        placementShot("cshot_00000001", { endUs: 3_000_000, startUs: 0 }, { fit: "contain", lookId: "clook_00000001" }),
+        placementShot("cshot_00000002", { endUs: 8_000_000, startUs: 4_000_000 }, { fit: "contain" }),
+        placementShot("cshot_00000003", { endUs: 10_000_000, startUs: 9_000_000 }, { fit: "contain" }),
+      ],
+      [{ durationUs: 500_000, kind: "dissolve" }, { kind: "cut" }],
+      {
+        audioCues: [galleryCue],
+        looks: [look("clook_00000001", "cinematic"), look("clook_00000002", "monochrome")],
+        ...overrides,
+      },
+    );
+    return ProjectCinemaPlanV1Schema.parse({
+      ...draft,
+      cinemaPlanSha256: hashCinemaPlanComposition(draft),
+    });
+  };
+
+  test("revalidates and rehashes every candidate, dedupes the authored plan, and never selects", () => {
+    const cinema = galleryCinema();
+    for (const axis of CINEMA_GALLERY_AXES) {
+      const plan = planCinemaGallery(cinema, axis);
+      const again = planCinemaGallery(cinema, axis);
+      expect(canonicalJson(plan)).toBe(canonicalJson(again));
+      expect(plan.axis).toBe(axis);
+      expect(plan.selection).toBeNull();
+      expect(plan.cinemaPlanSha256).toBe(cinema.cinemaPlanSha256);
+      expect(plan.candidates.length).toBeGreaterThanOrEqual(1);
+      expect(plan.candidates.length).toBeLessThanOrEqual(6);
+      const shas = new Set(plan.candidates.map(candidate => candidate.cinemaPlanSha256));
+      expect(shas.size).toBe(plan.candidates.length);
+      expect(shas.has(cinema.cinemaPlanSha256)).toBe(false);
+      for (const candidate of plan.candidates) {
+        expect(candidate.candidateId.startsWith(`gallery_${axis}_`)).toBe(true);
+        expect(() => assertCinemaPlanComposition(candidate.plan)).not.toThrow();
+        expect(candidate.label.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test("keeps axis mutations inside the plan boundary", () => {
+    const cinema = galleryCinema();
+    const pacing = planCinemaGallery(cinema, "pacing");
+    for (const candidate of pacing.candidates) {
+      const layout = cinemaSequenceLayout(candidate.plan);
+      expect(layout.shots).toHaveLength(3);
+      expect(candidate.plan.transitions).toEqual(cinema.transitions);
+    }
+    const transitions = planCinemaGallery(cinema, "transitions");
+    for (const candidate of transitions.candidates) {
+      expect(candidate.plan.shots).toEqual(cinema.shots);
+      expect(candidate.plan.transitions).toHaveLength(2);
+    }
+    const audio = planCinemaGallery(cinema, "audio");
+    for (const candidate of audio.candidates) {
+      expect(candidate.plan.audioCues).toHaveLength(1);
+      expect(candidate.plan.shots).toEqual(cinema.shots);
+      for (const cue of candidate.plan.audioCues) {
+        expect(cue.gainDb).toBeGreaterThanOrEqual(-60);
+        expect(cue.gainDb).toBeLessThanOrEqual(24);
+      }
+    }
+  });
+
+  test("rejects a tampered composition hash before planning", () => {
+    const cinema = galleryCinema();
+    const tampered = ProjectCinemaPlanV1Schema.parse({
+      ...cinema,
+      cinemaPlanSha256: "f".repeat(64),
+    });
+    expect(() => planCinemaGallery(tampered, "pacing")).toThrow(/hash mismatch/u);
   });
 });

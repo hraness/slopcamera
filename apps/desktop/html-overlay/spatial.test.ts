@@ -3,6 +3,9 @@ import { describe, expect, test } from "bun:test";
 import { EvaluatedSpatialSceneSchema, type EvaluatedSpatialScene, type SpatialEntity } from "../../../src/spatial-scene/contracts";
 import { spatialAssetClosureDigests } from "../../../src/spatial-scene/identity";
 import { IDENTITY_MATRIX, composeTransform } from "../../../src/spatial-scene/math";
+import { parseSpatialParticleSystem, spatialParticleSystemSha256 } from "../../../src/spatial-scene/particle";
+import { parseSpatialRenderPlan, spatialRenderPlanSha256 } from "../../../src/spatial-scene/effects";
+import { parseSpatialRenderEffectsDocument, spatialRenderEffectsSha256 } from "../../../src/spatial-scene/render-effects";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
 import { HTML_OVERLAY_MAX_HTML_BYTES, htmlOverlayFrameCount } from "./contracts";
 import {
@@ -146,6 +149,39 @@ describe("immutable spatial snapshot lowering", () => {
   });
 });
 
+describe("prepared particle boundary", () => {
+  test("binds one exact beauty buffer per system sample and omits diagnostics structurally", () => {
+    const frame = snapshot();
+    const system = parseSpatialParticleSystem({
+      kind: "slopcamera.spatial-particle-system", schemaVersion: 1, entityId: "entity_box", countTier: "preview", maxCount: 1,
+      emitters: [{ id: "emitter_01", seed: 1, rate: 0, burst: 1, lifetimeUs: [1, 1_000_000], shape: { kind: "point" }, velocity: [0, 0, 0], velocitySpread: [0, 0, 0], sizeOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] }, colorOverLife: [[1, 1, 1, 1], [1, 1, 1, 0]], opacityOverLife: { keys: [{ t: 0, value: 1 }, { t: 1, value: 0 }] } }],
+      forces: [], killVolumes: [],
+    });
+    const renderPlan = parseSpatialRenderPlan({ kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+      quality: { tier: "preview", pixelBudget: 320 * 180, texturePixelBudget: 1, particleCount: 1, simulationSteps: 0, outputBytes: 1_000_000 } });
+    const document = parseSpatialRenderEffectsDocument({ kind: "slopcamera.spatial-render-effects", schemaVersion: 1, sceneSha256: digest,
+      renderPlan, renderPlanSha256: spatialRenderPlanSha256(renderPlan), particleSystems: [{ system, systemSha256: spatialParticleSystemSha256(system) }], simulationBakes: [] });
+    const effects = { document, documentSha256: spatialRenderEffectsSha256(document) };
+    const prepared: PreparedSpatialAsset = { kind: "particle-instances", entityId: "entity_box", instanceCount: 1, strideBytes: 64,
+      systemSha256: spatialParticleSystemSha256(system), timeUs: 0,
+      resource: { name: "particles", urlPath: "particles.bin", mediaType: "application/octet-stream", bytes: 64, sha256: "b".repeat(64), transport: "fetch" } };
+    const beauty = createSpatialOverlayBatch({ ...request([frame]), effects, preparedAssets: [prepared] });
+    const beautyPayload = embedded(beauty) as { particleBuffers: unknown[]; frames: { particles: unknown[] }[] };
+    expect(beautyPayload.particleBuffers).toHaveLength(1);
+    expect(beautyPayload.frames[0]!.particles).toHaveLength(1);
+    expect(beauty.metadata.effects).toMatchObject({ applied: true, documentSha256: effects.documentSha256 });
+    expect(beauty.authoring.html).toContain("Prepared particle buffer digest changed");
+
+    const diagnostic = createSpatialOverlayBatch({ ...request([frame]), effects, mode: { kind: "object-id", coverage: { kind: "opaque" } }, preparedAssets: [] });
+    const diagnosticPayload = embedded(diagnostic) as { particleBuffers: unknown[]; frames: { particles: unknown[] }[]; effects?: unknown };
+    expect(diagnosticPayload.particleBuffers).toEqual([]);
+    expect(diagnosticPayload.frames[0]!.particles).toEqual([]);
+    expect(diagnosticPayload.effects).toBeUndefined();
+    expect(diagnostic.metadata.effects).toMatchObject({ applied: false, documentSha256: effects.documentSha256 });
+    expect(() => createSpatialOverlayBatch({ ...request([frame]), effects, mode: { kind: "object-id", coverage: { kind: "opaque" } }, preparedAssets: [prepared] })).toThrow(/active system/);
+  });
+});
+
 describe("prepared surface and geometry boundary", () => {
   test("ordinary dense geometry crosses the private resource boundary without expanding the HTML cap", () => {
     const entity = { ...mesh(), kind: "mesh" as const, geometry: { kind: "asset" as const, assetId: "asset_city" },
@@ -162,7 +198,7 @@ describe("prepared surface and geometry boundary", () => {
     const resource = { name: "city-geometry", urlPath: "city.json", mediaType: "application/json", bytes: bytes.byteLength, sha256: canonicalJsonSha256(primitives), transport: "fetch" as const };
     const result = createSpatialOverlayBatch({ ...request([frame, { ...frame, timeUs: 500_000 }, frame]), preparedAssets: [{ ...prepared, resource }] });
     expect(result.authoring.resources).toEqual([resource]);
-    expect(result.metadata.costs.htmlBytes).toBeLessThan(30_000);
+    expect(result.metadata.costs.htmlBytes).toBeLessThan(48_000);
     expect(result.metadata.costs.resourceBytes).toBe(bytes.byteLength);
     expect(embedded(result).geometry).toEqual({});
     expect(embedded(result).geometryResources).toMatchObject([{ key: "asset_city:entity_box:all:static", resource }]);
@@ -248,5 +284,109 @@ describe("qualified auxiliary passes", () => {
     expect(m[8]).toBe(1 - 286 / 320);
     expect(m[9]).toBe(162 / 180 - 1);
     expect(m[11]).toBe(-1);
+  });
+});
+
+function effectsFixture(steps: Record<string, unknown>[]) {
+  const renderPlan = parseSpatialRenderPlan({ kind: "slopcamera.spatial-render-plan", schemaVersion: 1,
+    postProcess: { kind: "slopcamera.spatial-post-process", schemaVersion: 1, steps },
+    quality: { tier: "preview", pixelBudget: 320 * 180, texturePixelBudget: 1_000_000, particleCount: 0, simulationSteps: 0, outputBytes: 1_000_000 } });
+  const document = parseSpatialRenderEffectsDocument({ kind: "slopcamera.spatial-render-effects", schemaVersion: 1, sceneSha256: digest,
+    renderPlan, renderPlanSha256: spatialRenderPlanSha256(renderPlan), particleSystems: [], simulationBakes: [] });
+  return { document, documentSha256: spatialRenderEffectsSha256(document) };
+}
+
+describe("ordered beauty post-processing", () => {
+  test("binds the declared stack into the payload, ordered metadata, and generated passes", () => {
+    const effects = effectsFixture([
+      { kind: "tone-map", exposure: 1, whitePoint: 4 },
+      { kind: "bloom", intensity: 0.5, radius: 8, threshold: 0.8 },
+      { kind: "vignette", intensity: 0.4, radius: 0.5 },
+      { kind: "grain", intensity: 0.1, seed: 7 },
+      { kind: "chromatic-aberration", offsetPixels: 2, radialFalloff: 1 },
+    ]);
+    const result = createSpatialOverlayBatch({ ...request([snapshot()]), effects });
+    const payload = embedded(result) as { effects: { steps: { kind: string }[] } };
+    expect(payload.effects.steps.map(step => step.kind)).toEqual(["tone-map", "bloom", "vignette", "grain", "chromatic-aberration"]);
+    expect(result.metadata.effects).toMatchObject({ applied: true, stepKinds: ["tone-map", "bloom", "vignette", "grain", "chromatic-aberration"] });
+    for (const marker of ["runPostChain", "unpremultiplyFragment", "brightA", "grainHash", "toSrgb"]) {
+      expect(result.authoring.html).toContain(marker);
+    }
+    expect(result.authoring.html).toContain("frame.timeUs");
+  });
+
+  test("motion-blur activates the velocity pass with per-frame previous transforms", () => {
+    const effects = effectsFixture([{ kind: "motion-blur", samples: 8, shutterAngle: 180 }]);
+    const moved = EvaluatedSpatialSceneSchema.parse({ ...snapshot(), timeUs: 33_366,
+      entities: [{ entity: mesh(), worldMatrix: composeTransform({ position: [1, 0, -3], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }), selectionId: 17, visible: true }] });
+    const result = createSpatialOverlayBatch({ ...request([snapshot(), moved]), effects });
+    const payload = embedded(result) as { frames: { previousCamera: unknown; objects: { previousMatrix?: readonly number[]; matrix: readonly number[] }[] }[] };
+    const [first, second] = payload.frames;
+    expect(first!.previousCamera).toBeDefined();
+    expect(first!.objects[0]!.previousMatrix).toEqual(first!.objects[0]!.matrix);
+    expect(second!.objects[0]!.previousMatrix).toEqual(first!.objects[0]!.matrix);
+    expect(second!.objects[0]!.previousMatrix).not.toEqual(second!.objects[0]!.matrix);
+    expect(result.metadata.effects?.postProcess?.velocitySource).toContain("previous-sample");
+    expect(result.authoring.html).toContain("velocityTarget");
+    expect(result.authoring.html).toContain("buildVelocityScene");
+  });
+
+  test("depth-of-field activates the depth attachment and records its source", () => {
+    const effects = effectsFixture([{ kind: "depth-of-field", aperture: 2.8, focalLength: 50, focusDistance: 3 }]);
+    const result = createSpatialOverlayBatch({ ...request([snapshot()]), effects });
+    expect(result.metadata.effects?.postProcess?.depthSource).toContain("beauty-depth-buffer");
+    expect(result.authoring.html).toContain("depthTexture");
+    expect(result.authoring.html).toContain("dofTaps");
+  });
+
+  test("lut-grade requires and binds an exact prepared strip LUT", () => {
+    const effects = effectsFixture([{ kind: "lut-grade", assetId: "asset_lut", intensity: 0.75 }]);
+    const lut: PreparedSpatialAsset = { kind: "lut", assetId: "asset_lut", assetManifestSha256: digest,
+      width: 256, height: 16, alpha: "opaque",
+      resource: { name: "lut-strip", urlPath: "lut.png", mediaType: "image/png", bytes: 2_048, sha256: "c".repeat(64) } };
+    const result = createSpatialOverlayBatch({ ...request([snapshot()]), effects, preparedAssets: [lut] });
+    const payload = embedded(result) as { effects: { steps: { kind: string; lut?: { resourceName: string; size: number } }[] }; textures: { name: string }[] };
+    expect(payload.effects.steps[0]!.lut).toEqual({ resourceName: "lut-strip", size: 16 });
+    expect(payload.textures.map(texture => texture.name)).toContain("lut-strip");
+    expect(result.metadata.effects?.postProcess?.lutDomain).toContain("strip-s2-by-s-3d-lut");
+    expect(result.authoring.html).toContain("lutLookup");
+    const wrongShape = { ...lut, width: 255 };
+    expect(() => createSpatialOverlayBatch({ ...request([snapshot()]), effects, preparedAssets: [wrongShape] })).toThrow(/strip image/);
+    expect(() => createSpatialOverlayBatch({ ...request([snapshot()]), effects })).toThrow(/no exact prepared LUT/);
+    const unbound = { ...lut, assetId: "asset_other" };
+    expect(() => createSpatialOverlayBatch({ ...request([snapshot()]), effects, preparedAssets: [unbound] })).toThrow(/does not bind an active lut-grade/);
+  });
+});
+
+describe("motion diagnostic mode", () => {
+  test("lowers velocity AOV with exact entity filter, previous chain, and packed output", () => {
+    const moved = EvaluatedSpatialSceneSchema.parse({ ...snapshot(), timeUs: 33_366,
+      entities: [{ entity: mesh(), worldMatrix: composeTransform({ position: [1, 0, -3], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }), selectionId: 17, visible: true }] });
+    const mode = { kind: "motion" as const, entityId: "entity_box", motionScale: 4, coverage: { kind: "opaque" as const } };
+    const result = createSpatialOverlayBatch({ ...request([snapshot(), moved]), mode });
+    const payload = embedded(result) as { mode: { kind: string; entityId: string }; frames: { previousCamera: unknown; objects: { matrix: readonly number[]; previousMatrix?: readonly number[] }[] }[] };
+    expect(payload.mode).toMatchObject({ kind: "motion", entityId: "entity_box" });
+    expect(payload.frames[0]!.objects[0]!.previousMatrix).toEqual(payload.frames[0]!.objects[0]!.matrix);
+    expect(payload.frames[1]!.objects[0]!.previousMatrix).toEqual(payload.frames[0]!.objects[0]!.matrix);
+    expect(result.metadata.motion).toMatchObject({ entityId: "entity_box", motionScale: 4, encoding: expect.stringContaining("rg16un") });
+    expect(result.authoring.html).toContain("motionScale");
+    expect(result.authoring.html).toContain("65535.0");
+    const modeWithEffects = { ...mode };
+    const effects = effectsFixture([{ kind: "tone-map", exposure: 1, whitePoint: 4 }]);
+    const bound = createSpatialOverlayBatch({ ...request([snapshot(), moved]), mode: modeWithEffects, effects });
+    expect(embedded(bound)).not.toHaveProperty("effects");
+    expect(bound.metadata.effects).toMatchObject({ applied: false, stepKinds: ["tone-map"] });
+    expect(() => createSpatialOverlayBatch({ ...request([snapshot()]), mode })).toThrow(/at least two rendered samples|leading sample/);
+  });
+
+  test("a leading snapshot supplies the first partition's previous transforms", () => {
+    const earlier = EvaluatedSpatialSceneSchema.parse({ ...snapshot(), stateSha256: "d".repeat(64) });
+    const later = EvaluatedSpatialSceneSchema.parse({ ...snapshot(), timeUs: 16_666 });
+    const mode = { kind: "motion" as const, entityId: "entity_box", motionScale: 4, coverage: { kind: "opaque" as const } };
+    const result = createSpatialOverlayBatch({ ...request([later]), mode, previousSnapshot: earlier });
+    const payload = embedded(result) as { frames: { previousCamera: unknown; objects: { previousMatrix?: readonly number[] }[] }[] };
+    expect(payload.frames[0]!.objects[0]!.previousMatrix).toBeDefined();
+    expect(() => createSpatialOverlayBatch({ ...request([later]), previousSnapshot: earlier })).toThrow(/only meaningful when the batch derives motion/);
+    expect(() => createSpatialOverlayBatch({ ...request([later]), mode, previousSnapshot: later })).toThrow(/must precede/);
   });
 });

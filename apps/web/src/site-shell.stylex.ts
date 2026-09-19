@@ -64,6 +64,13 @@ const shell = stylex.create({
     fontWeight: 600,
     letterSpacing: "-0.01em",
     textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  brandMark: {
+    width: "1.375rem",
+    height: "1.375rem",
+    marginRight: "0.5rem",
   },
   actions: {
     display: { default: "flex", [tablet]: "contents" },
@@ -187,6 +194,7 @@ export const siteShellClassNames = {
   skip: stylex.props(shell.skip).className,
   header: stylex.props(shell.header).className,
   wordmark: stylex.props(shell.wordmark).className,
+  brandMark: stylex.props(shell.brandMark).className,
   actions: stylex.props(shell.actions).className,
   navigation: stylex.props(shell.navigation).className,
   navigationLink: stylex.props(shell.navigationLink).className,

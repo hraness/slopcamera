@@ -7,7 +7,7 @@ slopcamera workflows list --json
 slopcamera workflows show social-variants --json
 ```
 
-The built-ins cover talking-head cleanup (`talking-head-cleanup`), polished screen demos (`polished-screen-demo`), chaptered compositions (`chaptered-demo`), social variants (`social-variants`), creative iteration and selection (`creative-iteration`, `creative-selection`), and prepared directed-scene delivery (`directed-scene`). Their input schemas differ, so write `input.json` against the schema returned by `show` instead of reusing another recipe's JSON. Use an inspected project ID and the requested output choices, then plan and run that same input:
+The built-ins cover talking-head cleanup (`talking-head-cleanup`), polished screen demos (`polished-screen-demo`), chaptered compositions (`chaptered-demo`), social variants (`social-variants`), creative iteration and selection (`creative-iteration`, `creative-selection`), prepared directed-scene delivery (`directed-scene`), and the cinematic planning loop over an inert recipe pack (`cinematic-world`). Their input schemas differ, so write `input.json` against the schema returned by `show` instead of reusing another recipe's JSON. Use an inspected project ID and the requested output choices, then plan and run that same input:
 
 ```sh
 slopcamera workflows plan social-variants --input input.json --json

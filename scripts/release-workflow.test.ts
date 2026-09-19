@@ -857,7 +857,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
   expect(publishJob).toContain("const maximumFiles = 520")
   expect(publishJob).toContain("const maximumPackedBytes = 4_800_000")
-  expect(publishJob).toContain("const maximumUnpackedBytes = 13_000_000")
+  expect(publishJob).toContain("const maximumUnpackedBytes = 14_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
   expect(publishJob).toContain("unpackedSize !== record.unpackedSize")
   expect(publishJob).toContain('"src/assets/fonts/nebula-sans/PROVENANCE.md"')

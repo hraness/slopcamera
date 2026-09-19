@@ -149,7 +149,7 @@ function assertAuthoredShellBudget(template: string): number {
   // spelling. The reviewed refinement allowance includes the literal highlighted
   // terminal, release installer, source disclosure, and four interface examples.
   for (const [slot, count] of [
-    ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
+    ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_BRAND_MARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
     ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
     ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
     ["INSTALL_COPY_CLASS", 1], ["INSTALL_VALUE_CLASS", 1], ["INSTALL_IDLE_CLASS", 2], ["INSTALL_COPIED_CLASS", 1],
@@ -1576,6 +1576,7 @@ describe("static Slopcamera site", () => {
       "lantern-material",
       "llms.txt",
       "marketing-preset",
+      "marks",
       "og.png",
       "preview.html",
       "robots.txt",

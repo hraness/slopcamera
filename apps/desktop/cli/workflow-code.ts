@@ -308,7 +308,7 @@ export function workflowCatalogDescription(workflow: BuiltInWorkflow) {
   return {
     ...workflowCatalogEntry(workflow),
     inputJsonSchema: {
-      ...z.toJSONSchema(workflow.inputSchema),
+      ...z.toJSONSchema(workflow.inputSchema, { io: "input" }),
       $id: workflow.inputSchemaId,
     },
   } as const;
