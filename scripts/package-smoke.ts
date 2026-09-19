@@ -23,6 +23,7 @@ import {
 } from "node:path";
 
 import { verifyNpmPublishManifest } from "./npm-publish-policy";
+import { verifyArchive } from "./npm-package-identity";
 
 const packageName = "@hraness/slopcamera";
 const importSpecifiers = [
@@ -41,7 +42,7 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Archive: at most 510 files, 4.8 MB packed and 14 MB unpacked.
+// Archive: at most 510 files, 4.8 MB packed and 14 MB including tar framing.
 // Keep bounded headroom aligned with the independent release artifact readers.
 const maximumPackedFiles = 510;
 const maximumPackedBytes = 4_800_000;
@@ -573,7 +574,7 @@ async function createNpmArchive(
   repository: string,
   packDirectory: string,
   environment: Readonly<Record<string, string | undefined>>,
-): Promise<{ readonly archive: string; readonly result: NpmPackResult }> {
+): Promise<{ readonly archive: string; readonly metadata: string; readonly result: NpmPackResult }> {
   await mkdir(packDirectory, { recursive: true });
   const output = await runOutput([
     "npm",
@@ -585,7 +586,9 @@ async function createNpmArchive(
     "--registry=https://registry.npmjs.org",
   ], repository, environment);
   const result = parseNpmPackResult(JSON.parse(output) as unknown);
-  return { archive: join(packDirectory, result.filename), result };
+  const metadata = join(packDirectory, "npm-pack.json");
+  await writeFile(metadata, output);
+  return { archive: join(packDirectory, result.filename), metadata, result };
 }
 
 function parseArguments(args: readonly string[]): PackageSmokeArguments {
@@ -816,8 +819,10 @@ try {
     ? await createNpmArchive(repository, join(work, "pack"), packageEnvironment)
     : undefined;
   const archive = packed?.archive ?? providedArchive;
+  const metadata = packed?.metadata ?? arguments_.packJson;
   const packResult = packed?.result ?? providedPackResult;
   if (archive === undefined) throw new Error("Packed archive path is unavailable.");
+  if (metadata === undefined) throw new Error("npm pack metadata path is unavailable.");
   if (packResult === undefined) throw new Error("npm pack metadata is unavailable.");
   const packageJson = record(
     JSON.parse(await readFile(join(repository, "package.json"), "utf8")) as unknown,
@@ -837,6 +842,7 @@ try {
       `Packed archive is ${String(archiveInfo.size)} bytes; maximum is ${String(maximumPackedBytes)}.`,
     );
   }
+  await verifyArchive(archive, metadata, "package smoke", packageName, packResult.version, packResult.filename);
   const archiveBytes = await readFile(archive);
   const consumer = join(work, "consumer");
   await mkdir(consumer);

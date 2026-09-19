@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { gzipSync } from "node:zlib"
 
-import { verifyNpmPackageIdentity } from "./npm-package-identity"
+import { verifyArchive, verifyNpmPackageIdentity } from "./npm-package-identity"
 import { archiveInstall, publishedArchiveUrl, publishedRelease, sourceInstall } from "../apps/web/src/published-release"
 import { homeMarkdown } from "../apps/web/src/agent-pages"
 import { verifyNpmPublishAuthority } from "./npm-publish-authority"
@@ -1086,7 +1086,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.3.0")
+  expect(manifest.version).toBe("3.3.1")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
@@ -1160,6 +1160,49 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
     expect(source).not.toContain('"softwareVersion": "2.0.0"')
   }
 })
+
+test("package smoke rejects oversized tar framing before installing a package below the content-byte limit", async () => {
+  const packageRoot = join(import.meta.dir, "..")
+  const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as { version: string }
+  const filename = `hraness-slopcamera-${manifest.version}.tgz`
+  const work = await mkdtemp(join(tmpdir(), "slopcamera-tar-envelope-"))
+  try {
+    const guard = join(work, "deny-processes.ts")
+    await writeFile(guard, `for (const name of ["spawn", "spawnSync"]) Object.defineProperty(Bun, name, { value: () => { throw new Error("PACKAGE_SMOKE_INSTALL_REACHED"); } });\n`)
+    for (const extraByte of [0, 1]) {
+      const entries: PackageFixtureEntry[] = [
+        { path: "package.json", body: "{}\n", mode: 0o644 },
+        { path: "padding.txt", body: "x".repeat(13_997_056 + extraByte), mode: 0o644 },
+      ]
+      const tar = packageFixtureTar(entries)
+      expect(tar.length).toBe(extraByte === 0 ? 13_999_616 : 14_000_128)
+      const archive = gzipSync(tar, { level: 9 })
+      const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
+      expect(metadata[0]!.unpackedSize).toBeLessThan(14_000_000)
+      expect(archive.length).toBeLessThan(4_800_000)
+      const directory = join(work, String(extraByte))
+      await mkdir(directory)
+      const archivePath = join(directory, filename), metadataPath = join(directory, "npm-pack.json")
+      await writeFile(archivePath, archive)
+      await writeFile(metadataPath, JSON.stringify(metadata))
+      if (extraByte === 0) {
+        await expect(verifyArchive(archivePath, metadataPath, "fixture", "@hraness/slopcamera", manifest.version, filename)).resolves.toBeDefined()
+        continue
+      }
+      await expect(verifyArchive(archivePath, metadataPath, "fixture", "@hraness/slopcamera", manifest.version, filename)).rejects.toMatchObject({ code: "ERR_BUFFER_TOO_LARGE" })
+      const child = Bun.spawn([
+        process.execPath, "--preload", guard, join(packageRoot, "scripts/package-smoke.ts"),
+        "--archive", archivePath, "--pack-json", metadataPath,
+      ], { cwd: packageRoot, env: { ...process.env, HRANESS_SUPPORT_AUDIENCE: "off", HRANESS_SUPPORT_EMAIL: "off" }, stdout: "pipe", stderr: "pipe" })
+      const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+      expect(exitCode).not.toBe(0)
+      expect(`${stdout}\n${stderr}`).not.toContain("PACKAGE_SMOKE_INSTALL_REACHED")
+      expect(stderr).toContain("ERR_BUFFER_TOO_LARGE")
+    }
+  } finally {
+    await rm(work, { recursive: true, force: true })
+  }
+}, 15_000)
 
 test("the package smoke proves metadata and bounded import side effects", async () => {
   const packageRoot = join(import.meta.dir, "..")
