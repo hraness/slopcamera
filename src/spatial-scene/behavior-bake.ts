@@ -82,13 +82,22 @@ const parseEntryManifest = (behavior: SpatialBehavior): OrganismManifest => {
   }
 }
 
-/** Maps declared interface-name args to ALGAL's cell-keyed run args. */
+/**
+ * Maps declared interface-name args to ALGAL's cell-keyed run args. An entry
+ * interface input named `seed` binds `behavior.seed` by convention when no
+ * arg supplies one — the document-level seed feeds seeded kernels without
+ * duplicating it into args, and galleries vary it for candidate diversity.
+ */
 const entryRunArgs = (behavior: SpatialBehavior, manifest: OrganismManifest): Record<string, Record<string, AlgalJsonValue>> => {
   const args: Record<string, Record<string, AlgalJsonValue>> = {}
   for (const [name, value] of Object.entries(behavior.args ?? {})) {
     const endpoint = manifest.interface?.inputs[name]
     if (endpoint === undefined) continue // `undeclared-arg` already an error finding
     ;(args[endpoint.cell] ??= {})[endpoint.port] = value as AlgalJsonValue
+  }
+  const seedEndpoint = manifest.interface?.inputs.seed
+  if (seedEndpoint !== undefined && behavior.args?.seed === undefined) {
+    (args[seedEndpoint.cell] ??= {})[seedEndpoint.port] = behavior.seed
   }
   return args
 }

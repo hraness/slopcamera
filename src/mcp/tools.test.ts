@@ -17,6 +17,7 @@ import type {
   HostResourceCoordinator,
 } from "../host-resources.ts"
 import { createSpatialSceneStarter } from "../spatial-scene/authoring.ts"
+import { behaviorOrganismSha256, type SpatialBehaviorOrganism } from "../spatial-scene/behavior.ts"
 import { spatialValueSha256 } from "../spatial-scene/identity.ts"
 import { fixtureAsset } from "../spatial-scene/test-fixture.ts"
 import {
@@ -736,6 +737,59 @@ describe("Slopcamera MCP scene tools", () => {
         summary: { errorCount: 0 },
       })
 
+      const emitOrganism: SpatialBehaviorOrganism = {
+        contract: "morphogen.organism.v1",
+        key: "organism:emit-window",
+        name: "Emit window",
+        cells: [
+          { id: "in", kind: "input", outputs: { win: { type: "json" } } },
+          {
+            id: "cfg", kind: "const",
+            outputs: {
+              channel: { type: "text", value: "alert" },
+              value: { type: "json", value: "ping" },
+            },
+          },
+          { id: "emit", kind: "fn", fn: "channel.emit.v1" },
+        ],
+        edges: [
+          { from: { cell: "in", port: "win" }, to: { cell: "emit", port: "window" } },
+          { from: { cell: "cfg", port: "channel" }, to: { cell: "emit", port: "channel" } },
+          { from: { cell: "cfg", port: "value" }, to: { cell: "emit", port: "value" } },
+        ],
+        interface: {
+          inputs: { win: { cell: "in", port: "win" } },
+          outputs: { out: { cell: "emit", port: "emitted" } },
+        },
+      }
+      const emitDigest = behaviorOrganismSha256(emitOrganism)
+      await writeFile(join(root, "behavior.json"), JSON.stringify({
+        kind: "slopcamera.spatial-behavior",
+        schemaVersion: 1,
+        behaviorId: "behavior_alert",
+        entityId: "entity_product",
+        sceneSha256,
+        seed: 7,
+        rangeUs: { startUs: 0, endUs: 1_000_000 },
+        organisms: { [emitDigest]: emitOrganism },
+        entry: emitDigest,
+        channels: ["alert"],
+        args: { win: { ticks: [{ tUs: 0 }, { tUs: 500_000 }] } },
+      }))
+      const behaviorCheck = await runtime.call("check_scene_behavior", {
+        scene: "scene.json", behavior: "behavior.json",
+      })
+      expect(behaviorCheck.isError).toBeUndefined()
+      expect(behaviorCheck.structuredContent).toMatchObject({
+        ok: true,
+        source: "scene.json",
+        summary: { errorCount: 0 },
+      })
+      const behaviorOutside = await runtime.call("check_scene_behavior", {
+        scene: "scene.json", behavior: "../outside/escape.diagram.json",
+      })
+      expect(behaviorOutside.isError).toBe(true)
+
       const temporal = await runtime.call("audit_scene_temporal", {
         path: "scene.json", camera_id: "camera_hero", times_us: [0, 2_000_000],
       })
@@ -753,7 +807,7 @@ describe("Slopcamera MCP scene tools", () => {
           { resource: "local-io", amount: 1 },
         ])
       }
-      expect(admission.claims).toHaveLength(6)
+      expect(admission.claims).toHaveLength(8)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

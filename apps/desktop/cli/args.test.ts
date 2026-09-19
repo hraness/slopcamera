@@ -487,3 +487,32 @@ test("capabilities is a zero-effect discovery command", async () => {
     toolVersion: "slopcamera-test",
   });
 });
+
+test("scene behavior commands parse scene, channel-map, and output options", () => {
+  expect(parseCliArgs([
+    "scene", "behavior", "check", "behavior.json", "--scene", "scene.json",
+  ])).toEqual({
+    action: "behavior-check", behavior: "behavior.json", json: false, kind: "spatial-scene", scene: "scene.json",
+  });
+  expect(parseCliArgs([
+    "scene", "behavior", "bake", "behavior.json", "--scene", "scene.json",
+    "--channel-map", "map.json", "--output", "bake.json", "--json",
+  ])).toEqual({
+    action: "behavior-bake", behavior: "behavior.json", channelMap: "map.json",
+    json: true, kind: "spatial-scene", output: "bake.json", scene: "scene.json",
+  });
+  expect(parseCliArgs([
+    "scene", "behavior", "gallery", "behavior.json", "--scene", "scene.json",
+  ])).toEqual({
+    action: "behavior-gallery", behavior: "behavior.json", json: false, kind: "spatial-scene", scene: "scene.json",
+  });
+  expect(() => parseCliArgs([
+    "scene", "behavior", "check", "behavior.json",
+  ])).toThrow(/--scene/u);
+  expect(() => parseCliArgs([
+    "scene", "behavior", "bake", "behavior.json", "--scene", "scene.json",
+  ])).toThrow(/--output/u);
+  expect(() => parseCliArgs([
+    "scene", "behavior", "plan", "behavior.json", "--scene", "scene.json",
+  ])).toThrow(/Usage/u);
+});

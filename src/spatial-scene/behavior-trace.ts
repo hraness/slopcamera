@@ -310,6 +310,10 @@ export const SpatialBehaviorBakeSchema = z.strictObject({
 })
 export type SpatialBehaviorBake = Readonly<z.infer<typeof SpatialBehaviorBakeSchema>>
 
+export function spatialBehaviorBakeSha256(bake: SpatialBehaviorBake): string {
+  return spatialValueSha256(bake)
+}
+
 /** Digest binding the admitted fn catalog — names, port signatures, and modeled work costs. */
 export function spatialBehaviorFnCatalogSha256(fns: ReadonlyMap<string, SpatialBehaviorFn>): string {
   const projection: Record<string, unknown> = {}

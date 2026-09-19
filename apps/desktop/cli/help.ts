@@ -11,7 +11,7 @@ Commands:
   capabilities                   Discover the exact static capability modules and qualification status
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
-  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|temporal-audit
+  scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|behavior|temporal-audit
                                  Author and inspect editable directed 3D scene sources
   direct init|plan|start|generate|review|assemble
                                  Direct short Gateway clips with retained takes and budgets
@@ -143,6 +143,9 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene effects check <effects.json> --scene <scene.json> [--json]
   slopcamera scene effects plan <draft.json> --scene <scene.json> [--output <effects.json>] [--json]
   slopcamera scene effects bake <plan.json> --scene <scene.json> --output <bake.json> [--json]
+  slopcamera scene behavior check <behavior.json> --scene <scene.json> [--json]
+  slopcamera scene behavior bake <behavior.json> --scene <scene.json> [--channel-map <map.json>] --output <bake.json> [--json]
+  slopcamera scene behavior gallery <behavior.json> --scene <scene.json> [--channel-map <map.json>] [--output <gallery.json>] [--json]
   slopcamera scene temporal-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--contacts <contacts.json>] [--cut-before-us <csv>] [--json]
   slopcamera scene project snapshot <project-id> [--json]
   slopcamera scene project prepare-render <project-id> --input <request.json> --output <prepared-render.json> [--profile <profile>] [--json]
@@ -199,6 +202,18 @@ renderPlan, particleSystems and simulationBakes draft to the actual scene digest
 emits a {document, documentSha256} binding; bake executes the bounded reference
 rigid-body integrator for one admitted simulation plan and publishes the canonical
 bake document. Native secondary-motion and hinge constraints remain unqualified.
+Behavior commands admit and execute slopcamera.spatial-behavior documents —
+inert ALGAL organism closures checked under the bake-safe profile (pure
+input/const/fn/repeat/each/organism cells only; effect-bearing cells reject
+before execution). Check reports manifest digests, wiring, entity and channel
+findings; bake runs the entry organism through the pinned ALGAL runtime with
+the closed pure fn catalog and publishes a canonical bake document — emitted
+semantic records, unverified performance directive proposals, and a receipt
+binding closure, scene, seed, run, and catalog digests; gallery bakes the
+document under deterministic seed variants as separate content-addressed
+candidates and never selects one. --channel-map binds emitted channels to
+clip runs and attach/release pairs; unmapped channels surface as unresolved
+intents rather than fabricated bindings.
 Temporal-audit evaluates the scene at bounded sample times under one camera and
 reports deterministic findings: visibility flicker, transform discontinuity,
 foot-slide against declared contact windows, camera acceleration/jerk/angular
@@ -619,7 +634,8 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "scene") {
     if (words[1] === "direction") return ["check", "plan", "gallery"];
     if (words[1] === "effects") return ["check", "plan", "bake"];
-    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "temporal-audit"];
+    if (words[1] === "behavior") return ["check", "bake", "gallery"];
+    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "temporal-audit"];
   }
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];

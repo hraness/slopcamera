@@ -244,7 +244,7 @@
   },
   "dependencies": {
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
-    "@hraness/algal": "github:hraness/algal#121267b",
+    "@hraness/algal": "github:hraness/algal#f6991d2",
     "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
     "@noble/hashes": "2.2.0",
     "@paper-design/shaders": "0.0.77",

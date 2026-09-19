@@ -6,6 +6,11 @@ import { normalizeSpatialAuditAssetBounds, spatialEntityLocalBounds } from "../.
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
 import { SPATIAL_SCENE_LIMITS, SpatialCameraIdSchema } from "../../../src/spatial-scene/contracts";
+import { checkSpatialBehavior } from "../../../src/spatial-scene/behavior";
+import { bakeSpatialBehavior } from "../../../src/spatial-scene/behavior-bake";
+import { spatialBehaviorFnSignatures } from "../../../src/spatial-scene/behavior-fns";
+import { planSpatialBehaviorGallery, spatialBehaviorGalleryPlanSha256 } from "../../../src/spatial-scene/behavior-gallery";
+import { parseSpatialBehaviorChannelMap, spatialBehaviorBakeSha256 } from "../../../src/spatial-scene/behavior-trace";
 import { checkSpatialDirection, compileSpatialDirection, spatialDirectionCompilationSha256 } from "../../../src/spatial-scene/direction-compile";
 import { createSpatialEvaluationContext, evaluateSpatialSceneInContext } from "../../../src/spatial-scene/evaluate";
 import { planSpatialDirectionGallery, spatialGalleryPlanSha256 } from "../../../src/spatial-scene/gallery";
@@ -271,6 +276,34 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     const output = resolve(application.paths.repositoryRoot, command.output);
     await publishSpatialSource(output, result.document);
     return { path: output, documentSha256: spatialSimulationBakeSha256(result.document), receipt: result.receipt };
+  }
+  if (command.action === "behavior-check") {
+    const behavior = await readSpatialJson(resolve(application.paths.repositoryRoot, command.behavior));
+    return checkSpatialBehavior({ behavior, scene }, spatialBehaviorFnSignatures());
+  }
+  if (command.action === "behavior-bake" || command.action === "behavior-gallery") {
+    const behavior = await readSpatialJson(resolve(application.paths.repositoryRoot, command.behavior));
+    const channelMap = command.channelMap === undefined
+      ? undefined
+      : parseSpatialBehaviorChannelMap(await readSpatialJson(resolve(application.paths.repositoryRoot, command.channelMap)));
+    if (command.action === "behavior-bake") {
+      const { bake } = await bakeSpatialBehavior({ behavior, scene, ...(channelMap === undefined ? {} : { channelMap }) });
+      const output = resolve(application.paths.repositoryRoot, command.output);
+      await publishSpatialSource(output, bake);
+      return {
+        path: output,
+        bakeSha256: spatialBehaviorBakeSha256(bake),
+        emitted: bake.emitted.length,
+        directives: bake.directives.length,
+        unresolvedIntents: bake.unresolvedIntents.length,
+        receipt: bake.receipt,
+      };
+    }
+    const plan = await planSpatialBehaviorGallery({ behavior, scene, ...(channelMap === undefined ? {} : { channelMap }) });
+    if (command.output === undefined) return plan;
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, plan);
+    return { path: output, galleryPlanSha256: spatialBehaviorGalleryPlanSha256(plan), candidates: plan.candidates.map(candidate => ({ candidateId: candidate.candidateId, documentSha256: candidate.documentSha256, parameter: candidate.parameter })) };
   }
   if (command.action === "temporal-audit") {
     const times = command.timesUs ?? (() => {

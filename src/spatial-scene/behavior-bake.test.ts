@@ -334,3 +334,60 @@ describe("bakeSpatialBehavior", () => {
       .rejects.toThrow(/emission-outside-range/)
   })
 })
+
+// An entry interface input named `seed` binds the document seed by convention:
+// seeded kernels consume it without the doc duplicating it into args, and
+// galleries vary it for candidate diversity.
+const seededOrganism: SpatialBehaviorOrganism = {
+  contract: "morphogen.organism.v1",
+  key: "organism:seeded-draws",
+  name: "Seeded draws",
+  cells: [
+    { id: "in", kind: "input", outputs: { seed: { type: "json" }, win: { type: "json" } } },
+    { id: "cfg", kind: "const", outputs: { count: { type: "json", value: 2 }, channel: { type: "text", value: "seed.draws" } } },
+    { id: "rng", kind: "fn", fn: "rng.seeded.v1" },
+    { id: "emit", kind: "fn", fn: "channel.emit.v1" },
+  ],
+  edges: [
+    { from: { cell: "in", port: "seed" }, to: { cell: "rng", port: "seed" } },
+    { from: { cell: "cfg", port: "count" }, to: { cell: "rng", port: "count" } },
+    { from: { cell: "in", port: "win" }, to: { cell: "emit", port: "window" } },
+    { from: { cell: "cfg", port: "channel" }, to: { cell: "emit", port: "channel" } },
+    { from: { cell: "rng", port: "draws" }, to: { cell: "emit", port: "value" } },
+  ],
+  interface: {
+    inputs: { seed: { cell: "in", port: "seed" }, win: { cell: "in", port: "win" } },
+    outputs: { out: { cell: "emit", port: "emitted" } },
+  },
+}
+const SEEDED_DIGEST = behaviorOrganismSha256(seededOrganism)
+
+const seededBehavior = (seed: number): Record<string, unknown> => ({
+  kind: "slopcamera.spatial-behavior",
+  schemaVersion: 1,
+  behaviorId: "behavior_seeded",
+  entityId: "hero",
+  sceneSha256: sceneSha(),
+  seed,
+  rangeUs: { startUs: 0, endUs: 250_000 },
+  organisms: { [SEEDED_DIGEST]: seededOrganism },
+  entry: SEEDED_DIGEST,
+  channels: ["seed.draws"],
+  args: { win: { ticks: [{ tUs: 0 }] } },
+})
+
+describe("document seed convention", () => {
+  test("binds behavior.seed to a declared seed interface input without an arg", async () => {
+    const { bake, check } = await bakeSpatialBehavior({ behavior: seededBehavior(11), scene: scene() })
+    expect(check.findings).toEqual([])
+    const [record] = bake.emitted
+    expect(record?.channel).toBe("seed.draws")
+    const draws = record?.value as readonly number[]
+    expect(draws).toHaveLength(2)
+    const other = await bakeSpatialBehavior({ behavior: seededBehavior(12), scene: scene() })
+    expect(other.bake.emitted[0]?.value).not.toEqual(record?.value)
+    // The same seed replays bit-for-bit.
+    const replay = await bakeSpatialBehavior({ behavior: seededBehavior(11), scene: scene() })
+    expect(replay.bake).toEqual(bake)
+  })
+})

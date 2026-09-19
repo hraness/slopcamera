@@ -5,6 +5,7 @@
 - `behavior-fns.ts` – the closed pure fn catalog organisms compose: seeded rng, fsm, expression, interact, channel emit, scene sample, combine, and the emitted/window plumbing kernels.
 - `behavior-trace.ts` – emitted-channel records, host channel maps, the emitted→performance-directive proposal mapper, and the `slopcamera.spatial-behavior-bake` artifact plus receipt.
 - `behavior-bake.ts` – the deterministic bake: runs an admitted closure through the pinned ALGAL runtime over a memory store and the pure fn registry, extracts interface emissions, and binds the run receipt.
+- `behavior-gallery.ts` – seeded behavior galleries: deterministic seed variants of one admitted behavior bake into content-addressed candidates; seed-agnostic organisms collapse honestly and selection stays explicit.
 - Pure identity, evaluation, inspection and audit modules – scene source and derived state without host effects.
 - Colocated deterministic and property tests – reference, transformation, time and edit laws.
 

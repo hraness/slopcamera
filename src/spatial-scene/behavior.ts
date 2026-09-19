@@ -591,7 +591,9 @@ export function checkSpatialBehavior(
       }
     }
     for (const name of Object.keys(entryContext.manifest.interface.inputs)) {
-      if (!argNames.has(name)) {
+      // `seed` is fed by convention: the bake binds behavior.seed to an entry
+      // interface input named `seed` when no arg supplies one.
+      if (!argNames.has(name) && name !== "seed") {
         finding("unfed-input", "warning", `Entry organism ${entryContext.manifest.key} declares interface input ${name} but no arg binds it; the input cell produces no value.`, `${entryContext.manifest.key}/${name}`)
       }
     }
