@@ -140,3 +140,9 @@ vignette and typewriter notes on paper right), do not ask Gateway to redraw the
 whole poster. Follow [rubber-stamp-field-notes.md](rubber-stamp-field-notes.md):
 generate only the stamp with a reference-capable model, then assemble with the
 local compositor.
+
+For an editorial or social banner made from an opaque plate, transparent
+characters, motif clusters, local type, annotations, and diagram clippings,
+follow [social-collage-banners.md](social-collage-banners.md). Generate each
+semantic role independently, inspect its pixels, and compose the selected files
+with the packaged manifest-driven compositor.

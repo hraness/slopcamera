@@ -19,6 +19,15 @@ const MAX_CANONICAL_JSON_BYTES = Number.MAX_SAFE_INTEGER
 const MAX_CANONICAL_JSON_DEPTH = Number.MAX_SAFE_INTEGER
 const MAX_CANONICAL_JSON_VALUES = Number.MAX_SAFE_INTEGER
 
+// Cross-implementation parity (pinned byte- and digest-for-digest by
+// canonical-parity.test.ts): on the shared domain — finite numbers other
+// than -0, well-formed UTF-16 strings, dense arrays, and plain objects
+// with enumerable string data properties — canonicalJson is identical to
+// @hraness/oh's RFC 8785 canonicalizer. Slopcamera intentionally keeps a
+// wider domain that oh rejects: -0 normalizes to 0, unpaired surrogates
+// serialize through \uXXXX escapes, non-enumerable own properties and
+// non-index array properties are ignored, and the iterative traversal
+// accepts nesting far beyond oh's recursive stack range.
 export type CanonicalJsonValue =
   | JsonScalar
   | readonly CanonicalJsonValue[]

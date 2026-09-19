@@ -86,7 +86,9 @@ const requiredPackedPaths = [
   "skills/slopcamera/references/web-media-excerpts.md",
   "skills/slopcamera/references/rubber-stamp-examples/poster-example-1.jpg",
   "skills/slopcamera/references/rubber-stamp-examples/stamp-style-1.png",
+  "skills/slopcamera/references/social-collage-banners.md",
   "skills/slopcamera/scripts/compose-rubber-stamp-field-note.ts",
+  "skills/slopcamera/scripts/compose-social-collage-banner.ts",
   "src/assets/fonts/nebula-sans/LICENSE.txt",
   "src/assets/fonts/nebula-sans/NebulaSans-Bold.otf",
   "src/assets/fonts/nebula-sans/NebulaSans-Bold.woff2",
@@ -1172,6 +1174,19 @@ if (downbeat.beatPosition !== 4 || downbeat.beatIndex !== 4 || downbeat.beatPhas
   if ([...rubberStampReference.matchAll(/skill_root="\$\(slopcamera skill path\)"/gu)].length !== 2) {
     throw new Error("Packed rubber-stamp steps do not resolve their skill root independently.");
   }
+  const socialCollageReference = await readFile(
+    join(installedSkill, "references", "social-collage-banners.md"),
+    "utf8",
+  );
+  for (const required of [
+    '$skill_root/scripts/compose-social-collage-banner.ts',
+    '"kind": "sticker"',
+    '"kind": "paper"',
+  ]) {
+    if (!socialCollageReference.includes(required)) {
+      throw new Error(`Packed social-collage workflow is missing ${required}.`);
+    }
+  }
   const posterExample = join(
     installedSkill,
     "references",
@@ -1215,6 +1230,39 @@ if (downbeat.beatPosition !== 4 || downbeat.beatIndex !== 4 || downbeat.beatPhas
   const compositorOutputStat = await lstat(compositorOutput);
   if (!compositorOutputStat.isFile() || compositorOutputStat.size === 0) {
     throw new Error("Packed rubber-stamp compositor did not produce a JPEG.");
+  }
+  const socialCollageManifest = join(consumer, "social-collage-smoke.json");
+  const socialCollageOutput = join(consumer, "social-collage-smoke.png");
+  await writeFile(socialCollageManifest, `${JSON.stringify({
+    schemaVersion: 1,
+    canvas: { width: 640, height: 240, background: { path: posterExample, position: "centre" } },
+    layers: [
+      { kind: "image", path: stampStyle, x: 130, y: 130, width: 150, rotation: -5, treatment: { kind: "sticker", border: 7 } },
+      { kind: "text", text: "LOCAL COMPOSITE", x: 390, y: 62, fontSize: 34, fill: "#ffe05a", stroke: "#3c1450", strokeWidth: 3, fontWeight: 800 },
+      { kind: "arrow", from: { x: 300, y: 108 }, to: { x: 210, y: 132 }, color: "#7ceaff", width: 6 },
+    ],
+    effects: { grain: 0.12, grainSeed: 9, vignette: 0.2, chromaticShift: 1 },
+  })}\n`, { flag: "wx" });
+  await run([
+    process.execPath,
+    join(installedSkill, "scripts", "compose-social-collage-banner.ts"),
+    "--manifest",
+    socialCollageManifest,
+    "--output",
+    socialCollageOutput,
+  ], consumer);
+  const socialCollageOutputStat = await lstat(socialCollageOutput);
+  const socialCollageReceipt = JSON.parse(
+    await readFile(socialCollageOutput.replace(/\.png$/u, ".receipt.json"), "utf8"),
+  ) as { canvas?: unknown; kind?: unknown; outputSha256?: unknown };
+  if (
+    !socialCollageOutputStat.isFile()
+    || socialCollageOutputStat.size === 0
+    || socialCollageReceipt.kind !== "slopcamera.social-collage-receipt"
+    || JSON.stringify(socialCollageReceipt.canvas) !== JSON.stringify({ height: 240, width: 640 })
+    || typeof socialCollageReceipt.outputSha256 !== "string"
+  ) {
+    throw new Error("Packed social-collage compositor did not produce its PNG and bound receipt.");
   }
   await run([
     join(consumer, "node_modules", ".bin", "slopcamera"),
