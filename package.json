@@ -226,7 +226,7 @@
     "benchmark:code-concurrency": "bun run ./apps/desktop/code/concurrency-benchmark.ts",
     "check:release-workflows": "bun test ./scripts/release-workflow.test.ts ./scripts/github-release.test.ts",
     "check:schema": "bun run ./scripts/validate-schema.ts",
-    "check:skill": "bun run ./scripts/validate-skill.ts",
+    "check:skill": "bun run ./scripts/validate-skill.ts && bun test ./scripts/social-collage-compositor.test.ts",
     "check:standalone": "bun test ./scripts/standalone-support-fixture.test.ts && bun run ./scripts/check-standalone.ts",
     "test:vectorize:official": "bun run ./scripts/official-vectorizer-smoke.ts",
     "test:package": "bun run ./scripts/package-smoke.ts",
