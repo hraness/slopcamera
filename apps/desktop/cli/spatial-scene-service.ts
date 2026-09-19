@@ -7,6 +7,7 @@ import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring"
 import { sampleSpatialCameraTrack } from "../../../src/spatial-scene/camera-track";
 import { SPATIAL_SCENE_LIMITS, SpatialCameraIdSchema } from "../../../src/spatial-scene/contracts";
 import { checkSpatialBehavior } from "../../../src/spatial-scene/behavior";
+import { auditSpatialBehaviorTrace } from "../../../src/spatial-scene/behavior-audit";
 import { bakeSpatialBehavior } from "../../../src/spatial-scene/behavior-bake";
 import { spatialBehaviorFnSignatures } from "../../../src/spatial-scene/behavior-fns";
 import { planSpatialBehaviorGallery, spatialBehaviorGalleryPlanSha256 } from "../../../src/spatial-scene/behavior-gallery";
@@ -87,6 +88,14 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
   // requires --allow-cloud-upload on this exact invocation.
   if (command.action === "review" && !command.allowCloudUpload) {
     throw new CliError("authorization-required", "scene review uploads bounded rendered beauty frames to a vision model and requires --allow-cloud-upload on this invocation.", { command: "scene review" });
+  }
+  if (command.action === "behavior-audit") {
+    const bake = await readSpatialJson(resolve(application.paths.repositoryRoot, command.bake));
+    const report = auditSpatialBehaviorTrace(bake);
+    if (command.output === undefined) return report;
+    const output = resolve(application.paths.repositoryRoot, command.output);
+    await publishSpatialSource(output, report);
+    return { path: output, findings: report.findings.length, channels: report.channelCount, emitted: report.emittedCount };
   }
   if (command.action === "camera-track") assertCameraTrackActive(signal);
   const sourcePath = resolve(application.paths.repositoryRoot, "path" in command ? command.path : command.scene);

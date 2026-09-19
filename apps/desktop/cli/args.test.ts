@@ -512,6 +512,16 @@ test("scene behavior commands parse scene, channel-map, and output options", () 
   expect(() => parseCliArgs([
     "scene", "behavior", "bake", "behavior.json", "--scene", "scene.json",
   ])).toThrow(/--output/u);
+  expect(parseCliArgs([
+    "scene", "behavior", "audit", "bake.json", "--output", "audit.json", "--json",
+  ])).toEqual({
+    action: "behavior-audit", bake: "bake.json", json: true, kind: "spatial-scene", output: "audit.json",
+  });
+  expect(parseCliArgs([
+    "scene", "behavior", "audit", "bake.json",
+  ])).toEqual({
+    action: "behavior-audit", bake: "bake.json", json: false, kind: "spatial-scene",
+  });
   expect(() => parseCliArgs([
     "scene", "behavior", "plan", "behavior.json", "--scene", "scene.json",
   ])).toThrow(/Usage/u);

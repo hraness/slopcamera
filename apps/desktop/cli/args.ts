@@ -100,6 +100,7 @@ export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" 
   | { readonly action: "behavior-check"; readonly behavior: string; readonly scene: string }
   | { readonly action: "behavior-bake"; readonly behavior: string; readonly scene: string; readonly channelMap?: string; readonly output: string }
   | { readonly action: "behavior-gallery"; readonly behavior: string; readonly scene: string; readonly channelMap?: string; readonly output?: string }
+  | { readonly action: "behavior-audit"; readonly bake: string; readonly output?: string }
   | { readonly action: "temporal-audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly contacts?: string; readonly cutBeforeUs?: readonly number[] }
 );
 export type SpatialProjectCommand = JsonOption & {
@@ -3475,7 +3476,13 @@ function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | S
         ? { ...shared, action: "behavior-bake", output: output! }
         : { ...shared, action: "behavior-gallery", ...(output === undefined ? {} : { output }) };
     }
-    fail("Usage: slopcamera scene behavior <check|bake|gallery> ...");
+    if (behaviorAction === "audit") {
+      const parsed = parseOptions(argv.slice(2), { ...JSON_SPEC, "--output": "value" });
+      const [bake] = exactPositionals(parsed, 1, "slopcamera scene behavior audit <bake.json> [--output <audit.json>] [--json]");
+      const output = optionString(parsed, "--output");
+      return { kind: "spatial-scene", action: "behavior-audit", bake: bake!, ...(output === undefined ? {} : { output }), json: optionFlag(parsed, "--json") };
+    }
+    fail("Usage: slopcamera scene behavior <check|bake|gallery|audit> ...");
   }
   if (action === "temporal-audit") {
     const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--camera": "value", "--contacts": "value", "--cut-before-us": "value", "--times-us": "value" });

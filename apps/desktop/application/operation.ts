@@ -22,6 +22,7 @@ export const OPERATION_KINDS = [
   "scene.behavior.check",
   "scene.behavior.bake",
   "scene.behavior.gallery",
+  "scene.behavior.audit",
   "scene.temporal-audit",
   "slopcamera.studio.run",
   "spatial.project.snapshot",

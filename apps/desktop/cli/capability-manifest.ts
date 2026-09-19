@@ -24,6 +24,7 @@ const diagramImageOperations = [
 
 const spatialSceneOperations = [
   "scene.audit@1",
+  "scene.behavior.audit@1",
   "scene.behavior.bake@1",
   "scene.behavior.check@1",
   "scene.behavior.gallery@1",
@@ -141,6 +142,7 @@ const capabilityModules = Object.freeze([
       { effect: "pure", name: "scene behavior check" },
       { effect: "local-derived-write", name: "scene behavior bake" },
       { effect: "local-derived-write", name: "scene behavior gallery" },
+      { effect: "pure", name: "scene behavior audit" },
       { effect: "pure", name: "scene temporal-audit" },
     ],
     description: "Editable spatial scenes, calibrated cameras, bounded geometry, rendered evidence, direction proposals, and closed effects contracts.",
@@ -164,6 +166,7 @@ const capabilityModules = Object.freeze([
     title: "Spatial scenes",
     toolNames: [
       "audit_scene",
+      "audit_scene_behavior",
       "audit_scene_temporal",
       "check_scene",
       "check_scene_behavior",

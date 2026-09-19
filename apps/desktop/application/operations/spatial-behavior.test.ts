@@ -52,11 +52,12 @@ const behavior = (sceneSha256: string) => ({
 });
 
 describe("scene behavior operations", () => {
-  test("register three pure operations with complete JSON schemas", () => {
+  test("register four pure operations with complete JSON schemas", () => {
     for (const kind of [
       "scene.behavior.check",
       "scene.behavior.bake",
       "scene.behavior.gallery",
+      "scene.behavior.audit",
     ] as const) {
       const description = registry.describe(kind, 1);
       expect(description.inputJsonSchema.type).toBe("object");

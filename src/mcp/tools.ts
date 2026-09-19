@@ -40,6 +40,9 @@ import {
   checkSpatialBehavior,
 } from "../spatial-scene/behavior.js"
 import {
+  auditSpatialBehaviorTrace,
+} from "../spatial-scene/behavior-audit.js"
+import {
   spatialBehaviorFnSignatures,
 } from "../spatial-scene/behavior-fns.js"
 import {
@@ -894,6 +897,47 @@ export const slopcameraMcpTools: readonly McpToolDefinition[] = deepFreeze([
     },
   },
   {
+    name: "audit_scene_behavior",
+    title: "Audit scene behavior trace",
+    description:
+      "Analyze a baked behavior trace for pathological patterns: state thrash (rapid transitions), exact periodicity (trivially cyclic channels), dead channels (constant-valued), and unreachable states (declared in transitions but never visited). Advisory findings for gallery review — never selects or promotes.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["bake"],
+      properties: {
+        bake: { type: "string", description: "Root-relative path to the behavior bake JSON (slopcamera.spatial-behavior-bake)." },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["ok", "source", "report", "summary"],
+      properties: {
+        ok: { const: true },
+        source: { type: "string" },
+        report: { type: "object" },
+        summary: {
+          type: "object",
+          additionalProperties: false,
+          required: ["findingCount", "channelCount", "emittedCount"],
+          properties: {
+            findingCount: { type: "integer", minimum: 0 },
+            channelCount: { type: "integer", minimum: 0 },
+            emittedCount: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    annotations: {
+      title: "Audit scene behavior trace",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "audit_scene_temporal",
     title: "Audit scene temporal evidence",
     description:
@@ -1017,6 +1061,10 @@ interface ParsedSceneEffectsArguments {
 interface ParsedSceneBehaviorArguments {
   readonly scene: string
   readonly behavior: string
+}
+
+interface ParsedSceneBehaviorAuditArguments {
+  readonly bake: string
 }
 
 interface ParsedSceneTemporalArguments extends ParsedSceneSourceArguments {
@@ -1334,6 +1382,18 @@ function parseSceneBehaviorArguments(
   return {
     scene: parseScenePath(value.scene, "scene"),
     behavior: parseScenePath(value.behavior, "behavior"),
+  }
+}
+
+function parseSceneBehaviorAuditArguments(
+  value: unknown,
+): ParsedSceneBehaviorAuditArguments {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  rejectUnknownKeys(value, new Set(["bake"]))
+  return {
+    bake: parseScenePath(value.bake, "bake"),
   }
 }
 
@@ -1793,6 +1853,12 @@ export class SlopcameraMcpToolRuntime {
         const options = parseSceneBehaviorArguments(argumentsValue)
         return await this.withSceneAdmission(
           async () => await this.checkSceneBehavior(options),
+        )
+      }
+      if (name === "audit_scene_behavior") {
+        const options = parseSceneBehaviorAuditArguments(argumentsValue)
+        return await this.withSceneAdmission(
+          async () => await this.auditSceneBehavior(options),
         )
       }
       if (name === "audit_scene_temporal") {
@@ -2334,6 +2400,28 @@ export class SlopcameraMcpToolRuntime {
       {
         ok: summary.errorCount === 0,
         source: source.relativePath,
+        report: { ...report, findings },
+        summary,
+      },
+    )
+  }
+
+  private async auditSceneBehavior(
+    options: ParsedSceneBehaviorAuditArguments,
+  ): Promise<McpToolResult> {
+    const bake = await loadJson(this.boundary, options.bake, "Behavior bake source")
+    const report = auditSpatialBehaviorTrace(bake.value)
+    const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings)
+    const summary = {
+      findingCount: report.findings.length,
+      channelCount: report.channelCount,
+      emittedCount: report.emittedCount,
+    }
+    return successResult(
+      `Audited behavior bake ${bake.source.relativePath}: ${summary.findingCount} finding${summary.findingCount === 1 ? "" : "s"} across ${summary.channelCount} channel${summary.channelCount === 1 ? "" : "s"}.`,
+      {
+        ok: true,
+        source: bake.source.relativePath,
         report: { ...report, findings },
         summary,
       },

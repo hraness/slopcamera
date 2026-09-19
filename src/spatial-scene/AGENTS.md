@@ -6,6 +6,8 @@
 - `behavior-trace.ts` – emitted-channel records, host channel maps, the emitted→performance-directive proposal mapper, and the `slopcamera.spatial-behavior-bake` artifact plus receipt.
 - `behavior-bake.ts` – the deterministic bake: runs an admitted closure through the pinned ALGAL runtime over a memory store and the pure fn registry, extracts interface emissions, and binds the run receipt.
 - `behavior-gallery.ts` – seeded behavior galleries: deterministic seed variants of one admitted behavior bake into content-addressed candidates; seed-agnostic organisms collapse honestly and selection stays explicit.
+- `behavior-stdlib.ts` – standard-library organisms composing the fn catalog into reusable patterns: locomotion FSM, expression layer, interaction sequence, and the combined top-level organism that chains pairwise append across all three.
+- `behavior-audit.ts` – behavior-trace audit: state-thrash, exact-periodicity, dead-channel, and unreachable-state findings on baked emitted traces; advisory for gallery review.
 - Pure identity, evaluation, inspection and audit modules – scene source and derived state without host effects.
 - Colocated deterministic and property tests – reference, transformation, time and edit laws.
 

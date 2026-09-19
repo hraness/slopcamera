@@ -790,6 +790,26 @@ describe("Slopcamera MCP scene tools", () => {
       })
       expect(behaviorOutside.isError).toBe(true)
 
+      await writeFile(join(root, "bake-audit.json"), JSON.stringify({
+        emitted: [
+          { tUs: 0, channel: "locomotion", value: "idle" },
+          { tUs: 100_000, channel: "locomotion", value: "walk" },
+          { tUs: 200_000, channel: "locomotion", value: "walk" },
+        ],
+        behaviorSha256: "a".repeat(64),
+        emittedSha256: "b".repeat(64),
+        rangeUs: { startUs: 0, endUs: 250_000 },
+      }))
+      const behaviorAudit = await runtime.call("audit_scene_behavior", {
+        bake: "bake-audit.json",
+      })
+      expect(behaviorAudit.isError).toBeUndefined()
+      expect(behaviorAudit.structuredContent).toMatchObject({
+        ok: true,
+        source: "bake-audit.json",
+        summary: { channelCount: 1, emittedCount: 3 },
+      })
+
       const temporal = await runtime.call("audit_scene_temporal", {
         path: "scene.json", camera_id: "camera_hero", times_us: [0, 2_000_000],
       })
@@ -807,7 +827,7 @@ describe("Slopcamera MCP scene tools", () => {
           { resource: "local-io", amount: 1 },
         ])
       }
-      expect(admission.claims).toHaveLength(8)
+      expect(admission.claims).toHaveLength(9)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

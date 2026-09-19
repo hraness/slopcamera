@@ -49,6 +49,7 @@ export interface McpToolDefinition {
     | "check_scene_effects"
     | "plan_scene_effects"
     | "check_scene_behavior"
+    | "audit_scene_behavior"
     | "audit_scene_temporal"
   readonly title: string
   readonly description: string

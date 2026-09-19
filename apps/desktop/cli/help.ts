@@ -146,6 +146,7 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene behavior check <behavior.json> --scene <scene.json> [--json]
   slopcamera scene behavior bake <behavior.json> --scene <scene.json> [--channel-map <map.json>] --output <bake.json> [--json]
   slopcamera scene behavior gallery <behavior.json> --scene <scene.json> [--channel-map <map.json>] [--output <gallery.json>] [--json]
+  slopcamera scene behavior audit <bake.json> [--output <audit.json>] [--json]
   slopcamera scene temporal-audit <scene.json> --camera <camera-id> [--times-us <csv>] [--contacts <contacts.json>] [--cut-before-us <csv>] [--json]
   slopcamera scene project snapshot <project-id> [--json]
   slopcamera scene project prepare-render <project-id> --input <request.json> --output <prepared-render.json> [--profile <profile>] [--json]
@@ -634,7 +635,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "scene") {
     if (words[1] === "direction") return ["check", "plan", "gallery"];
     if (words[1] === "effects") return ["check", "plan", "bake"];
-    if (words[1] === "behavior") return ["check", "bake", "gallery"];
+    if (words[1] === "behavior") return ["check", "bake", "gallery", "audit"];
     return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "temporal-audit"];
   }
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
