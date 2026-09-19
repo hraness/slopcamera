@@ -20,6 +20,65 @@ const FFMPEG = Bun.which("ffmpeg");
 const FFPROBE = Bun.which("ffprobe");
 const RSVG_CONVERT = Bun.which("rsvg-convert");
 
+for (const kind of ["image", "svg"] as const) {
+  test.skipIf(FFMPEG === null || FFPROBE === null || (kind === "svg" && RSVG_CONVERT === null))(
+    `holds a static ${kind} overlay through the last 24fps frame inside its interval`,
+    async () => {
+      if (FFMPEG === null || FFPROBE === null) return;
+      const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-static-overlay-end-")));
+      try {
+        await mkdir(join(root, "renders"));
+        const filename = kind === "svg" ? "red.svg" : "red.png";
+        if (kind === "svg") {
+          await writeFile(join(root, filename), '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><path fill="red" d="M0 0h64v64H0z"/></svg>');
+        } else {
+          await sharp({ create: { width: 64, height: 64, channels: 4, background: "red" } }).png().toFile(join(root, filename));
+        }
+        const expected = await fileIntegrity(join(root, filename));
+        const asset = { ...expected, path: filename,
+          provenance: { kind: "imported" as const, originalName: filename, sourceSha256: expected.sha256 } };
+        const source: OverlayOperation["source"] = kind === "svg"
+          ? { kind, asset: { ...asset, mediaType: "image/svg+xml" } }
+          : { kind, asset: { ...asset, mediaType: "image/png" } };
+        const operation = OverlayOperationSchema.parse({ ...overlay("overlay_staticend1", 0, source),
+          range: { startUs: 125_000, endUs: 4_900_000 } });
+        const plan = renderPlan({
+          output: { background: "#000000ff", durationUs: 5_125_000, frameRate: 24, pixelWidth: 64, pixelHeight: 64 },
+          overlays: [[125_000, 2_250_000], [2_500_000, 3_500_000], [3_500_000, 4_900_000]].map(([startUs, endUs]) => ({
+            operation, outputRange: { startUs: startUs!, endUs: endUs! }, projectRange: { startUs: startUs!, endUs: endUs! },
+            playbackOffsetUs: startUs! - 125_000, visibleDurationUs: endUs! - startUs!,
+          })),
+        });
+        const outputPath = join(root, "renders", "bounded.mp4");
+        const built = await buildProjectFfmpegInvocation(plan, { ffmpeg: FFMPEG, outputPath,
+          projectDirectory: root, repositoryRoot: root, runner, ffprobe: FFPROBE,
+          ...(RSVG_CONVERT === null ? {} : { rsvgConvert: RSVG_CONVERT, rsvgConvertVersion: "test runtime" }) });
+        const rendered = await runProcess(built.argv);
+        if (rendered.exitCode !== 0) throw new Error(rendered.stderr);
+        const decodedPath = join(root, "frames.rgb");
+        const decoded = await runProcess([FFMPEG, "-v", "error", "-nostdin", "-i", outputPath,
+          "-map", "0:v:0", "-pix_fmt", "rgb24", "-f", "rawvideo", decodedPath]);
+        if (decoded.exitCode !== 0) throw new Error(decoded.stderr);
+        const pixels = await readFile(decodedPath);
+        const frameBytes = 64 * 64 * 3;
+        expect(pixels.length / frameBytes).toBe(123);
+        for (let frame = 0; frame < 123; frame++) {
+          const offset = frame * frameBytes + (32 * 64 + 32) * 3;
+          const red = pixels[offset]!;
+          const green = pixels[offset + 1]!;
+          const blue = pixels[offset + 2]!;
+          const time = frame / 24;
+          const visible = (time >= .125 && time < 2.25) || (time >= 2.5 && time < 4.9);
+          if (visible) expect(red, `frame ${frame} at ${frame / 24}s`).toBeGreaterThan(200);
+          else expect(red, `outside interval at frame ${frame}`).toBeLessThan(20);
+          expect(green).toBeLessThan(20);
+          expect(blue).toBeLessThan(20);
+        }
+      } finally { await rm(root, { recursive: true, force: true }); }
+    }, 20_000,
+  );
+}
+
 const DISABLED_METADATA_EFFECTS: ProjectRenderPlanV1["effects"] = {
   clickCues: [],
   clicks: { enabled: false },
@@ -279,8 +338,8 @@ test("reuses one SVG sprite input across independently timed caption crops", asy
       "1",
     ]);
     expect(filter.match(/crop=w=/gu)).toHaveLength(2);
-    expect(filter).toContain("between(t,0.1,0.9)");
-    expect(filter).toContain("between(t,1.1,1.9)");
+    expect(filter).toContain("gte(t,0.1)*lt(t,0.9)");
+    expect(filter).toContain("gte(t,1.1)*lt(t,1.9)");
   } finally {
     await rm(repositoryRoot, { force: true, recursive: true });
   }
