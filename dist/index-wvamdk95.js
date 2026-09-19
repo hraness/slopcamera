@@ -2348,7 +2348,7 @@ class SlopcameraMcpToolRuntime {
 }
 
 // src/version.ts
-var SLOPCAMERA_VERSION = "3.2.8";
+var SLOPCAMERA_VERSION = "3.3.0";
 
 // src/mcp/server.ts
 var slopcameraMcpProtocolVersion = "2025-11-25";

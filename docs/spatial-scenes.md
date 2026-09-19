@@ -4,6 +4,8 @@ Slopcamera keeps a visual composition as editable scene data and renders it thro
 
 The Three.js renderer supports bounded offline rendering, explicit hardware acceleration, and retained Gaussian-splat environments. Importing and directing a saved world works locally without a provider account. Interactive world editing, simulation, and automatic video-model refinement remain future adapters. Existing HTML authoring and media-editing commands remain available.
 
+For architecture and furniture that must regenerate from dimensions, use [parametric designs](how-to/parametric-design.md). Designs compile into this same scene and asset contract.
+
 ## Render an editable scene
 
 Install [current Slopcamera source](how-to/use-current-source.md) for these commands, including calibrated camera tracks and native studio bridges; see [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.

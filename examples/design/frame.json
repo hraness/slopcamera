@@ -1,0 +1,5 @@
+{
+  "cameraId": "camera_hero",
+  "selection": { "kind": "frame", "timeUs": 0 },
+  "mode": { "kind": "beauty" }
+}

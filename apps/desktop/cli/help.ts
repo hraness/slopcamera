@@ -124,6 +124,12 @@ project for slopcamera project render run. Review and assembly work without clou
 This workflow retains image and prompt continuity; it has no provider neural checkpoint
 or real-time session. Use slopcamera ai models list --type video for live model discovery.`,
   scene: `Usage:
+  slopcamera scene design catalog [--json]
+  slopcamera scene design init <directory> --template <id> [--json]
+  slopcamera scene design inspect <design.json> [--json]
+  slopcamera scene design set <design.json> --parameters <values.json> --output <new-design.json> [--json]
+  slopcamera scene design compile <design.json> [--scene <base.scene.json>] --output-dir <new-directory> [--json]
+  slopcamera scene design gallery <design.json> --variants <variants.json> [--scene <base.scene.json>] --output-dir <new-directory> [--json]
   slopcamera scene init <scene.json> [--json]
   slopcamera scene check <scene.json> [--json]
   slopcamera scene inspect <scene.json> [--json]
@@ -157,6 +163,18 @@ or real-time session. Use slopcamera ai models list --type video for live model 
   slopcamera scene asset admit <model.glb> --output <manifest.json>
         [--source-root <directory>] [--asset-id <id>]
         [--meters-per-unit <n>] [--source-up x|y|z] [--json]
+
+Designs retain named numeric controls, derived values, dimensional constraints and
+geometry stages. Inspect resolves dependencies and checks budgets without creating
+meshes. Set applies a bounded JSON object of parameter values as a new revision.
+Compile creates a new directory containing design.json, scene.json, exact GLB/facts
+payloads, a compilation receipt and render.json when a camera is available. Pass
+the starter's base.scene.json to retain its cameras and lighting. Gallery compiles
+one to six labelled parameter variants into independent bundles; it does not render.
+Render each bundle through scene render <bundle/scene.json> --request <bundle/render.json>.
+Compilation is local and executes no authored code. Existing output paths conflict;
+interrupted bundles remain without a completion receipt. Use scene design catalog
+for the current architectural starters and docs/parametric-design.md for the contract.
 
 Hardware profiles: three-webgl2-hardware-v1 and three-spark-webgl2-hardware-v1.
 An explicit profile must agree with the request; omitting it preserves the request.

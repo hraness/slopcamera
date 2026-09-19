@@ -1,0 +1,285 @@
+{
+  "kind": "slopcamera.spatial-scene",
+  "schemaVersion": 1,
+  "sceneId": "scene_design_ribbed_tower",
+  "coordinates": "right-handed-y-up-meters",
+  "durationUs": 4000000,
+  "entities": [
+    {
+      "entityId": "entity_ambient",
+      "name": "Soft sky fill",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "ambient",
+      "color": "#e0ecf1",
+      "intensity": 1.1
+    },
+    {
+      "entityId": "entity_fill",
+      "name": "fill",
+      "parentId": null,
+      "transform": {
+        "position": [
+          17,
+          11.899999999999999,
+          5.1
+        ],
+        "rotation": [
+          -0.08659856183092098,
+          0.5934429851407236,
+          0.06443198432528942,
+          0.7976055615854174
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#c6dbef",
+      "intensity": 1.1,
+      "shadow": false
+    },
+    {
+      "entityId": "entity_ground",
+      "name": "Matte studio ground",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          -0.14,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "mesh",
+      "geometry": {
+        "kind": "box",
+        "size": [
+          200,
+          0.25,
+          200
+        ]
+      },
+      "material": {
+        "kind": "standard",
+        "color": "#263638",
+        "opacity": 1,
+        "roughness": 0.94,
+        "metalness": 0
+      },
+      "receiveShadow": true
+    },
+    {
+      "entityId": "entity_key",
+      "name": "key",
+      "parentId": null,
+      "transform": {
+        "position": [
+          -17,
+          28.9,
+          17
+        ],
+        "rotation": [
+          -0.32355895879712493,
+          -0.35844745291116475,
+          -0.1340225089610866,
+          0.8653687022162254
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#ffe7c5",
+      "intensity": 3.3,
+      "shadow": true
+    },
+    {
+      "entityId": "entity_rim",
+      "name": "rim",
+      "parentId": null,
+      "transform": {
+        "position": [
+          5.1,
+          17,
+          -17
+        ],
+        "rotation": [
+          -0.03376237144391645,
+          0.9622867455527188,
+          0.230037740260447,
+          0.14123370583507083
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#fff0db",
+      "intensity": 2.1,
+      "shadow": false
+    }
+  ],
+  "cameras": [
+    {
+      "cameraId": "camera_detail",
+      "name": "Material and connection study",
+      "pose": {
+        "position": [
+          14.399999999999999,
+          12.5,
+          17.4
+        ],
+        "rotation": [
+          -0.09236684091706383,
+          0.3371889029967366,
+          0.03326384123207304,
+          0.9363041852204586
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1696.213703393102,
+        "fy": 1696.213703393102,
+        "cx": 720,
+        "cy": 540
+      }
+    },
+    {
+      "cameraId": "camera_hero",
+      "name": "Architectural three-quarter",
+      "pose": {
+        "position": [
+          24,
+          17,
+          29
+        ],
+        "rotation": [
+          -0.11014718185612642,
+          0.33649571478069684,
+          0.0396670312965699,
+          0.9343793442127766
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1617.1464772110355,
+        "fy": 1617.1464772110355,
+        "cx": 720,
+        "cy": 540
+      }
+    },
+    {
+      "cameraId": "camera_plan",
+      "name": "Plan and structural rhythm",
+      "pose": {
+        "position": [
+          0.01,
+          42.5,
+          0
+        ],
+        "rotation": [
+          -0.499941173011602,
+          0.500058820067983,
+          0.499941173011602,
+          0.5000588200679829
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1476.2187659370932,
+        "fy": 1476.2187659370932,
+        "cx": 720,
+        "cy": 540
+      }
+    }
+  ],
+  "assets": [],
+  "animations": [],
+  "generators": [],
+  "overrides": []
+}

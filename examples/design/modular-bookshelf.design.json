@@ -1,0 +1,2276 @@
+{
+  "kind": "slopcamera.spatial-design",
+  "schemaVersion": 1,
+  "designId": "modular-bookshelf",
+  "parameters": [
+    {
+      "name": "bays",
+      "label": "Vertical bays",
+      "value": 5,
+      "min": 3,
+      "max": 8,
+      "step": 1,
+      "unit": "count"
+    },
+    {
+      "name": "depth",
+      "label": "Shelf depth",
+      "value": 0.42,
+      "min": 0.3,
+      "max": 0.6,
+      "unit": "m"
+    },
+    {
+      "name": "height",
+      "label": "Overall height",
+      "value": 2.7,
+      "min": 2.2,
+      "max": 3.4,
+      "unit": "m"
+    },
+    {
+      "name": "rows",
+      "label": "Shelf rows",
+      "value": 4,
+      "min": 3,
+      "max": 6,
+      "step": 1,
+      "unit": "count"
+    },
+    {
+      "name": "thickness",
+      "label": "Board thickness",
+      "value": 0.042,
+      "min": 0.025,
+      "max": 0.065,
+      "unit": "m"
+    },
+    {
+      "name": "width",
+      "label": "Overall width",
+      "value": 4.8,
+      "min": 3.6,
+      "max": 6.2,
+      "unit": "m"
+    }
+  ],
+  "values": [
+    {
+      "name": "bayPitch",
+      "expression": {
+        "op": "div",
+        "args": [
+          {
+            "op": "sub",
+            "args": [
+              {
+                "$param": "width"
+              },
+              {
+                "$param": "thickness"
+              }
+            ]
+          },
+          {
+            "$param": "bays"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rowPitch",
+      "expression": {
+        "op": "div",
+        "args": [
+          {
+            "op": "sub",
+            "args": [
+              {
+                "$param": "height"
+              },
+              {
+                "$param": "thickness"
+              }
+            ]
+          },
+          {
+            "$param": "rows"
+          }
+        ]
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "name": "bay-clearance",
+      "left": {
+        "op": "sub",
+        "args": [
+          {
+            "$value": "bayPitch"
+          },
+          {
+            "$param": "thickness"
+          }
+        ]
+      },
+      "operator": "gte",
+      "right": 0.4,
+      "message": "Bays need at least 0.4 m clear width."
+    },
+    {
+      "name": "book-clearance",
+      "left": {
+        "op": "sub",
+        "args": [
+          {
+            "$value": "rowPitch"
+          },
+          {
+            "$param": "thickness"
+          }
+        ]
+      },
+      "operator": "gte",
+      "right": 0.34,
+      "message": "Shelf openings must leave 0.34 m for the retained ceramic and books."
+    },
+    {
+      "name": "shelf-span",
+      "left": {
+        "$value": "bayPitch"
+      },
+      "operator": "lte",
+      "right": 1.25,
+      "message": "Keep unsupported shelf spans at or below 1.25 m."
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "books",
+      "name": "Indigo clothbound books",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "book_0_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.58
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_0",
+            "input": "book_0_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      -0.10500000000000001
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.58
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_1_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.6699999999999999
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_1",
+            "input": "book_1_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      -0.035
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.6699999999999999
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_2_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.76
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_2",
+            "input": "book_2_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      0.035
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.76
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_3_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.58
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_3",
+            "input": "book_3_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      0.10500000000000001
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.58
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_4_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.6699999999999999
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_4",
+            "input": "book_4_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  2.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      -0.10500000000000001
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.6699999999999999
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_5_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.76
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_5",
+            "input": "book_5_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  2.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      -0.035
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.76
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_6_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.58
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_6",
+            "input": "book_6_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  2.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      0.035
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.58
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "book_7_solid",
+            "kind": "box",
+            "size": [
+              0.055,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    0.6699999999999999
+                  ],
+                  "op": "mul"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.68
+                  ],
+                  "op": "mul"
+                }
+              }
+            ]
+          },
+          {
+            "id": "book_7",
+            "input": "book_7_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "width"
+                              },
+                              -0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$param": "thickness"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$value": "bayPitch"
+                                  },
+                                  2.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      0.10500000000000001
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              0.6699999999999999
+                            ],
+                            "op": "mul"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      0.04
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "assembly",
+            "inputs": [
+              "book_0",
+              "book_1",
+              "book_2",
+              "book_3",
+              "book_4",
+              "book_5",
+              "book_6",
+              "book_7"
+            ],
+            "kind": "merge"
+          }
+        ],
+        "output": "assembly",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#536d80",
+          "opacity": 1,
+          "roughness": 0.87,
+          "metalness": 0
+        }
+      ],
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "ceramic",
+      "name": "Ivory turned ceramic",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "profile",
+            "kind": "profile",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                0.075,
+                0
+              ],
+              [
+                0.1,
+                0.06
+              ],
+              [
+                0.105,
+                0.16
+              ],
+              [
+                0.08,
+                0.24
+              ],
+              [
+                0.048,
+                0.27
+              ],
+              [
+                0.048,
+                0.32
+              ],
+              [
+                0,
+                0.32
+              ]
+            ]
+          },
+          {
+            "id": "vase",
+            "kind": "revolve",
+            "profile": "profile",
+            "segments": 48
+          }
+        ],
+        "output": "vase",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#eee8dc",
+          "opacity": 1,
+          "roughness": 0.87,
+          "metalness": 0
+        }
+      ],
+      "transform": {
+        "position": [
+          {
+            "$expr": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "$param": "width"
+                    },
+                    -0.5
+                  ],
+                  "op": "mul"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "$param": "thickness"
+                        },
+                        0.5
+                      ],
+                      "op": "mul"
+                    },
+                    {
+                      "args": [
+                        {
+                          "$value": "bayPitch"
+                        },
+                        1.5
+                      ],
+                      "op": "mul"
+                    }
+                  ],
+                  "op": "add"
+                }
+              ],
+              "op": "add"
+            }
+          },
+          {
+            "$expr": {
+              "args": [
+                0.19,
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "$value": "rowPitch"
+                        },
+                        2
+                      ],
+                      "op": "mul"
+                    },
+                    {
+                      "$param": "thickness"
+                    }
+                  ],
+                  "op": "add"
+                }
+              ],
+              "op": "add"
+            }
+          },
+          0.015
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "horizontal-shelves",
+      "name": "Continuous walnut shelves",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "board",
+            "kind": "box",
+            "size": [
+              {
+                "$expr": {
+                  "$param": "width"
+                }
+              },
+              {
+                "$expr": {
+                  "$param": "thickness"
+                }
+              },
+              {
+                "$expr": {
+                  "$param": "depth"
+                }
+              }
+            ]
+          },
+          {
+            "count": {
+              "$expr": {
+                "args": [
+                  {
+                    "$param": "rows"
+                  },
+                  1
+                ],
+                "op": "add"
+              }
+            },
+            "id": "levels",
+            "input": "board",
+            "kind": "array",
+            "step": [
+              0,
+              {
+                "$expr": {
+                  "$value": "rowPitch"
+                }
+              },
+              0
+            ]
+          }
+        ],
+        "output": "levels",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#71503c",
+          "opacity": 1,
+          "roughness": 0.46,
+          "metalness": 0
+        }
+      ],
+      "transform": {
+        "position": [
+          0,
+          {
+            "$expr": {
+              "args": [
+                0.19,
+                {
+                  "args": [
+                    {
+                      "$param": "thickness"
+                    },
+                    0.5
+                  ],
+                  "op": "mul"
+                }
+              ],
+              "op": "add"
+            }
+          },
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "inset-backs",
+      "name": "Alternating terracotta backs",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "panel",
+            "kind": "box",
+            "size": [
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "bayPitch"
+                    },
+                    {
+                      "$param": "thickness"
+                    }
+                  ],
+                  "op": "sub"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$value": "rowPitch"
+                    },
+                    {
+                      "$param": "thickness"
+                    }
+                  ],
+                  "op": "sub"
+                }
+              },
+              0.018
+            ]
+          },
+          {
+            "id": "back_0",
+            "input": "panel",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "width"
+                          },
+                          -0.5
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "thickness"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$value": "bayPitch"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      -0.5
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "back_1",
+            "input": "panel",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "width"
+                          },
+                          -0.5
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "thickness"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$value": "bayPitch"
+                              },
+                              2.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      -0.5
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "back_2",
+            "input": "panel",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "width"
+                          },
+                          -0.5
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "thickness"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$value": "bayPitch"
+                              },
+                              1.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          0.19,
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "$value": "rowPitch"
+                                  },
+                                  2
+                                ],
+                                "op": "mul"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "add"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$value": "rowPitch"
+                              },
+                              {
+                                "$param": "thickness"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "$param": "depth"
+                      },
+                      -0.5
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "assembly",
+            "inputs": [
+              "back_0",
+              "back_1",
+              "back_2"
+            ],
+            "kind": "merge"
+          }
+        ],
+        "output": "assembly",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#ad6048",
+          "opacity": 1,
+          "roughness": 0.89,
+          "metalness": 0
+        }
+      ],
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "plinth",
+      "name": "Recessed dark plinth",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "plinth",
+            "kind": "box",
+            "size": [
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "width"
+                    },
+                    0.14
+                  ],
+                  "op": "sub"
+                }
+              },
+              0.2,
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "depth"
+                    },
+                    0.1
+                  ],
+                  "op": "sub"
+                }
+              }
+            ]
+          }
+        ],
+        "output": "plinth",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#283335",
+          "opacity": 1,
+          "roughness": 0.39,
+          "metalness": 0.22
+        }
+      ],
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "vertical-dividers",
+      "name": "Walnut uprights",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "upright",
+            "kind": "box",
+            "size": [
+              {
+                "$expr": {
+                  "$param": "thickness"
+                }
+              },
+              {
+                "$expr": {
+                  "args": [
+                    {
+                      "$param": "height"
+                    },
+                    {
+                      "$param": "thickness"
+                    }
+                  ],
+                  "op": "sub"
+                }
+              },
+              {
+                "$expr": {
+                  "$param": "depth"
+                }
+              }
+            ]
+          },
+          {
+            "count": {
+              "$expr": {
+                "args": [
+                  {
+                    "$param": "bays"
+                  },
+                  1
+                ],
+                "op": "add"
+              }
+            },
+            "id": "bays",
+            "input": "upright",
+            "kind": "array",
+            "step": [
+              {
+                "$expr": {
+                  "$value": "bayPitch"
+                }
+              },
+              0,
+              0
+            ]
+          }
+        ],
+        "output": "bays",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#71503c",
+          "opacity": 1,
+          "roughness": 0.46,
+          "metalness": 0
+        }
+      ],
+      "transform": {
+        "position": [
+          {
+            "$expr": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "$param": "width"
+                    },
+                    {
+                      "$param": "thickness"
+                    }
+                  ],
+                  "op": "sub"
+                },
+                -0.5
+              ],
+              "op": "mul"
+            }
+          },
+          {
+            "$expr": {
+              "args": [
+                0.19,
+                {
+                  "args": [
+                    {
+                      "$param": "height"
+                    },
+                    0.5
+                  ],
+                  "op": "mul"
+                }
+              ],
+              "op": "add"
+            }
+          },
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    }
+  ]
+}

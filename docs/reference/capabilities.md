@@ -19,6 +19,10 @@ Slopcamera v3.2.8 installs from its [canonical release archive](https://github.c
 
 Use the Slopcamera release installation or a source build for the commands below. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
 
+## Parametric architectural designs
+
+Current source adds `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation needs no Rhino, native engine or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+
 ## Discover the installed contract
 
 | Need | Discovery command |

@@ -131,6 +131,12 @@ const capabilityModules = Object.freeze([
   defineSlopcameraCapabilityModule({
     commands: [
       { effect: "local-read", name: "scene inspect" },
+      { effect: "pure", name: "scene design catalog" },
+      { effect: "local-read", name: "scene design inspect" },
+      { effect: "local-derived-write", name: "scene design init" },
+      { effect: "local-derived-write", name: "scene design set" },
+      { effect: "local-derived-write", name: "scene design compile" },
+      { effect: "local-derived-write", name: "scene design gallery" },
       { effect: "pure", name: "scene audit" },
       { effect: "local-derived-write", name: "scene render" },
       { effect: "pure", name: "scene direction check" },

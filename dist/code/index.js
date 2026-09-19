@@ -4134,12 +4134,18 @@ var coordinate = z9.number().finite().min(-1e6).max(1e6);
 var specVec2 = z9.tuple([coordinate, coordinate]);
 var specVec3 = z9.tuple([coordinate, coordinate, coordinate]);
 var editable = z9.array(z9.enum(["color", "opacity", "transform"])).max(3).optional();
-var partPlacement = { transform: SpatialTransformSchema.optional(), editable };
+var partPlacement = { transform: SpatialTransformSchema.optional(), editable, castShadow: z9.boolean().optional(), receiveShadow: z9.boolean().optional() };
 var opening = z9.discriminatedUnion("kind", [
   z9.strictObject({ kind: z9.literal("rect"), center: specVec2, width: meter, height: meter }),
   z9.strictObject({ kind: z9.literal("arch"), center: specVec2, width: meter, height: meter })
 ]);
 var SpatialParametricSpecSchema = z9.discriminatedUnion("kind", [
+  z9.strictObject({
+    ...partPlacement,
+    kind: z9.literal("geometry"),
+    graph: SpatialGeometryGraphSchema,
+    materials: z9.array(SpatialMaterialSchema).min(1).max(16)
+  }),
   z9.strictObject({
     ...partPlacement,
     kind: z9.literal("wall"),
@@ -4238,6 +4244,7 @@ var SpatialParametricRequestSchema = z9.strictObject({
   kind: z9.literal("slopcamera.spatial-parametric-request"),
   schemaVersion: z9.literal(1),
   generatorId: SpatialGeneratorIdSchema,
+  name: z9.string().min(1).max(160).optional(),
   spec: SpatialParametricSpecSchema,
   seed: z9.number().int().safe().min(0).max(4294967295).optional(),
   collision: z9.array(SpatialCollisionProxySchema).max(16).optional(),
@@ -4357,9 +4364,8 @@ function planArch(spec) {
   const count = spec.count ?? 1, spacing = spec.spacing ?? spec.width;
   if (spec.springline >= spec.height)
     pfail("Arch springline must stay below its apex height.", "spec.springline");
-  if (spec.width / 2 > spec.height - spec.springline + 0.000000001 && spec.height - spec.springline > 0) {
-    if (spec.width / 2 - (spec.height - spec.springline) > 0.000001)
-      pfail("Arch apex height must clear the opening radius.", "spec.height");
+  if (spec.height - spec.springline <= spec.width / 2 + 0.000000001) {
+    pfail("Arch apex height must leave positive material above the opening radius.", "spec.height");
   }
   const leg = Math.min(spec.width * 0.25, spec.depth);
   const points = archProfile(spec.width, spec.height, spec.springline, leg, 16);
@@ -4582,6 +4588,14 @@ function planScatter(spec) {
   }];
 }
 var PLANNERS = {
+  geometry: (spec) => [{
+    key: "geometry",
+    transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"],
+    materials: spec.materials,
+    collision: [],
+    lods: [{ level: 0, switchDistanceM: 0, graph: spec.graph }]
+  }],
   wall: planWall,
   floor: planFloor,
   stairs: planStairs,
@@ -4593,6 +4607,42 @@ var PLANNERS = {
   trim: planTrim,
   scatter: planScatter
 };
+function validatePartMaterials(plans) {
+  for (const part of plans) {
+    for (const material of part.materials) {
+      if (material.kind === "pbr" || material.map !== undefined) {
+        pfail("Retained parametric geometry requires untextured standard or unlit materials; PBR extension materials and texture maps are unsupported.", "spec.materials");
+      }
+    }
+    for (const lod of part.lods) {
+      const parsed = parseSpatialGeometryGraph(lod.graph);
+      for (const node of parsed.nodes) {
+        const slots = ["slot" in node ? node.slot : undefined, "sideSlot" in node ? node.sideSlot : undefined, "capSlot" in node ? node.capSlot : undefined];
+        if (slots.some((slot) => slot !== undefined && slot >= part.materials.length))
+          pfail("Geometry material slot has no declared material.", "spec.materials");
+      }
+    }
+  }
+}
+function estimateSpatialParametric(input) {
+  const spec = parseSpatialValue(SpatialParametricSpecSchema, input, "parametric spec");
+  const plans = PLANNERS[spec.kind](spec);
+  if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts)
+    pfail("Spec expands beyond the part budget.", "spec");
+  validatePartMaterials(plans);
+  let assets = 0, vertices = 0, triangles = 0, bytes = 0;
+  for (const part of plans) {
+    assets += part.lods.length + 1;
+    bytes += 65536 + (part.instances?.length ?? 0) * 512;
+    for (const lod of part.lods) {
+      const estimate = estimateSpatialGeometryGraph(lod.graph);
+      vertices += estimate.vertices;
+      triangles += estimate.triangles;
+      bytes += estimate.bytes + 65536;
+    }
+  }
+  return deepFreezeJson({ parts: plans.length, assets, vertices, triangles, bytes });
+}
 function sha256Bytes(bytes) {
   const hasher = createSha256HexHasher();
   hasher.update(bytes);
@@ -4621,6 +4671,7 @@ function emitSpatialParametric(input) {
   const plans = PLANNERS[spec.kind](spec);
   if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts)
     pfail("Spec expands beyond the part budget.", "spec");
+  validatePartMaterials(plans);
   const manifests = [];
   const artifacts = [];
   const entities = [];
@@ -4700,7 +4751,7 @@ function emitSpatialParametric(input) {
     const entity = parseSpatialValue(SpatialEntitySchema, {
       entityId,
       kind: "mesh",
-      name: `${spec.kind}:${part.key}`,
+      name: request.name === undefined ? `${spec.kind}:${part.key}` : plans.length === 1 ? request.name : `${request.name}:${part.key}`,
       parentId: null,
       transform: part.transform,
       placement: { kind: "world" },
@@ -4708,6 +4759,8 @@ function emitSpatialParametric(input) {
       visible: true,
       geometry: { kind: "asset", assetId: lod0.assetId, materialMode: multiSlot ? "source" : "entity" },
       material: part.materials[0],
+      ...spec.castShadow === undefined ? {} : { castShadow: spec.castShadow },
+      ...spec.receiveShadow === undefined ? {} : { receiveShadow: spec.receiveShadow },
       ...part.instances === undefined ? {} : { instances: [...part.instances] }
     }, `parametric entity ${part.key}`);
     entities.push(entity);
@@ -4735,6 +4788,7 @@ function emitSpatialParametric(input) {
     specSha256,
     parametersSha256,
     seed,
+    ...request.name === undefined ? {} : { name: request.name },
     profile: SPATIAL_GEOMETRY_PROFILE,
     assets: receiptAssets,
     entities: entities.map((entity) => entity.entityId).sort(),
@@ -4742,7 +4796,8 @@ function emitSpatialParametric(input) {
   });
   const receiptSha256 = spatialValueSha256({ domain: "slopcamera.spatial-parametric-receipt.v1", receipt });
   const bound = manifests.map((manifest) => manifest.provenance.source === "generated" ? parseSpatialValue(SpatialAssetManifestSchema, { ...manifest, provenance: { ...manifest.provenance, receiptSha256 } }, `parametric asset ${manifest.assetId}`) : manifest);
-  return deepFreezeJson({ generator: record, entities, manifests: bound, artifacts, facts: factsList, receipt, receiptSha256 });
+  const metadata = deepFreezeJson({ generator: record, entities, manifests: bound, facts: factsList, receipt, receiptSha256 });
+  return Object.freeze({ ...metadata, artifacts: Object.freeze(artifacts.map((artifact) => Object.freeze(artifact))) });
 }
 function mergeSpatialParametricOutput(scene, output) {
   return mergeSpatialGeneratorOutput(scene, output.generator, output.entities, output.manifests);
@@ -4797,20 +4852,764 @@ function auditSpatialParametricScene(sceneInput, factsInput, options) {
   return deepFreezeJson(entries);
 }
 
-// src/spatial-scene/particle-preparation.ts
+// src/spatial-scene/design.ts
 import { z as z10 } from "zod";
+var SPATIAL_DESIGN_LIMITS = Object.freeze({
+  sourceBytes: 1048576,
+  sourceDepth: 32,
+  sourceValues: 1e5,
+  parameters: 128,
+  values: 256,
+  constraints: 128,
+  stages: 32,
+  expressionNodes: 8192,
+  expressionDepth: 16,
+  parts: 64,
+  assets: 128,
+  vertices: 262144,
+  triangles: 400000,
+  outputBytes: 67108864,
+  scalarMagnitude: 1000000000000
+});
+var SPATIAL_DESIGN_COMPILER = "slopcamera.spatial-design-v1";
+var identifier = z10.string().min(1).max(64).regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/u);
+var scalar = z10.number().finite().min(-SPATIAL_DESIGN_LIMITS.scalarMagnitude).max(SPATIAL_DESIGN_LIMITS.scalarMagnitude);
+var template = z10.record(z10.string(), z10.json());
+var parameterSchema = z10.strictObject({
+  name: identifier,
+  label: z10.string().min(1).max(160).optional(),
+  value: scalar,
+  min: scalar,
+  max: scalar,
+  step: z10.number().finite().min(0.000000001).max(SPATIAL_DESIGN_LIMITS.scalarMagnitude).optional(),
+  unit: z10.enum(["m", "rad", "count", "ratio"]).optional()
+});
+var expressionSchema = z10.lazy(() => z10.union([
+  scalar,
+  z10.strictObject({ $param: identifier }),
+  z10.strictObject({ $value: identifier }),
+  z10.strictObject({ op: z10.enum(["add", "sub", "mul", "div", "min", "max", "neg", "abs", "sin", "cos", "floor", "ceil"]), args: z10.array(expressionSchema).min(1).max(16) })
+]));
+var stageBase = { stageId: identifier, name: z10.string().min(1).max(160).optional(), seed: z10.number().int().min(0).max(4294967295).optional() };
+var stageSchema = z10.discriminatedUnion("kind", [
+  z10.strictObject({ ...stageBase, kind: z10.literal("parametric"), spec: template }),
+  z10.strictObject({
+    ...stageBase,
+    kind: z10.literal("geometry"),
+    graph: template,
+    materials: z10.array(SpatialMaterialSchema).min(1).max(16),
+    transform: template.optional(),
+    editable: z10.array(z10.enum(["color", "opacity", "transform"])).max(3).optional(),
+    castShadow: z10.boolean().optional(),
+    receiveShadow: z10.boolean().optional()
+  })
+]);
+var SpatialDesignV1Schema = z10.strictObject({
+  kind: z10.literal("slopcamera.spatial-design"),
+  schemaVersion: z10.literal(1),
+  designId: identifier,
+  name: z10.string().min(1).max(160).optional(),
+  parameters: z10.array(parameterSchema).max(SPATIAL_DESIGN_LIMITS.parameters),
+  values: z10.array(z10.strictObject({ name: identifier, expression: expressionSchema })).max(SPATIAL_DESIGN_LIMITS.values).optional(),
+  constraints: z10.array(z10.strictObject({
+    name: identifier,
+    left: expressionSchema,
+    operator: z10.enum(["lt", "lte", "eq", "gte", "gt"]),
+    right: expressionSchema,
+    message: z10.string().min(1).max(512).optional()
+  })).max(SPATIAL_DESIGN_LIMITS.constraints).optional(),
+  stages: z10.array(stageSchema).min(1).max(SPATIAL_DESIGN_LIMITS.stages)
+});
+function fail(message, path = "design") {
+  throw new SpatialSceneError("invalid-data", message, path);
+}
+function compare(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function byName(items) {
+  return [...items].sort((a, b) => compare(a.name, b.name));
+}
+function unique(items, key, path) {
+  const result = new Map;
+  for (const item of items) {
+    const name = key(item);
+    if (result.has(name))
+      fail(`Duplicate identity ${name}.`, path);
+    result.set(name, item);
+  }
+  return result;
+}
+function capture(input, path) {
+  try {
+    return createBoundedJsonValueSnapshot(input, SPATIAL_DESIGN_LIMITS.sourceBytes, path, {
+      maximumDepth: SPATIAL_DESIGN_LIMITS.sourceDepth,
+      maximumValues: SPATIAL_DESIGN_LIMITS.sourceValues
+    }).value;
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "Invalid design data.", path);
+  }
+}
+function readDesign(input) {
+  const parsed = parseSpatialValue(SpatialDesignV1Schema, capture(input, "design"), "design");
+  return deepFreezeJson({
+    ...parsed,
+    parameters: byName(parsed.parameters),
+    ...parsed.values === undefined ? {} : { values: byName(parsed.values) },
+    ...parsed.constraints === undefined ? {} : { constraints: byName(parsed.constraints) },
+    stages: [...parsed.stages].sort((a, b) => compare(a.stageId, b.stageId))
+  });
+}
+function validateParameter(parameter, value) {
+  const path = `design.parameters.${parameter.name}`;
+  if (parameter.min > parameter.max)
+    fail("Parameter min must not exceed max.", path);
+  if (value < parameter.min || value > parameter.max)
+    fail(`Parameter ${parameter.name} must be between ${parameter.min} and ${parameter.max}.`, path);
+  if (parameter.unit === "count" && (!Number.isSafeInteger(value) || !Number.isSafeInteger(parameter.min) || !Number.isSafeInteger(parameter.max) || parameter.step !== undefined && !Number.isSafeInteger(parameter.step))) {
+    fail(`Count parameter ${parameter.name} requires integer value, bounds and step.`, path);
+  }
+  if (parameter.step !== undefined) {
+    const steps = (value - parameter.min) / parameter.step;
+    if (!Number.isFinite(steps) || Math.abs(steps - Math.round(steps)) > 0.0000001)
+      fail(`Parameter ${parameter.name} must follow step ${parameter.step} from min ${parameter.min}.`, path);
+  }
+}
+function resolveParameters(design, input) {
+  const parameters = unique(design.parameters, (item) => item.name, "design.parameters");
+  for (const parameter of parameters.values())
+    validateParameter(parameter, parameter.value);
+  const updates = input === undefined ? {} : parseSpatialValue(z10.record(identifier, scalar), capture(input, "parameter updates"), "parameter updates");
+  for (const name of Object.keys(updates)) {
+    const parameter = parameters.get(name);
+    if (parameter === undefined)
+      fail(`Unknown parameter ${name}.`, "parameter updates");
+    validateParameter(parameter, updates[name]);
+  }
+  return Object.fromEntries([...parameters.values()].map((parameter) => [parameter.name, Object.hasOwn(updates, parameter.name) ? updates[parameter.name] : parameter.value]));
+}
+function emptyDependencies() {
+  return { parameters: new Set, values: new Set };
+}
+function dependencies(value) {
+  return { parameters: [...value.parameters].sort(compare), values: [...value.values].sort(compare) };
+}
+function include(target, source) {
+  for (const name of source.parameters)
+    target.parameters.add(name);
+  for (const name of source.values)
+    target.values.add(name);
+}
+function checkedNumber(value, path) {
+  if (!Number.isFinite(value) || Math.abs(value) > SPATIAL_DESIGN_LIMITS.scalarMagnitude)
+    fail("Scalar arithmetic exceeded the finite magnitude bound.", path);
+  return Object.is(value, -0) ? 0 : value;
+}
+function evaluateExpression(expression, context, refs, path, depth = 0) {
+  if (++context.budget.nodes > SPATIAL_DESIGN_LIMITS.expressionNodes || depth > SPATIAL_DESIGN_LIMITS.expressionDepth)
+    fail("Design expression budget exceeded.", path);
+  if (typeof expression === "number")
+    return checkedNumber(expression, path);
+  if ("$param" in expression) {
+    if (!Object.hasOwn(context.parameters, expression.$param))
+      fail(`Missing parameter ${expression.$param}.`, path);
+    refs.parameters.add(expression.$param);
+    return context.parameters[expression.$param];
+  }
+  if ("$value" in expression) {
+    const value = context.values.get(expression.$value);
+    if (value === undefined)
+      fail(`Missing value ${expression.$value}.`, path);
+    refs.values.add(expression.$value);
+    include(refs, value.dependencies);
+    return value.value;
+  }
+  const { op, args } = expression;
+  const unary = ["neg", "abs", "sin", "cos", "floor", "ceil"].includes(op);
+  if (args.length !== (unary ? 1 : 2) && op !== "min" && op !== "max")
+    fail(`Operation ${op} requires ${unary ? 1 : 2} arguments.`, path);
+  if ((op === "min" || op === "max") && args.length < 2)
+    fail(`Operation ${op} requires at least two arguments.`, path);
+  const operands = args.map((arg) => evaluateExpression(arg, context, refs, path, depth + 1));
+  const a = operands[0], b = operands[1];
+  let result;
+  switch (op) {
+    case "add":
+      result = a + b;
+      break;
+    case "sub":
+      result = a - b;
+      break;
+    case "mul":
+      result = a * b;
+      break;
+    case "div":
+      if (b === 0)
+        fail("Division by zero.", path);
+      result = a / b;
+      break;
+    case "min":
+      result = Math.min(...operands);
+      break;
+    case "max":
+      result = Math.max(...operands);
+      break;
+    case "neg":
+      result = -a;
+      break;
+    case "abs":
+      result = Math.abs(a);
+      break;
+    case "sin":
+      result = Math.sin(a);
+      break;
+    case "cos":
+      result = Math.cos(a);
+      break;
+    case "floor":
+      result = Math.floor(a);
+      break;
+    case "ceil":
+      result = Math.ceil(a);
+      break;
+  }
+  return checkedNumber(result, path);
+}
+function valueReferences(expression, depth = 0) {
+  if (depth > SPATIAL_DESIGN_LIMITS.expressionDepth)
+    fail("Design expression depth exceeded.", "design.values");
+  if (typeof expression === "number" || "$param" in expression)
+    return [];
+  if ("$value" in expression)
+    return [expression.$value];
+  return expression.args.flatMap((arg) => valueReferences(arg, depth + 1));
+}
+function resolveTemplate(value, context, refs, path) {
+  if (value === null || typeof value !== "object")
+    return value;
+  if (Array.isArray(value))
+    return value.map((item, index) => resolveTemplate(item, context, refs, `${path}.${index}`));
+  const record = value;
+  if (Object.keys(record).some((key) => key.startsWith("$"))) {
+    const sentinel = Object.hasOwn(record, "$expr") ? parseSpatialValue(z10.strictObject({ $expr: expressionSchema }), record, path).$expr : parseSpatialValue(expressionSchema, record, path);
+    return evaluateExpression(sentinel, context, refs, path);
+  }
+  return Object.fromEntries(Object.entries(record).map(([key, item]) => [key, resolveTemplate(item, context, refs, `${path}.${key}`)]));
+}
+function generatorPrefix(designId) {
+  return `generator_design_${spatialValueSha256({ domain: "slopcamera.spatial-design-owner.v1", designId }).slice(0, 16)}_`;
+}
+function spatialDesignGeneratorId(designId, stageId) {
+  const ids = parseSpatialValue(z10.strictObject({ designId: identifier, stageId: identifier }), { designId, stageId }, "design stage identity");
+  return `${generatorPrefix(ids.designId)}${spatialValueSha256({ domain: "slopcamera.spatial-design-stage.v1", stageId: ids.stageId }).slice(0, 32)}`;
+}
+function inspectSpatialDesign(input, options = {}) {
+  const design = readDesign(input);
+  const parameters = resolveParameters(design, options.parameters);
+  const definitions = unique(design.values ?? [], (item) => item.name, "design.values");
+  unique(design.constraints ?? [], (item) => item.name, "design.constraints");
+  unique(design.stages, (item) => item.stageId, "design.stages");
+  const order = spatialTopologicalIds(new Map([...definitions].map(([name, definition]) => [name, [...new Set(valueReferences(definition.expression))].sort(compare)])), "design.values");
+  const values = new Map;
+  const context = { parameters, values, budget: { nodes: 0 } };
+  for (const name of order) {
+    const refs = emptyDependencies();
+    const value = evaluateExpression(definitions.get(name).expression, context, refs, `design.values.${name}`);
+    values.set(name, { value, dependencies: dependencies(refs) });
+  }
+  const constraints = (design.constraints ?? []).map((constraint) => {
+    const refs = emptyDependencies(), path = `design.constraints.${constraint.name}`;
+    const left = evaluateExpression(constraint.left, context, refs, path), right = evaluateExpression(constraint.right, context, refs, path);
+    const passed = constraint.operator === "lt" ? left < right : constraint.operator === "lte" ? left <= right : constraint.operator === "eq" ? left === right : constraint.operator === "gte" ? left >= right : left > right;
+    if (!passed)
+      fail(constraint.message ?? `Constraint ${constraint.name} failed: ${left} ${constraint.operator} ${right}.`, path);
+    return { name: constraint.name, left, operator: constraint.operator, right, passed };
+  });
+  const estimate = { parts: 0, assets: 0, vertices: 0, triangles: 0, bytes: 0 };
+  const stages = design.stages.map((stage) => {
+    const refs = emptyDependencies();
+    const raw = stage.kind === "parametric" ? stage.spec : {
+      kind: "geometry",
+      graph: stage.graph,
+      materials: stage.materials,
+      ...stage.transform === undefined ? {} : { transform: stage.transform },
+      ...stage.editable === undefined ? {} : { editable: stage.editable },
+      ...stage.castShadow === undefined ? {} : { castShadow: stage.castShadow },
+      ...stage.receiveShadow === undefined ? {} : { receiveShadow: stage.receiveShadow }
+    };
+    const spec = parseSpatialValue(SpatialParametricSpecSchema, resolveTemplate(raw, context, refs, `design.stages.${stage.stageId}`), `design.stages.${stage.stageId}.spec`);
+    const stageEstimate = estimateSpatialParametric(spec);
+    for (const key of ["parts", "assets", "vertices", "triangles", "bytes"])
+      estimate[key] += stageEstimate[key];
+    if (estimate.parts > SPATIAL_DESIGN_LIMITS.parts || estimate.assets > SPATIAL_DESIGN_LIMITS.assets || estimate.vertices > SPATIAL_DESIGN_LIMITS.vertices || estimate.triangles > SPATIAL_DESIGN_LIMITS.triangles || estimate.bytes > SPATIAL_DESIGN_LIMITS.outputBytes)
+      fail("Design aggregate geometry budget exceeded before emission.", "design.stages");
+    return {
+      stageId: stage.stageId,
+      ...stage.name === undefined ? {} : { name: stage.name },
+      kind: stage.kind,
+      generatorId: spatialDesignGeneratorId(design.designId, stage.stageId),
+      spec,
+      ...stage.seed === undefined ? {} : { seed: stage.seed },
+      dependencies: dependencies(refs),
+      estimate: stageEstimate
+    };
+  });
+  return deepFreezeJson({
+    design,
+    designSha256: spatialValueSha256({ domain: "slopcamera.spatial-design.v1", design }),
+    parameters,
+    values: [...values].map(([name, value]) => ({ name, ...value })),
+    valueOrder: order,
+    constraints,
+    stages,
+    estimate
+  });
+}
+function parseSpatialDesign(input) {
+  return inspectSpatialDesign(input).design;
+}
+function editSpatialDesignParameters(input, updates) {
+  const design = readDesign(input), parameters = resolveParameters(design, updates);
+  return parseSpatialDesign({ ...design, parameters: design.parameters.map((parameter) => ({ ...parameter, value: parameters[parameter.name] })) });
+}
+function compileSpatialDesign(input, options = {}) {
+  const inspection = inspectSpatialDesign(options.parameters === undefined ? input : editSpatialDesignParameters(input, options.parameters));
+  const base = options.scene === undefined ? undefined : parseSpatialScene(options.scene);
+  const owned = new Set(inspection.stages.map((stage) => stage.generatorId));
+  const stale = base?.generators.find((generator) => generator.generatorId.startsWith(generatorPrefix(inspection.design.designId)) && !owned.has(generator.generatorId));
+  if (stale !== undefined)
+    throw new SpatialSceneError("conflict", `Design removed a retained stage (${stale.generatorId}); explicitly remove its retained output and dependent overrides before recompiling.`, "design.stages");
+  const retiredAssets = new Set(base?.generators.filter((generator) => owned.has(generator.generatorId)).flatMap((generator) => generator.assets ?? []) ?? []);
+  const keptAssets = base?.assets.filter((asset) => !retiredAssets.has(asset.assetId)).length ?? 0;
+  const keptEntities = base?.entities.filter((entity) => entity.origin.kind !== "generated" || !owned.has(entity.origin.generatorId)).length ?? 0;
+  const keptGenerators = base?.generators.filter((generator) => !owned.has(generator.generatorId)).length ?? 0;
+  if (keptAssets + inspection.estimate.assets > SPATIAL_SCENE_LIMITS.assets || keptEntities + inspection.estimate.parts > SPATIAL_SCENE_LIMITS.entities || keptGenerators + owned.size > 128) {
+    fail("Design and retained scene exceed aggregate scene capacity before emission.", "scene");
+  }
+  const outputs = inspection.stages.map((stage) => emitSpatialParametric({
+    kind: "slopcamera.spatial-parametric-request",
+    schemaVersion: 1,
+    generatorId: stage.generatorId,
+    spec: stage.spec,
+    ...stage.seed === undefined ? {} : { seed: stage.seed },
+    ...stage.name === undefined ? {} : { name: stage.name }
+  }));
+  const artifactBytes = outputs.reduce((total, output) => total + output.artifacts.reduce((sum, artifact) => sum + artifact.bytes.byteLength, 0), 0);
+  if (artifactBytes > SPATIAL_DESIGN_LIMITS.outputBytes)
+    fail("Design emitted artifacts exceed the byte budget.", "design.stages");
+  const original = base ?? parseSpatialScene(createSpatialGeneratorSceneShell());
+  const scene = applySpatialScenePatch(original, {
+    kind: "slopcamera.spatial-scene-patch",
+    schemaVersion: 1,
+    expectedSceneSha256: spatialValueSha256(original),
+    operations: outputs.map((output) => ({ kind: "replace-generator-output", generator: output.generator, entities: output.entities, assets: output.manifests }))
+  }).scene;
+  const receipt = {
+    kind: "slopcamera.spatial-design-receipt",
+    schemaVersion: 1,
+    compiler: SPATIAL_DESIGN_COMPILER,
+    designId: inspection.design.designId,
+    designSha256: inspection.designSha256,
+    parametersSha256: spatialValueSha256({ domain: "slopcamera.spatial-design-parameters.v1", parameters: inspection.parameters }),
+    inputSceneSha256: base === undefined ? null : spatialValueSha256(base),
+    sceneSha256: spatialValueSha256(scene),
+    parameters: inspection.parameters,
+    estimate: inspection.estimate,
+    artifactBytes,
+    stages: inspection.stages.map((stage, index) => {
+      const output = outputs[index];
+      const previous = base?.generators.find((generator) => generator.generatorId === stage.generatorId);
+      return {
+        stageId: stage.stageId,
+        generatorId: stage.generatorId,
+        specSha256: output.receipt.specSha256,
+        receiptSha256: output.receiptSha256,
+        entities: output.receipt.entities,
+        dependencies: stage.dependencies,
+        changed: previous === undefined || spatialValueSha256(previous) !== spatialValueSha256(scene.generators.find((generator) => generator.generatorId === stage.generatorId))
+      };
+    })
+  };
+  const metadata = deepFreezeJson({ design: inspection.design, scene, receipt, receiptSha256: spatialValueSha256({ domain: "slopcamera.spatial-design-receipt.v1", receipt }) });
+  return Object.freeze({ ...metadata, outputs: Object.freeze(outputs) });
+}
+
+// src/spatial-scene/design-templates.ts
+var p = (name) => ({ $param: name });
+var v = (name) => ({ $value: name });
+var op = (name, ...args) => ({ op: name, args });
+var add = (a, b) => op("add", a, b);
+var sub = (a, b) => op("sub", a, b);
+var mul = (a, b) => op("mul", a, b);
+var div = (a, b) => op("div", a, b);
+var sin = (a) => op("sin", a);
+var cos = (a) => op("cos", a);
+var expr = (value) => typeof value === "number" ? value : { $expr: value };
+var xyz = (x, y, z11) => [expr(x), expr(y), expr(z11)];
+var transform3 = (position = [0, 0, 0], rotation = [0, 0, 0, 1]) => ({ position, rotation, scale: [1, 1, 1] });
+var yaw = (angle) => [0, expr(sin(mul(angle, 0.5))), 0, expr(cos(mul(angle, 0.5)))];
+var parameter = (name, label, value, min, max, unit3, step) => ({ name, label, value, min, max, unit: unit3, ...step === undefined ? {} : { step } });
+var standard = (color, roughness = 0.55, metalness = 0) => ({ kind: "standard", color, opacity: 1, roughness, metalness });
+var OAK = standard("#b98249", 0.43);
+var WALNUT = standard("#71503c", 0.46);
+var BRONZE = standard("#bc9864", 0.32, 0.64);
+var INK = standard("#283335", 0.39, 0.22);
+var STONE = standard("#d0c4ac", 0.83);
+var CREAM = standard("#eee8dc", 0.87);
+function geometry(stageId, name, nodes, output, material, placement) {
+  return {
+    kind: "geometry",
+    stageId,
+    name,
+    graph: { kind: "slopcamera.spatial-geometry-graph", schemaVersion: 1, nodes, output },
+    materials: [material],
+    castShadow: true,
+    receiveShadow: true,
+    editable: ["color", "transform"],
+    ...placement === undefined ? {} : { transform: placement }
+  };
+}
+function merge(nodes, inputs) {
+  if (inputs.length === 1)
+    return inputs[0];
+  nodes.push({ id: "assembly", kind: "merge", inputs });
+  return "assembly";
+}
+function stageScene(id, options) {
+  const { position, target, extent, dark = false } = options;
+  const common = { parentId: null, placement: { kind: "world" }, origin: { kind: "authored" }, visible: true };
+  const light = (name, location, color, intensity, shadow = false) => ({
+    ...common,
+    kind: "light",
+    entityId: `entity_${name}`,
+    name,
+    transform: { ...lookAtPose(location, target), scale: [1, 1, 1] },
+    light: "directional",
+    color,
+    intensity,
+    shadow
+  });
+  const camera = (cameraId, name, location, aim, fovDeg) => ({
+    cameraId,
+    name,
+    pose: lookAtPose(location, aim),
+    projection: perspectiveFromFov({ fovDeg, width: 1440, height: 1080, near: 0.05, far: 300 })
+  });
+  return parseSpatialScene({
+    kind: "slopcamera.spatial-scene",
+    schemaVersion: 1,
+    sceneId: `scene_design_${id.replaceAll("-", "_")}`,
+    coordinates: "right-handed-y-up-meters",
+    durationUs: 4000000,
+    entities: [
+      {
+        ...common,
+        kind: "mesh",
+        entityId: "entity_ground",
+        name: "Matte studio ground",
+        transform: transform3([0, -0.14, 0]),
+        geometry: { kind: "box", size: [200, 0.25, 200] },
+        material: standard(dark ? "#263638" : "#e3ded3", 0.94),
+        receiveShadow: true
+      },
+      { ...common, kind: "light", entityId: "entity_ambient", name: "Soft sky fill", transform: transform3(), light: "ambient", color: "#e0ecf1", intensity: dark ? 1.1 : 1.5 },
+      light("key", [-extent, extent * 1.7, extent], "#ffe7c5", 3.3, true),
+      light("fill", [extent, extent * 0.7, extent * 0.3], "#c6dbef", 1.1),
+      light("rim", [extent * 0.3, extent, -extent], "#fff0db", 2.1)
+    ],
+    cameras: [
+      camera("camera_hero", "Architectural three-quarter", position, target, 48),
+      camera("camera_detail", "Material and connection study", [position[0] * 0.6, target[1] + (position[1] - target[1]) * 0.5, position[2] * 0.6], target, 46),
+      camera("camera_plan", "Plan and structural rhythm", [0.01, extent * 2.5, 0], [0, 0, 0], 52)
+    ],
+    assets: [],
+    animations: [],
+    generators: [],
+    overrides: []
+  });
+}
+function pavilion() {
+  const stations = 29;
+  const angle = (t) => mul(p("bend"), t);
+  const centerX = (t) => mul(v("curveRadius"), sub(1, cos(angle(t))));
+  const centerZ = (t) => mul(v("curveRadius"), sin(angle(t)));
+  const archPath = Array.from({ length: 25 }, (_, i) => {
+    const a = Math.PI * i / 24;
+    return xyz(mul(p("span"), -0.5 * Math.cos(a)), add(0.16, mul(p("rise"), Math.sin(a))), 0);
+  });
+  const ribs = [
+    { id: "section", kind: "rect", width: expr(p("ribDepth")), height: expr(p("ribWidth")) },
+    { id: "rib", kind: "sweep", profile: "section", path: archPath }
+  ];
+  const ribIds = [];
+  for (let i = 0;i < stations; i++) {
+    const t = i / (stations - 1) - 0.5, id = `rib_${i}`;
+    ribs.push({ id, kind: "transform", input: "rib", transform: transform3(xyz(centerX(t), 0, centerZ(t)), yaw(angle(t))) });
+    ribIds.push(id);
+  }
+  const deckPath = Array.from({ length: 33 }, (_, i) => {
+    const t = i / 32 * 1.1 - 0.55;
+    return xyz(centerX(t), 0.1, centerZ(t));
+  });
+  const rails = [{ id: "section", kind: "rect", width: 0.075, height: 0.11 }];
+  const railIds = [];
+  for (const [i, sectionAngle] of [Math.PI / 6, Math.PI / 2, 5 * Math.PI / 6].entries()) {
+    const lateral = mul(p("span"), 0.5 * Math.cos(sectionAngle)), id = `rail_${i}`;
+    rails.push({ id, kind: "sweep", profile: "section", path: Array.from({ length: 33 }, (_, j) => {
+      const t = j / 32 - 0.5;
+      return xyz(add(centerX(t), mul(lateral, cos(angle(t)))), add(0.16, mul(p("rise"), Math.sin(sectionAngle))), sub(centerZ(t), mul(lateral, sin(angle(t)))));
+    }) });
+    railIds.push(id);
+  }
+  return {
+    design: parseSpatialDesign({
+      kind: "slopcamera.spatial-design",
+      schemaVersion: 1,
+      designId: "crescent-pavilion",
+      parameters: [
+        parameter("span", "Clear span", 6.2, 4, 8, "m"),
+        parameter("length", "Walk length", 11.5, 8, 16, "m"),
+        parameter("rise", "Crown height", 4.1, 2.8, 5.5, "m"),
+        parameter("bend", "Plan curvature", 1.1, 0.15, 1.7, "rad"),
+        parameter("ribDepth", "Rib depth", 0.26, 0.15, 0.38, "m"),
+        parameter("ribWidth", "Rib width", 0.13, 0.08, 0.2, "m")
+      ],
+      values: [{ name: "curveRadius", expression: div(p("length"), p("bend")) }],
+      constraints: [
+        { name: "inside-radius", left: v("curveRadius"), operator: "gt", right: add(mul(p("span"), 0.5), 1), message: "The curve must leave an open inner edge; increase length or reduce bend/span." },
+        { name: "rib-spacing", left: p("ribWidth"), operator: "lt", right: mul(div(p("length"), stations - 1), 0.6), message: "Timber ribs need daylight between them." }
+      ],
+      stages: [
+        geometry("timber-ribs", "Laminated oak arch ribs", ribs, merge(ribs, ribIds), OAK),
+        geometry("longitudinal-ties", "Bronze longitudinal ties", rails, merge(rails, railIds), BRONZE),
+        geometry("curved-plinth", "Continuous limestone walk", [
+          { id: "section", kind: "rect", width: 0.2, height: expr(add(p("span"), 1.1)) },
+          { id: "deck", kind: "sweep", profile: "section", path: deckPath }
+        ], "deck", STONE)
+      ]
+    }),
+    scene: stageScene("crescent-pavilion", { position: [15, 12, 18], target: [0.6, 1.5, 0], extent: 12 })
+  };
+}
+function spiralStair() {
+  const steps = 36;
+  const theta = (t) => mul(p("turns"), Math.PI * 2 * t);
+  const elevation = (t) => add(0.25, mul(p("height"), t));
+  const tread = [];
+  for (let i = 0;i <= 6; i++)
+    tread.push(xyz(mul(p("radius"), cos(mul(v("stepAngle"), i / 6))), mul(p("radius"), sin(mul(v("stepAngle"), i / 6))), 0).slice(0, 2));
+  for (let i = 6;i >= 0; i--)
+    tread.push(xyz(mul(p("innerRadius"), cos(mul(v("stepAngle"), i / 6))), mul(p("innerRadius"), sin(mul(v("stepAngle"), i / 6))), 0).slice(0, 2));
+  const treads = [
+    { id: "outline", kind: "profile", points: tread },
+    { id: "solid", kind: "extrude", profile: "outline", depth: expr(p("treadThickness")) },
+    { id: "tread", kind: "transform", input: "solid", transform: transform3([0, 0, 0], [Math.SQRT1_2, 0, 0, Math.SQRT1_2]) }
+  ];
+  const treadIds = [];
+  for (let i = 0;i < steps; i++) {
+    const id = `tread_${i}`;
+    treads.push({ id, kind: "transform", input: "tread", transform: transform3(xyz(0, elevation((i + 1) / steps), 0), yaw(mul(theta(i / steps), -1))) });
+    treadIds.push(id);
+  }
+  const metal = [{ id: "post", kind: "cylinder", radius: 0.018, height: expr(p("railHeight")), segments: 8 }];
+  const metalIds = [];
+  for (const [side, r] of [sub(p("radius"), 0.06), add(p("innerRadius"), 0.065)].entries()) {
+    const posts = [];
+    for (let i = 0;i < steps; i++) {
+      const t = (i + 0.5) / steps, id2 = `baluster_${side}_${i}`;
+      metal.push({ id: id2, kind: "transform", input: "post", transform: transform3(xyz(mul(r, cos(theta(t))), add(elevation((i + 1) / steps), mul(p("railHeight"), 0.5)), mul(r, sin(theta(t))))) });
+      posts.push(id2);
+    }
+    const id = `balustrade_${side}`;
+    metal.push({ id, kind: "merge", inputs: posts });
+    metalIds.push(id);
+  }
+  const rails = [{ id: "round", kind: "ellipse", radiusX: 0.04, radiusY: 0.04, segments: 12 }];
+  const railIds = [];
+  for (const [i, radius] of [sub(p("radius"), 0.06), add(p("innerRadius"), 0.065)].entries()) {
+    const id = `handrail_${i}`;
+    rails.push({ id, kind: "sweep", profile: "round", path: Array.from({ length: 73 }, (_, j) => {
+      const t = j / 72;
+      return xyz(mul(radius, cos(theta(t))), add(elevation(t), add(p("railHeight"), div(p("height"), steps * 2))), mul(radius, sin(theta(t))));
+    }) });
+    railIds.push(id);
+  }
+  return {
+    design: parseSpatialDesign({
+      kind: "slopcamera.spatial-design",
+      schemaVersion: 1,
+      designId: "spiral-stair",
+      parameters: [
+        parameter("height", "Total rise", 6, 4.5, 7.2, "m"),
+        parameter("radius", "Outer radius", 2.25, 1.6, 3, "m"),
+        parameter("innerRadius", "Central support radius", 0.55, 0.3, 0.9, "m"),
+        parameter("turns", "Spiral turns", 1.25, 1, 1.5, "ratio"),
+        parameter("treadThickness", "Stone tread thickness", 0.095, 0.055, 0.13, "m"),
+        parameter("railHeight", "Handrail height", 1.05, 0.9, 1.2, "m")
+      ],
+      values: [{ name: "stepAngle", expression: mul(div(mul(p("turns"), Math.PI * 2), steps), 0.96) }],
+      constraints: [
+        { name: "walking-width", left: sub(p("radius"), p("innerRadius")), operator: "gte", right: 1.1, message: "Leave at least 1.1 m between the central opening and outer edge." },
+        { name: "tread-clearance", left: p("treadThickness"), operator: "lt", right: mul(div(p("height"), steps), 0.85), message: "Tread thickness must leave a visible gap below the next tread." },
+        { name: "headroom", left: div(p("height"), p("turns")), operator: "gte", right: 2.4, message: "The spiral needs at least 2.4 m rise per revolution." }
+      ],
+      stages: [
+        geometry("stone-treads", "Radial limestone treads", treads, merge(treads, treadIds), standard("#d5be96", 0.63)),
+        geometry("balusters", "Slender bronze balusters", metal, merge(metal, metalIds), BRONZE),
+        geometry("handrails", "Continuous dark handrails", rails, merge(rails, railIds), INK),
+        geometry("central-support", "Central bronze support", [{ id: "column", kind: "cylinder", radius: expr(add(p("innerRadius"), 0.035)), height: expr(add(p("height"), 0.38)), segments: 64 }], "column", INK, transform3(xyz(0, mul(add(p("height"), 0.38), 0.5), 0))),
+        geometry("plinth", "Circular limestone plinth", [{ id: "base", kind: "cylinder", radius: expr(add(p("radius"), 0.4)), height: 0.22, segments: 96 }], "base", STONE, transform3([0, 0.11, 0]))
+      ]
+    }),
+    scene: stageScene("spiral-stair", { position: [11, 9, 12], target: [0, 3.3, 0], extent: 8 })
+  };
+}
+function ribbedTower() {
+  const ribs = [{ id: "section", kind: "ellipse", radiusX: expr(p("ribRadius")), radiusY: expr(p("ribRadius")), segments: 8 }];
+  const ids = [];
+  const radiusAt = (t) => mul(p("radius"), add(sub(1, mul(p("taper"), t)), mul(p("belly"), Math.sin(t * Math.PI))));
+  ribs.push({ id: "rib", kind: "sweep", profile: "section", path: Array.from({ length: 25 }, (_, j) => {
+    const t = j / 24, a = mul(p("twist"), t), r = radiusAt(t);
+    return xyz(mul(r, cos(a)), add(0.35, mul(p("height"), t)), mul(r, sin(a)));
+  }) });
+  for (let i = 0;i < 40; i++) {
+    const id = `rib_${i}`, phase = i / 40 * Math.PI * 2;
+    ribs.push({ id, kind: "transform", input: "rib", transform: transform3([0, 0, 0], [0, Math.sin(-phase / 2), 0, Math.cos(-phase / 2)]) });
+    ids.push(id);
+  }
+  const floors = [];
+  const floorIds = [];
+  for (let i = 0;i <= 12; i++) {
+    const t = i / 12, id = `floor_${i}`;
+    floors.push({ id: `${id}_solid`, kind: "cylinder", radius: expr(sub(radiusAt(t), 0.025)), height: 0.12, segments: 64 });
+    floors.push({ id, kind: "transform", input: `${id}_solid`, transform: transform3(xyz(0, add(0.35, mul(p("height"), t)), 0)) });
+    floorIds.push(id);
+  }
+  return {
+    design: parseSpatialDesign({
+      kind: "slopcamera.spatial-design",
+      schemaVersion: 1,
+      designId: "ribbed-tower",
+      parameters: [
+        parameter("height", "Tower height", 16, 12, 21, "m"),
+        parameter("radius", "Ground radius", 3.25, 2.5, 4.2, "m"),
+        parameter("twist", "Facade rotation", 1.35, 0, 2.3, "rad"),
+        parameter("taper", "Crown taper", 0.27, 0.05, 0.45, "ratio"),
+        parameter("belly", "Mid-height swell", 0.2, 0, 0.4, "ratio"),
+        parameter("ribRadius", "Bronze rib radius", 0.065, 0.035, 0.11, "m")
+      ],
+      constraints: [{ name: "rib-daylight", left: mul(p("ribRadius"), 3), operator: "lt", right: mul(mul(p("radius"), sub(1, p("taper"))), Math.PI * 2 / 40), message: "The narrow crown needs daylight between adjacent bronze ribs." }],
+      stages: [
+        geometry("bronze-exoskeleton", "Forty continuous twisting bronze ribs", ribs, merge(ribs, ids), BRONZE),
+        geometry("floor-plates", "Thirteen recessed floor plates", floors, merge(floors, floorIds), standard("#33494a", 0.42, 0.3)),
+        geometry("central-core", "Opaque central service core", [{ id: "core", kind: "cylinder", radius: expr(mul(p("radius"), 0.47)), height: expr(p("height")), segments: 64 }], "core", standard("#253738", 0.33, 0.3), transform3(xyz(0, add(0.35, mul(p("height"), 0.5)), 0))),
+        geometry("podium", "Low circular podium", [{ id: "podium", kind: "cylinder", radius: expr(add(p("radius"), 0.9)), height: 0.32, segments: 96 }], "podium", standard("#a6a795", 0.83), transform3([0, 0.16, 0]))
+      ]
+    }),
+    scene: stageScene("ribbed-tower", { position: [24, 17, 29], target: [0, 8, 0], extent: 17, dark: true })
+  };
+}
+function bookshelf() {
+  const board = [
+    { id: "board", kind: "box", size: xyz(p("width"), p("thickness"), p("depth")) },
+    { id: "levels", kind: "array", input: "board", count: expr(add(p("rows"), 1)), step: xyz(0, v("rowPitch"), 0) }
+  ];
+  const uprights = [
+    { id: "upright", kind: "box", size: xyz(p("thickness"), sub(p("height"), p("thickness")), p("depth")) },
+    { id: "bays", kind: "array", input: "upright", count: expr(add(p("bays"), 1)), step: xyz(v("bayPitch"), 0, 0) }
+  ];
+  const cellX = (column2) => add(mul(p("width"), -0.5), add(mul(p("thickness"), 0.5), mul(v("bayPitch"), column2 + 0.5)));
+  const shelfY = (row2) => add(0.19, add(mul(v("rowPitch"), row2), p("thickness")));
+  const backs = [{ id: "panel", kind: "box", size: xyz(sub(v("bayPitch"), p("thickness")), sub(v("rowPitch"), p("thickness")), 0.018) }];
+  const backIds = [];
+  for (const [i, [column2, row2]] of [[0, 0], [2, 1], [1, 2]].entries()) {
+    const id = `back_${i}`;
+    backs.push({ id, kind: "transform", input: "panel", transform: transform3(xyz(cellX(column2), add(shelfY(row2), mul(sub(v("rowPitch"), p("thickness")), 0.5)), mul(p("depth"), -0.5))) });
+    backIds.push(id);
+  }
+  const books = [], bookIds = [];
+  for (let i = 0;i < 8; i++) {
+    const id = `book_${i}`, column2 = i < 4 ? 0 : 2, row2 = i < 4 ? 1 : 0, offset = (i % 4 - 1.5) * 0.07;
+    const bookHeight = mul(v("rowPitch"), 0.58 + i % 3 * 0.09);
+    books.push({ id: `${id}_solid`, kind: "box", size: xyz(0.055, bookHeight, mul(p("depth"), 0.68)) });
+    books.push({ id, kind: "transform", input: `${id}_solid`, transform: transform3(xyz(add(cellX(column2), offset), add(shelfY(row2), mul(bookHeight, 0.5)), mul(p("depth"), 0.04))) });
+    bookIds.push(id);
+  }
+  const vase = [
+    { id: "profile", kind: "profile", points: [[0, 0], [0.075, 0], [0.1, 0.06], [0.105, 0.16], [0.08, 0.24], [0.048, 0.27], [0.048, 0.32], [0, 0.32]] },
+    { id: "vase", kind: "revolve", profile: "profile", segments: 48 }
+  ];
+  return {
+    design: parseSpatialDesign({
+      kind: "slopcamera.spatial-design",
+      schemaVersion: 1,
+      designId: "modular-bookshelf",
+      parameters: [
+        parameter("width", "Overall width", 4.8, 3.6, 6.2, "m"),
+        parameter("height", "Overall height", 2.7, 2.2, 3.4, "m"),
+        parameter("depth", "Shelf depth", 0.42, 0.3, 0.6, "m"),
+        parameter("thickness", "Board thickness", 0.042, 0.025, 0.065, "m"),
+        parameter("bays", "Vertical bays", 5, 3, 8, "count", 1),
+        parameter("rows", "Shelf rows", 4, 3, 6, "count", 1)
+      ],
+      values: [
+        { name: "bayPitch", expression: div(sub(p("width"), p("thickness")), p("bays")) },
+        { name: "rowPitch", expression: div(sub(p("height"), p("thickness")), p("rows")) }
+      ],
+      constraints: [
+        { name: "book-clearance", left: sub(v("rowPitch"), p("thickness")), operator: "gte", right: 0.34, message: "Shelf openings must leave 0.34 m for the retained ceramic and books." },
+        { name: "bay-clearance", left: sub(v("bayPitch"), p("thickness")), operator: "gte", right: 0.4, message: "Bays need at least 0.4 m clear width." },
+        { name: "shelf-span", left: v("bayPitch"), operator: "lte", right: 1.25, message: "Keep unsupported shelf spans at or below 1.25 m." }
+      ],
+      stages: [
+        geometry("horizontal-shelves", "Continuous walnut shelves", board, "levels", WALNUT, transform3(xyz(0, add(0.19, mul(p("thickness"), 0.5)), 0))),
+        geometry("vertical-dividers", "Walnut uprights", uprights, "bays", WALNUT, transform3(xyz(mul(sub(p("width"), p("thickness")), -0.5), add(0.19, mul(p("height"), 0.5)), 0))),
+        geometry("inset-backs", "Alternating terracotta backs", backs, merge(backs, backIds), standard("#ad6048", 0.89)),
+        geometry("books", "Indigo clothbound books", books, merge(books, bookIds), standard("#536d80", 0.87)),
+        geometry("ceramic", "Ivory turned ceramic", vase, "vase", CREAM, transform3(xyz(cellX(1), shelfY(2), 0.015))),
+        geometry("plinth", "Recessed dark plinth", [{ id: "plinth", kind: "box", size: xyz(sub(p("width"), 0.14), 0.2, sub(p("depth"), 0.1)) }], "plinth", INK, transform3([0, 0.1, 0]))
+      ]
+    }),
+    scene: stageScene("modular-bookshelf", { position: [5.2, 3.4, 7.8], target: [0, 1.35, 0], extent: 6 })
+  };
+}
+var TEMPLATES = deepFreezeJson([
+  { id: "crescent-pavilion", name: "Crescent timber pavilion", description: "Twenty-nine oak arches follow a curved limestone walk; span, rise and curvature reshape the whole assembly.", parameterNames: ["span", "length", "rise", "bend", "ribDepth", "ribWidth"], cameraId: "camera_hero" },
+  { id: "spiral-stair", name: "Sculptural spiral stair", description: "Thirty-six stone treads, bronze balusters and continuous handrails share one controlled helix.", parameterNames: ["height", "radius", "innerRadius", "turns", "treadThickness", "railHeight"], cameraId: "camera_hero" },
+  { id: "ribbed-tower", name: "Twisting bronze tower", description: "Forty swept bronze ribs wrap thirteen floor plates with a shared taper, swell and twist.", parameterNames: ["height", "radius", "twist", "taper", "belly", "ribRadius"], cameraId: "camera_hero" },
+  { id: "modular-bookshelf", name: "Modular walnut bookshelf", description: "An editable furniture system with linked bays, rows, joinery thickness and retained display objects.", parameterNames: ["width", "height", "depth", "thickness", "bays", "rows"], cameraId: "camera_hero" }
+]);
+function listSpatialDesignTemplates() {
+  return TEMPLATES;
+}
+function createSpatialDesignStarter(id) {
+  if (typeof id !== "string")
+    throw new SpatialSceneError("invalid-data", "Spatial design template must be a catalog ID string.", "template");
+  const factories = {
+    "crescent-pavilion": pavilion,
+    "spiral-stair": spiralStair,
+    "ribbed-tower": ribbedTower,
+    "modular-bookshelf": bookshelf
+  };
+  const factory = Object.prototype.hasOwnProperty.call(factories, id) ? factories[id] : undefined;
+  if (factory === undefined)
+    throw new SpatialSceneError("invalid-data", `Unknown spatial design template ${id.slice(0, 80)}. Choose ${TEMPLATES.map((template2) => template2.id).join(", ")}.`, "template");
+  return deepFreezeJson(factory());
+}
+
+// src/spatial-scene/particle-preparation.ts
+import { z as z11 } from "zod";
 var SPATIAL_PARTICLE_INSTANCE_STRIDE_BYTES = 64;
 var SPATIAL_PARTICLE_PREPARATION_LIMITS = Object.freeze({ surfaceSets: 64, trianglesPerSurface: 1e5 });
-var coordinate2 = z10.number().finite().min(-1e6).max(1e6);
-var vec32 = z10.tuple([coordinate2, coordinate2, coordinate2]);
-var surfaceSchema = z10.strictObject({
+var coordinate2 = z11.number().finite().min(-1e6).max(1e6);
+var vec32 = z11.tuple([coordinate2, coordinate2, coordinate2]);
+var surfaceSchema = z11.strictObject({
   assetId: SpatialAssetIdSchema,
-  triangles: z10.array(z10.tuple([vec32, vec32, vec32])).min(1).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.trianglesPerSurface)
+  triangles: z11.array(z11.tuple([vec32, vec32, vec32])).min(1).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.trianglesPerSurface)
 });
-var inputSchema = z10.strictObject({
+var inputSchema = z11.strictObject({
   sampleTimeUs: SpatialTimeUsSchema,
-  surfaces: z10.array(surfaceSchema).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.surfaceSets).default([]),
-  system: z10.unknown()
+  surfaces: z11.array(surfaceSchema).max(SPATIAL_PARTICLE_PREPARATION_LIMITS.surfaceSets).default([]),
+  system: z11.unknown()
 });
 function randomGenerator(seed) {
   let state = seed >>> 0 || 1831565813;
@@ -4855,11 +5654,11 @@ function addScaled(target, value, scale = 1) {
   target[2] += value[2] * scale;
 }
 function sampleSphere(random, radius, volume) {
-  const z11 = random() * 2 - 1;
+  const z12 = random() * 2 - 1;
   const angle = random() * Math.PI * 2;
   const radial = radius * (volume ? Math.cbrt(random()) : 1);
-  const planar = Math.sqrt(1 - z11 * z11);
-  return [radial * planar * Math.cos(angle), radial * z11, radial * planar * Math.sin(angle)];
+  const planar = Math.sqrt(1 - z12 * z12);
+  return [radial * planar * Math.cos(angle), radial * z12, radial * planar * Math.sin(angle)];
 }
 function trianglePoint(triangle, random) {
   const first = Math.sqrt(random()), second = random();
@@ -4974,7 +5773,7 @@ function prepareSpatialParticleInstances(input) {
 }
 
 // src/spatial-scene/motion-evidence.ts
-import { z as z11 } from "zod";
+import { z as z12 } from "zod";
 var SPATIAL_MOTION_EVIDENCE_LIMITS = Object.freeze({
   dimension: 16384,
   evidenceSamples: 64,
@@ -4983,22 +5782,22 @@ var SPATIAL_MOTION_EVIDENCE_LIMITS = Object.freeze({
   samples: 16,
   samplesPerPixel: 16
 });
-var positivePixels = z11.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.dimension);
-var SpatialMotionSampleSchema = z11.strictObject({
-  byteLength: z11.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels * 8),
-  encoding: z11.enum(["rg16f", "rg32f", "rg16un"]),
+var positivePixels = z12.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.dimension);
+var SpatialMotionSampleSchema = z12.strictObject({
+  byteLength: z12.number().int().safe().positive().max(SPATIAL_MOTION_EVIDENCE_LIMITS.pixels * 8),
+  encoding: z12.enum(["rg16f", "rg32f", "rg16un"]),
   entityId: SpatialEntityIdSchema,
   exposureUs: SpatialTimeUsSchema.min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.exposureUs),
   height: positivePixels,
-  id: z11.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u),
+  id: z12.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u),
   motionScale: positiveDimension,
   motionSha256: SpatialDigestSchema,
   previousTimeUs: SpatialTimeUsSchema,
   sampleTimeUs: SpatialTimeUsSchema,
-  samplesPerPixel: z11.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samplesPerPixel),
-  viewport: z11.tuple([
-    z11.number().int().safe().nonnegative(),
-    z11.number().int().safe().nonnegative(),
+  samplesPerPixel: z12.number().int().min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.samplesPerPixel),
+  viewport: z12.tuple([
+    z12.number().int().safe().nonnegative(),
+    z12.number().int().safe().nonnegative(),
     positivePixels,
     positivePixels
   ]),
@@ -5019,13 +5818,13 @@ var SpatialMotionSampleSchema = z11.strictObject({
     context.addIssue({ code: "custom", path: ["byteLength"], message: `Motion sample ${sample.id} byteLength does not match its dimensions and encoding.` });
   }
 });
-var SpatialMotionEvidenceSchema = z11.strictObject({
+var SpatialMotionEvidenceSchema = z12.strictObject({
   entityId: SpatialEntityIdSchema,
-  kind: z11.literal("slopcamera.spatial-motion-evidence"),
+  kind: z12.literal("slopcamera.spatial-motion-evidence"),
   renderRequestSha256: SpatialDigestSchema,
   rendererSha256: SpatialDigestSchema,
-  samples: z11.array(SpatialMotionSampleSchema).min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.evidenceSamples),
-  schemaVersion: z11.literal(1)
+  samples: z12.array(SpatialMotionSampleSchema).min(1).max(SPATIAL_MOTION_EVIDENCE_LIMITS.evidenceSamples),
+  schemaVersion: z12.literal(1)
 }).superRefine((evidence, context) => {
   const ids = new Set;
   let previousTimeUs = -1;
@@ -5048,35 +5847,35 @@ function spatialMotionEvidenceSha256(evidence) {
 }
 
 // src/spatial-scene/recipe-pack.ts
-import { z as z12 } from "zod";
+import { z as z13 } from "zod";
 var SPATIAL_RECIPE_PACK_LIMITS = Object.freeze({
   axes: 6,
   previews: 4,
   timesUs: 64
 });
-var SpatialRecipePackPreviewSchema = z12.strictObject({
-  name: z12.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/u),
-  request: z12.unknown()
+var SpatialRecipePackPreviewSchema = z13.strictObject({
+  name: z13.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/u),
+  request: z13.unknown()
 });
-var SpatialRecipePackEffectsSchema = z12.strictObject({
-  particleSystems: z12.array(SpatialParticleSystemSchema).max(64).default([]),
+var SpatialRecipePackEffectsSchema = z13.strictObject({
+  particleSystems: z13.array(SpatialParticleSystemSchema).max(64).default([]),
   renderPlan: SpatialRenderPlanSchema,
-  simulationBakes: z12.array(SpatialSimulationBakeReceiptSchema).max(64).default([])
+  simulationBakes: z13.array(SpatialSimulationBakeReceiptSchema).max(64).default([])
 });
-var SpatialRecipePackAuditSchema = z12.strictObject({
-  contacts: z12.array(SpatialTemporalContactSchema).max(64).default([]),
-  cutBeforeUs: z12.array(SpatialTimeUsSchema).max(64).default([]),
-  timesUs: z12.array(SpatialTimeUsSchema).min(2).max(SPATIAL_RECIPE_PACK_LIMITS.timesUs).optional()
+var SpatialRecipePackAuditSchema = z13.strictObject({
+  contacts: z13.array(SpatialTemporalContactSchema).max(64).default([]),
+  cutBeforeUs: z13.array(SpatialTimeUsSchema).max(64).default([]),
+  timesUs: z13.array(SpatialTimeUsSchema).min(2).max(SPATIAL_RECIPE_PACK_LIMITS.timesUs).optional()
 });
-var SpatialRecipePackSchema = z12.strictObject({
-  kind: z12.literal("slopcamera.spatial-recipe-pack"),
-  schemaVersion: z12.literal(1),
-  packId: z12.string().regex(/^recipe_[a-zA-Z0-9_-]{1,64}$/u),
+var SpatialRecipePackSchema = z13.strictObject({
+  kind: z13.literal("slopcamera.spatial-recipe-pack"),
+  schemaVersion: z13.literal(1),
+  packId: z13.string().regex(/^recipe_[a-zA-Z0-9_-]{1,64}$/u),
   sceneSha256: SpatialDigestSchema,
   direction: SpatialDirectionSchema,
   cameraId: SpatialCameraIdSchema.optional(),
-  axes: z12.array(SpatialGalleryAxisSchema).min(1).max(SPATIAL_RECIPE_PACK_LIMITS.axes),
-  previews: z12.array(SpatialRecipePackPreviewSchema).max(SPATIAL_RECIPE_PACK_LIMITS.previews).default([]),
+  axes: z13.array(SpatialGalleryAxisSchema).min(1).max(SPATIAL_RECIPE_PACK_LIMITS.axes),
+  previews: z13.array(SpatialRecipePackPreviewSchema).max(SPATIAL_RECIPE_PACK_LIMITS.previews).default([]),
   effects: SpatialRecipePackEffectsSchema.optional(),
   temporalAudit: SpatialRecipePackAuditSchema.optional()
 }).superRefine((pack, context) => {
@@ -5099,29 +5898,29 @@ function spatialRecipePackSha256(pack) {
 }
 
 // src/spatial-scene/simulation-bake.ts
-import { z as z13 } from "zod";
+import { z as z14 } from "zod";
 var SPATIAL_SIMULATION_BAKE_LIMITS = Object.freeze({
   channels: SPATIAL_SIMULATION_LIMITS.bodies,
   keysPerChannel: SPATIAL_SIMULATION_LIMITS.steps
 });
-var transformKeySchema = z13.strictObject({
+var transformKeySchema = z14.strictObject({
   orientation: SpatialQuaternionSchema,
   position: SpatialVec3Schema,
   timeUs: SpatialTimeUsSchema
 });
-var SpatialSimulationBakeChannelSchema = z13.strictObject({
+var SpatialSimulationBakeChannelSchema = z14.strictObject({
   entityId: SpatialEntityIdSchema,
-  keys: z13.array(transformKeySchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.keysPerChannel),
-  kind: z13.literal("transform")
+  keys: z14.array(transformKeySchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.keysPerChannel),
+  kind: z14.literal("transform")
 });
-var SpatialSimulationBakeDocumentSchema = z13.strictObject({
-  cacheId: z13.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
-  channels: z13.array(SpatialSimulationBakeChannelSchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.channels),
-  engineProfile: z13.literal("slopcamera-rigid-body-reference-v1"),
-  kind: z13.literal("slopcamera.spatial-simulation-bake"),
+var SpatialSimulationBakeDocumentSchema = z14.strictObject({
+  cacheId: z14.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
+  channels: z14.array(SpatialSimulationBakeChannelSchema).min(1).max(SPATIAL_SIMULATION_BAKE_LIMITS.channels),
+  engineProfile: z14.literal("slopcamera-rigid-body-reference-v1"),
+  kind: z14.literal("slopcamera.spatial-simulation-bake"),
   planSha256: SpatialDigestSchema,
-  schemaVersion: z13.literal(1),
-  stepCount: z13.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
+  schemaVersion: z14.literal(1),
+  stepCount: z14.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
   timeStepUs: SpatialTimeUsSchema.min(1).max(1e6)
 }).superRefine((document, context) => {
   const entityIds = new Set;
@@ -5272,7 +6071,7 @@ function bakeSpatialSimulation(planInput) {
 }
 
 // src/spatial-scene/behavior-trace.ts
-import { z as z14 } from "zod";
+import { z as z15 } from "zod";
 var SPATIAL_BEHAVIOR_TRACE_LIMITS = Object.freeze({
   emitted: 16384,
   channels: 64,
@@ -5283,31 +6082,31 @@ var SPATIAL_BEHAVIOR_TRACE_LIMITS = Object.freeze({
   directives: 4096,
   unresolvedIntents: 256
 });
-var channelName = z14.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/u);
-var SpatialBehaviorEmittedSchema = z14.strictObject({
+var channelName = z15.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/u);
+var SpatialBehaviorEmittedSchema = z15.strictObject({
   tUs: SpatialTimeUsSchema,
   channel: channelName,
-  value: z14.unknown()
+  value: z15.unknown()
 });
 function parseSpatialBehaviorEmissions(input, what) {
-  return parseSpatialValue(z14.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted), input, what);
+  return parseSpatialValue(z15.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted), input, what);
 }
-var humanoidBone = z14.enum(HUMANOID_BONE_NAMES);
+var humanoidBone = z15.enum(HUMANOID_BONE_NAMES);
 var bindingChannel = channelName;
-var clipValue = z14.string().min(1).max(64);
-var SpatialBehaviorChannelMapSchema = z14.strictObject({
-  clips: z14.record(bindingChannel, z14.record(clipValue, z14.strictObject({
+var clipValue = z15.string().min(1).max(64);
+var SpatialBehaviorChannelMapSchema = z15.strictObject({
+  clips: z15.record(bindingChannel, z15.record(clipValue, z15.strictObject({
     clipDigest: SpatialDigestSchema,
     durationUs: SpatialTimeUsSchema.refine((value) => value > 0, "Clip duration must be positive.")
   }))).refine((clips) => Object.keys(clips).length <= SPATIAL_BEHAVIOR_TRACE_LIMITS.clipChannels && Object.values(clips).every((values) => Object.keys(values).length <= SPATIAL_BEHAVIOR_TRACE_LIMITS.clipValues), { message: `At most ${SPATIAL_BEHAVIOR_TRACE_LIMITS.clipChannels} clip channels with ${SPATIAL_BEHAVIOR_TRACE_LIMITS.clipValues} values each.` }).optional(),
-  attachments: z14.array(z14.strictObject({
+  attachments: z15.array(z15.strictObject({
     attachChannel: bindingChannel,
     releaseChannel: bindingChannel,
-    propId: z14.string().min(1).max(128),
+    propId: z15.string().min(1).max(128),
     bone: humanoidBone,
     localOffset: SpatialTransformSchema
   })).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.attachments).optional(),
-  trajectories: z14.array(bindingChannel).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.trajectories).optional()
+  trajectories: z15.array(bindingChannel).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.trajectories).optional()
 }).superRefine((map, context) => {
   const attachChannels = new Set;
   for (const [index, attachment] of (map.attachments ?? []).entries()) {
@@ -5325,12 +6124,12 @@ var SpatialBehaviorChannelMapSchema = z14.strictObject({
 function parseSpatialBehaviorChannelMap(input) {
   return deepFreezeJson(parseSpatialValue(SpatialBehaviorChannelMapSchema, input, "behavior channel map"));
 }
-var SpatialBehaviorUnresolvedIntentSchema = z14.strictObject({
-  intentId: z14.string().regex(/^prop_[a-f0-9]{16}$/u),
-  domain: z14.literal("behavior"),
-  referenceId: z14.string().min(1).max(128),
-  slot: z14.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u),
-  detail: z14.string().min(1).max(240)
+var SpatialBehaviorUnresolvedIntentSchema = z15.strictObject({
+  intentId: z15.string().regex(/^prop_[a-f0-9]{16}$/u),
+  domain: z15.literal("behavior"),
+  referenceId: z15.string().min(1).max(128),
+  slot: z15.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u),
+  detail: z15.string().min(1).max(240)
 });
 var intentId = (domain, reference) => `prop_${spatialValueSha256({ domain: `slopcamera.behavior-intent.${domain}`, reference }).slice(0, 16)}`;
 var unresolved = (domain, referenceId, slot, detail) => deepFreezeJson({ intentId: intentId(domain, `${referenceId}/${slot}`), domain: "behavior", referenceId, slot, detail });
@@ -5469,36 +6268,36 @@ function compileSpatialBehaviorDirectives(input) {
   }
   return deepFreezeJson({ directives, unresolvedIntents });
 }
-var SpatialBehaviorBakeReceiptSchema = z14.strictObject({
-  kind: z14.literal("slopcamera.spatial-behavior-bake-receipt"),
-  schemaVersion: z14.literal(1),
+var SpatialBehaviorBakeReceiptSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-behavior-bake-receipt"),
+  schemaVersion: z15.literal(1),
   behaviorSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  entry: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
-  manifestDigest: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
-  runDigest: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
-  runtime: z14.strictObject({ name: z14.string().min(1).max(64), version: z14.string().min(1).max(64) }),
+  entry: z15.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  manifestDigest: z15.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  runDigest: z15.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  runtime: z15.strictObject({ name: z15.string().min(1).max(64), version: z15.string().min(1).max(64) }),
   fnCatalogSha256: SpatialDigestSchema,
   emittedSha256: SpatialDigestSchema,
   channelMapSha256: SpatialDigestSchema.optional(),
-  outcome: z14.enum(["complete", "failed", "stuck"]),
-  work: z14.strictObject({
-    steps: z14.number().int().min(0).max(SPATIAL_SCENE_LIMITS.durationUs),
-    agentCalls: z14.number().int().min(0).max(65536),
-    units: z14.number().int().min(0).max(1e8)
+  outcome: z15.enum(["complete", "failed", "stuck"]),
+  work: z15.strictObject({
+    steps: z15.number().int().min(0).max(SPATIAL_SCENE_LIMITS.durationUs),
+    agentCalls: z15.number().int().min(0).max(65536),
+    units: z15.number().int().min(0).max(1e8)
   })
 });
-var SpatialBehaviorBakeSchema = z14.strictObject({
-  kind: z14.literal("slopcamera.spatial-behavior-bake"),
-  schemaVersion: z14.literal(1),
+var SpatialBehaviorBakeSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-behavior-bake"),
+  schemaVersion: z15.literal(1),
   behaviorSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  entry: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
-  seed: z14.number().int().min(0).max(4294967295),
-  rangeUs: z14.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
-  emitted: z14.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted),
-  directives: z14.array(SpatialPerformanceDirectiveSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.directives),
-  unresolvedIntents: z14.array(SpatialBehaviorUnresolvedIntentSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.unresolvedIntents),
+  entry: z15.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  seed: z15.number().int().min(0).max(4294967295),
+  rangeUs: z15.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
+  emitted: z15.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted),
+  directives: z15.array(SpatialPerformanceDirectiveSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.directives),
+  unresolvedIntents: z15.array(SpatialBehaviorUnresolvedIntentSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.unresolvedIntents),
   receipt: SpatialBehaviorBakeReceiptSchema
 });
 function spatialBehaviorBakeSha256(bake) {
@@ -5514,11 +6313,11 @@ function spatialBehaviorFnCatalogSha256(fns) {
 }
 
 // src/spatial-scene/behavior-bake.ts
-import { z as z15 } from "zod";
-var bakeOptionsSchema = z15.strictObject({
-  behavior: z15.unknown(),
-  scene: z15.unknown(),
-  channelMap: z15.unknown().optional()
+import { z as z16 } from "zod";
+var bakeOptionsSchema = z16.strictObject({
+  behavior: z16.unknown(),
+  scene: z16.unknown(),
+  channelMap: z16.unknown().optional()
 });
 var algalRegistry = () => {
   const registry = new Map;
@@ -5678,37 +6477,37 @@ async function bakeSpatialBehavior(input) {
 }
 
 // src/spatial-scene/behavior-gallery.ts
-import { z as z16 } from "zod";
+import { z as z17 } from "zod";
 var BEHAVIOR_GALLERY_SEED_STRIDE = [0, 1, 2, 5, 11, 23];
 var SEED_MODULUS = 4294967296;
 var SPATIAL_BEHAVIOR_GALLERY_LIMITS = Object.freeze({
   candidates: 6
 });
-var SpatialBehaviorGalleryCandidateSchema = z16.strictObject({
-  candidateId: z16.string().min(1).max(96).regex(/^cand_[a-f0-9]{16}$/u),
-  label: z16.string().min(1).max(128),
-  parameter: z16.string().min(1).max(64),
-  documentKind: z16.literal("slopcamera.spatial-behavior-bake"),
+var SpatialBehaviorGalleryCandidateSchema = z17.strictObject({
+  candidateId: z17.string().min(1).max(96).regex(/^cand_[a-f0-9]{16}$/u),
+  label: z17.string().min(1).max(128),
+  parameter: z17.string().min(1).max(64),
+  documentKind: z17.literal("slopcamera.spatial-behavior-bake"),
   documentSha256: SpatialDigestSchema,
-  document: z16.unknown()
+  document: z17.unknown()
 });
-var SpatialBehaviorGalleryPlanSchema = z16.strictObject({
-  kind: z16.literal("slopcamera.spatial-behavior-gallery"),
-  schemaVersion: z16.literal(1),
+var SpatialBehaviorGalleryPlanSchema = z17.strictObject({
+  kind: z17.literal("slopcamera.spatial-behavior-gallery"),
+  schemaVersion: z17.literal(1),
   behaviorSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  entry: z16.string().regex(/^sha256:[a-f0-9]{64}$/u),
-  candidates: z16.array(SpatialBehaviorGalleryCandidateSchema).max(SPATIAL_BEHAVIOR_GALLERY_LIMITS.candidates)
+  entry: z17.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  candidates: z17.array(SpatialBehaviorGalleryCandidateSchema).max(SPATIAL_BEHAVIOR_GALLERY_LIMITS.candidates)
 });
 function spatialBehaviorGalleryPlanSha256(plan) {
   return spatialValueSha256(plan);
 }
-var galleryOptionsSchema = z16.strictObject({
-  behavior: z16.unknown(),
-  scene: z16.unknown(),
-  channelMap: z16.unknown().optional()
+var galleryOptionsSchema = z17.strictObject({
+  behavior: z17.unknown(),
+  scene: z17.unknown(),
+  channelMap: z17.unknown().optional()
 });
-var candidateId = (parameter, behaviorSha256) => `cand_${spatialValueSha256({ domain: "slopcamera.behavior-gallery-candidate.v1", parameter, behaviorSha256 }).slice(0, 16)}`;
+var candidateId = (parameter2, behaviorSha256) => `cand_${spatialValueSha256({ domain: "slopcamera.behavior-gallery-candidate.v1", parameter: parameter2, behaviorSha256 }).slice(0, 16)}`;
 async function planSpatialBehaviorGallery(input) {
   const options = parseSpatialValue(galleryOptionsSchema, input, "behavior gallery");
   const behavior = parseSpatialBehavior(options.behavior);
@@ -5728,11 +6527,11 @@ async function planSpatialBehaviorGallery(input) {
     if (seen.has(bake.receipt.emittedSha256))
       continue;
     seen.add(bake.receipt.emittedSha256);
-    const parameter = `seed:${seed}`;
+    const parameter2 = `seed:${seed}`;
     candidates.push(deepFreezeJson({
-      candidateId: candidateId(parameter, bake.behaviorSha256),
+      candidateId: candidateId(parameter2, bake.behaviorSha256),
       label: `seed ${seed}`,
-      parameter,
+      parameter: parameter2,
       documentKind: "slopcamera.spatial-behavior-bake",
       documentSha256,
       document: SpatialBehaviorBakeSchema.parse(bake)
@@ -6028,6 +6827,7 @@ export {
   spatialEntityLocalBounds,
   spatialDirectionSha256,
   spatialDirectionCompilationSha256,
+  spatialDesignGeneratorId,
   spatialBehaviorSha256,
   spatialBehaviorGalleryPlanSha256,
   spatialBehaviorFnSignatures,
@@ -6089,6 +6889,7 @@ export {
   parseSpatialGeometryGraph,
   parseSpatialGeneratorParameters,
   parseSpatialDirection,
+  parseSpatialDesign,
   parseSpatialCameraTrack,
   parseSpatialBehaviorEmissions,
   parseSpatialBehaviorChannelMap,
@@ -6106,11 +6907,13 @@ export {
   mergeSpatialOverrides,
   mergeSpatialGeneratorOutput,
   lookAtPose,
+  listSpatialDesignTemplates,
   lightingRigDescription,
   lightingRig,
   isPortableSlopcameraOperationKind,
   invertTransform,
   inspectSpatialScene,
+  inspectSpatialDesign,
   groundSnap,
   grid,
   generatedSpatialEntityId,
@@ -6124,9 +6927,11 @@ export {
   evaluateSpatialGlb,
   evaluateSpatialGeometry,
   evaluateHumanoidAttachmentMatrix,
+  estimateSpatialParametric,
   estimateSpatialGeometryGraph,
   emitSpatialParametric,
   emitSpatialGeometryGlb,
+  editSpatialDesignParameters,
   easeKeys,
   easeChannel,
   distribute,
@@ -6141,6 +6946,7 @@ export {
   createSpatialSceneStarter,
   createSpatialGeneratorSceneShell,
   createSpatialEvaluationContext,
+  createSpatialDesignStarter,
   createSlopcameraCodeHost,
   createPublicWorkflowRegistryProjection,
   createGraphHash,
@@ -6148,6 +6954,7 @@ export {
   compileWorkflowGraph2 as compileWorkflowGraph,
   compileSpatialPerformance,
   compileSpatialDirection,
+  compileSpatialDesign,
   compileSpatialCameraRig,
   compileSpatialBehaviorDirectives,
   column,
@@ -6348,6 +7155,7 @@ export {
   SpatialDirectionAdvisorySchema,
   SpatialDirectionAdvisoryCodeSchema,
   SpatialDigestSchema,
+  SpatialDesignV1Schema,
   SpatialDerivationMethodSchema,
   SpatialDerivationCandidateSchema,
   SpatialDepthOfFieldSchema,
@@ -6461,6 +7269,8 @@ export {
   SPATIAL_DIRECTION_LIMITS,
   SPATIAL_DIRECTION_COMPILER_ID,
   SPATIAL_DIRECTION_COMPILATION_LIMITS,
+  SPATIAL_DESIGN_LIMITS,
+  SPATIAL_DESIGN_COMPILER,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_BEHAVIOR_TRACE_LIMITS,
   SPATIAL_BEHAVIOR_STDLIB_LOCOMOTION_FSM,

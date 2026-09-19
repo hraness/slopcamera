@@ -196,6 +196,7 @@ export function commandHostResourceClaims(
         : claims(coordinator, ["cpu", "local-io"]);
     case "spatial-world":
     case "spatial-asset":
+    case "spatial-design":
       return claims(coordinator, ["cpu", "local-io"]);
     case "spatial-scene":
       return command.action === "render"
