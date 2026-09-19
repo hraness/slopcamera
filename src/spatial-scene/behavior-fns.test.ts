@@ -36,7 +36,7 @@ const fsmMachine = {
 
 describe("catalog shape", () => {
   test("every catalog fn exposes bounded signatures and an invoke kernel", () => {
-    expect(SPATIAL_BEHAVIOR_FNS.size).toBe(7)
+    expect(SPATIAL_BEHAVIOR_FNS.size).toBe(10)
     for (const [name, entry] of SPATIAL_BEHAVIOR_FNS) {
       expect(name).toMatch(/\.v[0-9]+$/)
       expect(Object.keys(entry.signature.inputs).length).toBeGreaterThan(0)
@@ -90,6 +90,14 @@ describe("determinism laws", () => {
         { priority: 5, emitted: [{ tUs: 0, channel: "a", value: "high" }, { tUs: 0, channel: "b", value: "keep" }] },
       ],
     }],
+    ["emitted.append.v1", {
+      prior: [{ tUs: 40_000, channel: "a", value: "old" }],
+      fresh: [{ tUs: 0, channel: "a", value: "new" }],
+    }],
+    ["emitted.flatten.v1", {
+      nested: [[{ tUs: 10, channel: "a", value: 1 }], [{ tUs: 0, channel: "b", value: 2 }]],
+    }],
+    ["window.advance.v1", { window: window([0, 10, 20, 30]), step: 2 }],
   ]
 
   test.each(cases)("%s returns deeply equal and canonically identical outputs on repeated invokes", (name, inputs) => {
@@ -358,6 +366,67 @@ describe("behavior.combine.v1", () => {
       ],
     })
     expect(out.emitted).toEqual([{ tUs: 0, channel: "a", value: "first" }])
+  })
+})
+
+describe("emitted.append.v1", () => {
+  test("concatenates prior and fresh sorted by (tUs, channel), prior winning ties", () => {
+    const out = invoke("emitted.append.v1", {
+      prior: [{ tUs: 40_000, channel: "a", value: "old" }, { tUs: 0, channel: "z", value: "p" }],
+      fresh: [{ tUs: 0, channel: "a", value: "new" }, { tUs: 40_000, channel: "a", value: "old2" }],
+    })
+    expect(out.emitted).toEqual([
+      { tUs: 0, channel: "a", value: "new" },
+      { tUs: 0, channel: "z", value: "p" },
+      { tUs: 40_000, channel: "a", value: "old" },
+      { tUs: 40_000, channel: "a", value: "old2" },
+    ])
+  })
+
+  test("accepts an empty prior accumulator for round zero", () => {
+    expect(invoke("emitted.append.v1", { prior: [], fresh: [{ tUs: 0, channel: "a", value: 1 }] }).emitted)
+      .toEqual([{ tUs: 0, channel: "a", value: 1 }])
+  })
+})
+
+describe("emitted.flatten.v1", () => {
+  test("flattens one level of nested emitted arrays into a sorted trace", () => {
+    const out = invoke("emitted.flatten.v1", {
+      nested: [
+        [{ tUs: 10, channel: "a", value: 1 }, { tUs: 20, channel: "a", value: 2 }],
+        [{ tUs: 0, channel: "b", value: 3 }],
+      ],
+    })
+    expect(out.emitted).toEqual([
+      { tUs: 0, channel: "b", value: 3 },
+      { tUs: 10, channel: "a", value: 1 },
+      { tUs: 20, channel: "a", value: 2 },
+    ])
+  })
+})
+
+describe("window.advance.v1", () => {
+  test("splits head from rest and reports done only when the tail is empty", () => {
+    const first = invoke("window.advance.v1", { window: window([0, 10, 20]), step: 2 })
+    expect(first.head).toEqual({ ticks: [{ tUs: 0 }, { tUs: 10 }] })
+    expect(first.rest).toEqual({ ticks: [{ tUs: 20 }] })
+    expect(first.done).toBe("false")
+    const second = invoke("window.advance.v1", { window: first.rest!, step: 2 })
+    expect(second.head).toEqual({ ticks: [{ tUs: 20 }] })
+    expect(second.rest).toEqual({ ticks: [] })
+    expect(second.done).toBe("true")
+  })
+
+  test("chained advances cover the window exactly", () => {
+    let rest = window([0, 1, 2, 3, 4])
+    const seen: number[] = []
+    for (let round = 0; round < 5; round += 1) {
+      const out = invoke("window.advance.v1", { window: rest, step: 2 })
+      seen.push(...(out.head as { ticks: { tUs: number }[] }).ticks.map((tick) => tick.tUs))
+      rest = out.rest as { ticks: { tUs: number }[] }
+      if (out.done === "true") break
+    }
+    expect(seen).toEqual([0, 1, 2, 3, 4])
   })
 })
 

@@ -243,8 +243,9 @@
     "check:effect": "bun run ./scripts/check-effect-policy.ts && bun test ./scripts/check-effect-architecture.test.ts"
   },
   "dependencies": {
-    "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
+    "@hraness/algal": "github:hraness/algal#121267b",
+    "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
     "@noble/hashes": "2.2.0",
     "@paper-design/shaders": "0.0.77",
     "@resvg/resvg-js": "2.6.2",

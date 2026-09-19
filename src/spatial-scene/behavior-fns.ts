@@ -47,7 +47,7 @@ export class SpatialBehaviorFnError extends Error {
 
 type JsonObject = Record<string, JsonValue>
 
-export interface SpatialBehaviorEmitted {
+interface SpatialBehaviorEmitted {
   readonly tUs: number
   readonly channel: string
   readonly value: JsonValue
@@ -416,6 +416,78 @@ function behaviorCombine(inputs: Readonly<Record<string, JsonValue>>): Record<st
   return { emitted: merged as unknown as JsonValue[] as JsonObject[] }
 }
 
+// --------------------------------------------------------- emitted.append ---
+
+const appendInputs = z.strictObject({
+  prior: emittedSchema,
+  fresh: emittedSchema,
+})
+
+/**
+ * Concatenates two emitted-record arrays into one sorted trace — the
+ * carry-accumulation primitive. `repeat` rounds surface only final outputs,
+ * so organisms thread `acc` through `carry` and append each round's fresh
+ * records here. Ordering is by `(tUs, channel)` with prior records winning
+ * ties, keeping duplicates for downstream priority merging.
+ */
+function emittedAppend(inputs: Readonly<Record<string, JsonValue>>): Record<string, JsonValue> {
+  const spec = parseSpec(appendInputs, { prior: inputs.prior, fresh: inputs.fresh } as JsonObject, "emitted.append.v1", "prior")
+  const merged = [...spec.prior, ...spec.fresh]
+    .sort((left, right) => left.tUs - right.tUs || (left.channel < right.channel ? -1 : left.channel > right.channel ? 1 : 0))
+  if (merged.length > SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `emitted.append.v1: accumulated emissions exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall}`)
+  }
+  return { emitted: merged as unknown as JsonValue[] as JsonObject[] }
+}
+
+// -------------------------------------------------------- emitted.flatten ---
+
+const flattenInputs = z.strictObject({
+  nested: z.array(emittedSchema).max(SPATIAL_BEHAVIOR_FN_LIMITS.layers),
+})
+
+/**
+ * Flattens one level of nested emitted arrays — the `each` counterpart of
+ * `emitted.append.v1`. An `each` cell collects its child's interface output
+ * per item, so a child emitting `emitted[]` surfaces `emitted[][]`; this
+ * kernel flattens it into one sorted trace.
+ */
+function emittedFlatten(inputs: Readonly<Record<string, JsonValue>>): Record<string, JsonValue> {
+  const spec = parseSpec(flattenInputs, { nested: inputs.nested } as JsonObject, "emitted.flatten.v1", "nested")
+  const merged = spec.nested.flat()
+    .sort((left, right) => left.tUs - right.tUs || (left.channel < right.channel ? -1 : left.channel > right.channel ? 1 : 0))
+  if (merged.length > SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `emitted.flatten.v1: flattened emissions exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall}`)
+  }
+  return { emitted: merged as unknown as JsonValue[] as JsonObject[] }
+}
+
+// --------------------------------------------------------- window.advance ---
+
+const advanceInputs = z.strictObject({
+  window: windowSchema,
+  step: uint.min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.ticksPerWindow),
+})
+
+/**
+ * Splits a tick window into a `head` chunk of the first `step` ticks and the
+ * `rest` tail — the carry-threading primitive for sequential automata. A
+ * `repeat` cell feeds identical inputs each round, so a windowed organism
+ * carries `rest → window`: each round advances through the timeline instead
+ * of reprocessing the same ticks. `done` is `"true"` once `rest` is empty so
+ * `until` can terminate the loop on a string compare.
+ */
+function windowAdvance(inputs: Readonly<Record<string, JsonValue>>): Record<string, JsonValue> {
+  const spec = parseSpec(advanceInputs, { window: inputs.window, step: inputs.step } as JsonObject, "window.advance.v1", "window")
+  const head = spec.window.ticks.slice(0, spec.step)
+  const rest = spec.window.ticks.slice(spec.step)
+  return {
+    head: { ticks: head } as unknown as JsonValue,
+    rest: { ticks: rest } as unknown as JsonValue,
+    done: (rest.length === 0 ? "true" : "false") as JsonValue,
+  }
+}
+
 // ---------------------------------------------------------------- catalog ---
 
 const ports = (map: Record<string, { type: "text" | "json" | "choice" | "ref"; optional?: boolean; many?: boolean }>): SpatialBehaviorPortMap => map
@@ -476,6 +548,30 @@ export const SPATIAL_BEHAVIOR_FNS: ReadonlyMap<string, SpatialBehaviorFn> = new 
       cost: 50,
     },
     invoke: behaviorCombine,
+  },
+  "emitted.append.v1": {
+    signature: {
+      inputs: ports({ prior: { type: "json" }, fresh: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 25,
+    },
+    invoke: emittedAppend,
+  },
+  "emitted.flatten.v1": {
+    signature: {
+      inputs: ports({ nested: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 25,
+    },
+    invoke: emittedFlatten,
+  },
+  "window.advance.v1": {
+    signature: {
+      inputs: ports({ window: { type: "json" }, step: { type: "json" } }),
+      outputs: ports({ head: { type: "json" }, rest: { type: "json" }, done: { type: "text" } }),
+      cost: 10,
+    },
+    invoke: windowAdvance,
   },
 }))
 

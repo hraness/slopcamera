@@ -1,6 +1,10 @@
 # Contents
 
 - `contracts.ts` – bounded authored spatial scene, asset, camera, animation and patch data.
+- `behavior.ts` – the `slopcamera.spatial-behavior` document: a content-addressed ALGAL organism closure under the bake-safe profile (input/const/fn/repeat/each/organism cells only), with the ALGAL `manifestToJson` digest mirror and closure/wiring checker.
+- `behavior-fns.ts` – the closed pure fn catalog organisms compose: seeded rng, fsm, expression, interact, channel emit, scene sample, combine, and the emitted/window plumbing kernels.
+- `behavior-trace.ts` – emitted-channel records, host channel maps, the emitted→performance-directive proposal mapper, and the `slopcamera.spatial-behavior-bake` artifact plus receipt.
+- `behavior-bake.ts` – the deterministic bake: runs an admitted closure through the pinned ALGAL runtime over a memory store and the pure fn registry, extracts interface emissions, and binds the run receipt.
 - Pure identity, evaluation, inspection and audit modules – scene source and derived state without host effects.
 - Colocated deterministic and property tests – reference, transformation, time and edit laws.
 

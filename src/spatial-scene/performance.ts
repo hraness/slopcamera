@@ -223,6 +223,20 @@ const springDirective = z.strictObject({
   seed: z.number().int().min(0).max(0xffff_ffff),
 })
 
+export const SpatialPerformanceDirectiveSchema = z.discriminatedUnion("kind", [
+  clipDirective,
+  crossfadeDirective,
+  lookAtDirective,
+  twoBoneIkDirective,
+  footPlantDirective,
+  morphDirective,
+  attachDirective,
+  releaseDirective,
+  rootTrajectoryDirective,
+  springDirective,
+])
+export type SpatialPerformanceDirective = DeepReadonly<z.infer<typeof SpatialPerformanceDirectiveSchema>>
+
 export const SpatialPerformancePlanSchema = z.strictObject({
   kind: z.literal("slopcamera.spatial-performance-plan"),
   schemaVersion: z.literal(1),
@@ -233,18 +247,7 @@ export const SpatialPerformancePlanSchema = z.strictObject({
   seed: z.number().int().min(0).max(0xffff_ffff),
   durationUs: SpatialTimeUsSchema.refine((value) => value > 0, "Duration must be positive."),
   frameRate: SpatialFrameRateSchema,
-  directives: z.array(z.discriminatedUnion("kind", [
-    clipDirective,
-    crossfadeDirective,
-    lookAtDirective,
-    twoBoneIkDirective,
-    footPlantDirective,
-    morphDirective,
-    attachDirective,
-    releaseDirective,
-    rootTrajectoryDirective,
-    springDirective,
-  ])).min(1).max(SPATIAL_PERFORMANCE_LIMITS.directives),
+  directives: z.array(SpatialPerformanceDirectiveSchema).min(1).max(SPATIAL_PERFORMANCE_LIMITS.directives),
 })
 
 export const SpatialPerformanceSourcesSchema = z.strictObject({
