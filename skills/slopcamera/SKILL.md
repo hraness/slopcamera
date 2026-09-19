@@ -1,6 +1,6 @@
 ---
 name: slopcamera
-description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
+description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
 ---
 
 # Create visual media with Slopcamera
@@ -30,6 +30,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |
 | Semantic direction, galleries, bounded effects, temporal audit or the cinematic-world recipe pack | [Directed scenes](references/directed-scenes.md#direct-cinematic-worlds) |
 | Author a scene from code, generate procedural entities, or audit framing | [Scene building](references/scene-building.md) |
+| Parametric architecture, furniture, dimensions, repeated structures or editable design variants | [Parametric design](references/parametric-design.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |
 | Typed Bun SDK, built-in workflow, durable resume or MCP | [Workflows and SDK](references/workflows-sdk.md) |

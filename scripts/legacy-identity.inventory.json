@@ -458,7 +458,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "dd6b7023cf72ce655ac251318d83374e00bfd89215af618f63cd9fdcfc116d73",
+    "identityLinesSha256": "3d7728e6122aef7f4fe32b03631ebf7189f2bef37f1aeac4e8fff65408308e00",
     "occurrenceCount": 1,
     "path": "apps/desktop/cli/main.ts",
     "categories": [
@@ -1277,9 +1277,9 @@
     ]
   },
   {
-    "identityLineCount": 84,
-    "identityLinesSha256": "b22431dd0b1e83fdf7f21f133a67fc1dc158a54ead22ce71697f131fc7eb0c1c",
-    "occurrenceCount": 448,
+    "identityLineCount": 85,
+    "identityLinesSha256": "850a7d05b753c2cab1cfdfa8d723eac391e9ab834c0118338f5ddc574108778b",
+    "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1639,6 +1639,15 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "f340f20e6473ab13798e48e5004ad173a4820b7c86e35c267ebb5021ab41c64d",
+    "occurrenceCount": 2,
+    "path": "dist/code/index.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 9,
     "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
     "occurrenceCount": 9,
@@ -1651,7 +1660,7 @@
     "identityLineCount": 142,
     "identityLinesSha256": "8b0218426811c110252d06848408742a8c58ab1ebe4bff06c1feb7ecacca63f6",
     "occurrenceCount": 237,
-    "path": "dist/index-set7344z.js",
+    "path": "dist/index-wvamdk95.js",
     "categories": [
       "generated"
     ]
@@ -1697,6 +1706,15 @@
     "identityLinesSha256": "0ecdb53302e7accb71797a575a5aac59f438a5496eef9f79e18d1c0f1895d78a",
     "occurrenceCount": 10,
     "path": "docs/how-to/educational-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "ae547d63575822b1cea0e3105c89292c7d016268963d6b2832091ef753589b58",
+    "occurrenceCount": 3,
+    "path": "docs/how-to/parametric-design.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1789,6 +1807,42 @@
     "path": "docs/vercel.md",
     "categories": [
       "compat-doc"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/crescent-pavilion.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/modular-bookshelf.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/ribbed-tower.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/spiral-stair.scene.json",
+    "categories": [
+      "native-film-studio"
     ]
   },
   {
@@ -1982,6 +2036,15 @@
   },
   {
     "identityLineCount": 1,
+    "identityLinesSha256": "ea86036c7b397aa40576317302e9e95056cc850311c6c52705d5cbfd734f7dfc",
+    "occurrenceCount": 3,
+    "path": "skills/slopcamera/references/parametric-design.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
     "identityLinesSha256": "3a448fc2dd66943323deb6d2a440819e37b5539a509c1c341284749ea14f872e",
     "occurrenceCount": 1,
     "path": "skills/slopcamera/references/video-projects.md",
@@ -2062,6 +2125,15 @@
     "identityLinesSha256": "b87f8d40f1993e57d4d5140fdb976b34e6a826e94a7b39aa3e6cffa22faa13f2",
     "occurrenceCount": 1,
     "path": "src/index.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "81a56ecdeb174e6f201bbf6345f0a40f3fc11e557dfadd8dcf9ad93986b43855",
+    "occurrenceCount": 2,
+    "path": "src/spatial-scene/design-templates.ts",
     "categories": [
       "native-film-studio"
     ]

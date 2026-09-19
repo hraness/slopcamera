@@ -74,7 +74,7 @@ import {
   studioSourceBundleSha256,
   summarizeSceneVariantPatch,
   validateStudioReceipt
-} from "./index-set7344z.js";
+} from "./index-wvamdk95.js";
 import {
   bundledSkillPath,
   installSkill

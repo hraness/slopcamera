@@ -6,7 +6,7 @@ import {
   checkDiagramFile,
   renderDiagramFile,
   runMcpServer
-} from "./index-set7344z.js";
+} from "./index-wvamdk95.js";
 import {
   installSkill,
   pathExists
