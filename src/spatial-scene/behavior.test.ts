@@ -9,6 +9,7 @@ import {
   type SpatialBehaviorFnSignature,
   type SpatialBehaviorOrganism,
 } from "./behavior"
+import { spatialBehaviorFnSignatures } from "./behavior-fns"
 import { parseSpatialScene, spatialValueSha256 } from "./identity"
 
 // The four manifests below are also digested by ALGAL's own
@@ -16,10 +17,10 @@ import { parseSpatialScene, spatialValueSha256 } from "./identity"
 // literals pin byte-exact digest parity between this mirror and the ALGAL
 // runtime so drift fails loudly here instead of corrupting closure checks.
 
-const TICK_DIGEST = "sha256:6fecd9b95f75704906202dadccb56bd50e4d5d2a145db90bd99680c00e596345"
-const LOOP_DIGEST = "sha256:bc8e97b90742935af7aa82adcc9bf2309f05ef07654bea8fc6bbda85d9e29c4a"
-const WORKER_DIGEST = "sha256:be29d889e639c748bef2d8e7d4e27be26efcc1da0b6c12c5329b7b85aa32bb96"
-const FANOUT_DIGEST = "sha256:3e29617d534e867b0e1de2b95450add2568128882eb2cc1e6bc41746aba8a387"
+const TICK_DIGEST = "sha256:8facb5bda465d6291d7c882cdf75f801a39fdeab2fd7b0241945f2ef34d6e624"
+const LOOP_DIGEST = "sha256:ef2aabe58e18b3810d802741ba121a88fca3d296dac94f864bda80cb8a579b21"
+const WORKER_DIGEST = "sha256:d3fc3ee77dc927e9b78fbef9289f1387be385d8f821c692b49d4d1c5c4b5ca51"
+const FANOUT_DIGEST = "sha256:fa8cfce4815641c2fa18d36a54f15284f03640814f7fd8f869b773298b1032a7"
 
 const tickManifest: SpatialBehaviorOrganism = {
   contract: "morphogen.organism.v1",
@@ -27,7 +28,7 @@ const tickManifest: SpatialBehaviorOrganism = {
   name: "FSM tick",
   cells: [
     { id: "s", kind: "input", outputs: { state: { type: "json" } } },
-    { id: "tick", kind: "fn", fn: "fsm.tick.v1" },
+    { id: "tick", kind: "fn", fn: "behavior.fsm.v1" },
   ],
   edges: [
     { from: { cell: "s", port: "state" }, to: { cell: "tick", port: "state" } },
@@ -69,19 +70,20 @@ const workerManifest: SpatialBehaviorOrganism = {
   key: "organism:each-worker",
   name: "Each worker",
   cells: [
-    { id: "cfg", kind: "const", outputs: { gain: { type: "json", value: 2 } } },
-    { id: "item", kind: "input", outputs: { value: { type: "json" } } },
+    { id: "cfg", kind: "const", outputs: { chan: { type: "text", value: "trace" } } },
+    { id: "item", kind: "input", outputs: { value: { type: "json" }, window: { type: "json" } } },
     { id: "sub", kind: "organism", manifest: TICK_DIGEST },
-    { id: "work", kind: "fn", fn: "behavior.emit.v1" },
+    { id: "work", kind: "fn", fn: "channel.emit.v1" },
   ],
   edges: [
     { from: { cell: "item", port: "value" }, to: { cell: "sub", port: "state" } },
-    { from: { cell: "sub", port: "emitted" }, to: { cell: "work", port: "trace" } },
-    { from: { cell: "cfg", port: "gain" }, to: { cell: "work", port: "gain" } },
+    { from: { cell: "item", port: "window" }, to: { cell: "work", port: "window" } },
+    { from: { cell: "cfg", port: "chan" }, to: { cell: "work", port: "channel" } },
+    { from: { cell: "sub", port: "emitted" }, to: { cell: "work", port: "value" } },
   ],
   interface: {
-    inputs: { value: { cell: "item", port: "value" } },
-    outputs: { out: { cell: "work", port: "out" } },
+    inputs: { value: { cell: "item", port: "value" }, window: { cell: "item", port: "window" } },
+    outputs: { out: { cell: "work", port: "emitted" } },
   },
 }
 
@@ -90,28 +92,20 @@ const fanoutManifest: SpatialBehaviorOrganism = {
   key: "organism:fanout",
   name: "Fan out",
   cells: [
-    { id: "list", kind: "input", outputs: { items: { type: "json" } } },
+    { id: "list", kind: "input", outputs: { items: { type: "json" }, window: { type: "json" } } },
     { id: "each", kind: "each", manifest: WORKER_DIGEST, over: "value", maxItems: 8 },
   ],
   edges: [
     { from: { cell: "list", port: "items" }, to: { cell: "each", port: "value" } },
+    { from: { cell: "list", port: "window" }, to: { cell: "each", port: "window" } },
   ],
   interface: {
-    inputs: { items: { cell: "list", port: "items" } },
+    inputs: { items: { cell: "list", port: "items" }, window: { cell: "list", port: "window" } },
     outputs: { outs: { cell: "each", port: "out" } },
   },
 }
 
-const catalog = new Map<string, SpatialBehaviorFnSignature>([
-  ["fsm.tick.v1", {
-    inputs: { state: { type: "json" } },
-    outputs: { next: { type: "json" }, emitted: { type: "json" } },
-  }],
-  ["behavior.emit.v1", {
-    inputs: { trace: { type: "json" }, gain: { type: "json", optional: true } },
-    outputs: { out: { type: "json" } },
-  }],
-])
+const catalog = spatialBehaviorFnSignatures()
 
 function scene(): unknown {
   return {
@@ -161,7 +155,7 @@ function behavior(overrides: Record<string, unknown> = {}): Record<string, unkno
     },
     entry: FANOUT_DIGEST,
     channels: ["locomotion.walk", "expression.fidget"],
-    args: { items: [{ t: 0 }, { t: 33333 }] },
+    args: { items: [{ t: 0 }, { t: 33333 }], window: { ticks: [{ tUs: 0 }, { tUs: 33333 }] } },
     ...overrides,
   }
 }
@@ -270,7 +264,7 @@ describe("behavior organism digest", () => {
 describe("checkSpatialBehavior", () => {
   test("accepts a well-formed closure with no findings", () => {
     const checked = report()
-    expect(checked.counts).toMatchObject({ organisms: 3, cells: 8, edges: 5, fnRefs: 2, errors: 0, warnings: 0 })
+    expect(checked.counts).toMatchObject({ organisms: 3, cells: 8, edges: 7, fnRefs: 2, errors: 0, warnings: 0 })
     expect(checked.findings).toEqual([])
     expect(checked.behaviorSha256).toBe(spatialBehaviorSha256(parseSpatialBehavior(behavior())))
   })
@@ -308,7 +302,7 @@ describe("checkSpatialBehavior", () => {
       ...workerManifest,
       edges: [
         ...workerManifest.edges,
-        { from: { cell: "sub", port: "next" }, to: { cell: "cfg", port: "gain" } },
+        { from: { cell: "sub", port: "next" }, to: { cell: "cfg", port: "chan" } },
       ],
     }
     const found = report(behavior({
