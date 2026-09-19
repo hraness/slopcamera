@@ -6,6 +6,10 @@ import {
   MAX_IMAGE_DIMENSION,
   ORIGINAL_MATERIAL_HERO_FIXTURE,
   SPATIAL_AUDIT_LIMITS,
+  SPATIAL_BEHAVIOR_AUDIT_LIMITS,
+  SPATIAL_BEHAVIOR_FNS,
+  SPATIAL_BEHAVIOR_FN_LIMITS,
+  SPATIAL_BEHAVIOR_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
   SPATIAL_DIRECTION_COMPILATION_LIMITS,
   SPATIAL_DIRECTION_COMPILER_ID,
@@ -41,6 +45,20 @@ import {
   SpatialAuditOptionsSchema,
   SpatialAuditReportSchema,
   SpatialAuditSampleSchema,
+  SpatialBehaviorAuditFindingKindSchema,
+  SpatialBehaviorAuditFindingSchema,
+  SpatialBehaviorAuditOptionsSchema,
+  SpatialBehaviorAuditReportSchema,
+  SpatialBehaviorCellSchema,
+  SpatialBehaviorCheckFindingSchema,
+  SpatialBehaviorCheckReportSchema,
+  SpatialBehaviorEdgeSchema,
+  SpatialBehaviorFindingCodeSchema,
+  SpatialBehaviorFnError,
+  SpatialBehaviorOrganismSchema,
+  SpatialBehaviorPortMapSchema,
+  SpatialBehaviorPortTypeSchema,
+  SpatialBehaviorSchema,
   SpatialBloomSchema,
   SpatialBoundsSchema,
   SpatialCameraCoverageSchema,
@@ -156,11 +174,15 @@ import {
   SpatialVignetteSchema,
   applySpatialEntityOverride,
   applySpatialScenePatch,
+  auditSpatialBehaviorTrace,
   auditSpatialCameraTrack,
   auditSpatialScene,
   auditSpatialSceneInContext,
   auditSpatialTemporalEvidence,
+  behaviorOrganismCanonicalValue,
+  behaviorOrganismSha256,
   cameraMathView,
+  checkSpatialBehavior,
   checkSpatialDirection,
   checkSpatialRenderEffects,
   compileSpatialCameraRig,
@@ -184,6 +206,7 @@ import {
   multiplyTransforms,
   normalizeQuaternion,
   normalizeSpatialAuditAssetBounds,
+  parseSpatialBehavior,
   parseSpatialCameraTrack,
   parseSpatialDirection,
   parseSpatialGeometryGraph,
@@ -214,6 +237,9 @@ import {
   spatialAssetClosureDigests,
   spatialAssetManifestSha256,
   spatialAuditDefaultTimesUs,
+  spatialBehaviorAuditReportSha256,
+  spatialBehaviorFnSignatures,
+  spatialBehaviorSha256,
   spatialDirectionCompilationSha256,
   spatialDirectionSha256,
   spatialEntityLocalBounds,
@@ -244,7 +270,7 @@ import {
   validatePbrMaterial,
   validateSpatialOverrides,
   validateSpatialShot
-} from "../index-pgzk6ndh.js";
+} from "../index-6s69cc1b.js";
 import {
   AuthoredGraphNodeV1Schema,
   AuthoredWorkflowGraphV1Schema,
@@ -319,7 +345,9 @@ import {
   sha256Hex,
   slopcameraCodeErrorMessage
 } from "../index-ff4r9h6b.js";
-import"../index-z1w83f81.js";
+import {
+  __require
+} from "../index-z1w83f81.js";
 
 // src/spatial-scene/audit-rendered.ts
 import { z } from "zod";
@@ -2717,6 +2745,18 @@ var springDirective = z7.strictObject({
   frequency: z7.number().finite().min(0).max(100),
   seed: z7.number().int().min(0).max(4294967295)
 });
+var SpatialPerformanceDirectiveSchema = z7.discriminatedUnion("kind", [
+  clipDirective,
+  crossfadeDirective,
+  lookAtDirective,
+  twoBoneIkDirective,
+  footPlantDirective,
+  morphDirective,
+  attachDirective,
+  releaseDirective,
+  rootTrajectoryDirective,
+  springDirective
+]);
 var SpatialPerformancePlanSchema = z7.strictObject({
   kind: z7.literal("slopcamera.spatial-performance-plan"),
   schemaVersion: z7.literal(1),
@@ -2727,18 +2767,7 @@ var SpatialPerformancePlanSchema = z7.strictObject({
   seed: z7.number().int().min(0).max(4294967295),
   durationUs: SpatialTimeUsSchema.refine((value) => value > 0, "Duration must be positive."),
   frameRate: SpatialFrameRateSchema,
-  directives: z7.array(z7.discriminatedUnion("kind", [
-    clipDirective,
-    crossfadeDirective,
-    lookAtDirective,
-    twoBoneIkDirective,
-    footPlantDirective,
-    morphDirective,
-    attachDirective,
-    releaseDirective,
-    rootTrajectoryDirective,
-    springDirective
-  ])).min(1).max(SPATIAL_PERFORMANCE_LIMITS.directives)
+  directives: z7.array(SpatialPerformanceDirectiveSchema).min(1).max(SPATIAL_PERFORMANCE_LIMITS.directives)
 });
 var SpatialPerformanceSourcesSchema = z7.strictObject({
   sceneSha256: SpatialDigestSchema,
@@ -5241,6 +5270,709 @@ function bakeSpatialSimulation(planInput) {
   });
   return { document, receipt };
 }
+
+// src/spatial-scene/behavior-trace.ts
+import { z as z14 } from "zod";
+var SPATIAL_BEHAVIOR_TRACE_LIMITS = Object.freeze({
+  emitted: 16384,
+  channels: 64,
+  clipChannels: 16,
+  clipValues: 64,
+  attachments: 8,
+  trajectories: 8,
+  directives: 4096,
+  unresolvedIntents: 256
+});
+var channelName = z14.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/u);
+var SpatialBehaviorEmittedSchema = z14.strictObject({
+  tUs: SpatialTimeUsSchema,
+  channel: channelName,
+  value: z14.unknown()
+});
+function parseSpatialBehaviorEmissions(input, what) {
+  return parseSpatialValue(z14.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted), input, what);
+}
+var humanoidBone = z14.enum(HUMANOID_BONE_NAMES);
+var bindingChannel = channelName;
+var clipValue = z14.string().min(1).max(64);
+var SpatialBehaviorChannelMapSchema = z14.strictObject({
+  clips: z14.record(bindingChannel, z14.record(clipValue, z14.strictObject({
+    clipDigest: SpatialDigestSchema,
+    durationUs: SpatialTimeUsSchema.refine((value) => value > 0, "Clip duration must be positive.")
+  }))).refine((clips) => Object.keys(clips).length <= SPATIAL_BEHAVIOR_TRACE_LIMITS.clipChannels && Object.values(clips).every((values) => Object.keys(values).length <= SPATIAL_BEHAVIOR_TRACE_LIMITS.clipValues), { message: `At most ${SPATIAL_BEHAVIOR_TRACE_LIMITS.clipChannels} clip channels with ${SPATIAL_BEHAVIOR_TRACE_LIMITS.clipValues} values each.` }).optional(),
+  attachments: z14.array(z14.strictObject({
+    attachChannel: bindingChannel,
+    releaseChannel: bindingChannel,
+    propId: z14.string().min(1).max(128),
+    bone: humanoidBone,
+    localOffset: SpatialTransformSchema
+  })).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.attachments).optional(),
+  trajectories: z14.array(bindingChannel).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.trajectories).optional()
+}).superRefine((map, context) => {
+  const attachChannels = new Set;
+  for (const [index, attachment] of (map.attachments ?? []).entries()) {
+    if (attachChannels.has(attachment.attachChannel)) {
+      context.addIssue({ code: "custom", path: ["attachments", index, "attachChannel"], message: `Attach channel ${attachment.attachChannel} is bound twice.` });
+    }
+    attachChannels.add(attachment.attachChannel);
+  }
+  for (const name of map.trajectories ?? []) {
+    if (map.clips !== undefined && name in map.clips) {
+      context.addIssue({ code: "custom", path: ["trajectories"], message: `Channel ${name} is bound as both clip and trajectory.` });
+    }
+  }
+});
+function parseSpatialBehaviorChannelMap(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialBehaviorChannelMapSchema, input, "behavior channel map"));
+}
+var SpatialBehaviorUnresolvedIntentSchema = z14.strictObject({
+  intentId: z14.string().regex(/^prop_[a-f0-9]{16}$/u),
+  domain: z14.literal("behavior"),
+  referenceId: z14.string().min(1).max(128),
+  slot: z14.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u),
+  detail: z14.string().min(1).max(240)
+});
+var intentId = (domain, reference) => `prop_${spatialValueSha256({ domain: `slopcamera.behavior-intent.${domain}`, reference }).slice(0, 16)}`;
+var unresolved = (domain, referenceId, slot, detail) => deepFreezeJson({ intentId: intentId(domain, `${referenceId}/${slot}`), domain: "behavior", referenceId, slot, detail });
+var emittedValueKey = (value) => {
+  try {
+    return spatialValueSha256(value);
+  } catch {
+    return "\x00unrepresentable";
+  }
+};
+var directiveId2 = (domain, parts) => `dir_${domain}_${spatialValueSha256({ domain: `slopcamera.behavior-directive.${domain}`, parts }).slice(0, 12)}`;
+function compileSpatialBehaviorDirectives(input) {
+  const { emitted, channelMap, rangeUs } = input;
+  const directives = [];
+  const unresolvedIntents = [];
+  const map = channelMap ?? {};
+  const sorted = [...emitted].sort((a, b) => a.tUs - b.tUs || a.channel.localeCompare(b.channel));
+  const clipChannels = Object.keys(map.clips ?? {});
+  for (const channel of clipChannels) {
+    const bindings = map.clips[channel];
+    const records = sorted.filter((record) => record.channel === channel);
+    if (records.length === 0)
+      continue;
+    let runStart = records[0].tUs;
+    let runValue = emittedValueKey(records[0].value);
+    let runLabel = records[0].value;
+    const flush = (endUs) => {
+      const label = typeof runLabel === "string" ? runLabel : undefined;
+      const binding = label === undefined ? undefined : bindings[label];
+      if (binding === undefined) {
+        unresolvedIntents.push(unresolved("clip", `${channel}:${label ?? "non-string"}`, "clip-binding", `Channel ${channel} emitted ${label === undefined ? "a non-string value" : `value ${label}`} with no clip binding at ${runStart}us.`));
+        return;
+      }
+      const intervalUs = endUs - runStart;
+      if (intervalUs <= 0)
+        return;
+      directives.push(deepFreezeJson(SpatialPerformanceDirectiveSchema.parse({
+        directiveId: directiveId2("clip", [channel, runStart, endUs]),
+        kind: "clip",
+        clipDigest: binding.clipDigest,
+        startUs: runStart,
+        endUs,
+        trimStartUs: 0,
+        trimEndUs: Math.min(intervalUs, binding.durationUs),
+        loop: intervalUs > binding.durationUs ? Math.ceil(intervalUs / binding.durationUs) : "once",
+        timeScale: 1
+      })));
+    };
+    for (let index = 1;index < records.length; index += 1) {
+      const record = records[index];
+      const key = emittedValueKey(record.value);
+      if (key !== runValue) {
+        flush(record.tUs);
+        runStart = record.tUs;
+        runValue = key;
+        runLabel = record.value;
+      }
+    }
+    flush(rangeUs.endUs);
+  }
+  for (const attachment of map.attachments ?? []) {
+    const attachRecords = sorted.filter((record) => record.channel === attachment.attachChannel);
+    const releaseRecords = sorted.filter((record) => record.channel === attachment.releaseChannel);
+    if (attachRecords.length === 0 && releaseRecords.length === 0)
+      continue;
+    if (releaseRecords.length > attachRecords.length) {
+      unresolvedIntents.push(unresolved("attach", attachment.propId, "release-order", `Channel ${attachment.releaseChannel} emits ${releaseRecords.length} releases against ${attachRecords.length} attaches on ${attachment.attachChannel}.`));
+      continue;
+    }
+    for (const [index, attachRecord] of attachRecords.entries()) {
+      const releaseRecord = releaseRecords[index];
+      if (releaseRecord !== undefined && releaseRecord.tUs <= attachRecord.tUs) {
+        unresolvedIntents.push(unresolved("attach", attachment.propId, "release-order", `Release on ${attachment.releaseChannel} at ${releaseRecord.tUs}us does not follow attach on ${attachment.attachChannel} at ${attachRecord.tUs}us.`));
+        continue;
+      }
+      const endUs = releaseRecord !== undefined ? releaseRecord.tUs : rangeUs.endUs;
+      directives.push(deepFreezeJson(SpatialPerformanceDirectiveSchema.parse({
+        directiveId: directiveId2("attach", [attachment.propId, attachRecord.tUs]),
+        kind: "attach",
+        propId: attachment.propId,
+        bone: attachment.bone,
+        localOffset: attachment.localOffset,
+        startUs: attachRecord.tUs,
+        endUs
+      })));
+      if (releaseRecord !== undefined) {
+        directives.push(deepFreezeJson(SpatialPerformanceDirectiveSchema.parse({
+          directiveId: directiveId2("release", [attachment.propId, releaseRecord.tUs]),
+          kind: "release",
+          propId: attachment.propId,
+          startUs: releaseRecord.tUs
+        })));
+      }
+    }
+  }
+  for (const channel of map.trajectories ?? []) {
+    const records = sorted.filter((record) => record.channel === channel);
+    if (records.length === 0)
+      continue;
+    const waypoints = [];
+    let malformed = 0;
+    for (const record of records) {
+      const value = record.value;
+      if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        malformed += 1;
+        continue;
+      }
+      const waypoint = value;
+      const position = SpatialVec3Schema.safeParse(waypoint.position);
+      const rotation = waypoint.rotation === undefined ? undefined : SpatialQuaternionSchema.safeParse(waypoint.rotation);
+      if (!position.success || rotation !== undefined && !rotation.success) {
+        malformed += 1;
+        continue;
+      }
+      waypoints.push({
+        timeUs: record.tUs,
+        position: position.data,
+        rotation: rotation === undefined ? [0, 0, 0, 1] : rotation.data
+      });
+    }
+    if (malformed > 0) {
+      unresolvedIntents.push(unresolved("trajectory", channel, "waypoint-shape", `Channel ${channel} emitted ${malformed} malformed waypoint records; waypoints need {position, rotation?}.`));
+    }
+    if (waypoints.length < 2) {
+      unresolvedIntents.push(unresolved("trajectory", channel, "waypoint-count", `Channel ${channel} produced ${waypoints.length} valid waypoints; a root trajectory needs at least 2.`));
+      continue;
+    }
+    directives.push(deepFreezeJson(SpatialPerformanceDirectiveSchema.parse({
+      directiveId: directiveId2("trajectory", [channel, waypoints[0].timeUs, waypoints.length]),
+      kind: "root-trajectory",
+      waypoints
+    })));
+  }
+  if (directives.length > SPATIAL_BEHAVIOR_TRACE_LIMITS.directives) {
+    throw new SpatialSceneError("invalid-data", `over-bound: channel map produced ${directives.length} directives beyond ${SPATIAL_BEHAVIOR_TRACE_LIMITS.directives}.`, "behavior-trace");
+  }
+  return deepFreezeJson({ directives, unresolvedIntents });
+}
+var SpatialBehaviorBakeReceiptSchema = z14.strictObject({
+  kind: z14.literal("slopcamera.spatial-behavior-bake-receipt"),
+  schemaVersion: z14.literal(1),
+  behaviorSha256: SpatialDigestSchema,
+  sceneSha256: SpatialDigestSchema,
+  entry: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  manifestDigest: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  runDigest: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  runtime: z14.strictObject({ name: z14.string().min(1).max(64), version: z14.string().min(1).max(64) }),
+  fnCatalogSha256: SpatialDigestSchema,
+  emittedSha256: SpatialDigestSchema,
+  channelMapSha256: SpatialDigestSchema.optional(),
+  outcome: z14.enum(["complete", "failed", "stuck"]),
+  work: z14.strictObject({
+    steps: z14.number().int().min(0).max(SPATIAL_SCENE_LIMITS.durationUs),
+    agentCalls: z14.number().int().min(0).max(65536),
+    units: z14.number().int().min(0).max(1e8)
+  })
+});
+var SpatialBehaviorBakeSchema = z14.strictObject({
+  kind: z14.literal("slopcamera.spatial-behavior-bake"),
+  schemaVersion: z14.literal(1),
+  behaviorSha256: SpatialDigestSchema,
+  sceneSha256: SpatialDigestSchema,
+  entry: z14.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  seed: z14.number().int().min(0).max(4294967295),
+  rangeUs: z14.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
+  emitted: z14.array(SpatialBehaviorEmittedSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted),
+  directives: z14.array(SpatialPerformanceDirectiveSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.directives),
+  unresolvedIntents: z14.array(SpatialBehaviorUnresolvedIntentSchema).max(SPATIAL_BEHAVIOR_TRACE_LIMITS.unresolvedIntents),
+  receipt: SpatialBehaviorBakeReceiptSchema
+});
+function spatialBehaviorBakeSha256(bake) {
+  return spatialValueSha256(bake);
+}
+function spatialBehaviorFnCatalogSha256(fns) {
+  const projection = {};
+  for (const name of [...fns.keys()].sort()) {
+    const signature = fns.get(name).signature;
+    projection[name] = { inputs: signature.inputs, outputs: signature.outputs, cost: signature.cost };
+  }
+  return spatialValueSha256({ domain: "slopcamera.behavior-fn-catalog.v1", fns: projection });
+}
+
+// src/spatial-scene/behavior-bake.ts
+import { z as z15 } from "zod";
+var bakeOptionsSchema = z15.strictObject({
+  behavior: z15.unknown(),
+  scene: z15.unknown(),
+  channelMap: z15.unknown().optional()
+});
+var algalRegistry = () => {
+  const registry = new Map;
+  for (const [name, entry] of SPATIAL_BEHAVIOR_FNS) {
+    registry.set(name, {
+      signature: {
+        inputs: entry.signature.inputs,
+        outputs: entry.signature.outputs,
+        cost: entry.signature.cost
+      },
+      fn: (inputs) => entry.invoke(inputs)
+    });
+  }
+  return registry;
+};
+var parseEntryManifest = (behavior, parseOrganismManifest) => {
+  const organism = behavior.organisms[behavior.entry];
+  if (organism === undefined) {
+    throw new SpatialSceneError("invalid-data", `unresolved-entry: entry digest ${behavior.entry.slice(0, 24)}\u2026 is absent from the organisms closure.`, "behavior-bake");
+  }
+  try {
+    return parseOrganismManifest(organism);
+  } catch (error) {
+    throw new SpatialSceneError("invalid-data", `invalid-manifest: entry organism failed ALGAL manifest parsing: ${error instanceof Error ? error.message : String(error)}`, "behavior-bake");
+  }
+};
+var entryRunArgs = (behavior, manifest) => {
+  const args = {};
+  for (const [name, value] of Object.entries(behavior.args ?? {})) {
+    const endpoint = manifest.interface?.inputs[name];
+    if (endpoint === undefined)
+      continue;
+    (args[endpoint.cell] ??= {})[endpoint.port] = value;
+  }
+  const seedEndpoint = manifest.interface?.inputs.seed;
+  if (seedEndpoint !== undefined && behavior.args?.seed === undefined) {
+    (args[seedEndpoint.cell] ??= {})[seedEndpoint.port] = behavior.seed;
+  }
+  return args;
+};
+async function bakeSpatialBehavior(input) {
+  const options = parseSpatialValue(bakeOptionsSchema, input, "behavior bake");
+  const behavior = parseSpatialBehavior(options.behavior);
+  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene");
+  const sceneSha256 = spatialValueSha256(scene);
+  const signatures = spatialBehaviorFnSignatures();
+  const check = checkSpatialBehavior({ behavior, scene }, signatures);
+  const errors = check.findings.filter((finding) => finding.severity === "error");
+  if (errors.length > 0) {
+    const codes = [...new Set(errors.map((finding) => finding.code))].join(", ");
+    throw new SpatialSceneError("invalid-data", `behavior-check-failed: behavior ${behavior.behaviorId} failed admission with ${errors.length} error finding(s): ${codes}.`, "behavior-bake");
+  }
+  const channelMap = options.channelMap === undefined ? undefined : parseSpatialBehaviorChannelMap(options.channelMap);
+  if (channelMap !== undefined) {
+    const declared = new Set(behavior.channels);
+    for (const channel of [
+      ...Object.keys(channelMap.clips ?? {}),
+      ...channelMap.trajectories ?? [],
+      ...(channelMap.attachments ?? []).flatMap((entry) => [entry.attachChannel, entry.releaseChannel])
+    ]) {
+      if (!declared.has(channel)) {
+        throw new SpatialSceneError("invalid-data", `undeclared-channel: channel map binds channel ${channel}, which behavior ${behavior.behaviorId} does not declare.`, "behavior-bake");
+      }
+    }
+  }
+  const { MemoryStore, parseOrganismManifest, runOrganism } = await import("@hraness/algal");
+  const store = new MemoryStore;
+  for (const [digest, organism] of Object.entries(behavior.organisms)) {
+    let manifest2;
+    try {
+      manifest2 = parseOrganismManifest(organism);
+    } catch (error) {
+      throw new SpatialSceneError("invalid-data", `invalid-manifest: organism ${organism.key} failed ALGAL manifest parsing: ${error instanceof Error ? error.message : String(error)}`, "behavior-bake");
+    }
+    const stored = await store.putManifest(manifest2);
+    if (stored !== digest) {
+      throw new SpatialSceneError("invalid-data", `organism-digest-drift: organism ${organism.key} stored at ${stored.slice(0, 24)}\u2026 but the closure keys it at ${digest.slice(0, 24)}\u2026; the ALGAL projection drifted from the admitted digest.`, "behavior-bake");
+    }
+  }
+  const manifest = parseEntryManifest(behavior, parseOrganismManifest);
+  const args = entryRunArgs(behavior, manifest);
+  const receipt = await runOrganism({
+    manifest,
+    args,
+    fns: algalRegistry(),
+    store,
+    executors: []
+  });
+  if (receipt.manifestDigest !== behavior.entry) {
+    throw new SpatialSceneError("invalid-data", `organism-digest-drift: run manifest digest ${receipt.manifestDigest.slice(0, 24)}\u2026 does not match entry ${behavior.entry.slice(0, 24)}\u2026.`, "behavior-bake");
+  }
+  if (receipt.effects.length > 0 || receipt.work.agentCalls > 0) {
+    throw new SpatialSceneError("invalid-data", `effect-leak: bake-safe run recorded ${receipt.effects.length} effect(s) and ${receipt.work.agentCalls} agent call(s); the profile admits none.`, "behavior-bake");
+  }
+  if (receipt.outcome !== "complete") {
+    const failure = receipt.failure;
+    throw new SpatialSceneError("invalid-data", `behavior-run-failed: ALGAL run ${receipt.outcome}${failure === undefined ? "" : `: ${failure.code} ${failure.message}`}`, "behavior-bake");
+  }
+  const declaredChannels = new Set(behavior.channels);
+  const emitted = [];
+  const outputs = manifest.interface?.outputs ?? {};
+  for (const name of Object.keys(outputs).sort()) {
+    const endpoint = outputs[name];
+    const record = receipt.cells[endpoint.cell];
+    if (record === undefined || record.status !== "committed" || record.outputs === undefined) {
+      throw new SpatialSceneError("invalid-data", `emission-missing: interface output ${name} maps to cell ${endpoint.cell}, which did not commit an output.`, "behavior-bake");
+    }
+    const records = parseSpatialBehaviorEmissions(record.outputs[endpoint.port], `interface output ${name}`);
+    for (const emittedRecord of records) {
+      if (!declaredChannels.has(emittedRecord.channel)) {
+        throw new SpatialSceneError("invalid-data", `undeclared-channel: emission on channel ${emittedRecord.channel}, which behavior ${behavior.behaviorId} does not declare.`, "behavior-bake");
+      }
+      if (emittedRecord.tUs < behavior.rangeUs.startUs || emittedRecord.tUs > behavior.rangeUs.endUs) {
+        throw new SpatialSceneError("invalid-data", `emission-outside-range: emission on channel ${emittedRecord.channel} at ${emittedRecord.tUs}us is outside the declared range ${behavior.rangeUs.startUs}\u2013${behavior.rangeUs.endUs}us.`, "behavior-bake");
+      }
+    }
+    emitted.push(...records);
+  }
+  if (emitted.length > SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted) {
+    throw new SpatialSceneError("invalid-data", `over-bound: run emitted ${emitted.length} records beyond ${SPATIAL_BEHAVIOR_TRACE_LIMITS.emitted}.`, "behavior-bake");
+  }
+  emitted.sort((a, b) => a.tUs - b.tUs || a.channel.localeCompare(b.channel));
+  const { directives, unresolvedIntents } = compileSpatialBehaviorDirectives({
+    emitted,
+    ...channelMap === undefined ? {} : { channelMap },
+    rangeUs: behavior.rangeUs
+  });
+  const behaviorSha256 = spatialBehaviorSha256(behavior);
+  const bake = deepFreezeJson(SpatialBehaviorBakeSchema.parse({
+    kind: "slopcamera.spatial-behavior-bake",
+    schemaVersion: 1,
+    behaviorSha256,
+    sceneSha256,
+    entry: behavior.entry,
+    seed: behavior.seed,
+    rangeUs: behavior.rangeUs,
+    emitted,
+    directives,
+    unresolvedIntents,
+    receipt: {
+      kind: "slopcamera.spatial-behavior-bake-receipt",
+      schemaVersion: 1,
+      behaviorSha256,
+      sceneSha256,
+      entry: behavior.entry,
+      manifestDigest: receipt.manifestDigest,
+      runDigest: receipt.digest,
+      runtime: { name: receipt.runtime.name, version: receipt.runtime.version },
+      fnCatalogSha256: spatialBehaviorFnCatalogSha256(SPATIAL_BEHAVIOR_FNS),
+      emittedSha256: spatialValueSha256(emitted),
+      ...channelMap === undefined ? {} : { channelMapSha256: spatialValueSha256(channelMap) },
+      outcome: receipt.outcome,
+      work: receipt.work
+    }
+  }));
+  return { bake, check };
+}
+
+// src/spatial-scene/behavior-gallery.ts
+import { z as z16 } from "zod";
+var BEHAVIOR_GALLERY_SEED_STRIDE = [0, 1, 2, 5, 11, 23];
+var SEED_MODULUS = 4294967296;
+var SPATIAL_BEHAVIOR_GALLERY_LIMITS = Object.freeze({
+  candidates: 6
+});
+var SpatialBehaviorGalleryCandidateSchema = z16.strictObject({
+  candidateId: z16.string().min(1).max(96).regex(/^cand_[a-f0-9]{16}$/u),
+  label: z16.string().min(1).max(128),
+  parameter: z16.string().min(1).max(64),
+  documentKind: z16.literal("slopcamera.spatial-behavior-bake"),
+  documentSha256: SpatialDigestSchema,
+  document: z16.unknown()
+});
+var SpatialBehaviorGalleryPlanSchema = z16.strictObject({
+  kind: z16.literal("slopcamera.spatial-behavior-gallery"),
+  schemaVersion: z16.literal(1),
+  behaviorSha256: SpatialDigestSchema,
+  sceneSha256: SpatialDigestSchema,
+  entry: z16.string().regex(/^sha256:[a-f0-9]{64}$/u),
+  candidates: z16.array(SpatialBehaviorGalleryCandidateSchema).max(SPATIAL_BEHAVIOR_GALLERY_LIMITS.candidates)
+});
+function spatialBehaviorGalleryPlanSha256(plan) {
+  return spatialValueSha256(plan);
+}
+var galleryOptionsSchema = z16.strictObject({
+  behavior: z16.unknown(),
+  scene: z16.unknown(),
+  channelMap: z16.unknown().optional()
+});
+var candidateId = (parameter, behaviorSha256) => `cand_${spatialValueSha256({ domain: "slopcamera.behavior-gallery-candidate.v1", parameter, behaviorSha256 }).slice(0, 16)}`;
+async function planSpatialBehaviorGallery(input) {
+  const options = parseSpatialValue(galleryOptionsSchema, input, "behavior gallery");
+  const behavior = parseSpatialBehavior(options.behavior);
+  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene");
+  const channelMap = options.channelMap === undefined ? undefined : parseSpatialBehaviorChannelMap(options.channelMap);
+  const seen = new Set;
+  const candidates = [];
+  for (const stride of BEHAVIOR_GALLERY_SEED_STRIDE) {
+    const seed = (behavior.seed + stride) % SEED_MODULUS;
+    const variant = parseSpatialBehavior({ ...behavior, seed });
+    const { bake } = await bakeSpatialBehavior({
+      behavior: variant,
+      scene,
+      ...channelMap === undefined ? {} : { channelMap }
+    });
+    const documentSha256 = spatialValueSha256(bake);
+    if (seen.has(bake.receipt.emittedSha256))
+      continue;
+    seen.add(bake.receipt.emittedSha256);
+    const parameter = `seed:${seed}`;
+    candidates.push(deepFreezeJson({
+      candidateId: candidateId(parameter, bake.behaviorSha256),
+      label: `seed ${seed}`,
+      parameter,
+      documentKind: "slopcamera.spatial-behavior-bake",
+      documentSha256,
+      document: SpatialBehaviorBakeSchema.parse(bake)
+    }));
+  }
+  return deepFreezeJson(SpatialBehaviorGalleryPlanSchema.parse({
+    kind: "slopcamera.spatial-behavior-gallery",
+    schemaVersion: 1,
+    behaviorSha256: spatialBehaviorSha256(behavior),
+    sceneSha256: spatialValueSha256(scene),
+    entry: behavior.entry,
+    candidates
+  }));
+}
+
+// src/spatial-scene/behavior-stdlib.ts
+var makeAccTickOrganism = (name, kernelFn, ports) => {
+  const inputOutputs = {
+    [ports.state]: { type: "json" },
+    acc: { type: "json" },
+    win: { type: "json" },
+    [ports.spec]: { type: "json" },
+    step: { type: "json" }
+  };
+  return deepFreezeJson({
+    contract: "morphogen.organism.v1",
+    key: `organism:acc-tick-${name}`,
+    name: `Acc tick ${name}`,
+    cells: [
+      { id: "in", kind: "input", outputs: inputOutputs },
+      { id: "adv", kind: "fn", fn: "window.advance.v1" },
+      { id: "tick", kind: "fn", fn: kernelFn },
+      { id: "ap", kind: "fn", fn: "emitted.append.v1" }
+    ],
+    edges: [
+      { from: { cell: "in", port: "win" }, to: { cell: "adv", port: "window" } },
+      { from: { cell: "in", port: "step" }, to: { cell: "adv", port: "step" } },
+      { from: { cell: "adv", port: "head" }, to: { cell: "tick", port: ports.window } },
+      { from: { cell: "in", port: ports.spec }, to: { cell: "tick", port: ports.spec } },
+      { from: { cell: "in", port: ports.state }, to: { cell: "tick", port: ports.state } },
+      { from: { cell: "in", port: "acc" }, to: { cell: "ap", port: "prior" } },
+      { from: { cell: "tick", port: ports.emitted }, to: { cell: "ap", port: "fresh" } }
+    ],
+    interface: {
+      inputs: {
+        [ports.state]: { cell: "in", port: ports.state },
+        acc: { cell: "in", port: "acc" },
+        win: { cell: "in", port: "win" },
+        [ports.spec]: { cell: "in", port: ports.spec },
+        step: { cell: "in", port: "step" }
+      },
+      outputs: {
+        next: { cell: "tick", port: ports.next },
+        acc: { cell: "ap", port: "emitted" },
+        rest: { cell: "adv", port: "rest" },
+        done: { cell: "adv", port: "done" }
+      }
+    }
+  });
+};
+var makeAccLoopOrganism = (name, accTickDigest, specPort, statePort) => {
+  const loopInputOutputs = {
+    [statePort]: { type: "json" },
+    [specPort]: { type: "json" },
+    win: { type: "json" },
+    seed: { type: "json" }
+  };
+  const loopConstOutputs = {
+    step: { type: "json", value: 3 },
+    acc: { type: "json", value: [] }
+  };
+  return deepFreezeJson({
+    contract: "morphogen.organism.v1",
+    key: `organism:acc-loop-${name}`,
+    name: `Acc loop ${name}`,
+    cells: [
+      { id: "in", kind: "input", outputs: loopInputOutputs },
+      { id: "cfg", kind: "const", outputs: loopConstOutputs },
+      {
+        id: "loop",
+        kind: "repeat",
+        manifest: accTickDigest,
+        maxRounds: 16,
+        carry: { next: statePort, acc: "acc", rest: "win" },
+        until: { output: "done", equals: "true" }
+      }
+    ],
+    edges: [
+      { from: { cell: "in", port: statePort }, to: { cell: "loop", port: statePort } },
+      { from: { cell: "in", port: specPort }, to: { cell: "loop", port: specPort } },
+      { from: { cell: "in", port: "win" }, to: { cell: "loop", port: "win" } },
+      { from: { cell: "cfg", port: "step" }, to: { cell: "loop", port: "step" } },
+      { from: { cell: "cfg", port: "acc" }, to: { cell: "loop", port: "acc" } }
+    ],
+    interface: {
+      inputs: {
+        [statePort]: { cell: "in", port: statePort },
+        [specPort]: { cell: "in", port: specPort },
+        win: { cell: "in", port: "win" },
+        seed: { cell: "in", port: "seed" }
+      },
+      outputs: { trace: { cell: "loop", port: "acc" } }
+    }
+  });
+};
+var locomotionAccTick = makeAccTickOrganism("locomotion", "behavior.fsm.v1", {
+  spec: "machine",
+  state: "state",
+  window: "window",
+  next: "next",
+  emitted: "emitted"
+});
+var LOCOMOTION_ACC_TICK_DIGEST = behaviorOrganismSha256(locomotionAccTick);
+var locomotionAccLoop = makeAccLoopOrganism("locomotion", LOCOMOTION_ACC_TICK_DIGEST, "machine", "state");
+var LOCOMOTION_ACC_LOOP_DIGEST = behaviorOrganismSha256(locomotionAccLoop);
+var SPATIAL_BEHAVIOR_STDLIB_LOCOMOTION_FSM = deepFreezeJson({
+  organisms: {
+    [LOCOMOTION_ACC_TICK_DIGEST]: locomotionAccTick,
+    [LOCOMOTION_ACC_LOOP_DIGEST]: locomotionAccLoop
+  },
+  entry: LOCOMOTION_ACC_LOOP_DIGEST,
+  inputs: { state: "json", machine: "json", win: "json", seed: "json" },
+  outputs: { trace: "json" }
+});
+var expressionAccTick = makeAccTickOrganism("expression", "behavior.expression.v1", {
+  spec: "spec",
+  state: "state",
+  window: "window",
+  next: "next",
+  emitted: "emitted"
+});
+var EXPRESSION_ACC_TICK_DIGEST = behaviorOrganismSha256(expressionAccTick);
+var expressionAccLoop = makeAccLoopOrganism("expression", EXPRESSION_ACC_TICK_DIGEST, "spec", "state");
+var EXPRESSION_ACC_LOOP_DIGEST = behaviorOrganismSha256(expressionAccLoop);
+var SPATIAL_BEHAVIOR_STDLIB_EXPRESSION = deepFreezeJson({
+  organisms: {
+    [EXPRESSION_ACC_TICK_DIGEST]: expressionAccTick,
+    [EXPRESSION_ACC_LOOP_DIGEST]: expressionAccLoop
+  },
+  entry: EXPRESSION_ACC_LOOP_DIGEST,
+  inputs: { state: "json", spec: "json", win: "json", seed: "json" },
+  outputs: { trace: "json" }
+});
+var interactAccTick = makeAccTickOrganism("interact", "behavior.interact.v1", {
+  spec: "spec",
+  state: "state",
+  window: "window",
+  next: "next",
+  emitted: "emitted"
+});
+var INTERACT_ACC_TICK_DIGEST = behaviorOrganismSha256(interactAccTick);
+var interactAccLoop = makeAccLoopOrganism("interact", INTERACT_ACC_TICK_DIGEST, "spec", "state");
+var INTERACT_ACC_LOOP_DIGEST = behaviorOrganismSha256(interactAccLoop);
+var SPATIAL_BEHAVIOR_STDLIB_INTERACT = deepFreezeJson({
+  organisms: {
+    [INTERACT_ACC_TICK_DIGEST]: interactAccTick,
+    [INTERACT_ACC_LOOP_DIGEST]: interactAccLoop
+  },
+  entry: INTERACT_ACC_LOOP_DIGEST,
+  inputs: { state: "json", spec: "json", win: "json", seed: "json" },
+  outputs: { trace: "json" }
+});
+var combinedOrganism = deepFreezeJson({
+  contract: "morphogen.organism.v1",
+  key: "organism:combined-behavior",
+  name: "Combined behavior",
+  cells: [
+    {
+      id: "in",
+      kind: "input",
+      outputs: {
+        "loco-state": { type: "json" },
+        "loco-machine": { type: "json" },
+        "expr-state": { type: "json" },
+        "expr-spec": { type: "json" },
+        "interact-state": { type: "json" },
+        "interact-spec": { type: "json" },
+        win: { type: "json" },
+        seed: { type: "json" }
+      }
+    },
+    { id: "loco", kind: "organism", manifest: LOCOMOTION_ACC_LOOP_DIGEST },
+    { id: "expr", kind: "organism", manifest: EXPRESSION_ACC_LOOP_DIGEST },
+    { id: "interact", kind: "organism", manifest: INTERACT_ACC_LOOP_DIGEST },
+    { id: "ap-le", kind: "fn", fn: "emitted.append.v1" },
+    { id: "ap-lei", kind: "fn", fn: "emitted.append.v1" }
+  ],
+  edges: [
+    { from: { cell: "in", port: "loco-state" }, to: { cell: "loco", port: "state" } },
+    { from: { cell: "in", port: "loco-machine" }, to: { cell: "loco", port: "machine" } },
+    { from: { cell: "in", port: "win" }, to: { cell: "loco", port: "win" } },
+    { from: { cell: "in", port: "seed" }, to: { cell: "loco", port: "seed" } },
+    { from: { cell: "in", port: "expr-state" }, to: { cell: "expr", port: "state" } },
+    { from: { cell: "in", port: "expr-spec" }, to: { cell: "expr", port: "spec" } },
+    { from: { cell: "in", port: "win" }, to: { cell: "expr", port: "win" } },
+    { from: { cell: "in", port: "seed" }, to: { cell: "expr", port: "seed" } },
+    { from: { cell: "in", port: "interact-state" }, to: { cell: "interact", port: "state" } },
+    { from: { cell: "in", port: "interact-spec" }, to: { cell: "interact", port: "spec" } },
+    { from: { cell: "in", port: "win" }, to: { cell: "interact", port: "win" } },
+    { from: { cell: "in", port: "seed" }, to: { cell: "interact", port: "seed" } },
+    { from: { cell: "loco", port: "trace" }, to: { cell: "ap-le", port: "prior" } },
+    { from: { cell: "expr", port: "trace" }, to: { cell: "ap-le", port: "fresh" } },
+    { from: { cell: "ap-le", port: "emitted" }, to: { cell: "ap-lei", port: "prior" } },
+    { from: { cell: "interact", port: "trace" }, to: { cell: "ap-lei", port: "fresh" } }
+  ],
+  interface: {
+    inputs: {
+      "loco-state": { cell: "in", port: "loco-state" },
+      "loco-machine": { cell: "in", port: "loco-machine" },
+      "expr-state": { cell: "in", port: "expr-state" },
+      "expr-spec": { cell: "in", port: "expr-spec" },
+      "interact-state": { cell: "in", port: "interact-state" },
+      "interact-spec": { cell: "in", port: "interact-spec" },
+      win: { cell: "in", port: "win" },
+      seed: { cell: "in", port: "seed" }
+    },
+    outputs: { trace: { cell: "ap-lei", port: "emitted" } }
+  }
+});
+var COMBINED_DIGEST = behaviorOrganismSha256(combinedOrganism);
+var SPATIAL_BEHAVIOR_STDLIB_COMBINED = deepFreezeJson({
+  organisms: {
+    ...SPATIAL_BEHAVIOR_STDLIB_LOCOMOTION_FSM.organisms,
+    ...SPATIAL_BEHAVIOR_STDLIB_EXPRESSION.organisms,
+    ...SPATIAL_BEHAVIOR_STDLIB_INTERACT.organisms,
+    [COMBINED_DIGEST]: combinedOrganism
+  },
+  entry: COMBINED_DIGEST,
+  inputs: {
+    "loco-state": "json",
+    "loco-machine": "json",
+    "expr-state": "json",
+    "expr-spec": "json",
+    "interact-state": "json",
+    "interact-spec": "json",
+    win: "json",
+    seed: "json"
+  },
+  outputs: { trace: "json" }
+});
 // src/code/index.ts
 function compileWorkflowGraph2(options) {
   return compileWorkflowGraph({
@@ -5296,6 +6028,12 @@ export {
   spatialEntityLocalBounds,
   spatialDirectionSha256,
   spatialDirectionCompilationSha256,
+  spatialBehaviorSha256,
+  spatialBehaviorGalleryPlanSha256,
+  spatialBehaviorFnSignatures,
+  spatialBehaviorFnCatalogSha256,
+  spatialBehaviorBakeSha256,
+  spatialBehaviorAuditReportSha256,
   spatialAuditDefaultTimesUs,
   spatialAssetManifestSha256,
   spatialAssetClosureDigests,
@@ -5323,6 +6061,7 @@ export {
   poseFromMatrix,
   planSpatialRenderEffects,
   planSpatialDirectionGallery,
+  planSpatialBehaviorGallery,
   planMaterialProbeGallery,
   pixelRay,
   perspectiveFromFov,
@@ -5351,6 +6090,9 @@ export {
   parseSpatialGeneratorParameters,
   parseSpatialDirection,
   parseSpatialCameraTrack,
+  parseSpatialBehaviorEmissions,
+  parseSpatialBehaviorChannelMap,
+  parseSpatialBehavior,
   parseHumanoidMapping,
   parseHumanoidAttachment,
   orbitKeys,
@@ -5407,9 +6149,11 @@ export {
   compileSpatialPerformance,
   compileSpatialDirection,
   compileSpatialCameraRig,
+  compileSpatialBehaviorDirectives,
   column,
   checkSpatialRenderEffects,
   checkSpatialDirection,
+  checkSpatialBehavior,
   canonicalJsonSha256,
   canonicalJson,
   cameraMathView,
@@ -5419,7 +6163,10 @@ export {
   buildSpatialGeneratorRecord,
   boundedCanonicalJsonSha256,
   boundedCanonicalJson,
+  behaviorOrganismSha256,
+  behaviorOrganismCanonicalValue,
   bakeSpatialSimulation,
+  bakeSpatialBehavior,
   auditSpatialTemporalEvidence,
   auditSpatialSceneRenderedInContext,
   auditSpatialSceneRendered,
@@ -5428,6 +6175,7 @@ export {
   auditSpatialPerformance,
   auditSpatialParametricScene,
   auditSpatialCameraTrack,
+  auditSpatialBehaviorTrace,
   asSlopcameraCodeError,
   applySpatialScenePatch,
   applySpatialEntityOverride,
@@ -5523,6 +6271,7 @@ export {
   SpatialPerformanceGalleryPlanSchema,
   SpatialPerformanceGalleryCandidateSchema,
   SpatialPerformanceFindingSchema,
+  SpatialPerformanceDirectiveSchema,
   SpatialPerformanceClipSchema,
   SpatialPerformanceClipKindSchema,
   SpatialPerformanceChannelSchema,
@@ -5615,6 +6364,27 @@ export {
   SpatialCameraCoverageSchema,
   SpatialBoundsSchema,
   SpatialBloomSchema,
+  SpatialBehaviorUnresolvedIntentSchema,
+  SpatialBehaviorSchema,
+  SpatialBehaviorPortTypeSchema,
+  SpatialBehaviorPortMapSchema,
+  SpatialBehaviorOrganismSchema,
+  SpatialBehaviorGalleryPlanSchema,
+  SpatialBehaviorGalleryCandidateSchema,
+  SpatialBehaviorFnError,
+  SpatialBehaviorFindingCodeSchema,
+  SpatialBehaviorEmittedSchema,
+  SpatialBehaviorEdgeSchema,
+  SpatialBehaviorCheckReportSchema,
+  SpatialBehaviorCheckFindingSchema,
+  SpatialBehaviorChannelMapSchema,
+  SpatialBehaviorCellSchema,
+  SpatialBehaviorBakeSchema,
+  SpatialBehaviorBakeReceiptSchema,
+  SpatialBehaviorAuditReportSchema,
+  SpatialBehaviorAuditOptionsSchema,
+  SpatialBehaviorAuditFindingSchema,
+  SpatialBehaviorAuditFindingKindSchema,
   SpatialAuditSampleSchema,
   SpatialAuditReportSchema,
   SpatialAuditOptionsSchema,
@@ -5692,6 +6462,16 @@ export {
   SPATIAL_DIRECTION_COMPILER_ID,
   SPATIAL_DIRECTION_COMPILATION_LIMITS,
   SPATIAL_CAMERA_TRACK_MAX_FRAMES,
+  SPATIAL_BEHAVIOR_TRACE_LIMITS,
+  SPATIAL_BEHAVIOR_STDLIB_LOCOMOTION_FSM,
+  SPATIAL_BEHAVIOR_STDLIB_INTERACT,
+  SPATIAL_BEHAVIOR_STDLIB_EXPRESSION,
+  SPATIAL_BEHAVIOR_STDLIB_COMBINED,
+  SPATIAL_BEHAVIOR_LIMITS,
+  SPATIAL_BEHAVIOR_GALLERY_LIMITS,
+  SPATIAL_BEHAVIOR_FN_LIMITS,
+  SPATIAL_BEHAVIOR_FNS,
+  SPATIAL_BEHAVIOR_AUDIT_LIMITS,
   SPATIAL_AUDIT_LIMITS,
   RequirementEnvelopeSchema,
   REQUIREMENT_ENVELOPE_VERSION,

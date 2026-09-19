@@ -6,6 +6,7 @@
       "name": "@hraness/slopcamera",
       "dependencies": {
         "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
+        "@hraness/algal": "github:hraness/algal#c46264a",
         "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
         "@noble/hashes": "2.2.0",
         "@paper-design/shaders": "0.0.77",
@@ -182,6 +183,8 @@
     "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.9", "", { "dependencies": { "@floating-ui/dom": "^1.8.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
+
+    "@hraness/algal": ["@hraness/algal@github:hraness/algal#c46264a", { "bin": { "algal": "./cli.ts", "morphogen": "./cli.ts" } }, "hraness-algal-c46264a", "sha512-7NwCCh55A4RPdiCmfnvJJVumA1AU/3OA93rG3qEV3a/EjkiE9XBRZkbOdM81loFXvGmmBBqwRq4OtJXTY9aPgw=="],
 
     "@hraness/design-kit": ["@hraness/design-kit@github:hraness/design-kit#a50a8f2", { "dependencies": { "@hugeicons/core-free-icons": "^4.2.2", "@stylexjs/stylex": "0.19.0", "motion": "12.42.0", "next-themes": "0.4.6", "react-aria-components": "1.19.0", "recharts": "3.8.0", "sugar-high": "^1.2.1", "web-haptics": "0.0.6" }, "peerDependencies": { "@hraness/ui": ">=0.4.7 <0.5.0", "react": ">=18 <20", "react-dom": ">=18 <20" }, "optionalPeers": ["@hraness/ui"] }, "hraness-design-kit-a50a8f2", "sha512-nCmHqqXFfIbuakK86yXJSiBuoyaCD3IIihLMWEZzITLnkGsPLkFVMvFdiPI492OjfBY4Aq85YRGdAFV8pm350w=="],
 

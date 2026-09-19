@@ -1,6 +1,7 @@
 // @bun
 import {
   SlopcameraCodeError,
+  boundedCanonicalJsonSha256,
   canonicalJson,
   canonicalJsonSha256,
   createBoundedJsonSnapshot,
@@ -4554,6 +4555,1184 @@ function normalizeSpatialAuditAssetBounds(input) {
   return parseSpatialValue(SpatialAuditAssetBoundsMapSchema, merged, "asset bounds");
 }
 
+// src/spatial-scene/behavior.ts
+import { z as z8 } from "zod";
+var SPATIAL_BEHAVIOR_LIMITS = Object.freeze({
+  args: 16,
+  carry: 16,
+  cells: 64,
+  channels: 64,
+  constPorts: 32,
+  eachItems: 64,
+  edges: 256,
+  findings: 128,
+  interfacePorts: 32,
+  organisms: 8,
+  rounds: 16
+});
+var organismKey = z8.string().regex(/^organism:[a-z][a-z0-9-]{0,54}$/u);
+var cellId = z8.string().regex(/^[a-z][a-z0-9-]{0,63}$/u);
+var portName = z8.string().regex(/^[a-z][a-z0-9-]{0,63}$/u);
+var interfaceName = z8.string().regex(/^[a-z][a-z0-9-]{0,63}$/u);
+var organismDigest = z8.string().regex(/^sha256:[a-f0-9]{64}$/u);
+var fnRef = z8.string().regex(/^[a-z][a-z0-9_.]*\.v[0-9]+$/u).max(64);
+var SpatialBehaviorPortTypeSchema = z8.strictObject({
+  type: z8.enum(["text", "json", "choice", "ref"]),
+  optional: z8.boolean().optional(),
+  many: z8.boolean().optional(),
+  labels: z8.array(z8.string().min(1).max(64)).max(32).optional(),
+  schema: z8.unknown().optional()
+}).superRefine((port, context) => {
+  if (port.labels !== undefined && port.type !== "choice") {
+    context.addIssue({ code: "custom", message: "Only choice ports declare labels.", path: ["labels"] });
+  }
+  if (port.schema !== undefined && port.type !== "json") {
+    context.addIssue({ code: "custom", message: "Only json ports declare a schema.", path: ["schema"] });
+  }
+});
+var SpatialBehaviorPortMapSchema = z8.record(portName, SpatialBehaviorPortTypeSchema).refine((ports) => Object.keys(ports).length <= SPATIAL_BEHAVIOR_LIMITS.interfacePorts, {
+  message: `A port map admits at most ${SPATIAL_BEHAVIOR_LIMITS.interfacePorts} ports.`
+});
+var constOutput = z8.record(portName, SpatialBehaviorPortTypeSchema.extend({ value: z8.unknown() })).refine((ports) => Object.keys(ports).length <= SPATIAL_BEHAVIOR_LIMITS.constPorts, {
+  message: `A const cell declares at most ${SPATIAL_BEHAVIOR_LIMITS.constPorts} outputs.`
+});
+var SpatialBehaviorCellSchema = z8.discriminatedUnion("kind", [
+  z8.strictObject({ id: cellId, kind: z8.literal("input"), outputs: SpatialBehaviorPortMapSchema }),
+  z8.strictObject({ id: cellId, kind: z8.literal("const"), outputs: constOutput }),
+  z8.strictObject({ id: cellId, kind: z8.literal("fn"), fn: fnRef }),
+  z8.strictObject({
+    id: cellId,
+    kind: z8.literal("repeat"),
+    manifest: organismDigest,
+    maxRounds: z8.number().int().min(1).max(SPATIAL_BEHAVIOR_LIMITS.rounds),
+    carry: z8.record(interfaceName, interfaceName).refine((carry) => Object.keys(carry).length <= SPATIAL_BEHAVIOR_LIMITS.carry, { message: `A repeat cell carries at most ${SPATIAL_BEHAVIOR_LIMITS.carry} ports.` }).optional(),
+    until: z8.strictObject({
+      output: interfaceName,
+      equals: z8.string().min(1).max(64),
+      field: portName.optional()
+    }).optional()
+  }),
+  z8.strictObject({
+    id: cellId,
+    kind: z8.literal("each"),
+    manifest: organismDigest,
+    over: interfaceName,
+    maxItems: z8.number().int().min(1).max(SPATIAL_BEHAVIOR_LIMITS.eachItems)
+  }),
+  z8.strictObject({ id: cellId, kind: z8.literal("organism"), manifest: organismDigest })
+]);
+var SpatialBehaviorEdgeSchema = z8.strictObject({
+  from: z8.strictObject({ cell: cellId, port: portName }),
+  to: z8.strictObject({ cell: cellId, port: portName }),
+  guard: z8.strictObject({ equals: z8.string().min(1).max(64), field: portName.optional() }).optional(),
+  on: z8.literal("fail").optional()
+});
+var behaviorBudgets = z8.strictObject({
+  maxSteps: z8.number().int().min(1).max(1024).optional(),
+  maxAgentCalls: z8.number().int().min(0).max(64).optional(),
+  maxWork: z8.number().int().min(1).max(1e8).optional(),
+  maxContextBytes: z8.number().int().min(1).max(262144).optional(),
+  maxOutputBytes: z8.number().int().min(1).max(262144).optional(),
+  maxDepth: z8.number().int().min(1).max(8).optional()
+});
+var interfaceEndpoint = z8.strictObject({ cell: cellId, port: portName });
+var SpatialBehaviorOrganismSchema = z8.strictObject({
+  contract: z8.literal("morphogen.organism.v1"),
+  key: organismKey,
+  name: z8.string().min(1).max(120),
+  note: z8.string().max(2000).optional(),
+  budgets: behaviorBudgets.optional(),
+  interface: z8.strictObject({
+    inputs: z8.record(interfaceName, interfaceEndpoint),
+    outputs: z8.record(interfaceName, interfaceEndpoint)
+  }),
+  cells: z8.array(SpatialBehaviorCellSchema).min(1).max(SPATIAL_BEHAVIOR_LIMITS.cells),
+  edges: z8.array(SpatialBehaviorEdgeSchema).max(SPATIAL_BEHAVIOR_LIMITS.edges)
+}).superRefine((manifest, context) => {
+  const ids = new Set;
+  for (const [index2, cell] of manifest.cells.entries()) {
+    if (ids.has(cell.id)) {
+      context.addIssue({ code: "custom", message: `Duplicate cell id ${cell.id}.`, path: ["cells", index2, "id"] });
+    }
+    ids.add(cell.id);
+    if (cell.kind === "input" || cell.kind === "const") {
+      for (const [name, port] of Object.entries(cell.outputs)) {
+        if (port.many === true) {
+          context.addIssue({ code: "custom", message: `Port ${name} declares many, which is only valid on consumer ports.`, path: ["cells", index2, "outputs", name, "many"] });
+        }
+      }
+    }
+  }
+});
+var SpatialBehaviorSchema = z8.strictObject({
+  kind: z8.literal("slopcamera.spatial-behavior"),
+  schemaVersion: z8.literal(1),
+  behaviorId: z8.string().regex(/^behavior_[a-zA-Z0-9_-]{1,64}$/u),
+  entityId: z8.string().min(1).max(128).regex(/^[a-z][a-z0-9_-]*$/u),
+  sceneSha256: SpatialDigestSchema,
+  seed: z8.number().int().min(0).max(4294967295),
+  rangeUs: z8.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }).refine((range) => range.endUs > range.startUs, { message: "rangeUs.endUs must exceed rangeUs.startUs." }),
+  organisms: z8.record(z8.string(), SpatialBehaviorOrganismSchema).refine((organisms) => {
+    const keys = Object.keys(organisms);
+    return keys.length >= 1 && keys.length <= SPATIAL_BEHAVIOR_LIMITS.organisms && keys.every((key2) => /^sha256:[a-f0-9]{64}$/u.test(key2));
+  }, { message: `organisms maps 1\u2013${SPATIAL_BEHAVIOR_LIMITS.organisms} sha256:<64-hex> digests to manifests.` }),
+  entry: organismDigest,
+  channels: z8.array(z8.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/u)).min(1).max(SPATIAL_BEHAVIOR_LIMITS.channels),
+  args: z8.record(interfaceName, z8.unknown()).refine((args) => Object.keys(args).length <= SPATIAL_BEHAVIOR_LIMITS.args, { message: `At most ${SPATIAL_BEHAVIOR_LIMITS.args} entry args.` }).optional()
+}).superRefine((behavior, context) => {
+  const channelSet = new Set(behavior.channels);
+  if (channelSet.size !== behavior.channels.length) {
+    context.addIssue({ code: "custom", message: "Behavior channels must be unique.", path: ["channels"] });
+  }
+});
+function parseSpatialBehavior(input) {
+  return deepFreezeJson(parseSpatialValue(SpatialBehaviorSchema, input, "spatial behavior"));
+}
+function spatialBehaviorSha256(behavior) {
+  return spatialValueSha256(behavior);
+}
+var ALGAL_DEFAULT_BUDGETS = Object.freeze({
+  maxSteps: 256,
+  maxAgentCalls: 16,
+  maxWork: 1e6,
+  maxContextBytes: 65536,
+  maxOutputBytes: 65536,
+  maxDepth: 4
+});
+function portTypeJson(port) {
+  const out = { type: port.type };
+  if (port.optional === true)
+    out.optional = true;
+  if (port.many === true)
+    out.many = true;
+  if (port.type === "choice" && port.labels !== undefined)
+    out.labels = [...port.labels];
+  if (port.type === "json" && port.schema !== undefined)
+    out.schema = port.schema;
+  return out;
+}
+function cellJson(cell) {
+  switch (cell.kind) {
+    case "input":
+      return { id: cell.id, kind: cell.kind, outputs: portMapJson(cell.outputs) };
+    case "const": {
+      const outputs = {};
+      for (const [name, port] of Object.entries(cell.outputs)) {
+        const projected = portTypeJson(port);
+        projected.value = port.value;
+        outputs[name] = projected;
+      }
+      return { id: cell.id, kind: cell.kind, outputs };
+    }
+    case "fn":
+      return { id: cell.id, kind: cell.kind, fn: cell.fn };
+    case "organism":
+      return { id: cell.id, kind: cell.kind, manifest: cell.manifest };
+    case "repeat": {
+      const out = { id: cell.id, kind: cell.kind, manifest: cell.manifest, maxRounds: cell.maxRounds };
+      if (cell.carry !== undefined)
+        out.carry = { ...cell.carry };
+      if (cell.until !== undefined) {
+        out.until = {
+          output: cell.until.output,
+          equals: cell.until.equals,
+          ...cell.until.field === undefined ? {} : { field: cell.until.field }
+        };
+      }
+      return out;
+    }
+    case "each":
+      return { id: cell.id, kind: cell.kind, manifest: cell.manifest, over: cell.over, maxItems: cell.maxItems };
+  }
+}
+function portMapJson(ports) {
+  const out = {};
+  for (const [name, port] of Object.entries(ports))
+    out[name] = portTypeJson(port);
+  return out;
+}
+function behaviorOrganismCanonicalValue(manifest) {
+  const budgets = { ...ALGAL_DEFAULT_BUDGETS, ...manifest.budgets ?? {} };
+  const out = {
+    contract: manifest.contract,
+    key: manifest.key,
+    name: manifest.name,
+    budgets: {
+      maxAgentCalls: budgets.maxAgentCalls,
+      maxContextBytes: budgets.maxContextBytes,
+      maxDepth: budgets.maxDepth,
+      maxOutputBytes: budgets.maxOutputBytes,
+      maxSteps: budgets.maxSteps,
+      maxWork: budgets.maxWork
+    },
+    cells: manifest.cells.map(cellJson),
+    edges: manifest.edges.map((edge) => ({
+      from: { cell: edge.from.cell, port: edge.from.port },
+      to: { cell: edge.to.cell, port: edge.to.port },
+      ...edge.on === undefined ? {} : { on: edge.on },
+      ...edge.guard === undefined ? {} : {
+        guard: {
+          equals: edge.guard.equals,
+          ...edge.guard.field === undefined ? {} : { field: edge.guard.field }
+        }
+      }
+    }))
+  };
+  if (manifest.note !== undefined)
+    out.note = manifest.note;
+  const mapEnds = (endpoints) => {
+    const mapped = {};
+    for (const [name, target] of Object.entries(endpoints))
+      mapped[name] = { cell: target.cell, port: target.port };
+    return mapped;
+  };
+  out.interface = { inputs: mapEnds(manifest.interface.inputs), outputs: mapEnds(manifest.interface.outputs) };
+  return out;
+}
+function behaviorOrganismSha256(manifest) {
+  return `sha256:${boundedCanonicalJsonSha256(behaviorOrganismCanonicalValue(manifest), {
+    maximumBytes: 262144,
+    name: "behavior organism"
+  })}`;
+}
+var SpatialBehaviorFindingCodeSchema = z8.enum([
+  "stale-digest",
+  "unresolved-entity",
+  "unresolved-entry",
+  "unresolved-manifest",
+  "unresolved-fn",
+  "closure-digest-mismatch",
+  "invalid-wiring",
+  "undeclared-arg",
+  "range-outside-scene",
+  "unreachable-organism",
+  "cyclic-composition",
+  "unfed-input"
+]);
+var SpatialBehaviorCheckFindingSchema = z8.strictObject({
+  code: SpatialBehaviorFindingCodeSchema,
+  severity: z8.enum(["error", "warning"]),
+  referenceId: z8.string().min(1).max(128).optional(),
+  detail: z8.string().min(1).max(240)
+});
+var SpatialBehaviorCheckReportSchema = z8.strictObject({
+  kind: z8.literal("slopcamera.spatial-behavior-check"),
+  schemaVersion: z8.literal(1),
+  behaviorSha256: SpatialDigestSchema,
+  sceneSha256: SpatialDigestSchema,
+  findings: z8.array(SpatialBehaviorCheckFindingSchema).max(SPATIAL_BEHAVIOR_LIMITS.findings),
+  counts: z8.strictObject({
+    organisms: z8.number().int().min(0),
+    cells: z8.number().int().min(0),
+    edges: z8.number().int().min(0),
+    fnRefs: z8.number().int().min(0),
+    errors: z8.number().int().min(0),
+    warnings: z8.number().int().min(0)
+  })
+});
+var checkOptionsSchema = z8.strictObject({
+  behavior: z8.unknown(),
+  scene: z8.unknown()
+});
+function resolveEntityId(scene, referenceId) {
+  const ids = new Set(scene.entities.map((entity) => entity.entityId));
+  if (ids.has(referenceId))
+    return referenceId;
+  const prefixed = `entity_${referenceId}`;
+  return ids.has(prefixed) ? prefixed : undefined;
+}
+function checkSpatialBehavior(input, admittedFns) {
+  const options = parseSpatialValue(checkOptionsSchema, input, "behavior check");
+  const behavior = parseSpatialBehavior(options.behavior);
+  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene");
+  const sceneSha256 = spatialValueSha256(scene);
+  const findings = [];
+  const finding = (code, severity, detail, referenceId) => {
+    findings.push(deepFreezeJson(referenceId === undefined ? { code, severity, detail } : { code, severity, detail, referenceId }));
+  };
+  if (behavior.sceneSha256 !== sceneSha256) {
+    finding("stale-digest", "error", `Behavior sceneSha256 ${behavior.sceneSha256} does not match scene digest ${sceneSha256}; re-author or rebind the behavior.`);
+  }
+  if (resolveEntityId(scene, behavior.entityId) === undefined) {
+    finding("unresolved-entity", "error", `Behavior entity ${behavior.entityId} is not a scene entity.`, behavior.entityId);
+  }
+  if (behavior.rangeUs.endUs > scene.durationUs) {
+    finding("range-outside-scene", "error", `Behavior range ends at ${behavior.rangeUs.endUs}us beyond scene duration ${scene.durationUs}us.`);
+  }
+  if (behavior.organisms[behavior.entry] === undefined) {
+    finding("unresolved-entry", "error", `Entry digest ${behavior.entry.slice(0, 24)}\u2026 is not a member of the organisms closure.`, behavior.entry.slice(7, 39));
+  }
+  let cellTotal = 0;
+  let edgeTotal = 0;
+  let fnRefTotal = 0;
+  const contexts = new Map;
+  for (const [digest, manifest] of Object.entries(behavior.organisms)) {
+    const recomputed = behaviorOrganismSha256(manifest);
+    if (recomputed !== digest) {
+      finding("closure-digest-mismatch", "error", `Organisms key ${digest.slice(0, 24)}\u2026 rehashes to ${recomputed.slice(0, 24)}\u2026; the manifest changed after admission.`, manifest.key);
+    }
+    cellTotal += manifest.cells.length;
+    edgeTotal += manifest.edges.length;
+    const outputPorts = new Map;
+    const inputPorts = new Map;
+    for (const cell of manifest.cells) {
+      switch (cell.kind) {
+        case "input":
+        case "const":
+          outputPorts.set(cell.id, new Set(Object.keys(cell.outputs)));
+          break;
+        case "fn": {
+          fnRefTotal += 1;
+          const signature = admittedFns.get(cell.fn);
+          if (signature === undefined) {
+            finding("unresolved-fn", "error", `Cell ${cell.id} names fn ${cell.fn}, which the admitted behavior catalog does not contain.`, `${manifest.key}/${cell.id}`);
+          } else {
+            outputPorts.set(cell.id, new Set(Object.keys(signature.outputs)));
+            inputPorts.set(cell.id, new Set(Object.keys(signature.inputs)));
+          }
+          break;
+        }
+        case "repeat":
+        case "each":
+        case "organism": {
+          const child = behavior.organisms[cell.manifest];
+          if (child === undefined) {
+            finding("unresolved-manifest", "error", `Cell ${cell.id} references manifest ${cell.manifest.slice(0, 24)}\u2026, absent from the organisms closure.`, `${manifest.key}/${cell.id}`);
+          } else {
+            outputPorts.set(cell.id, new Set(Object.keys(child.interface.outputs)));
+            inputPorts.set(cell.id, new Set(Object.keys(child.interface.inputs)));
+          }
+          break;
+        }
+      }
+    }
+    contexts.set(digest, { manifest, outputPorts, inputPorts });
+  }
+  for (const context of contexts.values()) {
+    const { manifest, outputPorts, inputPorts } = context;
+    const cellIds = new Set(manifest.cells.map((cell) => cell.id));
+    const ref = (cell) => `${manifest.key}/${cell}`;
+    for (const [name, endpoint] of Object.entries(manifest.interface.inputs)) {
+      const cell = manifest.cells.find((candidate) => candidate.id === endpoint.cell);
+      if (cell === undefined) {
+        finding("invalid-wiring", "error", `Interface input ${name} references absent cell ${endpoint.cell}.`, manifest.key);
+      } else if (cell.kind !== "input") {
+        finding("invalid-wiring", "error", `Interface input ${name} references ${cell.kind} cell ${cell.id}; only input cells receive entry args.`, ref(cell.id));
+      } else if (!(endpoint.port in cell.outputs)) {
+        finding("invalid-wiring", "error", `Interface input ${name} names undeclared port ${endpoint.port} on input cell ${cell.id}.`, ref(cell.id));
+      }
+    }
+    for (const [name, endpoint] of Object.entries(manifest.interface.outputs)) {
+      if (!cellIds.has(endpoint.cell)) {
+        finding("invalid-wiring", "error", `Interface output ${name} references absent cell ${endpoint.cell}.`, manifest.key);
+      } else if (!outputPorts.get(endpoint.cell)?.has(endpoint.port)) {
+        finding("invalid-wiring", "error", `Interface output ${name} names undeclared output port ${endpoint.port} on cell ${endpoint.cell}.`, ref(endpoint.cell));
+      }
+    }
+    for (const cell of manifest.cells) {
+      if (cell.kind === "repeat" || cell.kind === "each" || cell.kind === "organism") {
+        const child = behavior.organisms[cell.manifest];
+        if (child !== undefined) {
+          if (cell.kind === "repeat") {
+            for (const [outName, inName] of Object.entries(cell.carry ?? {})) {
+              if (!(outName in child.interface.outputs)) {
+                finding("invalid-wiring", "error", `Repeat ${cell.id} carries undeclared output ${outName} from ${child.key}.`, ref(cell.id));
+              }
+              if (!(inName in child.interface.inputs)) {
+                finding("invalid-wiring", "error", `Repeat ${cell.id} carries into undeclared input ${inName} on ${child.key}.`, ref(cell.id));
+              }
+            }
+            if (cell.until !== undefined && !(cell.until.output in child.interface.outputs)) {
+              finding("invalid-wiring", "error", `Repeat ${cell.id} until watches undeclared output ${cell.until.output} on ${child.key}.`, ref(cell.id));
+            }
+          }
+          if (cell.kind === "each" && !(cell.over in child.interface.inputs)) {
+            finding("invalid-wiring", "error", `Each ${cell.id} over names undeclared input ${cell.over} on ${child.key}.`, ref(cell.id));
+          }
+          const carried = cell.kind === "repeat" ? new Set(Object.values(cell.carry ?? {})) : new Set;
+          for (const input2 of Object.keys(child.interface.inputs)) {
+            if (carried.has(input2))
+              continue;
+            if (cell.kind === "each" && input2 === cell.over)
+              continue;
+            const fed = manifest.edges.some((edge) => edge.to.cell === cell.id && edge.to.port === input2);
+            if (!fed) {
+              finding("unfed-input", "warning", `${cell.kind} cell ${cell.id} leaves interface input ${input2} of ${child.key} without a delivering edge; the input cell produces no value.`, ref(cell.id));
+            }
+          }
+        }
+      }
+      if (cell.kind === "each") {
+        const delivered = manifest.edges.some((edge) => edge.to.cell === cell.id && edge.to.port === cell.over);
+        if (!delivered) {
+          finding("invalid-wiring", "error", `Each ${cell.id} over port ${cell.over} has no delivering edge; the list can never arrive.`, ref(cell.id));
+        }
+      }
+    }
+    for (const [index2, edge] of manifest.edges.entries()) {
+      if (!cellIds.has(edge.from.cell)) {
+        finding("invalid-wiring", "error", `Edge ${index2} from references absent cell ${edge.from.cell}.`, manifest.key);
+      } else if (!outputPorts.get(edge.from.cell)?.has(edge.from.port)) {
+        finding("invalid-wiring", "error", `Edge ${index2} names undeclared output port ${edge.from.port} on cell ${edge.from.cell}.`, ref(edge.from.cell));
+      }
+      if (!cellIds.has(edge.to.cell)) {
+        finding("invalid-wiring", "error", `Edge ${index2} to references absent cell ${edge.to.cell}.`, manifest.key);
+      } else if (!inputPorts.get(edge.to.cell)?.has(edge.to.port)) {
+        finding("invalid-wiring", "error", `Edge ${index2} names undeclared input port ${edge.to.port} on cell ${edge.to.cell}; input and const cells have no input ports.`, ref(edge.to.cell));
+      }
+    }
+  }
+  const visiting = new Set;
+  const done = new Set;
+  const detectCycles = (digest) => {
+    if (done.has(digest))
+      return;
+    if (visiting.has(digest)) {
+      const context2 = contexts.get(digest);
+      finding("cyclic-composition", "error", `Organism ${context2?.manifest.key ?? digest.slice(0, 24)} participates in a manifest-reference cycle that cannot terminate within any depth budget.`, context2?.manifest.key);
+      return;
+    }
+    visiting.add(digest);
+    const context = contexts.get(digest);
+    if (context !== undefined) {
+      for (const cell of context.manifest.cells) {
+        if (cell.kind === "repeat" || cell.kind === "each" || cell.kind === "organism")
+          detectCycles(cell.manifest);
+      }
+    }
+    visiting.delete(digest);
+    done.add(digest);
+  };
+  for (const digest of contexts.keys())
+    detectCycles(digest);
+  const reachable = new Set;
+  const walk = (digest) => {
+    if (reachable.has(digest))
+      return;
+    const context = contexts.get(digest);
+    if (context === undefined)
+      return;
+    reachable.add(digest);
+    for (const cell of context.manifest.cells) {
+      if (cell.kind === "repeat" || cell.kind === "each" || cell.kind === "organism")
+        walk(cell.manifest);
+    }
+  };
+  walk(behavior.entry);
+  for (const [entryDigest, context] of contexts) {
+    if (!reachable.has(entryDigest)) {
+      finding("unreachable-organism", "warning", `Organism ${context.manifest.key} is in the closure but unreachable from the entry manifest.`, context.manifest.key);
+    }
+  }
+  const entryContext = contexts.get(behavior.entry);
+  if (entryContext !== undefined) {
+    const argNames = new Set(Object.keys(behavior.args ?? {}));
+    for (const name of Object.keys(behavior.args ?? {})) {
+      if (!(name in entryContext.manifest.interface.inputs)) {
+        finding("undeclared-arg", "error", `Arg ${name} is not a declared interface input of entry organism ${entryContext.manifest.key}.`, `${entryContext.manifest.key}/${name}`);
+      }
+    }
+    for (const name of Object.keys(entryContext.manifest.interface.inputs)) {
+      if (!argNames.has(name) && name !== "seed") {
+        finding("unfed-input", "warning", `Entry organism ${entryContext.manifest.key} declares interface input ${name} but no arg binds it; the input cell produces no value.`, `${entryContext.manifest.key}/${name}`);
+      }
+    }
+  }
+  const errors = findings.filter((item) => item.severity === "error").length;
+  return deepFreezeJson(SpatialBehaviorCheckReportSchema.parse({
+    kind: "slopcamera.spatial-behavior-check",
+    schemaVersion: 1,
+    behaviorSha256: spatialBehaviorSha256(behavior),
+    sceneSha256,
+    findings,
+    counts: {
+      organisms: Object.keys(behavior.organisms).length,
+      cells: cellTotal,
+      edges: edgeTotal,
+      fnRefs: fnRefTotal,
+      errors,
+      warnings: findings.length - errors
+    }
+  }));
+}
+
+// src/spatial-scene/behavior-audit.ts
+import { z as z9 } from "zod";
+var SPATIAL_BEHAVIOR_AUDIT_LIMITS = Object.freeze({
+  findings: 128,
+  channels: 64
+});
+var SpatialBehaviorAuditFindingKindSchema = z9.enum([
+  "state-thrash",
+  "exact-periodicity",
+  "dead-channel",
+  "unreachable-state"
+]);
+var SpatialBehaviorAuditFindingSchema = z9.strictObject({
+  kind: SpatialBehaviorAuditFindingKindSchema,
+  channel: z9.string().min(1).max(64),
+  severity: z9.enum(["warning", "info"]),
+  detail: z9.string().min(1).max(240),
+  measured: z9.number().finite().optional(),
+  limit: z9.number().finite().optional()
+});
+var SpatialBehaviorAuditOptionsSchema = z9.strictObject({
+  maxTransitionsPerSecond: z9.number().int().min(1).max(1000).default(10),
+  minDistinctValues: z9.number().int().min(2).max(100).default(2),
+  maxPeriodicityWindowUs: z9.number().int().min(1e5).max(60000000).default(5000000)
+});
+var SpatialBehaviorAuditReportSchema = z9.strictObject({
+  kind: z9.literal("slopcamera.spatial-behavior-audit-report"),
+  schemaVersion: z9.literal(1),
+  behaviorSha256: SpatialDigestSchema,
+  emittedSha256: SpatialDigestSchema,
+  rangeUs: z9.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
+  emittedCount: z9.number().int().min(0),
+  channelCount: z9.number().int().min(0),
+  findings: z9.array(SpatialBehaviorAuditFindingSchema).max(SPATIAL_BEHAVIOR_AUDIT_LIMITS.findings),
+  omittedFindings: z9.number().int().min(0)
+});
+function spatialBehaviorAuditReportSha256(report) {
+  return spatialValueSha256(report);
+}
+var valueKey = (value) => {
+  if (typeof value === "string")
+    return value;
+  if (typeof value === "number")
+    return `n:${value}`;
+  if (typeof value === "boolean")
+    return `b:${value ? 1 : 0}`;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "\x00";
+  }
+};
+function groupByChannel(emitted) {
+  const groups = new Map;
+  for (const record of emitted) {
+    let list = groups.get(record.channel);
+    if (list === undefined) {
+      list = [];
+      groups.set(record.channel, list);
+    }
+    list.push(record);
+  }
+  const result = new Map;
+  for (const [channel, records] of groups) {
+    const values2 = records.map((record) => valueKey(record.value));
+    result.set(channel, { channel, records, values: values2, distinctValues: new Set(values2) });
+  }
+  return result;
+}
+function checkStateThrash(trace, maxTransitionsPerSecond, findings) {
+  const { records, values: values2 } = trace;
+  if (records.length < 3)
+    return;
+  const windowUs = 1e6;
+  let windowStart = 0;
+  let transitions = 0;
+  let maxSeen = 0;
+  for (let i = 1;i < records.length; i += 1) {
+    if (values2[i] !== values2[i - 1])
+      transitions += 1;
+    while (windowStart < i && records[i].tUs - records[windowStart].tUs > windowUs) {
+      if (values2[windowStart + 1] !== values2[windowStart])
+        transitions -= 1;
+      windowStart += 1;
+    }
+    maxSeen = Math.max(maxSeen, transitions);
+  }
+  if (maxSeen > maxTransitionsPerSecond) {
+    findings.push({
+      kind: "state-thrash",
+      channel: trace.channel,
+      severity: "warning",
+      detail: `${maxSeen} transitions/sec in a 1s window exceeds ${maxTransitionsPerSecond}/sec threshold.`,
+      measured: maxSeen,
+      limit: maxTransitionsPerSecond
+    });
+  }
+}
+function checkDeadChannel(trace, minDistinct, findings) {
+  if (trace.records.length < 2)
+    return;
+  if (trace.distinctValues.size < minDistinct) {
+    findings.push({
+      kind: "dead-channel",
+      channel: trace.channel,
+      severity: "info",
+      detail: `Channel emits ${trace.distinctValues.size} distinct value(s) across ${trace.records.length} records.`,
+      measured: trace.distinctValues.size,
+      limit: minDistinct
+    });
+  }
+}
+function checkExactPeriodicity(trace, maxWindowUs, findings) {
+  const { records, values: values2 } = trace;
+  if (records.length < 6)
+    return;
+  const rangeUs = records[records.length - 1].tUs - records[0].tUs;
+  if (rangeUs <= 0)
+    return;
+  const halfLen = Math.floor(values2.length / 2);
+  const maxPeriod = Math.min(halfLen, Math.floor(values2.length * maxWindowUs / rangeUs));
+  for (let period = 2;period <= maxPeriod; period += 1) {
+    let match = true;
+    for (let i = period;i < values2.length; i += 1) {
+      if (values2[i] !== values2[i - period]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      findings.push({
+        kind: "exact-periodicity",
+        channel: trace.channel,
+        severity: "info",
+        detail: `Values repeat exactly every ${period} records \u2014 the behavior may be trivially cyclic.`,
+        measured: period
+      });
+      return;
+    }
+  }
+}
+function checkUnreachableStates(channels, findings) {
+  for (const [channel, trace] of channels) {
+    const transitionChannel = `${channel}.transition`;
+    const transitionTrace = channels.get(transitionChannel);
+    if (transitionTrace === undefined)
+      continue;
+    const visited = new Set;
+    for (const value of trace.values) {
+      if (typeof value === "string")
+        visited.add(value);
+    }
+    const referenced = new Set;
+    for (const record of transitionTrace.records) {
+      const value = record.value;
+      if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+        const typed = value;
+        if (typeof typed.to === "string")
+          referenced.add(typed.to);
+        if (typeof typed.from === "string")
+          referenced.add(typed.from);
+      }
+    }
+    for (const state of referenced) {
+      if (!visited.has(state)) {
+        findings.push({
+          kind: "unreachable-state",
+          channel,
+          severity: "warning",
+          detail: `State "${state}" appears in ${transitionChannel} transitions but never as the current ${channel} value.`
+        });
+      }
+    }
+  }
+}
+var auditInputSchema = z9.strictObject({
+  emitted: z9.array(z9.strictObject({
+    tUs: SpatialTimeUsSchema,
+    channel: z9.string().min(1).max(64),
+    value: z9.unknown()
+  })).max(16384),
+  behaviorSha256: SpatialDigestSchema,
+  emittedSha256: SpatialDigestSchema,
+  rangeUs: z9.strictObject({ startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema }),
+  options: SpatialBehaviorAuditOptionsSchema.optional()
+});
+function auditSpatialBehaviorTrace(input) {
+  const parsed = parseSpatialValue(auditInputSchema, input, "behavior audit");
+  const options = parsed.options ?? SpatialBehaviorAuditOptionsSchema.parse({});
+  const channels = groupByChannel(parsed.emitted);
+  const findings = [];
+  for (const trace of channels.values()) {
+    if (findings.length >= SPATIAL_BEHAVIOR_AUDIT_LIMITS.findings)
+      break;
+    checkStateThrash(trace, options.maxTransitionsPerSecond, findings);
+    checkDeadChannel(trace, options.minDistinctValues, findings);
+    checkExactPeriodicity(trace, options.maxPeriodicityWindowUs, findings);
+  }
+  checkUnreachableStates(channels, findings);
+  const bounded = findings.slice(0, SPATIAL_BEHAVIOR_AUDIT_LIMITS.findings);
+  const omitted = findings.length - bounded.length;
+  return deepFreezeJson(SpatialBehaviorAuditReportSchema.parse({
+    kind: "slopcamera.spatial-behavior-audit-report",
+    schemaVersion: 1,
+    behaviorSha256: parsed.behaviorSha256,
+    emittedSha256: parsed.emittedSha256,
+    rangeUs: parsed.rangeUs,
+    emittedCount: parsed.emitted.length,
+    channelCount: channels.size,
+    findings: bounded,
+    omittedFindings: omitted
+  }));
+}
+
+// src/spatial-scene/behavior-fns.ts
+import { z as z10 } from "zod";
+var SPATIAL_BEHAVIOR_FN_LIMITS = Object.freeze({
+  drawsPerCall: 256,
+  emittedPerCall: 4096,
+  fsmStates: 16,
+  fsmTransitions: 64,
+  gazeTargets: 8,
+  layers: 8,
+  moodChannels: 8,
+  obsFlags: 32,
+  pairs: 8,
+  phases: 8,
+  positionsPerTick: 8,
+  ticksPerWindow: 512
+});
+
+class SpatialBehaviorFnError extends Error {
+  code;
+  constructor(code, detail) {
+    super(detail);
+    this.name = "SpatialBehaviorFnError";
+    this.code = code;
+  }
+}
+var uint = z10.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+var channelName = z10.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/u);
+var kebabName = z10.string().regex(/^[a-z][a-z0-9-]{0,62}$/u);
+function parseSpec(schema, input, fn, field) {
+  const parsed = schema.safeParse(input ?? null);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new SpatialBehaviorFnError(field === "state" ? "invalid-state" : "invalid-input", `${fn}: ${field} invalid \u2014 ${issue?.message ?? "schema mismatch"}`);
+  }
+  return parsed.data;
+}
+function requireField(inputs, name, fn) {
+  const value = inputs[name];
+  if (value === undefined)
+    throw new SpatialBehaviorFnError("invalid-input", `${fn}: missing required input ${name}`);
+  return value;
+}
+function rngNext(state) {
+  const next = state + 1831565813 >>> 0;
+  let t = next;
+  t = Math.imul(t ^ t >>> 15, t | 1);
+  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+  return { value: ((t ^ t >>> 14) >>> 0) / 4294967296, next };
+}
+function drawStream(seed, count) {
+  const draws = [];
+  let state = seed >>> 0;
+  for (let i = 0;i < count; i += 1) {
+    const drawn = rngNext(state);
+    draws.push(drawn.value);
+    state = drawn.next;
+  }
+  return { draws, next: state };
+}
+var obsSchema = z10.strictObject({
+  draw: z10.number().min(0).max(1).optional(),
+  flags: z10.record(kebabName, z10.boolean()).refine((flags) => Object.keys(flags).length <= SPATIAL_BEHAVIOR_FN_LIMITS.obsFlags, {
+    message: `At most ${SPATIAL_BEHAVIOR_FN_LIMITS.obsFlags} obs flags per tick.`
+  }).optional(),
+  distances: z10.record(kebabName, z10.number().min(0)).refine((distances) => Object.keys(distances).length <= SPATIAL_BEHAVIOR_FN_LIMITS.obsFlags, {
+    message: `At most ${SPATIAL_BEHAVIOR_FN_LIMITS.obsFlags} obs distances per tick.`
+  }).optional()
+});
+var windowSchema = z10.strictObject({
+  ticks: z10.array(z10.strictObject({
+    tUs: uint,
+    obs: obsSchema.optional(),
+    positions: z10.record(kebabName, z10.tuple([z10.number(), z10.number(), z10.number()])).refine((positions) => Object.keys(positions).length <= SPATIAL_BEHAVIOR_FN_LIMITS.positionsPerTick, { message: `At most ${SPATIAL_BEHAVIOR_FN_LIMITS.positionsPerTick} positions per tick.` }).optional()
+  })).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.ticksPerWindow)
+}).superRefine((window, context) => {
+  for (let i = 1;i < window.ticks.length; i += 1) {
+    const previous = window.ticks[i - 1]?.tUs ?? 0;
+    const current = window.ticks[i]?.tUs ?? 0;
+    if (current <= previous) {
+      context.addIssue({ code: "custom", message: "window.ticks must be strictly increasing in tUs.", path: ["ticks", i, "tUs"] });
+    }
+  }
+});
+var emittedSchema = z10.array(z10.strictObject({
+  tUs: uint,
+  channel: channelName,
+  value: z10.unknown()
+})).max(SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall);
+function emit(emitted, tUs, channel, value) {
+  if (emitted.length >= SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `Emitted records exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall} per call.`);
+  }
+  emitted.push({ tUs, channel, value });
+}
+var rngInputs = z10.strictObject({
+  seed: uint,
+  count: z10.number().int().min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.drawsPerCall),
+  stream: uint.optional()
+});
+function rngSeeded(inputs) {
+  const spec = parseSpec(rngInputs, { seed: inputs.seed, count: inputs.count, stream: inputs.stream }, "rng.seeded.v1", "inputs");
+  const salted = (spec.seed ^ Math.imul(spec.stream ?? 0, 2654435769)) >>> 0;
+  const { draws, next } = drawStream(salted, spec.count);
+  return { draws, next };
+}
+var fsmGuardSchema = z10.discriminatedUnion("kind", [
+  z10.strictObject({ kind: z10.literal("after"), us: uint }),
+  z10.strictObject({ kind: z10.literal("chance"), threshold: z10.number().min(0).max(1) }),
+  z10.strictObject({ kind: z10.literal("flag"), name: kebabName }),
+  z10.strictObject({ kind: z10.literal("clear"), name: kebabName }),
+  z10.strictObject({ kind: z10.literal("always") })
+]);
+var fsmMachineSchema = z10.strictObject({
+  channel: channelName,
+  states: z10.array(kebabName).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.fsmStates),
+  transitions: z10.array(z10.strictObject({
+    from: kebabName,
+    to: kebabName,
+    guard: fsmGuardSchema
+  })).max(SPATIAL_BEHAVIOR_FN_LIMITS.fsmTransitions),
+  minDwellUs: uint.optional()
+}).superRefine((machine, context) => {
+  const states = new Set(machine.states);
+  if (states.size !== machine.states.length) {
+    context.addIssue({ code: "custom", message: "machine.states must be unique.", path: ["states"] });
+  }
+  for (const [index2, transition] of machine.transitions.entries()) {
+    if (!states.has(transition.from))
+      context.addIssue({ code: "custom", message: `Transition from undeclared state ${transition.from}.`, path: ["transitions", index2, "from"] });
+    if (!states.has(transition.to))
+      context.addIssue({ code: "custom", message: `Transition to undeclared state ${transition.to}.`, path: ["transitions", index2, "to"] });
+  }
+});
+var fsmStateSchema = z10.strictObject({ name: kebabName, enteredUs: uint });
+function guardPasses(guard, elapsedUs, obs, fn) {
+  switch (guard.kind) {
+    case "after":
+      return elapsedUs >= guard.us;
+    case "chance": {
+      if (obs?.draw === undefined) {
+        throw new SpatialBehaviorFnError("invalid-input", `${fn}: a chance guard fired with no obs.draw supplied for the tick`);
+      }
+      return obs.draw < guard.threshold;
+    }
+    case "flag":
+      return obs?.flags?.[guard.name] === true;
+    case "clear":
+      return obs?.flags?.[guard.name] !== true;
+    case "always":
+      return true;
+  }
+}
+function behaviorFsm(inputs) {
+  const machine = parseSpec(fsmMachineSchema, inputs.machine, "behavior.fsm.v1", "machine");
+  const state = parseSpec(fsmStateSchema, requireField(inputs, "state", "behavior.fsm.v1"), "behavior.fsm.v1", "state");
+  const window = parseSpec(windowSchema, requireField(inputs, "window", "behavior.fsm.v1"), "behavior.fsm.v1", "window");
+  if (!machine.states.includes(state.name)) {
+    throw new SpatialBehaviorFnError("invalid-state", `behavior.fsm.v1: state ${state.name} is not declared in machine.states`);
+  }
+  const emitted = [];
+  let current = { ...state };
+  for (const tick of window.ticks) {
+    const elapsedUs = Math.max(0, tick.tUs - current.enteredUs);
+    if (machine.minDwellUs === undefined || elapsedUs >= machine.minDwellUs) {
+      const fired = machine.transitions.find((transition) => transition.from === current.name && guardPasses(transition.guard, elapsedUs, tick.obs, "behavior.fsm.v1"));
+      if (fired !== undefined) {
+        emit(emitted, tick.tUs, `${machine.channel}.transition`, { from: current.name, to: fired.to, guard: fired.guard.kind });
+        current = { name: fired.to, enteredUs: tick.tUs };
+      }
+    }
+    emit(emitted, tick.tUs, machine.channel, current.name);
+  }
+  return { next: current, emitted };
+}
+var expressionSpecSchema = z10.strictObject({
+  channel: channelName,
+  seed: uint,
+  blinkEveryUs: z10.number().int().min(1e5).max(60000000),
+  blinkUs: z10.number().int().min(1e4).max(1e6),
+  saccadeEveryUs: z10.number().int().min(50000).max(60000000),
+  gazeTargets: z10.array(kebabName).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.gazeTargets),
+  mood: z10.record(kebabName, z10.number().min(0).max(1)).refine((mood) => Object.keys(mood).length <= SPATIAL_BEHAVIOR_FN_LIMITS.moodChannels, {
+    message: `At most ${SPATIAL_BEHAVIOR_FN_LIMITS.moodChannels} mood channels.`
+  })
+});
+var expressionStateSchema = z10.strictObject({
+  rng: uint,
+  nextBlinkUs: uint,
+  nextSaccadeUs: uint,
+  gazeIndex: z10.number().int().min(0).max(SPATIAL_BEHAVIOR_FN_LIMITS.gazeTargets - 1)
+});
+function behaviorExpression(inputs) {
+  const spec = parseSpec(expressionSpecSchema, inputs.spec, "behavior.expression.v1", "spec");
+  const state = parseSpec(expressionStateSchema, requireField(inputs, "state", "behavior.expression.v1"), "behavior.expression.v1", "state");
+  const window = parseSpec(windowSchema, requireField(inputs, "window", "behavior.expression.v1"), "behavior.expression.v1", "window");
+  if (state.gazeIndex >= spec.gazeTargets.length) {
+    throw new SpatialBehaviorFnError("invalid-state", `behavior.expression.v1: state.gazeIndex ${state.gazeIndex} exceeds gazeTargets`);
+  }
+  const emitted = [];
+  let { rng, nextBlinkUs, nextSaccadeUs, gazeIndex } = state;
+  for (const tick of window.ticks) {
+    if (tick.tUs >= nextSaccadeUs) {
+      const draw = rngNext(rng);
+      rng = draw.next;
+      const step = spec.gazeTargets.length === 1 ? 0 : 1 + Math.floor(draw.value * (spec.gazeTargets.length - 1));
+      gazeIndex = (gazeIndex + step) % spec.gazeTargets.length;
+      const jitter = rngNext(rng);
+      rng = jitter.next;
+      nextSaccadeUs = tick.tUs + spec.saccadeEveryUs + Math.floor(jitter.value * spec.saccadeEveryUs * 0.5);
+    }
+    if (tick.tUs >= nextBlinkUs + spec.blinkUs) {
+      const jitter = rngNext(rng);
+      rng = jitter.next;
+      nextBlinkUs = tick.tUs + spec.blinkEveryUs + Math.floor(jitter.value * spec.blinkEveryUs * 0.5);
+    }
+    const blinking = tick.tUs >= nextBlinkUs && tick.tUs < nextBlinkUs + spec.blinkUs;
+    emit(emitted, tick.tUs, `${spec.channel}.blink`, blinking ? 1 : 0);
+    emit(emitted, tick.tUs, `${spec.channel}.gaze`, spec.gazeTargets[gazeIndex] ?? spec.gazeTargets[0] ?? "center");
+    emit(emitted, tick.tUs, `${spec.channel}.mood`, spec.mood);
+  }
+  return { next: { rng, nextBlinkUs, nextSaccadeUs, gazeIndex }, emitted };
+}
+var interactSpecSchema = z10.strictObject({
+  channel: channelName,
+  phases: z10.array(z10.strictObject({
+    name: kebabName,
+    minUs: uint,
+    emit: z10.array(z10.strictObject({ channel: channelName, value: z10.unknown() })).max(8).optional()
+  })).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.phases),
+  loop: z10.boolean().optional()
+});
+var interactStateSchema = z10.strictObject({
+  phaseIndex: z10.number().int().min(0).max(SPATIAL_BEHAVIOR_FN_LIMITS.phases - 1),
+  enteredUs: uint
+});
+function behaviorInteract(inputs) {
+  const spec = parseSpec(interactSpecSchema, inputs.spec, "behavior.interact.v1", "spec");
+  const state = parseSpec(interactStateSchema, requireField(inputs, "state", "behavior.interact.v1"), "behavior.interact.v1", "state");
+  const window = parseSpec(windowSchema, requireField(inputs, "window", "behavior.interact.v1"), "behavior.interact.v1", "window");
+  if (state.phaseIndex >= spec.phases.length) {
+    throw new SpatialBehaviorFnError("invalid-state", `behavior.interact.v1: state.phaseIndex ${state.phaseIndex} exceeds phases`);
+  }
+  const emitted = [];
+  let { phaseIndex, enteredUs } = state;
+  for (const tick of window.ticks) {
+    let advanced = true;
+    while (advanced) {
+      advanced = false;
+      const phase = spec.phases[phaseIndex];
+      if (phase !== undefined && tick.tUs - enteredUs >= phase.minUs) {
+        const last = phaseIndex + 1 >= spec.phases.length;
+        if (!last || spec.loop === true) {
+          const nextIndex = last ? 0 : phaseIndex + 1;
+          const entered = spec.phases[nextIndex];
+          emit(emitted, tick.tUs, `${spec.channel}.phase`, { from: phase.name, to: entered?.name ?? phase.name });
+          for (const record of entered?.emit ?? []) {
+            emit(emitted, tick.tUs, record.channel, record.value);
+          }
+          phaseIndex = nextIndex;
+          enteredUs = tick.tUs;
+          advanced = true;
+        }
+      }
+    }
+    emit(emitted, tick.tUs, spec.channel, spec.phases[phaseIndex]?.name ?? "done");
+  }
+  return { next: { phaseIndex, enteredUs }, emitted };
+}
+function channelEmit(inputs) {
+  const channel = parseSpec(channelName, inputs.channel, "channel.emit.v1", "channel");
+  const window = parseSpec(windowSchema, requireField(inputs, "window", "channel.emit.v1"), "channel.emit.v1", "window");
+  const value = inputs.value ?? null;
+  const emitted = [];
+  for (const tick of window.ticks)
+    emit(emitted, tick.tUs, channel, value);
+  return { emitted };
+}
+var sampleSpecSchema = z10.strictObject({
+  pairs: z10.array(z10.strictObject({
+    a: kebabName,
+    b: kebabName,
+    within: z10.number().min(0).max(100)
+  })).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.pairs)
+});
+function sceneSample(inputs) {
+  const spec = parseSpec(sampleSpecSchema, inputs.spec, "scene.sample.v1", "spec");
+  const window = parseSpec(windowSchema, requireField(inputs, "window", "scene.sample.v1"), "scene.sample.v1", "window");
+  const ticks = window.ticks.map((tick) => {
+    const positions = tick.positions ?? {};
+    const flags = {};
+    const distances = {};
+    for (const pair of spec.pairs) {
+      const a = positions[pair.a];
+      const b = positions[pair.b];
+      if (a === undefined || b === undefined) {
+        throw new SpatialBehaviorFnError("invalid-input", `scene.sample.v1: pair ${pair.a}/${pair.b} missing positions at ${tick.tUs}us`);
+      }
+      const distance = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const key2 = `${pair.a}-${pair.b}`;
+      distances[`dist-${key2}`] = Math.round(distance * 1e6) / 1e6;
+      flags[`contact-${key2}`] = distance <= pair.within;
+    }
+    const obs = {
+      ...tick.obs ?? {},
+      flags: { ...tick.obs?.flags ?? {}, ...flags },
+      distances: { ...tick.obs?.distances ?? {}, ...distances }
+    };
+    return { tUs: tick.tUs, obs };
+  });
+  return { window: { ticks } };
+}
+var combineInputs = z10.strictObject({
+  layers: z10.array(z10.strictObject({
+    priority: z10.number().int().min(0).max(1000),
+    emitted: emittedSchema
+  })).min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.layers)
+});
+function behaviorCombine(inputs) {
+  const spec = parseSpec(combineInputs, { layers: inputs.layers }, "behavior.combine.v1", "layers");
+  const winners = new Map;
+  spec.layers.forEach((layer, layerIndex) => {
+    for (const record of layer.emitted) {
+      const key2 = `${record.tUs}${record.channel}`;
+      const held = winners.get(key2);
+      if (held === undefined || layer.priority > held.priority) {
+        winners.set(key2, { priority: layer.priority, order: layerIndex, record });
+      }
+    }
+  });
+  const merged = [...winners.values()].sort((left, right) => left.record.tUs - right.record.tUs || (left.record.channel < right.record.channel ? -1 : left.record.channel > right.record.channel ? 1 : 0) || left.order - right.order).map((entry) => entry.record);
+  if (merged.length > SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `behavior.combine.v1: merged emissions exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall}`);
+  }
+  return { emitted: merged };
+}
+var appendInputs = z10.strictObject({
+  prior: emittedSchema,
+  fresh: emittedSchema
+});
+function emittedAppend(inputs) {
+  const spec = parseSpec(appendInputs, { prior: inputs.prior, fresh: inputs.fresh }, "emitted.append.v1", "prior");
+  const merged = [...spec.prior, ...spec.fresh].sort((left, right) => left.tUs - right.tUs || (left.channel < right.channel ? -1 : left.channel > right.channel ? 1 : 0));
+  if (merged.length > SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `emitted.append.v1: accumulated emissions exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall}`);
+  }
+  return { emitted: merged };
+}
+var flattenInputs = z10.strictObject({
+  nested: z10.array(emittedSchema).max(SPATIAL_BEHAVIOR_FN_LIMITS.layers)
+});
+function emittedFlatten(inputs) {
+  const spec = parseSpec(flattenInputs, { nested: inputs.nested }, "emitted.flatten.v1", "nested");
+  const merged = spec.nested.flat().sort((left, right) => left.tUs - right.tUs || (left.channel < right.channel ? -1 : left.channel > right.channel ? 1 : 0));
+  if (merged.length > SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall) {
+    throw new SpatialBehaviorFnError("over-bound", `emitted.flatten.v1: flattened emissions exceed ${SPATIAL_BEHAVIOR_FN_LIMITS.emittedPerCall}`);
+  }
+  return { emitted: merged };
+}
+var advanceInputs = z10.strictObject({
+  window: windowSchema,
+  step: uint.min(1).max(SPATIAL_BEHAVIOR_FN_LIMITS.ticksPerWindow)
+});
+function windowAdvance(inputs) {
+  const spec = parseSpec(advanceInputs, { window: inputs.window, step: inputs.step }, "window.advance.v1", "window");
+  const head = spec.window.ticks.slice(0, spec.step);
+  const rest = spec.window.ticks.slice(spec.step);
+  return {
+    head: { ticks: head },
+    rest: { ticks: rest },
+    done: rest.length === 0 ? "true" : "false"
+  };
+}
+var ports = (map) => map;
+var SPATIAL_BEHAVIOR_FNS = new Map(Object.entries({
+  "rng.seeded.v1": {
+    signature: {
+      inputs: ports({ seed: { type: "json" }, count: { type: "json" }, stream: { type: "json", optional: true } }),
+      outputs: ports({ draws: { type: "json" }, next: { type: "json" } }),
+      cost: 50
+    },
+    invoke: rngSeeded
+  },
+  "behavior.fsm.v1": {
+    signature: {
+      inputs: ports({ machine: { type: "json" }, state: { type: "json" }, window: { type: "json" } }),
+      outputs: ports({ next: { type: "json" }, emitted: { type: "json" } }),
+      cost: 200
+    },
+    invoke: behaviorFsm
+  },
+  "behavior.expression.v1": {
+    signature: {
+      inputs: ports({ spec: { type: "json" }, state: { type: "json" }, window: { type: "json" } }),
+      outputs: ports({ next: { type: "json" }, emitted: { type: "json" } }),
+      cost: 200
+    },
+    invoke: behaviorExpression
+  },
+  "behavior.interact.v1": {
+    signature: {
+      inputs: ports({ spec: { type: "json" }, state: { type: "json" }, window: { type: "json" } }),
+      outputs: ports({ next: { type: "json" }, emitted: { type: "json" } }),
+      cost: 200
+    },
+    invoke: behaviorInteract
+  },
+  "channel.emit.v1": {
+    signature: {
+      inputs: ports({ channel: { type: "text" }, value: { type: "json", optional: true }, window: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 25
+    },
+    invoke: channelEmit
+  },
+  "scene.sample.v1": {
+    signature: {
+      inputs: ports({ spec: { type: "json" }, window: { type: "json" } }),
+      outputs: ports({ window: { type: "json" } }),
+      cost: 100
+    },
+    invoke: sceneSample
+  },
+  "behavior.combine.v1": {
+    signature: {
+      inputs: ports({ layers: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 50
+    },
+    invoke: behaviorCombine
+  },
+  "emitted.append.v1": {
+    signature: {
+      inputs: ports({ prior: { type: "json" }, fresh: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 25
+    },
+    invoke: emittedAppend
+  },
+  "emitted.flatten.v1": {
+    signature: {
+      inputs: ports({ nested: { type: "json" } }),
+      outputs: ports({ emitted: { type: "json" } }),
+      cost: 25
+    },
+    invoke: emittedFlatten
+  },
+  "window.advance.v1": {
+    signature: {
+      inputs: ports({ window: { type: "json" }, step: { type: "json" } }),
+      outputs: ports({ head: { type: "json" }, rest: { type: "json" }, done: { type: "text" } }),
+      cost: 10
+    },
+    invoke: windowAdvance
+  }
+}));
+function spatialBehaviorFnSignatures() {
+  const signatures = new Map;
+  for (const [name, entry] of SPATIAL_BEHAVIOR_FNS) {
+    signatures.set(name, { inputs: entry.signature.inputs, outputs: entry.signature.outputs });
+  }
+  return signatures;
+}
+
 // src/spatial-scene/time.ts
 function gcd(a, b) {
   while (b !== 0n) {
@@ -4602,25 +5781,25 @@ function spatialOutputDuration(durationUs, rateInput) {
 }
 
 // src/spatial-scene/camera-track.ts
-import { z as z8 } from "zod";
+import { z as z11 } from "zod";
 var SPATIAL_CAMERA_TRACK_MAX_FRAMES = 2048;
-var clockSchema = z8.strictObject({
+var clockSchema = z11.strictObject({
   startUs: SpatialTimeUsSchema,
   frameRate: SpatialFrameRateSchema,
-  frameCount: z8.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
+  frameCount: z11.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES)
 });
-var rationalSchema = z8.strictObject({
-  numerator: z8.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
-  denominator: z8.string().regex(/^[1-9][0-9]{0,6}$/u)
+var rationalSchema = z11.strictObject({
+  numerator: z11.string().regex(/^(0|[1-9][0-9]{0,19})$/u),
+  denominator: z11.string().regex(/^[1-9][0-9]{0,6}$/u)
 });
-var SpatialCameraTrackSchema = z8.strictObject({
-  kind: z8.literal("slopcamera.spatial-camera-track"),
-  schemaVersion: z8.literal(1),
+var SpatialCameraTrackSchema = z11.strictObject({
+  kind: z11.literal("slopcamera.spatial-camera-track"),
+  schemaVersion: z11.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
   clock: clockSchema,
-  samples: z8.array(z8.strictObject({
-    frameIndex: z8.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
+  samples: z11.array(z11.strictObject({
+    frameIndex: z11.number().int().min(0).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES - 1),
     timeUs: SpatialTimeUsSchema,
     exactTimeUs: rationalSchema,
     camera: SpatialCameraSchema
@@ -4684,25 +5863,25 @@ function sampleSpatialCameraTrack(sceneInput, optionsInput) {
 }
 
 // src/spatial-scene/camera-rig.ts
-import { z as z9 } from "zod";
-var scalar = z9.number().finite().min(-1e6).max(1e6);
-var positive2 = z9.number().finite().positive().max(1e6);
-var target = z9.strictObject({ entityId: SpatialEntityIdSchema.optional(), position: SpatialVec3Schema, radiusM: positive2 });
+import { z as z12 } from "zod";
+var scalar = z12.number().finite().min(-1e6).max(1e6);
+var positive2 = z12.number().finite().positive().max(1e6);
+var target = z12.strictObject({ entityId: SpatialEntityIdSchema.optional(), position: SpatialVec3Schema, radiusM: positive2 });
 var timing = { startUs: SpatialTimeUsSchema, endUs: SpatialTimeUsSchema };
-var base = { cameraId: SpatialCameraIdSchema, ...timing, easing: z9.enum(["linear", "smoothstep", "smootherstep"]).optional() };
-var shake = z9.strictObject({ seed: z9.number().int().min(0).max(4294967295), amplitudeM: z9.number().finite().min(0).max(10), frequencyHz: z9.number().finite().min(0.01).max(100), layers: z9.number().int().min(1).max(8) });
-var SpatialCameraRigSchema = z9.discriminatedUnion("kind", [
-  z9.strictObject({ ...base, kind: z9.literal("dolly"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
-  z9.strictObject({ ...base, kind: z9.literal("crane"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
-  z9.strictObject({ ...base, kind: z9.literal("orbit"), center: SpatialVec3Schema, radiusM: positive2, startAngleRad: scalar, endAngleRad: scalar, heightM: scalar, target }),
-  z9.strictObject({ ...base, kind: z9.literal("rail"), points: z9.array(SpatialVec3Schema).min(2).max(64), target }),
-  z9.strictObject({ ...base, kind: z9.literal("handheld"), pose: SpatialPoseSchema, target, shake }),
-  z9.strictObject({ ...base, kind: z9.literal("chase"), target, offset: SpatialVec3Schema, fromTarget: SpatialVec3Schema.optional(), toTarget: SpatialVec3Schema.optional(), shake: shake.optional() }),
-  z9.strictObject({ ...base, kind: z9.literal("tripod"), pose: SpatialPoseSchema, target }),
-  z9.strictObject({ ...base, kind: z9.literal("target-tracking"), from: SpatialVec3Schema, to: SpatialVec3Schema, target, targetEnd: SpatialVec3Schema.optional() })
+var base = { cameraId: SpatialCameraIdSchema, ...timing, easing: z12.enum(["linear", "smoothstep", "smootherstep"]).optional() };
+var shake = z12.strictObject({ seed: z12.number().int().min(0).max(4294967295), amplitudeM: z12.number().finite().min(0).max(10), frequencyHz: z12.number().finite().min(0.01).max(100), layers: z12.number().int().min(1).max(8) });
+var SpatialCameraRigSchema = z12.discriminatedUnion("kind", [
+  z12.strictObject({ ...base, kind: z12.literal("dolly"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
+  z12.strictObject({ ...base, kind: z12.literal("crane"), from: SpatialVec3Schema, to: SpatialVec3Schema, target }),
+  z12.strictObject({ ...base, kind: z12.literal("orbit"), center: SpatialVec3Schema, radiusM: positive2, startAngleRad: scalar, endAngleRad: scalar, heightM: scalar, target }),
+  z12.strictObject({ ...base, kind: z12.literal("rail"), points: z12.array(SpatialVec3Schema).min(2).max(64), target }),
+  z12.strictObject({ ...base, kind: z12.literal("handheld"), pose: SpatialPoseSchema, target, shake }),
+  z12.strictObject({ ...base, kind: z12.literal("chase"), target, offset: SpatialVec3Schema, fromTarget: SpatialVec3Schema.optional(), toTarget: SpatialVec3Schema.optional(), shake: shake.optional() }),
+  z12.strictObject({ ...base, kind: z12.literal("tripod"), pose: SpatialPoseSchema, target }),
+  z12.strictObject({ ...base, kind: z12.literal("target-tracking"), from: SpatialVec3Schema, to: SpatialVec3Schema, target, targetEnd: SpatialVec3Schema.optional() })
 ]).refine((value) => value.endUs > value.startUs, "Camera rig duration must be nonempty.");
-var SpatialRackFocusSchema = z9.strictObject({ startDistanceM: positive2, endDistanceM: positive2 });
-var compileSchema = z9.strictObject({ camera: SpatialCameraSchema, rig: SpatialCameraRigSchema, frameRate: SpatialFrameRateSchema, frameCount: z9.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES), rackFocus: SpatialRackFocusSchema.optional() });
+var SpatialRackFocusSchema = z12.strictObject({ startDistanceM: positive2, endDistanceM: positive2 });
+var compileSchema = z12.strictObject({ camera: SpatialCameraSchema, rig: SpatialCameraRigSchema, frameRate: SpatialFrameRateSchema, frameCount: z12.number().int().min(1).max(SPATIAL_CAMERA_TRACK_MAX_FRAMES), rackFocus: SpatialRackFocusSchema.optional() });
 var mix = (a, b, t) => a + (b - a) * t;
 var vec = (a, b, t) => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 function eased(t, kind) {
@@ -4729,8 +5908,8 @@ var normalize = (v) => {
   return [v[0] / n, v[1] / n, v[2] / n];
 };
 var cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-function quaternionFromBasis(x, y, z10) {
-  const m00 = x[0], m01 = y[0], m02 = z10[0], m10 = x[1], m11 = y[1], m12 = z10[1], m20 = x[2], m21 = y[2], m22 = z10[2], trace = m00 + m11 + m22;
+function quaternionFromBasis(x, y, z13) {
+  const m00 = x[0], m01 = y[0], m02 = z13[0], m10 = x[1], m11 = y[1], m12 = z13[1], m20 = x[2], m21 = y[2], m22 = z13[2], trace = m00 + m11 + m22;
   let q;
   if (trace > 0) {
     const s = 2 * Math.sqrt(trace + 1);
@@ -4799,16 +5978,16 @@ function compileSpatialCameraRig(input) {
   });
   return parseSpatialCameraTrack({ kind: "slopcamera.spatial-camera-track", schemaVersion: 1, sceneSha256: spatialValueSha256({ domain: "slopcamera.camera-rig.v1", camera: value.camera, rig: value.rig, frameRate: rate, frameCount: value.frameCount, rackFocus: value.rackFocus ?? null }), cameraId: value.camera.cameraId, clock, samples });
 }
-var framingTolerance = z9.number().finite().min(0).max(0.5).default(0.05);
-var SpatialFramingGoalSchema = z9.discriminatedUnion("kind", [
-  z9.strictObject({ kind: z9.literal("close-up"), targets: z9.array(target).min(1).max(3), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("medium"), targets: z9.array(target).min(1).max(3), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("wide"), targets: z9.array(target).min(1).max(3), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("two-shot"), targets: z9.array(target).length(2), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("over-shoulder"), targets: z9.array(target).min(2).max(3), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("screen-position"), targets: z9.array(target).length(1), position: z9.tuple([z9.number().finite().min(0).max(1), z9.number().finite().min(0).max(1)]), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("headroom"), targets: z9.array(target).length(1), headroom: z9.number().finite().min(0).max(0.5), tolerance: framingTolerance }),
-  z9.strictObject({ kind: z9.literal("rule-of-thirds"), targets: z9.array(target).length(1), quadrant: z9.enum(["upper-left", "upper-right", "lower-left", "lower-right"]), tolerance: framingTolerance })
+var framingTolerance = z12.number().finite().min(0).max(0.5).default(0.05);
+var SpatialFramingGoalSchema = z12.discriminatedUnion("kind", [
+  z12.strictObject({ kind: z12.literal("close-up"), targets: z12.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("medium"), targets: z12.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("wide"), targets: z12.array(target).min(1).max(3), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("two-shot"), targets: z12.array(target).length(2), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("over-shoulder"), targets: z12.array(target).min(2).max(3), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("screen-position"), targets: z12.array(target).length(1), position: z12.tuple([z12.number().finite().min(0).max(1), z12.number().finite().min(0).max(1)]), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("headroom"), targets: z12.array(target).length(1), headroom: z12.number().finite().min(0).max(0.5), tolerance: framingTolerance }),
+  z12.strictObject({ kind: z12.literal("rule-of-thirds"), targets: z12.array(target).length(1), quadrant: z12.enum(["upper-left", "upper-right", "lower-left", "lower-right"]), tolerance: framingTolerance })
 ]);
 function solveSpatialFraming(cameraInput, goalInput) {
   const camera2 = parseSpatialValue(SpatialCameraSchema, cameraInput, "framing camera"), goal = parseSpatialValue(SpatialFramingGoalSchema, goalInput, "framing goal"), ids = goal.targets.flatMap((x) => x.entityId ? [x.entityId] : []);
@@ -4834,10 +6013,10 @@ function solveSpatialFraming(cameraInput, goalInput) {
   const actual = worldToCamera([center[0] - position[0], center[1] - position[1], center[2] - position[2]], q), actualDepth = -actual[2], projectedX = p.cx + actual[0] * p.fx / actualDepth, projectedY = p.cy - actual[1] * p.fy / actualDepth, deviation = Math.hypot(projectedX / p.width - desiredX, projectedY / p.height - desiredY);
   return deviation <= goal.tolerance + 0.000000000001 ? deepFreezeJson({ satisfied: true, camera: solved }) : deepFreezeJson({ satisfied: false, report: { code: "unsatisfied", goal: goal.kind, entityIds: ids, detail: "Calibrated framing exceeds the declared normalized-screen tolerance.", deviation } });
 }
-var auditOptions = z9.strictObject({ subjects: z9.array(target).max(128).default([]), collisionBounds: z9.array(target).max(128).default([]), cameraCollisionRadiusM: z9.number().finite().min(0).max(100).default(0), maxAcceleration: z9.number().finite().positive().max(1e6).default(50), maxAngularVelocity: z9.number().finite().positive().max(1e5).default(4), maxFramingDeviation: z9.number().finite().min(0).max(1).default(0.1), maxFocusErrorM: z9.number().finite().positive().max(1e6).default(0.5) });
+var auditOptions = z12.strictObject({ subjects: z12.array(target).max(128).default([]), collisionBounds: z12.array(target).max(128).default([]), cameraCollisionRadiusM: z12.number().finite().min(0).max(100).default(0), maxAcceleration: z12.number().finite().positive().max(1e6).default(50), maxAngularVelocity: z12.number().finite().positive().max(1e5).default(4), maxFramingDeviation: z12.number().finite().min(0).max(1).default(0.1), maxFocusErrorM: z12.number().finite().positive().max(1e6).default(0.5) });
 function worldToCamera(delta, q) {
-  const [x, y, z10, w] = q, tx = 2 * (-y * delta[2] + z10 * delta[1]), ty = 2 * (-z10 * delta[0] + x * delta[2]), tz = 2 * (-x * delta[1] + y * delta[0]);
-  return [delta[0] + w * tx + (-y * tz + z10 * ty), delta[1] + w * ty + (-z10 * tx + x * tz), delta[2] + w * tz + (-x * ty + y * tx)];
+  const [x, y, z13, w] = q, tx = 2 * (-y * delta[2] + z13 * delta[1]), ty = 2 * (-z13 * delta[0] + x * delta[2]), tz = 2 * (-x * delta[1] + y * delta[0]);
+  return [delta[0] + w * tx + (-y * tz + z13 * ty), delta[1] + w * ty + (-z13 * tx + x * tz), delta[2] + w * tz + (-x * ty + y * tx)];
 }
 function auditSpatialCameraTrack(trackInput, optionsInput) {
   const track = parseSpatialCameraTrack(trackInput), options = parseSpatialValue(auditOptions, optionsInput, "camera audit options"), findings = [];
@@ -4883,7 +6062,7 @@ function auditSpatialCameraTrack(trackInput, optionsInput) {
 }
 
 // src/spatial-scene/direction.ts
-import { z as z10 } from "zod";
+import { z as z13 } from "zod";
 var SPATIAL_DIRECTION_LIMITS = Object.freeze({
   actions: 256,
   beats: 64,
@@ -4891,52 +6070,52 @@ var SPATIAL_DIRECTION_LIMITS = Object.freeze({
   durationUs: 3600000000,
   looks: 32
 });
-var directionId = z10.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
-var referenceId = z10.string().min(1).max(128).regex(/^[a-z][a-z0-9_-]*$/u);
+var directionId = z13.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
+var referenceId = z13.string().min(1).max(128).regex(/^[a-z][a-z0-9_-]*$/u);
 var intervalShape = {
   endUs: SpatialTimeUsSchema.max(SPATIAL_DIRECTION_LIMITS.durationUs),
   startUs: SpatialTimeUsSchema.max(SPATIAL_DIRECTION_LIMITS.durationUs)
 };
-var SpatialDramaticBeatSchema = z10.strictObject({
+var SpatialDramaticBeatSchema = z13.strictObject({
   id: directionId,
   ...intervalShape,
-  intent: z10.string().trim().min(1).max(256),
-  emotion: z10.string().trim().min(1).max(64),
-  verified: z10.boolean().default(false)
+  intent: z13.string().trim().min(1).max(256),
+  emotion: z13.string().trim().min(1).max(64),
+  verified: z13.boolean().default(false)
 });
-var SpatialCharacterActionSchema = z10.strictObject({
+var SpatialCharacterActionSchema = z13.strictObject({
   id: directionId,
   characterId: referenceId,
   ...intervalShape,
-  action: z10.enum(["idle", "walk", "run", "turn", "gesture", "interact", "morph"]),
+  action: z13.enum(["idle", "walk", "run", "turn", "gesture", "interact", "morph"]),
   targetId: referenceId.optional(),
-  verified: z10.boolean().default(false)
+  verified: z13.boolean().default(false)
 });
-var SpatialCameraCoverageSchema = z10.strictObject({
+var SpatialCameraCoverageSchema = z13.strictObject({
   id: directionId,
   ...intervalShape,
-  rigKind: z10.enum(["chase", "crane", "dolly", "handheld", "orbit", "rail", "target-tracking", "tripod"]),
-  framing: z10.enum(["extreme-close-up", "close-up", "medium-close-up", "medium", "medium-wide", "wide", "extreme-wide", "over-shoulder", "insert"]),
-  screenDirection: z10.enum(["left", "right", "neutral"]).optional(),
+  rigKind: z13.enum(["chase", "crane", "dolly", "handheld", "orbit", "rail", "target-tracking", "tripod"]),
+  framing: z13.enum(["extreme-close-up", "close-up", "medium-close-up", "medium", "medium-wide", "wide", "extreme-wide", "over-shoulder", "insert"]),
+  screenDirection: z13.enum(["left", "right", "neutral"]).optional(),
   subjectId: referenceId.optional(),
-  verified: z10.boolean().default(false)
+  verified: z13.boolean().default(false)
 });
-var SpatialLookIntentSchema = z10.strictObject({
+var SpatialLookIntentSchema = z13.strictObject({
   id: directionId,
   ...intervalShape,
-  lighting: z10.string().trim().min(1).max(128),
-  atmosphere: z10.string().trim().min(1).max(128),
-  verified: z10.boolean().default(false)
+  lighting: z13.string().trim().min(1).max(128),
+  atmosphere: z13.string().trim().min(1).max(128),
+  verified: z13.boolean().default(false)
 });
-var SpatialDirectionSchema = z10.strictObject({
-  kind: z10.literal("slopcamera.spatial-direction"),
-  schemaVersion: z10.literal(1),
+var SpatialDirectionSchema = z13.strictObject({
+  kind: z13.literal("slopcamera.spatial-direction"),
+  schemaVersion: z13.literal(1),
   entityId: referenceId,
   projectDigest: SpatialDigestSchema,
-  beats: z10.array(SpatialDramaticBeatSchema).max(SPATIAL_DIRECTION_LIMITS.beats),
-  actions: z10.array(SpatialCharacterActionSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
-  coverage: z10.array(SpatialCameraCoverageSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
-  looks: z10.array(SpatialLookIntentSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
+  beats: z13.array(SpatialDramaticBeatSchema).max(SPATIAL_DIRECTION_LIMITS.beats),
+  actions: z13.array(SpatialCharacterActionSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
+  coverage: z13.array(SpatialCameraCoverageSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
+  looks: z13.array(SpatialLookIntentSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
 }).superRefine((direction, context) => {
   const ids = new Set;
   for (const [collectionName, values2] of [
@@ -4987,9 +6166,9 @@ function spatialDirectionSha256(direction) {
 }
 
 // src/spatial-scene/effects.ts
-import { z as z11 } from "zod";
-var positiveDimension2 = z11.number().finite().positive().max(1e6);
-var unit4 = z11.number().finite().min(0).max(1);
+import { z as z14 } from "zod";
+var positiveDimension2 = z14.number().finite().positive().max(1e6);
+var unit4 = z14.number().finite().min(0).max(1);
 var SPATIAL_EFFECT_LIMITS = Object.freeze({
   dust: 500000,
   embers: 1e6,
@@ -5003,65 +6182,65 @@ var SPATIAL_EFFECT_LIMITS = Object.freeze({
   simulationSteps: 1e4,
   texturePixels: 268435456
 });
-var boundedPixels = z11.number().int().safe().positive();
-var SpatialRenderQualitySchema = z11.strictObject({
-  outputBytes: z11.number().int().safe().positive().max(SPATIAL_EFFECT_LIMITS.outputBytes),
-  particleCount: z11.number().int().safe().min(0).max(SPATIAL_EFFECT_LIMITS.embers),
+var boundedPixels = z14.number().int().safe().positive();
+var SpatialRenderQualitySchema = z14.strictObject({
+  outputBytes: z14.number().int().safe().positive().max(SPATIAL_EFFECT_LIMITS.outputBytes),
+  particleCount: z14.number().int().safe().min(0).max(SPATIAL_EFFECT_LIMITS.embers),
   pixelBudget: boundedPixels.max(SPATIAL_EFFECT_LIMITS.renderPixels),
-  simulationSteps: z11.number().int().safe().min(0).max(SPATIAL_EFFECT_LIMITS.simulationSteps),
+  simulationSteps: z14.number().int().safe().min(0).max(SPATIAL_EFFECT_LIMITS.simulationSteps),
   texturePixelBudget: boundedPixels.max(SPATIAL_EFFECT_LIMITS.texturePixels),
-  tier: z11.enum(["preview", "final"])
+  tier: z14.enum(["preview", "final"])
 });
-var SpatialBloomSchema = z11.strictObject({
+var SpatialBloomSchema = z14.strictObject({
   intensity: unit4,
-  kind: z11.literal("bloom"),
-  radius: z11.number().finite().min(0).max(64),
+  kind: z14.literal("bloom"),
+  radius: z14.number().finite().min(0).max(64),
   threshold: unit4
 });
-var SpatialDepthOfFieldSchema = z11.strictObject({
-  aperture: z11.number().finite().positive().max(256),
-  focalLength: z11.number().finite().positive().max(1e4),
+var SpatialDepthOfFieldSchema = z14.strictObject({
+  aperture: z14.number().finite().positive().max(256),
+  focalLength: z14.number().finite().positive().max(1e4),
   focusDistance: positiveDimension2,
-  kind: z11.literal("depth-of-field")
+  kind: z14.literal("depth-of-field")
 });
-var SpatialMotionBlurSchema = z11.strictObject({
-  kind: z11.literal("motion-blur"),
-  samples: z11.number().int().min(1).max(64),
-  shutterAngle: z11.number().finite().min(0).max(360)
+var SpatialMotionBlurSchema = z14.strictObject({
+  kind: z14.literal("motion-blur"),
+  samples: z14.number().int().min(1).max(64),
+  shutterAngle: z14.number().finite().min(0).max(360)
 });
-var SpatialToneMapSchema = z11.strictObject({
-  exposure: z11.number().finite().min(-20).max(20),
-  kind: z11.literal("tone-map"),
-  whitePoint: z11.number().finite().positive().max(1e6)
+var SpatialToneMapSchema = z14.strictObject({
+  exposure: z14.number().finite().min(-20).max(20),
+  kind: z14.literal("tone-map"),
+  whitePoint: z14.number().finite().positive().max(1e6)
 });
-var SpatialVignetteSchema = z11.strictObject({
+var SpatialVignetteSchema = z14.strictObject({
   intensity: unit4,
-  kind: z11.literal("vignette"),
+  kind: z14.literal("vignette"),
   radius: unit4
 });
-var SpatialChromaticAberrationSchema = z11.strictObject({
-  kind: z11.literal("chromatic-aberration"),
-  offsetPixels: z11.number().finite().min(0).max(64),
+var SpatialChromaticAberrationSchema = z14.strictObject({
+  kind: z14.literal("chromatic-aberration"),
+  offsetPixels: z14.number().finite().min(0).max(64),
   radialFalloff: unit4
 });
-var SpatialGrainSchema = z11.strictObject({
+var SpatialGrainSchema = z14.strictObject({
   intensity: unit4,
-  kind: z11.literal("grain"),
-  seed: z11.number().int().min(0).max(2147483647)
+  kind: z14.literal("grain"),
+  seed: z14.number().int().min(0).max(2147483647)
 });
-var SpatialFlareSchema = z11.strictObject({
-  ghosts: z11.number().int().min(0).max(16),
+var SpatialFlareSchema = z14.strictObject({
+  ghosts: z14.number().int().min(0).max(16),
   haloWidth: unit4,
   intensity: unit4,
-  kind: z11.literal("flare"),
+  kind: z14.literal("flare"),
   threshold: unit4
 });
-var SpatialLutGradeSchema = z11.strictObject({
+var SpatialLutGradeSchema = z14.strictObject({
   assetId: SpatialAssetIdSchema,
   intensity: unit4,
-  kind: z11.literal("lut-grade")
+  kind: z14.literal("lut-grade")
 });
-var SpatialPostProcessStepSchema = z11.discriminatedUnion("kind", [
+var SpatialPostProcessStepSchema = z14.discriminatedUnion("kind", [
   SpatialBloomSchema,
   SpatialDepthOfFieldSchema,
   SpatialMotionBlurSchema,
@@ -5072,20 +6251,20 @@ var SpatialPostProcessStepSchema = z11.discriminatedUnion("kind", [
   SpatialFlareSchema,
   SpatialLutGradeSchema
 ]);
-var SpatialPostProcessStackSchema = z11.strictObject({
-  kind: z11.literal("slopcamera.spatial-post-process"),
-  schemaVersion: z11.literal(1),
-  steps: z11.array(SpatialPostProcessStepSchema).min(1).max(SPATIAL_EFFECT_LIMITS.postProcessStack)
+var SpatialPostProcessStackSchema = z14.strictObject({
+  kind: z14.literal("slopcamera.spatial-post-process"),
+  schemaVersion: z14.literal(1),
+  steps: z14.array(SpatialPostProcessStepSchema).min(1).max(SPATIAL_EFFECT_LIMITS.postProcessStack)
 }).superRefine((stack, context) => {
   if (stack.steps.filter((step) => step.kind === "lut-grade").length > SPATIAL_EFFECT_LIMITS.luts) {
     context.addIssue({ code: "custom", path: ["steps"], message: `Post-process stacks support at most ${SPATIAL_EFFECT_LIMITS.luts} LUT grades.` });
   }
 });
-var SpatialRenderPlanSchema = z11.strictObject({
-  kind: z11.literal("slopcamera.spatial-render-plan"),
+var SpatialRenderPlanSchema = z14.strictObject({
+  kind: z14.literal("slopcamera.spatial-render-plan"),
   postProcess: SpatialPostProcessStackSchema.optional(),
   quality: SpatialRenderQualitySchema,
-  schemaVersion: z11.literal(1)
+  schemaVersion: z14.literal(1)
 });
 function parseSpatialRenderPlan(input) {
   const plan = parseSpatialValue(SpatialRenderPlanSchema, input, "render plan");
@@ -5105,14 +6284,14 @@ function spatialRenderPlanSha256(plan) {
 }
 
 // src/spatial-scene/direction-compile.ts
-import { z as z12 } from "zod";
+import { z as z15 } from "zod";
 var SPATIAL_DIRECTION_COMPILER_ID = "slopcamera.spatial-direction-compiler@v1";
 var SPATIAL_DIRECTION_COMPILATION_LIMITS = Object.freeze({
   advisories: 256,
   unresolvedIntents: 256,
   checks: 512
 });
-var SpatialDirectionAdvisoryCodeSchema = z12.enum([
+var SpatialDirectionAdvisoryCodeSchema = z15.enum([
   "unresolved-reference",
   "stale-digest",
   "defaulted-camera",
@@ -5121,21 +6300,21 @@ var SpatialDirectionAdvisoryCodeSchema = z12.enum([
   "interval-outside-scene",
   "coverage-ungrouped"
 ]);
-var SpatialDirectionAdvisorySchema = z12.strictObject({
+var SpatialDirectionAdvisorySchema = z15.strictObject({
   code: SpatialDirectionAdvisoryCodeSchema,
-  referenceId: z12.string().min(1).max(128).optional(),
-  detail: z12.string().min(1).max(240)
+  referenceId: z15.string().min(1).max(128).optional(),
+  detail: z15.string().min(1).max(240)
 });
-var SpatialUnresolvedIntentDomainSchema = z12.enum(["performance", "camera", "shot", "look"]);
-var SpatialUnresolvedIntentSchema = z12.strictObject({
-  intentId: z12.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
+var SpatialUnresolvedIntentDomainSchema = z15.enum(["performance", "camera", "shot", "look"]);
+var SpatialUnresolvedIntentSchema = z15.strictObject({
+  intentId: z15.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
   domain: SpatialUnresolvedIntentDomainSchema,
-  referenceId: z12.string().min(1).max(128),
-  slot: z12.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u),
-  detail: z12.string().min(1).max(240)
+  referenceId: z15.string().min(1).max(128),
+  slot: z15.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u),
+  detail: z15.string().min(1).max(240)
 });
 var unresolvedSlot = (intentId, domain, referenceId2, slot, detail) => deepFreezeJson({ intentId, domain, referenceId: referenceId2, slot, detail });
-var SpatialPerformanceClipKindSchema = z12.enum([
+var SpatialPerformanceClipKindSchema = z15.enum([
   "idle",
   "walk-cycle",
   "run-cycle",
@@ -5144,74 +6323,74 @@ var SpatialPerformanceClipKindSchema = z12.enum([
   "interact",
   "expression"
 ]);
-var SpatialPerformanceProposalSchema = z12.strictObject({
-  proposalId: z12.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
-  actionId: z12.string().min(1).max(64),
-  characterId: z12.string().min(1).max(128),
+var SpatialPerformanceProposalSchema = z15.strictObject({
+  proposalId: z15.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
+  actionId: z15.string().min(1).max(64),
+  characterId: z15.string().min(1).max(128),
   action: SpatialDirectionSchema.shape.actions.element.shape.action,
   clipKind: SpatialPerformanceClipKindSchema,
   startUs: SpatialTimeUsSchema,
   endUs: SpatialTimeUsSchema,
   characterEntityId: SpatialEntityIdSchema.optional(),
   targetEntityId: SpatialEntityIdSchema.optional(),
-  unresolved: z12.array(z12.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u)).min(1).max(16)
+  unresolved: z15.array(z15.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u)).min(1).max(16)
 });
-var SpatialLookProposalSchema = z12.strictObject({
-  proposalId: z12.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
-  lookId: z12.string().min(1).max(64),
+var SpatialLookProposalSchema = z15.strictObject({
+  proposalId: z15.string().min(1).max(96).regex(/^prop_[a-f0-9]{16}$/u),
+  lookId: z15.string().min(1).max(64),
   startUs: SpatialTimeUsSchema,
   endUs: SpatialTimeUsSchema,
-  lighting: z12.string().min(1).max(128),
-  atmosphere: z12.string().min(1).max(128),
-  unresolved: z12.array(z12.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u)).min(1).max(16),
-  suggestedLightingPreset: z12.string().min(1).max(64).optional(),
-  suggestedMaterialPalette: z12.string().min(1).max(64).optional(),
-  suggestedPostProcess: z12.array(SpatialPostProcessStepSchema).max(16).optional()
+  lighting: z15.string().min(1).max(128),
+  atmosphere: z15.string().min(1).max(128),
+  unresolved: z15.array(z15.string().min(1).max(64).regex(/^[a-z][a-z0-9-]*$/u)).min(1).max(16),
+  suggestedLightingPreset: z15.string().min(1).max(64).optional(),
+  suggestedMaterialPalette: z15.string().min(1).max(64).optional(),
+  suggestedPostProcess: z15.array(SpatialPostProcessStepSchema).max(16).optional()
 });
-var SpatialDirectionProposalsSchema = z12.strictObject({
-  performance: z12.array(SpatialPerformanceProposalSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
-  cameraRigs: z12.array(SpatialCameraRigSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
-  shots: z12.array(SpatialShotV1Schema).max(SPATIAL_DIRECTION_LIMITS.coverage),
-  lookIntents: z12.array(SpatialLookProposalSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
+var SpatialDirectionProposalsSchema = z15.strictObject({
+  performance: z15.array(SpatialPerformanceProposalSchema).max(SPATIAL_DIRECTION_LIMITS.actions),
+  cameraRigs: z15.array(SpatialCameraRigSchema).max(SPATIAL_DIRECTION_LIMITS.coverage),
+  shots: z15.array(SpatialShotV1Schema).max(SPATIAL_DIRECTION_LIMITS.coverage),
+  lookIntents: z15.array(SpatialLookProposalSchema).max(SPATIAL_DIRECTION_LIMITS.looks)
 });
-var SpatialDirectionCompilationSchema = z12.strictObject({
-  kind: z12.literal("slopcamera.spatial-direction-compilation"),
-  schemaVersion: z12.literal(1),
+var SpatialDirectionCompilationSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-direction-compilation"),
+  schemaVersion: z15.literal(1),
   directionSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  compilerVersion: z12.literal(SPATIAL_DIRECTION_COMPILER_ID),
-  verified: z12.literal(false),
+  compilerVersion: z15.literal(SPATIAL_DIRECTION_COMPILER_ID),
+  verified: z15.literal(false),
   cameraId: SpatialCameraIdSchema.optional(),
   proposals: SpatialDirectionProposalsSchema,
-  advisories: z12.array(SpatialDirectionAdvisorySchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.advisories),
-  unresolvedIntents: z12.array(SpatialUnresolvedIntentSchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.unresolvedIntents)
+  advisories: z15.array(SpatialDirectionAdvisorySchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.advisories),
+  unresolvedIntents: z15.array(SpatialUnresolvedIntentSchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.unresolvedIntents)
 });
-var SpatialDirectionCheckFindingSchema = z12.strictObject({
+var SpatialDirectionCheckFindingSchema = z15.strictObject({
   code: SpatialDirectionAdvisoryCodeSchema,
-  severity: z12.enum(["error", "warning"]),
-  referenceId: z12.string().min(1).max(128).optional(),
-  detail: z12.string().min(1).max(240)
+  severity: z15.enum(["error", "warning"]),
+  referenceId: z15.string().min(1).max(128).optional(),
+  detail: z15.string().min(1).max(240)
 });
-var SpatialDirectionCheckReportSchema = z12.strictObject({
-  kind: z12.literal("slopcamera.spatial-direction-check"),
-  schemaVersion: z12.literal(1),
+var SpatialDirectionCheckReportSchema = z15.strictObject({
+  kind: z15.literal("slopcamera.spatial-direction-check"),
+  schemaVersion: z15.literal(1),
   directionSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  findings: z12.array(SpatialDirectionCheckFindingSchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.checks),
-  counts: z12.strictObject({
-    beats: z12.number().int().min(0),
-    actions: z12.number().int().min(0),
-    coverage: z12.number().int().min(0),
-    looks: z12.number().int().min(0),
-    errors: z12.number().int().min(0),
-    warnings: z12.number().int().min(0)
+  findings: z15.array(SpatialDirectionCheckFindingSchema).max(SPATIAL_DIRECTION_COMPILATION_LIMITS.checks),
+  counts: z15.strictObject({
+    beats: z15.number().int().min(0),
+    actions: z15.number().int().min(0),
+    coverage: z15.number().int().min(0),
+    looks: z15.number().int().min(0),
+    errors: z15.number().int().min(0),
+    warnings: z15.number().int().min(0)
   })
 });
 function spatialDirectionCompilationSha256(compilation) {
   return spatialValueSha256(compilation);
 }
 var proposalId = (domain, referenceId2) => `prop_${spatialValueSha256({ domain: `slopcamera.direction-proposal.v1.${domain}`, referenceId: referenceId2 }).slice(0, 16)}`;
-function resolveEntityId(scene, referenceId2) {
+function resolveEntityId2(scene, referenceId2) {
   const ids = new Set(scene.entities.map((entity) => entity.entityId));
   if (ids.has(referenceId2))
     return referenceId2;
@@ -5247,8 +6426,8 @@ var cross2 = (a, b) => [
   a[2] * b[0] - a[0] * b[2],
   a[0] * b[1] - a[1] * b[0]
 ];
-function quaternionFromBasis2(x, y, z13) {
-  const m00 = x[0], m01 = y[0], m02 = z13[0], m10 = x[1], m11 = y[1], m12 = z13[1], m20 = x[2], m21 = y[2], m22 = z13[2], trace = m00 + m11 + m22;
+function quaternionFromBasis2(x, y, z16) {
+  const m00 = x[0], m01 = y[0], m02 = z16[0], m10 = x[1], m11 = y[1], m12 = z16[1], m20 = x[2], m21 = y[2], m22 = z16[2], trace = m00 + m11 + m22;
   let q;
   if (trace > 0) {
     const s = 2 * Math.sqrt(trace + 1);
@@ -5285,7 +6464,7 @@ var advisory = (code, detail, referenceId2) => deepFreezeJson(referenceId2 === u
 function resolveSubject(context, coverage, evaluation) {
   if (coverage.subjectId === undefined || evaluation === undefined || context.cameraId === undefined)
     return;
-  const entityId = resolveEntityId(context.scene, coverage.subjectId);
+  const entityId = resolveEntityId2(context.scene, coverage.subjectId);
   if (entityId === undefined) {
     context.advisories.push(advisory("unresolved-reference", `Coverage ${coverage.id} subject ${coverage.subjectId} is not a scene entity.`, coverage.id));
     return;
@@ -5397,10 +6576,10 @@ function compileCoverageRig(context, coverage, subject) {
     return;
   }
 }
-var compileOptionsSchema = z12.strictObject({
-  direction: z12.unknown(),
-  scene: z12.unknown(),
-  cameraId: z12.string().min(1).max(128).optional()
+var compileOptionsSchema = z15.strictObject({
+  direction: z15.unknown(),
+  scene: z15.unknown(),
+  cameraId: z15.string().min(1).max(128).optional()
 });
 function compileSpatialDirection(input) {
   const options = parseSpatialValue(compileOptionsSchema, input, "direction compilation");
@@ -5412,7 +6591,7 @@ function compileSpatialDirection(input) {
   if (direction.projectDigest !== sceneSha256) {
     advisories.push(advisory("stale-digest", `Direction projectDigest ${direction.projectDigest} does not match the scene digest ${sceneSha256}.`));
   }
-  if (resolveEntityId(scene, direction.entityId) === undefined) {
+  if (resolveEntityId2(scene, direction.entityId) === undefined) {
     advisories.push(advisory("unresolved-reference", `Directed entity ${direction.entityId} is not a scene entity.`, direction.entityId));
   }
   let cameraId;
@@ -5438,8 +6617,8 @@ function compileSpatialDirection(input) {
   const performance = [];
   for (const action of direction.actions) {
     checkInterval(action.id, action.endUs);
-    const characterEntityId = resolveEntityId(scene, action.characterId);
-    const targetEntityId = action.targetId === undefined ? undefined : resolveEntityId(scene, action.targetId);
+    const characterEntityId = resolveEntityId2(scene, action.characterId);
+    const targetEntityId = action.targetId === undefined ? undefined : resolveEntityId2(scene, action.targetId);
     if (characterEntityId === undefined) {
       advisories.push(advisory("unresolved-reference", `Action ${action.id} character ${action.characterId} is not a scene entity.`, action.id));
     }
@@ -5531,12 +6710,12 @@ function compileSpatialDirection(input) {
     unresolvedIntents
   }));
 }
-var checkOptionsSchema = z12.strictObject({
-  direction: z12.unknown(),
-  scene: z12.unknown()
+var checkOptionsSchema2 = z15.strictObject({
+  direction: z15.unknown(),
+  scene: z15.unknown()
 });
 function checkSpatialDirection(input) {
-  const options = parseSpatialValue(checkOptionsSchema, input, "direction check");
+  const options = parseSpatialValue(checkOptionsSchema2, input, "direction check");
   const direction = parseSpatialDirection(options.direction);
   const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene");
   const sceneSha256 = spatialValueSha256(scene);
@@ -5547,17 +6726,17 @@ function checkSpatialDirection(input) {
   if (direction.projectDigest !== sceneSha256) {
     finding("stale-digest", "error", `Direction projectDigest ${direction.projectDigest} does not match scene digest ${sceneSha256}; re-author or rebind the direction.`);
   }
-  if (resolveEntityId(scene, direction.entityId) === undefined) {
+  if (resolveEntityId2(scene, direction.entityId) === undefined) {
     finding("unresolved-reference", "error", `Directed entity ${direction.entityId} is not a scene entity.`, direction.entityId);
   }
   if (scene.cameras.length === 0 && direction.coverage.length > 0) {
     finding("missing-camera", "error", "Direction declares camera coverage but the scene declares no cameras.");
   }
   for (const action of direction.actions) {
-    if (resolveEntityId(scene, action.characterId) === undefined) {
+    if (resolveEntityId2(scene, action.characterId) === undefined) {
       finding("unresolved-reference", "error", `Action ${action.id} character ${action.characterId} is not a scene entity.`, action.id);
     }
-    if (action.targetId !== undefined && resolveEntityId(scene, action.targetId) === undefined) {
+    if (action.targetId !== undefined && resolveEntityId2(scene, action.targetId) === undefined) {
       finding("unresolved-reference", "error", `Action ${action.id} target ${action.targetId} is not a scene entity.`, action.id);
     }
     if (action.endUs > scene.durationUs) {
@@ -5565,7 +6744,7 @@ function checkSpatialDirection(input) {
     }
   }
   for (const coverage of direction.coverage) {
-    if (coverage.subjectId !== undefined && resolveEntityId(scene, coverage.subjectId) === undefined) {
+    if (coverage.subjectId !== undefined && resolveEntityId2(scene, coverage.subjectId) === undefined) {
       finding("unresolved-reference", "error", `Coverage ${coverage.id} subject ${coverage.subjectId} is not a scene entity.`, coverage.id);
     }
     if (coverage.endUs > scene.durationUs) {
@@ -5609,12 +6788,12 @@ function checkSpatialDirection(input) {
 }
 
 // src/spatial-scene/gallery.ts
-import { z as z13 } from "zod";
+import { z as z16 } from "zod";
 var SPATIAL_GALLERY_LIMITS = Object.freeze({
   candidates: 6,
   previewSamples: 8
 });
-var SpatialGalleryAxisSchema = z13.enum([
+var SpatialGalleryAxisSchema = z16.enum([
   "performance",
   "camera",
   "lighting",
@@ -5622,29 +6801,29 @@ var SpatialGalleryAxisSchema = z13.enum([
   "effects",
   "sequence"
 ]);
-var SpatialGalleryCandidateSchema = z13.strictObject({
-  candidateId: z13.string().min(1).max(96).regex(/^cand_[a-f0-9]{16}$/u),
-  label: z13.string().min(1).max(128),
-  parameter: z13.string().min(1).max(64),
-  documentKind: z13.literal("slopcamera.spatial-direction-compilation"),
+var SpatialGalleryCandidateSchema = z16.strictObject({
+  candidateId: z16.string().min(1).max(96).regex(/^cand_[a-f0-9]{16}$/u),
+  label: z16.string().min(1).max(128),
+  parameter: z16.string().min(1).max(64),
+  documentKind: z16.literal("slopcamera.spatial-direction-compilation"),
   documentSha256: SpatialDigestSchema,
-  document: z13.unknown()
+  document: z16.unknown()
 });
-var SpatialGalleryPlanSchema = z13.strictObject({
-  kind: z13.literal("slopcamera.spatial-gallery-plan"),
-  schemaVersion: z13.literal(1),
+var SpatialGalleryPlanSchema = z16.strictObject({
+  kind: z16.literal("slopcamera.spatial-gallery-plan"),
+  schemaVersion: z16.literal(1),
   axis: SpatialGalleryAxisSchema,
   sourceSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema.optional(),
-  candidates: z13.array(SpatialGalleryCandidateSchema).max(SPATIAL_GALLERY_LIMITS.candidates),
-  previewReel: z13.strictObject({
-    sampleTimesUs: z13.array(SpatialTimeUsSchema).max(SPATIAL_GALLERY_LIMITS.previewSamples)
+  candidates: z16.array(SpatialGalleryCandidateSchema).max(SPATIAL_GALLERY_LIMITS.candidates),
+  previewReel: z16.strictObject({
+    sampleTimesUs: z16.array(SpatialTimeUsSchema).max(SPATIAL_GALLERY_LIMITS.previewSamples)
   }).optional(),
-  selection: z13.strictObject({
-    candidateId: z13.string().min(1).max(96),
+  selection: z16.strictObject({
+    candidateId: z16.string().min(1).max(96),
     selectorDigest: SpatialDigestSchema.optional(),
-    note: z13.string().min(1).max(256).optional()
+    note: z16.string().min(1).max(256).optional()
   }).optional()
 });
 function spatialGalleryPlanSha256(plan) {
@@ -5764,11 +6943,11 @@ function variantsForAxis(axis2, sceneDurationUs) {
       }));
   }
 }
-var galleryOptionsSchema = z13.strictObject({
-  direction: z13.unknown(),
-  scene: z13.unknown(),
+var galleryOptionsSchema = z16.strictObject({
+  direction: z16.unknown(),
+  scene: z16.unknown(),
   axis: SpatialGalleryAxisSchema,
-  cameraId: z13.string().min(1).max(128).optional()
+  cameraId: z16.string().min(1).max(128).optional()
 });
 var compileVariant = (direction, scene, cameraId) => compileSpatialDirection({ direction, scene, ...cameraId === undefined ? {} : { cameraId } });
 function planSpatialDirectionGallery(input) {
@@ -6143,7 +7322,7 @@ function applySpatialScenePatch(sceneInput, patchInput) {
 }
 
 // src/spatial-scene/particle.ts
-import { z as z14 } from "zod";
+import { z as z17 } from "zod";
 var SPATIAL_PARTICLE_LIMITS = Object.freeze({
   collisionVolumes: 16,
   curveKeys: 16,
@@ -6155,14 +7334,14 @@ var SPATIAL_PARTICLE_LIMITS = Object.freeze({
   preview: 1e5,
   splinePoints: 64
 });
-var finiteCoordinate3 = z14.number().finite().min(-1e6).max(1e6);
-var positiveDimension3 = z14.number().finite().positive().max(1e6);
-var unit5 = z14.number().finite().min(0).max(1);
-var vec34 = z14.tuple([finiteCoordinate3, finiteCoordinate3, finiteCoordinate3]);
-var rgba = z14.tuple([unit5, unit5, unit5, unit5]);
-var particleId = z14.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
-var scalarCurveKey = z14.strictObject({ t: unit5, value: unit5 });
-var scalarCurveKeys = z14.array(scalarCurveKey).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).superRefine((keys, context) => {
+var finiteCoordinate3 = z17.number().finite().min(-1e6).max(1e6);
+var positiveDimension3 = z17.number().finite().positive().max(1e6);
+var unit5 = z17.number().finite().min(0).max(1);
+var vec34 = z17.tuple([finiteCoordinate3, finiteCoordinate3, finiteCoordinate3]);
+var rgba = z17.tuple([unit5, unit5, unit5, unit5]);
+var particleId = z17.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
+var scalarCurveKey = z17.strictObject({ t: unit5, value: unit5 });
+var scalarCurveKeys = z17.array(scalarCurveKey).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).superRefine((keys, context) => {
   if (keys[0]?.t !== 0 || keys[keys.length - 1]?.t !== 1) {
     context.addIssue({ code: "custom", message: "Particle curves must cover normalized time from 0 through 1." });
   }
@@ -6172,8 +7351,8 @@ var scalarCurveKeys = z14.array(scalarCurveKey).min(2).max(SPATIAL_PARTICLE_LIMI
     }
   }
 });
-var colorCurveKey = z14.strictObject({ t: unit5, color: rgba });
-var keyedColorCurve = z14.array(colorCurveKey).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).superRefine((keys, context) => {
+var colorCurveKey = z17.strictObject({ t: unit5, color: rgba });
+var keyedColorCurve = z17.array(colorCurveKey).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).superRefine((keys, context) => {
   if (keys[0]?.t !== 0 || keys[keys.length - 1]?.t !== 1) {
     context.addIssue({ code: "custom", message: "Particle color curves must cover normalized time from 0 through 1." });
   }
@@ -6183,56 +7362,56 @@ var keyedColorCurve = z14.array(colorCurveKey).min(2).max(SPATIAL_PARTICLE_LIMIT
     }
   }
 });
-var legacyColorCurve = z14.array(rgba).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).transform((colors) => colors.map((color3, index2) => ({ t: index2 / (colors.length - 1), color: color3 })));
-var SpatialParticleEmitterShapeSchema = z14.discriminatedUnion("kind", [
-  z14.strictObject({ kind: z14.literal("point") }),
-  z14.strictObject({ kind: z14.literal("sphere"), radius: positiveDimension3, volume: z14.boolean().default(true) }),
-  z14.strictObject({ kind: z14.literal("box"), size: z14.tuple([positiveDimension3, positiveDimension3, positiveDimension3]), volume: z14.boolean().default(true) }),
-  z14.strictObject({ kind: z14.literal("disc"), radius: positiveDimension3 }),
-  z14.strictObject({ kind: z14.literal("surface"), assetId: SpatialAssetIdSchema }),
-  z14.strictObject({ kind: z14.literal("spline"), controlPoints: z14.array(vec34).min(2).max(SPATIAL_PARTICLE_LIMITS.splinePoints) })
+var legacyColorCurve = z17.array(rgba).min(2).max(SPATIAL_PARTICLE_LIMITS.curveKeys).transform((colors) => colors.map((color3, index2) => ({ t: index2 / (colors.length - 1), color: color3 })));
+var SpatialParticleEmitterShapeSchema = z17.discriminatedUnion("kind", [
+  z17.strictObject({ kind: z17.literal("point") }),
+  z17.strictObject({ kind: z17.literal("sphere"), radius: positiveDimension3, volume: z17.boolean().default(true) }),
+  z17.strictObject({ kind: z17.literal("box"), size: z17.tuple([positiveDimension3, positiveDimension3, positiveDimension3]), volume: z17.boolean().default(true) }),
+  z17.strictObject({ kind: z17.literal("disc"), radius: positiveDimension3 }),
+  z17.strictObject({ kind: z17.literal("surface"), assetId: SpatialAssetIdSchema }),
+  z17.strictObject({ kind: z17.literal("spline"), controlPoints: z17.array(vec34).min(2).max(SPATIAL_PARTICLE_LIMITS.splinePoints) })
 ]);
-var SpatialParticleForceSchema = z14.discriminatedUnion("kind", [
-  z14.strictObject({ kind: z14.literal("gravity"), acceleration: vec34 }),
-  z14.strictObject({ kind: z14.literal("drag"), coefficient: unit5 }),
-  z14.strictObject({ kind: z14.literal("vortex"), axis: vec34, strength: z14.number().finite().min(-1e6).max(1e6) }),
-  z14.strictObject({ kind: z14.literal("turbulence"), seed: z14.number().int().min(0).max(2147483647), scale: positiveDimension3, strength: positiveDimension3 })
+var SpatialParticleForceSchema = z17.discriminatedUnion("kind", [
+  z17.strictObject({ kind: z17.literal("gravity"), acceleration: vec34 }),
+  z17.strictObject({ kind: z17.literal("drag"), coefficient: unit5 }),
+  z17.strictObject({ kind: z17.literal("vortex"), axis: vec34, strength: z17.number().finite().min(-1e6).max(1e6) }),
+  z17.strictObject({ kind: z17.literal("turbulence"), seed: z17.number().int().min(0).max(2147483647), scale: positiveDimension3, strength: positiveDimension3 })
 ]);
 var boxVolumeShape = {
-  kind: z14.literal("box"),
+  kind: z17.literal("box"),
   max: vec34,
   min: vec34
 };
 var sphereVolumeShape = {
   center: vec34,
-  kind: z14.literal("sphere"),
+  kind: z17.literal("sphere"),
   radius: positiveDimension3
 };
-var SpatialParticleKillVolumeSchema = z14.discriminatedUnion("kind", [
-  z14.strictObject(boxVolumeShape),
-  z14.strictObject(sphereVolumeShape)
+var SpatialParticleKillVolumeSchema = z17.discriminatedUnion("kind", [
+  z17.strictObject(boxVolumeShape),
+  z17.strictObject(sphereVolumeShape)
 ]);
-var SpatialParticleCollisionVolumeSchema = z14.discriminatedUnion("kind", [
-  z14.strictObject({ ...boxVolumeShape, response: z14.enum(["bounce", "slide"]), restitution: unit5 }),
-  z14.strictObject({ ...sphereVolumeShape, response: z14.enum(["bounce", "slide"]), restitution: unit5 })
+var SpatialParticleCollisionVolumeSchema = z17.discriminatedUnion("kind", [
+  z17.strictObject({ ...boxVolumeShape, response: z17.enum(["bounce", "slide"]), restitution: unit5 }),
+  z17.strictObject({ ...sphereVolumeShape, response: z17.enum(["bounce", "slide"]), restitution: unit5 })
 ]);
-var SpatialParticleCurveSchema = z14.strictObject({ keys: scalarCurveKeys });
-var SpatialParticleEmitterSchema = z14.strictObject({
-  burst: z14.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final).optional(),
-  colorOverLife: z14.union([keyedColorCurve, legacyColorCurve]),
-  enabled: z14.boolean().default(true),
+var SpatialParticleCurveSchema = z17.strictObject({ keys: scalarCurveKeys });
+var SpatialParticleEmitterSchema = z17.strictObject({
+  burst: z17.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final).optional(),
+  colorOverLife: z17.union([keyedColorCurve, legacyColorCurve]),
+  enabled: z17.boolean().default(true),
   id: particleId,
-  lifetimeUs: z14.tuple([
+  lifetimeUs: z17.tuple([
     SpatialTimeUsSchema.min(1).max(SPATIAL_PARTICLE_LIMITS.durationUs),
     SpatialTimeUsSchema.min(1).max(SPATIAL_PARTICLE_LIMITS.durationUs)
   ]),
   opacityOverLife: SpatialParticleCurveSchema,
-  rate: z14.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
-  seed: z14.number().int().min(0).max(2147483647),
+  rate: z17.number().int().min(0).max(SPATIAL_PARTICLE_LIMITS.final),
+  seed: z17.number().int().min(0).max(2147483647),
   shape: SpatialParticleEmitterShapeSchema,
   sizeOverLife: SpatialParticleCurveSchema,
   velocity: vec34,
-  velocitySpread: z14.tuple([unit5, unit5, unit5])
+  velocitySpread: z17.tuple([unit5, unit5, unit5])
 }).superRefine((emitter, context) => {
   if (emitter.lifetimeUs[1] < emitter.lifetimeUs[0]) {
     context.addIssue({ code: "custom", path: ["lifetimeUs", 1], message: "Maximum particle lifetime must not precede minimum lifetime." });
@@ -6246,22 +7425,22 @@ var SpatialParticleEmitterSchema = z14.strictObject({
       context.addIssue({ code: "custom", path: ["shape", "controlPoints"], message: "A spline emitter needs at least two distinct control points." });
   }
 });
-var SpatialParticleRendererSchema = z14.discriminatedUnion("kind", [
-  z14.strictObject({ kind: z14.literal("sprite"), assetId: SpatialAssetIdSchema.optional(), billboard: z14.boolean().default(true) }),
-  z14.strictObject({ kind: z14.literal("instanced-mesh"), assetId: SpatialAssetIdSchema })
+var SpatialParticleRendererSchema = z17.discriminatedUnion("kind", [
+  z17.strictObject({ kind: z17.literal("sprite"), assetId: SpatialAssetIdSchema.optional(), billboard: z17.boolean().default(true) }),
+  z17.strictObject({ kind: z17.literal("instanced-mesh"), assetId: SpatialAssetIdSchema })
 ]);
-var SpatialParticleSystemSchema = z14.strictObject({
-  collisionVolumes: z14.array(SpatialParticleCollisionVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.collisionVolumes).default([]),
-  countTier: z14.enum(["preview", "final"]),
-  emitters: z14.array(SpatialParticleEmitterSchema).min(1).max(SPATIAL_PARTICLE_LIMITS.emitters),
+var SpatialParticleSystemSchema = z17.strictObject({
+  collisionVolumes: z17.array(SpatialParticleCollisionVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.collisionVolumes).default([]),
+  countTier: z17.enum(["preview", "final"]),
+  emitters: z17.array(SpatialParticleEmitterSchema).min(1).max(SPATIAL_PARTICLE_LIMITS.emitters),
   entityId: SpatialEntityIdSchema,
-  forces: z14.array(SpatialParticleForceSchema).max(SPATIAL_PARTICLE_LIMITS.forces),
-  killVolumes: z14.array(SpatialParticleKillVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.killVolumes),
-  kind: z14.literal("slopcamera.spatial-particle-system"),
-  maxCount: z14.number().int().min(1).max(SPATIAL_PARTICLE_LIMITS.final),
-  preBake: z14.boolean().default(false),
+  forces: z17.array(SpatialParticleForceSchema).max(SPATIAL_PARTICLE_LIMITS.forces),
+  killVolumes: z17.array(SpatialParticleKillVolumeSchema).max(SPATIAL_PARTICLE_LIMITS.killVolumes),
+  kind: z17.literal("slopcamera.spatial-particle-system"),
+  maxCount: z17.number().int().min(1).max(SPATIAL_PARTICLE_LIMITS.final),
+  preBake: z17.boolean().default(false),
   renderer: SpatialParticleRendererSchema.default({ kind: "sprite", billboard: true }),
-  schemaVersion: z14.literal(1)
+  schemaVersion: z17.literal(1)
 });
 function assertBoxVolume(volume, label) {
   if (volume.kind !== "box" || volume.min === undefined || volume.max === undefined)
@@ -6310,7 +7489,7 @@ function spatialParticleSystemSha256(system) {
 }
 
 // src/spatial-scene/simulation.ts
-import { z as z15 } from "zod";
+import { z as z18 } from "zod";
 var SPATIAL_SIMULATION_LIMITS = Object.freeze({
   bodies: 256,
   constraints: 256,
@@ -6319,15 +7498,15 @@ var SPATIAL_SIMULATION_LIMITS = Object.freeze({
   steps: 1e5,
   substeps: 128
 });
-var positiveDimension4 = z15.number().finite().positive().max(1e6);
-var unit6 = z15.number().finite().min(0).max(1);
-var bodyId = z15.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
-var constraintId = z15.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
-var SpatialSimulationEngineSchema = z15.strictObject({
+var positiveDimension4 = z18.number().finite().positive().max(1e6);
+var unit6 = z18.number().finite().min(0).max(1);
+var bodyId = z18.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
+var constraintId = z18.string().min(1).max(64).regex(/^[a-z][a-z0-9_-]*$/u);
+var SpatialSimulationEngineSchema = z18.strictObject({
   identitySha256: SpatialDigestSchema,
-  profile: z15.enum(["slopcamera-rigid-body-reference-v1", "slopcamera-native-secondary-motion-v1"])
+  profile: z18.enum(["slopcamera-rigid-body-reference-v1", "slopcamera-native-secondary-motion-v1"])
 });
-var SpatialRigidBodySchema = z15.strictObject({
+var SpatialRigidBodySchema = z18.strictObject({
   entityId: SpatialEntityIdSchema,
   friction: unit6,
   id: bodyId,
@@ -6335,13 +7514,13 @@ var SpatialRigidBodySchema = z15.strictObject({
   initialOrientation: SpatialQuaternionSchema,
   initialPosition: SpatialVec3Schema,
   initialVelocity: SpatialVec3Schema,
-  mass: z15.number().finite().min(0).max(1e9),
-  pinned: z15.boolean().default(false),
+  mass: z18.number().finite().min(0).max(1e9),
+  pinned: z18.boolean().default(false),
   restitution: unit6,
-  shape: z15.discriminatedUnion("kind", [
-    z15.strictObject({ kind: z15.literal("sphere"), radius: positiveDimension4 }),
-    z15.strictObject({ kind: z15.literal("box"), size: z15.tuple([positiveDimension4, positiveDimension4, positiveDimension4]) }),
-    z15.strictObject({ height: positiveDimension4, kind: z15.literal("capsule"), radius: positiveDimension4 })
+  shape: z18.discriminatedUnion("kind", [
+    z18.strictObject({ kind: z18.literal("sphere"), radius: positiveDimension4 }),
+    z18.strictObject({ kind: z18.literal("box"), size: z18.tuple([positiveDimension4, positiveDimension4, positiveDimension4]) }),
+    z18.strictObject({ height: positiveDimension4, kind: z18.literal("capsule"), radius: positiveDimension4 })
   ])
 }).superRefine((body, context) => {
   if (!body.pinned && body.mass <= 0) {
@@ -6353,26 +7532,26 @@ var constraintBase = {
   bodyB: bodyId,
   constraintId
 };
-var SpatialConstraintSchema = z15.discriminatedUnion("kind", [
-  z15.strictObject({ ...constraintBase, axis: SpatialVec3Schema, kind: z15.literal("hinge"), limits: z15.tuple([z15.number().finite(), z15.number().finite()]).optional() }),
-  z15.strictObject({ ...constraintBase, damping: z15.number().finite().min(0).max(1e6), kind: z15.literal("spring"), stiffness: positiveDimension4 }),
-  z15.strictObject({ ...constraintBase, kind: z15.literal("fixed"), localA: SpatialVec3Schema, localB: SpatialVec3Schema })
+var SpatialConstraintSchema = z18.discriminatedUnion("kind", [
+  z18.strictObject({ ...constraintBase, axis: SpatialVec3Schema, kind: z18.literal("hinge"), limits: z18.tuple([z18.number().finite(), z18.number().finite()]).optional() }),
+  z18.strictObject({ ...constraintBase, damping: z18.number().finite().min(0).max(1e6), kind: z18.literal("spring"), stiffness: positiveDimension4 }),
+  z18.strictObject({ ...constraintBase, kind: z18.literal("fixed"), localA: SpatialVec3Schema, localB: SpatialVec3Schema })
 ]);
-var SpatialSimulationPlanSchema = z15.strictObject({
-  bodies: z15.array(SpatialRigidBodySchema).min(1).max(SPATIAL_SIMULATION_LIMITS.bodies),
-  cacheId: z15.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
-  constraints: z15.array(SpatialConstraintSchema).max(SPATIAL_SIMULATION_LIMITS.constraints),
+var SpatialSimulationPlanSchema = z18.strictObject({
+  bodies: z18.array(SpatialRigidBodySchema).min(1).max(SPATIAL_SIMULATION_LIMITS.bodies),
+  cacheId: z18.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
+  constraints: z18.array(SpatialConstraintSchema).max(SPATIAL_SIMULATION_LIMITS.constraints),
   engine: SpatialSimulationEngineSchema,
   entityId: SpatialEntityIdSchema,
   gravity: SpatialVec3Schema,
-  kind: z15.literal("slopcamera.spatial-simulation-plan"),
-  maxSubsteps: z15.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.substeps),
-  maximumOutputBytes: z15.number().int().safe().positive().max(SPATIAL_SIMULATION_LIMITS.outputBytes).default(SPATIAL_SIMULATION_LIMITS.outputBytes),
-  schemaVersion: z15.literal(1),
-  seed: z15.number().int().min(0).max(2147483647),
-  simulationKind: z15.enum(["rigid-body", "secondary-motion"]).default("rigid-body"),
+  kind: z18.literal("slopcamera.spatial-simulation-plan"),
+  maxSubsteps: z18.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.substeps),
+  maximumOutputBytes: z18.number().int().safe().positive().max(SPATIAL_SIMULATION_LIMITS.outputBytes).default(SPATIAL_SIMULATION_LIMITS.outputBytes),
+  schemaVersion: z18.literal(1),
+  seed: z18.number().int().min(0).max(2147483647),
+  simulationKind: z18.enum(["rigid-body", "secondary-motion"]).default("rigid-body"),
   sourceDigest: SpatialDigestSchema,
-  stepCount: z15.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
+  stepCount: z18.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
   timeStepUs: SpatialTimeUsSchema.min(1).max(1e6)
 }).superRefine((plan, context) => {
   if (plan.simulationKind === "rigid-body" && plan.engine.profile !== "slopcamera-rigid-body-reference-v1" || plan.simulationKind === "secondary-motion" && plan.engine.profile !== "slopcamera-native-secondary-motion-v1") {
@@ -6415,21 +7594,21 @@ var SpatialSimulationPlanSchema = z15.strictObject({
     context.addIssue({ code: "custom", path: ["maximumOutputBytes"], message: `Estimated ordinary-animation bytes (${estimatedBytes}) exceed maximumOutputBytes (${plan.maximumOutputBytes}).` });
   }
 });
-var simulationBakeReceiptBodySchema = z15.strictObject({
-  cacheId: z15.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
+var simulationBakeReceiptBodySchema = z18.strictObject({
+  cacheId: z18.string().min(1).max(128).regex(/^cache_[a-z0-9][a-z0-9_-]*$/u),
   engine: SpatialSimulationEngineSchema,
-  kind: z15.literal("slopcamera.spatial-simulation-bake-receipt"),
-  output: z15.strictObject({
+  kind: z18.literal("slopcamera.spatial-simulation-bake-receipt"),
+  output: z18.strictObject({
     animationSha256: SpatialDigestSchema,
-    bytes: z15.number().int().safe().positive().max(SPATIAL_SIMULATION_LIMITS.outputBytes),
-    channelCount: z15.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.bodies * 2),
-    keyCount: z15.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.bodies * SPATIAL_SIMULATION_LIMITS.steps * 2)
+    bytes: z18.number().int().safe().positive().max(SPATIAL_SIMULATION_LIMITS.outputBytes),
+    channelCount: z18.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.bodies * 2),
+    keyCount: z18.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.bodies * SPATIAL_SIMULATION_LIMITS.steps * 2)
   }),
   planSha256: SpatialDigestSchema,
-  schemaVersion: z15.literal(1),
-  seed: z15.number().int().min(0).max(2147483647),
+  schemaVersion: z18.literal(1),
+  seed: z18.number().int().min(0).max(2147483647),
   sourceDigest: SpatialDigestSchema,
-  stepCount: z15.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
+  stepCount: z18.number().int().min(1).max(SPATIAL_SIMULATION_LIMITS.steps),
   timeStepUs: SpatialTimeUsSchema.min(1).max(1e6)
 });
 var SpatialSimulationBakeReceiptSchema = simulationBakeReceiptBodySchema.extend({
@@ -6467,23 +7646,23 @@ function reconcileSpatialSimulationBakeReceipt(planInput, receiptInput) {
 }
 
 // src/spatial-scene/render-effects.ts
-import { z as z16 } from "zod";
+import { z as z19 } from "zod";
 var SPATIAL_RENDER_EFFECTS_LIMITS = Object.freeze({
   particleSystems: 64,
   simulationBakes: 64
 });
-var particleBindingSchema = z16.strictObject({
+var particleBindingSchema = z19.strictObject({
   system: SpatialParticleSystemSchema,
   systemSha256: SpatialDigestSchema
 });
-var SpatialRenderEffectsDocumentSchema = z16.strictObject({
-  kind: z16.literal("slopcamera.spatial-render-effects"),
-  particleSystems: z16.array(particleBindingSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.particleSystems),
+var SpatialRenderEffectsDocumentSchema = z19.strictObject({
+  kind: z19.literal("slopcamera.spatial-render-effects"),
+  particleSystems: z19.array(particleBindingSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.particleSystems),
   renderPlan: SpatialRenderPlanSchema,
   renderPlanSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  schemaVersion: z16.literal(1),
-  simulationBakes: z16.array(SpatialSimulationBakeReceiptSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.simulationBakes)
+  schemaVersion: z19.literal(1),
+  simulationBakes: z19.array(SpatialSimulationBakeReceiptSchema).max(SPATIAL_RENDER_EFFECTS_LIMITS.simulationBakes)
 }).superRefine((document, context) => {
   if (spatialRenderPlanSha256(document.renderPlan) !== document.renderPlanSha256) {
     context.addIssue({ code: "custom", path: ["renderPlanSha256"], message: "Render-plan digest does not match the canonical render plan." });
@@ -6521,7 +7700,7 @@ var SpatialRenderEffectsDocumentSchema = z16.strictObject({
     context.addIssue({ code: "custom", path: ["renderPlan", "quality", "simulationSteps"], message: "Render quality must declare the exact aggregate simulation-step count." });
   }
 });
-var SpatialRenderEffectsBindingSchema = z16.strictObject({
+var SpatialRenderEffectsBindingSchema = z19.strictObject({
   document: SpatialRenderEffectsDocumentSchema,
   documentSha256: SpatialDigestSchema
 }).superRefine((binding, context) => {
@@ -6544,29 +7723,29 @@ function spatialRenderEffectsSha256(document) {
 var SPATIAL_EFFECTS_CHECK_LIMITS = Object.freeze({
   findings: 256
 });
-var SpatialEffectsCheckFindingSchema = z16.strictObject({
-  code: z16.enum(["stale-scene", "unresolved-entity", "unresolved-asset"]),
-  severity: z16.enum(["error", "warning"]),
-  referenceId: z16.string().min(1).max(128).optional(),
-  detail: z16.string().min(1).max(240)
+var SpatialEffectsCheckFindingSchema = z19.strictObject({
+  code: z19.enum(["stale-scene", "unresolved-entity", "unresolved-asset"]),
+  severity: z19.enum(["error", "warning"]),
+  referenceId: z19.string().min(1).max(128).optional(),
+  detail: z19.string().min(1).max(240)
 });
-var SpatialEffectsCheckReportSchema = z16.strictObject({
-  kind: z16.literal("slopcamera.spatial-render-effects-check"),
-  schemaVersion: z16.literal(1),
+var SpatialEffectsCheckReportSchema = z19.strictObject({
+  kind: z19.literal("slopcamera.spatial-render-effects-check"),
+  schemaVersion: z19.literal(1),
   documentSha256: SpatialDigestSchema,
   sceneSha256: SpatialDigestSchema,
-  findings: z16.array(SpatialEffectsCheckFindingSchema).max(SPATIAL_EFFECTS_CHECK_LIMITS.findings),
-  counts: z16.strictObject({
-    particleSystems: z16.number().int().min(0),
-    simulationBakes: z16.number().int().min(0),
-    postProcessSteps: z16.number().int().min(0),
-    errors: z16.number().int().min(0),
-    warnings: z16.number().int().min(0)
+  findings: z19.array(SpatialEffectsCheckFindingSchema).max(SPATIAL_EFFECTS_CHECK_LIMITS.findings),
+  counts: z19.strictObject({
+    particleSystems: z19.number().int().min(0),
+    simulationBakes: z19.number().int().min(0),
+    postProcessSteps: z19.number().int().min(0),
+    errors: z19.number().int().min(0),
+    warnings: z19.number().int().min(0)
   })
 });
-var effectsCheckInputSchema = z16.strictObject({
-  effects: z16.unknown(),
-  scene: z16.unknown()
+var effectsCheckInputSchema = z19.strictObject({
+  effects: z19.unknown(),
+  scene: z19.unknown()
 });
 var parseEffectsInput = (input) => {
   if (input !== null && typeof input === "object" && "document" in input) {
@@ -6616,11 +7795,11 @@ function checkSpatialRenderEffects(input) {
     }
   }));
 }
-var effectsPlanInputSchema = z16.strictObject({
-  scene: z16.unknown(),
-  renderPlan: z16.unknown(),
-  particleSystems: z16.array(z16.unknown()).max(SPATIAL_RENDER_EFFECTS_LIMITS.particleSystems).default([]),
-  simulationBakes: z16.array(z16.unknown()).max(SPATIAL_RENDER_EFFECTS_LIMITS.simulationBakes).default([])
+var effectsPlanInputSchema = z19.strictObject({
+  scene: z19.unknown(),
+  renderPlan: z19.unknown(),
+  particleSystems: z19.array(z19.unknown()).max(SPATIAL_RENDER_EFFECTS_LIMITS.particleSystems).default([]),
+  simulationBakes: z19.array(z19.unknown()).max(SPATIAL_RENDER_EFFECTS_LIMITS.simulationBakes).default([])
 });
 function planSpatialRenderEffects(input) {
   const options = parseSpatialValue(effectsPlanInputSchema, input, "render effects plan");
@@ -6663,16 +7842,16 @@ function planSpatialRenderEffects(input) {
 }
 
 // src/spatial-scene/temporal-audit.ts
-import { z as z17 } from "zod";
+import { z as z20 } from "zod";
 var SPATIAL_TEMPORAL_AUDIT_LIMITS = Object.freeze({
   samples: 256,
   contacts: 64,
   cutBoundaries: 64,
   findings: 512
 });
-var SpatialTemporalContactSchema = z17.strictObject({
+var SpatialTemporalContactSchema = z20.strictObject({
   entityId: SpatialEntityIdSchema,
-  groundY: z17.number().finite().min(-1e6).max(1e6),
+  groundY: z20.number().finite().min(-1e6).max(1e6),
   startUs: SpatialTimeUsSchema,
   endUs: SpatialTimeUsSchema
 }).superRefine((contact, context) => {
@@ -6680,23 +7859,23 @@ var SpatialTemporalContactSchema = z17.strictObject({
     context.addIssue({ code: "custom", path: ["endUs"], message: "Contact windows must have positive duration." });
   }
 });
-var SpatialTemporalContactsFileSchema = z17.strictObject({
-  contacts: z17.array(SpatialTemporalContactSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts)
+var SpatialTemporalContactsFileSchema = z20.strictObject({
+  contacts: z20.array(SpatialTemporalContactSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts)
 });
-var SpatialTemporalAuditOptionsSchema = z17.strictObject({
-  contacts: z17.array(SpatialTemporalContactSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts).default([]),
-  cutBeforeUs: z17.array(SpatialTimeUsSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.cutBoundaries).default([]),
-  maxPositionJumpM: z17.number().finite().positive().max(1e6).default(5),
-  maxFootSlideMps: z17.number().finite().positive().max(1000).default(0.05),
-  maxCameraAccelerationMps2: z17.number().finite().positive().max(1e6).default(50),
-  maxCameraJerkMps3: z17.number().finite().positive().max(1e9).default(400),
-  maxAngularVelocityRadps: z17.number().finite().positive().max(1e5).default(4),
-  maxExposureJumpEv: z17.number().finite().positive().max(64).default(1),
-  maxFocusJumpM: z17.number().finite().positive().max(1e6).default(0.5),
-  maxNewAssetsPerSample: z17.number().int().min(1).max(1024).default(8),
-  maxEntityCountDelta: z17.number().int().min(1).max(1024).default(16)
+var SpatialTemporalAuditOptionsSchema = z20.strictObject({
+  contacts: z20.array(SpatialTemporalContactSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts).default([]),
+  cutBeforeUs: z20.array(SpatialTimeUsSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.cutBoundaries).default([]),
+  maxPositionJumpM: z20.number().finite().positive().max(1e6).default(5),
+  maxFootSlideMps: z20.number().finite().positive().max(1000).default(0.05),
+  maxCameraAccelerationMps2: z20.number().finite().positive().max(1e6).default(50),
+  maxCameraJerkMps3: z20.number().finite().positive().max(1e9).default(400),
+  maxAngularVelocityRadps: z20.number().finite().positive().max(1e5).default(4),
+  maxExposureJumpEv: z20.number().finite().positive().max(64).default(1),
+  maxFocusJumpM: z20.number().finite().positive().max(1e6).default(0.5),
+  maxNewAssetsPerSample: z20.number().int().min(1).max(1024).default(8),
+  maxEntityCountDelta: z20.number().int().min(1).max(1024).default(16)
 });
-var SpatialTemporalFindingKindSchema = z17.enum([
+var SpatialTemporalFindingKindSchema = z20.enum([
   "visibility-flicker",
   "transform-discontinuity",
   "foot-slide",
@@ -6707,35 +7886,35 @@ var SpatialTemporalFindingKindSchema = z17.enum([
   "focus-jump",
   "resource-spike"
 ]);
-var SpatialTemporalFindingSchema = z17.strictObject({
+var SpatialTemporalFindingSchema = z20.strictObject({
   kind: SpatialTemporalFindingKindSchema,
-  sampleIndex: z17.number().int().min(0).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples - 1),
+  sampleIndex: z20.number().int().min(0).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples - 1),
   timeUs: SpatialTimeUsSchema,
   entityId: SpatialEntityIdSchema.optional(),
   cameraId: SpatialCameraIdSchema.optional(),
-  measured: z17.number().finite(),
-  limit: z17.number().finite(),
-  detail: z17.string().min(1).max(240)
+  measured: z20.number().finite(),
+  limit: z20.number().finite(),
+  detail: z20.string().min(1).max(240)
 });
-var SpatialTemporalAuditReportSchema = z17.strictObject({
-  kind: z17.literal("slopcamera.spatial-temporal-audit-report"),
-  schemaVersion: z17.literal(1),
+var SpatialTemporalAuditReportSchema = z20.strictObject({
+  kind: z20.literal("slopcamera.spatial-temporal-audit-report"),
+  schemaVersion: z20.literal(1),
   sceneSha256: SpatialDigestSchema,
   cameraId: SpatialCameraIdSchema,
-  sampleCount: z17.number().int().min(2).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples),
+  sampleCount: z20.number().int().min(2).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples),
   firstTimeUs: SpatialTimeUsSchema,
   lastTimeUs: SpatialTimeUsSchema,
-  findings: z17.array(SpatialTemporalFindingSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.findings),
-  omittedFindings: z17.number().int().min(0),
+  findings: z20.array(SpatialTemporalFindingSchema).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.findings),
+  omittedFindings: z20.number().int().min(0),
   thresholds: SpatialTemporalAuditOptionsSchema.omit({ contacts: true, cutBeforeUs: true }),
-  contactCount: z17.number().int().min(0).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts)
+  contactCount: z20.number().int().min(0).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.contacts)
 });
 function spatialTemporalAuditReportSha256(report) {
   return spatialValueSha256(report);
 }
-var auditInputSchema = z17.strictObject({
-  snapshots: z17.array(z17.unknown()).min(2).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples),
-  options: z17.unknown().optional()
+var auditInputSchema2 = z20.strictObject({
+  snapshots: z20.array(z20.unknown()).min(2).max(SPATIAL_TEMPORAL_AUDIT_LIMITS.samples),
+  options: z20.unknown().optional()
 });
 var KIND_ORDER = {
   "visibility-flicker": 0,
@@ -6762,7 +7941,7 @@ function quaternionAngleRadians(a, b) {
   return 2 * Math.acos(dot);
 }
 function auditSpatialTemporalEvidence(input) {
-  const value = parseSpatialValue(auditInputSchema, input, "temporal audit");
+  const value = parseSpatialValue(auditInputSchema2, input, "temporal audit");
   const snapshots = value.snapshots.map((snapshot) => parseSpatialValue(EvaluatedSpatialSceneSchema, snapshot, "snapshot"));
   const options = parseSpatialValue(SpatialTemporalAuditOptionsSchema, value.options ?? {}, "temporal audit options");
   const sceneSha256 = snapshots[0].sceneSha256;
@@ -6983,4 +8162,4 @@ function auditSpatialTemporalEvidence(input) {
   }));
 }
 
-export { SpatialMapChannelSchema, SpatialMapColorSpaceSchema, SpatialUvTransformSchema, SpatialPbrMapSchema, SpatialPbrEmissiveSchema, SpatialPbrClearcoatSchema, SpatialPbrTransmissionSchema, SpatialPbrSheenSchema, SpatialPbrAnisotropySchema, SpatialPbrMaterialSchema, pbrMaterialMapAssetIds, SpatialDerivationMethodSchema, SpatialDerivationCandidateSchema, pbrDerivationCandidates, SpatialFogSchema, SpatialLightingRigTypeSchema, lightingRig, lightingRigDescription, SpatialProbeGeometrySchema, ORIGINAL_MATERIAL_HERO_FIXTURE, planMaterialProbeGallery, validatePbrMaterial, SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraLensSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SPATIAL_GEOMETRY_LIMITS, SPATIAL_GEOMETRY_GRAPH_KIND, SPATIAL_GEOMETRY_PROFILE, SpatialGeometryNodeSchema, SpatialGeometryGraphSchema, parseSpatialGeometryGraph, estimateSpatialGeometryGraph, evaluateSpatialGeometry, emitSpatialGeometryGlb, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetLodSchema, SpatialCollisionProxySchema, SpatialRetainedArtifactSchema, SpatialAssetGeneratorFactsSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, reduceSpatialFrameRate, spatialFrameCount, spatialFrameSample, spatialOutputDuration, SPATIAL_CAMERA_TRACK_MAX_FRAMES, SpatialCameraTrackSchema, parseSpatialCameraTrack, sampleSpatialCameraTrack, SpatialCameraRigSchema, SpatialRackFocusSchema, compileSpatialCameraRig, SpatialFramingGoalSchema, solveSpatialFraming, auditSpatialCameraTrack, SPATIAL_DIRECTION_LIMITS, SpatialDramaticBeatSchema, SpatialCharacterActionSchema, SpatialCameraCoverageSchema, SpatialLookIntentSchema, SpatialDirectionSchema, parseSpatialDirection, spatialDirectionSha256, positiveDimension2 as positiveDimension, unit4 as unit, SPATIAL_EFFECT_LIMITS, SpatialRenderQualitySchema, SpatialBloomSchema, SpatialDepthOfFieldSchema, SpatialMotionBlurSchema, SpatialToneMapSchema, SpatialVignetteSchema, SpatialChromaticAberrationSchema, SpatialGrainSchema, SpatialFlareSchema, SpatialLutGradeSchema, SpatialPostProcessStepSchema, SpatialPostProcessStackSchema, SpatialRenderPlanSchema, parseSpatialRenderPlan, spatialRenderPlanAssetIds, spatialRenderPlanSha256, SPATIAL_DIRECTION_COMPILER_ID, SPATIAL_DIRECTION_COMPILATION_LIMITS, SpatialDirectionAdvisoryCodeSchema, SpatialDirectionAdvisorySchema, SpatialUnresolvedIntentDomainSchema, SpatialUnresolvedIntentSchema, SpatialPerformanceClipKindSchema, SpatialPerformanceProposalSchema, SpatialLookProposalSchema, SpatialDirectionProposalsSchema, SpatialDirectionCompilationSchema, SpatialDirectionCheckFindingSchema, SpatialDirectionCheckReportSchema, spatialDirectionCompilationSha256, compileSpatialDirection, checkSpatialDirection, SPATIAL_GALLERY_LIMITS, SpatialGalleryAxisSchema, SpatialGalleryCandidateSchema, SpatialGalleryPlanSchema, spatialGalleryPlanSha256, planSpatialDirectionGallery, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch, SPATIAL_PARTICLE_LIMITS, SpatialParticleEmitterShapeSchema, SpatialParticleForceSchema, SpatialParticleKillVolumeSchema, SpatialParticleCollisionVolumeSchema, SpatialParticleCurveSchema, SpatialParticleEmitterSchema, SpatialParticleRendererSchema, SpatialParticleSystemSchema, parseSpatialParticleSystem, spatialParticleAssetIds, spatialParticleSystemSha256, SPATIAL_SIMULATION_LIMITS, SpatialSimulationEngineSchema, SpatialRigidBodySchema, SpatialConstraintSchema, SpatialSimulationPlanSchema, SpatialSimulationBakeReceiptSchema, parseSpatialSimulationPlan, spatialSimulationPlanSha256, createSpatialSimulationBakeReceipt, parseSpatialSimulationBakeReceipt, reconcileSpatialSimulationBakeReceipt, SPATIAL_RENDER_EFFECTS_LIMITS, SpatialRenderEffectsDocumentSchema, SpatialRenderEffectsBindingSchema, parseSpatialRenderEffectsDocument, spatialRenderEffectsAssetIds, spatialRenderEffectsSha256, SPATIAL_EFFECTS_CHECK_LIMITS, SpatialEffectsCheckFindingSchema, SpatialEffectsCheckReportSchema, checkSpatialRenderEffects, planSpatialRenderEffects, SPATIAL_TEMPORAL_AUDIT_LIMITS, SpatialTemporalContactSchema, SpatialTemporalContactsFileSchema, SpatialTemporalAuditOptionsSchema, SpatialTemporalFindingKindSchema, SpatialTemporalFindingSchema, SpatialTemporalAuditReportSchema, spatialTemporalAuditReportSha256, auditSpatialTemporalEvidence };
+export { SpatialMapChannelSchema, SpatialMapColorSpaceSchema, SpatialUvTransformSchema, SpatialPbrMapSchema, SpatialPbrEmissiveSchema, SpatialPbrClearcoatSchema, SpatialPbrTransmissionSchema, SpatialPbrSheenSchema, SpatialPbrAnisotropySchema, SpatialPbrMaterialSchema, pbrMaterialMapAssetIds, SpatialDerivationMethodSchema, SpatialDerivationCandidateSchema, pbrDerivationCandidates, SpatialFogSchema, SpatialLightingRigTypeSchema, lightingRig, lightingRigDescription, SpatialProbeGeometrySchema, ORIGINAL_MATERIAL_HERO_FIXTURE, planMaterialProbeGallery, validatePbrMaterial, SPATIAL_SCENE_LIMITS, SpatialDigestSchema, SpatialSceneIdSchema, SpatialEntityIdSchema, SpatialCameraIdSchema, SpatialAssetIdSchema, SpatialGeneratorIdSchema, SpatialChannelIdSchema, SpatialShotIdSchema, SpatialTimeUsSchema, SpatialVec3Schema, SpatialQuaternionSchema, SpatialTransformSchema, SpatialPoseSchema, SpatialFrameRateSchema, SpatialProjectionSchema, SpatialCameraLensSchema, SpatialCameraSchema, SpatialPayloadSchema, SpatialAssetInterpretationSchema, SpatialAssetManifestSchema, SpatialEmissiveSchema, SpatialMaterialSchema, SpatialGeometrySchema, SpatialSpotLightSchema, SpatialOriginSchema, SpatialPlacementSchema, SpatialEntitySchema, SpatialAnimationSchema, SpatialOverrideSchema, SpatialGeneratorSchema, SpatialSceneV1Schema, SpatialPatchOperationSchema, SpatialScenePatchV1Schema, SpatialShotV1Schema, SpatialMatrixSchema, EvaluatedSpatialSceneSchema, SpatialSceneError, parseSpatialValue, spatialValueSha256, spatialStateValueSha256, sortSpatialBy, spatialTopologicalIds, generatedSpatialEntityId, spatialGeneratorOutputSha256, spatialAssetManifestSha256, spatialAssetClosureDigests, spatialPropertySupported, validateSpatialOverrides, parseSpatialScene, spatialSceneSha256, MAX_ABS_COMPONENT, MAX_IMAGE_DIMENSION, IDENTITY_MATRIX, normalizeQuaternion, composeTransform, multiplyTransforms, invertTransform, transformPoint, transformDirection, slerpQuaternion, prepareCameraView, projectPreparedPoint, projectPoint, unprojectPixel, pixelRay, transformBounds, cameraMathView, SPATIAL_GLB_PROFILE, SPATIAL_GLB_PROFILE_V1, SPATIAL_GLB_RIGGED_PROFILE, SPATIAL_GLB_LIMITS, SpatialGlbModel, parseSpatialGlb, evaluateSpatialGlb, spatialGlbBounds, SPATIAL_GEOMETRY_LIMITS, SPATIAL_GEOMETRY_GRAPH_KIND, SPATIAL_GEOMETRY_PROFILE, SpatialGeometryNodeSchema, SpatialGeometryGraphSchema, parseSpatialGeometryGraph, estimateSpatialGeometryGraph, evaluateSpatialGeometry, emitSpatialGeometryGlb, SpatialBoundsSchema, SpatialAssetMaterialFactSchema, SpatialAssetLodSchema, SpatialCollisionProxySchema, SpatialRetainedArtifactSchema, SpatialAssetGeneratorFactsSchema, SpatialAssetFactsV1Schema, SpatialPublishedArtifactSchema, SpatialAssetAdmissionV1Schema, mergeSpatialOverrides, applySpatialEntityOverride, validateSpatialShot, createSpatialEvaluationContext, evaluateSpatialSceneInContext, evaluateSpatialScene, SPATIAL_AUDIT_LIMITS, SpatialAuditBoundsSchema, SpatialAuditOptionsSchema, SpatialAuditFrustumSchema, SpatialAuditSampleSchema, SpatialAuditEntitySchema, SpatialAuditFindingSchema, SpatialAuditReportSchema, spatialEntityLocalBounds, spatialAuditDefaultTimesUs, auditSpatialScene, auditSpatialSceneInContext, normalizeSpatialAuditAssetBounds, SPATIAL_BEHAVIOR_LIMITS, SpatialBehaviorPortTypeSchema, SpatialBehaviorPortMapSchema, SpatialBehaviorCellSchema, SpatialBehaviorEdgeSchema, SpatialBehaviorOrganismSchema, SpatialBehaviorSchema, parseSpatialBehavior, spatialBehaviorSha256, behaviorOrganismCanonicalValue, behaviorOrganismSha256, SpatialBehaviorFindingCodeSchema, SpatialBehaviorCheckFindingSchema, SpatialBehaviorCheckReportSchema, checkSpatialBehavior, SPATIAL_BEHAVIOR_AUDIT_LIMITS, SpatialBehaviorAuditFindingKindSchema, SpatialBehaviorAuditFindingSchema, SpatialBehaviorAuditOptionsSchema, SpatialBehaviorAuditReportSchema, spatialBehaviorAuditReportSha256, auditSpatialBehaviorTrace, SPATIAL_BEHAVIOR_FN_LIMITS, SpatialBehaviorFnError, SPATIAL_BEHAVIOR_FNS, spatialBehaviorFnSignatures, reduceSpatialFrameRate, spatialFrameCount, spatialFrameSample, spatialOutputDuration, SPATIAL_CAMERA_TRACK_MAX_FRAMES, SpatialCameraTrackSchema, parseSpatialCameraTrack, sampleSpatialCameraTrack, SpatialCameraRigSchema, SpatialRackFocusSchema, compileSpatialCameraRig, SpatialFramingGoalSchema, solveSpatialFraming, auditSpatialCameraTrack, SPATIAL_DIRECTION_LIMITS, SpatialDramaticBeatSchema, SpatialCharacterActionSchema, SpatialCameraCoverageSchema, SpatialLookIntentSchema, SpatialDirectionSchema, parseSpatialDirection, spatialDirectionSha256, positiveDimension2 as positiveDimension, unit4 as unit, SPATIAL_EFFECT_LIMITS, SpatialRenderQualitySchema, SpatialBloomSchema, SpatialDepthOfFieldSchema, SpatialMotionBlurSchema, SpatialToneMapSchema, SpatialVignetteSchema, SpatialChromaticAberrationSchema, SpatialGrainSchema, SpatialFlareSchema, SpatialLutGradeSchema, SpatialPostProcessStepSchema, SpatialPostProcessStackSchema, SpatialRenderPlanSchema, parseSpatialRenderPlan, spatialRenderPlanAssetIds, spatialRenderPlanSha256, SPATIAL_DIRECTION_COMPILER_ID, SPATIAL_DIRECTION_COMPILATION_LIMITS, SpatialDirectionAdvisoryCodeSchema, SpatialDirectionAdvisorySchema, SpatialUnresolvedIntentDomainSchema, SpatialUnresolvedIntentSchema, SpatialPerformanceClipKindSchema, SpatialPerformanceProposalSchema, SpatialLookProposalSchema, SpatialDirectionProposalsSchema, SpatialDirectionCompilationSchema, SpatialDirectionCheckFindingSchema, SpatialDirectionCheckReportSchema, spatialDirectionCompilationSha256, compileSpatialDirection, checkSpatialDirection, SPATIAL_GALLERY_LIMITS, SpatialGalleryAxisSchema, SpatialGalleryCandidateSchema, SpatialGalleryPlanSchema, spatialGalleryPlanSha256, planSpatialDirectionGallery, inspectSpatialScene, diffSpatialScenes, applySpatialScenePatch, SPATIAL_PARTICLE_LIMITS, SpatialParticleEmitterShapeSchema, SpatialParticleForceSchema, SpatialParticleKillVolumeSchema, SpatialParticleCollisionVolumeSchema, SpatialParticleCurveSchema, SpatialParticleEmitterSchema, SpatialParticleRendererSchema, SpatialParticleSystemSchema, parseSpatialParticleSystem, spatialParticleAssetIds, spatialParticleSystemSha256, SPATIAL_SIMULATION_LIMITS, SpatialSimulationEngineSchema, SpatialRigidBodySchema, SpatialConstraintSchema, SpatialSimulationPlanSchema, SpatialSimulationBakeReceiptSchema, parseSpatialSimulationPlan, spatialSimulationPlanSha256, createSpatialSimulationBakeReceipt, parseSpatialSimulationBakeReceipt, reconcileSpatialSimulationBakeReceipt, SPATIAL_RENDER_EFFECTS_LIMITS, SpatialRenderEffectsDocumentSchema, SpatialRenderEffectsBindingSchema, parseSpatialRenderEffectsDocument, spatialRenderEffectsAssetIds, spatialRenderEffectsSha256, SPATIAL_EFFECTS_CHECK_LIMITS, SpatialEffectsCheckFindingSchema, SpatialEffectsCheckReportSchema, checkSpatialRenderEffects, planSpatialRenderEffects, SPATIAL_TEMPORAL_AUDIT_LIMITS, SpatialTemporalContactSchema, SpatialTemporalContactsFileSchema, SpatialTemporalAuditOptionsSchema, SpatialTemporalFindingKindSchema, SpatialTemporalFindingSchema, SpatialTemporalAuditReportSchema, spatialTemporalAuditReportSha256, auditSpatialTemporalEvidence };

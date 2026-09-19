@@ -23,6 +23,7 @@ export * from "./render/project-plan";
 export * from "./render/project";
 export * from "./render/materialize-selection";
 export * from "./slopcamera-visuals";
+export * from "./spatial-behavior";
 export * from "./spatial-direction";
 export * from "./spatial-scene";
 export * from "./spatial-project";
