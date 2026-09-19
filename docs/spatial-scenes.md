@@ -35,6 +35,8 @@ slopcamera scene render product.scene.json --request frame.json --json
 
 `plan` validates the source and estimates bounded rendering work without opening a browser. `render` writes a PNG, retained source and assets, and a receipt beneath the ignored artifact root. It checks asset bytes and native runtime identity before using them. Unsupported asset features fail explicitly.
 
+For grounded geometry, enable `castShadow` on the model, `receiveShadow` on the ground, and `shadow` on a directional, point or spot light. Beauty rendering fits directional shadow coverage to the casting geometry and applies a small offset to prevent self-shadow striping. Large receiving floors do not reduce model shadow detail. Shadow participation remains explicit; object-ID and other data passes preserve their unlit output.
+
 To inspect animation, replace `selection` with:
 
 ```json

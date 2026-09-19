@@ -34,6 +34,7 @@ import { htmlOverlayAssetLocalUrl, serializeHtmlOverlayImportMap } from "./libra
 import { HtmlOverlayExecutionProfileSchema } from "./execution-profile";
 import { SpatialSpzFactsSchema, SPATIAL_SPLAT_LIMITS, spatialSpzAllocationBounds } from "../contracts/spatial-world";
 import { addSpatialSplatRuntime } from "./spatial-splat-runtime";
+import { SPATIAL_SHADOW_POLICY, spatialShadowRuntimeSource } from "./spatial-shadows";
 
 export const SPATIAL_OVERLAY_LIMITS = Object.freeze({
   frames: 32,
@@ -841,6 +842,7 @@ export function createSpatialOverlayBatch(input: unknown) {
     color: request.mode.kind === "beauty"
       ? { source: "srgb", working: "linear-srgb", compositing: "linear-half-float-premultiplied", output: "srgb", alpha: "straight-png", toneMapping: "none" }
       : { source: "rgba8-data", working: "rgba8-data", output: "rgba8-data", alpha: "binary-validity", toneMapping: "none" },
+    ...(request.mode.kind === "beauty" ? { shadows: SPATIAL_SHADOW_POLICY } : {}),
     rasterization: { antialias: false, sampling: "single-pixel-center", surfaces: "authored-primitives-double-sided; prepared-mesh-explicit-sidedness", transparentOrdering: "three-object-sort" },
     selectionEncoding: { channels: "RGB-big-endian-uint24", noHit: [0, 0, 0, 0] },
     depthEncoding: {
@@ -881,6 +883,7 @@ const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:false,premul
 renderer.setPixelRatio(1);renderer.setSize(SlopcameraOverlay.width,SlopcameraOverlay.height,false);
 renderer.setClearColor(0x000000,0);renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.NoToneMapping;renderer.autoClear=false;renderer.shadowMap.enabled=input.mode.kind==="beauty";renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+${spatialShadowRuntimeSource()}
 const mode=input.mode;const postSteps=input.effects?input.effects.steps:[];
 const isMotion=mode.kind==="motion";
 const needsVelocity=isMotion||postSteps.some(step=>step.kind==="motion-blur");
@@ -1193,6 +1196,7 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
         mesh.renderOrder=object.placement.order;mesh.frustumCulled=false;view.add(mesh);
       }else world.add(mesh);
     }
+    if(input.mode.kind==="beauty")configureSpatialShadows(world,renderer.capabilities.maxTextureSize,track);
     renderer.setRenderTarget(beautyTarget);renderer.clear(true,true,true);renderer.render(world,camera);renderer.clearDepth();renderer.render(view,viewCamera);
     if(beautyTarget){
       if(velocityTarget){renderer.setRenderTarget(velocityTarget);renderer.clear(true,true,true);renderer.render(buildVelocityScene(frame,track),outputCamera);}

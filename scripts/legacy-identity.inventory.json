@@ -1278,8 +1278,8 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "7bd2fa54d756ad440a95cc15a431d49013c2c1565b10ca4b7ad2e39e0c372cde",
-    "occurrenceCount": 449,
+    "identityLinesSha256": "0a02d8399ccd9cf721adb85ce17585a784c5f7aa0806ed6d21ef25ef6587347f",
+    "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1639,9 +1639,9 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "7ed2fe4b82375c1bb44bc3c325f18a9778bdd1f31888e0a537bad92f2ddb6928",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "f340f20e6473ab13798e48e5004ad173a4820b7c86e35c267ebb5021ab41c64d",
+    "occurrenceCount": 2,
     "path": "dist/code/index.js",
     "categories": [
       "generated"
@@ -1810,36 +1810,36 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "7f5366e94cb6d656adaa1d3c249440371ba79d0bd276999b405492dc6b88c674",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
     "path": "examples/design/crescent-pavilion.scene.json",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "7f5366e94cb6d656adaa1d3c249440371ba79d0bd276999b405492dc6b88c674",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
     "path": "examples/design/modular-bookshelf.scene.json",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "7f5366e94cb6d656adaa1d3c249440371ba79d0bd276999b405492dc6b88c674",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
     "path": "examples/design/ribbed-tower.scene.json",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "7f5366e94cb6d656adaa1d3c249440371ba79d0bd276999b405492dc6b88c674",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
     "path": "examples/design/spiral-stair.scene.json",
     "categories": [
       "native-film-studio"
@@ -2130,9 +2130,9 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "1c61d38c28147aa53242ee6696389ef89a1bc7e35e07ad6803b17516dafd8797",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "81a56ecdeb174e6f201bbf6345f0a40f3fc11e557dfadd8dcf9ad93986b43855",
+    "occurrenceCount": 2,
     "path": "src/spatial-scene/design-templates.ts",
     "categories": [
       "native-film-studio"

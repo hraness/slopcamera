@@ -5234,6 +5234,16 @@ function compileSpatialDesign(input, options = {}) {
 }
 
 // src/spatial-scene/design-templates.ts
+function canonicalTemplateNumbers(value) {
+  if (typeof value === "number")
+    return Number(value.toFixed(12));
+  if (Array.isArray(value))
+    return value.map(canonicalTemplateNumbers);
+  if (value !== null && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, canonicalTemplateNumbers(child)]));
+  return value;
+}
+var parseDesign = (value) => parseSpatialDesign(canonicalTemplateNumbers(value));
 var p = (name) => ({ $param: name });
 var v = (name) => ({ $value: name });
 var op = (name, ...args) => ({ op: name, args });
@@ -5249,7 +5259,7 @@ var transform3 = (position = [0, 0, 0], rotation = [0, 0, 0, 1]) => ({ position,
 var yaw = (angle) => [0, expr(sin(mul(angle, 0.5))), 0, expr(cos(mul(angle, 0.5)))];
 var parameter = (name, label, value, min, max, unit3, step) => ({ name, label, value, min, max, unit: unit3, ...step === undefined ? {} : { step } });
 var standard = (color, roughness = 0.55, metalness = 0) => ({ kind: "standard", color, opacity: 1, roughness, metalness });
-var OAK = standard("#b98249", 0.43);
+var OAK = standard("#a97040", 0.43);
 var WALNUT = standard("#71503c", 0.46);
 var BRONZE = standard("#bc9864", 0.32, 0.64);
 var INK = standard("#283335", 0.39, 0.22);
@@ -5294,7 +5304,7 @@ function stageScene(id, options) {
     pose: lookAtPose(location, aim),
     projection: perspectiveFromFov({ fovDeg, width: 1440, height: 1080, near: 0.05, far: 300 })
   });
-  return parseSpatialScene({
+  return parseSpatialScene(canonicalTemplateNumbers({
     kind: "slopcamera.spatial-scene",
     schemaVersion: 1,
     sceneId: `scene_design_${id.replaceAll("-", "_")}`,
@@ -5308,13 +5318,30 @@ function stageScene(id, options) {
         name: "Matte studio ground",
         transform: transform3([0, -0.14, 0]),
         geometry: { kind: "box", size: [200, 0.25, 200] },
-        material: standard(dark ? "#263638" : "#e3ded3", 0.94),
+        material: standard(dark ? "#283739" : "#d7d9d6", 0.94),
         receiveShadow: true
       },
-      { ...common, kind: "light", entityId: "entity_ambient", name: "Soft sky fill", transform: transform3(), light: "ambient", color: "#e0ecf1", intensity: dark ? 1.1 : 1.5 },
-      light("key", [-extent, extent * 1.7, extent], "#ffe7c5", 3.3, true),
-      light("fill", [extent, extent * 0.7, extent * 0.3], "#c6dbef", 1.1),
-      light("rim", [extent * 0.3, extent, -extent], "#fff0db", 2.1)
+      {
+        ...common,
+        kind: "mesh",
+        entityId: "entity_backdrop",
+        name: "Seamless studio backdrop",
+        transform: transform3([0, 20, 0]),
+        geometry: { kind: "sphere", radius: 150 },
+        material: {
+          kind: "pbr",
+          color: "#000000",
+          opacity: 1,
+          roughness: 1,
+          metalness: 1,
+          doubleSided: true,
+          emissive: { color: dark ? "#344245" : "#d9dddb", intensity: 1 }
+        }
+      },
+      { ...common, kind: "light", entityId: "entity_ambient", name: "Soft sky fill", transform: transform3(), light: "ambient", color: "#e0ecf1", intensity: 0.7 },
+      light("key", [-extent, extent * 1.7, extent], "#fff2df", 2.2, true),
+      light("fill", [extent, extent * 0.7, extent * 0.3], "#c6dbef", 0.7),
+      light("rim", [extent * 0.3, extent, -extent], "#ffffff", 1.2)
     ],
     cameras: [
       camera("camera_hero", "Architectural three-quarter", position, target, 48),
@@ -5325,7 +5352,7 @@ function stageScene(id, options) {
     animations: [],
     generators: [],
     overrides: []
-  });
+  }));
 }
 function pavilion() {
   const stations = 29;
@@ -5361,7 +5388,7 @@ function pavilion() {
     railIds.push(id);
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design",
       schemaVersion: 1,
       designId: "crescent-pavilion",
@@ -5434,7 +5461,7 @@ function spiralStair() {
     railIds.push(id);
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design",
       schemaVersion: 1,
       designId: "spiral-stair",
@@ -5485,7 +5512,7 @@ function ribbedTower() {
     floorIds.push(id);
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design",
       schemaVersion: 1,
       designId: "ribbed-tower",
@@ -5539,7 +5566,7 @@ function bookshelf() {
     { id: "vase", kind: "revolve", profile: "profile", segments: 48 }
   ];
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design",
       schemaVersion: 1,
       designId: "modular-bookshelf",

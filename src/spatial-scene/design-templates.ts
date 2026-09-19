@@ -21,6 +21,14 @@ export interface SpatialDesignStarter {
 
 type Expression = number | { $param: string } | { $value: string } | { op: string; args: Expression[] }
 type Json = null | boolean | number | string | { [key: string]: Json } | Json[]
+/** Quantize authored constants so libm last-bit differences do not rewrite checked starters. */
+function canonicalTemplateNumbers(value: unknown): unknown {
+  if (typeof value === "number") return Number(value.toFixed(12))
+  if (Array.isArray(value)) return value.map(canonicalTemplateNumbers)
+  if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, canonicalTemplateNumbers(child)]))
+  return value
+}
+const parseDesign = (value: unknown): SpatialDesignV1 => parseSpatialDesign(canonicalTemplateNumbers(value))
 const p = (name: string): Expression => ({ $param: name })
 const v = (name: string): Expression => ({ $value: name })
 const op = (name: string, ...args: Expression[]): Expression => ({ op: name, args })
@@ -36,7 +44,7 @@ const transform = (position: Json[] = [0, 0, 0], rotation: Json[] = [0, 0, 0, 1]
 const yaw = (angle: Expression): Json[] => [0, expr(sin(mul(angle, 0.5))), 0, expr(cos(mul(angle, 0.5)))]
 const parameter = (name: string, label: string, value: number, min: number, max: number, unit: string, step?: number) => ({ name, label, value, min, max, unit, ...(step === undefined ? {} : { step }) })
 const standard = (color: string, roughness = 0.55, metalness = 0): SpatialMaterial => ({ kind: "standard", color, opacity: 1, roughness, metalness })
-const OAK = standard("#b98249", 0.43)
+const OAK = standard("#a97040", 0.43)
 const WALNUT = standard("#71503c", 0.46)
 const BRONZE = standard("#bc9864", 0.32, 0.64)
 const INK = standard("#283335", 0.39, 0.22)
@@ -70,16 +78,20 @@ function stageScene(id: string, options: { position: [number, number, number]; t
     cameraId, name, pose: lookAtPose(location, aim),
     projection: perspectiveFromFov({ fovDeg, width: 1440, height: 1080, near: 0.05, far: 300 }),
   })
-  return parseSpatialScene({
+  return parseSpatialScene(canonicalTemplateNumbers({
     kind: "slopcamera.spatial-scene", schemaVersion: 1, sceneId: `scene_design_${id.replaceAll("-", "_")}`,
     coordinates: "right-handed-y-up-meters", durationUs: 4_000_000,
     entities: [
       { ...common, kind: "mesh", entityId: "entity_ground", name: "Matte studio ground", transform: transform([0, -0.14, 0]),
-        geometry: { kind: "box", size: [200, 0.25, 200] }, material: standard(dark ? "#263638" : "#e3ded3", 0.94), receiveShadow: true },
-      { ...common, kind: "light", entityId: "entity_ambient", name: "Soft sky fill", transform: transform(), light: "ambient", color: "#e0ecf1", intensity: dark ? 1.1 : 1.5 },
-      light("key", [-extent, extent * 1.7, extent], "#ffe7c5", 3.3, true),
-      light("fill", [extent, extent * 0.7, extent * 0.3], "#c6dbef", 1.1),
-      light("rim", [extent * 0.3, extent, -extent], "#fff0db", 2.1),
+        geometry: { kind: "box", size: [200, 0.25, 200] }, material: standard(dark ? "#283739" : "#d7d9d6", 0.94), receiveShadow: true },
+      { ...common, kind: "mesh", entityId: "entity_backdrop", name: "Seamless studio backdrop", transform: transform([0, 20, 0]),
+        geometry: { kind: "sphere", radius: 150 },
+        material: { kind: "pbr", color: "#000000", opacity: 1, roughness: 1, metalness: 1, doubleSided: true,
+          emissive: { color: dark ? "#344245" : "#d9dddb", intensity: 1 } } },
+      { ...common, kind: "light", entityId: "entity_ambient", name: "Soft sky fill", transform: transform(), light: "ambient", color: "#e0ecf1", intensity: 0.7 },
+      light("key", [-extent, extent * 1.7, extent], "#fff2df", 2.2, true),
+      light("fill", [extent, extent * 0.7, extent * 0.3], "#c6dbef", 0.7),
+      light("rim", [extent * 0.3, extent, -extent], "#ffffff", 1.2),
     ],
     cameras: [
       camera("camera_hero", "Architectural three-quarter", position, target, 48),
@@ -87,7 +99,7 @@ function stageScene(id: string, options: { position: [number, number, number]; t
       camera("camera_plan", "Plan and structural rhythm", [0.01, extent * 2.5, 0], [0, 0, 0], 52),
     ],
     assets: [], animations: [], generators: [], overrides: [],
-  })
+  }))
 }
 
 function pavilion(): SpatialDesignStarter {
@@ -124,7 +136,7 @@ function pavilion(): SpatialDesignStarter {
     railIds.push(id)
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design", schemaVersion: 1, designId: "crescent-pavilion",
       parameters: [
         parameter("span", "Clear span", 6.2, 4, 8, "m"), parameter("length", "Walk length", 11.5, 8, 16, "m"),
@@ -191,7 +203,7 @@ function spiralStair(): SpatialDesignStarter {
     railIds.push(id)
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design", schemaVersion: 1, designId: "spiral-stair",
       parameters: [
         parameter("height", "Total rise", 6, 4.5, 7.2, "m"), parameter("radius", "Outer radius", 2.25, 1.6, 3, "m"),
@@ -238,7 +250,7 @@ function ribbedTower(): SpatialDesignStarter {
     floorIds.push(id)
   }
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design", schemaVersion: 1, designId: "ribbed-tower",
       parameters: [
         parameter("height", "Tower height", 16, 12, 21, "m"), parameter("radius", "Ground radius", 3.25, 2.5, 4.2, "m"),
@@ -288,7 +300,7 @@ function bookshelf(): SpatialDesignStarter {
     { id: "vase", kind: "revolve", profile: "profile", segments: 48 },
   ]
   return {
-    design: parseSpatialDesign({
+    design: parseDesign({
       kind: "slopcamera.spatial-design", schemaVersion: 1, designId: "modular-bookshelf",
       parameters: [
         parameter("width", "Overall width", 4.8, 3.6, 6.2, "m"), parameter("height", "Overall height", 2.7, 2.2, 3.4, "m"),
