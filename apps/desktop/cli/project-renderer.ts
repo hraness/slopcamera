@@ -1310,6 +1310,7 @@ export async function buildProjectFfmpegInvocation(
     } else {
       const transparent = `video_blend_canvas_${serial++}`;
       const positioned = `video_blend_positioned_${serial++}`;
+      const layerColorSource = `video_blend_color_source_${serial++}`;
       const layerColor = `video_blend_color_${serial++}`;
       const layerAlphaSource = `video_blend_alpha_source_${serial++}`;
       const layerMask = `video_blend_mask_${serial++}`;
@@ -1318,10 +1319,13 @@ export async function buildProjectFfmpegInvocation(
       const blended = `video_blend_result_${serial++}`;
       filters.push(
         `color=c=black@0:s=${plan.output.pixelWidth}x${plan.output.pixelHeight}:r=${emittedRate}:d=${seconds(plan.output.durationUs)},format=rgba[${transparent}]`,
-        `[${transparent}][${label}]overlay=x=${transform.x}:y=${transform.y}:eof_action=repeat:repeatlast=1:enable='${enable}'[${positioned}]`,
-        `[${positioned}]format=rgba,split=2[${layerColor}][${layerAlphaSource}]`,
+        // Preserve the positioned layer's alpha and blend color channels in RGB.
+        // YUV blend arithmetic changes even uncovered pixels (neutral chroma is 128).
+        `[${transparent}][${label}]overlay=x=${transform.x}:y=${transform.y}:eof_action=repeat:repeatlast=1:enable='${enable}':format=auto[${positioned}]`,
+        `[${positioned}]format=rgba,split=2[${layerColorSource}][${layerAlphaSource}]`,
+        `[${layerColorSource}]format=gbrp[${layerColor}]`,
         `[${layerAlphaSource}]alphaextract[${layerMask}]`,
-        `[${currentVideo}]split=2[${baseBlend}][${baseMerge}]`,
+        `[${currentVideo}]format=gbrp,split=2[${baseBlend}][${baseMerge}]`,
         `[${baseBlend}][${layerColor}]blend=all_mode=${slice.presentation.blendMode}[${blended}]`,
         `[${baseMerge}][${blended}][${layerMask}]maskedmerge[${next}]`,
       );
@@ -1382,6 +1386,7 @@ export async function buildProjectFfmpegInvocation(
     } else {
       const transparent = `graphic_blend_canvas_${serial++}`;
       const positioned = `graphic_blend_positioned_${serial++}`;
+      const layerColorSource = `graphic_blend_color_source_${serial++}`;
       const layerColor = `graphic_blend_color_${serial++}`;
       const layerAlphaSource = `graphic_blend_alpha_source_${serial++}`;
       const layerMask = `graphic_blend_mask_${serial++}`;
@@ -1390,10 +1395,11 @@ export async function buildProjectFfmpegInvocation(
       const blended = `graphic_blend_result_${serial++}`;
       filters.push(
         `color=c=black@0:s=${plan.output.pixelWidth}x${plan.output.pixelHeight}:r=${emittedRate}:d=${seconds(plan.output.durationUs)},format=rgba[${transparent}]`,
-        `[${transparent}][${label}]overlay=x='${x}':y='${y}':${terminal}:enable='${enable}'[${positioned}]`,
-        `[${positioned}]format=rgba,split=2[${layerColor}][${layerAlphaSource}]`,
+        `[${transparent}][${label}]overlay=x='${x}':y='${y}':${terminal}:enable='${enable}':format=auto[${positioned}]`,
+        `[${positioned}]format=rgba,split=2[${layerColorSource}][${layerAlphaSource}]`,
+        `[${layerColorSource}]format=gbrp[${layerColor}]`,
         `[${layerAlphaSource}]alphaextract[${layerMask}]`,
-        `[${currentVideo}]split=2[${baseBlend}][${baseMerge}]`,
+        `[${currentVideo}]format=gbrp,split=2[${baseBlend}][${baseMerge}]`,
         `[${baseBlend}][${layerColor}]blend=all_mode=${blendMode}[${blended}]`,
         `[${baseMerge}][${blended}][${layerMask}]maskedmerge[${next}]`,
       );
