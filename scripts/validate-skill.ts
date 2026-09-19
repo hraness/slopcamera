@@ -78,6 +78,7 @@ for (const relativePath of [
   "references/reference-led-3d.md",
   "references/native-studio.md",
   "references/rubber-stamp-field-notes.md",
+  "references/social-collage-banners.md",
   "references/video-projects.md",
   "references/visual-communication.md",
 ]) {
@@ -96,6 +97,7 @@ for (const relativePath of [
   "references/rubber-stamp-examples/stamp-style-1.png",
   "references/rubber-stamp-examples/stamp-style-2.png",
   "scripts/compose-rubber-stamp-field-note.ts",
+  "scripts/compose-social-collage-banner.ts",
 ]) {
   try {
     await access(join(root, relativePath))
@@ -129,6 +131,28 @@ for (const executableBlock of [
   if (!executableBlock.test(rubberStampReference)) {
     throw new Error("Rubber-stamp executable blocks must be self-contained")
   }
+}
+const socialCollageReference = await readFile(
+  join(root, "references", "social-collage-banners.md"),
+  "utf8",
+)
+for (const required of [
+  "slopcamera ai models show <image-model-id> --json",
+  "slopcamera diagram check work/token-flow.diagram.json --strict",
+  '$skill_root/scripts/compose-social-collage-banner.ts',
+  '"kind": "sticker"',
+  '"kind": "paper"',
+  '"kind": "arrow"',
+]) {
+  if (!socialCollageReference.includes(required)) {
+    throw new Error(`Social collage workflow must retain ${required}`)
+  }
+}
+if (socialCollageReference.includes("skills/slopcamera/")) {
+  throw new Error("Social collage workflow must not assume a Slopcamera source checkout")
+}
+if ([...socialCollageReference.matchAll(/skill_root="\$\(slopcamera skill path\)"/gu)].length !== 1) {
+  throw new Error("Social collage executable step must resolve its packaged skill root")
 }
 try {
   await access(join(root, "agents", "openai.yaml"))
