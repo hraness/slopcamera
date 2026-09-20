@@ -4,12 +4,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
   examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesScope, examplesBaselineProfile,
-  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, type ExamplesRequest } from "./site-examples-browser-contract"
+  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, compareExamplesHeroBackgroundImage, type ExamplesRequest } from "./site-examples-browser-contract"
 import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelectors, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases } from "./site-copy-browser-contract"
 import { refinementInstallCommand } from "./site-refinement-profile"
-import { assertExamplesBaselineManifest } from "./verify-site-examples"
-import { examplesBaselineRevision, examplesBaselineTree } from "./site-examples-profile"
+import { assertExamplesBaselineManifest, assertExamplesHeroTextures } from "./verify-site-examples"
+import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures } from "./site-examples-profile"
 import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodeProfiledWorkerJson,
   publishWorkerPhase, publishProfiledWorkerPhase, examplesWorkerProtocolLimit, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
@@ -212,6 +212,57 @@ describe("real local media transport", () => {
  })
 })
 const box=(key:string,y:number,height:number):ShellElement=>({key,rect:[0,y,100,height],styles:{},text:'',semantics:{}})
+describe("examples hero texture transport", () => {
+ const origins={current:'http://127.0.0.1:51954',baseline:'http://127.0.0.1:51955'}
+ const image=(origin:string)=>`url("${origin}/graphs/site-foundation/assets/grain-DOupJfvn.svg"), url("${origin}/graphs/site-foundation/assets/cells-B8vUTEH9.svg"), radial-gradient(at 60% 110%, oklch(0.728013 0.11141 69.6489 / 0.22), rgba(0, 0, 0, 0) 68%)`
+ test("pairs identical texture paint served by the exact two test origins",()=>{
+  expect(compareExamplesHeroBackgroundImage(image(origins.current),image(origins.baseline),origins)).toBe(image(origins.baseline))
+ })
+ test("retains paired forced-color absence without admitting a missing texture",()=>{
+  expect(compareExamplesHeroBackgroundImage('none','none',origins)).toBe('none')
+  expect(()=>compareExamplesHeroBackgroundImage('none',image(origins.baseline),origins)).toThrow()
+  expect(()=>compareExamplesHeroBackgroundImage(image(origins.current),'none',origins)).toThrow()
+ })
+ test.each([
+  (value:string)=>value.replace('51954','51956'),
+  (value:string)=>value.replace('127.0.0.1','localhost'),
+  (value:string)=>value.replace('http://127.0.0.1:51954','https://example.com'),
+  (value:string)=>value.replace('grain-DOupJfvn.svg','grain-changed.svg'),
+  (value:string)=>value.replace('grain-DOupJfvn.svg','grain-DOupJfvn.svg?changed=1'),
+  (value:string)=>value.replace('grain-DOupJfvn.svg','grain-DOupJfvn.svg#changed'),
+  (value:string)=>value.replace('grain-DOupJfvn.svg','cells-B8vUTEH9.svg'),
+  (value:string)=>value.replace(/url\([^)]*\), /u,''),
+  (value:string)=>`${value}, url("https://example.com/extra.svg")`,
+  (value:string)=>value.replace('0.22','0.23'),
+  (value:string)=>value.replace('60% 110%','50% 110%'),
+  (value:string)=>value.replace(/^(url\([^)]*\)), (url\([^)]*\))/u,'$2, $1'),
+ ])("rejects changed origin, resource identity, layer order or gradient",change=>{
+  expect(()=>compareExamplesHeroBackgroundImage(change(image(origins.current)),image(origins.baseline),origins)).toThrow()
+  // The baseline must independently use its own exact server and assets.
+  const changedBaseline=change(image(origins.current)).replaceAll(origins.current,origins.baseline)
+  expect(()=>compareExamplesHeroBackgroundImage(image(origins.current),changedBaseline,origins)).toThrow()
+ })
+ test("requires two distinct exact loopback origins",()=>{
+  for(const invalid of ['https://127.0.0.1:51954','http://localhost:51954','http://127.0.0.1:0','http://127.0.0.1:65536',origins.current+'/']) {
+   expect(()=>compareExamplesHeroBackgroundImage('none','none',{...origins,current:invalid})).toThrow()
+  }
+  expect(()=>compareExamplesHeroBackgroundImage('none','none',{current:origins.current,baseline:origins.current})).toThrow()
+ })
+ test("requires both exact texture digests and sizes before native comparison",()=>{
+  const snapshot={artifacts:examplesHeroTextures.map(asset=>({...asset}))}
+  expect(()=>assertExamplesHeroTextures(snapshot)).not.toThrow()
+  for(const change of [
+   (value:any)=>{value.artifacts[0].sha256='a'.repeat(64)},
+   (value:any)=>{value.artifacts[0].bytes++},
+   (value:any)=>{value.artifacts[0].path+='?changed=1'},
+   (value:any)=>{value.artifacts.pop()},
+   (value:any)=>{value.artifacts.push({...value.artifacts[0]})},
+  ]) {
+   const changed=structuredClone(snapshot);change(changed)
+   expect(()=>assertExamplesHeroTextures(changed)).toThrow()
+  }
+ })
+})
 describe("closed layout differences and historical invariants",()=>{
  test("only declared height changes translate later sections",()=>{
   const before=[box('.hraness-marketing-hero[0]',0,100),box('#install[0]',100,50)]

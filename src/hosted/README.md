@@ -4,7 +4,8 @@ This internal module parses inert hosted-image request, quote, job and artifact
 data and computes state decisions. It has no package export, command, endpoint,
 transport, storage, credential handling or provider adapter. Importing it performs
 no filesystem or network operation. It does not activate a hosted Slopcamera
-service or change direct Gateway generation.
+service or change direct Gateway generation. The package archive excludes this
+prototype; it remains repository source until an explicit integration is ready.
 
 The image shape is a limited prototype contract, not a selected product catalog.
 It accepts one exact model/catalog revision, an authored prompt, up to four

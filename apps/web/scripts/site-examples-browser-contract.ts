@@ -11,7 +11,7 @@ import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type C
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { observeRefinementHero, compareRefinementHeroCopies, type RefinementHero } from "./site-refinement-browser-contract"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
-  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds } from "./site-examples-profile"
+  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures } from "./site-examples-profile"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
@@ -219,6 +219,28 @@ export async function examplesDom(page: Page, current: boolean, scenario: ShellC
   }, { current, home: scenario.route === "/", islands: examplesIslands, selectors: ["body", "#main", ...workflowExamplesHomeSelectors] })
 }
 const near = (actual: number, expected: number, label: string) => assert.ok(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= .5, label)
+export function compareExamplesHeroBackgroundImage(actual: string, baseline: string,
+  origins: Readonly<{ current: string; baseline: string }>): string {
+  for (const origin of [origins.current, origins.baseline]) {
+    assert.match(origin, /^http:\/\/127\.0\.0\.1:\d{1,5}$/u)
+    const port = Number(new URL(origin).port)
+    assert.ok(port > 0 && port <= 65535)
+  }
+  assert.notEqual(origins.current, origins.baseline)
+  if (actual === "none" || baseline === "none") {
+    assert.equal(actual, baseline, "Paired hero background visibility changed")
+    return baseline
+  }
+  const project = (value: string, origin: string) => {
+    assert.equal(value.match(/\burl\(/giu)?.length, 2, "Hero must retain exactly two texture layers")
+    assert.deepEqual([...value.matchAll(/url\("([^"\n]+)"\)/gu)].map(match => match[1]),
+      examplesHeroTextures.map(asset => `${origin}/${asset.path}`), "Hero texture origin, path and order must be exact")
+    for (const asset of examplesHeroTextures) value = value.replace(`url("${origin}/${asset.path}")`, `url("/${asset.path}")`)
+    return value
+  }
+  assert.equal(project(actual, origins.current), project(baseline, origins.baseline), "Every other hero background byte remains paired")
+  return baseline
+}
 export function compareExamplesFlow(actual: readonly ShellElement[], baseline: readonly ShellElement[]): number {
   assert.deepEqual(actual.map(item => item.key), baseline.map(item => item.key))
   let previousDelta = 0
@@ -258,7 +280,8 @@ export function projectExamplesState(items: readonly ShellElement[], previous: r
 export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEvidence, scenario: ShellCase,
   currentDesign: ExamplesDesign, baselineDesign: ExamplesDesign,
   currentDom: ExamplesDomProjection, baselineDom: ExamplesDomProjection,
-  positions: ShellCurrentDesignPositions, oldPositions: ShellCurrentDesignPositions): void {
+  positions: ShellCurrentDesignPositions, oldPositions: ShellCurrentDesignPositions,
+  origins: Readonly<{ current: string; baseline: string }>): void {
   assert.deepEqual(actual.obstructions, [], "Current controls are obstructed")
   assert.deepEqual(baseline.obstructions, [], "This baseline must have no inherited historical obstruction allowance")
   assert.equal(currentDom.dom, baselineDom.dom, "Only separately reviewed semantic islands may differ")
@@ -288,6 +311,10 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
     .map((item, index) => {
       const old = baseline.elements[index]!, owner = item.key.replace(/\[\d+\]$/u, "")
       let height = item.rect[3]!, styles = { ...item.styles }
+      // Only these two exact hash-bound textures may differ by the two owned
+      // servers' origins. Preserve raw evidence and every other paint byte.
+      if (item.key === ".hraness-marketing-hero[0]") styles["background-image"] = compareExamplesHeroBackgroundImage(
+        item.styles["background-image"]!, old.styles["background-image"]!, origins)
       if (owner === "body" || owner === "#main") near(height - old.rect[3]!, total, `${owner}: complete content-height delta`)
       if (owner === "body" || owner === "#main" || examplesHeightOwners.includes(owner)) { height = old.rect[3]!; styles.height = old.styles.height! }
       return { ...item, rect: [item.rect[0]!, item.rect[1]!, item.rect[2]!, height], styles,

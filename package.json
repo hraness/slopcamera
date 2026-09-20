@@ -186,6 +186,7 @@
     "NOTICE.md",
     "src/**/*.ts",
     "!src/**/*.test.ts",
+    "!src/hosted/**",
     "!src/spatial-scene/test-fixture.ts",
     "src/assets/fonts/nebula-sans",
     "schema",

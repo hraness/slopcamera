@@ -21,6 +21,7 @@ import { assertShellHeaders, assertShellSnapshotUnchanged, parseShellArguments, 
 import { snapshotMarketingPreset } from "./marketing-preset"
 import { snapshotLanternMaterial } from "./lantern-material"
 import { parseWorkflowExamples, workflowExampleAssets } from "../src/example-registry"
+import { examplesHeroTextures } from "./site-examples-profile"
 import { parseExamplesCaseFailure, parseExamplesPhase, parseExamplesRequest, examplesCaseNames, examplesDeadlineMs,
   examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesContentType,
   parseExampleByteRange, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
@@ -156,6 +157,14 @@ export function assertExamplesBaselineManifest(value: unknown, snapshot: ShellSn
   assert.equal(manifest.checkoutRevision, examplesBaselineRevision); assert.equal(manifest.sourceRevision, examplesBaselineRevision)
   assert.equal(manifest.sourceTree, examplesBaselineTree); assert.equal(snapshot.stylesheets.length, 2)
   assert.deepEqual(manifest.inputs, snapshot.inputs); assert.deepEqual(manifest.artifacts, snapshot.artifacts)
+}
+/** Bind the only origin-projected paint resources to exact immutable bytes on
+ * both trees, in addition to each complete before/after source snapshot. */
+export function assertExamplesHeroTextures(snapshot: Pick<ShellSnapshot, "artifacts">): void {
+  for (const asset of examplesHeroTextures) {
+    const matches = snapshot.artifacts.filter(item => item.path === asset.path)
+    assert.deepEqual(matches, [asset], "Hero texture bytes must match the reviewed immutable asset")
+  }
 }
 function serve(snapshot: ShellSnapshot) {
   const rejected: string[] = []
@@ -303,6 +312,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       baseline = await step(() => readExamplesSnapshot(options.baseline, false))
       manifestBefore = Uint8Array.from(await step(() => readPreviewFile(options.manifest, 128 * 1024)))
       assertExamplesBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
+      assertExamplesHeroTextures(current); assertExamplesHeroTextures(baseline)
       const node = await step(() => executable("NODE_EXECUTABLE_PATH")), browserPath = await step(() => executable("SLOPCAMERA_CHROME_PATH"))
       assert.ok(process.env.PLAYWRIGHT_BROWSERS_PATH !== undefined && isAbsolute(process.env.PLAYWRIGHT_BROWSERS_PATH),
         "PLAYWRIGHT_BROWSERS_PATH must select the explicit task-owned pinned Chrome for Testing installation")
@@ -353,6 +363,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       return { ...observation.result, nativeBrowserZoom: false, reflowEquivalent: "1440x900 at 200% => 720x450 CSS viewport",
         productionHeaders: siteShellHeaders, internetRequestsAllowed: false, analytics: "unaltered scripts on neutral loopback origin",
         candidate, baselineIdentity, baselineManifestSha256: digest(manifestBefore), currentArtifacts: current.artifacts,
+        pairedHeroTextures: examplesHeroTextures,
         materialSourceCommit: current.materialSourceCommit,
         presetSourceCommit: current.presetSourceCommit,
         expectationsSha256: current.inputs.find(input => input.path === "scripts/site-examples-browser-contract.ts")!.sha256 }

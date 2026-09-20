@@ -90,7 +90,8 @@ async function main() {
       // The raw observer records obstruction evidence only. This new oracle
       // requires zero on both trees and uses no historical support allowance.
       assert.ok(currentDom && baselineDom && design && baselineDesign && currentPositions && baselinePositions)
-      compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions)
+      compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
+        { current: request.current.origin, baseline: request.baseline.origin })
       return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions }
     })
     for (const scenario of siteCopyCases) await runCase(scenario.name, "pair", async () => {

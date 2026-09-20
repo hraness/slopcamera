@@ -1,4 +1,5 @@
 node_modules/
+__pycache__/
 /apps/desktop/dist/slopcamera
 /apps/desktop/dist/atet
 /artifacts/

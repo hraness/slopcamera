@@ -101,6 +101,7 @@ const forbiddenPackedPaths = [
   { label: "repository agent guide", pattern: /(?:^|\/)AGENTS\.md$/u },
   { label: "test source", pattern: /\.(?:test|testing)\.[cm]?[jt]sx?$/u },
   { label: "test support", pattern: /(?:^|\/)test-support\.[cm]?[jt]sx?$/u },
+  { label: "inactive hosted prototype", pattern: /^src\/hosted\//u },
   {
     label: "desktop capture build tree",
     pattern: /^apps\/desktop\/capture\/(?!protocol\.ts$)/u,

@@ -4,6 +4,11 @@ export const examplesBaselineProfile = "before-workflow-examples-4cdfb0b-v1"
 export const examplesBaselineRevision = "4cdfb0b3cc9fc23707549b0ee7a0e8cb1179c45b"
 export const examplesBaselineTree = "3148096494b4911f4660d55d5a7840c0e7e53fb5"
 export const examplesDeadlineMs = 720_000
+/** Exact immutable textures admitted for paired test-server origin projection. */
+export const examplesHeroTextures = [
+  { path: "graphs/site-foundation/assets/grain-DOupJfvn.svg", bytes: 152319, sha256: "b40c33a0e382c8e9d0518b4720321b5c262a929c28d40a190a902d07acd06553" },
+  { path: "graphs/site-foundation/assets/cells-B8vUTEH9.svg", bytes: 17102, sha256: "be9b12eefeae91772f024ed24ccda5be6173fb626921374b7e5270c298611b01" },
+] as const
 export interface ExamplesIsland { readonly selector: string; readonly baseline: string; readonly current: string }
 /** Eight authored body islands independently reviewed against the clean 4cdfb0b baseline.
  * All body content outside these exact literals remains paired by the native verifier. */
