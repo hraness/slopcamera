@@ -4,9 +4,9 @@ This reference describes the current Slopcamera CLI and its runtime requirements
 
 ## Current Slopcamera and historical Atet
 
-Slopcamera v3.3.1 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.3.1/hraness-slopcamera-3.3.1.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
+Slopcamera v3.3.2 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.3.2/hraness-slopcamera-3.3.2.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
-| Surface | Historical Atet v3.2.3 | Slopcamera v3.3.1 |
+| Surface | Historical Atet v3.2.3 | Slopcamera v3.3.2 |
 | --- | --- | --- |
 | Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
@@ -41,7 +41,7 @@ Later source corrects static-overlay duration and positioned-layer RGB blending 
 
 ## Parametric architectural designs
 
-Slopcamera v3.3.1 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation needs no Rhino, native engine or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+Slopcamera v3.3.2 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation needs no Rhino, native engine or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 ## Discover the installed contract
 
