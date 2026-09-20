@@ -1,6 +1,6 @@
 The `slopcamera ai` commands produce images, video, speech, and transcripts through the caller's own Vercel AI Gateway access: you supply a credential for one invocation, acknowledge each upload explicitly, and keep every output and receipt on your machine. Keep the intended subject, reference files, duration, and delivery role explicit before you spend anything. Model discovery is live, so the examples below use placeholder IDs that your current catalog must return.
 
-Generation runs on macOS, Linux, and Windows wherever the CLI and a credential are available; only the local recording commands are macOS-specific.
+Generation runs on macOS, Linux, and Windows wherever the CLI and a credential are available. Local rendering has separate runtime requirements; see [capabilities](/docs/reference/capabilities).
 
 ## Discover a compatible model
 
@@ -16,7 +16,9 @@ Check the model's actual input types and settings before paying for a call: a vi
 
 ## Supply credentials for one invocation
 
-Slopcamera reads `AI_GATEWAY_API_KEY` first, falling back to `VERCEL_OIDC_TOKEN`. Set an existing credential in the process environment, or use an already linked Vercel project to inject it for a single command:
+Slopcamera reads `AI_GATEWAY_API_KEY` first, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the commands directly. A direct key needs no Vercel CLI, linked project, or deployment.
+
+If you already use a linked Vercel project, environment injection is an optional alternative:
 
 ```sh
 vercel env run -- slopcamera ai models list --type image --json
@@ -55,7 +57,7 @@ Do not automatically repeat an ambiguous paid call. Zero client retries do not p
 
 ## Related surfaces
 
-- For several shots, accepted takes, endpoint continuity, and one retained budget, use [direct short generated clips](/docs/how-to/direct-takes) on a compatible current-source CLI; its private reference-hosting adapter is separate from ordinary URL inputs.
+- For several shots, accepted takes, endpoint continuity, and one retained budget, use [direct short generated clips](/docs/how-to/direct-takes); its private reference-hosting adapter is separate from ordinary URL inputs.
 - For one explicitly named output file, `slopcamera image generate '<prompt>' --output image.webp` is the portable lane: its bounded model contract does not expose the full `ai` grammar.
 - `slopcamera image vectorize` is a separate local operation and needs no Gateway credential.
 - The [capability reference](/docs/reference/capabilities) lists which other commands can cross the network boundary.

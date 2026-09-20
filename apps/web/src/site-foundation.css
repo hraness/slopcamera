@@ -13,6 +13,8 @@
 @import "./site-ua-compatibility.css" layer(base.slopcamera-ua);
 @import "../vendor/paper-theme/paper-theme.css" layer(components.slopcamera-legacy);
 @import "./styles.css" layer(components.slopcamera-legacy);
+@import "./example-player.css" layer(components.slopcamera-legacy);
+@import "./example-gallery.css" layer(components.slopcamera-legacy);
 @import "./site-ask-ai-compatibility.css";
 @import "./site-footer-compatibility.css";
 

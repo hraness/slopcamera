@@ -113,8 +113,9 @@ describe("visual studio public copy (pure, process-free)", () => {
     ])
     expect(html).toContain("It does not expose every CLI command.")
     expect(readme).toContain("Seven editable")
-    expect(llmsTxt).toContain("qualified Three.js GPU profile")
-    expect(llmsTxt).toContain("camera-track export")
+    expect(llmsTxt).toContain("GPU support required by its selected profile")
+    expect(llmsTxt).toContain("`scene camera-track` export")
+    expect(llmsTxt).toContain("17 tools and six portable operation codes in v3.3.1")
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {

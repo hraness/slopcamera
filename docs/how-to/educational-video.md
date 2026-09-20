@@ -2,7 +2,13 @@
 
 Use Manim for mathematical visuals and keep narration, music and sound effects in an ordinary Slopcamera project. Use a native Blender scene when the explanation depends on detailed 3D, or a spatial scene when named geometry and world-space media need editable camera direction.
 
-This Manim path requires the [current-source studio commands](../reference/capabilities.md), a selected Python environment with Manim Community and the starter's Typst dependency, and FFmpeg/FFprobe.
+This Manim path requires the [released studio commands](../reference/capabilities.md), a selected Python environment with Manim Community and the starter's Typst dependency, and FFmpeg/FFprobe.
+
+## Inspect the finished example
+
+[Watch the rendered example](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example).
+
+This actual ten-second Manim render contains 240 portrait frames. Inspect the tile transitions, the presenter and the caption rail, then open the [complete lesson source](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/education) to change the authored timings. It is silent: the mouth cues and visible captions do not establish speech alignment. The geometry illustrates the 3–4–5 case, not a general proof.
 
 ## Author the lesson
 

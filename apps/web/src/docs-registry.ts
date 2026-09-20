@@ -1,4 +1,5 @@
 import { archiveInstall, publishedArchiveUrl, publishedRelease, sourceInstall } from "./published-release"
+import { examplesInMarkdown } from "./example-content"
 
 // The public /docs registry. Page bodies live in src/docs/<slug>.md and are
 // hashed as sealed compiler inputs. This module carries only metadata,
@@ -38,6 +39,9 @@ export const docPages: readonly DocsPage[] = [
   { slug: "tutorials/first-diagram", title: "Create and revise your first diagram",
     description: "Make a two-node flow, inspect its five exports, then change a label by editing its source.",
     section: "tutorials" },
+  { slug: "tutorials/first-animation", title: "Create and revise your first animation",
+    description: "Render an eight-second HTML title, change its copy and color, and keep both results with their editable sources.",
+    section: "tutorials" },
   { slug: "tutorials/first-native-film", title: "Render your first native film",
     description: "Retain a Blender source, render a small shot, and export an ordinary Slopcamera project.",
     section: "tutorials" },
@@ -48,7 +52,7 @@ export const docPages: readonly DocsPage[] = [
     description: "Install the verified release and the Agent Skill so Codex can create visual media in a repository.",
     section: "tutorials" },
   { slug: "tutorials/mcp", title: "Use Slopcamera from an MCP client",
-    description: "Expose the fixed diagram and image toolset to Cursor, Claude Desktop, and other MCP-capable clients.",
+    description: "Expose fixed tools for diagrams, images, and scene inspection and planning to MCP-capable clients.",
     section: "tutorials" },
   { slug: "tutorials/other-agents", title: "Set up Slopcamera for other coding agents",
     description: "Use the portable Agent Skill target or plain CLI access from agents without a dedicated integration.",
@@ -59,6 +63,12 @@ export const docPages: readonly DocsPage[] = [
     section: "how-to" },
   { slug: "how-to/edit-video", title: "Edit and deliver video",
     description: "Import footage, align related tracks, place overlays, and check a delivery.",
+    section: "how-to" },
+  { slug: "how-to/render-motion-graphics", title: "Render motion graphics from HTML",
+    description: "Choose an HTML, SVG, Motion, p5, Two.js, shader, or Three.js scene, render a video, and retain sources for revisions and overlays.",
+    section: "how-to" },
+  { slug: "how-to/vectorize-images", title: "Convert raster images to SVG",
+    description: "Trace a raster illustration locally, inspect its SVG and fidelity measurements, and make a separate two-color treatment.",
     section: "how-to" },
   { slug: "how-to/generate-media", title: "Generate images, video, and narration",
     description: "Discover Gateway capabilities, acknowledge selected uploads, and retain the result.",
@@ -71,6 +81,9 @@ export const docPages: readonly DocsPage[] = [
     section: "how-to" },
   { slug: "how-to/direct-scenes", title: "Render and edit spatial scenes",
     description: "Patch named entities, use hardware rendering, import a saved world, or prepare a shot composition.",
+    section: "how-to" },
+  { slug: "how-to/parametric-design", title: "Build and revise a parametric design",
+    description: "Compile an editable architectural or furniture study, change coupled dimensions, and compare five retained-source renders.",
     section: "how-to" },
   { slug: "how-to/cinematic-worlds", title: "Direct a cinematic world",
     description: "Pack direction, galleries, effects, and an audit into the cinematic-world workflow, then review before selecting.",
@@ -164,7 +177,7 @@ export function resolveDocsContent(markdown: string): string {
 
 /** The public Markdown mirror of a documentation page. */
 export function docsPageMarkdown(page: DocsPage, body: string): string {
-  return `# ${page.title}\n\n${page.description}\n\n${resolveDocsContent(body).trim()}\n`
+  return `# ${page.title}\n\n${page.description}\n\n${examplesInMarkdown(resolveDocsContent(body)).trim()}\n`
 }
 
 /** Resolve a request path to a documentation page, or null when it misses. */

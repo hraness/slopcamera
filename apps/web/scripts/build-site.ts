@@ -39,6 +39,7 @@ const documents = [
 const sourceFiles = [
   "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
+  "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/styles.css",
   "vendor/paper-theme/paper-theme.css",

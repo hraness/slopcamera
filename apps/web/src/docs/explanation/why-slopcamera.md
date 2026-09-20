@@ -28,7 +28,7 @@ Properties a per-task script would have to reimplement, such as absolute-time re
 
 - No hosted state. Without an account or project database there is no built-in sync, sharing, or multi-machine collaboration. Project state lives in local files you manage.
 - No sandbox for trusted code. Native Python sources and caller-authored Bun workflows run with the current user's access, including potential network access. Hashes and receipts identify what ran; they do not confine it.
-- Platform limits. Screen, camera, microphone, and system-audio recording is macOS-specific. Vectorization runs on macOS and Linux and deliberately rejects Windows. The hardware scene profiles require a qualified macOS graphics context.
+- Platform limits. New recording capture is absent from both the release and current CLI. Vectorization runs on macOS and Linux and deliberately rejects Windows. The hardware scene profiles require a qualified macOS graphics context.
 - No promised pixels across machines. Native tools, codecs, GPU drivers, and provider models affect results, so retained source identity does not guarantee identical output elsewhere.
 - Generated media needs review. Models can change subject identity, motion, or text, and a local budget estimate is not a provider-enforced spending cap.
 - Bounded interchange. A GLB export carries a supported geometry and material subset; it does not turn a native rig into an editable scene.

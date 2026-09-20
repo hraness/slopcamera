@@ -1,0 +1,26 @@
+{
+  "kind": "slopcamera.studio-source-bundle",
+  "schemaVersion": 1,
+  "engine": "blender",
+  "entrypoint": {
+    "kind": "python",
+    "path": "export.py"
+  },
+  "files": [
+    {
+      "path": "export.py",
+      "sha256": "876761f0a9783f0302e9b7c740d6446b8df733833b2384f64fdc101411bd4c36",
+      "bytes": 1358
+    },
+    {
+      "path": "scene.py",
+      "sha256": "9b53ba0b1ce94d928fb25e18c3fcbf3483352b39a9c656f92e4320969df2c9be",
+      "bytes": 7551
+    },
+    {
+      "path": "studio_scene.py",
+      "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419",
+      "bytes": 5682
+    }
+  ]
+}

@@ -1,11 +1,24 @@
 An authored HTML or Three.js scene can become a finished MP4 over your own track, while the rendered scene video and the original music stay separate sources inside an ordinary project. You can revise the scene, the edit, and the mix independently instead of extracting audio from a finished movie.
 
-Scene export is a current-source command. Use a [source build](/docs/how-to/install-from-source) whose `slopcamera help html` lists `html render`. Rendering also needs the admitted local Chrome runtime and FFmpeg/FFprobe, so check the host before preparing a full render:
+Scene export ships in v{{PUBLISHED_VERSION}}. [Install Slopcamera](/docs) and confirm its `slopcamera help html` lists `html render`. Rendering also needs the admitted local Chrome runtime and FFmpeg/FFprobe, so check the host before preparing a full render:
 
 ```sh
 slopcamera help html
 {{DOCTOR_COMMAND}}
 ```
+
+## Inspect the island example
+
+::example[island-pulse]
+
+This eight-second Three.js scene combines named rigid joints, a camera and lighting changes on an original procedural island. Its source uses an authored 120 BPM clock. The published preview is silent; it demonstrates the visual choreography, with no claim that its soundtrack has passed a listening review. To reproduce the full source, generate the original track and render the request:
+
+```sh
+python3 examples/showcase/html/synth-island.py
+slopcamera html render --input examples/showcase/html/island-pulse.json --json
+```
+
+Run from the repository checkout. [The source and request](https://github.com/hraness/slopcamera/tree/main/examples/showcase/html) retain the independent track and visual decisions.
 
 ## Prepare the scene request
 

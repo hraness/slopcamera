@@ -1,0 +1,24 @@
+{
+  "kind": "slopcamera.showcase-native-runtime",
+  "schemaVersion": 1,
+  "qualifiedOn": "2026-09-19",
+  "blender": {
+    "version": "5.2.1 LTS",
+    "platform": "macos-arm64",
+    "archiveUrl": "https://download.blender.org/release/Blender5.2/blender-5.2.1-macos-arm64.dmg",
+    "archiveSha256": "6409e21de80994db5f4c4a34486b6fd43cea21085b912f7491c53e923acb65a3",
+    "checksumManifestUrl": "https://download.blender.org/release/Blender5.2/blender-5.2.1.sha256",
+    "signatureVerification": "codesign --verify --deep --strict",
+    "renderBackend": "Cycles / Metal"
+  },
+  "python": {
+    "version": "3.12.14",
+    "manim": "0.21.0",
+    "cadquery": "2.8.0",
+    "typst": "0.15.0",
+    "index": "https://pypi.org/simple",
+    "requirementLock": "runtime-requirements.txt",
+    "requirementLockSha256": "93f1fe048e693413bb6adb2ebd0b3cf36e2f945235d0bd49e0cee361dd7f2b59"
+  },
+  "limits": "These identify the observed runtime. They do not promise cross-engine or cross-platform pixel determinism."
+}

@@ -9,7 +9,7 @@ from retained sources.**
 Describe a finished result to Codex, Claude, or another coding agent. Slopcamera gives
 it a Bun CLI, TypeScript SDK, and version-matched Agent Skill to inspect sources,
 direct cameras, edit a composition, and render the result. A separate MCP server
-exposes a fixed diagram and image toolset. There is no Slopcamera account or hosted
+exposes fixed tools for diagrams, images, and scene inspection and planning. There is no Slopcamera account or hosted
 project database.
 
 [Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
@@ -129,7 +129,8 @@ replaces those five derived files.
 Follow [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) to change a label and
 see the result. To animate type and SVG, [make your first animation](https://slopcamera.com/docs/tutorials/first-animation). For a moving 3D subject, use [Directed scenes](docs/spatial-scenes.md).
 For detailed native 3D, follow
-[Your first native film](docs/tutorials/first-native-film.md).
+[Your first native film](docs/tutorials/first-native-film.md). To generate editable
+architecture from dimensions, [build a parametric design](https://slopcamera.com/docs/how-to/parametric-design).
 
 ## What Slopcamera does
 
@@ -145,12 +146,12 @@ GPU path. Spark admits saved splat worlds for local camera direction.
 > mount the product diagram on a screen in the scene, and show me contact frames
 > before rendering the video.
 
-The portable GLB profile has a defined geometry and material subset; the
-current-source rigged profile adds bounded skins and morph targets. Saved splats
+The portable GLB profiles have defined geometry and material subsets. The
+rigged/morph profile in v3.3.1 admits bounded skins and morph targets. Saved splats
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
 
-Current source adds the cinematic planning loop: a `slopcamera.spatial-direction`
+Slopcamera v3.3.1 includes the cinematic planning loop: a `slopcamera.spatial-direction`
 document describes beats, actions, camera coverage, and look intents, compiles
 into proposed performance/camera/cinema/material-lighting/shot documents, and
 fans out into bounded galleries per axis. Declared effects bind into renders,
@@ -297,10 +298,9 @@ declarative graphs, approvals, and resuming work.
 - **Trusted code is not sandboxed.** Native Python and caller-authored Bun
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
-- **MCP is a subset.** Its fixed tools check and render diagrams, plan and audit
-  scenes in current source, and run the bounded portable operations. The v3.2.8
-  release has four MCP tools; current source has seventeen. It does not expose every
-  local CLI operation and never mutates project state.
+- **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and audit
+  scenes, and run six bounded portable operation codes in v3.3.1. It does not
+  expose every local CLI operation and never mutates project state.
 
 ## Design and trust
 

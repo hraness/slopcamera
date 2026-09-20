@@ -44,7 +44,7 @@ ${archiveInstall.alternateSkillCommand}
 
 Start a new agent session. Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
 
-For source-only capabilities or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
+For later source corrections, repository example helpers, or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
 
 ## Made with Slopcamera. Yours to revise.
 
@@ -52,9 +52,9 @@ Real outputs, editable sources, and a guide for each workflow. Start with an exa
 
 ${homepageExampleMarkdown()}
 
-The verified release covers local diagrams, all seven HTML motion profiles, ordinary media editing, and native Blender/CadQuery/Manim studio. Current source adds cinematic direction, performance, effects, and behavior tools. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
+The verified v3.3.1 release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender/CadQuery/Manim studio, cinematic direction, performance, effects, behavior, and parametric design. Later renderer corrections and repository example inputs have separate source requirements. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
-Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md).
+Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md).
 
 ## From source to a finished film
 
@@ -152,7 +152,7 @@ export const llmsTxt = `# Slopcamera
 
 > Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
 
-Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes four tools in the release; current source adds thirteen scene tools. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
+Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes 17 tools and six portable operation codes in v3.3.1, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
 ## When to use Slopcamera
 

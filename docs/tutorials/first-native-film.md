@@ -2,11 +2,17 @@
 
 Create a one-second product shot in Blender, inspect its retained frames, and export it through an ordinary Slopcamera video project. You will keep the native source and the encoded clip as separate artifacts.
 
-This lesson uses Slopcamera's native studio commands. Complete [source installation](../how-to/use-current-source.md), which defines `slopcamera` for the built checkout, and verify `slopcamera help studio` lists `init`, `run`, `encode` and `assemble`. The following setup uses macOS, Blender 5.2.1 LTS, Bun, FFmpeg and FFprobe. Set `SLOPCAMERA_BLENDER_BIN` to your installed Blender executable; the usual application path is shown below. The small preview deliberately uses CPU rendering; no cloud service or GPU is required.
+This lesson uses Slopcamera's native studio commands. [Install Slopcamera](../../README.md#install-slopcamera), and verify `slopcamera help studio` lists `init`, `run`, `encode` and `assemble`. The following setup uses macOS, Blender 5.2.1 LTS, Bun, FFmpeg and FFprobe. Set `SLOPCAMERA_BLENDER_BIN` to your installed Blender executable; the usual application path is shown below. The small preview deliberately uses CPU rendering; no cloud service or GPU is required.
+
+## Inspect the finished example
+
+[Watch the rendered example](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example).
+
+The finished optical study uses the same native-film workflow: 144 frames at 24 fps, rendered at 1280×720 with Blender 5.2.1 LTS. The camera, brass and rubber materials, optical glass, lighting and focus keys are editable in the [complete example source](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/product). The short tutorial below starts with a smaller CPU preview; it does not ask you to reproduce the finished film before checking your installation.
 
 ## Create and retain the source
 
-In the new production working directory created during source setup, select Blender:
+In a new working directory, select Blender:
 
 ```sh
 export SLOPCAMERA_BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender"

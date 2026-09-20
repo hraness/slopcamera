@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"p5":"/.slopcamera-overlay/libraries/78062f4b654ec2d7eab8391cb9f960720e90a379789974f27b6fc4aed94fae21.mjs"}}</script>
+  <style>.backdrop{position:absolute;inset:0;background:#112a2b}.sketch{position:absolute;inset:0}.label{position:absolute;left:5.5%;top:8%;color:#ece6d6;font-family:Arial,sans-serif}.eyebrow{font-size:1.15vw;letter-spacing:.16em}h1{font-size:6.4vw;line-height:1;letter-spacing:-.065em;font-weight:500;margin-top:24%}em{font-family:Georgia,serif;font-weight:400}p{font-size:1.3vw;line-height:1.5;opacity:.75;margin-top:23%}</style></head>
+  <body>
+    <div class="backdrop"></div><canvas class="sketch" aria-hidden="true"></canvas><div class="label"><div class="eyebrow">02 / PROCEDURAL DRAWING</div><h1>Order,<br><em>with a<br>little drift.</em></h1><p>72 contours. One absolute clock.<br>p5 Canvas · authored study</p></div>
+    <style>
+      .sketch {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import p5 from "p5";
+
+      // p5 owns drawing, while Slopcamera remains the only clock and entropy source.
+      // Keep this P2D starter seek-stable: no hidden frame state, mutable RNG,
+      // native frame scheduler, live input, loaders, or cumulative drawing.
+      p5.disableFriendlyErrors = true;
+      const canvas = document.querySelector(".sketch");
+      let currentFrame = Object.freeze({ progress: 0, timeMs: 0 });
+      let sketch = null;
+
+      const initialization = new Promise((resolve, reject) => {
+        try {
+          sketch = new p5((p) => {
+            let startupDraw = true;
+            let startupSettled = false;
+            const redraw = p.redraw.bind(p);
+            p.redraw = async (...args) => {
+              try {
+                await redraw(...args);
+                if (!startupSettled) {
+                  startupSettled = true;
+                  resolve();
+                }
+              } catch (error) {
+                reject(error);
+                throw error;
+              }
+            };
+
+            p.setup = () => {
+              try {
+                p.createCanvas(
+                  SlopcameraOverlay.width,
+                  SlopcameraOverlay.height,
+                  p.P2D,
+                  canvas,
+                  {
+                    alpha: true,
+                    colorSpace: "srgb",
+                    desynchronized: false,
+                  },
+                );
+                p.pixelDensity(devicePixelRatio);
+                p.noLoop();
+              } catch (error) {
+                reject(error);
+                throw error;
+              }
+            };
+
+            p.draw = () => {
+              // p5 performs one mandatory startup draw even after noLoop().
+              // The redraw wrapper resolves readiness only after p5 completes
+              // this empty draw, including its postdraw and finishDraw work.
+              if (startupDraw) {
+                startupDraw = false;
+                return;
+              }
+              const angle=currentFrame.timeMs/8000*Math.PI*2;
+              const w=SlopcameraOverlay.width,h=SlopcameraOverlay.height;
+              p.clear();p.resetMatrix();p.blendMode(p.BLEND);p.noFill();
+              p.translate(w*.65,h*.50);
+              for(let line=0;line<72;line++){
+                const r=h*(.105+line*.0045);
+                const turn=angle+(line/72)*Math.PI*2;
+                p.stroke(line<24?'#f6ad70':line<48?'#ece6d6':'#65bbad');
+                p.strokeWeight(1.25);
+                p.beginShape();
+                for(let j=0;j<=180;j++){
+                  const theta=j/180*Math.PI*2;
+                  const distortion=1+.17*Math.cos(theta*3+turn)+.045*Math.sin(theta*7-angle);
+                  p.vertex(Math.cos(theta)*r*distortion,Math.sin(theta)*r*distortion);
+                }
+                p.endShape();
+              }
+
+            };
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      SlopcameraOverlay.ready(initialization);
+      SlopcameraOverlay.onFrame(async (frame) => {
+        currentFrame = frame;
+        await initialization;
+        await sketch.redraw();
+      });
+
+      addEventListener("pagehide", () => {
+        sketch?.remove();
+      }, { once: true });
+    </script>
+  </body>
+</html>

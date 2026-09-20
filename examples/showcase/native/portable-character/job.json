@@ -1,0 +1,55 @@
+{
+  "bundleSha256": "33b118012db43cc406b568fa984a6eee5873251ed7af25cea4cee5790c09ec6c",
+  "engine": {
+    "denoise": true,
+    "device": "cpu",
+    "engine": "blender",
+    "renderer": "cycles",
+    "samples": 1,
+    "seed": 0,
+    "transparent": false,
+    "viewTransform": "AgX"
+  },
+  "execution": {
+    "hermetic": false,
+    "isolation": "none",
+    "trust": "trusted-current-user"
+  },
+  "jobId": "studio_showcase_character_portable",
+  "kind": "slopcamera.studio-job",
+  "limits": {
+    "maximumOutputBytes": 134217728,
+    "maximumOutputFiles": 16,
+    "timeoutSeconds": 180
+  },
+  "outputs": [
+    {
+      "format": "glb",
+      "id": "rig",
+      "interpretation": {
+        "kind": "model",
+        "sourceSpace": {
+          "handedness": "right",
+          "units": "meters",
+          "upAxis": "y"
+        }
+      },
+      "kind": "file",
+      "path": "character.glb",
+      "role": "model"
+    }
+  ],
+  "parameters": {},
+  "render": {
+    "endFrameExclusive": 145,
+    "frameRate": {
+      "denominator": 1,
+      "numerator": 24
+    },
+    "height": 720,
+    "startFrame": 0,
+    "width": 1280
+  },
+  "schemaVersion": 1,
+  "stage": "build"
+}

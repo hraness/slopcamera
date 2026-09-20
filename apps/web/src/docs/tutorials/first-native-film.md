@@ -1,6 +1,14 @@
 Create a one-second Blender shot, inspect its retained frames, and export the result through an ordinary Slopcamera video project. You finish with four artifacts: the editable Python scene, a content-addressed source bundle, the verified PNG frames, and a project that holds the encoded clip.
 
-The `studio` commands are documented for the current source build. Complete the [source build](/docs/how-to/install-from-source) so `slopcamera` invokes your checkout, then confirm `slopcamera help studio` lists `init`, `run`, `encode`, and `assemble`. The setup below uses macOS with Blender 5.2.1 LTS, Bun, FFmpeg, and FFprobe. The preview renders on the CPU, so no GPU or cloud service is involved, and nothing here uses the macOS-specific recording features.
+The `studio` commands ship in v{{PUBLISHED_VERSION}}. [Install Slopcamera](/docs) and confirm `slopcamera help studio` lists `init`, `run`, `encode`, and `assemble`. The setup below uses macOS with Blender 5.2.1 LTS, Bun, FFmpeg, and FFprobe. The preview renders on the CPU, so no GPU or cloud service is involved. The current CLI does not capture new recordings.
+
+## Inspect the finished example
+
+::example[native-product]
+
+The finished optical study uses the same native-film workflow: 144 frames at 24 fps, rendered at 1280×720 with Blender 5.2.1 LTS. The camera, brass and rubber materials, optical glass, lighting and focus keys are editable in the [complete example source](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/product). The short tutorial below starts with a smaller CPU preview; it does not ask you to reproduce the finished film before checking your installation.
+
+The showcase job requests Cycles on a GPU at 32 samples. Its reproduction helper uses a [source installation](/docs/how-to/install-from-source); the tutorial commands below also work with the verified release.
 
 ## Select the Blender executable
 
@@ -15,7 +23,7 @@ If the check fails, substitute the actual executable path of your installation b
 
 ## Create and retain the source
 
-In the production working directory you created during source setup, scaffold the product starter and retain it:
+In a new working directory, scaffold the product starter and retain it:
 
 ```sh
 slopcamera studio init product --template blender-product --json

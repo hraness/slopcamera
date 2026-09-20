@@ -1,0 +1,5 @@
+{
+  "engine": "blender",
+  "entrypoint": { "kind": "python", "path": "scene.py" },
+  "files": ["scene.py", "motion.py", "studio_scene.py", "parts.json", "assets/baseline.glb"]
+}

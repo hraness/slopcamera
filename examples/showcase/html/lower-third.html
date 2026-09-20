@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>An editable transparent lower third</title>
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+  </head>
+  <body>
+<div class="lower"><div class="rule"></div><div class="text"><strong>Built from a living source.</strong><span>CHANGE THE WORDS. KEEP THE TIMING.</span></div><div class="index">06</div></div>
+<style>
+.lower{position:absolute;left:5.5%;right:5.5%;bottom:9%;display:flex;gap:2.2%;align-items:center;color:#f4f1e6;font-family:Arial,sans-serif;opacity:0}.rule{height:5.2vw;width:.55vw;background:#e3ee7e}.text{flex:1;text-shadow:0 2px 10px #0008}strong{font-size:3.0vw;font-weight:500;letter-spacing:-.04em}span{display:block;font-size:1.05vw;letter-spacing:.16em;margin-top:1vw}.index{font-size:3.7vw;letter-spacing:-.06em;border:1px solid #ffffff65;border-radius:100%;width:6vw;height:6vw;display:grid;place-items:center}
+</style>
+<script type="module">
+const lower=document.querySelector('.lower');
+const copy=SlopcameraOverlay.parameters;
+document.querySelector('strong').textContent=copy.title ?? 'Built from a living source.';
+document.querySelector('.text span').textContent=copy.subtitle ?? 'CHANGE THE WORDS. KEEP THE TIMING.';
+document.querySelector('.index').textContent=copy.index ?? '06';
+SlopcameraOverlay.onFrame(({timeMs})=>{const t=timeMs/1000;const rise=Math.min(1,t/.8);const fall=Math.min(1,(6-t)/.8);const reveal=Math.max(0,Math.min(rise,fall));const ease=1-Math.pow(1-reveal,3);lower.style.opacity=String(ease);lower.style.transform=`translateY(${24*(1-ease)}px)`;});
+</script>
+</body>
+</html>

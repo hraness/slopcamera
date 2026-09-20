@@ -1,0 +1,22 @@
+{
+  "kind": "slopcamera.html-scene",
+  "schemaVersion": 1,
+  "name": "An editable transparent lower third",
+  "document": {
+    "path": "examples/showcase/html/lower-third.html"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "deviceScaleFactor": 1
+  },
+  "timing": {
+    "durationUs": 6000000,
+    "fps": 24
+  },
+  "libraries": [],
+  "seed": 20260919,
+  "background": "#24494c",
+  "parameters": {},
+  "resources": []
+}

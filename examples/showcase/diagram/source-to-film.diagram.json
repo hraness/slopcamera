@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "name": "source-to-film",
+  "canvas": {
+    "width": 1600,
+    "height": 1020,
+    "padding": 60
+  },
+  "shapes": [
+    {
+      "id": "diagram",
+      "type": "rect",
+      "x": 100,
+      "y": 140,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Diagram export",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "blue"
+    },
+    {
+      "id": "scene",
+      "type": "rect",
+      "x": 640,
+      "y": 140,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Rendered scene",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "blue"
+    },
+    {
+      "id": "footage",
+      "type": "rect",
+      "x": 1180,
+      "y": 140,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Footage",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "blue"
+    },
+    {
+      "id": "project",
+      "type": "rect",
+      "x": 640,
+      "y": 440,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Project",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "purple"
+    },
+    {
+      "id": "preview",
+      "type": "rect",
+      "x": 360,
+      "y": 740,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Preview",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "green"
+    },
+    {
+      "id": "delivery",
+      "type": "rect",
+      "x": 920,
+      "y": 740,
+      "width": 320,
+      "height": 140,
+      "radius": 24,
+      "label": "Delivery",
+      "labelFontSize": 36,
+      "labelWeight": 500,
+      "tone": "green"
+    }
+  ],
+  "edges": [
+    {
+      "id": "diagram-project",
+      "from": "diagram",
+      "to": "project",
+      "start": "bottom",
+      "end": "top",
+      "endPosition": 0.2
+    },
+    {
+      "id": "scene-project",
+      "from": "scene",
+      "to": "project",
+      "start": "bottom",
+      "end": "top",
+      "endPosition": 0.5
+    },
+    {
+      "id": "footage-project",
+      "from": "footage",
+      "to": "project",
+      "start": "bottom",
+      "end": "top",
+      "endPosition": 0.8
+    },
+    {
+      "id": "project-preview",
+      "from": "project",
+      "to": "preview",
+      "start": "bottom",
+      "end": "top",
+      "startPosition": 0.25
+    },
+    {
+      "id": "project-delivery",
+      "from": "project",
+      "to": "delivery",
+      "start": "bottom",
+      "end": "top",
+      "startPosition": 0.75
+    }
+  ]
+}

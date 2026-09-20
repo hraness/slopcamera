@@ -1,6 +1,6 @@
 # Direct short generated clips
 
-Use the [Slopcamera source installation](how-to/use-current-source.md) for the `direct` commands. For one generated artifact, use [Gateway media generation](how-to/generate-media.md).
+The `direct` commands ship in the [verified Slopcamera release](reference/capabilities.md). For one generated artifact, use [Gateway media generation](how-to/generate-media.md).
 
 Use `slopcamera direct` to turn a shot recipe into reviewed video takes and an editable media project. Each shot names its prompt, model, duration, and output settings. A later shot can use the accepted predecessor's final decoded frame as its opening image. Slopcamera retains the requests, media, review decisions, dependency identities, and estimated spending across revisions.
 
@@ -100,7 +100,7 @@ slopcamera direct start film.recipe.json --budget-usd 5.00 --json
 
 Starting retains the recipe and budget without generating video. Reusing the ID cannot reset its spending. Budgets accept positive USD values with at most six decimal places and are stored as integer microdollars.
 
-Generate the opening take after making the credential available to this process. Slopcamera reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`; a linked Vercel workspace can use `vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" direct generate <arguments>`. [Source installation](how-to/use-current-source.md) defines that root. The shell function cannot be launched by Vercel, and credential injection applies only to this child invocation. Keep credentials out of recipes, prompts, command arguments, and retained output.
+Make `AI_GATEWAY_API_KEY` available in the local process environment, then generate the first take. Slopcamera falls back to `VERCEL_OIDC_TOKEN` when the key is absent. The Vercel CLI is optional; a linked workspace can prefix an installed CLI command with `vercel env run --`. [Credential setup](how-to/generate-media.md) also covers the source-build shell function. Keep credentials out of recipes, prompts, command arguments, and retained output.
 
 ```sh
 slopcamera direct generate direct_atrium --shot opening --attempt take_opening_v1 \

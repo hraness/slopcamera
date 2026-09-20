@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"motion":"/.slopcamera-overlay/libraries/0d89a96784df54ed726443ebd09be2bee6118d9f1e074166df580bce632c5b62.mjs"}}</script>
+  </head>
+  <body>
+    <div class="card">Deterministic motion</div>
+    <style>
+      .card {
+        position: absolute;
+        left: 8%;
+        top: 12%;
+        padding: 0.7em 0.9em;
+        border-radius: 0.8em;
+        color: white;
+        background: linear-gradient(135deg, rgb(83 67 255 / 92%), rgb(205 74 255 / 82%));
+        box-shadow: 0 1em 3em rgb(14 8 48 / 28%);
+        font: 650 clamp(28px, 5vw, 84px) / 1 system-ui, sans-serif;
+        opacity: 0;
+      }
+    </style>
+    <script type="module">
+      import { animate } from "motion";
+
+      const card = document.querySelector(".card");
+      SlopcameraOverlay.trackAnimation(animate(
+        card,
+        {
+          opacity: [0, 1, 1, 0],
+          transform: [
+            "translateY(40px) scale(.96)",
+            "translateY(0) scale(1)",
+            "translateY(0) scale(1)",
+            "translateY(-24px) scale(.98)",
+          ],
+        },
+        { duration: SlopcameraOverlay.durationMs / 1000, ease: "linear" },
+      ));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,3334 @@
+[
+  {
+    "id": "source-to-film",
+    "title": "From source to delivery",
+    "description": "Three visual inputs converge in an editable project, then branch into preview and delivery. The diagram itself stays editable.",
+    "family": "diagram",
+    "techniques": [
+      "diagram.positioned"
+    ],
+    "guideSlug": "tutorials/first-diagram",
+    "guideAnchor": "",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8 and Bun. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/diagram/source-to-film.diagram.json",
+          "sha256": "ad4ec880638435ae88d1086f16bb11403a4463a0df3b1f3fa2a6afffc5862a31"
+        },
+        {
+          "path": "examples/showcase/diagram/render.ts",
+          "sha256": "b5213be2563f58025840f61d669b2fa3c4d89e67657bf63cc395b2e21da84ef8"
+        }
+      ],
+      "command": "bun examples/showcase/diagram/render.ts",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Bundled Resvg 2.6.2"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "source-to-film-poster-e468cac07bfc.webp",
+      "sha256": "e468cac07bfc68443cdd3656aa2b084d955433c01ea5db1435e8e9ef953b3b11",
+      "bytes": 21212,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 816,
+      "alt": "Diagram export, Rendered scene and Footage point into Project, which points to Preview and Delivery."
+    },
+    "downloads": [
+      {
+        "file": "source-to-film-light-svg-148aabe73e38.svg",
+        "sha256": "148aabe73e384a07c08ba742e44c28c834a001a9284222e53ba46f672563b647",
+        "bytes": 198428,
+        "mime": "image/svg+xml",
+        "label": "Light SVG"
+      },
+      {
+        "file": "source-to-film-dark-svg-5d2ac1e36651.svg",
+        "sha256": "5d2ac1e366510764c02a4250311a2f263fd90331fa8d7807cf3e0004a0110b04",
+        "bytes": 198427,
+        "mime": "image/svg+xml",
+        "label": "Dark SVG"
+      },
+      {
+        "file": "source-to-film-light-png-c3c24c460490.png",
+        "sha256": "c3c24c460490234025b49482fbf0a275f4c7c5f53f7e9c413ef7d5136783276d",
+        "bytes": 120720,
+        "mime": "image/png",
+        "label": "Light PNG"
+      },
+      {
+        "file": "source-to-film-dark-png-b8db55ec6e42.png",
+        "sha256": "b8db55ec6e4280389d84dcff9ce6ef426495a31374419ab233185ac5329d1821",
+        "bytes": 120214,
+        "mime": "image/png",
+        "label": "Dark PNG"
+      },
+      {
+        "file": "source-to-film-tldr-7e4851d98b2b.tldr",
+        "sha256": "7e4851d98b2b9c952adbe30b0c8750d059190729ca1a6e62514039c246e07b0f",
+        "bytes": 21038,
+        "mime": "application/json",
+        "label": "Editable canvas"
+      },
+      {
+        "file": "source-to-film-source-ad4ec8806384.json",
+        "sha256": "ad4ec880638435ae88d1086f16bb11403a4463a0df3b1f3fa2a6afffc5862a31",
+        "bytes": 2497,
+        "mime": "application/json",
+        "label": "Diagram source"
+      }
+    ],
+    "review": {
+      "agent": "root: light and dark artifact review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "source-to-film-revised",
+    "title": "Revise the delivery",
+    "description": "Change one label in the source and render again. The editable canvas and both light and dark exports carry the same revision.",
+    "family": "diagram",
+    "techniques": [
+      "diagram.revision"
+    ],
+    "guideSlug": "tutorials/first-diagram",
+    "guideAnchor": "",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Bun. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/diagram/source-to-film-revised.diagram.json",
+          "sha256": "822a690049ca442becd86a7e6638a338ca9d311894df68072ad2189971553908"
+        },
+        {
+          "path": "examples/showcase/diagram/render.ts",
+          "sha256": "b5213be2563f58025840f61d669b2fa3c4d89e67657bf63cc395b2e21da84ef8"
+        }
+      ],
+      "command": "bun examples/showcase/diagram/render.ts",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Bundled Resvg 2.6.2"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "source-to-film-revised-poster-dfcb44148820.webp",
+      "sha256": "dfcb441488200609a6adb37f95e937d46b182f0160ac775b7df5439c9772c71d",
+      "bytes": 21904,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 816,
+      "alt": "Diagram export, Rendered scene and Footage point into Project, which points to Preview and Social delivery."
+    },
+    "downloads": [
+      {
+        "file": "source-to-film-revised-light-svg-d9b3fa4924c9.svg",
+        "sha256": "d9b3fa4924c98c0b037f27128a887cfeefa7e6d377754b2244a277fc8ef61e40",
+        "bytes": 198490,
+        "mime": "image/svg+xml",
+        "label": "Light SVG"
+      },
+      {
+        "file": "source-to-film-revised-dark-svg-668ff46c5a9f.svg",
+        "sha256": "668ff46c5a9ff9a9ee84323539cb9d68cf214269922e0b03efa2cab810b9ba71",
+        "bytes": 198489,
+        "mime": "image/svg+xml",
+        "label": "Dark SVG"
+      },
+      {
+        "file": "source-to-film-revised-light-png-9ad9767c2bdf.png",
+        "sha256": "9ad9767c2bdf5341bfef64e909e441d2467e823bf56f82f82048295ebec2f6d2",
+        "bytes": 126223,
+        "mime": "image/png",
+        "label": "Light PNG"
+      },
+      {
+        "file": "source-to-film-revised-dark-png-5d8ada2a66a5.png",
+        "sha256": "5d8ada2a66a51407b6f0359f3d2e026bd8ce6ecaf1f87477d202e1e8e3c41824",
+        "bytes": 125709,
+        "mime": "image/png",
+        "label": "Dark PNG"
+      },
+      {
+        "file": "source-to-film-revised-tldr-899a03a01318.tldr",
+        "sha256": "899a03a0131876209fd19ea4246f28f4d5a1db7b3c251384948915bda0a81b9c",
+        "bytes": 21258,
+        "mime": "application/json",
+        "label": "Editable canvas"
+      },
+      {
+        "file": "source-to-film-revised-source-822a690049ca.json",
+        "sha256": "822a690049ca442becd86a7e6638a338ca9d311894df68072ad2189971553908",
+        "bytes": 2512,
+        "mime": "application/json",
+        "label": "Diagram source"
+      }
+    ],
+    "review": {
+      "agent": "root: light and dark artifact review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "editorial",
+    "title": "Form follows a frame",
+    "description": "An editorial title and an animated field of SVG ellipses. Change the copy and accent in the request, then render the same scene again.",
+    "family": "html",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "tutorials/first-animation",
+    "guideAnchor": "render-and-inspect-the-title",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8, Bun, a local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/editorial.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "Native HTML/SVG"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "editorial-poster-e97157af0c92.webp",
+      "sha256": "e97157af0c92ce2bc73c38bc69f8b686c741bf6b83af809e5926c460637b18e6",
+      "bytes": 68698,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Cream and lime title reading Form follows a frame beside a rotating lime ellipse sculpture on charcoal."
+    },
+    "video": {
+      "file": "editorial-c37b086cb995.mp4",
+      "sha256": "c37b086cb995c7c826de3e155530b04bad51cb7e54a791da7aaf0e266d957c0b",
+      "bytes": 2891811,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: all 192 decoded frames in four contact sheets; full-size poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "orbit-vector",
+    "title": "One raster, two SVG treatments",
+    "description": "An original transparent illustration, a local color trace and a duotone treatment. Compare the silhouette and small edge differences before choosing a delivery format.",
+    "family": "vector",
+    "techniques": [
+      "vector.simple-mark"
+    ],
+    "guideSlug": "how-to/vectorize-images",
+    "guideAnchor": "inspect-a-reproducible-example",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 on macOS or Linux. Reproduction script needs a source checkout.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/vector/render.ts",
+          "sha256": "dbfc579ac9ecbb0dbc06890fbcff5e1c6bd7b8a5c33e977e56e69f3ddf002646"
+        }
+      ],
+      "command": "bun examples/showcase/vector/render.ts",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "VTracer 0.6.4",
+        "Sharp 0.35.3",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "orbit-comparison-6d32006ddd32.webp",
+      "sha256": "6d32006ddd329ade431d32a8836dad6b83a29fbe6d9a0267d03c1af11ce47a9b",
+      "bytes": 27148,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 576,
+      "alt": "Side-by-side original six-petal raster, orange-blue color trace and navy-peach duotone trace on cream."
+    },
+    "downloads": [
+      {
+        "file": "orbit-input-fe859de8c852.png",
+        "sha256": "fe859de8c85299b7ca143f9319f92ccc7e0f5201c147419f8cfd95d677279910",
+        "bytes": 32534,
+        "mime": "image/png",
+        "label": "Original raster"
+      },
+      {
+        "file": "orbit-traced-e46dc19727fc.svg",
+        "sha256": "e46dc19727fcbc110490fdc81b84c1b2bbc67283d1898f7c195da9e90b56f613",
+        "bytes": 33462,
+        "mime": "image/svg+xml",
+        "label": "Color SVG"
+      },
+      {
+        "file": "orbit-duotone-82140f10e9e7.svg",
+        "sha256": "82140f10e9e70f6413841dc81ba108664224067d6e01d07350a017eb1456fb15",
+        "bytes": 33462,
+        "mime": "image/svg+xml",
+        "label": "Duotone SVG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size raster and both actual SVG rasterizations",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-product",
+    "title": "An optical instrument, in motion",
+    "description": "A six-second camera move around original brass, rubber and optical glass. Geometry, materials, lighting and focus remain editable in Blender.",
+    "family": "native",
+    "techniques": [
+      "native.product"
+    ],
+    "guideSlug": "tutorials/first-native-film",
+    "guideAnchor": "inspect-the-finished-example",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts product --blender-bin /absolute/path/to/Blender",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-product-poster-51b1658c46d3.webp",
+      "sha256": "51b1658c46d361076fd0586a5b788f3b3783a32dd38edfa61fc756e732bdca99",
+      "bytes": 32906,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A brass optical instrument with ribbed dark housing, glass lens and five front switches on a black plinth."
+    },
+    "video": {
+      "file": "native-product-video-d434d4f5a93e.mp4",
+      "sha256": "d434d4f5a93ef38d7834468301f066ac8b3573679999218c071cdca32a089830",
+      "bytes": 804848,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "education-luma",
+    "title": "Why the long side is five",
+    "description": "A portrait lesson turns the areas of a 3–4–5 triangle into 25 tiles, with an original presenter and authored captions. This silent example illustrates one triangle.",
+    "family": "education",
+    "techniques": [
+      "education.manim-lesson"
+    ],
+    "guideSlug": "how-to/educational-video",
+    "guideAnchor": "inspect-the-finished-example",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8 and Manim Community 0.21.0; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/education/source.json",
+          "sha256": "bb9fe7c148d23f7e98d1c58fe04b988f6fdeb09069d099c8033c511a878f1938"
+        },
+        {
+          "path": "examples/showcase/native/education/job.json",
+          "sha256": "802aede093b30fc28b471a0073d9e5bde7dfce6c237e32cc63d7db232ad97116"
+        },
+        {
+          "path": "examples/showcase/native/education/lesson.json",
+          "sha256": "b307683363dd5823ce1788bdf252dcc32c2a35fa348f5471089adbb2d7b08cce"
+        },
+        {
+          "path": "examples/showcase/native/education/lesson.py",
+          "sha256": "17bdd81695e61520d91d43a85f2f8f8d251c415ac7c0f9a7175afe899c5d07d5"
+        },
+        {
+          "path": "examples/showcase/native/education/scene.py",
+          "sha256": "a0b913f0ed5f0c1e106e1e68805668a0579fe1ec154227adb582bca641e90814"
+        },
+        {
+          "path": "examples/showcase/native/education/toolkit.py",
+          "sha256": "d9e2f92c55d8cd84d9f13242ea054b8dd261b194c95101e76a329acfa2425711"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts education --python /absolute/path/to/python",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Manim Community 0.21.0",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "education-luma-poster-154755eaba4b.webp",
+      "sha256": "154755eaba4b8bb425b15d52ab4fee0aa6eef80b234f5216f186242d37867b80",
+      "bytes": 34098,
+      "mime": "image/webp",
+      "width": 720,
+      "height": 1280,
+      "alt": "Luma presents nine green and sixteen blue tiles in a five-by-five square, with the equation 3² + 4² = 5² and authored lesson captions."
+    },
+    "video": {
+      "file": "education-luma-video-81d96807cebf.mp4",
+      "sha256": "81d96807cebff00826e288be4f2e69e02241d9b9a112145b6c2ebe17f9ab80fe",
+      "bytes": 251783,
+      "mime": "video/mp4",
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 10,
+      "fps": 24,
+      "frames": 240,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "editorial-revised",
+    "title": "Revise the same composition",
+    "description": "The original editorial source with new copy and a warm accent. A second request preserves the layout and timing.",
+    "family": "html",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "tutorials/first-animation",
+    "guideAnchor": "revise-the-same-source",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/editorial-revised.json",
+          "sha256": "fa51414c1cdac62ae749aca1689d620af4ab8ad5829a2bf195058a3bd812992a"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/editorial-revised.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "Native HTML/SVG"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "editorial-revised-poster-0f469f88453e.webp",
+      "sha256": "0f469f88453e77f4dccd5612ae8b3b14ad6c07d46abea66eee851a255d1d5dca",
+      "bytes": 59742,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Warm orange ellipse sculpture beside the title Form follows your idea."
+    },
+    "video": {
+      "file": "editorial-revised-video-c10f9f10618e.mp4",
+      "sha256": "c10f9f10618e0a42957d901df0f12b873605b4116bb744f7263c80f09579321d",
+      "bytes": 2552725,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "kinetic-title",
+    "title": "Make every frame count",
+    "description": "Seeked typography enters, holds and leaves on an authored timeline, accompanied by staggered bars.",
+    "family": "html",
+    "techniques": [
+      "html.motion"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "animate-type-with-motion",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/kinetic-title.json",
+          "sha256": "2bae14b2c80b5dc4cda0e438e424f38b007b0d5410814b59b3a390d6f921aea7"
+        },
+        {
+          "path": "examples/showcase/html/kinetic-title.html",
+          "sha256": "be622f68ed45cf5a70080655eb89845196ac443af31b79d34587d90e9aa393ba"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/kinetic-title.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "motion 12.42.2"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "kinetic-title-poster-9b6d7b6a3118.webp",
+      "sha256": "9b6d7b6a3118146cb78e65670740853d11554861fcd812e4fcda91ed724ae78c",
+      "bytes": 27084,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Black kinetic typography reading Make every frame count on an orange field."
+    },
+    "video": {
+      "file": "kinetic-title-video-030da95b1f94.mp4",
+      "sha256": "030da95b1f943ef0269870b9ed516cdd5823bfceac5b78ffccc2bc190ed36b9a",
+      "bytes": 195091,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "contour-drift",
+    "title": "Order, with a little drift",
+    "description": "Seventy-two procedural contours redraw from absolute time in a p5 Canvas composition.",
+    "family": "html",
+    "techniques": [
+      "html.p5"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "draw-procedural-contours",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/contour-drift.json",
+          "sha256": "4c6e9bc79ae705307bc6e3189ff784d0ec05997da68bcd63cdd18ec0d3e8b32e"
+        },
+        {
+          "path": "examples/showcase/html/contour-drift.html",
+          "sha256": "d15bf22adca309894c7a9cc27db9a26c1fecd88b4b7be9fdd128807988690b67"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/contour-drift.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "p5 2.3.2"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "contour-drift-poster-8cf4c0040d00.webp",
+      "sha256": "8cf4c0040d003b1b169a233e1f66d51b8edb34101f4787045681fb0865ec5e9f",
+      "bytes": 157918,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Seventy-two green, cream and orange contours form a rippling ring beside the editorial title."
+    },
+    "video": {
+      "file": "contour-drift-video-cfce0a621473.mp4",
+      "sha256": "cfce0a621473311ea75d9c4e98fd88b7aae74a383f2687876c74f8a96f3eda44",
+      "bytes": 2810082,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "orbital-assembly",
+    "title": "Many parts. One rhythm.",
+    "description": "Sixty retained vector circles follow five editable orbits, with every position derived from the requested frame.",
+    "family": "html",
+    "techniques": [
+      "html.two"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "choreograph-vector-shapes",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/orbital-assembly.json",
+          "sha256": "365498ac29d8a0404fe1af3a7f35283fbaf84e46dfaeadbbbe567f00c5dda662"
+        },
+        {
+          "path": "examples/showcase/html/orbital-assembly.html",
+          "sha256": "06663abfc3c9581c3e580581e2ce6004afa54829b767a32b90f97764c980a9dd"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/orbital-assembly.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "two.js 0.8.24"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "orbital-assembly-poster-5e10d8349b43.webp",
+      "sha256": "5e10d8349b43e0b7980f35f4992ef079e154e22a3e6eab16d4bfe63f5fd83787",
+      "bytes": 30154,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Colored circles travel around five elliptical orbits on a cream background."
+    },
+    "video": {
+      "file": "orbital-assembly-video-5ec1746f7a55.mp4",
+      "sha256": "5ec1746f7a5502de2c3487dfecb3d751df8ae845f13e158d681c5497fbb5e4af",
+      "bytes": 579410,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "living-colour",
+    "title": "Living colour",
+    "description": "A time-controlled Paper Shaders field adds grain and moving color beneath editable typography.",
+    "family": "html",
+    "techniques": [
+      "html.paper-shaders"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "shape-a-shader-background",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/living-colour.json",
+          "sha256": "e0b5b6631dc7297e585c92a5b9f0efb8101a4a57e6842c77fe4fedfe3da0e597"
+        },
+        {
+          "path": "examples/showcase/html/living-colour.html",
+          "sha256": "b773aef48ff1c1713b55401d8867470ce865bb872903907987023b8dad8b66ee"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/living-colour.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "@paper-design/shaders 0.0.77"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "living-colour-poster-2428aaa90f14.webp",
+      "sha256": "2428aaa90f14d662d242576aad7437ed10a6e10dba0810e1bf482df9f31637d1",
+      "bytes": 51378,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Cream Living colour typography over a textured orange, green and violet field."
+    },
+    "video": {
+      "file": "living-colour-video-5e76285592d1.mp4",
+      "sha256": "5e76285592d1285df683bc58df1469b57ec86e255b612581490eca699b4020ef",
+      "bytes": 2555807,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "interference-field",
+    "title": "Patterns from a program",
+    "description": "One full-screen WGSL pass renders a changing interference field. This is an authored pattern, not a physical simulation.",
+    "family": "html",
+    "techniques": [
+      "html.vgpu"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "write-a-wgsl-field",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/interference-field.json",
+          "sha256": "57ad00fb1db24168d1ace6783e3a4b4e219d48a2db6b0408eab8a102188f2f33"
+        },
+        {
+          "path": "examples/showcase/html/interference-field.html",
+          "sha256": "face4a196995c28713c04a31a39025ca53d64353f88552d2f44475f683945a8b"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/interference-field.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "vgpu 0.3.1"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "interference-field-poster-869cf2dd72af.webp",
+      "sha256": "869cf2dd72afd1960dad38262bdbc1aaaf8a27a038e785319ec36bfe9653729a",
+      "bytes": 87576,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Teal and orange interference bands move under a fine grid and the title Patterns from a program."
+    },
+    "video": {
+      "file": "interference-field-video-260ba63165a1.mp4",
+      "sha256": "260ba63165a1139c36ec12046aaf8b00b68c67946e71c4d4a83894e556226600",
+      "bytes": 2372191,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "island-pulse",
+    "title": "Island Pulse",
+    "description": "An original articulated robot dances above a procedural island through day, night and sunrise. This published preview is silent.",
+    "family": "music",
+    "techniques": [
+      "html.three"
+    ],
+    "guideSlug": "how-to/music-video",
+    "guideAnchor": "inspect-the-island-example",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8, qualified macOS Three.js hardware profile, FFmpeg and Python 3 for the original track.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/island-pulse.json",
+          "sha256": "950e9a7e19f9f8a6532d4e83d0bf69847696e6d7c903a7298d27708a0b5c4e00"
+        },
+        {
+          "path": "examples/showcase/html/island-pulse.html",
+          "sha256": "bfbc369374c425e9340260f3e87b6d088bf8daab0f191ba993c6c6d2e4e364cc"
+        },
+        {
+          "path": "examples/showcase/html/synth-island.py",
+          "sha256": "a00d83441658d6014b7906ae8d1350600aa4b33864cfb1d6674062135d0b8a28"
+        }
+      ],
+      "command": "python3 examples/showcase/html/synth-island.py && slopcamera html render --input examples/showcase/html/island-pulse.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "three 0.185.1"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "island-pulse-poster-09e1ca2f433a.webp",
+      "sha256": "09e1ca2f433a7017f67d585329f2f7071555d45e4ce4ea688bd130c34750c7e6",
+      "bytes": 52036,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A white and teal robot on a glowing circular platform above an island at sunset."
+    },
+    "video": {
+      "file": "island-pulse-video-df235020e4b9.mp4",
+      "sha256": "df235020e4b98d0d5330bca47a55d4319b6f1f2024a0f6bc31e60ce186364842",
+      "bytes": 1418532,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "lower-third",
+    "title": "A title over your footage",
+    "description": "A timed HTML/SVG lower third with editable copy. This H.264 preview uses an opaque plate; the source supports a separate transparent overlay.",
+    "family": "html",
+    "techniques": [
+      "html.transparent-overlay"
+    ],
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "compose-a-transparent-lower-third",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/html/lower-third.json",
+          "sha256": "59fbd5b10b00ab035a70217399e515100e191469f91e435b0f7ca43502613ef7"
+        },
+        {
+          "path": "examples/showcase/html/lower-third.html",
+          "sha256": "d07509918ff6f7cb41de1b16986c99baf19fa30dcbff396e642cf357ed261f08"
+        }
+      ],
+      "command": "slopcamera html render --input examples/showcase/html/lower-third.json --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Signed Chrome for Testing 153",
+        "Local FFmpeg",
+        "Native HTML/SVG"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "lower-third-poster-ff735c477958.webp",
+      "sha256": "ff735c4779585bda7c654a984d40aace52d7f709de476c3c57b9b1fd96894181",
+      "bytes": 9378,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A lime accent and lower-third title Built from a living source on a dark teal plate."
+    },
+    "video": {
+      "file": "lower-third-video-c7be68daad01.mp4",
+      "sha256": "c7be68daad01150652e85dfb087baab3d34cc385764fd70fcf5b1031f24bcfe1",
+      "bytes": 33221,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root and hosted_audit: chronological all-frame sheets, full decode and final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-character",
+    "title": "A wave, a blink and a smile",
+    "description": "An original weighted Blender character follows an IK target and facial shape keys through a six-second greeting. The native rig remains editable.",
+    "family": "native",
+    "techniques": [
+      "native.character"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "animate-a-native-character",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/character/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/character/job.json",
+          "sha256": "e3a49c484bd06848288079a9863ddb6c8f57cc9633a8f2754f2e9a3a09afe44e"
+        },
+        {
+          "path": "examples/showcase/native/character/scene.py",
+          "sha256": "9b53ba0b1ce94d928fb25e18c3fcbf3483352b39a9c656f92e4320969df2c9be"
+        },
+        {
+          "path": "examples/showcase/native/character/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts character --blender-bin /absolute/path/to/Blender",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-character-poster-5fc14c563d00.webp",
+      "sha256": "5fc14c563d00543db9adc9fd201caabe1272e29dd099e80c8f5281101144edd0",
+      "bytes": 16240,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "An original white and teal robot with copper shoulders waves from a softly lit stage."
+    },
+    "video": {
+      "file": "native-character-video-b78574f93466.mp4",
+      "sha256": "b78574f934661f408a18083a3732c36a22a469f113c34157147ad75cf0aa224b",
+      "bytes": 159800,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-cloth",
+    "title": "Bake the cloth, retain the fall",
+    "description": "Forty real solver frames of cloth falling over a collider, replayed from a retained native cache in a fresh process.",
+    "family": "simulation",
+    "techniques": [
+      "native.cloth"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "inspect-the-cloth-cache",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/cloth/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/cloth/job.json",
+          "sha256": "9617b442cad2e092b4e6697ef4e982117e2ed032c9b1334c961d669215b32fd1"
+        },
+        {
+          "path": "examples/showcase/native/cloth/scene.py",
+          "sha256": "791f1531af5c67640bad0d56fb933e4755a695b4d24bc7ade18cecf46860d83b"
+        },
+        {
+          "path": "examples/showcase/native/cloth/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        },
+        {
+          "path": "examples/showcase/native/replay.ts",
+          "sha256": "055e8a983b5c300a7aa44ec7c3bf67b1ab1e69f6934cf7a5842f8f9a3c3d5293"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts cloth --blender-bin /absolute/path/to/Blender && bun examples/showcase/native/replay.ts cloth --blender-bin /absolute/path/to/Blender",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-cloth-poster-cfa4dd31f418.webp",
+      "sha256": "cfa4dd31f418aee19142c2fe94f6a54e7f87b44ec4cfa6a550a130b6bf90788e",
+      "bytes": 15972,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 800,
+      "alt": "Orange cloth draped over a white spherical collider on a softly lit stage."
+    },
+    "video": {
+      "file": "native-cloth-video-6433633dee7d.mp4",
+      "sha256": "6433633dee7d12f2ea5b6763c3d11c4d8c894b9c174de906f93c6f985bcbb09b",
+      "bytes": 216544,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 800,
+      "durationSeconds": 1.6666666666666667,
+      "fps": 24,
+      "frames": 40,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-fluid",
+    "title": "Keep the liquid cache",
+    "description": "Thirty-two real solver frames show a liquid volume falling into a basin. The preview replays the retained data and surface cache at its original timing.",
+    "family": "simulation",
+    "techniques": [
+      "native.fluid"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "inspect-the-fluid-cache",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/fluid/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/fluid/job.json",
+          "sha256": "0dbf17255ce43acbebbd6385e0b2590fb8f2964b51e3d5b81024250c452c299d"
+        },
+        {
+          "path": "examples/showcase/native/fluid/scene.py",
+          "sha256": "042b7b1700eff27e844238c0d9e14b5fdf7fe2d34a207753fc14e3a6953ce1f8"
+        },
+        {
+          "path": "examples/showcase/native/fluid/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        },
+        {
+          "path": "examples/showcase/native/replay.ts",
+          "sha256": "055e8a983b5c300a7aa44ec7c3bf67b1ab1e69f6934cf7a5842f8f9a3c3d5293"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts fluid --blender-bin /absolute/path/to/Blender && bun examples/showcase/native/replay.ts fluid --blender-bin /absolute/path/to/Blender",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-fluid-poster-fd10eccd95b1.webp",
+      "sha256": "fd10eccd95b1aa922f98cc18122874e971429971fe24ad9f1a07191c9e467e90",
+      "bytes": 29142,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 960,
+      "alt": "A blue liquid volume meets the water in a rectangular white basin."
+    },
+    "video": {
+      "file": "native-fluid-video-e7dd1413e7b4.mp4",
+      "sha256": "e7dd1413e7b4aab992864f2133e6d0c8b144ea990db9ae607f8282dfc354ffdb",
+      "bytes": 324213,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 960,
+      "durationSeconds": 1.3333333333333333,
+      "fps": 24,
+      "frames": 32,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-cad",
+    "title": "One bracket, two dimensions",
+    "description": "A CadQuery parameter change widens the mounting bracket while preserving its holes and pad. Both generated solids become exact GLB inputs to the Blender presentation.",
+    "family": "native",
+    "techniques": [
+      "cad.parametric-build"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "change-the-cad-dimensions",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS, CadQuery 2.8.0 and Python 3.12; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/cad/source.json",
+          "sha256": "821bd50c5771148eff3e69a719047c50b8c7079b1e779edcfee1176272205f57"
+        },
+        {
+          "path": "examples/showcase/native/cad/job.json",
+          "sha256": "433933786f17224d903101be9a144cdfc7a9466fab80e5f8e7eb44c37f180c9b"
+        },
+        {
+          "path": "examples/showcase/native/cad/scene.py",
+          "sha256": "23236ebdc648aa6c3245aaf3be67ceeb70628389f4aec3ea19f39dd61642ffdb"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        },
+        {
+          "path": "examples/showcase/native/cad-variations.ts",
+          "sha256": "8014cb9de9ce8a04603b942b8b08681c497a8d9bef1d59f1801f55d670eea0ed"
+        },
+        {
+          "path": "examples/showcase/native/cad/wide.job.json",
+          "sha256": "ab2661380d4968509afcef832df244448c9c1ecb3a628290939d48ad81583934"
+        },
+        {
+          "path": "examples/showcase/native/cad/import_step.py",
+          "sha256": "fe4dda7405a26e822c5a442a6b79593822cfcc2919dedb96afa3f3a5af941d68"
+        },
+        {
+          "path": "examples/showcase/native/cad/preview.py",
+          "sha256": "cd80152f13914646d72f51b6365473512b85e06db80158e9eea6e75faf7c0bfc"
+        },
+        {
+          "path": "examples/showcase/native/cad/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        }
+      ],
+      "command": "bun examples/showcase/native/render.ts cad --python /absolute/path/to/python && bun examples/showcase/native/cad-variations.ts --python /absolute/path/to/python && bun apps/desktop/dist/cli/main.js studio run artifacts/showcase/native/cad/preview.job.json --blender-bin /absolute/path/to/Blender --allow-trusted-code --json",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "CadQuery 2.8.0",
+        "Python 3.12.14",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-cad-poster-66e40c116f39.webp",
+      "sha256": "66e40c116f3977087125729898a2b6a63882669b4889194690b84b91f3e9273b",
+      "bytes": 25840,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A gold mounting bracket beside its wider teal variation on a dark presentation plinth."
+    },
+    "video": {
+      "file": "native-cad-video-b81f03398adf.mp4",
+      "sha256": "b81f03398adfdd8ccb4e41a7a42082cdbb31ee429c7c8cf6db02187dc84b597b",
+      "bytes": 508719,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "color-warm",
+    "title": "Warm brass",
+    "description": "The same six-second product film receives the local warm preset. Its retained transform receipt names the input, exact filter graph and output.",
+    "family": "color",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "color-finishing",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/color/render.ts",
+          "sha256": "54ad5d26595f8394d675b2d8cb72b8be95663dccb5c2b5785a8495f2c29b9d25"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/color/render.ts /absolute/path/to/product.mp4",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "color-warm-poster-1031ca5c88cf.webp",
+      "sha256": "1031ca5c88cf4acd2d3454b8ed15d110195e8c3362b4e46e672aea75bf321539",
+      "bytes": 35484,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A brass optical instrument on a black plinth, with the warm color treatment applied."
+    },
+    "video": {
+      "file": "color-warm-video-3689ddf44842.mp4",
+      "sha256": "3689ddf44842b4700d033ab4bc984f88871be7df268c431c4f8afb22294bb24a",
+      "bytes": 991932,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: all 144 chronological decoded frames for each grade plus full-size final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "color-cool",
+    "title": "Cool surroundings",
+    "description": "The same six-second product film receives the local cool preset. Its retained transform receipt names the input, exact filter graph and output.",
+    "family": "color",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "color-finishing",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/color/render.ts",
+          "sha256": "54ad5d26595f8394d675b2d8cb72b8be95663dccb5c2b5785a8495f2c29b9d25"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/color/render.ts /absolute/path/to/product.mp4",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "color-cool-poster-14c740701c17.webp",
+      "sha256": "14c740701c17eee8abfed9acc07f1672cb5389973fe77fbc66afbc422826f8c4",
+      "bytes": 35064,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A brass optical instrument on a black plinth, with the cool color treatment applied."
+    },
+    "video": {
+      "file": "color-cool-video-1b8592c2f9d5.mp4",
+      "sha256": "1b8592c2f9d58421153fa2e8f9b5268bd7b60279a3eaedcca660f5fbc863dd61",
+      "bytes": 985849,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: all 144 chronological decoded frames for each grade plus full-size final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "color-mono",
+    "title": "Monochrome",
+    "description": "The same six-second product film receives the local mono preset. Its retained transform receipt names the input, exact filter graph and output.",
+    "family": "color",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "color-finishing",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/color/render.ts",
+          "sha256": "54ad5d26595f8394d675b2d8cb72b8be95663dccb5c2b5785a8495f2c29b9d25"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/color/render.ts /absolute/path/to/product.mp4",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "color-mono-poster-15d7c2579db9.webp",
+      "sha256": "15d7c2579db9ca786b086735f879dada47bff6943d6a2cc4539399e9deb9035a",
+      "bytes": 26338,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A monochrome optical instrument on a black plinth, with the mono color treatment applied."
+    },
+    "video": {
+      "file": "color-mono-video-f76e71dd3390.mp4",
+      "sha256": "f76e71dd33905f921dddd18a7bd7cfea62f9ce747c72b6b806e663ca10215dc9",
+      "bytes": 909369,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 6,
+      "fps": 24,
+      "frames": 144,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: all 144 chronological decoded frames for each grade plus full-size final posters",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-cloth-pinned",
+    "title": "Hold the corners, change the drape",
+    "description": "A fresh 40-frame cloth bake fixes two back corners while the remaining fabric falls over the same collider. Both pins remain stationary through the actual solver frames.",
+    "family": "simulation",
+    "techniques": [
+      "native.cloth-pins"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "compare-a-pinned-cloth-bake",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+      "files": [
+        {
+          "path": "examples/showcase/native/cloth-pinned/job.json",
+          "sha256": "c04b7c53cb89035248171b61486d6fabcd9bcf866bf0e8e3c6d79ef3c9d915ef"
+        },
+        {
+          "path": "examples/showcase/native/cloth/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/cloth/job.json",
+          "sha256": "9617b442cad2e092b4e6697ef4e982117e2ed032c9b1334c961d669215b32fd1"
+        },
+        {
+          "path": "examples/showcase/native/cloth/scene.py",
+          "sha256": "791f1531af5c67640bad0d56fb933e4755a695b4d24bc7ade18cecf46860d83b"
+        },
+        {
+          "path": "examples/showcase/native/cloth/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/cloth-pinned.ts",
+          "sha256": "c01bd4e92c0f4e97b075660af2581da8bc03c2aebd9cfb053064fcd2f3e9038e"
+        }
+      ],
+      "command": "bun examples/showcase/native/cloth-pinned.ts --blender-bin /absolute/path/to/Blender",
+      "toolVersion": "3.2.8 source at ba231ba",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS",
+        "ffmpeg version 7.1.5 Copyright (c) 2000-2026 the FFmpeg developers",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-cloth-pinned-poster-2d756d0531d9.webp",
+      "sha256": "2d756d0531d9ddca149fa6f20f110862077cd8081074325db1ad02b031766676",
+      "bytes": 17476,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 800,
+      "alt": "Orange cloth hangs from two raised back corners and drapes over a white sphere."
+    },
+    "video": {
+      "file": "native-cloth-pinned-video-7ad1a0abbe24.mp4",
+      "sha256": "7ad1a0abbe24148437f14150acfd2c8cced49d4091757677a557b4c8b1835b35",
+      "bytes": 238762,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 800,
+      "durationSeconds": 1.6666666666666667,
+      "fps": 24,
+      "frames": 40,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: every decoded frame in chronological sheets and full-size final poster",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "crescent-pavilion",
+    "title": "Build a shape from rules",
+    "description": "A timber pavilion built from editable dimensions, repeated ribs, and a curved plan. Change the parameters and render again.",
+    "family": "parametric-design",
+    "techniques": [
+      "design.crescent-pavilion"
+    ],
+    "guideSlug": "how-to/parametric-design",
+    "guideAnchor": "crescent-pavilion",
+    "featured": true,
+    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
+      "files": [
+        {
+          "path": "examples/showcase/parametric/crescent-pavilion/design.json",
+          "sha256": "aad25711fc5691ffb8b20054c081ea2d7c7a10f88c0e4ced64b52e43d3202596"
+        },
+        {
+          "path": "examples/showcase/parametric/crescent-pavilion/base.scene.json",
+          "sha256": "8acea0c0aba6a49e7b50a552709df856de10012b3ae44b1c7d0d5c7ed02bb246"
+        }
+      ],
+      "command": "slopcamera scene design compile examples/showcase/parametric/crescent-pavilion/design.json --scene examples/showcase/parametric/crescent-pavilion/base.scene.json --output-dir artifacts/slopcamera/generated/showcase-crescent-pavilion --json && slopcamera scene render artifacts/slopcamera/generated/showcase-crescent-pavilion/scene.json --request artifacts/slopcamera/generated/showcase-crescent-pavilion/render.json --json",
+      "toolVersion": "3.3.0 source at 6d53343",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Three.js 0.185.1",
+        "Google Chrome 153.0.8010.48",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "crescent-pavilion-poster-98e4e363688c.webp",
+      "sha256": "98e4e363688c1317a8fada25935727ae74979e4f852e58b9d048383462e6f0ec",
+      "bytes": 58816,
+      "mime": "image/webp",
+      "width": 1440,
+      "height": 1080,
+      "alt": "Curved timber ribs form an open pavilion above a pale stone walkway."
+    },
+    "downloads": [
+      {
+        "file": "crescent-pavilion-original-f1f2907bfdb2.png",
+        "sha256": "f1f2907bfdb24bb319f50cf850fe30db5e659c34d6b3b1e41d6a54d1fa1dcf25",
+        "bytes": 400051,
+        "mime": "image/png",
+        "label": "Original rendered PNG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size original PNG and final WebP; independent geometry/source review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "spiral-stair",
+    "title": "Generate a spiral stair",
+    "description": "Stone treads and bronze rails follow a 1.25-turn spiral around a central support. Retained controls set the height and inner and outer radii.",
+    "family": "parametric-design",
+    "techniques": [
+      "design.spiral-stair"
+    ],
+    "guideSlug": "how-to/parametric-design",
+    "guideAnchor": "spiral-stair",
+    "featured": false,
+    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
+      "files": [
+        {
+          "path": "examples/showcase/parametric/spiral-stair/design.json",
+          "sha256": "97daa643717fb2b1193f82b9adf6dfa3b5ce0dab68fc1c052f68eddd95dde11b"
+        },
+        {
+          "path": "examples/showcase/parametric/spiral-stair/base.scene.json",
+          "sha256": "f993cec607dd4b42fa2db012a8c651440a547b0c8794d62c143f03e0a5bdf788"
+        }
+      ],
+      "command": "slopcamera scene design compile examples/showcase/parametric/spiral-stair/design.json --scene examples/showcase/parametric/spiral-stair/base.scene.json --output-dir artifacts/slopcamera/generated/showcase-spiral-stair --json && slopcamera scene render artifacts/slopcamera/generated/showcase-spiral-stair/scene.json --request artifacts/slopcamera/generated/showcase-spiral-stair/render.json --json",
+      "toolVersion": "3.3.0 source at 6d53343",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Three.js 0.185.1",
+        "Google Chrome 153.0.8010.48",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "spiral-stair-poster-1d2cb312cd60.webp",
+      "sha256": "1d2cb312cd60081d0694e36e274c87c747379d2d7a145a1c8a572f692397c123",
+      "bytes": 51664,
+      "mime": "image/webp",
+      "width": 1440,
+      "height": 1080,
+      "alt": "A spiral stair with pale stone treads, thin bronze balusters and dark handrails."
+    },
+    "downloads": [
+      {
+        "file": "spiral-stair-original-d93cb70baa41.png",
+        "sha256": "d93cb70baa41e7d9411ea76085595763ad189b6828c22ac8b800cb79e3d24e99",
+        "bytes": 247000,
+        "mime": "image/png",
+        "label": "Original rendered PNG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size original PNG and final WebP; independent geometry/source review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "ribbed-tower",
+    "title": "Twist a ribbed tower",
+    "description": "Forty bronze ribs wrap around 13 recessed floor plates. Height, taper, radius and twist remain editable in the retained design.",
+    "family": "parametric-design",
+    "techniques": [
+      "design.ribbed-tower"
+    ],
+    "guideSlug": "how-to/parametric-design",
+    "guideAnchor": "ribbed-tower",
+    "featured": false,
+    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
+      "files": [
+        {
+          "path": "examples/showcase/parametric/ribbed-tower/design.json",
+          "sha256": "96839e753efd698fa48e28f303a6c7128cc605dd9e292a292e1d196d78916fa1"
+        },
+        {
+          "path": "examples/showcase/parametric/ribbed-tower/base.scene.json",
+          "sha256": "5f5dc99bdc952a34a64c9bb6475e04494bebbcd8df70fc7f24facec137edd8dd"
+        }
+      ],
+      "command": "slopcamera scene design compile examples/showcase/parametric/ribbed-tower/design.json --scene examples/showcase/parametric/ribbed-tower/base.scene.json --output-dir artifacts/slopcamera/generated/showcase-ribbed-tower --json && slopcamera scene render artifacts/slopcamera/generated/showcase-ribbed-tower/scene.json --request artifacts/slopcamera/generated/showcase-ribbed-tower/render.json --json",
+      "toolVersion": "3.3.0 source at 6d53343",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Three.js 0.185.1",
+        "Google Chrome 153.0.8010.48",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "ribbed-tower-poster-c083d1c7e01c.webp",
+      "sha256": "c083d1c7e01c264ae3bd7883549ab7970bbb2f143c55647d5b808cdd7355a010",
+      "bytes": 58402,
+      "mime": "image/webp",
+      "width": 1440,
+      "height": 1080,
+      "alt": "Bronze ribs twist around a dark cylindrical tower on a circular base."
+    },
+    "downloads": [
+      {
+        "file": "ribbed-tower-original-6c5e4ddf3621.png",
+        "sha256": "6c5e4ddf3621b248625a65dfd9fcdf44ec917a64093c1badb38310a212d75379",
+        "bytes": 261281,
+        "mime": "image/png",
+        "label": "Original rendered PNG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size original PNG and final WebP; independent geometry/source review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "modular-bookshelf",
+    "title": "Lay out a modular bookshelf",
+    "description": "Five bays and four rows of walnut shelves, with terracotta backs and separate books and ceramic geometry. Change the dimensions while retaining the construction rules.",
+    "family": "parametric-design",
+    "techniques": [
+      "design.modular-bookshelf"
+    ],
+    "guideSlug": "how-to/parametric-design",
+    "guideAnchor": "modular-bookshelf",
+    "featured": false,
+    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
+      "files": [
+        {
+          "path": "examples/showcase/parametric/modular-bookshelf/design.json",
+          "sha256": "b3b2413d0ad05c67539ac70bb38a127725cc4e0a3e9dfacd1ef548e875080283"
+        },
+        {
+          "path": "examples/showcase/parametric/modular-bookshelf/base.scene.json",
+          "sha256": "f2500e0dfbebc4b833fa9f1bac9b0f2209bb050d72540e7701ebb64032b08a76"
+        }
+      ],
+      "command": "slopcamera scene design compile examples/showcase/parametric/modular-bookshelf/design.json --scene examples/showcase/parametric/modular-bookshelf/base.scene.json --output-dir artifacts/slopcamera/generated/showcase-modular-bookshelf --json && slopcamera scene render artifacts/slopcamera/generated/showcase-modular-bookshelf/scene.json --request artifacts/slopcamera/generated/showcase-modular-bookshelf/render.json --json",
+      "toolVersion": "3.3.0 source at 6d53343",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Three.js 0.185.1",
+        "Google Chrome 153.0.8010.48",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "modular-bookshelf-poster-6b1ba13dc24f.webp",
+      "sha256": "6b1ba13dc24fe4deb488bc572d09afb8854c9f22e3441a4ecfbe1b585bf96a1b",
+      "bytes": 26392,
+      "mime": "image/webp",
+      "width": 1440,
+      "height": 1080,
+      "alt": "A walnut bookshelf with five columns, four rows, alternating warm backs, books and a ceramic vase."
+    },
+    "downloads": [
+      {
+        "file": "modular-bookshelf-original-0a1bd5aa3a20.png",
+        "sha256": "0a1bd5aa3a20e572c55a2cb258983e041b71fd5277e30548d1e36d73725ec1b6",
+        "bytes": 167894,
+        "mime": "image/png",
+        "label": "Original rendered PNG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size original PNG and final WebP; independent geometry/source review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "crescent-pavilion-wide",
+    "title": "Widen the span, lower the crown",
+    "description": "The same pavilion and camera, with span changed from 6.2 to 8 metres, crown height from 4.1 to 3.3 metres, and plan curvature from 1.1 to 1.6 radians.",
+    "family": "parametric-design",
+    "techniques": [
+      "design.parameter-revision"
+    ],
+    "guideSlug": "how-to/parametric-design",
+    "guideAnchor": "crescent-pavilion-wide",
+    "featured": false,
+    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
+      "files": [
+        {
+          "path": "examples/showcase/parametric/crescent-pavilion-wide/design.json",
+          "sha256": "d97234ad93eee221e0bc23e353ac1fc75f94c2bcae123ca9d2d19c6c0e4da54d"
+        },
+        {
+          "path": "examples/showcase/parametric/crescent-pavilion-wide/base.scene.json",
+          "sha256": "8acea0c0aba6a49e7b50a552709df856de10012b3ae44b1c7d0d5c7ed02bb246"
+        }
+      ],
+      "command": "slopcamera scene design compile examples/showcase/parametric/crescent-pavilion-wide/design.json --scene examples/showcase/parametric/crescent-pavilion-wide/base.scene.json --output-dir artifacts/slopcamera/generated/showcase-crescent-pavilion-wide --json && slopcamera scene render artifacts/slopcamera/generated/showcase-crescent-pavilion-wide/scene.json --request artifacts/slopcamera/generated/showcase-crescent-pavilion-wide/render.json --json",
+      "toolVersion": "3.3.0 source at 6d53343",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Three.js 0.185.1",
+        "Google Chrome 153.0.8010.48",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "crescent-pavilion-wide-poster-03881a682321.webp",
+      "sha256": "03881a6823212d14f6d7a4fe39ce67eacb9a1bf00dd835bf9e7b90e7239c9d4a",
+      "bytes": 61610,
+      "mime": "image/webp",
+      "width": 1440,
+      "height": 1080,
+      "alt": "A wider, lower timber pavilion follows a tighter curve, viewed through the same camera."
+    },
+    "downloads": [
+      {
+        "file": "crescent-pavilion-wide-original-78f271e576a9.png",
+        "sha256": "78f271e576a9a3ed6098a32b2ce4ce46a1c9b27ddba62091f638c9800c9ac010",
+        "bytes": 407744,
+        "mime": "image/png",
+        "label": "Original rendered PNG"
+      }
+    ],
+    "review": {
+      "agent": "root: full-size original PNG and final WebP; independent geometry/source review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "edit-directed-landscape",
+    "title": "Landscape delivery",
+    "description": "Keep the instrument wide, with the title above and material labels below. A gentle centered push preserves space around the silhouette.",
+    "family": "video-editing",
+    "techniques": [
+      "edit.bootstrap",
+      "edit.cuts-speed",
+      "edit.overlays",
+      "edit.manual-camera",
+      "delivery.16-9"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "landscape-delivery",
+    "featured": false,
+    "requirements": "Current source with the static-overlay timing fix, a completed native product render, FFmpeg, FFprobe and rsvg-convert. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "bd011ec10854d34aacd9a318cacaf5ffb4d52b9d",
+      "files": [
+        {
+          "path": "examples/showcase/edit/ratio-variants.ts",
+          "sha256": "09ad846ce5de993104c74e09c9ecc8a468d3fe75889991c66b3cee27a53f6708"
+        },
+        {
+          "path": "examples/showcase/edit/review-ratios.ts",
+          "sha256": "7511a8c049a3ae3bde8cf5894b483dfedbf7095d4bf16eaea6affabb7ae7de2d"
+        },
+        {
+          "path": "examples/showcase/edit/create-ratio-frames.py",
+          "sha256": "75d6284398a1d6779d028c47d7c1ed83513e7fc8ff646f4239c80a189b7b99ce"
+        },
+        {
+          "path": "examples/showcase/edit/README.md",
+          "sha256": "776f90c762296d2c8c1f427db208c211352986e0e459663f247f80fc58ecd2ad"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/feed-portrait.svg",
+          "sha256": "10a8ef19950552319f4a2245de41d187f8a256211ddec680023af62c290d4427"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/landscape.svg",
+          "sha256": "23309d6d617b99dbb2b8a14af55ef530ba5ee530b0bc7a88107ca5a2e6f347b7"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/portrait.svg",
+          "sha256": "ef24453b69bcb243c86a16b0585e81557c22e2f4def9b771d0aabc65cc37084a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/provenance.json",
+          "sha256": "a5415f314b48027948b8216fd696eb04c481fa52e80e62783b4d354ba08c847a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/square.svg",
+          "sha256": "afbd1d48a4709d5babbe935823daed2ad9360fbb2028573ac188efa1815b1541"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> prepare; bun examples/showcase/edit/review-ratios.ts <printed-artifact-directory>; bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> render <reviewed-engine-revision>",
+      "toolVersion": "3.2.8 source at bd011ec",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg / FFprobe 7.1.5",
+        "rsvg-convert 2.63.0",
+        "Optional SVG regeneration: Python 3 and fontTools",
+        "Native input: Blender 5.2.1 LTS at ba231ba"
+      ],
+      "license": "MIT recipe and original film; outlined Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "edit-directed-landscape-poster-7604faf4f822.webp",
+      "sha256": "7604faf4f822b0720b70d9302b459b6ea487c918d7640ae579c12108ba7a9737",
+      "bytes": 44910,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "Landscape optical instrument study with an outlined title above and small material labels below."
+    },
+    "video": {
+      "file": "edit-directed-landscape-film-e477e7623413.mp4",
+      "sha256": "e477e7623413f4a2a8c148dc4dad1f798a2e7120898e327d36fdba11eb70fb65",
+      "bytes": 421148,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 4.916667,
+      "fps": 24,
+      "frames": 118,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "capability_inventory: all frames; root and seo_research: composition, endpoints and source",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "edit-directed-portrait",
+    "title": "Portrait delivery",
+    "description": "Enlarge the instrument for a tall frame and place the title and specification rows above and below it. The crop retains the complete lens and controls.",
+    "family": "video-editing",
+    "techniques": [
+      "edit.bootstrap",
+      "edit.cuts-speed",
+      "edit.overlays",
+      "edit.manual-camera",
+      "delivery.9-16"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "portrait-delivery",
+    "featured": false,
+    "requirements": "Current source with the static-overlay timing fix, a completed native product render, FFmpeg, FFprobe and rsvg-convert. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "bd011ec10854d34aacd9a318cacaf5ffb4d52b9d",
+      "files": [
+        {
+          "path": "examples/showcase/edit/ratio-variants.ts",
+          "sha256": "09ad846ce5de993104c74e09c9ecc8a468d3fe75889991c66b3cee27a53f6708"
+        },
+        {
+          "path": "examples/showcase/edit/review-ratios.ts",
+          "sha256": "7511a8c049a3ae3bde8cf5894b483dfedbf7095d4bf16eaea6affabb7ae7de2d"
+        },
+        {
+          "path": "examples/showcase/edit/create-ratio-frames.py",
+          "sha256": "75d6284398a1d6779d028c47d7c1ed83513e7fc8ff646f4239c80a189b7b99ce"
+        },
+        {
+          "path": "examples/showcase/edit/README.md",
+          "sha256": "776f90c762296d2c8c1f427db208c211352986e0e459663f247f80fc58ecd2ad"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/feed-portrait.svg",
+          "sha256": "10a8ef19950552319f4a2245de41d187f8a256211ddec680023af62c290d4427"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/landscape.svg",
+          "sha256": "23309d6d617b99dbb2b8a14af55ef530ba5ee530b0bc7a88107ca5a2e6f347b7"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/portrait.svg",
+          "sha256": "ef24453b69bcb243c86a16b0585e81557c22e2f4def9b771d0aabc65cc37084a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/provenance.json",
+          "sha256": "a5415f314b48027948b8216fd696eb04c481fa52e80e62783b4d354ba08c847a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/square.svg",
+          "sha256": "afbd1d48a4709d5babbe935823daed2ad9360fbb2028573ac188efa1815b1541"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> prepare; bun examples/showcase/edit/review-ratios.ts <printed-artifact-directory>; bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> render <reviewed-engine-revision>",
+      "toolVersion": "3.2.8 source at bd011ec",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg / FFprobe 7.1.5",
+        "rsvg-convert 2.63.0",
+        "Optional SVG regeneration: Python 3 and fontTools",
+        "Native input: Blender 5.2.1 LTS at ba231ba"
+      ],
+      "license": "MIT recipe and original film; outlined Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "edit-directed-portrait-poster-1f2957af0901.webp",
+      "sha256": "1f2957af090120e64ac8c8cb197ae3a2323713652c6e0195d83ad3a9739515c6",
+      "bytes": 44584,
+      "mime": "image/webp",
+      "width": 720,
+      "height": 1280,
+      "alt": "Tall optical instrument study with large lettering above the lens and material labels near the bottom."
+    },
+    "video": {
+      "file": "edit-directed-portrait-film-1e7c397aa056.mp4",
+      "sha256": "1e7c397aa056a47d4201221593c6fc704cd89596ee896eedfb46b3738290accd",
+      "bytes": 320335,
+      "mime": "video/mp4",
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 4.916667,
+      "fps": 24,
+      "frames": 118,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "capability_inventory: all frames; root and seo_research: composition, endpoints and source",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "edit-directed-square",
+    "title": "Square delivery",
+    "description": "Bring the instrument forward within a square composition, with a dedicated typographic frame and a restrained camera push.",
+    "family": "video-editing",
+    "techniques": [
+      "edit.bootstrap",
+      "edit.cuts-speed",
+      "edit.overlays",
+      "edit.manual-camera",
+      "delivery.1-1"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "square-delivery",
+    "featured": false,
+    "requirements": "Current source with the static-overlay timing fix, a completed native product render, FFmpeg, FFprobe and rsvg-convert. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "bd011ec10854d34aacd9a318cacaf5ffb4d52b9d",
+      "files": [
+        {
+          "path": "examples/showcase/edit/ratio-variants.ts",
+          "sha256": "09ad846ce5de993104c74e09c9ecc8a468d3fe75889991c66b3cee27a53f6708"
+        },
+        {
+          "path": "examples/showcase/edit/review-ratios.ts",
+          "sha256": "7511a8c049a3ae3bde8cf5894b483dfedbf7095d4bf16eaea6affabb7ae7de2d"
+        },
+        {
+          "path": "examples/showcase/edit/create-ratio-frames.py",
+          "sha256": "75d6284398a1d6779d028c47d7c1ed83513e7fc8ff646f4239c80a189b7b99ce"
+        },
+        {
+          "path": "examples/showcase/edit/README.md",
+          "sha256": "776f90c762296d2c8c1f427db208c211352986e0e459663f247f80fc58ecd2ad"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/feed-portrait.svg",
+          "sha256": "10a8ef19950552319f4a2245de41d187f8a256211ddec680023af62c290d4427"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/landscape.svg",
+          "sha256": "23309d6d617b99dbb2b8a14af55ef530ba5ee530b0bc7a88107ca5a2e6f347b7"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/portrait.svg",
+          "sha256": "ef24453b69bcb243c86a16b0585e81557c22e2f4def9b771d0aabc65cc37084a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/provenance.json",
+          "sha256": "a5415f314b48027948b8216fd696eb04c481fa52e80e62783b4d354ba08c847a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/square.svg",
+          "sha256": "afbd1d48a4709d5babbe935823daed2ad9360fbb2028573ac188efa1815b1541"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> prepare; bun examples/showcase/edit/review-ratios.ts <printed-artifact-directory>; bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> render <reviewed-engine-revision>",
+      "toolVersion": "3.2.8 source at bd011ec",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg / FFprobe 7.1.5",
+        "rsvg-convert 2.63.0",
+        "Optional SVG regeneration: Python 3 and fontTools",
+        "Native input: Blender 5.2.1 LTS at ba231ba"
+      ],
+      "license": "MIT recipe and original film; outlined Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "edit-directed-square-poster-cd77dce36a54.webp",
+      "sha256": "cd77dce36a540c97d76470d6ffe5516d19711523a6fcc77e17b1a029d3aab2f0",
+      "bytes": 46870,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 960,
+      "alt": "Square optical instrument study with the complete lens centered between a title and specification rows."
+    },
+    "video": {
+      "file": "edit-directed-square-film-c49e2a857466.mp4",
+      "sha256": "c49e2a857466b833ee61c47bb2269c0089162c43cf7589225b4b3faa2d53bf85",
+      "bytes": 370432,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 960,
+      "durationSeconds": 4.916667,
+      "fps": 24,
+      "frames": 118,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "capability_inventory: all frames; root and seo_research: composition, endpoints and source",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "edit-directed-feed-portrait",
+    "title": "Feed portrait delivery",
+    "description": "Use a 4:5 composition with a closer view of the instrument, a broad title, and readable material labels beneath it.",
+    "family": "video-editing",
+    "techniques": [
+      "edit.bootstrap",
+      "edit.cuts-speed",
+      "edit.overlays",
+      "edit.manual-camera",
+      "delivery.4-5"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "feed-portrait-delivery",
+    "featured": false,
+    "requirements": "Current source with the static-overlay timing fix, a completed native product render, FFmpeg, FFprobe and rsvg-convert. Local rendering; no cloud account.",
+    "source": {
+      "engineRevision": "bd011ec10854d34aacd9a318cacaf5ffb4d52b9d",
+      "files": [
+        {
+          "path": "examples/showcase/edit/ratio-variants.ts",
+          "sha256": "09ad846ce5de993104c74e09c9ecc8a468d3fe75889991c66b3cee27a53f6708"
+        },
+        {
+          "path": "examples/showcase/edit/review-ratios.ts",
+          "sha256": "7511a8c049a3ae3bde8cf5894b483dfedbf7095d4bf16eaea6affabb7ae7de2d"
+        },
+        {
+          "path": "examples/showcase/edit/create-ratio-frames.py",
+          "sha256": "75d6284398a1d6779d028c47d7c1ed83513e7fc8ff646f4239c80a189b7b99ce"
+        },
+        {
+          "path": "examples/showcase/edit/README.md",
+          "sha256": "776f90c762296d2c8c1f427db208c211352986e0e459663f247f80fc58ecd2ad"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/feed-portrait.svg",
+          "sha256": "10a8ef19950552319f4a2245de41d187f8a256211ddec680023af62c290d4427"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/landscape.svg",
+          "sha256": "23309d6d617b99dbb2b8a14af55ef530ba5ee530b0bc7a88107ca5a2e6f347b7"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/portrait.svg",
+          "sha256": "ef24453b69bcb243c86a16b0585e81557c22e2f4def9b771d0aabc65cc37084a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/provenance.json",
+          "sha256": "a5415f314b48027948b8216fd696eb04c481fa52e80e62783b4d354ba08c847a"
+        },
+        {
+          "path": "examples/showcase/edit/ratio-frames/square.svg",
+          "sha256": "afbd1d48a4709d5babbe935823daed2ad9360fbb2028573ac188efa1815b1541"
+        },
+        {
+          "path": "examples/showcase/native/product/source.json",
+          "sha256": "5a33cd2e475ddaf8748f21e0c95cf2f5efc87ce5c4584d82272407bb751bebc2"
+        },
+        {
+          "path": "examples/showcase/native/product/job.json",
+          "sha256": "026b06a90bf4efc01de41f6f3e96c1c81c2ff38a498f16ee707f86e55860a8b4"
+        },
+        {
+          "path": "examples/showcase/native/product/scene.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/product/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/render.ts",
+          "sha256": "6f690b00b7b29dee48291e33eae25fef723d04a6ecd7874c1cec95b770ef5048"
+        }
+      ],
+      "command": "bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> prepare; bun examples/showcase/edit/review-ratios.ts <printed-artifact-directory>; bun examples/showcase/edit/ratio-variants.ts <successful-product-job-id> render <reviewed-engine-revision>",
+      "toolVersion": "3.2.8 source at bd011ec",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg / FFprobe 7.1.5",
+        "rsvg-convert 2.63.0",
+        "Optional SVG regeneration: Python 3 and fontTools",
+        "Native input: Blender 5.2.1 LTS at ba231ba"
+      ],
+      "license": "MIT recipe and original film; outlined Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "edit-directed-feed-portrait-poster-a85c4faaa588.webp",
+      "sha256": "a85c4faaa588992e4f44269bdbda0eb3c163ba52103f78d51fa385bc36b974bb",
+      "bytes": 41988,
+      "mime": "image/webp",
+      "width": 864,
+      "height": 1080,
+      "alt": "Four-by-five optical instrument study with a wide title and small specification rows around the product."
+    },
+    "video": {
+      "file": "edit-directed-feed-portrait-film-a43d6dcba34a.mp4",
+      "sha256": "a43d6dcba34a3e985760dcf38d2f1eac79ffe73380dc0bda5a1c2cba397f7aee",
+      "bytes": 329265,
+      "mime": "video/mp4",
+      "width": 864,
+      "height": 1080,
+      "durationSeconds": 4.916667,
+      "fps": 24,
+      "frames": 118,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "capability_inventory: all frames; root and seo_research: composition, endpoints and source",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-orbit",
+    "title": "Orbit around live media",
+    "description": "An animated editorial film and a vector process diagram sit on separate planes in a 3D scene. The camera moves around them while foreground geometry reveals depth through occlusion.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.orbit",
+      "scene.world-media"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "orbit-around-live-media",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "bd011ec10854d34aacd9a318cacaf5ffb4d52b9d",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/render-orbit.ts",
+          "sha256": "aee4ffec790da59abc84d69b97d05cfdd76527b3fc33fb9d70c9e9e61e2ecdac"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/render-orbit.ts",
+      "toolVersion": "3.2.8 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-orbit-poster-0a0ac3812fc9.webp",
+      "sha256": "0a0ac3812fc9b4d6ed93aaa45b4c13ca1a1872c4904bad23be764ebdd3afaad4",
+      "bytes": 19046,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "An editorial motion graphic and process diagram stand as separate panels behind dark fins in a three-dimensional stage."
+    },
+    "video": {
+      "file": "camera-orbit-film-ec062f3d6af2.mp4",
+      "sha256": "ec062f3d6af2894d5bac1ee60a8f84deaaf98d7b2db2214dc9dd809ea5cf25fd",
+      "bytes": 564083,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "hosted_audit and root: all 192 frames, full-size poster and retained source",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-color-alpha",
+    "title": "Keep transparency and highlight range",
+    "description": "One native chart produces a straight-alpha PNG and a linear, premultiplied EXR. Measured patches distinguish display color, transparency and values above the SDR range. This preview composites the PNG over a dark background.",
+    "family": "native",
+    "techniques": [
+      "native.color-alpha"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "preserve-color-and-alpha",
+    "featured": false,
+    "requirements": "Blender 5.2.1 LTS on CPU, Bun, FFmpeg and Python 3; the reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "171304aa3a1cd7563cd98e88f792d458169ca825",
+      "files": [
+        {
+          "path": "examples/showcase/native/color-alpha-study/README.md",
+          "sha256": "cbb356d2a2306523b7db848358d4ceaeeac54196140a24cba1b5452ef70fb6cb"
+        },
+        {
+          "path": "examples/showcase/native/color-alpha-study/jobs/chart.json",
+          "sha256": "78af6a72a6ed51c8e1947d9d31f2dff157ad398daa8151ec658246599849d2e9"
+        },
+        {
+          "path": "examples/showcase/native/color-alpha-study/patches.json",
+          "sha256": "f88e3db89357ab77fc0f0db0a123dfa0745481f88769dff4e42be9e37e1ccabe"
+        },
+        {
+          "path": "examples/showcase/native/color-alpha-study/qualify.py",
+          "sha256": "1c8c5f9dcae4b95aa6ab14b3eea19d8f6bcc1d42ea17c76ffcf3d2cf90eda62d"
+        },
+        {
+          "path": "examples/showcase/native/color-alpha-study/scene.py",
+          "sha256": "cc5d7e7ad5589c3ba13e7ea0c2f7b8ab0b9c06dcc9d22d1c879d3af201ae3ca0"
+        },
+        {
+          "path": "examples/showcase/native/color-alpha-study/source.json",
+          "sha256": "a53dcc436d58bbb349767b436e83fef7f3f588da19b62959f271013d7aa09ace"
+        },
+        {
+          "path": "examples/showcase/native/prepare-study.ts",
+          "sha256": "619fbb1d40d858b563e9225c42a4fcc7cd31b376912d4a647b6cf652b81ab3db"
+        }
+      ],
+      "command": "bun examples/showcase/native/prepare-study.ts color-alpha-study --write-jobs && bun apps/desktop/cli/main.ts studio bundle examples/showcase/native/color-alpha-study/source.json --json",
+      "toolVersion": "3.2.8 source at 171304a",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS / Cycles CPU",
+        "FFmpeg 7.1.5",
+        "Python 3.14.6",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-color-alpha-poster-46121edf9bf8.png",
+      "sha256": "46121edf9bf89b37fcdd188b96f9771799ceb90bb0cdc62eb7f893a5fcbe0de8",
+      "bytes": 15544,
+      "mime": "image/png",
+      "width": 512,
+      "height": 288,
+      "alt": "Six labeled positions show gray, red, an HDR highlight, half-transparent cyan and brass, and a clear patch on a dark background."
+    },
+    "downloads": [
+      {
+        "file": "native-color-alpha-straight-png-96268c6e70eb.png",
+        "sha256": "96268c6e70ebe1a0a63200b8cd5ac49f8d1fa06c39bddcf5a8cbf91dacf087f4",
+        "bytes": 27049,
+        "mime": "image/png",
+        "label": "16-bit straight-alpha PNG, metadata removed"
+      },
+      {
+        "file": "native-color-alpha-light-composite-39703565f736.png",
+        "sha256": "39703565f736dc0ac3aed996f1458df6e9af6286d9f03ddb75071db46ad3002e",
+        "bytes": 11820,
+        "mime": "image/png",
+        "label": "PNG over a light background"
+      },
+      {
+        "file": "native-color-alpha-exr-sdr-preview-3bc69ee0f99c.png",
+        "sha256": "3bc69ee0f99c469b1c9a8db8f4a0271450bbe55022a1834445275487c838c55a",
+        "bytes": 14441,
+        "mime": "image/png",
+        "label": "SDR preview derived from EXR"
+      }
+    ],
+    "review": {
+      "agent": "root + native_recovery: numeric proof and independent still/edge review",
+      "date": "2026-09-19",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "production-pipeline",
+    "title": "Lay out a pipeline from ordered cards",
+    "description": "Five equal cards and four explicit arrows form a coordinate-free stack. Light, dark and editable exports preserve the declared order.",
+    "family": "diagram",
+    "techniques": [
+      "diagram.stack"
+    ],
+    "guideSlug": "tutorials/first-diagram",
+    "guideAnchor": "stack-layout",
+    "featured": false,
+    "requirements": "A repository checkout with locked dependencies and Bun 1.3.14. Local diagram rendering; no account, browser, native engine or paid model.",
+    "source": {
+      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "files": [
+        {
+          "path": "examples/showcase/diagram/production-pipeline/production-pipeline.diagram.json",
+          "sha256": "c0058cce3f198768f2535092d417e9fe297f94cbe932e65afada91cf8e85376a"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/baseline.config.json",
+          "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/production-pipeline-themed.diagram.json",
+          "sha256": "15c127a261f1a45846ffeb74f7b5697bcbcab868cc1668aaded93bdbab127fc2"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/themed.config.json",
+          "sha256": "fc2ccbde6c67bdabfc973b3f2a9bd5531add5f14b21385b9e22c2be60462141d"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/render.ts",
+          "sha256": "244c734caa6545e376515e296175bdb521589138a7fcbf8e7e22219eb06a9332"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/README.md",
+          "sha256": "995f3c3104edc8828bdd33a7a50369e1ebfa089a4713865049372f2be7e34c38"
+        }
+      ],
+      "command": "bun examples/showcase/diagram/production-pipeline/render.ts",
+      "toolVersion": "3.3.1; engine matched to ad49406",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Bundled Resvg 2.6.2"
+      ],
+      "license": "MIT; Nebula Sans SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "production-pipeline-light-png-f5f2fff6316b.png",
+      "sha256": "f5f2fff6316be8987c63200a4aabbdd773fca21eb2ee14ef7fe31459b6efb430",
+      "bytes": 32385,
+      "mime": "image/png",
+      "width": 720,
+      "height": 1232,
+      "alt": "Five equal cards read Author, Check, Render, Review and Deliver, connected by four downward arrows."
+    },
+    "downloads": [
+      {
+        "file": "production-pipeline-tldr-06d28479d8e9.tldr",
+        "sha256": "06d28479d8e92e108a78dd34d4592facfb803a857d9260d3d321c036a8677c35",
+        "bytes": 17372,
+        "mime": "application/json",
+        "label": "Editable canvas"
+      },
+      {
+        "file": "production-pipeline-light-svg-8c95d22a6271.svg",
+        "sha256": "8c95d22a6271264c51cfd1e3b52fcd268d8cacab047fd422e782dcdc37fa9ca1",
+        "bytes": 197858,
+        "mime": "image/svg+xml",
+        "label": "Light SVG"
+      },
+      {
+        "file": "production-pipeline-dark-svg-0eec8d9831c5.svg",
+        "sha256": "0eec8d9831c58b4aea89eb87f46521bfec97826b806b97b454464034483a8e0e",
+        "bytes": 197857,
+        "mime": "image/svg+xml",
+        "label": "Dark SVG"
+      },
+      {
+        "file": "production-pipeline-light-png-f5f2fff6316b.png",
+        "sha256": "f5f2fff6316be8987c63200a4aabbdd773fca21eb2ee14ef7fe31459b6efb430",
+        "bytes": 32385,
+        "mime": "image/png",
+        "label": "Light PNG"
+      },
+      {
+        "file": "production-pipeline-dark-png-0b9573fffa52.png",
+        "sha256": "0b9573fffa52f43731661040cd08a6e2865960486dd9a48549e89a163a9a3a4d",
+        "bytes": 31210,
+        "mime": "image/png",
+        "label": "Dark PNG"
+      }
+    ],
+    "review": {
+      "agent": "root + editorial_recovery: light/dark and editable export review",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "production-pipeline-themed",
+    "title": "Apply a house style without changing the graph",
+    "description": "The same stack uses a warm light palette, an ink dark palette, licensed Nebula Sans Bold and five original line icons. Labels, relationships and geometry stay unchanged.",
+    "family": "diagram",
+    "techniques": [
+      "diagram.theming"
+    ],
+    "guideSlug": "tutorials/first-diagram",
+    "guideAnchor": "custom-fonts-and-icons",
+    "featured": false,
+    "requirements": "A repository checkout with locked dependencies and Bun 1.3.14. Local diagram rendering; no account, browser, native engine or paid model.",
+    "source": {
+      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "files": [
+        {
+          "path": "examples/showcase/diagram/production-pipeline/production-pipeline-themed.diagram.json",
+          "sha256": "15c127a261f1a45846ffeb74f7b5697bcbcab868cc1668aaded93bdbab127fc2"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/production-pipeline.diagram.json",
+          "sha256": "c0058cce3f198768f2535092d417e9fe297f94cbe932e65afada91cf8e85376a"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/baseline.config.json",
+          "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/themed.config.json",
+          "sha256": "fc2ccbde6c67bdabfc973b3f2a9bd5531add5f14b21385b9e22c2be60462141d"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/render.ts",
+          "sha256": "244c734caa6545e376515e296175bdb521589138a7fcbf8e7e22219eb06a9332"
+        },
+        {
+          "path": "examples/showcase/diagram/production-pipeline/README.md",
+          "sha256": "995f3c3104edc8828bdd33a7a50369e1ebfa089a4713865049372f2be7e34c38"
+        }
+      ],
+      "command": "bun examples/showcase/diagram/production-pipeline/render.ts",
+      "toolVersion": "3.3.1; engine matched to ad49406",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Bundled Resvg 2.6.2"
+      ],
+      "license": "MIT; Nebula Sans SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "production-pipeline-themed-light-png-5325021afed3.png",
+      "sha256": "5325021afed31d8fde4d071e24a05c4ca006c44eabf63faa043bf28d2c82da4f",
+      "bytes": 35849,
+      "mime": "image/png",
+      "width": 720,
+      "height": 1232,
+      "alt": "A vertical Author, Check, Render, Review and Deliver pipeline uses bold labels, matching outline icons and a green delivery card."
+    },
+    "downloads": [
+      {
+        "file": "production-pipeline-themed-tldr-a034e2a58b4d.tldr",
+        "sha256": "a034e2a58b4decba031097cf0a155a34310055d27ee55c0f329f4c9956b19230",
+        "bytes": 25129,
+        "mime": "application/json",
+        "label": "Editable canvas"
+      },
+      {
+        "file": "production-pipeline-themed-light-svg-d2a4786fcac5.svg",
+        "sha256": "d2a4786fcac5ec8171e872692d7186fc790a102b70c7c173a0ffda5f84e16b6d",
+        "bytes": 199172,
+        "mime": "image/svg+xml",
+        "label": "Light SVG"
+      },
+      {
+        "file": "production-pipeline-themed-dark-svg-1b6ff38b889e.svg",
+        "sha256": "1b6ff38b889edc99c0bca267c0cb7164af6fb7fc26d6a8c132cd5996ca841c25",
+        "bytes": 199171,
+        "mime": "image/svg+xml",
+        "label": "Dark SVG"
+      },
+      {
+        "file": "production-pipeline-themed-light-png-5325021afed3.png",
+        "sha256": "5325021afed31d8fde4d071e24a05c4ca006c44eabf63faa043bf28d2c82da4f",
+        "bytes": 35849,
+        "mime": "image/png",
+        "label": "Light PNG"
+      },
+      {
+        "file": "production-pipeline-themed-dark-png-7f4441ceac7f.png",
+        "sha256": "7f4441ceac7f2403cd1f964b83b600d98e0590dc52608d041d9b5dd95c3be74e",
+        "bytes": 37125,
+        "mime": "image/png",
+        "label": "Dark PNG"
+      }
+    ],
+    "review": {
+      "agent": "root + editorial_recovery: light/dark and editable export review",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-focus-pull",
+    "title": "Move focus without moving the camera",
+    "description": "A three-second focus pull on the original optical instrument. The front rim and screws soften as the housing and side knob become sharper, with a short hold at each endpoint.",
+    "family": "native",
+    "techniques": [
+      "native.product"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "move-focus-through-a-shot",
+    "featured": false,
+    "requirements": "Blender 5.2.1 LTS on CPU, Bun and FFmpeg; the reproduction helper needs a source checkout. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "files": [
+        {
+          "path": "examples/showcase/native/focus-study/README.md",
+          "sha256": "6dfa280b05ec1c1fe5cff0e3c486919b963a3c775dd6ed393c0dd7c0f7ef5391"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/focus_schedule.py",
+          "sha256": "e93ba47af735e222d5e06a41ab87455bf0eac3255756c823d3a170d57c66b0e0"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/jobs/01-near.json",
+          "sha256": "dc50681c389870050348d33a5ff9f1d9b107684b773972589347220b25dafb87"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/jobs/02-middle.json",
+          "sha256": "184bae4013afac1db5a61d18b636647c0bb6641686038bad9645fddcd106db2c"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/jobs/03-far.json",
+          "sha256": "b69e245047be1635185449d95d4dc6a40ec5240b629669029ce50b9c1460e261"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/jobs/film.json",
+          "sha256": "6cdea4371591ac4e192a3cfabf2de0e8b70ca746d34648e17d0c3b6931788c98"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/product_geometry.py",
+          "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/provenance.json",
+          "sha256": "d6d14e636a191ac9be795420d4d8960a6726218b33f49f099ae7d8111c425384"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/scene.py",
+          "sha256": "6bce1587712a3891636de3df67bb3d27a7c99488169781b45e8701dd0b33394b"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/source.json",
+          "sha256": "e20f9ff1baed1f5b5871639ec32565d167e7bd5df99ed33b2cfe551ef60f8058"
+        },
+        {
+          "path": "examples/showcase/native/focus-study/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/prepare-study.ts",
+          "sha256": "619fbb1d40d858b563e9225c42a4fcc7cd31b376912d4a647b6cf652b81ab3db"
+        }
+      ],
+      "command": "bun examples/showcase/native/prepare-study.ts focus-study --write-jobs && bun apps/desktop/cli/main.ts studio bundle examples/showcase/native/focus-study/source.json --json",
+      "toolVersion": "3.3.1 source at ad49406",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS / Cycles CPU",
+        "FFmpeg 7.1.5",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-focus-pull-poster-7325cb1b186a.webp",
+      "sha256": "7325cb1b186a7cdb7ac3f1927f8b592ad8b8e40a24fcd5a04141f2c2bb8f0803",
+      "bytes": 21656,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "A brass optical instrument with its ribbed barrel and housing in focus at the midpoint of an authored focus pull."
+    },
+    "video": {
+      "file": "native-focus-pull-video-d8425fd38c76.mp4",
+      "sha256": "d8425fd38c7606ef11aa869152ca26665a52a8d058208f382175bffcb4501da2",
+      "bytes": 166803,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 3,
+      "fps": 24,
+      "frames": 72,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root + native_recovery: all 72 frames, focus crops and decoded film",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-dolly",
+    "title": "Move closer with a dolly",
+    "description": "A straight push toward the display makes both media panels larger while keeping the aim fixed. The foreground fin makes the changing distance visible.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.dolly"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "move-closer-with-a-dolly",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-stage.ts <editorial-result.json>; bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/dolly.scene.json --request artifacts/showcase/spatial/source/dolly.request.json --json",
+      "toolVersion": "3.3.1 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-dolly-poster-63f7a7f130c8.webp",
+      "sha256": "63f7a7f130c88b0c16022b2ea51117cc6761b931ea41108e2fd1495ea2d86fb0",
+      "bytes": 16760,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "Move closer with a dolly: a coral foreground fin stands beside an animated editorial display and a three-step process diagram on a 3D stage."
+    },
+    "video": {
+      "file": "camera-dolly-film-347a6727bcae.mp4",
+      "sha256": "347a6727bcae5a309928d80d2245f7cccb0d9e456aff239b6fd9f63909bc6426",
+      "bytes": 633407,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "ui_spatial_recovery: all frames; root: selected frames, poster and calibrated source",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-crane",
+    "title": "Raise the view with a crane",
+    "description": "The camera rises while keeping the display in view, revealing more of the plinth. The playing film and diagram keep their positions in the scene.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.crane"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "raise-the-view-with-a-crane",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "8fead79b5c9c008ac5f2728c2fd7367cc1ef66f9",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-stage.ts <editorial-result.json>; bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/crane.scene.json --request artifacts/showcase/spatial/source/crane.request.json --json",
+      "toolVersion": "3.3.1 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-crane-poster-11ae978cdc2a.webp",
+      "sha256": "11ae978cdc2ae0af31869642d883f1240bbfb539d620fc32321b8390cccd0679",
+      "bytes": 17526,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "Raise the view with a crane: a coral foreground fin stands beside an animated editorial display and a three-step process diagram on a 3D stage."
+    },
+    "video": {
+      "file": "camera-crane-film-b1ec6795ceaa.mp4",
+      "sha256": "b1ec6795ceaa06dd903d1b97a0d681f3df466ea9a2a558a9d00281d56fdfdf5d",
+      "bytes": 482808,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "ui_spatial_recovery: all frames; root: selected frames, poster and calibrated source",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-rail",
+    "title": "Move laterally on a rail",
+    "description": "A camera follows an eased straight track across the display. The foreground fin shifts against the two media panels, making lateral parallax visible.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.rail"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "move-laterally-on-a-rail",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "8fead79b5c9c008ac5f2728c2fd7367cc1ef66f9",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-stage.ts <editorial-result.json>; bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/rail.scene.json --request artifacts/showcase/spatial/source/rail.request.json --json",
+      "toolVersion": "3.3.1 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-rail-poster-52992058a01e.webp",
+      "sha256": "52992058a01ebe059a5609a72adbe39709a1d6b0b0bf1295ce342968c97a6ea2",
+      "bytes": 18384,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "Move laterally on a rail: a coral foreground fin stands beside an animated editorial display and a three-step process diagram on a 3D stage."
+    },
+    "video": {
+      "file": "camera-rail-film-7527c31c37ba.mp4",
+      "sha256": "7527c31c37ba29e8166ff00573cfdee79a7401d779ef02bf91ca52c8ba91a9da",
+      "bytes": 587878,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "ui_spatial_recovery: all frames; root: selected frames, poster and calibrated source",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-tripod",
+    "title": "Hold a tripod view",
+    "description": "A fixed camera holds the scene composition while the embedded editorial film continues to animate. It provides a steady reference for the moving-camera studies.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.tripod"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "hold-a-tripod-view",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "8fead79b5c9c008ac5f2728c2fd7367cc1ef66f9",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-stage.ts <editorial-result.json>; bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/tripod.scene.json --request artifacts/showcase/spatial/source/tripod.request.json --json",
+      "toolVersion": "3.3.1 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-tripod-poster-dbe7bbefa4c0.webp",
+      "sha256": "dbe7bbefa4c06e2d2e16ba35ee9024372c2f6a24e003fde94f8296d754511d1d",
+      "bytes": 19326,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "Hold a tripod view: a coral foreground fin stands beside an animated editorial display and a three-step process diagram on a 3D stage."
+    },
+    "video": {
+      "file": "camera-tripod-film-d22b164c2984.mp4",
+      "sha256": "d22b164c2984683b828c9dcdebaeafb51fb09e7106518636c790b5a9507f7989",
+      "bytes": 330360,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "ui_spatial_recovery: all frames; root: selected frames, poster and calibrated source",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "camera-handheld",
+    "title": "Add subtle handheld motion",
+    "description": "Small seeded camera movements add a restrained handheld drift to the fixed composition. The media panels stay framed while the foreground fin shifts slightly against them.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.handheld"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "add-subtle-handheld-motion",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "8fead79b5c9c008ac5f2728c2fd7367cc1ef66f9",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-stage.ts",
+          "sha256": "4fc615fce93d6c51e3ffe588cd97d92a7ae05672c5147e8c8d4c0eecaed916d1"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/editorial.json",
+          "sha256": "9d63105ade7f74d6945821799886081b95dc3288761f712f1293edddcc5e2060"
+        },
+        {
+          "path": "examples/showcase/html/editorial.html",
+          "sha256": "15be60a3c8315709c58ef90691ac30e1cb698478cb944f67261a9fd71ebb2a55"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-stage.ts <editorial-result.json>; bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/handheld.scene.json --request artifacts/showcase/spatial/source/handheld.request.json --json",
+      "toolVersion": "3.3.1 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.48",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene and film; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "camera-handheld-poster-302992b254ce.webp",
+      "sha256": "302992b254cee8206a3fa402b74e0c8bb0bd054027ea76d016c685c2dfc629b9",
+      "bytes": 19350,
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "Add subtle handheld motion: a coral foreground fin stands beside an animated editorial display and a three-step process diagram on a 3D stage."
+    },
+    "video": {
+      "file": "camera-handheld-film-3faa8f4be474.mp4",
+      "sha256": "3faa8f4be474f7b5ad7492019610bcfd2a76db076fb80620c9f206d17d88f3cc",
+      "bytes": 459525,
+      "mime": "video/mp4",
+      "width": 960,
+      "height": 540,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "ui_spatial_recovery: all frames; root: selected frames, poster and calibrated source",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  }
+]

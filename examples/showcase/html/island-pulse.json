@@ -1,0 +1,34 @@
+{
+  "kind": "slopcamera.html-scene",
+  "schemaVersion": 1,
+  "name": "Island Pulse \u2014 one original phrase",
+  "document": {
+    "path": "examples/showcase/html/island-pulse.html"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "deviceScaleFactor": 1
+  },
+  "timing": {
+    "durationUs": 8000000,
+    "fps": 24
+  },
+  "libraries": [
+    "three"
+  ],
+  "seed": 20260919,
+  "background": "#11191b",
+  "parameters": {
+    "music": {
+      "bpm": 120,
+      "beatOffsetUs": 0,
+      "beatsPerBar": 4
+    }
+  },
+  "resources": [],
+  "executionProfile": "three-webgl2-hardware-v1",
+  "audio": {
+    "path": "artifacts/showcase/html/island-pulse.wav"
+  }
+}

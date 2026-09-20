@@ -37,7 +37,7 @@ slopcamera skill install --target agents
 
 Use `--target claude` for Claude Code, or omit the target for Codex. The skill comes from the same source checkout. Start a new agent session after installing it.
 
-The `slopcamera` function works in this shell. Programs that launch a child process, such as Vercel, cannot execute a shell function. Give them the built entrypoint instead:
+A direct `AI_GATEWAY_API_KEY` in the local process environment works with this function and needs no Vercel CLI or linked project. The `slopcamera` function works in this shell. Programs that launch a child process, such as Vercel, cannot execute a shell function. Give them the built entrypoint instead:
 
 ```sh
 vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" ai models list --type image --json

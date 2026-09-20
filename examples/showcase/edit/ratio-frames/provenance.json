@@ -1,0 +1,28 @@
+{
+  "font": "src/assets/fonts/nebula-sans/NebulaSans-Book.otf",
+  "fontSha256": "4cc650f856591af1affc4add4f50e260c8239a2542bafe77909b78006023f091",
+  "fontLicense": "src/assets/fonts/nebula-sans/LICENSE.txt",
+  "method": "FontTools glyph outlines at explicit positions; SVGs contain paths and gradients only.",
+  "files": [
+    {
+      "path": "feed-portrait.svg",
+      "sha256": "10a8ef19950552319f4a2245de41d187f8a256211ddec680023af62c290d4427",
+      "bytes": 31426
+    },
+    {
+      "path": "landscape.svg",
+      "sha256": "23309d6d617b99dbb2b8a14af55ef530ba5ee530b0bc7a88107ca5a2e6f347b7",
+      "bytes": 31815
+    },
+    {
+      "path": "portrait.svg",
+      "sha256": "ef24453b69bcb243c86a16b0585e81557c22e2f4def9b771d0aabc65cc37084a",
+      "bytes": 32440
+    },
+    {
+      "path": "square.svg",
+      "sha256": "afbd1d48a4709d5babbe935823daed2ad9360fbb2028573ac188efa1815b1541",
+      "bytes": 31332
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "slopcamera.studio-source-bundle",
+  "schemaVersion": 1,
+  "engine": "cadquery",
+  "entrypoint": {
+    "kind": "python",
+    "path": "scene.py"
+  },
+  "files": [
+    {
+      "path": "scene.py",
+      "sha256": "23236ebdc648aa6c3245aaf3be67ceeb70628389f4aec3ea19f39dd61642ffdb",
+      "bytes": 2332
+    }
+  ]
+}

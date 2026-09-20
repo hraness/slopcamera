@@ -1,0 +1,21 @@
+{
+  "kind": "slopcamera.studio-source-bundle",
+  "schemaVersion": 1,
+  "engine": "blender",
+  "entrypoint": {
+    "kind": "python",
+    "path": "scene.py"
+  },
+  "files": [
+    {
+      "path": "scene.py",
+      "sha256": "9b53ba0b1ce94d928fb25e18c3fcbf3483352b39a9c656f92e4320969df2c9be",
+      "bytes": 7551
+    },
+    {
+      "path": "studio_scene.py",
+      "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419",
+      "bytes": 5682
+    }
+  ]
+}

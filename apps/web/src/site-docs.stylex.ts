@@ -9,7 +9,7 @@ const forcedColors = "@media (forced-colors: active)"
 const docs = stylex.create({
   layout: {
     display: "grid",
-    gridTemplateColumns: { default: "16rem minmax(0, 1fr)", [tablet]: "1fr" },
+    gridTemplateColumns: { default: "16rem minmax(0, 1fr)", [tablet]: "minmax(0, 1fr)" },
     columnGap: "clamp(1.5rem, 4vw, 4rem)",
     width: "min(100% - 2 * var(--gutter), 72rem)",
     marginTop: 0,
@@ -20,6 +20,7 @@ const docs = stylex.create({
     paddingBottom: "clamp(3rem, 8vw, 6rem)",
   },
   nav: {
+    display: { default: "block", [tablet]: "none" },
     alignSelf: "start",
     position: { default: "sticky", [tablet]: "static" },
     top: "5rem",
@@ -28,6 +29,38 @@ const docs = stylex.create({
     borderBottomWidth: { default: 0, [tablet]: "1px" },
     borderBottomStyle: { default: "none", [tablet]: "solid" },
     borderBottomColor: { default: "transparent", [tablet]: "var(--line)" },
+    fontSize: "0.92rem",
+  },
+  mobileNav: {
+    display: { default: "none", [tablet]: "block" },
+    minWidth: 0,
+    marginBottom: "1.5rem",
+    borderBottomWidth: "1px",
+    borderBottomStyle: "solid",
+    borderBottomColor: "var(--line)",
+  },
+  navSummary: {
+    minHeight: "2.75rem",
+    paddingTop: "0.75rem",
+    paddingBottom: "0.75rem",
+    color: "var(--ink)",
+    cursor: "pointer",
+    overflowWrap: "anywhere",
+    lineHeight: 1.5,
+    outlineWidth: { default: 0, ":focus-visible": "2px" },
+    outlineStyle: { default: "none", ":focus-visible": "solid" },
+    outlineColor: { default: "var(--gold)", [forcedColors]: "Highlight" },
+    outlineOffset: "4px",
+  },
+  navContext: {
+    display: "block",
+    marginTop: "0.25rem",
+    color: "var(--muted)",
+    fontSize: "0.875rem",
+  },
+  mobileLinks: {
+    paddingTop: "0.75rem",
+    paddingBottom: "1rem",
     fontSize: "0.92rem",
   },
   navHome: {
@@ -151,6 +184,7 @@ const docs = stylex.create({
     textUnderlineOffset: "0.15em",
   },
   code: {
+    overflowWrap: "anywhere",
     paddingTop: "0.08em",
     paddingRight: "0.3em",
     paddingBottom: "0.08em",
@@ -275,6 +309,10 @@ const docs = stylex.create({
 export const siteDocsClassNames = {
   layout: stylex.props(docs.layout).className,
   nav: stylex.props(docs.nav).className,
+  mobileNav: stylex.props(docs.mobileNav).className,
+  navSummary: stylex.props(docs.navSummary).className,
+  navContext: stylex.props(docs.navContext).className,
+  mobileLinks: stylex.props(docs.mobileLinks).className,
   navHome: stylex.props(docs.navHome).className,
   navSection: stylex.props(docs.navSection).className,
   navSectionLabel: stylex.props(docs.navSectionLabel).className,

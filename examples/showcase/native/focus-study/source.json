@@ -1,0 +1,13 @@
+{
+  "engine": "blender",
+  "entrypoint": {
+    "kind": "python",
+    "path": "scene.py"
+  },
+  "files": [
+    "scene.py",
+    "product_geometry.py",
+    "studio_scene.py",
+    "focus_schedule.py"
+  ]
+}

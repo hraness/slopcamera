@@ -1,0 +1,13 @@
+{
+  "kind": "slopcamera.html-scene",
+  "schemaVersion": 1,
+  "name": "Form follows a frame",
+  "document": { "path": "examples/showcase/html/editorial.html" },
+  "canvas": { "width": 1280, "height": 720, "deviceScaleFactor": 1 },
+  "timing": { "durationUs": 8000000, "fps": 24 },
+  "libraries": [],
+  "seed": 20260919,
+  "background": "#192521",
+  "parameters": {},
+  "resources": []
+}

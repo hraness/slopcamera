@@ -1,11 +1,11 @@
-Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed Slopcamera distribution — the installed Bun package or a checkout — and its admitted tools. Check [release and platform support](/docs/reference/capabilities) before relying on a current-source addition.
+Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed Slopcamera distribution — the installed Bun package or a checkout — and its admitted tools. Check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
 
 ## Public entrypoints
 
 | Import | Contract |
 | --- | --- |
 | `@hraness/slopcamera` | Diagram schemas and rendering, vectorization, portable spatial-scene and native-studio contracts, and pure planning helpers. Named exports and the frozen `slopcameraApi` object carry the same surface. |
-| `@hraness/slopcamera/code` | Declarative graph authoring and compilation against the portable four-operation projection. |
+| `@hraness/slopcamera/code` | Declarative graph authoring and compilation against the fixed portable projection. |
 | `@hraness/slopcamera/code/advanced` | Lower-level portable graph, compiler, canonical-JSON, and planning contracts. |
 | `@hraness/slopcamera/operations` | The fixed portable semantic operation registry and its executor. |
 | `@hraness/slopcamera/workflow` | The preserved imperative v0.8 API for explicitly imported trusted Bun workflows. |
@@ -22,7 +22,7 @@ There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/
 
 ## The portable projection
 
-The portable projection contains exactly four operations: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, and `slopcamera.image.generate`. Portable spatial and studio schemas can parse, hash, and plan values without making their local executors available.
+The v3.3.1 portable projection contains six operations: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. Portable spatial and studio schemas can parse, hash, and plan values without making their local executors available.
 
 Compilation binds one closed projection. A graph containing an unsupported operation fails before executor or resource admission. An operation input is typed data, never a caller-selected executable, shell command, dynamic loader, or registration hook.
 
@@ -37,7 +37,7 @@ slopcamera workflows list --json
 slopcamera workflows show directed-scene --json
 ```
 
-Local `media.ingest` imports files into an existing project. There is no public SDK operation that creates a project from arbitrary standalone files: creation starts from a stopped recording, a successful studio or directing assembly, or an authored scene rendered with `html render`. Access to TypeScript types does not authorize calling private storage constructors.
+Local `media.ingest` imports files into an existing project. There is no public SDK operation that creates a project from arbitrary standalone files: creation starts from an existing finished recording bundle, a successful studio or directing assembly, or an authored scene rendered with `html render`. Access to TypeScript types does not authorize calling private storage constructors.
 
 ## Author a declarative graph
 
@@ -142,4 +142,4 @@ The local scheduler binds exact artifacts, operation plans, and observed runtime
 
 Effect approval and native source authorization have different scopes. `runs approve` records an exact preparation or node plan, while native execution through `slopcamera.studio.run` additionally needs an invocation-scoped `--allow-trusted-code` envelope. [Running workflows](/docs/how-to/run-workflows) covers the plan, approval, and resume commands.
 
-`slopcamera mcp` exposes compatibility diagram tools, read-mostly scene planning and audit tools, and the bounded portable registry to other clients. Its paths are root-relative, its configuration is inert, and its diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Generated `.tldr` output is editable interchange for browser-based canvas tooling; the diagram JSON remains the authored source. See [the MCP setup page](/docs/tutorials/mcp) and [the engine stack reference](/docs/reference/engines) for the surrounding contracts.
+The v3.3.1 MCP server exposes 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools. These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection contains six operation codes. Paths are root-relative and configuration is inert. Diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Generated `.tldr` output is editable interchange; diagram JSON remains the authored source. See [the MCP setup page](/docs/tutorials/mcp) for the released tool tables and setup.

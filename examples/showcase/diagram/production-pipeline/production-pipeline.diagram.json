@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hraness/slopcamera/main/schema/diagram.schema.json",
+  "version": 1,
+  "name": "production-pipeline",
+  "canvas": {
+    "width": 720,
+    "height": 1232,
+    "padding": 64
+  },
+  "layout": {
+    "type": "stack",
+    "direction": "vertical",
+    "gap": 96,
+    "align": "center"
+  },
+  "shapes": [
+    {
+      "id": "author",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Author",
+      "labelFontSize": 44,
+      "labelWeight": 400,
+      "tone": "neutral"
+    },
+    {
+      "id": "check",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Check",
+      "labelFontSize": 44,
+      "labelWeight": 400,
+      "tone": "neutral"
+    },
+    {
+      "id": "render",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Render",
+      "labelFontSize": 44,
+      "labelWeight": 400,
+      "tone": "neutral"
+    },
+    {
+      "id": "review",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Review",
+      "labelFontSize": 44,
+      "labelWeight": 400,
+      "tone": "neutral"
+    },
+    {
+      "id": "deliver",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Deliver",
+      "labelFontSize": 44,
+      "labelWeight": 400,
+      "tone": "green"
+    }
+  ],
+  "edges": [
+    {
+      "id": "author-check",
+      "from": "author",
+      "to": "check"
+    },
+    {
+      "id": "check-render",
+      "from": "check",
+      "to": "render"
+    },
+    {
+      "id": "render-review",
+      "from": "render",
+      "to": "review"
+    },
+    {
+      "id": "review-deliver",
+      "from": "review",
+      "to": "deliver"
+    }
+  ]
+}

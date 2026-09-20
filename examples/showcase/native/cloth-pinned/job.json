@@ -1,0 +1,63 @@
+{
+  "bundleSha256": "fcf8af29b3ee70a63b099d7769376744e29659e520aa645df59a6bb903ec86a2",
+  "engine": {
+    "denoise": true,
+    "device": "cpu",
+    "engine": "blender",
+    "renderer": "cycles",
+    "samples": 8,
+    "seed": 0,
+    "transparent": false,
+    "viewTransform": "AgX"
+  },
+  "execution": {
+    "hermetic": false,
+    "isolation": "none",
+    "trust": "trusted-current-user"
+  },
+  "jobId": "studio_showcase_cloth_pinned_v1",
+  "kind": "slopcamera.studio-job",
+  "limits": {
+    "timeoutSeconds": 300,
+    "maximumOutputBytes": 536870912,
+    "maximumOutputFiles": 2048
+  },
+  "outputs": [
+    {
+      "format": "cache",
+      "id": "cache",
+      "interpretation": {
+        "kind": "cache",
+        "semantics": "opaque-native"
+      },
+      "kind": "directory",
+      "path": "cache",
+      "role": "simulation-cache"
+    },
+    {
+      "format": "blend",
+      "id": "native",
+      "interpretation": {
+        "kind": "native-source"
+      },
+      "kind": "file",
+      "path": "native/scene.blend",
+      "role": "native-source"
+    }
+  ],
+  "parameters": {
+    "pinBackCorners": true
+  },
+  "render": {
+    "endFrameExclusive": 41,
+    "frameRate": {
+      "denominator": 1,
+      "numerator": 24
+    },
+    "height": 360,
+    "startFrame": 1,
+    "width": 640
+  },
+  "schemaVersion": 1,
+  "stage": "bake"
+}

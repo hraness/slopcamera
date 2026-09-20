@@ -1,0 +1,92 @@
+.slopcamera-example {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--ink);
+}
+
+.slopcamera-example__media {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: min(72vh, 42rem);
+  object-fit: contain;
+  background: var(--night);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg, 0.875rem);
+}
+
+.slopcamera-example__image-link {
+  display: block;
+}
+
+.slopcamera-example__caption {
+  padding-block-start: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.slopcamera-example__title {
+  display: block;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+.slopcamera-example__caption p {
+  max-inline-size: 68ch;
+  margin: 0.5rem 0 0;
+}
+
+.slopcamera-example__details {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.slopcamera-example__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.slopcamera-example__links a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.slopcamera-example__links a:hover {
+  color: var(--gold);
+}
+
+.slopcamera-example :is(a, video):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.slopcamera-example__status[hidden] {
+  display: none;
+}
+
+.slopcamera-example__downloads summary {
+  min-block-size: 2.75rem;
+  padding-block: 0.75rem;
+  cursor: pointer;
+}
+
+.slopcamera-example__downloads a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+}
+
+@media (forced-colors: active) {
+  .slopcamera-example__media {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+  .slopcamera-example :is(a, video):focus-visible {
+    outline-color: Highlight;
+  }
+}

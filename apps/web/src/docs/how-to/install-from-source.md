@@ -48,7 +48,7 @@ slopcamera --help
 {{DOCTOR_COMMAND}}
 ```
 
-The function works only in this shell. A program that launches a child process, such as Vercel, cannot execute a shell function; give it the built entrypoint instead:
+A direct `AI_GATEWAY_API_KEY` in the local process environment works with this function and needs no Vercel CLI or linked project. The function works only in this shell. A program that launches a child process, such as Vercel, cannot execute a shell function; give it the built entrypoint instead:
 
 ```sh
 vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" ai models list --type image --json
@@ -81,6 +81,6 @@ The function keeps using the built CLI while recordings, projects, and generated
 
 ## Install native tools separately
 
-The portable source build provides no native engines, no operating-system capture permissions, and no GPU. Install only what your workflow needs: the [first native film tutorial](/docs/tutorials/first-native-film) uses a specific local Blender installation, and [author a native film](/docs/how-to/native-films) covers Blender, CadQuery, and Manim. The [capability reference](/docs/reference/capabilities) names each workflow's additional runtime requirements.
+The portable source build provides no native engines, no recording capture, and no GPU. Install only what your workflow needs: the [first native film tutorial](/docs/tutorials/first-native-film) uses a specific local Blender installation, and [author a native film](/docs/how-to/native-films) covers Blender, CadQuery, and Manim. The [capability reference](/docs/reference/capabilities) names each workflow's additional runtime requirements.
 
 The repository maintains the canonical version of this procedure at `{{SOURCE_INSTALL_URL}}`.
