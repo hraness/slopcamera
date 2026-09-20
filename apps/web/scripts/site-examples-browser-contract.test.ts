@@ -2,10 +2,11 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { runInNewContext } from "node:vm"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
   examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesScope, examplesBaselineProfile,
-  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, compareExamplesHeroBackgroundImage, type ExamplesRequest } from "./site-examples-browser-contract"
-import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelectors, type ShellElement } from "./site-shell-browser-contract"
+  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, compareExamplesHeroBackgroundImage, settleExamplesDisabledStyles, type ExamplesRequest } from "./site-examples-browser-contract"
+import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelectors, settle, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases } from "./site-copy-browser-contract"
 import { refinementInstallCommand } from "./site-refinement-profile"
 import { assertExamplesBaselineManifest, assertExamplesHeroTextures } from "./verify-site-examples"
@@ -51,6 +52,53 @@ function terminal(req = request()) {
  return {schemaVersion:1,token:req.token,scope:examplesScope,baselineProfile:examplesBaselineProfile,sequence:2,kind:'result',node:'24.18.1',playwright:'1.62.0',browser:'151.0.0.0',closed:true,cases:[...examplesCaseNames],negativeControls:[...examplesNegativeControls],observations}
 }
 const mutate = (value: unknown, action: (record: any) => void) => { const copy = structuredClone(value); action(copy); return copy }
+
+function disabledStyleFixture() {
+ const href="http://127.0.0.1:1234/graphs/site-foundation/style.css",frames: (()=>void)[]=[]
+ let fontReads=0
+ class Sheet { href=href;disabled=true }
+ const sheet=new Sheet(),document={styleSheets:[sheet],fonts:{ready:Promise.resolve(),load:async()=>{fontReads++;return sheet.disabled?[]:[{status:"loaded"}]}}}
+ const execute=(callback:Function,...args:unknown[])=>runInNewContext(`(${callback.toString()})(...args)`,{document,CSSStyleSheet:Sheet,requestAnimationFrame:(callback:()=>void)=>frames.push(callback),args}) as Promise<void>
+ return {sheet,document,href,frames,execute,start:()=>execute(settleExamplesDisabledStyles,sheet,href),frame:()=>{const callbacks=frames.splice(0);for(const callback of callbacks)callback()},get fontReads(){return fontReads}}
+}
+describe("exact held examples stylesheet negative control",()=>{
+ test("reproduces disabled FontFace failure while normal font admission stays strict",async()=>{
+  const f=disabledStyleFixture(),page={evaluate:(callback:Function,...args:unknown[])=>f.execute(callback,...args)}
+  await expect(settle(page as never)).rejects.toThrow("Local fonts did not load")
+  expect(f.fontReads).toBe(3)
+ })
+ test("settles two native frames only for the held disabled sheet without reading removed fonts",async()=>{
+  const f=disabledStyleFixture();let completed=false
+  const pending=f.start().then(()=>{completed=true})
+  expect(f.frames).toHaveLength(1);f.frame();await Promise.resolve();expect(completed).toBe(false)
+  expect(f.frames).toHaveLength(1);f.frame();await pending
+  expect(completed).toBe(true);expect(f.fontReads).toBe(0)
+  f.sheet.disabled=false
+  await expect(f.start()).rejects.toThrow("Lost exact disabled examples stylesheet")
+  const restored=settle({evaluate:(callback:Function,...args:unknown[])=>f.execute(callback,...args)} as never)
+  for(let i=0;i<12;i++)await Promise.resolve()
+  expect(f.fontReads).toBe(3);f.frame();f.frame();await restored
+ })
+ const corruptions:Record<string,(fixture:ReturnType<typeof disabledStyleFixture>)=>void>={
+  detached:f=>{f.document.styleSheets=[]},
+  duplicate:f=>{f.document.styleSheets.push(f.sheet)},
+  "wrong URL":f=>{f.sheet.href+="?different"},
+  enabled:f=>{f.sheet.disabled=false},
+  replacement:f=>{f.document.styleSheets=[{href:f.href,disabled:true}]},
+ }
+ for(const [name,corrupt]of Object.entries(corruptions))test(`rejects ${name} before or during disabled-state paint`,async()=>{
+  const before=disabledStyleFixture();corrupt(before);await expect(before.start()).rejects.toThrow("Lost exact disabled examples stylesheet")
+  const during=disabledStyleFixture(),pending=during.start();corrupt(during);during.frame();during.frame()
+  await expect(pending).rejects.toThrow("Lost exact disabled examples stylesheet")
+ })
+ test("keeps changed paint, exact restoration and the original font settle at their real callsites",async()=>{
+  const source=await readFile(new URL('./site-examples-browser-contract.ts',import.meta.url),'utf8')
+  expect(source).toContain('await sheet.evaluate(settleExamplesDisabledStyles, href)')
+  expect(source).toContain('"Example stylesheet negative did not change paint"')
+  expect(source).toContain('await settle(page, scenario.direction)\n      } finally { await sheet.dispose() }')
+  expect(source).toContain('compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")')
+ })
+})
 
 function ctaFixture(current: boolean, available = 500, direction = "ltr", height = 42) {
  const copySelector=".slopcamera-product-hero > .hraness-marketing-hero__copy", top=current?120:100, left=40

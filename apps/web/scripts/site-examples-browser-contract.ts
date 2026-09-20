@@ -327,6 +327,18 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
     hover: projectExamplesState(actual.hover, baseline.hover, positions.hover, oldPositions.hover, deltaFor) },
   { ...baseline, dom: baselineDom.dom, elements: oldElements }, scenario.name)
 }
+/** Removing the foundation unregisters its FontFaces. Settle only the exact
+ * held disabled sheet here; normal and restored states retain strict fonts. */
+export async function settleExamplesDisabledStyles(sheet: CSSStyleSheet, href: string): Promise<void> {
+  const assertDisabled = () => {
+    const matches = [...document.styleSheets].filter(value => value.href === href)
+    if (!(sheet instanceof CSSStyleSheet) || sheet.href !== href || matches.length !== 1 || matches[0] !== sheet || !sheet.disabled)
+      throw new Error("Lost exact disabled examples stylesheet")
+  }
+  assertDisabled()
+  await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  assertDisabled()
+}
 export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean) {
   if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined }
   const flow = await measure(page, examplesFlowSections), hero = await observeRefinementHero(page, scenario)
@@ -347,16 +359,26 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
   assert.equal(gallery.lastColumn, "1 / -1")
   if (negative) {
     const selectors = [".slopcamera-example__media", ".slopcamera-example__caption"], before = await measure(page, selectors)
+    const href = `${payload.origin}${payload.stylesheets[0]}`
     const sheet = await page.evaluateHandle(href => {
-      const sheet = [...document.styleSheets].find(value => value.href === href)
-      if (!sheet || sheet.disabled) throw new Error("Missing example stylesheet")
+      const matches = [...document.styleSheets].filter(value => value.href === href), sheet = matches[0]
+      if (matches.length !== 1 || !sheet || sheet.disabled) throw new Error("Missing exact example stylesheet")
       sheet.disabled = true; return sheet
-    }, `${payload.origin}${payload.stylesheets[0]}`)
+    }, href)
     try {
-      await settle(page, scenario.direction)
+      await sheet.evaluate(settleExamplesDisabledStyles, href)
       const removed = await measure(page, selectors)
       assert.notDeepEqual(removed.map(item => item.styles), before.map(item => item.styles), "Example stylesheet negative did not change paint")
-    } finally { await sheet.evaluate(sheet => { sheet.disabled = false }); await settle(page, scenario.direction); await sheet.dispose() }
+    } finally {
+      try {
+        await sheet.evaluate((sheet, href) => {
+          if (!(sheet instanceof CSSStyleSheet) || sheet.href !== href || ![...document.styleSheets].includes(sheet) || !sheet.disabled)
+            throw new Error("Lost examples stylesheet before restoration")
+          sheet.disabled = false
+        }, href)
+        await settle(page, scenario.direction)
+      } finally { await sheet.dispose() }
+    }
     compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")
   }
   return { flow, hero, actions }
