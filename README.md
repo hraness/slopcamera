@@ -33,14 +33,14 @@ project database.
 
 ## Install Slopcamera
 
-Slopcamera v3.3.1 adds [parametric architectural designs](docs/how-to/parametric-design.md): editable dimensions, constraints, four starters, and galleries of retained 3D scenes. The Three renderer fits shadows to the casting geometry.
+Slopcamera v3.3.2 fixes prop reattachment, canonical scene bindings, and saved behavior-bake auditing.
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.3.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.1)
+[Slopcamera v3.3.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.2)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.1/hraness-slopcamera-3.3.1.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.2/hraness-slopcamera-3.3.2.tgz
 slopcamera skill install --target agents
 ```
 
