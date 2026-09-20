@@ -2,6 +2,9 @@
 
 Use `slopcamera scene --help` to check that the installed CLI includes the directed-scene foundation. The initial renderer uses Three.js and supports explicit scene JSON, semantic edits, calibrated cameras, native media surfaces, contact sheets, and transparent video.
 
+Use [scene refinement](scene-refinement.md) for a shot-by-shot craft pass, subtle
+behavior design, actual-rig contact checks, and final encoded-frame review.
+
 To author a scene from code — builder helpers, procedural generator modules, glTF admission, or geometric audit — read [scene building](scene-building.md) first. Start interactive work with `slopcamera scene init scene.json --json`, then `slopcamera scene inspect scene.json --json`. Retain the original source. Use its stable entity IDs and exact `sceneSha256` in typed patches; save each edit with `--output` to a new file. Inspect `editableControls` before changing generated parts or imported materials. Do not replace named scene parts with opaque regenerated source merely to change one color or camera.
 
 Use `slopcamera scene plan scene.json --request request.json --json` before rendering. A frame request is:
@@ -48,6 +51,22 @@ Check a behavior against a scene with `slopcamera scene behavior check behavior.
 Four standard-library organisms are available for composition: locomotion FSM (`behavior.fsm.v1` — state machines with after/chance/flag/clear/always guards), expression layer (`behavior.expression.v1` — blink, gaze, mood), interaction sequence (`behavior.interact.v1` — phase sequencer with emit-on-entry), and a combined organism that merges all three via pairwise `emitted.append`. Each follows the `repeat`+`carry`+`window.advance` accumulation pattern. Use the stdlib organisms as templates; compose them into a behavior document with explicit initial states and scene-bound args.
 
 The authoring loop: (1) assemble a behavior doc from stdlib organisms with scene-bound args, (2) check it with `scene behavior check`, (3) bake it with `scene behavior bake`, (4) audit the trace with `scene behavior audit`, (5) plan gallery variants and review. Identical behavior doc + seed + scene produce byte-identical bakes. The `seed` interface input auto-binds from `behavior.seed` for gallery diversity. A channel map (`--channel-map`) binds emitted channels to clip runs, attach/release pairs, or trajectory waypoints for performance directives. Behaviors never execute source, contact providers, or access the filesystem; organisms are data.
+
+The CLI check and bake still wait for host CPU and local-I/O admission. A concurrent
+render can reserve the CPU pool. A timeout with no output does not establish that
+the behavior program failed; preserve the attempt's outcome and distinguish
+resource waiting from a returned validation error before retrying.
+
+When compiling mapped directives with `compileSpatialPerformance`, use the
+exported `SPATIAL_PERFORMANCE_COMPILER_ID` for the plan's `compilerVersion`.
+Compiler `slopcamera.spatial-performance-compiler@v3` resolves prop ownership in
+time order. A later attach can take ownership after a release. At the same
+timestamp, releases precede attaches, so an immediate handoff keeps the new
+attachment; among simultaneous attaches, the last authored attach wins. When the
+latest attachment's interval ends, an older overlapping attachment does not
+resume. Retained `@v2` plans require an explicit version update and a new compile
+and audit. Preserve old takes and receipts as evidence rather than relabeling
+them with the new compiler identity.
 
 The `cinematic-world` built-in workflow composes exactly these operations for one admitted scene. Its input is an inert `slopcamera.spatial-recipe-pack` — one scene digest, one direction document, bounded gallery axes, up to 4 named preview render requests, optional declared effects, and optional temporal-audit inputs — wrapped with the scene document and its repository path. Plan it with `slopcamera workflows plan cinematic-world --input input.json --json`; run it with `workflows run`. The workflow never selects or promotes a candidate: registration uses `scene project add-candidate <project-id> --input <request.json>`, and selection uses `scene project select-candidate <project-id> --input <request.json>`, both after review. A recipe pack is data — it cannot register executors, source paths beyond the declared render source, permissions, secrets, or URLs.
 

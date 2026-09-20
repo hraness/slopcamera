@@ -1278,7 +1278,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "112a90b31c6c1b9a220ba904554d829e3e301b2e2994b7be720c4b3e218f2726",
+    "identityLinesSha256": "c919c3e4b73a5ff9d8a863212bdc8c7cd88b7ddc49a3ebdde76c95c3739f7bc5",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1660,14 +1660,14 @@
     "identityLineCount": 1,
     "identityLinesSha256": "8133b65bc166ad06c416d7c44a0ce7c1f630eec0241e31daac1d633d92ad4f0f",
     "occurrenceCount": 233,
-    "path": "dist/index-f0ptv8dm.js",
+    "path": "dist/index-zd0z6m4d.js",
     "categories": [
       "generated"
     ]
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "d369425b3f9b4df9f7916def878b404c6abb7edaebfe10a3c3272cd88655f937",
+    "identityLinesSha256": "f0b2caa0671a496d9799c90a4d15573a67d02d512abe4934af2ee6a37f126564",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1783,9 +1783,9 @@
     ]
   },
   {
-    "identityLineCount": 40,
-    "identityLinesSha256": "248f2ce880c7ba778675f68a0bc58ff1aa157576c9b9be2df829b49f4059bb9a",
-    "occurrenceCount": 54,
+    "identityLineCount": 41,
+    "identityLinesSha256": "706b54978a88de5c5b479b598dc552ed79b29b13faeabbb9a48bb1f1c8d2aba1",
+    "occurrenceCount": 55,
     "path": "docs/studio.md",
     "categories": [
       "native-film-studio"
@@ -2026,9 +2026,9 @@
     ]
   },
   {
-    "identityLineCount": 15,
-    "identityLinesSha256": "fcc8fbed1f7ab29dfaffe06e47624f3f9d429c82e62325d637018ff41d2fb7a8",
-    "occurrenceCount": 24,
+    "identityLineCount": 17,
+    "identityLinesSha256": "26b680ae125999b9c8124e429656214455af019d501e9e482546b8eb2a281e3a",
+    "occurrenceCount": 26,
     "path": "skills/slopcamera/references/native-studio.md",
     "categories": [
       "native-film-studio"
@@ -2039,6 +2039,15 @@
     "identityLinesSha256": "ea86036c7b397aa40576317302e9e95056cc850311c6c52705d5cbfd734f7dfc",
     "occurrenceCount": 3,
     "path": "skills/slopcamera/references/parametric-design.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "6dde087405498cb9e9895d0122923366886f235bdaa2dab9632db202931e8f2b",
+    "occurrenceCount": 2,
+    "path": "skills/slopcamera/references/scene-refinement.md",
     "categories": [
       "native-film-studio"
     ]

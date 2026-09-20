@@ -20,6 +20,25 @@ A failed or interrupted job is never automatically rerun. `studio inspect` reche
 
 See the shipped `docs/studio.md` and checked `examples/studio/` for source conventions, color/alpha rules, native caveats and the local `.studio.run()` workflow operation. Source/runtime identities are observed provenance, not a complete hash of every plugin, font, library or ambient read.
 
+### Diagnose a Blender render crash
+
+`studio probe` discovers devices and checks runtime capabilities; it does not
+render a frame or prove that Cycles shader compilation succeeds. Qualify the
+selected engine and device with a bounded render before a long job.
+
+When Blender quits unexpectedly, inspect the exact studio attempt and its retained
+logs, then correlate the process and time with the operating system's crash
+report. On macOS, a `MetalKernelPipeline::compile` stack and a main thread waiting
+in `BlenderSession::render` identify failure during rendering. They do not establish
+an out-of-memory condition, a harmless shutdown, or a particular cache defect.
+A successful Chrome/Three.js render supplies no evidence about Blender's recovery.
+
+After custody is settled, test a revised engine or device in a new, explicitly
+configured job if needed. CPU or EEVEE success can narrow the failing path but
+does not fix or qualify Cycles/Metal. Keep the original failure and inspect the
+new frames before adopting that configuration. Do not clear shared caches, alter
+another task's render, or repeatedly launch the failing job as a generic recovery.
+
 ## Share a native output without re-executing it
 
 `studio asset <studio-id> --output-id <id> --asset-id <id> --representation native|encoded-video [--frame <index>] --json` rechecks one successful output and returns its spatial asset, binding and receipt. It never rerenders or silently transcodes. Preserve all three together. A frame selection uses the native job’s explicit frame index; an encoded-video selection requires a previously retained unambiguous encode. Unsupported GLB materials, skins or morphs fail before rendering. Keep the original native rig and export a deliberate compatible static derivative.
