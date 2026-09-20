@@ -22,7 +22,7 @@ Use the Slopcamera release installation or a source build for the commands below
 
 ## Parametric architectural designs
 
-Slopcamera v3.3.2 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation needs no Rhino, native engine or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+Slopcamera v3.3.2 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 ## Discover the installed contract
 

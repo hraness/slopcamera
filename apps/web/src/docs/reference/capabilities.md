@@ -37,7 +37,7 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Parametric architectural designs
 
-Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named dimensions and constraints compile into retained geometry and ordinary scenes. Four original starters include materials, lights, and cameras. Inspection and compilation need no browser, Rhino, native engine, or cloud account; rendering uses the existing spatial browser runtime. Follow the [parametric design guide](https://github.com/hraness/slopcamera/blob/main/docs/how-to/parametric-design.md).
+Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named dimensions and constraints compile into retained geometry and ordinary scenes. Four original starters include materials, lights, and cameras. Inspection and compilation run locally with the Slopcamera CLI; rendering uses the existing spatial browser runtime. Follow the [parametric design guide](https://github.com/hraness/slopcamera/blob/main/docs/how-to/parametric-design.md).
 
 ## What requires the source-backed distribution
 
