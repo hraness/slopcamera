@@ -334,7 +334,7 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
   if (command.action === "plan" || command.action === "render") {
     const request = bindSpatialCliExecutionProfile(await readSpatialJson(resolve(application.paths.repositoryRoot, command.request)), command.executionProfile);
     if (command.action === "plan") return planSpatialRender(scene, request);
-    const result = await createApplicationOperationRegistry().execute({ application, abortSignal: new AbortController().signal }, {
+    const result = await createApplicationOperationRegistry().execute({ application, abortSignal: signal ?? new AbortController().signal }, {
       kind: "scene.render", version: 1, input: {
         source: { path: relative(application.paths.repositoryRoot, sourcePath) }, request,
         ...(command.assets === undefined ? {} : { assets: await readSpatialJson(resolve(application.paths.repositoryRoot, command.assets)) }),
