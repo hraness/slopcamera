@@ -129,7 +129,16 @@ def closure(image):
                 raise ValueError("Unexpected Python or expression driver")
     if any(item != image and item.source not in {"VIEWER"} for item in bpy.data.images):
         raise ValueError("Unexpected scene image dependency")
-    if bpy.context.scene.sequence_editor or bpy.context.scene.use_nodes:
+    scene = bpy.context.scene
+    # Blender 5 removed the compositor switch: use_nodes always reports True.
+    # Inspect the assigned tree, including a disabled tree, as a dependency.
+    if hasattr(scene, "compositing_node_group"):
+        compositor = scene.compositing_node_group
+    elif hasattr(scene, "node_tree"):
+        compositor = scene.node_tree
+    else:
+        raise ValueError("Unsupported scene compositor API")
+    if scene.sequence_editor is not None or compositor is not None:
         raise ValueError("Unexpected sequencer or compositor dependency")
     return {"externalDependencies": [], "libraries": 0, "volumes": 0, "mediaInputs": 0,
             "fontObjects": 0, "embeddedTextScripts": 0, "drivers": 0, "packedImages": 1,

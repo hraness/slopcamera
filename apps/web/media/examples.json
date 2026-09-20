@@ -3330,5 +3330,413 @@
       "sound": "silent",
       "captions": "not-applicable"
     }
+  },
+  {
+    "id": "native-import-model-hero",
+    "title": "Import a textured packaging mockup",
+    "description": "An original GLB keeps its FIELD / 01 artwork, measured 70 × 45 × 120 mm dimensions and stripe across the front/right seam when staged in Blender.",
+    "family": "native",
+    "techniques": [
+      "native.import-model"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "import-model",
+    "featured": false,
+    "requirements": "Source checkout and Bun 1.3.14; installed Blender 5.2.1 LTS, Cycles CPU. Qualified on macOS arm64. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "2026d44802676280bb1530bfd7fa0490a7de1b9e",
+      "files": [
+        {
+          "path": "examples/showcase/native/imported-model-study/README.md",
+          "sha256": "414d4117f2905518f2edc79cb56a527cb250dbe4fb766c7a3e1d7dbaf7e36047"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/artwork.svg",
+          "sha256": "1dbe23241b32c3e4b3958db2fb1bc53f2ee366c0d3ee630a9babdd470078132e"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset-facts.json",
+          "sha256": "5e26ca524603fcc42f5d596bd0b1cc39eee25ba67d4679cdf3a043332a0cb193"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset_io.py",
+          "sha256": "a6bde09874b779eaaa925630a6e630312ffae1a44268c37363d00154fbb29b5d"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/assets/field-carton.glb",
+          "sha256": "dea21b6430e5a84b888f99a5311ab16605196408146b048dac478dec2512da75"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/author-assets.ts",
+          "sha256": "49dc54f593bd7e9003244049a8f2a8f183a6af1ca4e0e0d54f3dde68562c6843"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-poses.py",
+          "sha256": "2c52860bcf0a73d25eefcefbbae040535aeeaae126f8b16cb2bb8c0adc7c3fc5"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-setup.py",
+          "sha256": "d51b8c12eab52f5bdb094de384bfe557eb7c6e12074cda1aa9f03d896354aff2"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.test.ts",
+          "sha256": "a7eab3f0e8a5896a10f383fee58cee4169ccc539566f6077a60180f01f94e4f8"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.ts",
+          "sha256": "5bcfcfe63407fc40aca8f3737d2245dffe935c4e323041a501498e794e587e4b"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/inspect.py",
+          "sha256": "cbe1dd31c073685c0ce77420407a0fd60e08517c373e0189499a313650835084"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/jobs/final-views.json",
+          "sha256": "db19b2de72d1369ae9d87c4e42e97fb22c8323bab88b04ce6f69308d9edfc408"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare-replay.ts",
+          "sha256": "1fd4591971bb90ef49bf99520e13cb65ed14f85e660158d782883afb8a725955"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare.ts",
+          "sha256": "cb69cab1175ee7957e9e0f12ec1da477048695abcb7a1b60269b129a48c32729"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.test.ts",
+          "sha256": "e416e8a3b4bee386ee7375b9a7820ccf41716b50655ec4cf6997d1620243676a"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.ts",
+          "sha256": "3ae0eab4b7e6c1151146a7a9c4e204f8b48abffe9b39a583c90cf520b3ee99d4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene.py",
+          "sha256": "d7ac2af1fd17047aecd658b0072cecdf332857ba72b0fe0ea27eb5f15d46bf2f"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene_checks.py",
+          "sha256": "be52d1cd4315accee275c60ed5830c6820c0ead82e8bd411f7b534283d383463"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/source.json",
+          "sha256": "cf00eed52708cd5e0e4a26433be60ca5e35e88d4c09b28bf04c7add9a1d6acc4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/textures/field-label.png",
+          "sha256": "e7fa4b0276a3509457b9f3ecd22339552acc4944b3fb904b843bf42d56f48861"
+        }
+      ],
+      "command": "bun examples/showcase/native/imported-model-study/prepare.ts --check && bun examples/showcase/native/imported-model-study/prepare.ts",
+      "toolVersion": "3.3.3 candidate at 2026d448",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS / Cycles CPU",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-import-model-hero-poster-27001eae934d.webp",
+      "bytes": 17236,
+      "sha256": "27001eae934dd4fd639b109fe58ec001992328ef09fe04fcfd813d05c2d93383",
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "A pale FIELD / 01 carton with a teal right face, peach stripe across the front and side, and an asymmetric top mark."
+    },
+    "downloads": [
+      {
+        "file": "native-import-model-hero-original-3a549c2076c9.png",
+        "bytes": 461504,
+        "sha256": "3a549c2076c9d589cf0ecd04837ef26dda8a4c4c524c34bb15f6a9659a2b5ff0",
+        "mime": "image/png",
+        "label": "Original PNG, metadata removed"
+      }
+    ],
+    "review": {
+      "agent": "root and native_recovery: import, artwork and packed replay",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-import-model-right",
+    "title": "Turn the model, keep the artwork",
+    "description": "A second view exposes the side panel and top mark without rebuilding the imported mesh or changing its UV map.",
+    "family": "native",
+    "techniques": [
+      "native.import-model"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "import-model",
+    "featured": false,
+    "requirements": "Source checkout and Bun 1.3.14; installed Blender 5.2.1 LTS, Cycles CPU. Qualified on macOS arm64. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "2026d44802676280bb1530bfd7fa0490a7de1b9e",
+      "files": [
+        {
+          "path": "examples/showcase/native/imported-model-study/README.md",
+          "sha256": "414d4117f2905518f2edc79cb56a527cb250dbe4fb766c7a3e1d7dbaf7e36047"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/artwork.svg",
+          "sha256": "1dbe23241b32c3e4b3958db2fb1bc53f2ee366c0d3ee630a9babdd470078132e"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset-facts.json",
+          "sha256": "5e26ca524603fcc42f5d596bd0b1cc39eee25ba67d4679cdf3a043332a0cb193"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset_io.py",
+          "sha256": "a6bde09874b779eaaa925630a6e630312ffae1a44268c37363d00154fbb29b5d"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/assets/field-carton.glb",
+          "sha256": "dea21b6430e5a84b888f99a5311ab16605196408146b048dac478dec2512da75"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/author-assets.ts",
+          "sha256": "49dc54f593bd7e9003244049a8f2a8f183a6af1ca4e0e0d54f3dde68562c6843"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-poses.py",
+          "sha256": "2c52860bcf0a73d25eefcefbbae040535aeeaae126f8b16cb2bb8c0adc7c3fc5"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-setup.py",
+          "sha256": "d51b8c12eab52f5bdb094de384bfe557eb7c6e12074cda1aa9f03d896354aff2"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.test.ts",
+          "sha256": "a7eab3f0e8a5896a10f383fee58cee4169ccc539566f6077a60180f01f94e4f8"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.ts",
+          "sha256": "5bcfcfe63407fc40aca8f3737d2245dffe935c4e323041a501498e794e587e4b"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/inspect.py",
+          "sha256": "cbe1dd31c073685c0ce77420407a0fd60e08517c373e0189499a313650835084"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/jobs/final-views.json",
+          "sha256": "db19b2de72d1369ae9d87c4e42e97fb22c8323bab88b04ce6f69308d9edfc408"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare-replay.ts",
+          "sha256": "1fd4591971bb90ef49bf99520e13cb65ed14f85e660158d782883afb8a725955"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare.ts",
+          "sha256": "cb69cab1175ee7957e9e0f12ec1da477048695abcb7a1b60269b129a48c32729"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.test.ts",
+          "sha256": "e416e8a3b4bee386ee7375b9a7820ccf41716b50655ec4cf6997d1620243676a"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.ts",
+          "sha256": "3ae0eab4b7e6c1151146a7a9c4e204f8b48abffe9b39a583c90cf520b3ee99d4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene.py",
+          "sha256": "d7ac2af1fd17047aecd658b0072cecdf332857ba72b0fe0ea27eb5f15d46bf2f"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene_checks.py",
+          "sha256": "be52d1cd4315accee275c60ed5830c6820c0ead82e8bd411f7b534283d383463"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/source.json",
+          "sha256": "cf00eed52708cd5e0e4a26433be60ca5e35e88d4c09b28bf04c7add9a1d6acc4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/textures/field-label.png",
+          "sha256": "e7fa4b0276a3509457b9f3ecd22339552acc4944b3fb904b843bf42d56f48861"
+        }
+      ],
+      "command": "bun examples/showcase/native/imported-model-study/prepare.ts --check && bun examples/showcase/native/imported-model-study/prepare.ts",
+      "toolVersion": "3.3.3 candidate at 2026d448",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS / Cycles CPU",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-import-model-right-poster-412a34fdd420.webp",
+      "bytes": 10946,
+      "sha256": "412a34fdd420b80fcc2c6650985bd8c8fcca1af5576094f56449c76f97d912dc",
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "The teal right face of the carton carries a large white 01, four thin lines, a peach band and a small peach dot."
+    },
+    "downloads": [
+      {
+        "file": "native-import-model-right-original-410afbce75b3.png",
+        "bytes": 436902,
+        "sha256": "410afbce75b3576d68a639a64800ff6fe08e0af5e28e761631d4a1a2ff02dbf2",
+        "mime": "image/png",
+        "label": "Original PNG, metadata removed"
+      }
+    ],
+    "review": {
+      "agent": "root and native_recovery: import, artwork and packed replay",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "native-import-model-back",
+    "title": "Reopen the packed native scene",
+    "description": "The back bars, bottom checker and neighboring FIELD face remain distinct. All three packed-scene replay images matched the original decoded RGB pixels on the qualified runtime.",
+    "family": "native",
+    "techniques": [
+      "native.import-model"
+    ],
+    "guideSlug": "how-to/native-films",
+    "guideAnchor": "import-model",
+    "featured": false,
+    "requirements": "Source checkout and Bun 1.3.14; installed Blender 5.2.1 LTS, Cycles CPU. Qualified on macOS arm64. Local rendering; no model account.",
+    "source": {
+      "engineRevision": "2026d44802676280bb1530bfd7fa0490a7de1b9e",
+      "files": [
+        {
+          "path": "examples/showcase/native/imported-model-study/README.md",
+          "sha256": "414d4117f2905518f2edc79cb56a527cb250dbe4fb766c7a3e1d7dbaf7e36047"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/artwork.svg",
+          "sha256": "1dbe23241b32c3e4b3958db2fb1bc53f2ee366c0d3ee630a9babdd470078132e"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset-facts.json",
+          "sha256": "5e26ca524603fcc42f5d596bd0b1cc39eee25ba67d4679cdf3a043332a0cb193"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/asset_io.py",
+          "sha256": "a6bde09874b779eaaa925630a6e630312ffae1a44268c37363d00154fbb29b5d"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/assets/field-carton.glb",
+          "sha256": "dea21b6430e5a84b888f99a5311ab16605196408146b048dac478dec2512da75"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/author-assets.ts",
+          "sha256": "49dc54f593bd7e9003244049a8f2a8f183a6af1ca4e0e0d54f3dde68562c6843"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-poses.py",
+          "sha256": "2c52860bcf0a73d25eefcefbbae040535aeeaae126f8b16cb2bb8c0adc7c3fc5"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/check-setup.py",
+          "sha256": "d51b8c12eab52f5bdb094de384bfe557eb7c6e12074cda1aa9f03d896354aff2"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.test.ts",
+          "sha256": "a7eab3f0e8a5896a10f383fee58cee4169ccc539566f6077a60180f01f94e4f8"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/compare-pixels.ts",
+          "sha256": "5bcfcfe63407fc40aca8f3737d2245dffe935c4e323041a501498e794e587e4b"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/inspect.py",
+          "sha256": "cbe1dd31c073685c0ce77420407a0fd60e08517c373e0189499a313650835084"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/jobs/final-views.json",
+          "sha256": "db19b2de72d1369ae9d87c4e42e97fb22c8323bab88b04ce6f69308d9edfc408"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare-replay.ts",
+          "sha256": "1fd4591971bb90ef49bf99520e13cb65ed14f85e660158d782883afb8a725955"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/prepare.ts",
+          "sha256": "cb69cab1175ee7957e9e0f12ec1da477048695abcb7a1b60269b129a48c32729"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.test.ts",
+          "sha256": "e416e8a3b4bee386ee7375b9a7820ccf41716b50655ec4cf6997d1620243676a"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/recipes.ts",
+          "sha256": "3ae0eab4b7e6c1151146a7a9c4e204f8b48abffe9b39a583c90cf520b3ee99d4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene.py",
+          "sha256": "d7ac2af1fd17047aecd658b0072cecdf332857ba72b0fe0ea27eb5f15d46bf2f"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/scene_checks.py",
+          "sha256": "be52d1cd4315accee275c60ed5830c6820c0ead82e8bd411f7b534283d383463"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/source.json",
+          "sha256": "cf00eed52708cd5e0e4a26433be60ca5e35e88d4c09b28bf04c7add9a1d6acc4"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/studio_scene.py",
+          "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+        },
+        {
+          "path": "examples/showcase/native/imported-model-study/textures/field-label.png",
+          "sha256": "e7fa4b0276a3509457b9f3ecd22339552acc4944b3fb904b843bf42d56f48861"
+        }
+      ],
+      "command": "bun examples/showcase/native/imported-model-study/prepare.ts --check && bun examples/showcase/native/imported-model-study/prepare.ts",
+      "toolVersion": "3.3.3 candidate at 2026d448",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.1 LTS / Cycles CPU",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "native-import-model-back-poster-39badd6a3ea7.webp",
+      "bytes": 16990,
+      "sha256": "39badd6a3ea7f6201b267526e0249cac4eb052f55fe5986a2c3a7858531811b0",
+      "mime": "image/webp",
+      "width": 960,
+      "height": 540,
+      "alt": "The back of the carton shows 01, four teal bars and a teal-and-peach checker beside the teal FIELD face."
+    },
+    "downloads": [
+      {
+        "file": "native-import-model-back-original-6f153d11265e.png",
+        "bytes": 459988,
+        "sha256": "6f153d11265ee7416040de4b7a68fefa61261ee84806805b1c38ebf6145de824",
+        "mime": "image/png",
+        "label": "Original PNG, metadata removed"
+      }
+    ],
+    "review": {
+      "agent": "root and native_recovery: import, artwork and packed replay",
+      "date": "2026-09-20",
+      "still": "passed",
+      "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
   }
 ]

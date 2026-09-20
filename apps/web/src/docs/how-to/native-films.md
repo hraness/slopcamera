@@ -1,6 +1,6 @@
 A native film keeps the engine's own source, a Blender scene, a CadQuery program, or a Manim scene, as the editable artifact. The `slopcamera studio` commands retain that source as an immutable bundle, run it through a closed host adapter against an engine you installed yourself, verify every declared output, and hand the result to an ordinary video project.
 
-Install a supported engine before running a job; Slopcamera does not silently install or upgrade native tools. The qualified versions are Blender 5.2.1 LTS, CadQuery 2.8.0, and Manim Community 0.21.0, measured on an Apple M4 Max. The `studio` commands ship in the verified release and run under Bun; a durable workflow that contains a native job needs the installed Bun package or a source checkout, since a copied standalone executable has no host source tree. For a bounded end-to-end pass, start with [Render your first native film](/docs/tutorials/first-native-film).
+Install a supported engine before running a job; Slopcamera does not silently install or upgrade native tools. The examples use Blender 5.2.1 LTS, CadQuery 2.8.0, and Manim Community 0.21.0 on macOS arm64; each source recipe records its qualified runtime. The `studio` commands ship in the verified release and run under Bun; a durable workflow that contains a native job needs the installed Bun package or a source checkout, since a copied standalone executable has no host source tree. For a bounded end-to-end pass, start with [Render your first native film](/docs/tutorials/first-native-film).
 
 ## Know the trust boundary
 
@@ -131,6 +131,50 @@ a diagnostic for transparent edges; its pale labels have limited contrast.
 The gold bracket is 100 mm wide; its teal variation is 132 mm wide. Both preserve the mounting holes, central aperture and isolation pad. The [CadQuery source and variation helper](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/cad) retain the solids and measure their dimensions before the exact GLB exports enter a Blender presentation. The STEP reimport preserves two valid solids, with relative volume error below `0.00001`.
 
 Start with `bun examples/showcase/native/render.ts cad --python /absolute/path/to/python`, then run `bun examples/showcase/native/cad-variations.ts --python /absolute/path/to/python`. Probe and run the resulting `artifacts/showcase/native/cad/preview.job.json` with your Blender binary, as described in the [native reproduction guide](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native). STEP retains millimeter solid geometry; the GLB presentation uses meters. The film demonstrates the parameter change, not structural or manufacturing validation.
+
+## Import model
+
+Bring an existing textured GLB into Blender, light it, and render views of the
+same model. This original packaging mockup keeps its FIELD / 01 artwork and
+70 × 45 × 120 mm dimensions after import.
+
+::example[native-import-model-hero]
+
+The peach stripe crosses the front/right seam. Turn the model to inspect the
+side panel and asymmetric top mark; the mesh and UV map stay the same.
+
+::example[native-import-model-right]
+
+The [source recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/imported-model-study)
+includes the owned GLB, its 2048 × 2048 texture, and the Blender setup. In a
+source checkout with Bun, check the recipe, then prepare a fresh job:
+
+```sh
+bun examples/showcase/native/imported-model-study/prepare.ts --check
+bun examples/showcase/native/imported-model-study/prepare.ts
+```
+
+The preparer prints the commands to bundle, plan, probe, run, and inspect the
+job with your explicit Blender executable. Rendering requires
+`--allow-trusted-code`. It produces three discrete 960 × 540 stills using
+Cycles on CPU at 128 samples with denoising and AgX. These poses are not an
+animation.
+
+### Reopen the packed scene
+
+::example[native-import-model-back]
+
+The replay helper retains only the resulting `.blend` as its render input.
+On the qualified Blender 5.2.1 runtime, all three reopened views matched the
+original decoded RGB pixels exactly. A separate inspection confirmed the
+packed texture, all 24 face-local vertices and 12 triangles, with zero measured
+position, normal, or UV corner error against this source and no external asset
+dependencies.
+
+Use this workflow to check a static textured model you own. This example does
+not establish rig, morph, animation, or material-extension compatibility for
+other GLB files. The source README describes the replay and inspection commands
+and their measured tolerances.
 
 ## Acquire and admit external assets
 

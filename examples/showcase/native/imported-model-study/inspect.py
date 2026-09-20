@@ -10,6 +10,18 @@ from asset_io import load_assets
 from scene_checks import closure, imported_fidelity, mesh_hashes, texture_state
 
 
+def validate_pose_records(facts, saved):
+    expected, actual = facts.get("views"), saved.get("poses")
+    if not isinstance(expected, list) or not isinstance(actual, list) or len(expected) != 3 or len(actual) != 3:
+        raise ValueError("Expected exactly three retained view poses")
+    for record in [*expected, *actual]:
+        if not isinstance(record, dict) or type(record.get("frame")) is not int or not isinstance(record.get("name"), str):
+            raise ValueError("Malformed retained view identity")
+    expected_ids = [(row["frame"], row["name"]) for row in expected]
+    if [row[0] for row in expected_ids] != [0, 1, 2] or [(row["frame"], row["name"]) for row in actual] != expected_ids:
+        raise ValueError("Retained view frame/name sequence changed")
+
+
 def build(context):
     root = Path(context["sourceRoot"])
     facts, decoded, original = load_assets(root)
@@ -33,6 +45,7 @@ def build(context):
     dependencies = closure(image)
     if texture != saved["texture"] or dependencies != saved["dependencies"]:
         raise ValueError("Packed texture or dependency closure changed on reload")
+    validate_pose_records(facts, saved)
     poses = []
     for view, prior in zip(facts["views"], saved["poses"]):
         scene.frame_set(view["frame"])

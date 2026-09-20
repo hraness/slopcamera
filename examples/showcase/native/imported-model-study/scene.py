@@ -10,6 +10,30 @@ from scene_checks import closure, imported_fidelity, mesh_hashes, stored_json, t
 from studio_scene import area, camera, cube, material, reset
 
 
+def clear_empty_startup_sequencer(scene):
+    editor = scene.sequence_editor
+    if editor is None:
+        return
+    if hasattr(editor, "strips") or hasattr(editor, "strips_all"):
+        if not (hasattr(editor, "strips") and hasattr(editor, "strips_all")):
+            raise ValueError("Unsupported startup sequencer API")
+        top, recursive = editor.strips, editor.strips_all
+    elif hasattr(editor, "sequences") or hasattr(editor, "sequences_all"):
+        if not (hasattr(editor, "sequences") and hasattr(editor, "sequences_all")):
+            raise ValueError("Unsupported startup sequencer API")
+        top, recursive = editor.sequences, editor.sequences_all
+    else:
+        raise ValueError("Unsupported startup sequencer API")
+    if len(top) != 0 or len(recursive) != 0:
+        raise ValueError("Unexpected nonempty startup sequencer")
+    clear = getattr(scene, "sequence_editor_clear", None)
+    if not callable(clear):
+        raise ValueError("Unsupported startup sequencer clear API")
+    clear()
+    if scene.sequence_editor is not None:
+        raise ValueError("Startup sequencer did not clear")
+
+
 def constant_keys(obj):
     if obj.animation_data and obj.animation_data.action:
         for slot in obj.animation_data.action.slots:
@@ -31,6 +55,7 @@ def build(context):
     root = Path(context["sourceRoot"])
     facts, decoded, original = load_assets(root)
     scene = reset()
+    clear_empty_startup_sequencer(scene)
     scene.world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.20, 0.20, 0.20, 1)
     scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.18
     bpy.ops.import_scene.gltf(filepath=str(root / "assets/field-carton.glb"))
