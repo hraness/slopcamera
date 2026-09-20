@@ -17,6 +17,7 @@ import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, publishProfiledWork
 import { readPreviewFile } from "./preview-file"
 import { assertOwnedPreviewEndpoint, closeOwnedPreviewBrowser } from "./preview-browser-shutdown"
 import { checkCopyCase, siteCopyCases } from "./site-copy-browser-contract"
+import { collectExamplesFontDiagnostic, ExamplesDiagnosticSizeError, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 
 // This entry is bundled by the Bun parent, then executed by genuine pinned
 // Node. The temporary bundle resolves dependencies only from the explicit app.
@@ -77,24 +78,47 @@ async function main() {
     for (const scenario of siteShellCases) await runCase(scenario.name, "pair", async () => {
       const negative = scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light"
       let currentDom, baselineDom, design, baselineDesign, currentPositions, baselinePositions
-      const [current, baseline] = await settleShellPair(
-        () => checkShellCase(browser, request.current, scenario, "current", negative, async (page, positions) => {
-          currentPositions = positions;
-          currentDom = await examplesDom(page, true, scenario)
-          design = await observeExamplesDesign(page, scenario, request.current, negative && scenario.route === "/")
-        }, "workflow-examples-v1"),
-        () => checkShellCase(browser, request.baseline, scenario, "current", false, async (page, positions) => {
-          baselinePositions = positions;
-          baselineDom = await examplesDom(page, false, scenario)
-          baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
-            actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined }
-        }, "workflow-examples-v1"))
-      // The raw observer records obstruction evidence only. This new oracle
-      // requires zero on both trees and uses no historical support allowance.
-      assert.ok(currentDom && baselineDom && design && baselineDesign && currentPositions && baselinePositions)
-      compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
-        { current: request.current.origin, baseline: request.baseline.origin })
-      return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions }
+      // Keep first samples separate from later read-only font diagnostics.
+      // Only the existing first samples ever enter the comparison below.
+      const retained = { schemaVersion: 1, token: request.token, scope: request.scope, accepted: false, completed: false,
+        diagnosticOnly: true, scenario, current: {}, baseline: {} }
+      const captureFonts = async (page, side, origin) => {
+        try { side.laterFontDiagnostic = await collectExamplesFontDiagnostic(page, origin) }
+        catch (error) {
+          // Preserve side attribution before the shared pair aggregates errors.
+          if (error instanceof ExamplesDiagnosticSizeError) side.diagnosticOverflow = error.metadata
+          throw error
+        }
+      }
+      try {
+        const [current, baseline] = await settleShellPair(
+          () => checkShellCase(browser, request.current, scenario, "current", negative, async (page, positions) => {
+            currentPositions = positions;
+            currentDom = await examplesDom(page, true, scenario)
+            design = await observeExamplesDesign(page, scenario, request.current, negative && scenario.route === "/")
+            Object.assign(retained.current, { original: { dom: currentDom, design, positions } })
+            if (scenario.route === "/") await captureFonts(page, retained.current, request.current.origin)
+          }, "workflow-examples-v1"),
+          () => checkShellCase(browser, request.baseline, scenario, "current", false, async (page, positions) => {
+            baselinePositions = positions;
+            baselineDom = await examplesDom(page, false, scenario)
+            baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
+              actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined }
+            Object.assign(retained.baseline, { original: { dom: baselineDom, design: baselineDesign, positions } })
+            if (scenario.route === "/") await captureFonts(page, retained.baseline, request.baseline.origin)
+          }, "workflow-examples-v1"))
+        retained.current.shell = current; retained.baseline.shell = baseline
+        // The raw observer records obstruction evidence only. This new oracle
+        // requires zero on both trees and uses no historical support allowance.
+        assert.ok(currentDom && baselineDom && design && baselineDesign && currentPositions && baselinePositions)
+        compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
+          { current: request.current.origin, baseline: request.baseline.origin })
+        return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions }
+      } catch (error) {
+        await retainExamplesFailureDiagnostic(error, retained, text => bounded(writeFile(
+          join(dirname(requestPath), "site-examples-comparison-diagnostic.json"), text, { flag: "wx", mode: 0o600 }),
+        "Examples comparison diagnostic retention", 5_000))
+      }
     })
     for (const scenario of siteCopyCases) await runCase(scenario.name, "pair", async () => {
       const negative = scenario === siteCopyCases[0]

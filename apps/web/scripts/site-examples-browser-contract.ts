@@ -252,7 +252,8 @@ export function compareExamplesFlow(actual: readonly ShellElement[], baseline: r
     near(item.rect[1]! - old.rect[1]!, previousDelta, `${selector}: flow translation`)
     assert.ok(item.rect[3]! > 0 && old.rect[3]! > 0)
     const delta = item.rect[3]! - old.rect[3]!
-    if (!examplesHeightOwners.includes(selector)) near(delta, 0, `${selector}: undeclared height change`)
+    if (!examplesHeightOwners.includes(selector)) near(delta, 0,
+      `${selector}: undeclared height change ${JSON.stringify({ actual: item.rect, baseline: old.rect, heightDelta: delta })}`)
     previousDelta += delta
   }
   return previousDelta

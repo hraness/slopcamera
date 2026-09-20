@@ -16,6 +16,9 @@ import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodePro
 import { readPreviewFile } from "./preview-file"
 import { projectExamplesHeroActions } from "./site-examples-cta"
 import { compareRefinementHeroCopies } from "./site-refinement-browser-contract"
+import { collectExamplesFontDiagnostic, encodeExamplesFailureDiagnostic, ExamplesDiagnosticSizeError,
+  examplesFontOwners, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
+import type { Page } from "playwright-core"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
   poster: "/assets/examples/editorial-aaaaaaaaaaaa.webp", guide: "/docs/tutorials/first-animation", width: 1280, height: 720, durationSeconds: 8, hasAudio: false },
@@ -52,6 +55,100 @@ function terminal(req = request()) {
  return {schemaVersion:1,token:req.token,scope:examplesScope,baselineProfile:examplesBaselineProfile,sequence:2,kind:'result',node:'24.18.1',playwright:'1.62.0',browser:'151.0.0.0',closed:true,cases:[...examplesCaseNames],negativeControls:[...examplesNegativeControls],observations}
 }
 const mutate = (value: unknown, action: (record: any) => void) => { const copy = structuredClone(value); action(copy); return copy }
+
+function examplesDiagnosticFixture(options: { failAt?: string | undefined; detachFails?: boolean; fragments?: number; children?: number;
+ faces?: number; resources?: number; platformFonts?: number; remoteFont?: boolean; stringLength?: number } = {}) {
+ const events: string[] = [], operationError = Error("Read-only observation failed"), detachError = Error("Owned session detach failed")
+ const forbidden = () => { throw Error("Diagnostic attempted readiness, mutation or waiting") }
+ class Element {
+  tagName="P"; children: Element[]=[]
+  getBoundingClientRect(){return {x:10,y:20,width:300,height:42}}
+  computedStyleMap(){return new Map([["max-inline-size","17ch"]])}
+  get style(){return forbidden()}
+  setAttribute=forbidden
+ }
+ const node=new Element(),closing=new Element();closing.children=Array.from({length:options.children??4},()=>new Element())
+ const fonts=Array.from({length:options.faces??14},()=>({family:"Nebula Sans",style:"normal",weight:"400",stretch:"normal",status:"loaded",display:"swap",unicodeRange:"U+0-10FFFF"}))
+ Object.defineProperties(fonts,{status:{value:"loaded"},load:{get:forbidden},ready:{get:forbidden}})
+ const document={fonts,readyState:"complete",querySelectorAll:(selector:string)=>[selector==="#closing"?closing:node],
+  createRange:()=>({selectNodeContents:()=>{},getClientRects:()=>Array.from({length:options.fragments??1},()=>node.getBoundingClientRect())}),createElement:forbidden}
+ const session={send:async(method:string)=>{
+  events.push(method);if(method===options.failAt)throw operationError
+  if(method==="DOM.getDocument")return {root:{nodeId:1}}
+  if(method==="DOM.querySelector")return {nodeId:2}
+  if(method==="CSS.getPlatformFontsForNode")return {fonts:Array.from({length:options.platformFonts??1},()=>({familyName:"Nebula Sans",postScriptName:"NebulaSans-Book",isCustomFont:true,glyphCount:25}))}
+  return {}
+ },detach:async()=>{events.push("detach");if(options.detachFails)throw detachError}}
+ const page={evaluate:async(callback:Function,args:unknown)=>{
+  events.push("snapshot");if(options.failAt==="snapshot")throw operationError
+  return runInNewContext(`(${callback.toString()})(args)`,{args,document,HTMLElement:Element,scrollY:100,URL,
+   getComputedStyle:()=>({getPropertyValue:(name:string)=>name==="max-width"?"300px":"a".repeat(options.stringLength??1)}),
+   performance:{now:()=>1000,getEntriesByType:()=>Array.from({length:options.resources??2},()=>({name:`${options.remoteFont?"https://outside.example":"http://127.0.0.1:1234"}/fonts/nebula.woff2`,startTime:10,duration:5,transferSize:100,encodedBodySize:100,decodedBodySize:100,responseStatus:200}))},
+   requestAnimationFrame:forbidden,setTimeout:forbidden}) as unknown
+ },context:()=>({newCDPSession:async()=>{events.push("session");if(options.failAt==="session")throw operationError;return session}})} as unknown as Page
+ return {page,events,operationError,detachError}
+}
+describe("examples diagnostic evidence never changes acceptance",()=>{
+ test("captures one read-only bounded sample and all eight actual font owners",async()=>{
+  const f=examplesDiagnosticFixture(),value=await collectExamplesFontDiagnostic(f.page,"http://127.0.0.1:1234")
+  expect(value.snapshot.elements.map(item=>item.selector)).toEqual([...examplesFontOwners])
+  expect(value.usedFonts.map(item=>item.selector)).toEqual([...examplesFontOwners])
+  expect(value.snapshot.children).toHaveLength(4);expect(value.snapshot.elements[0]!.rect).toEqual([10,120,300,42])
+  expect(value.snapshot.elements[0]!.textRects).toEqual([[10,120,300,42]])
+  expect(f.events.filter(value=>value==="snapshot")).toHaveLength(1);expect(f.events.at(-1)).toBe("detach")
+ })
+ test("detaches only its owned CDP session on every read failure",async()=>{
+  for(const failAt of ["snapshot","session","DOM.enable","CSS.enable","DOM.getDocument","DOM.querySelector","CSS.getPlatformFontsForNode","CSS.getMatchedStylesForNode",undefined]){
+   for(const detachFails of [false,true]){
+    if(!failAt&&!detachFails)continue
+    const f=examplesDiagnosticFixture({failAt,detachFails}),failure=await collectExamplesFontDiagnostic(f.page,"http://127.0.0.1:1234").catch(value=>value)
+    const owns=failAt!=="snapshot"&&failAt!=="session"
+    if(failAt==="snapshot")expect(failure).toBe(f.operationError)
+    else expect(failure.errors).toEqual([...(failAt?[f.operationError]:[]),...(owns&&detachFails?[f.detachError]:[])])
+    expect(f.events.filter(value=>value==="detach")).toHaveLength(owns?1:0)
+   }
+  }
+ })
+ test("refuses every bounded inventory overflow and foreign font resource",async()=>{
+  for(const options of [{fragments:65},{children:5},{faces:33},{resources:33},{platformFonts:17},{remoteFont:true},{stringLength:513}]){
+   const f=examplesDiagnosticFixture(options)
+   await expect(collectExamplesFontDiagnostic(f.page,"http://127.0.0.1:1234")).rejects.toThrow()
+  }
+ })
+ test("64KiB per-side overflow fails after CDP collection with bounded exact metadata",async()=>{
+  const f=examplesDiagnosticFixture({stringLength:300}),failure=await collectExamplesFontDiagnostic(f.page,"http://127.0.0.1:1234").catch(value=>value)
+  expect(failure).toBeInstanceOf(ExamplesDiagnosticSizeError);expect(failure.metadata.limit).toBe(65536)
+  expect(failure.metadata.bytes).toBeGreaterThan(65536);expect(f.events.at(-1)).toBe("detach")
+ })
+ test("retains unequal original samples unchanged even when a later readback converges",async()=>{
+  const error=Error("Original closing height mismatch"),evidence={original:{current:300,baseline:320},later:{current:300,baseline:300}},before=structuredClone(evidence),written:string[]=[]
+  await expect(retainExamplesFailureDiagnostic(error,evidence,async text=>{written.push(text)})).rejects.toBe(error)
+  expect(JSON.parse(written[0]!)).toEqual(before);expect(evidence).toEqual(before)
+ })
+ test("exact UTF-8 cap preserves Unicode and refuses one extra glyph with digest metadata",()=>{
+  const prefix={sample:"📇é\n\""},head=JSON.stringify(prefix),remaining=4*1024*1024-Buffer.byteLength(head)
+  const boundary={sample:prefix.sample+"a".repeat(remaining)}
+  expect(Buffer.byteLength(encodeExamplesFailureDiagnostic(boundary))).toBe(4*1024*1024)
+  expect(()=>encodeExamplesFailureDiagnostic({sample:boundary.sample+"📇"})).toThrow(ExamplesDiagnosticSizeError)
+ })
+ test("retention failure preserves original error and publishes visible overflow metadata",async()=>{
+  const error=Error("Original failure"),written:string[]=[]
+  const result=await retainExamplesFailureDiagnostic(error,{large:"é".repeat(3*1024*1024)},async text=>{written.push(text)}).catch(value=>value)
+  expect(result.errors[0]).toBe(error);expect(result.errors[1]).toBeInstanceOf(ExamplesDiagnosticSizeError)
+  expect(written).toHaveLength(1);expect(JSON.parse(written[0]!)).toEqual(result.errors[1].metadata)
+  const publication=Error("disk full"),failed=await retainExamplesFailureDiagnostic(error,{original:42},async()=>{throw publication}).catch(value=>value)
+  expect(failed.errors).toEqual([error,publication])
+ })
+ test("per-side overflow metadata survives retention beside original samples",async()=>{
+  const error=new ExamplesDiagnosticSizeError('"'+"a".repeat(65536)+'"',65536),written:string[]=[]
+  await expect(retainExamplesFailureDiagnostic(error,{original:42},async text=>{written.push(text)})).rejects.toBe(error)
+  expect(JSON.parse(written[0]!)).toEqual({evidence:{original:42},diagnosticOverflow:error.metadata})
+ })
+ test("closing failure includes the authoritative numeric rectangles without admitting their difference",()=>{
+  const item={key:"#closing[0]",rect:[0,100,545,300],styles:{},text:"",semantics:{}} as unknown as ShellElement
+  expect(()=>compareExamplesFlow([item],[{...item,rect:[0,100,545,320]}])).toThrow('"actual":[0,100,545,300],"baseline":[0,100,545,320],"heightDelta":-20')
+ })
+})
 
 function disabledStyleFixture() {
  const href="http://127.0.0.1:1234/graphs/site-foundation/style.css",frames: (()=>void)[]=[]
