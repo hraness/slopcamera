@@ -70,6 +70,28 @@ describe("closed Three/Spark lowering", () => {
     expect(result.metadata.splatProfile?.kernel).toEqual({ antialiased: false, preBlurAmount: 0.3, blurAmount: 0 });
     expect(result.authoring.html).not.toContain("requestAnimationFrame(");
   });
+  test("guards signed SH radiance before gamma without clipping positive HDR", () => {
+    const html = createSpatialOverlayBatch(fixture()).authoring.html;
+    const guardSource = html.match(/const linearRgbAnchor=[\s\S]*?(?=\nspark.readPause)/u)?.[0];
+    expect(guardSource).toBeDefined();
+    const applyGuard = new Function("spark", guardSource!);
+    const conversion = "rgba.rgb = srgbToLinear(rgba.rgb);";
+    const material = { fragmentShader: `void main() {\n${conversion}\nrgba.a *= 0.5;\n}` };
+    applyGuard({ material });
+    expect(material.fragmentShader).toContain("rgba.a *= 0.5;");
+    // Execute the emitted GLSL expression with component-wise GLSL helpers.
+    // This checks the actual generated boundary, not a separately copied clamp.
+    const expression = material.fragmentShader.match(/rgba\.rgb = (.+);/u)![1]!;
+    const evaluate = new Function("rgba", "vec3", "max", "srgbToLinear", `return ${expression};`);
+    const encode = (rgb: number[]) => evaluate({ rgb }, (n: number) => [n, n, n],
+      (a: number[], b: number[]) => a.map((n, i) => Math.max(n, b[i]!)),
+      (rgb: number[]) => rgb.map(n => Math.pow(n, 2.2)));
+    expect(encode([-0.25, 0, 4])).toEqual([0, 0, Math.pow(4, 2.2)]);
+    expect(encode([0.04045, 0.5, 2])).toEqual([0.04045, 0.5, 2].map(n => Math.pow(n, 2.2)));
+    for (const fragmentShader of ["void main() {}", `${conversion}\n${conversion}`]) {
+      expect(() => applyGuard({ material: { fragmentShader } })).toThrow("shader anchor changed");
+    }
+  });
   test("rejects stale payload, forged allocation and unsupported world transforms", () => {
     const input = fixture(), prepared = input.preparedAssets[0]!, snapshot = input.snapshots[0]!;
     expect(() => createSpatialOverlayBatch({ ...input, preparedAssets: [{ ...prepared, resource: { ...prepared.resource, sha256: "b".repeat(64) } }] })).toThrow("exact source payload");
