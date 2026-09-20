@@ -62,11 +62,21 @@ The geometry graph provides profiles, inset and bevel, primitives, extrusion, re
 
 Generated entity IDs derive from the design and stage identities. Recompiling into a retained scene replaces the corresponding generated output and preserves declared overrides through the existing generator merge rules. Receipts report changed stages. Unrelated authored entities, other generators and their assets remain present. Removing a retained stage requires explicit scene cleanup; the compiler rejects an obsolete stage instead of leaving unexplained geometry behind.
 
+### Wall openings and boolean geometry
+
+A wall's base is at local `y = 0`, its length is centered on X, and its thickness is centered on Z. An opening's `center` is `[horizontalCenter, sillHeightFromWallBase]`; its second value is not the opening's vertical midpoint. An arched opening's height includes a semicircular crown with radius `width / 2`. Its straight jambs therefore end at `sillHeight + height - width / 2`. The height may equal the radius for a pure semicircular opening. Openings must fit inside the wall rectangle.
+
+Booleans accept a bounded hull subset of the geometry graph. Supply closed inputs that satisfy convexity; this is not a general mesh repair or manifold-validation interface. The compiler checks a conservative partition estimate before evaluating surfaces. The schema permits up to eight wall openings, but geometry budgets can reject smaller counts. For example, a 20 × 5 × 0.4 m wall with separated 1.5 × 2.5 m openings admits six rectangular openings or two arches; seven rectangles or three arches exceed the current estimate. Split a longer façade into separately generated wall segments when necessary instead of bypassing the budget.
+
+The wall's distant LOD remains a solid box, and its collision proxy remains a box. Use the detailed geometry for inspecting openings, and author interaction or traversal collision separately when it must follow an aperture.
+
 ## Limits and identity
 
 The design compiler admits at most 128 parameters, 256 named values, 128 constraints and 32 stages. Source JSON is bounded to 1 MiB, scalar-expression depth to 16 and expression work to 8,192 nodes. Each existing geometry graph retains its own limits. Across stages, compilation checks estimates against 64 parts, 128 assets, 262,144 vertices, 400,000 triangles and 64 MiB before mesh emission. The CLI allows at most 64 MiB of asset payloads per bundle and 128 MiB across up to six gallery candidates; retained design, scene and receipt JSON are additional files.
 
 Compilation receipts bind the normalized effective design, parameter values, input and output scene identities, stage specifications and emission receipts. Same-source compilation is deterministic within the declared compiler profile. A receipt establishes source and output identity; inspect actual geometry and render pixels separately.
+
+Slopcamera v3.3.3 corrects wall opening elevations, curved arch crowns and boolean surface partitioning. Wall receipts carry compiler `slopcamera.parametric-wall-v2`; affected boolean evaluations and receipts carry `slopcamera.geometry-boolean-v2`. These revisions change affected source/runtime identities without changing entity IDs or the v1 retained-asset format. Existing retained GLBs remain readable; recompile affected source designs to receive the corrected geometry.
 
 ## SDK
 

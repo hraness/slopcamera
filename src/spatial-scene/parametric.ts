@@ -18,7 +18,7 @@ import {
 import { SpatialAssetFactsV1Schema, SpatialCollisionProxySchema, type SpatialAssetFactsV1, type SpatialCollisionProxy, type SpatialRetainedArtifact } from "./asset-admission.js"
 import { mulberry32 } from "./build.js"
 import {
-  SPATIAL_GEOMETRY_PROFILE, SpatialGeometryGraphSchema, emitSpatialGeometryGlb, evaluateSpatialGeometry, estimateSpatialGeometryGraph, parseSpatialGeometryGraph,
+  SPATIAL_GEOMETRY_PROFILE, SPATIAL_GEOMETRY_BOOLEAN_COMPILER, SpatialGeometryGraphSchema, emitSpatialGeometryGlb, evaluateSpatialGeometry, estimateSpatialGeometryGraph, parseSpatialGeometryGraph,
   type SpatialGeometryMesh,
 } from "./geometry.js"
 import {
@@ -68,6 +68,8 @@ const specVec3 = z.tuple([coordinate, coordinate, coordinate])
 const editable = z.array(z.enum(["color", "opacity", "transform"])).max(3).optional()
 const partPlacement = { transform: SpatialTransformSchema.optional(), editable, castShadow: z.boolean().optional(), receiveShadow: z.boolean().optional() }
 
+/** center is [horizontal center, sill height from the wall base]. Arch height
+ * includes the semicircular crown, whose radius is half its width. */
 const opening = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("rect"), center: specVec2, width: meter, height: meter }),
   z.strictObject({ kind: z.literal("arch"), center: specVec2, width: meter, height: meter }),
@@ -155,6 +157,9 @@ function boxBounds(bounds: Bounds): SpatialCollisionProxy {
 }
 
 const LOD1_DISTANCE_M = 25
+// Wall lowering changed while the retained GLB/facts format remains v1. Keep
+// the revision local to this planner so unrelated generators retain identity.
+export const SPATIAL_PARAMETRIC_WALL_COMPILER = "slopcamera.parametric-wall-v2" as const
 
 function planWall(spec: Extract<SpatialParametricSpec, { kind: "wall" }>): PartPlan[] {
   const { length, height, thickness } = spec
@@ -165,19 +170,33 @@ function planWall(spec: Extract<SpatialParametricSpec, { kind: "wall" }>): PartP
     if (cx - item.width / 2 < -length / 2 || cx + item.width / 2 > length / 2 || baseY < 0 || baseY + item.height > height) {
       pfail(`Wall opening ${index} must stay inside the wall rectangle.`, "spec.openings")
     }
-    const rectId = `cut${index}`
-    cutterNodes.push({ id: rectId, kind: "box", size: [item.width, item.height, thickness * 4] })
-    cutterNodes.push({ id: `${rectId}p`, kind: "transform", input: rectId, transform: { position: [cx, baseY + item.height / 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } })
-    cutterIds.push(`${rectId}p`)
+    const cutterId = `cut${index}`
+    // The body is still centered until the final lift. Authored opening Y is
+    // measured from its base, so cutters must share the body's local frame.
+    let cutterY = baseY + item.height / 2 - height / 2
     if (item.kind === "arch") {
       const radius = item.width / 2
       if (radius > item.height) pfail(`Arch opening ${index} rise exceeds its height.`, "spec.openings")
-      const cylId = `cyl${index}`
-      // Half-cylinder lintel: cylinder rotated so its axis runs through the wall thickness.
-      cutterNodes.push({ id: cylId, kind: "cylinder", radius, height: thickness * 4, segments: 24 })
-      cutterNodes.push({ id: `${cylId}r`, kind: "transform", input: cylId, transform: { position: [cx, baseY + item.height - radius, 0], rotation: [Math.SQRT1_2, 0, 0, Math.SQRT1_2], scale: [1, 1, 1] } })
-      cutterIds.push(`${cylId}r`)
+      const springline = item.height - radius
+      // One extruded cutter has a flat sill and a semicircular crown. A full
+      // circle would cut below a shallow opening, while a full-height box
+      // would remove the masonry that should remain at the arch shoulders.
+      const points: number[][] = [[-radius, 0], [radius, 0]]
+      if (springline > 0) points.push([radius, springline])
+      for (let segment = 1; segment <= 12; segment++) {
+        const angle = Math.PI * segment / 12
+        points.push(segment === 12 ? [-radius, springline] : [radius * Math.cos(angle), springline + radius * Math.sin(angle)])
+      }
+      // At height == radius the arc ends at the first profile point.
+      if (springline === 0) points.pop()
+      cutterNodes.push({ id: `${cutterId}profile`, kind: "profile", points })
+      cutterNodes.push({ id: cutterId, kind: "extrude", profile: `${cutterId}profile`, depth: thickness * 4 })
+      cutterY = baseY - height / 2
+    } else {
+      cutterNodes.push({ id: cutterId, kind: "box", size: [item.width, item.height, thickness * 4] })
     }
+    cutterNodes.push({ id: `${cutterId}p`, kind: "transform", input: cutterId, transform: { position: [cx, cutterY, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] } })
+    cutterIds.push(`${cutterId}p`)
   }
   const nodes: unknown[] = [{ id: "body", kind: "box", size: [length, height, thickness] }]
   let output = "body"
@@ -534,6 +553,8 @@ export interface SpatialParametricArtifact { readonly assetId: string; readonly 
 export interface SpatialParametricFacts { readonly manifest: SpatialAssetManifest; readonly facts: SpatialAssetFactsV1 }
 export interface SpatialParametricReceipt {
   readonly name?: string
+  readonly compiler?: typeof SPATIAL_PARAMETRIC_WALL_COMPILER
+  readonly booleanCompiler?: typeof SPATIAL_GEOMETRY_BOOLEAN_COMPILER
   readonly kind: "slopcamera.spatial-parametric-receipt"
   readonly schemaVersion: 1
   readonly generatorId: string
@@ -580,14 +601,19 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
       outputs: [...outputs],
     })
   }
-  const sourceSha256 = spatialValueSha256({ domain: "slopcamera.parametric-source.v1", profile: SPATIAL_GEOMETRY_PROFILE, kind: spec.kind })
-  const parametersSha256 = spatialGeneratorParametersSha256(spec)
-  const specSha256 = spatialValueSha256({ domain: "slopcamera.parametric-spec.v1", spec })
-  const seed = request.seed ?? deriveSpatialGeneratorSeed(sourceSha256)
-  const runtimeSha256 = spatialValueSha256({ domain: "slopcamera.parametric-runtime.v1", profile: SPATIAL_GEOMETRY_PROFILE })
   const plans = PLANNERS[spec.kind](spec as never)
   if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts) pfail("Spec expands beyond the part budget.", "spec")
   validatePartMaterials(plans)
+  const usesBoolean = plans.some(part => part.lods.some(lod => parseSpatialGeometryGraph(lod.graph).nodes.some(node => node.kind === "boolean")))
+  const compiler: Pick<SpatialParametricReceipt, "compiler" | "booleanCompiler"> = {
+    ...(spec.kind === "wall" ? { compiler: SPATIAL_PARAMETRIC_WALL_COMPILER } : {}),
+    ...(usesBoolean ? { booleanCompiler: SPATIAL_GEOMETRY_BOOLEAN_COMPILER } : {}),
+  }
+  const sourceSha256 = spatialValueSha256({ domain: "slopcamera.parametric-source.v1", profile: SPATIAL_GEOMETRY_PROFILE, kind: spec.kind, ...compiler })
+  const parametersSha256 = spatialGeneratorParametersSha256(spec)
+  const specSha256 = spatialValueSha256({ domain: "slopcamera.parametric-spec.v1", spec })
+  const seed = request.seed ?? deriveSpatialGeneratorSeed(sourceSha256)
+  const runtimeSha256 = spatialValueSha256({ domain: "slopcamera.parametric-runtime.v1", profile: SPATIAL_GEOMETRY_PROFILE, ...compiler })
   const manifests: SpatialAssetManifest[] = []
   const artifacts: SpatialParametricArtifact[] = []
   const entities: SpatialEntity[] = []
@@ -682,6 +708,7 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
     generatorId, specSha256, parametersSha256, seed,
     ...(request.name === undefined ? {} : { name: request.name }),
     profile: SPATIAL_GEOMETRY_PROFILE,
+    ...compiler,
     assets: receiptAssets,
     entities: entities.map(entity => entity.entityId).sort(),
     native: retainedArtifacts.map(artifact => ({ requestSha256: artifact.requestSha256, receiptSha256: artifact.receiptSha256 })),

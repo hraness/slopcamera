@@ -98,3 +98,15 @@ Each candidate directory has its own `scene.json`, `render.json` and receipt. Re
 The [design reference](../parametric-design.md) describes expressions, constraints, geometry stages and the SDK. Author dimensions and meaningful part names before increasing detail. Use bevels, coherent member proportions and deliberate joints where they affect the final view. Lighting, materials, camera position and the surrounding scene remain explicit design decisions.
 
 Use [native studio](../studio.md) for Blender/Cycles production shading, native CAD operations, or engine-specific geometry. Retain the original design and units when exchanging generated GLB models with another tool. To add downloaded models, use the [local GLB import workflow](../spatial-scenes.md#admit-a-local-gltf-asset).
+
+## Integrate a design into an existing film
+
+Compile the architecture before playback. Keep the film's cameras, character rigs and interaction timing in the host scene, and give generated parts semantic stage names so that materials and placement remain understandable. Retain the design, compiled scene, GLB bytes and receipt together; record the compiler version and the hashes of the assets used by the film.
+
+For a custom renderer, decode the retained bytes with the public SDK's `parseSpatialGlb` and `evaluateSpatialGlb`. Generated designs use meters in a right-handed, Y-up coordinate system. Preserve each evaluated primitive's matrix and the generated entity transform, applying each once. `material.baseColorLinear` is already linear RGB; converting it as an sRGB hex color changes the finish. Verify a translated, rotated and nonuniformly scaled fixture against the emitted vertices before trusting a new import bridge.
+
+Decode and cache geometry once, then create independent object groups and materials for each instance. If the host adds UVs or other geometry attributes, clone shared geometry first. Keep such surface treatments separate from the retained compiled asset. Project texture coordinates in meters so plaster, timber and stone have consistent scale across differently sized members.
+
+Review construction from the actual camera path, including entrances and transitions. Check opening depth and jambs, glass placement, floor-to-wall joints, roof equipment supports, and gaps beneath props. Separate finish surfaces from structural slabs to prevent coplanar flicker. A mullion that looks correct in a hero image can obstruct a moving camera; inspect nearby frames before moving the camera or changing choreography.
+
+After the revision, repeat earlier and later seeks and compare their rendered pixels. Seed unrelated procedural sets independently so changing one building does not rearrange another scene. Finally inspect frames decoded from the encoded movie, including interaction contacts and chapter transitions. A successful compilation or a still-image review alone does not establish that the delivered film plays correctly.
