@@ -27,8 +27,7 @@ import {
   type SpatialBehaviorChannelMap,
   type SpatialBehaviorEmitted,
 } from "./behavior-trace.js"
-import { SpatialSceneV1Schema } from "./contracts.js"
-import { parseSpatialValue, spatialValueSha256, SpatialSceneError } from "./identity.js"
+import { parseSpatialScene, parseSpatialValue, spatialValueSha256, SpatialSceneError } from "./identity.js"
 
 /**
  * Deterministic behavior bake: an admitted `slopcamera.spatial-behavior`
@@ -105,7 +104,7 @@ const entryRunArgs = (behavior: SpatialBehavior, manifest: OrganismManifest): Re
 export async function bakeSpatialBehavior(input: unknown): Promise<SpatialBehaviorBakeResult> {
   const options = parseSpatialValue(bakeOptionsSchema, input, "behavior bake")
   const behavior = parseSpatialBehavior(options.behavior)
-  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene")
+  const scene = parseSpatialScene(options.scene)
   const sceneSha256 = spatialValueSha256(scene)
   const signatures = spatialBehaviorFnSignatures()
   const check = checkSpatialBehavior({ behavior, scene }, signatures)

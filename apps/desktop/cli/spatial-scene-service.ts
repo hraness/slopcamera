@@ -11,7 +11,7 @@ import { auditSpatialBehaviorTrace } from "../../../src/spatial-scene/behavior-a
 import { bakeSpatialBehavior } from "../../../src/spatial-scene/behavior-bake";
 import { spatialBehaviorFnSignatures } from "../../../src/spatial-scene/behavior-fns";
 import { planSpatialBehaviorGallery, spatialBehaviorGalleryPlanSha256 } from "../../../src/spatial-scene/behavior-gallery";
-import { parseSpatialBehaviorChannelMap, spatialBehaviorBakeSha256 } from "../../../src/spatial-scene/behavior-trace";
+import { parseSpatialBehaviorChannelMap, SpatialBehaviorBakeSchema, spatialBehaviorBakeSha256 } from "../../../src/spatial-scene/behavior-trace";
 import { checkSpatialDirection, compileSpatialDirection, spatialDirectionCompilationSha256 } from "../../../src/spatial-scene/direction-compile";
 import { createSpatialEvaluationContext, evaluateSpatialSceneInContext } from "../../../src/spatial-scene/evaluate";
 import { planSpatialDirectionGallery, spatialGalleryPlanSha256 } from "../../../src/spatial-scene/gallery";
@@ -90,8 +90,11 @@ export async function executeSpatialSceneCommand(application: ApplicationContext
     throw new CliError("authorization-required", "scene review uploads bounded rendered beauty frames to a vision model and requires --allow-cloud-upload on this invocation.", { command: "scene review" });
   }
   if (command.action === "behavior-audit") {
-    const bake = await readSpatialJson(resolve(application.paths.repositoryRoot, command.bake));
-    const report = auditSpatialBehaviorTrace(bake);
+    const bake = parseSpatialValue(SpatialBehaviorBakeSchema, await readSpatialJson(resolve(application.paths.repositoryRoot, command.bake)), "behavior bake");
+    const report = auditSpatialBehaviorTrace({
+      behaviorSha256: bake.behaviorSha256, emittedSha256: bake.receipt.emittedSha256,
+      emitted: bake.emitted, rangeUs: bake.rangeUs,
+    });
     if (command.output === undefined) return report;
     const output = resolve(application.paths.repositoryRoot, command.output);
     await publishSpatialSource(output, report);

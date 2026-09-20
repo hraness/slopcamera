@@ -103,7 +103,7 @@ const TEXT_EXTENSIONS = new Set([
 const CANONICAL_TEXT_SENTINELS = [
   {
     path: "src/version.ts",
-    values: ['export const SLOPCAMERA_VERSION = "3.3.1" as const'],
+    values: ['export const SLOPCAMERA_VERSION = "3.3.2" as const'],
   },
   {
     path: "src/operations.ts",
@@ -125,7 +125,7 @@ const CANONICAL_TEXT_SENTINELS = [
   {
     path: "apps/desktop/dist/cli/main.js",
     values: [
-      '"3.3.1"',
+      '"3.3.2"',
       '"slopcamera.diagram.check"',
       '"slopcamera.edit-plan"',
       '"slopcamera.video-project"',
@@ -389,8 +389,8 @@ if (
 const packageVersion = rootPackage.version;
 if (typeof packageVersion !== "string") {
   problems.push("package.json version must be a string");
-} else if (packageVersion !== "3.3.1") {
-  problems.push("package.json version must be 3.3.1 for this source candidate; it does not identify a published Slopcamera release");
+} else if (packageVersion !== "3.3.2") {
+  problems.push("package.json version must be 3.3.2 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
     [
