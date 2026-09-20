@@ -13,6 +13,8 @@ import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures } 
 import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodeProfiledWorkerJson,
   publishWorkerPhase, publishProfiledWorkerPhase, examplesWorkerProtocolLimit, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
+import { projectExamplesHeroActions } from "./site-examples-cta"
+import { compareRefinementHeroCopies } from "./site-refinement-browser-contract"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
   poster: "/assets/examples/editorial-aaaaaaaaaaaa.webp", guide: "/docs/tutorials/first-animation", width: 1280, height: 720, durationSeconds: 8, hasAudio: false },
@@ -49,6 +51,91 @@ function terminal(req = request()) {
  return {schemaVersion:1,token:req.token,scope:examplesScope,baselineProfile:examplesBaselineProfile,sequence:2,kind:'result',node:'24.18.1',playwright:'1.62.0',browser:'151.0.0.0',closed:true,cases:[...examplesCaseNames],negativeControls:[...examplesNegativeControls],observations}
 }
 const mutate = (value: unknown, action: (record: any) => void) => { const copy = structuredClone(value); action(copy); return copy }
+
+function ctaFixture(current: boolean, available = 500, direction = "ltr", height = 42) {
+ const copySelector=".slopcamera-product-hero > .hraness-marketing-hero__copy", top=current?120:100, left=40
+ const texts=["Install Slopcamera",current?"Explore the examples":"See example requests"]
+ const widths=[172,current?197.678:201.834],gap=10.4, natural=widths[0]!+gap+widths[1]!,wrapped=natural>available
+ const width=Math.min(available,natural),rowHeight=wrapped?2*height+gap:height,rowX=direction==="rtl"?left+available-width:left,rowY=top+180
+ const zero=Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"0px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))
+ const rowStyles:Record<string,string>={...zero,display:"flex",position:"static","box-sizing":"border-box","flex-wrap":"wrap","flex-direction":"row","align-items":"center","justify-content":"flex-start",direction,"row-gap":`${gap}px`,"column-gap":`${gap}px`,width:`${width}px`,height:`${rowHeight}px`,color:"black","margin-top":"8px"}
+ const elements=Array.from({length:6},(_,index)=>({key:index===0?`${copySelector}[0]`:`${copySelector} > *[${index-1}]`,rect:[left,top+index*30,available,20],text:`Child ${index}`,semantics:{role:null},styles:{...zero,display:"block",height:"20px",color:"black"} as Record<string,string>}))
+ elements[0]={...elements[0]!,rect:[left,top,available,240+rowHeight],styles:{...zero,display:"grid",height:`${240+rowHeight}px`,width:`${available}px`,"justify-items":"start",direction,color:"black"}}
+ elements[1]={...elements[1]!,text:"Slopcamera",rect:[left,top,1,1],styles:{...zero,display:"block",position:"absolute",width:"1px",height:"1px",clip:"rect(0px, 0px, 0px, 0px)","clip-path":"inset(50%)","white-space":"nowrap","overflow-x":"hidden","overflow-y":"hidden",top:"auto",right:"auto",bottom:"auto",left:"auto"}}
+ elements[4]={...elements[4]!,rect:[rowX,rowY,width,rowHeight],text:texts.join(" "),styles:rowStyles}
+ elements[5]={...elements[5]!,rect:[left,rowY+rowHeight+20,available,20]}
+ const buttons=widths.map((width,index)=>{
+  const offset=index===1&&!wrapped?widths[0]!+gap:0,x=direction==="rtl"?rowX+elements[4]!.rect[2]!-offset-width:rowX+offset,y=rowY+(index===1&&wrapped?height+gap:0)
+  return {key:`${copySelector} > .hraness-marketing-hero__actions > a[${index}]`,rect:[x,y,width,height],text:texts[index]!,semantics:{href:index===0?"#install":"#examples",role:null},styles:{...zero,display:"flex",position:"static","box-sizing":"border-box","align-items":"center","justify-content":"center","flex-grow":"0","flex-shrink":"1","flex-basis":"auto","align-self":"auto",order:"0",direction,width:`${width}px`,height:`${height}px`,"padding-left":"17.6px","padding-right":"17.6px","border-left-width":"1px","border-right-width":"1px","font-family":"Nebula Sans","font-size":"15.2px",color:"black","background-color":"white"} as Record<string,string>}
+ })
+ const textRects=buttons.map(button=>[button.rect[0]!+18.6,button.rect[1]!+(height-18)/2,button.rect[2]!-37.2,18])
+ return {hero:{copyTop:top,boundaryLines:1,boundaryLineHeight:20,nameComputedInsets:{top:"auto",right:"auto",bottom:"auto",left:"auto"},elements},actions:{buttons,textRects}}
+}
+function compareCta(current:ReturnType<typeof ctaFixture>,baseline:ReturnType<typeof ctaFixture>) {
+ compareRefinementHeroCopies(projectExamplesHeroActions(current.hero,baseline.hero,current.actions,baseline.actions),baseline.hero)
+}
+describe("examples-only native CTA intrinsic width proof",()=>{
+ test("reproduces the retained 544px failure and admits only its text-derived width",()=>{
+  const current=ctaFixture(true),baseline=ctaFixture(false)
+  expect(current.hero.elements[4]!.rect[2]).toBeCloseTo(380.078,3);expect(baseline.hero.elements[4]!.rect[2]).toBeCloseTo(384.234,3)
+  const former={...current.hero,elements:current.hero.elements.map((item,index)=>index===4?{...item,text:baseline.hero.elements[4]!.text}:item)}
+  expect(()=>compareRefinementHeroCopies(former,baseline.hero)).toThrow()
+  const before=structuredClone(current)
+  expect(()=>compareCta(current,baseline)).not.toThrow();expect(current).toEqual(before)
+ })
+ for(const available of [272,342,500])for(const direction of ["ltr","rtl"])for(const height of [42,48])
+  test(`preserves ${available}px ${direction} wrapping, heights and natural alignment at ${height}px`,()=>{
+   expect(()=>compareCta(ctaFixture(true,available,direction,height),ctaFixture(false,available,direction,height))).not.toThrow()
+  })
+ const corruptions:Record<string,(value:ReturnType<typeof ctaFixture>)=>void>={
+  "missing anchor":v=>{v.actions.buttons.pop()},
+  "missing range":v=>{v.actions.textRects.pop()},
+  "wrong text":v=>{v.actions.buttons[1]!.text="Different wording"},
+  "wrong primary href":v=>{v.actions.buttons[0]!.semantics.href="#other"},
+  "secondary width unrelated to text":v=>{v.actions.buttons[1]!.rect[2]!+=2},
+  "text escapes padding":v=>{v.actions.textRects[1]![0]!+=2},
+  "text escapes vertically":v=>{v.actions.textRects[1]![1]!-=80},
+  "nonfinite range":v=>{v.actions.textRects[1]![2]=NaN},
+  "nonzero margin":v=>{v.actions.buttons[1]!.styles["margin-left"]="1px"},
+  "padding drift":v=>{v.actions.buttons[1]!.styles["padding-left"]="18.6px"},
+  "border drift":v=>{v.actions.buttons[1]!.styles["border-right-width"]="2px"},
+  "font drift":v=>{v.actions.buttons[1]!.styles["font-family"]="Other font"},
+  "unblockified button display":v=>{v.actions.buttons[1]!.styles.display="inline-flex"},
+  "button paint drift":v=>{v.actions.buttons[1]!.styles.color="red"},
+  "primary paint drift":v=>{v.actions.buttons[0]!.styles.color="red"},
+  "button height drift":v=>{v.actions.buttons[1]!.rect[3]!+=2},
+  "row gap drift":v=>{v.hero.elements[4]!.styles["row-gap"]="11.4px"},
+  "column gap drift":v=>{v.hero.elements[4]!.styles["column-gap"]="11.4px"},
+  "row width unrelated to text":v=>{v.hero.elements[4]!.rect[2]!+=2},
+  "row computed width mismatch":v=>{v.hero.elements[4]!.styles.width="381px"},
+  "row padding":v=>{v.hero.elements[4]!.styles["padding-right"]="1px"},
+  "row alignment":v=>{v.hero.elements[4]!.rect[0]!+=2},
+  "row height":v=>{v.hero.elements[4]!.rect[3]!+=2},
+  "row paint":v=>{v.hero.elements[4]!.styles.color="red"},
+  "button gap":v=>{v.actions.buttons[1]!.rect[0]!+=2;v.actions.textRects[1]![0]!+=2},
+  "copy width":v=>{v.hero.elements[0]!.rect[2]!+=2},
+  "primary intrinsic width":v=>{v.actions.buttons[0]!.rect[2]!+=2;v.actions.textRects[0]![2]!+=2},
+  "other retained geometry":v=>{v.hero.elements[2]!.rect[0]!+=2},
+  "vertical text alignment":v=>{v.actions.textRects[1]![1]!+=2},
+ }
+ for(const [name,corrupt]of Object.entries(corruptions))test(`rejects ${name} on either tree`,()=>{
+  for(const side of ["current","baseline"]as const){const pair={current:ctaFixture(true),baseline:ctaFixture(false)};corrupt(pair[side]);expect(()=>compareCta(pair.current,pair.baseline)).toThrow()}
+ })
+ test("refuses different wrapping modes and an ambiguous wrap threshold",()=>{
+  expect(()=>compareCta(ctaFixture(true,382),ctaFixture(false,382))).toThrow()
+  expect(()=>compareCta(ctaFixture(true,380.078),ctaFixture(false,380.078))).toThrow()
+ })
+ test("retains strict RTL right edge and wrapped line placement",()=>{
+  for(const available of [272,500]){
+   const current=ctaFixture(true,available,"rtl"),baseline=ctaFixture(false,available,"rtl")
+   current.actions.buttons[1]!.rect[0]!-=2;current.actions.textRects[1]![0]!-=2
+   expect(()=>compareCta(current,baseline)).toThrow()
+  }
+  const current=ctaFixture(true,272),baseline=ctaFixture(false,272)
+  current.actions.buttons[1]!.rect[1]!-=2;current.actions.textRects[1]![1]!-=2
+  expect(()=>compareCta(current,baseline)).toThrow()
+ })
+})
 
 describe("examples-only finite worker protocol", () => {
  test("roundtrips the complete 133-case receipt without dropping copy or media evidence", async () => {

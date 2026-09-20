@@ -9,6 +9,7 @@ import { parseExamplesRequest, parseExamplesPhase, examplesCaseNames, examplesDe
   observeExamplesDesign, examplesDom, compareExamplesEvidence, compareExamplesCopy, checkExamplesDocs, checkExamplesPlayer,
   examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesNegativeControls, examplesScope } from "./site-examples-browser-contract"
 import { observeRefinementHero } from "./site-refinement-browser-contract"
+import { observeExamplesActions } from "./site-examples-cta"
 import { examplesFlowSections } from "./site-examples-profile"
 import { refinementCopyProfile } from "./site-refinement-profile"
 import { measure, siteShellCases } from "./site-shell-browser-contract"
@@ -85,7 +86,8 @@ async function main() {
         () => checkShellCase(browser, request.baseline, scenario, "current", false, async (page, positions) => {
           baselinePositions = positions;
           baselineDom = await examplesDom(page, false, scenario)
-          baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario) }
+          baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
+            actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined }
         }, "workflow-examples-v1"))
       // The raw observer records obstruction evidence only. This new oracle
       // requires zero on both trees and uses no historical support allowance.

@@ -10,6 +10,7 @@ import { assertShellNode, compareShellElements, compareShellEvidence, measure, s
 import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { observeRefinementHero, compareRefinementHeroCopies, type RefinementHero } from "./site-refinement-browser-contract"
+import { observeExamplesActions, projectExamplesHeroActions, type ExamplesActions } from "./site-examples-cta"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
   examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures } from "./site-examples-profile"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
@@ -259,6 +260,7 @@ export function compareExamplesFlow(actual: readonly ShellElement[], baseline: r
 export interface ExamplesDesign {
   readonly flow: readonly ShellElement[]
   readonly hero: RefinementHero | undefined
+  readonly actions: ExamplesActions | undefined
 }
 /** Ordinary flow coordinates are document-relative. A fixed ancestor instead
  * requires strict viewport coordinates from the independently observed scroll. */
@@ -289,11 +291,8 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
   const currentFlow = currentDesign.flow, baselineFlow = baselineDesign.flow
   const total = compareExamplesFlow(currentFlow, baselineFlow)
   const hero = currentDesign.hero, oldHero = baselineDesign.hero
-  assert.ok(hero && oldHero)
-  // The exact CTA and boundary are independently literal-bound by examplesDom.
-  // Reuse the existing complete grid/copy geometry proof with the CTA text
-  // projected only at its known five-child copy position.
-  const retained = { ...hero, elements: hero.elements.map((item, index) => index === 4 ? { ...item, text: oldHero.elements[index]!.text } : item) }
+  assert.ok(hero && oldHero && currentDesign.actions && baselineDesign.actions)
+  const retained = projectExamplesHeroActions(hero, oldHero, currentDesign.actions, baselineDesign.actions)
   compareRefinementHeroCopies(retained, oldHero)
   const sectionDelta = (selector: string) => {
     const item = currentFlow.find(row => row.key === `${selector}[0]`), old = baselineFlow.find(row => row.key === `${selector}[0]`)
@@ -329,8 +328,9 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
   { ...baseline, dom: baselineDom.dom, elements: oldElements }, scenario.name)
 }
 export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean) {
-  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined }
+  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined }
   const flow = await measure(page, examplesFlowSections), hero = await observeRefinementHero(page, scenario)
+  const actions = await observeExamplesActions(page, true)
   const ids = await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id")))
   assert.deepEqual(ids, examplesHomeIds, "Reviewed homepage example inventory")
   await assertExampleGeometry(page, scenario.width)
@@ -359,7 +359,7 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
     } finally { await sheet.evaluate(sheet => { sheet.disabled = false }); await settle(page, scenario.direction); await sheet.dispose() }
     compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")
   }
-  return { flow, hero }
+  return { flow, hero, actions }
 }
 export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
   assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, refinementInstallCommand)
