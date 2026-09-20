@@ -4,11 +4,10 @@ import { boundedCanonicalJsonSha256 } from "../code/canonical-json.js"
 import { deepFreezeJson } from "../code/json-snapshot.js"
 import {
   SpatialDigestSchema,
-  SpatialSceneV1Schema,
   SpatialTimeUsSchema,
   type SpatialSceneV1,
 } from "./contracts.js"
-import { parseSpatialValue, spatialValueSha256 } from "./identity.js"
+import { parseSpatialScene, parseSpatialValue, spatialValueSha256 } from "./identity.js"
 
 /**
  * Behavior documents bind an ALGAL organism closure to one scene entity.
@@ -392,7 +391,7 @@ export function checkSpatialBehavior(
 ): SpatialBehaviorCheckReport {
   const options = parseSpatialValue(checkOptionsSchema, input, "behavior check")
   const behavior = parseSpatialBehavior(options.behavior)
-  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene")
+  const scene = parseSpatialScene(options.scene)
   const sceneSha256 = spatialValueSha256(scene)
   const findings: SpatialBehaviorCheckFinding[] = []
   const finding = (code: SpatialBehaviorFindingCode, severity: "error" | "warning", detail: string, referenceId?: string): void => {

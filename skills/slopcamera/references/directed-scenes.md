@@ -52,6 +52,13 @@ Four standard-library organisms are available for composition: locomotion FSM (`
 
 The authoring loop: (1) assemble a behavior doc from stdlib organisms with scene-bound args, (2) check it with `scene behavior check`, (3) bake it with `scene behavior bake`, (4) audit the trace with `scene behavior audit`, (5) plan gallery variants and review. Identical behavior doc + seed + scene produce byte-identical bakes. The `seed` interface input auto-binds from `behavior.seed` for gallery diversity. A channel map (`--channel-map`) binds emitted channels to clip runs, attach/release pairs, or trajectory waypoints for performance directives. Behaviors never execute source, contact providers, or access the filesystem; organisms are data.
 
+For SDK authoring, normalize the scene with `parseSpatialScene` and bind the
+behavior using `spatialSceneSha256`. These public helpers validate references and
+normalize entity order so saved SDK scenes and the CLI share the same identity.
+Check, bake, and gallery use that canonical identity. A behavior bound to a raw,
+noncanonical scene hash remains stale: explicitly rebind it to the inspected
+scene and bake again, preserving the earlier documents and receipts.
+
 The CLI check and bake still wait for host CPU and local-I/O admission. A concurrent
 render can reserve the CPU pool. A timeout with no output does not establish that
 the behavior program failed; preserve the attempt's outcome and distinguish
