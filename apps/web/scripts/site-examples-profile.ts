@@ -1,11 +1,11 @@
 /** Independent current-design acceptance. Historical profiles are unchanged. */
 export const examplesScope = "workflow-examples-v1"
-export const examplesBaselineProfile = "before-workflow-examples-437a530-v1"
-export const examplesBaselineRevision = "437a530ee81bd0816c911f216f4331c88770bf31"
-export const examplesBaselineTree = "4a453ddc4aecd6c68a2135dcf447dc323efa6c6d"
+export const examplesBaselineProfile = "before-workflow-examples-4cdfb0b-v1"
+export const examplesBaselineRevision = "4cdfb0b3cc9fc23707549b0ee7a0e8cb1179c45b"
+export const examplesBaselineTree = "3148096494b4911f4660d55d5a7840c0e7e53fb5"
 export const examplesDeadlineMs = 720_000
 export interface ExamplesIsland { readonly selector: string; readonly baseline: string; readonly current: string }
-/** Eight authored body islands independently reviewed against the clean 437a530 baseline.
+/** Eight authored body islands independently reviewed against the clean 4cdfb0b baseline.
  * All body content outside these exact literals remains paired by the native verifier. */
 export const examplesIslands: readonly ExamplesIsland[] = [
   {

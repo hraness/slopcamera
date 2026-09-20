@@ -2,7 +2,7 @@
 
 Slopcamera retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 
-Install the [verified Slopcamera v3.3.1 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any later correction that requires [current source](how-to/use-current-source.md). Example helpers that import repository TypeScript also need a checkout; that requirement does not mean their CLI commands are unreleased. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any later correction that requires [current source](how-to/use-current-source.md). Example helpers that import repository TypeScript also need a checkout; that requirement does not mean their CLI commands are unreleased. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
