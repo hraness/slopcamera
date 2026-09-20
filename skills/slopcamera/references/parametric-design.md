@@ -1,6 +1,6 @@
 # Build a revisable parametric design
 
-Use current source and `slopcamera scene design` for dimensions, repeated architectural parts, furniture, pavilions and façades that must regenerate from retained rules. This is a local mesh-design workflow; Rhino, Grasshopper and native engine execution are separate tools.
+Use Slopcamera v3.3.1 or newer and `slopcamera scene design` for dimensions, repeated architectural parts, furniture, pavilions and façades that must regenerate from retained rules. This is a local mesh-design workflow; Rhino, Grasshopper and native engine execution are separate tools.
 
 1. Discover original studies with `slopcamera scene design catalog --json`. Start with `scene design init <new-directory> --template crescent-pavilion|spiral-stair|ribbed-tower|modular-bookshelf`.
 2. Read the emitted `design.json` and inspect it with `scene design inspect`. Describe the user's intended shape in named parameters, derived scalar values, constraints and semantic geometry stages. Keep references to engineering knowledge separate from visual references. Do not infer structural validation from appearance.

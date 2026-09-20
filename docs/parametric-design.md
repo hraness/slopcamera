@@ -2,7 +2,7 @@
 
 A Slopcamera design retains the rules that generate a model. Named parameters feed derived values and geometry stages; changing a parameter updates every stage that depends on it. The compiler produces ordinary editable spatial scenes with retained GLB geometry, asset facts and receipts. Use the [design guide](how-to/parametric-design.md) to create and render a first study.
 
-This interface is available from current source through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses local geometry code and requires neither Rhino nor a native modeling engine. It does not execute authored JavaScript or Python.
+This interface is available in Slopcamera v3.3.1 through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses local geometry code and requires neither Rhino nor a native modeling engine. It does not execute authored JavaScript or Python.
 
 ## Commands
 
