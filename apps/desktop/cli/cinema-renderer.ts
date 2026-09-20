@@ -142,8 +142,7 @@ function sliceChain(slice: CinemaMediaSlice, inputIndex: ReadonlyMap<string, num
   const inputDurationUs = slice.fileRange.endUs - slice.fileRange.startUs;
   const outputDurationUs = slice.outputRange.endUs - slice.outputRange.startUs;
   return [
-    `[${inputSpecifier(input, slice.streamIndex)}]`,
-    `trim=start=${seconds(slice.fileRange.startUs)}:end=${seconds(slice.fileRange.endUs)}`,
+    `[${inputSpecifier(input, slice.streamIndex)}]trim=start=${seconds(slice.fileRange.startUs)}:end=${seconds(slice.fileRange.endUs)}`,
     "settb=AVTB",
     // Source clocks may be coarse; cinema offsets stay in integer microseconds.
     `setpts=(PTS-STARTPTS)*${decimal(outputDurationUs / inputDurationUs)}+${seconds(slice.outputRange.startUs)}/TB`,
@@ -256,7 +255,7 @@ function transitionWindowChain(
     }
     const zeroed = label(context, `${prefix}_zero`);
     context.filters.push(
-      `[${stream}]setpts=PTS-STARTPTS,fps=${context.rate}${limitUs === undefined ? "" : `,trim=end=${seconds(limitUs)},setpts=PTS-STARTPTS`}[${zeroed}]`,
+      `[${stream}]setpts=PTS-STARTPTS${limitUs === undefined ? "" : `,trim=end=${seconds(limitUs)},setpts=PTS-STARTPTS`},fps=${context.rate}[${zeroed}]`,
     );
     return zeroed;
   };
