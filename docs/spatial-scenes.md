@@ -183,6 +183,10 @@ slopcamera scene asset admit model.glb --source-root assets --output model.manif
 
 The source must resolve inside `--source-root`; admission refuses symlink escapes, bounds the payload, and hashes the captured bytes. The returned document carries the asset manifest, a sibling facts manifest with model-space and scene-space bounds, a mesh entity, and ready `add-asset`/`add-entity` patch operations. Apply them through `scene patch` to place the model in a scene. The admission document feeds `scene audit --asset-bounds` directly, which cannot decode assets on its own. Out-of-profile GLBs and tampered bytes reject with typed errors; admission never downloads or executes source.
 
+Downloaded props use this same workflow. A GLB extension alone does not establish compatibility: this importer requires a self-contained GLB; any textures must be embedded PNG/JPEG. It rejects external resources, compressed meshes, and unsupported attributes or extensions. Loose `.gltf` files and separate texture folders cannot be passed directly to this command.
+
+Admission creates a mesh with a gray entity material. To retain an admitted model's own materials and textures, set `geometry.materialMode` to `"source"` on the returned mesh in its `add-entity` operation before applying the patch. Inspect the rendered result; source-material mode exposes transform edits, while color and opacity edits require entity-material mode.
+
 The `@hraness/slopcamera/code` SDK also exports pure scene builders — camera poses from FOV and look-at, baked easing channels, grid/scatter layout, and placement relations — that return validated scene data for programmatic authoring. They are documented in the Slopcamera Agent Skill under scene building.
 
 ## Generate procedural output at authoring time
