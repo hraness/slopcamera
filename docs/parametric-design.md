@@ -2,7 +2,7 @@
 
 A Slopcamera design retains the rules that generate a model. Named parameters feed derived values and geometry stages; changing a parameter updates every stage that depends on it. The compiler produces ordinary editable spatial scenes with retained GLB geometry, asset facts and receipts. Use the [design guide](how-to/parametric-design.md) to create and render a first study.
 
-This interface is available in Slopcamera v3.3.1 through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses local geometry code and requires neither Rhino nor a native modeling engine. It does not execute authored JavaScript or Python.
+This interface is available in Slopcamera v3.3.1 through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses Slopcamera's local geometry code and needs no additional modeling application. It does not execute authored JavaScript or Python.
 
 ## Commands
 
@@ -58,7 +58,7 @@ Generated GLB stages currently accept unmapped `unlit` and `standard` materials.
 
 Templates are JSON data. Insert a parameter or named-value reference at a numeric leaf, or use `{"$expr": <expression>}` for a local calculation. Strings are literal data; no source text is evaluated. After substitution, the complete existing geometry or parametric schema must validate.
 
-The geometry graph provides profiles, inset and bevel, primitives, extrusion, revolution, sweep, loft, transform, mirror, array, merge, material slots and UV projection, plus its existing bounded boolean subset. See `SpatialGeometryNodeSchema` in the [portable geometry implementation](../src/spatial-scene/geometry.ts) for the exact supported contract. These are mesh operations; they do not provide Rhino's full NURBS or Grasshopper component ecosystem.
+The geometry graph provides profiles, inset and bevel, primitives, extrusion, revolution, sweep, loft, transform, mirror, array, merge, material slots and UV projection, plus its existing bounded boolean subset. See `SpatialGeometryNodeSchema` in the [portable geometry implementation](../src/spatial-scene/geometry.ts) for the exact supported contract. These operations produce polygon meshes; exact NURBS surface modeling is outside this interface.
 
 Generated entity IDs derive from the design and stage identities. Recompiling into a retained scene replaces the corresponding generated output and preserves declared overrides through the existing generator merge rules. Receipts report changed stages. Unrelated authored entities, other generators and their assets remain present. Removing a retained stage requires explicit scene cleanup; the compiler rejects an obsolete stage instead of leaving unexplained geometry behind.
 

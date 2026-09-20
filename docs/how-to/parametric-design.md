@@ -1,6 +1,6 @@
 # Build and revise a parametric design
 
-Create an architectural study, change its dimensions, and render its generated model while retaining the rules that built it. Install the [verified Slopcamera v3.3.2 release](../../README.md#install-slopcamera) or use a [source build](use-current-source.md), then check `slopcamera doctor --json` for the browser required by spatial rendering. Design inspection and compilation work without a browser, Rhino, a cloud account or paid generation.
+Create an architectural study, change its dimensions, and render its generated model while retaining the rules that built it. Install the [verified Slopcamera v3.3.2 release](../../README.md#install-slopcamera) or use a [source build](use-current-source.md), then check `slopcamera doctor --json` for the browser required by spatial rendering. Design inspection and compilation run locally with the Slopcamera CLI.
 
 ## Create a study
 
@@ -97,4 +97,4 @@ Each candidate directory has its own `scene.json`, `render.json` and receipt. Re
 
 The [design reference](../parametric-design.md) describes expressions, constraints, geometry stages and the SDK. Author dimensions and meaningful part names before increasing detail. Use bevels, coherent member proportions and deliberate joints where they affect the final view. Lighting, materials, camera position and the surrounding scene remain explicit design decisions.
 
-Use [native studio](../studio.md) for Blender/Cycles production shading, native CAD operations or engine-specific geometry. A GLB model can also be opened in a compatible DCC tool; retain its original design and units. From Rhino, export a compatible GLB and use `scene asset admit` to retain it in Slopcamera. Slopcamera does not execute `.gh` definitions or import `.3dm` directly. Rhino's proprietary application and plugin requirements remain separate from these local design commands.
+Use [native studio](../studio.md) for Blender/Cycles production shading, native CAD operations, or engine-specific geometry. Retain the original design and units when exchanging generated GLB models with another tool. To add downloaded models, use the [local GLB import workflow](../spatial-scenes.md#admit-a-local-gltf-asset).

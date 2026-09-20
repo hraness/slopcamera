@@ -34,6 +34,8 @@ Prefer helpers over hand-written scene JSON. The `@hraness/slopcamera/code` expo
 
 `slopcamera scene asset admit model.glb --source-root <dir> --output manifest.json --json` validates a local GLB 2.0 against the closed profile, stores it content-addressed, derives model-space and scene-space bounds into a sibling facts manifest, and emits the mesh entity plus ready `add-asset`/`add-entity` patch operations. The source path must stay inside `--source-root`; unsupported GLB features reject rather than degrade. Apply the returned operations through `scene patch`, then feed the admission document itself to `scene audit --asset-bounds`.
 
+Downloaded props use this same workflow. Require a self-contained GLB; any textures must be embedded PNG/JPEG. Loose glTF bundles, external textures, compressed meshes, and unsupported attributes or extensions reject. Admission defaults to a gray entity material. To preserve the model's materials and textures, set `geometry.materialMode: "source"` on the returned mesh in its `add-entity` operation before applying the patch, then inspect a rendered frame. Check each model's license and admission result; see the [local asset guide](https://github.com/hraness/slopcamera/blob/main/docs/spatial-scenes.md#admit-a-local-gltf-asset).
+
 ## Refine an existing scene
 
 Use this pass when an existing HTML, Three.js, or native scene needs better
