@@ -196,6 +196,8 @@
     "LICENSE"
   ],
   "scripts": {
+    "kb:search": "bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.22.0/hraness-wordcell-0.22.0.tgz wordcell search --root kb --mode exact --rerank typesafe --rerank-limit 25",
+    "kb:search:local": "bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.22.0/hraness-wordcell-0.22.0.tgz wordcell search --root kb --mode exact",
     "build": "bun run build:sdk && bun run build:desktop && bun run build:web",
     "build:sdk": "bun -e 'await (await import(\"node:fs/promises\")).rm(\"./dist\", { recursive: true, force: true })' && bun build ./src/index.ts ./src/cli.ts ./src/code/index.ts ./src/code/advanced.ts ./src/generate.ts ./src/host-resources.ts ./src/operations.ts ./src/workflow.ts ./src/vectorize/worker.ts --outdir ./dist --root ./src --target bun --format esm --splitting --packages external --minify-whitespace --emit-dce-annotations",
     "build:desktop": "bun run build:desktop:cli",
