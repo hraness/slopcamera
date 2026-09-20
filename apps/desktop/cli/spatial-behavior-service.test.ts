@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSpatialSceneStarter } from "../../../src/spatial-scene/authoring";
 import { checkSpatialBehavior } from "../../../src/spatial-scene/behavior";
+import { auditSpatialBehaviorTrace } from "../../../src/spatial-scene/behavior-audit";
 import { bakeSpatialBehavior } from "../../../src/spatial-scene/behavior-bake";
 import { spatialBehaviorFnSignatures } from "../../../src/spatial-scene/behavior-fns";
 import { planSpatialBehaviorGallery } from "../../../src/spatial-scene/behavior-gallery";
@@ -45,6 +46,17 @@ test("behavior SDK and CLI agree for a saved scene with unsorted entities", asyn
     expect(JSON.parse(await readFile(join(root, "bake.json"), "utf8"))).toEqual(bake);
     expect(await executeSpatialSceneCommand(application, { ...common, action: "behavior-gallery" }))
       .toEqual(await planSpatialBehaviorGallery({ behavior, scene }));
+    const audit = auditSpatialBehaviorTrace({
+      behaviorSha256: bake.behaviorSha256, emittedSha256: bake.receipt.emittedSha256,
+      emitted: bake.emitted, rangeUs: bake.rangeUs,
+    });
+    const auditCommand = { kind: "spatial-scene", action: "behavior-audit", bake: "bake.json", json: true } as const;
+    expect(await executeSpatialSceneCommand(application, auditCommand)).toEqual(audit);
+    expect(await executeSpatialSceneCommand(application, { ...auditCommand, output: "audit.json" })).toMatchObject({
+      findings: audit.findings.length, channels: audit.channelCount, emitted: audit.emittedCount,
+    });
+    expect(JSON.parse(await readFile(join(root, "audit.json"), "utf8"))).toEqual(audit);
+    expect(JSON.parse(await readFile(join(root, "bake.json"), "utf8"))).toEqual(bake);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

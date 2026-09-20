@@ -45,6 +45,7 @@ import {
 import {
   spatialBehaviorFnSignatures,
 } from "../spatial-scene/behavior-fns.js"
+import { SpatialBehaviorBakeSchema } from "../spatial-scene/behavior-trace.js"
 import {
   SPATIAL_SCENE_LIMITS,
   type SpatialSceneV1,
@@ -2410,7 +2411,11 @@ export class SlopcameraMcpToolRuntime {
     options: ParsedSceneBehaviorAuditArguments,
   ): Promise<McpToolResult> {
     const bake = await loadJson(this.boundary, options.bake, "Behavior bake source")
-    const report = auditSpatialBehaviorTrace(bake.value)
+    const document = parseSpatialValue(SpatialBehaviorBakeSchema, bake.value, "behavior bake")
+    const report = auditSpatialBehaviorTrace({
+      behaviorSha256: document.behaviorSha256, emittedSha256: document.receipt.emittedSha256,
+      emitted: document.emitted, rangeUs: document.rangeUs,
+    })
     const findings = boundedSlice(report.findings, mcpMaximumReturnedFindings)
     const summary = {
       findingCount: report.findings.length,

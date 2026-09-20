@@ -100,6 +100,11 @@ the actual target in the character's coordinate frame. Preserve a resting arm
 when only the other arm participates. Use small delays and bounded pose changes
 to separate reactions without giving every object continuous motion.
 
+Direct within the visible asset's limits. A mathematically exact gaze can turn a
+photographic face map into an unreadable profile. Review face visibility during
+the gesture and use a restrained glance or nod when that better communicates the
+intended acknowledgment.
+
 When adapting a procedural rig, document any proxy skeleton and the conversion
 between local and world transforms. Test the visible rig separately. An audit of
 a proxy does not establish the visible character's foot placement, grip, or
@@ -119,6 +124,11 @@ planting events. Check finite transforms, grip error, floor clearance, ownership
 and prop orientation. For moving crowds or vehicles, check geometry extents and
 intermediate times as well as center distances. Report sampling density and
 tolerances; sampled clearance is not continuous collision proof.
+
+Require finite measurements and actual samples for every required contact state.
+Missing contact data must fail validation rather than default to zero error.
+Ensure each reported contact and replay check contributes to the final pass/fail
+result.
 
 Render a short preview containing the entire difficult action. For an HTML scene,
 author a bounded preview request and map its local clock to the intended source
