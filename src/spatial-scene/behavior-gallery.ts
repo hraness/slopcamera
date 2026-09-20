@@ -13,9 +13,8 @@ import {
 } from "./behavior-trace.js"
 import {
   SpatialDigestSchema,
-  SpatialSceneV1Schema,
 } from "./contracts.js"
-import { parseSpatialValue, spatialValueSha256 } from "./identity.js"
+import { parseSpatialScene, parseSpatialValue, spatialValueSha256 } from "./identity.js"
 
 /**
  * Seeded behavior galleries: one admitted behavior document baked under
@@ -69,7 +68,7 @@ const candidateId = (parameter: string, behaviorSha256: string): string =>
 export async function planSpatialBehaviorGallery(input: unknown): Promise<SpatialBehaviorGalleryPlan> {
   const options = parseSpatialValue(galleryOptionsSchema, input, "behavior gallery")
   const behavior = parseSpatialBehavior(options.behavior)
-  const scene = parseSpatialValue(SpatialSceneV1Schema, options.scene, "scene")
+  const scene = parseSpatialScene(options.scene)
   const channelMap = options.channelMap === undefined ? undefined : parseSpatialBehaviorChannelMap(options.channelMap)
 
   const seen = new Set<string>()

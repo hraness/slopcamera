@@ -52,6 +52,10 @@ The scaffold creates `scene.py`, any explicit helpers, `source.json` and `job.js
 
 The default Blender product job requests Cycles GPU rendering. An unavailable GPU fails clearly. Select `device: "cpu"` in a new job when CPU rendering is intended; no fallback is implicit. Initial Metal shader compilation can make the first render substantially slower than later frames.
 
+`studio probe` discovers devices without rendering a frame. A successful probe
+does not qualify shader compilation or the scene's render. Use a bounded render
+with the selected engine and device before committing to a long job.
+
 Other starters:
 
 ```sh
@@ -265,6 +269,14 @@ slopcamera studio reconcile <studio-id> --json
 ```
 
 Inspection rechecks source and physical output hashes. Reconciliation can restore a missing receipt only when a closed successful process completion and an unchanged output-validation checkpoint exist. Earlier interrupted execution remains ambiguous and is never automatically resubmitted. Choose a new job ID for an explicitly revised attempt after custody is settled.
+
+For an unexpected Blender exit, correlate that attempt's retained logs with the
+operating system's crash report before changing settings. A macOS report in
+`MetalKernelPipeline::compile` while the main thread waits in
+`BlenderSession::render` identifies a render failure; it does not prove an
+out-of-memory condition or a specific shader-cache defect. A bounded CPU or EEVEE
+comparison needs a new, explicitly configured job after custody is settled. Its
+success does not qualify Cycles/Metal, and its frames need separate visual review.
 
 The supervisor bounds combined logs, the job deadline and termination/pipe-drain grace. It monitors output and scratch budgets, retains failure evidence and tracks native process groups. Live scans tolerate bounded disappearance of temporary cache entries; final output, source and scratch scans remain strict. Budget-monitor and validation failures retain a safe failed host stage separately from authored-process logs, without storing foreign exception text. A machine-wide durable activity marker survives CLI death; unresolved custody blocks later native dispatch. Detached sessions from authored source are unsupported. Do not delete an unresolved marker to bypass admission; inspect and resolve the actual process ownership first.
 

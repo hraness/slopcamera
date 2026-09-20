@@ -18,6 +18,8 @@ import type {
 } from "../host-resources.ts"
 import { createSpatialSceneStarter } from "../spatial-scene/authoring.ts"
 import { behaviorOrganismSha256, type SpatialBehaviorOrganism } from "../spatial-scene/behavior.ts"
+import { auditSpatialBehaviorTrace } from "../spatial-scene/behavior-audit.ts"
+import { bakeSpatialBehavior } from "../spatial-scene/behavior-bake.ts"
 import { spatialValueSha256 } from "../spatial-scene/identity.ts"
 import { fixtureAsset } from "../spatial-scene/test-fixture.ts"
 import {
@@ -790,16 +792,10 @@ describe("Slopcamera MCP scene tools", () => {
       })
       expect(behaviorOutside.isError).toBe(true)
 
-      await writeFile(join(root, "bake-audit.json"), JSON.stringify({
-        emitted: [
-          { tUs: 0, channel: "locomotion", value: "idle" },
-          { tUs: 100_000, channel: "locomotion", value: "walk" },
-          { tUs: 200_000, channel: "locomotion", value: "walk" },
-        ],
-        behaviorSha256: "a".repeat(64),
-        emittedSha256: "b".repeat(64),
-        rangeUs: { startUs: 0, endUs: 250_000 },
-      }))
+      const { bake } = await bakeSpatialBehavior({
+        behavior: JSON.parse(await readFile(join(root, "behavior.json"), "utf8")) as unknown, scene,
+      })
+      await writeFile(join(root, "bake-audit.json"), JSON.stringify(bake))
       const behaviorAudit = await runtime.call("audit_scene_behavior", {
         bake: "bake-audit.json",
       })
@@ -807,7 +803,11 @@ describe("Slopcamera MCP scene tools", () => {
       expect(behaviorAudit.structuredContent).toMatchObject({
         ok: true,
         source: "bake-audit.json",
-        summary: { channelCount: 1, emittedCount: 3 },
+        summary: { channelCount: 1, emittedCount: 2 },
+        report: auditSpatialBehaviorTrace({
+          behaviorSha256: bake.behaviorSha256, emittedSha256: bake.receipt.emittedSha256,
+          emitted: bake.emitted, rangeUs: bake.rangeUs,
+        }),
       })
 
       const temporal = await runtime.call("audit_scene_temporal", {

@@ -3,6 +3,7 @@ import { canonicalJson, canonicalJsonSha256 } from "../code/canonical-json.js"
 import { CORE_HUMANOID_BONE_NAMES, HUMANOID_BONE_NAMES, parseHumanoidMapping } from "./character.js"
 import { SPATIAL_GLB_RIGGED_PROFILE } from "./gltf.js"
 import { type SpatialFrameRate } from "./contracts.js"
+import { compileSpatialBehaviorDirectives, parseSpatialBehaviorChannelMap } from "./behavior-trace.js"
 import {
   auditSpatialPerformance,
   compileSpatialPerformance,
@@ -119,6 +120,9 @@ describe("parseSpatialPerformancePlan", () => {
     const sources = buildSources(mapping, { [sha]: clip })
     const take = compileSpatialPerformance(plan, sources)
     expect(take.receipt.outputSha256).toHaveLength(64)
+    expect(take.receipt.compiler).toBe("slopcamera.spatial-performance-compiler@v3")
+    expect(take.receipt.compilerSha256).toBe(canonicalJsonSha256(SPATIAL_PERFORMANCE_COMPILER_ID))
+    expect(() => parseSpatialPerformancePlan({ ...plan, compilerVersion: "slopcamera.spatial-performance-compiler@v2" })).toThrow()
   })
 })
 
@@ -325,6 +329,95 @@ describe("compileSpatialPerformance", () => {
     expect(first).toBe(false)
     expect(mid).toBe(true)
     expect(last).toBe(false)
+  })
+
+  test("native behavior releases do not prevent a later prop pickup", () => {
+    const mapping = fullMapping()
+    const channelMap = parseSpatialBehaviorChannelMap({ attachments: [{
+      attachChannel: "parcel.attach", releaseChannel: "parcel.release",
+      propId: "parcel", bone: "leftHand", localOffset: identity,
+    }] })
+    const compilation = compileSpatialBehaviorDirectives({
+      emitted: [
+        { tUs: 0, channel: "parcel.attach", value: true },
+        { tUs: 700_000, channel: "parcel.release", value: true },
+        { tUs: 4_900_000, channel: "parcel.attach", value: true },
+      ],
+      channelMap,
+      rangeUs: { startUs: 0, endUs: 8_000_000 },
+    })
+    expect(compilation.unresolvedIntents).toEqual([])
+    expect(compilation.directives.map((directive) => directive.kind)).toEqual(["attach", "release", "attach"])
+    const plan = { ...buildPlan(compilation.directives, canonicalJsonSha256(mapping), 8_000_000), frameRate: { numerator: 10, denominator: 1 } }
+    const sources = buildSources(mapping, {}, { parcel: { propId: "parcel", localOffset: identity } })
+    const take = compileSpatialPerformance(plan, sources)
+    const attachmentAt = (timeUs: number) => take.samples.find((sample) => sample.timeUs === timeUs)!.attachments["parcel"]!
+    expect(attachmentAt(0)).toMatchObject({ attached: true, parentBone: "leftHand" })
+    expect(attachmentAt(700_000).attached).toBe(false)
+    expect(attachmentAt(4_800_000).attached).toBe(false)
+    expect(attachmentAt(4_900_000)).toMatchObject({ attached: true, parentBone: "leftHand" })
+    expect(attachmentAt(7_900_000).attached).toBe(true)
+    const channel = take.channels.find((candidate): candidate is SpatialPerformanceAttachmentChannel => candidate.kind === "attachment")!
+    expect(channel.keys.map((key) => key.attached)).toEqual(take.samples.map((sample) => sample.attachments["parcel"]!.attached))
+    expect(compileSpatialPerformance(plan, sources)).toEqual(take)
+  })
+
+  test("prop ownership follows event time and never revives an older attachment", () => {
+    const mapping = fullMapping()
+    const sources = buildSources(mapping, {}, { parcel: { propId: "parcel", localOffset: identity } })
+    const directives: SpatialPerformancePlan["directives"] = [
+      { directiveId: "new", kind: "attach", propId: "parcel", bone: "leftHand", localOffset: identity, startUs: 500_000, endUs: 700_000 },
+      { directiveId: "old", kind: "attach", propId: "parcel", bone: "rightHand", localOffset: identity, startUs: 0, endUs: 1_000_000 },
+      { directiveId: "early-drop", kind: "release", propId: "parcel", startUs: 300_000 },
+    ]
+    const plan = { ...buildPlan(directives, canonicalJsonSha256(mapping)), frameRate: { numerator: 10, denominator: 1 } }
+    const take = compileSpatialPerformance(plan, sources)
+    expect(take.samples.map((sample) => sample.attachments["parcel"]!.parentBone ?? null)).toEqual([
+      "rightHand", "rightHand", "rightHand", null, null, "leftHand", "leftHand", null, null, null,
+    ])
+    const reordered = compileSpatialPerformance({ ...plan, directives: [...directives].reverse() }, sources)
+    expect(reordered.samples).toEqual(take.samples)
+    expect(reordered.channels).toEqual(take.channels)
+  })
+
+  test("native behavior can release and reattach at the same instant", () => {
+    const mapping = fullMapping()
+    const compilation = compileSpatialBehaviorDirectives({
+      emitted: [
+        { tUs: 0, channel: "parcel.attach", value: true },
+        { tUs: 500_000, channel: "parcel.release", value: true },
+        { tUs: 500_000, channel: "parcel.attach", value: true },
+        { tUs: 800_000, channel: "parcel.release", value: true },
+      ],
+      channelMap: parseSpatialBehaviorChannelMap({ attachments: [{
+        attachChannel: "parcel.attach", releaseChannel: "parcel.release",
+        propId: "parcel", bone: "leftHand", localOffset: identity,
+      }] }),
+      rangeUs: { startUs: 0, endUs: 1_000_000 },
+    })
+    expect(compilation.unresolvedIntents).toEqual([])
+    const plan = { ...buildPlan(compilation.directives, canonicalJsonSha256(mapping)), frameRate: { numerator: 10, denominator: 1 } }
+    const take = compileSpatialPerformance(plan, buildSources(mapping, {}, { parcel: { propId: "parcel", localOffset: identity } }))
+    expect(take.samples.map((sample) => sample.attachments["parcel"]!.attached)).toEqual([
+      true, true, true, true, true, true, true, true, false, false,
+    ])
+  })
+
+  test("simultaneous releases precede attaches, and simultaneous attaches preserve authored precedence", () => {
+    const mapping = fullMapping()
+    const sources = buildSources(mapping, {}, { parcel: { propId: "parcel", localOffset: identity } })
+    const first = { directiveId: "first", kind: "attach", propId: "parcel", bone: "rightHand", localOffset: identity, startUs: 0, endUs: 1_000_000 } as const
+    const second = { ...first, directiveId: "second", bone: "leftHand" } as const
+    const drop = { directiveId: "drop", kind: "release", propId: "parcel", startUs: 0 } as const
+    for (const directives of [[first, second], [second, first]]) {
+      const take = compileSpatialPerformance(buildPlan(directives, canonicalJsonSha256(mapping)), sources)
+      expect(take.samples[0]!.attachments["parcel"]!.parentBone).toBe(directives[1]!.bone)
+    }
+    for (const directives of [[drop, first, second], [second, first, drop]]) {
+      const take = compileSpatialPerformance(buildPlan(directives, canonicalJsonSha256(mapping)), sources)
+      const lastAttach = directives.filter((directive) => directive.kind === "attach").at(-1)!
+      expect(take.samples.every((sample) => sample.attachments["parcel"]!.parentBone === lastAttach.bone)).toBe(true)
+    }
   })
 
   test("sets a morph expression", () => {

@@ -76,7 +76,7 @@ export const SPATIAL_PERFORMANCE_BODY_MASKS = Object.freeze({
 
 export type SpatialPerformanceBodyMaskName = keyof typeof SPATIAL_PERFORMANCE_BODY_MASKS
 
-export const SPATIAL_PERFORMANCE_COMPILER_ID = "slopcamera.spatial-performance-compiler@v2"
+export const SPATIAL_PERFORMANCE_COMPILER_ID = "slopcamera.spatial-performance-compiler@v3"
 
 const humanoidBoneName = z.enum(HUMANOID_BONE_NAMES)
 const unit = z.number().finite().min(0).max(1)
@@ -1150,15 +1150,15 @@ export function compileSpatialPerformance(planInput: unknown, sourcesInput: unkn
   const order = mappedBoneOrder(sources.mapping)
 
   const morphDirectives = plan.directives.filter((d) => d.kind === "morph") as Extract<SpatialPerformancePlan["directives"][number], { kind: "morph" }>[]
-  const attachDirectives = plan.directives.filter((d) => d.kind === "attach") as Extract<SpatialPerformancePlan["directives"][number], { kind: "attach" }>[]
-  const releaseDirectives = plan.directives.filter((d) => d.kind === "release") as Extract<SpatialPerformancePlan["directives"][number], { kind: "release" }>[]
+  const attachmentDirectives = plan.directives.filter((d) => d.kind === "attach" || d.kind === "release")
+    .sort((a, b) => a.startUs - b.startUs || Number(a.kind === "attach") - Number(b.kind === "attach"))
   const springDirectives = plan.directives.filter((d) => d.kind === "spring") as Extract<SpatialPerformancePlan["directives"][number], { kind: "spring" }>[]
   const lookAtDirectives = plan.directives.filter((d) => d.kind === "look-at") as Extract<SpatialPerformancePlan["directives"][number], { kind: "look-at" }>[]
   const twoBoneDirectives = plan.directives.filter((d) => d.kind === "two-bone-ik") as Extract<SpatialPerformancePlan["directives"][number], { kind: "two-bone-ik" }>[]
   const footPlantDirectives = plan.directives.filter((d) => d.kind === "foot-plant") as Extract<SpatialPerformancePlan["directives"][number], { kind: "foot-plant" }>[]
   const rootTrajectory = plan.directives.find((d) => d.kind === "root-trajectory") as Extract<SpatialPerformancePlan["directives"][number], { kind: "root-trajectory" }> | undefined
 
-  const propIds = new Set<string>([...Object.keys(sources.props), ...attachDirectives.map((d) => d.propId), ...releaseDirectives.map((d) => d.propId)])
+  const propIds = new Set<string>([...Object.keys(sources.props), ...attachmentDirectives.map((d) => d.propId)])
 
   type MutableSample = {
     timeUs: number
@@ -1307,22 +1307,22 @@ export function compileSpatialPerformance(planInput: unknown, sourcesInput: unkn
       let attached = false
       let parentBone: string | undefined
       let localOffset: { position: [number, number, number]; rotation: [number, number, number, number]; scale: [number, number, number] } | undefined
-      for (const directive of attachDirectives) {
-        if (directive.propId === propId && timeUs >= directive.startUs && timeUs < directive.endUs) {
-          attached = true
-          parentBone = directive.bone
-          localOffset = {
-            position: [directive.localOffset.position[0], directive.localOffset.position[1], directive.localOffset.position[2]],
-            rotation: [directive.localOffset.rotation[0], directive.localOffset.rotation[1], directive.localOffset.rotation[2], directive.localOffset.rotation[3]],
-            scale: [directive.localOffset.scale[0], directive.localOffset.scale[1], directive.localOffset.scale[2]],
-          }
-        }
+      // Ownership follows the latest event, including expired attaches so an
+      // older interval cannot resume. At one instant, release closes the old
+      // binding before attach opens the new one. Stable sorting preserves
+      // authored precedence among simultaneous attaches.
+      let latest: (typeof attachmentDirectives)[number] | undefined
+      for (const directive of attachmentDirectives) {
+        if (directive.startUs > timeUs) break
+        if (directive.propId === propId) latest = directive
       }
-      for (const directive of releaseDirectives) {
-        if (directive.propId === propId && timeUs >= directive.startUs) {
-          attached = false
-          parentBone = undefined
-          localOffset = undefined
+      if (latest?.kind === "attach" && timeUs < latest.endUs) {
+        attached = true
+        parentBone = latest.bone
+        localOffset = {
+          position: [latest.localOffset.position[0], latest.localOffset.position[1], latest.localOffset.position[2]],
+          rotation: [latest.localOffset.rotation[0], latest.localOffset.rotation[1], latest.localOffset.rotation[2], latest.localOffset.rotation[3]],
+          scale: [latest.localOffset.scale[0], latest.localOffset.scale[1], latest.localOffset.scale[2]],
         }
       }
       let worldPosition: [number, number, number] = [0, 0, 0]

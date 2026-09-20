@@ -5,6 +5,10 @@ including dancing characters, changing landscapes, and musical light accents.
 The export retains the source and creates an ordinary editable project with
 separate scene video and original music.
 
+For an existing composition, use [scene refinement](scene-building.md#refine-an-existing-scene) to review
+each shot, author subtle interactions, check contact, and inspect the encoded
+delivery. Keep the scene's deliberate style and original media intact.
+
 ## Confirm the input and local capability
 
 Use the user's selected track and supplied tempo. Establish an explicit duration,
