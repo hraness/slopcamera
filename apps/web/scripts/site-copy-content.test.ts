@@ -23,13 +23,16 @@ describe("visual studio public copy (pure, process-free)", () => {
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
     expect(readme).toContain("Historical Atet release evidence")
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.2.8/hraness-slopcamera-3.2.8.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.3.1/hraness-slopcamera-3.3.1.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')
     expect(homeMarkdown).toContain(archiveInstall.skillCommand)
-    expect(llmsTxt).toContain("native studio, shot-recipe directing, and camera-track export")
-    expect(llmsTxt).toContain("Current source adds cinematic direction, performance, effects, behavior and scene-authoring tools")
+    expect(llmsTxt).toContain("Spatial rendering needs the admitted local browser runtime and the GPU support required by its selected profile")
+    expect(llmsTxt).toContain("Native studio engines need separately installed executables or Python environments")
+    expect(llmsTxt).not.toContain("camera-track export require the current source build")
+    expect(llmsTxt).toContain("scene design catalog|init|inspect|set|compile|gallery")
+    expect(llmsTxt).toContain("https://github.com/hraness/slopcamera/blob/main/docs/how-to/parametric-design.md")
     expect(llmsTxt.match(/Install the verified release with/gu)).toHaveLength(1)
     const graph = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u)![1]!)["@graph"] as Record<string, unknown>[]
     for (const item of graph) {

@@ -2,7 +2,7 @@
 
 Slopcamera retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 
-Install the [verified Slopcamera v3.2.8 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Pages mark additions that require [current source](how-to/use-current-source.md); a source checkout can retain the release version number while exposing newer commands. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [verified Slopcamera v3.3.1 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Pages mark additions that require [current source](how-to/use-current-source.md); a source checkout can retain the release version number while exposing newer commands. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
@@ -21,6 +21,7 @@ Install the [verified Slopcamera v3.2.8 release](../README.md#install-slopcamera
 - [Generate images, video, or narration](how-to/generate-media.md): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
 - [Direct short generated clips](directing-video.md): budget, review takes, preserve endpoint continuity, and recover uncertain work.
 - [Author a native film](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
+- [Build and revise a parametric design](how-to/parametric-design.md): generate architectural models from retained parameters, inspect dependencies and render alternatives.
 - [Render and edit spatial scenes](spatial-scenes.md): patch named entities, use hardware rendering, import a saved world, or prepare a V2 shot composition.
 - [Build a directed cinematic character world](how-to/cinematic-character-worlds.md): admit a rigged world, direct it semantically, plan effects and galleries, and audit temporal evidence.
 - [Direct a cinematic world end to end](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.

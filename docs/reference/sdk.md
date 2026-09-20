@@ -19,6 +19,10 @@ Slopcamera exposes a portable Bun SDK and a complete local media host. Imports s
 
 There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint. The local subpaths need the source-backed Bun distribution — the installed package or a checkout, never a copied standalone executable; they are not browser SDKs.
 
+## Parametric designs
+
+`@hraness/slopcamera/code` exports `parseSpatialDesign`, `inspectSpatialDesign`, `editSpatialDesignParameters`, `compileSpatialDesign`, `listSpatialDesignTemplates` and `createSpatialDesignStarter`. These effect-free helpers retain scalar dependencies, dimensional constraints and generated geometry. Use the [design reference](../parametric-design.md) for schemas, limits and compilation receipts, and the CLI for asset publication and rendering.
+
 ## Portable and local operations
 
 The v3.2.8 portable projection contains four operations: diagram check/render and image generate/vectorize. Current source adds image icon/gallery, for six operations. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.

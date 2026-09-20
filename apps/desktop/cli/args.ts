@@ -103,6 +103,14 @@ export type SpatialSceneCommand = JsonOption & { readonly kind: "spatial-scene" 
   | { readonly action: "behavior-audit"; readonly bake: string; readonly output?: string }
   | { readonly action: "temporal-audit"; readonly path: string; readonly camera: string; readonly timesUs?: readonly number[]; readonly contacts?: string; readonly cutBeforeUs?: readonly number[] }
 );
+export type SpatialDesignCommand = JsonOption & { readonly kind: "spatial-design" } & (
+  | { readonly action: "catalog" }
+  | { readonly action: "init"; readonly directory: string; readonly template: string }
+  | { readonly action: "inspect"; readonly path: string }
+  | { readonly action: "set"; readonly path: string; readonly parameters: string; readonly output: string }
+  | { readonly action: "compile"; readonly path: string; readonly scene?: string; readonly outputDir: string }
+  | { readonly action: "gallery"; readonly path: string; readonly scene?: string; readonly variants: string; readonly outputDir: string }
+);
 export type SpatialProjectCommand = JsonOption & {
   readonly kind: "spatial-project"; readonly project: string;
 } & (
@@ -118,6 +126,7 @@ export type CliCommand =
   | SpatialWorldCommand
   | SpatialAssetCommand
   | SpatialSceneCommand
+  | SpatialDesignCommand
   | SpatialProjectCommand
   | { readonly kind: "help"; readonly topic: readonly string[] }
   | { readonly kind: "version" }
@@ -3285,8 +3294,49 @@ function parseSpatialAssetArgs(argv: readonly string[]): SpatialAssetCommand {
   };
 }
 
-function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialProjectCommand | SpatialWorldCommand | SpatialAssetCommand {
+function parseSpatialDesignArgs(argv: readonly string[]): SpatialDesignCommand {
   const action = argv[0];
+  if (action === "catalog") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    exactPositionals(parsed, 0, "slopcamera scene design catalog [--json]");
+    return { kind: "spatial-design", action, json: optionFlag(parsed, "--json") };
+  }
+  if (action === "init") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--template": "value" });
+    const [directory] = exactPositionals(parsed, 1, "slopcamera scene design init <directory> --template <id> [--json]");
+    const template = optionString(parsed, "--template");
+    if (template === undefined) return fail("scene design init requires --template; use scene design catalog.");
+    return { kind: "spatial-design", action, directory: directory!, template, json: optionFlag(parsed, "--json") };
+  }
+  if (action === "inspect" || action === "check") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene design inspect <design.json> [--json]");
+    return { kind: "spatial-design", action: "inspect", path: path!, json: optionFlag(parsed, "--json") };
+  }
+  if (action === "set") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--parameters": "value", "--output": "value" });
+    const [path] = exactPositionals(parsed, 1, "slopcamera scene design set <design.json> --parameters <values.json> --output <new-design.json> [--json]");
+    const parameters = optionString(parsed, "--parameters"), output = optionString(parsed, "--output");
+    if (parameters === undefined || output === undefined) return fail("scene design set requires --parameters and --output.");
+    return { kind: "spatial-design", action, path: path!, parameters, output, json: optionFlag(parsed, "--json") };
+  }
+  if (action === "compile" || action === "gallery") {
+    const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--scene": "value", "--output-dir": "value", ...(action === "gallery" ? { "--variants": "value" as const } : {}) });
+    const [path] = exactPositionals(parsed, 1, `slopcamera scene design ${action} <design.json> [--scene <scene.json>] --output-dir <new-directory> [--json]`);
+    const scene = optionString(parsed, "--scene"), outputDir = optionString(parsed, "--output-dir");
+    if (outputDir === undefined) return fail(`scene design ${action} requires --output-dir.`);
+    const shared = { kind: "spatial-design" as const, path: path!, ...(scene === undefined ? {} : { scene }), outputDir, json: optionFlag(parsed, "--json") };
+    if (action === "compile") return { ...shared, action };
+    const variants = optionString(parsed, "--variants");
+    if (variants === undefined) return fail("scene design gallery requires --variants.");
+    return { ...shared, action, variants };
+  }
+  return fail("Usage: slopcamera scene design <catalog|init|inspect|set|compile|gallery> ...");
+}
+
+function parseSpatialSceneArgs(argv: readonly string[]): SpatialSceneCommand | SpatialDesignCommand | SpatialProjectCommand | SpatialWorldCommand | SpatialAssetCommand {
+  const action = argv[0];
+  if (action === "design") return parseSpatialDesignArgs(argv.slice(1));
   if (action === "world") return parseSpatialWorldArgs(argv.slice(1));
   if (action === "asset") return parseSpatialAssetArgs(argv.slice(1));
   if (action === "project") {

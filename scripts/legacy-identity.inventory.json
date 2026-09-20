@@ -458,7 +458,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "dd6b7023cf72ce655ac251318d83374e00bfd89215af618f63cd9fdcfc116d73",
+    "identityLinesSha256": "3d7728e6122aef7f4fe32b03631ebf7189f2bef37f1aeac4e8fff65408308e00",
     "occurrenceCount": 1,
     "path": "apps/desktop/cli/main.ts",
     "categories": [
@@ -1277,9 +1277,9 @@
     ]
   },
   {
-    "identityLineCount": 84,
-    "identityLinesSha256": "b22431dd0b1e83fdf7f21f133a67fc1dc158a54ead22ce71697f131fc7eb0c1c",
-    "occurrenceCount": 448,
+    "identityLineCount": 85,
+    "identityLinesSha256": "112a90b31c6c1b9a220ba904554d829e3e301b2e2994b7be720c4b3e218f2726",
+    "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1449,9 +1449,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "236ab72fb1b957b97b24320b5b05a2003205a1485e0b967632397c6bad5711fc",
-    "occurrenceCount": 4,
+    "identityLineCount": 5,
+    "identityLinesSha256": "13af4c8fe08566ee6fc56a4f8c57a82428f8068c62228e2b0d3a41832f4bde82",
+    "occurrenceCount": 5,
     "path": "apps/web/scripts/site-copy-content.test.ts",
     "categories": [
       "test-fixture"
@@ -1468,7 +1468,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "8bb12f5bf2b82cd56b30522a6f761d81aacdb0c817bb2b342c2124c453efd299",
+    "identityLinesSha256": "a89e0d5031e14315bb8f10b326bea5d865147b4562b1f869c0ca84f62ae5596c",
     "occurrenceCount": 8,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1639,26 +1639,35 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "f82f29507a30cb8049cad748d202b719140e8c915b107dea5cdd6051d026e681",
+    "identityLineCount": 1,
+    "identityLinesSha256": "9dfe8027c35151af301c70c25ced1eb5f64c450e43ebe31102edfc54ccdf52cc",
+    "occurrenceCount": 2,
+    "path": "dist/code/index.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
-    "path": "dist/index-gzadr1hk.js",
+    "path": "dist/index-a3vvs3rf.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 142,
-    "identityLinesSha256": "8b0218426811c110252d06848408742a8c58ab1ebe4bff06c1feb7ecacca63f6",
-    "occurrenceCount": 237,
-    "path": "dist/index-set7344z.js",
+    "identityLineCount": 1,
+    "identityLinesSha256": "8133b65bc166ad06c416d7c44a0ce7c1f630eec0241e31daac1d633d92ad4f0f",
+    "occurrenceCount": 233,
+    "path": "dist/index-f0ptv8dm.js",
     "categories": [
       "generated"
     ]
   },
   {
-    "identityLineCount": 64,
-    "identityLinesSha256": "333f1376a805025708d9d75537a9d11d644d800ff22bdfe1b21c96894b692a49",
+    "identityLineCount": 1,
+    "identityLinesSha256": "d369425b3f9b4df9f7916def878b404c6abb7edaebfe10a3c3272cd88655f937",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1697,6 +1706,15 @@
     "identityLinesSha256": "0ecdb53302e7accb71797a575a5aac59f438a5496eef9f79e18d1c0f1895d78a",
     "occurrenceCount": 10,
     "path": "docs/how-to/educational-video.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "ae547d63575822b1cea0e3105c89292c7d016268963d6b2832091ef753589b58",
+    "occurrenceCount": 3,
+    "path": "docs/how-to/parametric-design.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1789,6 +1807,42 @@
     "path": "docs/vercel.md",
     "categories": [
       "compat-doc"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/crescent-pavilion.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/modular-bookshelf.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/ribbed-tower.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/design/spiral-stair.scene.json",
+    "categories": [
+      "native-film-studio"
     ]
   },
   {
@@ -1982,6 +2036,15 @@
   },
   {
     "identityLineCount": 1,
+    "identityLinesSha256": "ea86036c7b397aa40576317302e9e95056cc850311c6c52705d5cbfd734f7dfc",
+    "occurrenceCount": 3,
+    "path": "skills/slopcamera/references/parametric-design.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
     "identityLinesSha256": "3a448fc2dd66943323deb6d2a440819e37b5539a509c1c341284749ea14f872e",
     "occurrenceCount": 1,
     "path": "skills/slopcamera/references/video-projects.md",
@@ -2062,6 +2125,15 @@
     "identityLinesSha256": "b87f8d40f1993e57d4d5140fdb976b34e6a826e94a7b39aa3e6cffa22faa13f2",
     "occurrenceCount": 1,
     "path": "src/index.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "81a56ecdeb174e6f201bbf6345f0a40f3fc11e557dfadd8dcf9ad93986b43855",
+    "occurrenceCount": 2,
+    "path": "src/spatial-scene/design-templates.ts",
     "categories": [
       "native-film-studio"
     ]

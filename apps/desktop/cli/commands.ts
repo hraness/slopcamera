@@ -34,6 +34,7 @@ import { executeDirectingCommand } from "./directing-service";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { executeSpatialAssetCommand } from "./spatial-asset-service";
+import { executeSpatialDesignCommand } from "./spatial-design-service";
 import {
   executeSpatialSceneCommand,
   publishSpatialSource,
@@ -354,7 +355,7 @@ import {
   workflowRunStore,
 } from "./workflow-runs";
 
-export const SLOPCAMERA_VERSION = "3.2.8";
+export const SLOPCAMERA_VERSION = "3.3.1";
 
 // Legacy direct renders predate per-target output contracts. Keep them
 // bounded generously enough for long-form production while preventing one
@@ -6928,6 +6929,11 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
       return;
     }
+    case "spatial-design": {
+      const output = await executeSpatialDesignCommand(applicationContext(context), command, context.abortSignal);
+      writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
+      return;
+    }
     case "spatial-scene": {
       const output = await executeSpatialSceneCommand(applicationContext(context), command, context.abortSignal);
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
@@ -7709,6 +7715,7 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "directing": return undefined; // The directing store owns its explicit lease.
     case "spatial-world": return undefined; // Immutable world attempts and imports own their publication custody.
     case "spatial-asset": return undefined; // Content-addressed asset admission owns its publication custody.
+    case "spatial-design": return undefined; // Fresh directories and no-replace source publication own custody.
     case "spatial-scene": return command.action === "init" || command.action === "patch" || command.action === "camera-track" || command.action === "solve" ? { kind: "workspace-private" } : undefined;
     case "spatial-project": return undefined; // Its explicit application adapter owns one version-aware lease.
     case "project-camera-edit": return command.action === "show"

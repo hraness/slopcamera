@@ -1,6 +1,19 @@
 {
   "version": 1,
   "surfaces": {
+    "local:spatial-design-bundle": {
+      "kind": "derived",
+      "retention": "persistent",
+      "owner": "apps/desktop/cli/spatial-design-service.ts",
+      "source": "Caller-retained spatial design and optional base scene; source templates are owned by src/spatial-scene/design-templates.ts",
+      "budget": {
+        "maximumSourceBytes": 1048576,
+        "maximumBundleAssetBytes": 67108864,
+        "maximumGalleryAssetBytes": 134217728,
+        "maximumVariants": 6
+      },
+      "note": "Local user-managed files in fresh workspace directories; no provider meter or automatic deletion. Completion receipt follows durable asset publication."
+    },
     "posthog:$pageview": {
       "kind": "telemetry",
       "retention": "ttl:P365D",

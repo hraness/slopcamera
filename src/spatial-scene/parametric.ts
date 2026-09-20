@@ -18,7 +18,7 @@ import {
 import { SpatialAssetFactsV1Schema, SpatialCollisionProxySchema, type SpatialAssetFactsV1, type SpatialCollisionProxy, type SpatialRetainedArtifact } from "./asset-admission.js"
 import { mulberry32 } from "./build.js"
 import {
-  SPATIAL_GEOMETRY_PROFILE, emitSpatialGeometryGlb, evaluateSpatialGeometry,
+  SPATIAL_GEOMETRY_PROFILE, SpatialGeometryGraphSchema, emitSpatialGeometryGlb, evaluateSpatialGeometry, estimateSpatialGeometryGraph, parseSpatialGeometryGraph,
   type SpatialGeometryMesh,
 } from "./geometry.js"
 import {
@@ -66,7 +66,7 @@ const coordinate = z.number().finite().min(-1_000_000).max(1_000_000)
 const specVec2 = z.tuple([coordinate, coordinate])
 const specVec3 = z.tuple([coordinate, coordinate, coordinate])
 const editable = z.array(z.enum(["color", "opacity", "transform"])).max(3).optional()
-const partPlacement = { transform: SpatialTransformSchema.optional(), editable }
+const partPlacement = { transform: SpatialTransformSchema.optional(), editable, castShadow: z.boolean().optional(), receiveShadow: z.boolean().optional() }
 
 const opening = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("rect"), center: specVec2, width: meter, height: meter }),
@@ -74,6 +74,8 @@ const opening = z.discriminatedUnion("kind", [
 ])
 
 export const SpatialParametricSpecSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ ...partPlacement, kind: z.literal("geometry"), graph: SpatialGeometryGraphSchema,
+    materials: z.array(SpatialMaterialSchema).min(1).max(16) }),
   z.strictObject({ ...partPlacement, kind: z.literal("wall"), length: meter, height: meter, thickness: meter,
     openings: z.array(opening).max(SPATIAL_PARAMETRIC_LIMITS.openings).optional(), material: SpatialMaterialSchema }),
   z.strictObject({ ...partPlacement, kind: z.literal("floor"), width: meter, depth: meter, thickness: meter, material: SpatialMaterialSchema }),
@@ -109,6 +111,8 @@ export const SpatialParametricRequestSchema = z.strictObject({
   kind: z.literal("slopcamera.spatial-parametric-request"),
   schemaVersion: z.literal(1),
   generatorId: SpatialGeneratorIdSchema,
+  /** Semantic display name; generated identity and payload bytes remain independent of labels. */
+  name: z.string().min(1).max(160).optional(),
   spec: SpatialParametricSpecSchema,
   /** Authored seed override; absent derives deterministically from the spec kind source. */
   seed: z.number().int().safe().min(0).max(0xffff_ffff).optional(),
@@ -247,9 +251,9 @@ function archProfile(width: number, height: number, springline: number, leg: num
 function planArch(spec: Extract<SpatialParametricSpec, { kind: "arch" }>): PartPlan[] {
   const count = spec.count ?? 1, spacing = spec.spacing ?? spec.width
   if (spec.springline >= spec.height) pfail("Arch springline must stay below its apex height.", "spec.springline")
-  if (spec.width / 2 > spec.height - spec.springline + 1e-9 && spec.height - spec.springline > 0) {
-    // Semicircular-plus arcs need apex clearance of at least the opening radius.
-    if (spec.width / 2 - (spec.height - spec.springline) > 1e-6) pfail("Arch apex height must clear the opening radius.", "spec.height")
+  // Equality pinches the polygon at the crown and creates a self-intersection.
+  if (spec.height - spec.springline <= spec.width / 2 + 1e-9) {
+    pfail("Arch apex height must leave positive material above the opening radius.", "spec.height")
   }
   const leg = Math.min(spec.width * 0.25, spec.depth)
   const points = archProfile(spec.width, spec.height, spec.springline, leg, 16)
@@ -468,8 +472,58 @@ function planScatter(spec: Extract<SpatialParametricSpec, { kind: "scatter" }>):
 }
 
 const PLANNERS: { [K in SpatialParametricSpec["kind"]]: (spec: Extract<SpatialParametricSpec, { kind: K }>) => PartPlan[] } = {
+  geometry: spec => [{ key: "geometry", transform: spec.transform ?? IDENTITY_TRANSFORM,
+    editable: spec.editable ?? ["transform"], materials: spec.materials, collision: [],
+    lods: [{ level: 0, switchDistanceM: 0, graph: spec.graph }] }],
   wall: planWall, floor: planFloor, stairs: planStairs, arch: planArch, column: planColumn,
   window: planWindow, roof: planRoof, pipe: planPipe, trim: planTrim, scatter: planScatter,
+}
+
+/** Retained GLB entities support the closed untextured material profile. */
+function validatePartMaterials(plans: readonly PartPlan[]): void {
+  for (const part of plans) {
+    for (const material of part.materials) {
+      if (material.kind === "pbr" || material.map !== undefined) {
+        pfail("Retained parametric geometry requires untextured standard or unlit materials; PBR extension materials and texture maps are unsupported.", "spec.materials")
+      }
+    }
+    for (const lod of part.lods) {
+      const parsed = parseSpatialGeometryGraph(lod.graph)
+      for (const node of parsed.nodes) {
+        const slots = ["slot" in node ? node.slot : undefined, "sideSlot" in node ? node.sideSlot : undefined, "capSlot" in node ? node.capSlot : undefined]
+        if (slots.some(slot => slot !== undefined && slot >= part.materials.length)) pfail("Geometry material slot has no declared material.", "spec.materials")
+      }
+    }
+  }
+}
+
+/** Conservative aggregate retained-output budget, computed before mesh evaluation. */
+export interface SpatialParametricEstimate {
+  readonly parts: number
+  readonly assets: number
+  readonly vertices: number
+  readonly triangles: number
+  readonly bytes: number
+}
+
+export function estimateSpatialParametric(input: unknown): SpatialParametricEstimate {
+  const spec = parseSpatialValue(SpatialParametricSpecSchema, input, "parametric spec")
+  const plans = PLANNERS[spec.kind](spec as never)
+  if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts) pfail("Spec expands beyond the part budget.", "spec")
+  validatePartMaterials(plans)
+  let assets = 0, vertices = 0, triangles = 0, bytes = 0
+  for (const part of plans) {
+    assets += part.lods.length + 1
+    // Includes GLB framing, material JSON, facts, and per-part instance metadata.
+    bytes += 65_536 + (part.instances?.length ?? 0) * 512
+    for (const lod of part.lods) {
+      const estimate = estimateSpatialGeometryGraph(lod.graph)
+      vertices += estimate.vertices
+      triangles += estimate.triangles
+      bytes += estimate.bytes + 65_536
+    }
+  }
+  return deepFreezeJson({ parts: plans.length, assets, vertices, triangles, bytes })
 }
 
 // ---------------------------------------------------------------------------
@@ -479,6 +533,7 @@ const PLANNERS: { [K in SpatialParametricSpec["kind"]]: (spec: Extract<SpatialPa
 export interface SpatialParametricArtifact { readonly assetId: string; readonly path: string; readonly bytes: Uint8Array }
 export interface SpatialParametricFacts { readonly manifest: SpatialAssetManifest; readonly facts: SpatialAssetFactsV1 }
 export interface SpatialParametricReceipt {
+  readonly name?: string
   readonly kind: "slopcamera.spatial-parametric-receipt"
   readonly schemaVersion: 1
   readonly generatorId: string
@@ -532,6 +587,7 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
   const runtimeSha256 = spatialValueSha256({ domain: "slopcamera.parametric-runtime.v1", profile: SPATIAL_GEOMETRY_PROFILE })
   const plans = PLANNERS[spec.kind](spec as never)
   if (plans.length > SPATIAL_PARAMETRIC_LIMITS.parts) pfail("Spec expands beyond the part budget.", "spec")
+  validatePartMaterials(plans)
   const manifests: SpatialAssetManifest[] = []
   const artifacts: SpatialParametricArtifact[] = []
   const entities: SpatialEntity[] = []
@@ -601,11 +657,13 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
     const entityId = generatedSpatialEntityId(generatorId, part.key)
     const multiSlot = part.materials.length > 1
     const entity = parseSpatialValue(SpatialEntitySchema, {
-      entityId, kind: "mesh", name: `${spec.kind}:${part.key}`, parentId: null,
+      entityId, kind: "mesh", name: request.name === undefined ? `${spec.kind}:${part.key}` : plans.length === 1 ? request.name : `${request.name}:${part.key}`, parentId: null,
       transform: part.transform, placement: { kind: "world" },
       origin: { kind: "generated", generatorId, key: part.key }, visible: true,
       geometry: { kind: "asset", assetId: lod0.assetId, materialMode: multiSlot ? "source" : "entity" },
       material: part.materials[0]!,
+      ...(spec.castShadow === undefined ? {} : { castShadow: spec.castShadow }),
+      ...(spec.receiveShadow === undefined ? {} : { receiveShadow: spec.receiveShadow }),
       ...(part.instances === undefined ? {} : { instances: [...part.instances] }),
     }, `parametric entity ${part.key}`)
     entities.push(entity)
@@ -622,6 +680,7 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
   const receipt = deepFreezeJson({
     kind: "slopcamera.spatial-parametric-receipt" as const, schemaVersion: 1 as const,
     generatorId, specSha256, parametersSha256, seed,
+    ...(request.name === undefined ? {} : { name: request.name }),
     profile: SPATIAL_GEOMETRY_PROFILE,
     assets: receiptAssets,
     entities: entities.map(entity => entity.entityId).sort(),
@@ -632,7 +691,9 @@ export function emitSpatialParametric(input: unknown): SpatialParametricOutput {
   const bound = manifests.map(manifest => manifest.provenance.source === "generated"
     ? parseSpatialValue(SpatialAssetManifestSchema, { ...manifest, provenance: { ...manifest.provenance, receiptSha256 } }, `parametric asset ${manifest.assetId}`)
     : manifest)
-  return deepFreezeJson({ generator: record, entities, manifests: bound, artifacts, facts: factsList, receipt, receiptSha256 })
+  // Payload buffers are owned binary outputs, outside the canonical JSON domain.
+  const metadata = deepFreezeJson({ generator: record, entities, manifests: bound, facts: factsList, receipt, receiptSha256 })
+  return Object.freeze({ ...metadata, artifacts: Object.freeze(artifacts.map(artifact => Object.freeze(artifact))) })
 }
 
 /** Merges one emission into a scene through the retained-output contract. */

@@ -7,6 +7,7 @@ import { parseSpatialParticleSystem, spatialParticleSystemSha256 } from "../../.
 import { parseSpatialRenderPlan, spatialRenderPlanSha256 } from "../../../src/spatial-scene/effects";
 import { parseSpatialRenderEffectsDocument, spatialRenderEffectsSha256 } from "../../../src/spatial-scene/render-effects";
 import { canonicalJson, canonicalJsonSha256 } from "../core/canonical-json";
+import { SPATIAL_SHADOW_POLICY } from "./spatial";
 import { HTML_OVERLAY_MAX_HTML_BYTES, htmlOverlayFrameCount } from "./contracts";
 import {
   createSpatialOverlayBatch, decodeSpatialAxialDepth, spatialSelectionColor,
@@ -80,6 +81,15 @@ describe("physical material lowering qualification", () => {
     expect(() => createSpatialOverlayBatch(request([height]))).toThrow("Height-dependent fog")
   })
 })
+
+test("fitted shadow policy is receipt-bound and invoked only for beauty", () => {
+  const beauty = createSpatialOverlayBatch(request());
+  const diagnostic = createSpatialOverlayBatch({ ...request(), mode: { kind: "object-id", coverage: { kind: "opaque" } } });
+  expect(beauty.metadata.shadows).toEqual(SPATIAL_SHADOW_POLICY);
+  expect(diagnostic.metadata).not.toHaveProperty("shadows");
+  expect(beauty.authoring.html).toContain('if(input.mode.kind==="beauty")configureSpatialShadows(world,renderer.capabilities.maxTextureSize,track)');
+  expect(beauty.authoring.html).toContain('renderer.shadowMap.enabled=input.mode.kind==="beauty"');
+});
 
 describe("immutable spatial snapshot lowering", () => {
   test("preserves rational delivery rate and explicit times through index-only transport", () => {

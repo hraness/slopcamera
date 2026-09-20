@@ -1,0 +1,5846 @@
+{
+  "kind": "slopcamera.spatial-design",
+  "schemaVersion": 1,
+  "designId": "ribbed-tower",
+  "parameters": [
+    {
+      "name": "belly",
+      "label": "Mid-height swell",
+      "value": 0.2,
+      "min": 0,
+      "max": 0.4,
+      "unit": "ratio"
+    },
+    {
+      "name": "height",
+      "label": "Tower height",
+      "value": 16,
+      "min": 12,
+      "max": 21,
+      "unit": "m"
+    },
+    {
+      "name": "radius",
+      "label": "Ground radius",
+      "value": 3.25,
+      "min": 2.5,
+      "max": 4.2,
+      "unit": "m"
+    },
+    {
+      "name": "ribRadius",
+      "label": "Bronze rib radius",
+      "value": 0.065,
+      "min": 0.035,
+      "max": 0.11,
+      "unit": "m"
+    },
+    {
+      "name": "taper",
+      "label": "Crown taper",
+      "value": 0.27,
+      "min": 0.05,
+      "max": 0.45,
+      "unit": "ratio"
+    },
+    {
+      "name": "twist",
+      "label": "Facade rotation",
+      "value": 1.35,
+      "min": 0,
+      "max": 2.3,
+      "unit": "rad"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "rib-daylight",
+      "left": {
+        "op": "mul",
+        "args": [
+          {
+            "$param": "ribRadius"
+          },
+          3
+        ]
+      },
+      "operator": "lt",
+      "right": {
+        "op": "mul",
+        "args": [
+          {
+            "op": "mul",
+            "args": [
+              {
+                "$param": "radius"
+              },
+              {
+                "op": "sub",
+                "args": [
+                  1,
+                  {
+                    "$param": "taper"
+                  }
+                ]
+              }
+            ]
+          },
+          0.157079632679
+        ]
+      },
+      "message": "The narrow crown needs daylight between adjacent bronze ribs."
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "bronze-exoskeleton",
+      "name": "Forty continuous twisting bronze ribs",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "id": "section",
+            "kind": "ellipse",
+            "radiusX": {
+              "$expr": {
+                "$param": "ribRadius"
+              }
+            },
+            "radiusY": {
+              "$expr": {
+                "$param": "ribRadius"
+              }
+            },
+            "segments": 8
+          },
+          {
+            "id": "rib",
+            "kind": "sweep",
+            "path": [
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.0416666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.13052619222
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.0416666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.0416666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.0416666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.13052619222
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.0416666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.0833333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.258819045103
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.0833333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.0833333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.0833333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.258819045103
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.0833333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.125
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.382683432365
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.125
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.125
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.125
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.382683432365
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.125
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.166666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.166666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.166666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.166666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.166666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.208333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.608761429009
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.208333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.208333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.208333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.608761429009
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.208333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.25
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.707106781187
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.25
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.25
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.25
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.707106781187
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.25
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.291666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.793353340291
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.291666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.291666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.291666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.793353340291
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.291666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.333333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.866025403784
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.333333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.333333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.333333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.866025403784
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.333333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.375
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.923879532511
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.375
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.375
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.375
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.923879532511
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.375
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.416666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.965925826289
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.416666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.416666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.416666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.965925826289
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.416666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.458333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.991444861374
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.458333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.458333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.458333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.991444861374
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.458333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.5
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.5
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.541666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.991444861374
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.541666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.541666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.541666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.991444861374
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.541666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.583333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.965925826289
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.583333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.583333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.583333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.965925826289
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.583333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.625
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.923879532511
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.625
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.625
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.625
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.923879532511
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.625
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.666666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.866025403784
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.666666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.666666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.666666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.866025403784
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.666666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.708333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.793353340291
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.708333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.708333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.708333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.793353340291
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.708333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.75
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.707106781187
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.75
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.75
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.75
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.707106781187
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.75
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.791666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.608761429009
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.791666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.791666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.791666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.608761429009
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.791666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.833333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.833333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.833333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.833333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.833333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.875
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.382683432365
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.875
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.875
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.875
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.382683432365
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.875
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.916666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.258819045103
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.916666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.916666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.916666666667
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.258819045103
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.916666666667
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.958333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.13052619222
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.958333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.958333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      0.958333333333
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0.13052619222
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              0.958333333333
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ],
+              [
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      1
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              1
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "cos"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          1
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                {
+                  "$expr": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "$param": "radius"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  1,
+                                  {
+                                    "args": [
+                                      {
+                                        "$param": "taper"
+                                      },
+                                      1
+                                    ],
+                                    "op": "mul"
+                                  }
+                                ],
+                                "op": "sub"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "$param": "belly"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "add"
+                          }
+                        ],
+                        "op": "mul"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "$param": "twist"
+                              },
+                              1
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "sin"
+                      }
+                    ],
+                    "op": "mul"
+                  }
+                }
+              ]
+            ],
+            "profile": "section"
+          },
+          {
+            "id": "rib_0",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_1",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.0784590957278,
+                0,
+                0.996917333733
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_2",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.15643446504,
+                0,
+                0.987688340595
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_3",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.233445363856,
+                0,
+                0.972369920398
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_4",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.309016994375,
+                0,
+                0.951056516295
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_5",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.382683432365,
+                0,
+                0.923879532511
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_6",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.45399049974,
+                0,
+                0.891006524188
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_7",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.522498564716,
+                0,
+                0.852640164354
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_8",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.587785252292,
+                0,
+                0.809016994375
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_9",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.64944804833,
+                0,
+                0.7604059656
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_10",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.707106781187,
+                0,
+                0.707106781187
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_11",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.7604059656,
+                0,
+                0.64944804833
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_12",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.809016994375,
+                0,
+                0.587785252292
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_13",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.852640164354,
+                0,
+                0.522498564716
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_14",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.891006524188,
+                0,
+                0.45399049974
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_15",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.923879532511,
+                0,
+                0.382683432365
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_16",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.951056516295,
+                0,
+                0.309016994375
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_17",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.972369920398,
+                0,
+                0.233445363856
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_18",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.987688340595,
+                0,
+                0.15643446504
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_19",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.996917333733,
+                0,
+                0.0784590957278
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_20",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -1,
+                0,
+                0
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_21",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.996917333733,
+                0,
+                -0.0784590957278
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_22",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.987688340595,
+                0,
+                -0.15643446504
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_23",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.972369920398,
+                0,
+                -0.233445363856
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_24",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.951056516295,
+                0,
+                -0.309016994375
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_25",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.923879532511,
+                0,
+                -0.382683432365
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_26",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.891006524188,
+                0,
+                -0.45399049974
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_27",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.852640164354,
+                0,
+                -0.522498564716
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_28",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.809016994375,
+                0,
+                -0.587785252292
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_29",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.7604059656,
+                0,
+                -0.64944804833
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_30",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.707106781187,
+                0,
+                -0.707106781187
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_31",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.64944804833,
+                0,
+                -0.7604059656
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_32",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.587785252292,
+                0,
+                -0.809016994375
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_33",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.522498564716,
+                0,
+                -0.852640164354
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_34",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.45399049974,
+                0,
+                -0.891006524188
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_35",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.382683432365,
+                0,
+                -0.923879532511
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_36",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.309016994375,
+                0,
+                -0.951056516295
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_37",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.233445363856,
+                0,
+                -0.972369920398
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_38",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.15643446504,
+                0,
+                -0.987688340595
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rib_39",
+            "input": "rib",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                -0.0784590957278,
+                0,
+                -0.996917333733
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "assembly",
+            "inputs": [
+              "rib_0",
+              "rib_1",
+              "rib_2",
+              "rib_3",
+              "rib_4",
+              "rib_5",
+              "rib_6",
+              "rib_7",
+              "rib_8",
+              "rib_9",
+              "rib_10",
+              "rib_11",
+              "rib_12",
+              "rib_13",
+              "rib_14",
+              "rib_15",
+              "rib_16",
+              "rib_17",
+              "rib_18",
+              "rib_19",
+              "rib_20",
+              "rib_21",
+              "rib_22",
+              "rib_23",
+              "rib_24",
+              "rib_25",
+              "rib_26",
+              "rib_27",
+              "rib_28",
+              "rib_29",
+              "rib_30",
+              "rib_31",
+              "rib_32",
+              "rib_33",
+              "rib_34",
+              "rib_35",
+              "rib_36",
+              "rib_37",
+              "rib_38",
+              "rib_39"
+            ],
+            "kind": "merge"
+          }
+        ],
+        "output": "assembly",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#bc9864",
+          "opacity": 1,
+          "roughness": 0.32,
+          "metalness": 0.64
+        }
+      ],
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "central-core",
+      "name": "Opaque central service core",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "height": {
+              "$expr": {
+                "$param": "height"
+              }
+            },
+            "id": "core",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "$param": "radius"
+                  },
+                  0.47
+                ],
+                "op": "mul"
+              }
+            },
+            "segments": 64
+          }
+        ],
+        "output": "core",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#253738",
+          "opacity": 1,
+          "roughness": 0.33,
+          "metalness": 0.3
+        }
+      ],
+      "transform": {
+        "position": [
+          0,
+          {
+            "$expr": {
+              "args": [
+                0.35,
+                {
+                  "args": [
+                    {
+                      "$param": "height"
+                    },
+                    0.5
+                  ],
+                  "op": "mul"
+                }
+              ],
+              "op": "add"
+            }
+          },
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "floor-plates",
+      "name": "Thirteen recessed floor plates",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "height": 0.12,
+            "id": "floor_0_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_0",
+            "input": "floor_0_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_1_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.0833333333333
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.258819045103
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_1",
+            "input": "floor_1_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.0833333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_2_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.166666666667
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_2",
+            "input": "floor_2_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.166666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_3_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.25
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.707106781187
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_3",
+            "input": "floor_3_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.25
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_4_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.333333333333
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.866025403784
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_4",
+            "input": "floor_4_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.333333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_5_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.416666666667
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.965925826289
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_5",
+            "input": "floor_5_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.416666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_6_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.5
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              1
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_6",
+            "input": "floor_6_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.5
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_7_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.583333333333
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.965925826289
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_7",
+            "input": "floor_7_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.583333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_8_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.666666666667
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.866025403784
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_8",
+            "input": "floor_8_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.666666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_9_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.75
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.707106781187
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_9",
+            "input": "floor_9_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.75
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_10_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.833333333333
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.5
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_10",
+            "input": "floor_10_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.833333333333
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_11_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  0.916666666667
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0.258819045103
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_11",
+            "input": "floor_11_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          0.916666666667
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "height": 0.12,
+            "id": "floor_12_solid",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "$param": "radius"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              1,
+                              {
+                                "args": [
+                                  {
+                                    "$param": "taper"
+                                  },
+                                  1
+                                ],
+                                "op": "mul"
+                              }
+                            ],
+                            "op": "sub"
+                          },
+                          {
+                            "args": [
+                              {
+                                "$param": "belly"
+                              },
+                              0
+                            ],
+                            "op": "mul"
+                          }
+                        ],
+                        "op": "add"
+                      }
+                    ],
+                    "op": "mul"
+                  },
+                  0.025
+                ],
+                "op": "sub"
+              }
+            },
+            "segments": 64
+          },
+          {
+            "id": "floor_12",
+            "input": "floor_12_solid",
+            "kind": "transform",
+            "transform": {
+              "position": [
+                0,
+                {
+                  "$expr": {
+                    "args": [
+                      0.35,
+                      {
+                        "args": [
+                          {
+                            "$param": "height"
+                          },
+                          1
+                        ],
+                        "op": "mul"
+                      }
+                    ],
+                    "op": "add"
+                  }
+                },
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "assembly",
+            "inputs": [
+              "floor_0",
+              "floor_1",
+              "floor_2",
+              "floor_3",
+              "floor_4",
+              "floor_5",
+              "floor_6",
+              "floor_7",
+              "floor_8",
+              "floor_9",
+              "floor_10",
+              "floor_11",
+              "floor_12"
+            ],
+            "kind": "merge"
+          }
+        ],
+        "output": "assembly",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#33494a",
+          "opacity": 1,
+          "roughness": 0.42,
+          "metalness": 0.3
+        }
+      ],
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    },
+    {
+      "stageId": "podium",
+      "name": "Low circular podium",
+      "kind": "geometry",
+      "graph": {
+        "kind": "slopcamera.spatial-geometry-graph",
+        "nodes": [
+          {
+            "height": 0.32,
+            "id": "podium",
+            "kind": "cylinder",
+            "radius": {
+              "$expr": {
+                "args": [
+                  {
+                    "$param": "radius"
+                  },
+                  0.9
+                ],
+                "op": "add"
+              }
+            },
+            "segments": 96
+          }
+        ],
+        "output": "podium",
+        "schemaVersion": 1
+      },
+      "materials": [
+        {
+          "kind": "standard",
+          "color": "#a6a795",
+          "opacity": 1,
+          "roughness": 0.83,
+          "metalness": 0
+        }
+      ],
+      "transform": {
+        "position": [
+          0,
+          0.16,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "editable": [
+        "color",
+        "transform"
+      ],
+      "castShadow": true,
+      "receiveShadow": true
+    }
+  ]
+}

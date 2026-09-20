@@ -4,6 +4,8 @@ Slopcamera keeps a visual composition as editable scene data and renders it thro
 
 The Three.js renderer supports bounded offline rendering, explicit hardware acceleration, and retained Gaussian-splat environments. Importing and directing a saved world works locally without a provider account. Interactive world editing, simulation, and automatic video-model refinement remain future adapters. Existing HTML authoring and media-editing commands remain available.
 
+For architecture and furniture that must regenerate from dimensions, use [parametric designs](how-to/parametric-design.md). Designs compile into this same scene and asset contract.
+
 ## Render an editable scene
 
 Basic scene rendering, calibrated camera tracks, and native studio bridges ship in v3.2.8. This guide also uses newer scene audits, character, direction, and effects APIs: install [current Slopcamera source](how-to/use-current-source.md) for those additions and check [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.
@@ -32,6 +34,8 @@ slopcamera scene render product.scene.json --request frame.json --json
 ```
 
 `plan` validates the source and estimates bounded rendering work without opening a browser. `render` writes a PNG, retained source and assets, and a receipt beneath the ignored artifact root. It checks asset bytes and native runtime identity before using them. Unsupported asset features fail explicitly.
+
+For grounded geometry, enable `castShadow` on the model, `receiveShadow` on the ground, and `shadow` on a directional, point or spot light. Beauty rendering fits directional shadow coverage to the casting geometry and applies a small offset to prevent self-shadow striping. Large receiving floors do not reduce model shadow detail. Shadow participation remains explicit; object-ID and other data passes preserve their unlit output.
 
 To inspect animation, replace `selection` with:
 
