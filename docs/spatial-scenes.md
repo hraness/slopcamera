@@ -6,7 +6,7 @@ The Three.js renderer supports bounded offline rendering, explicit hardware acce
 
 ## Render an editable scene
 
-Install [current Slopcamera source](how-to/use-current-source.md) for these commands, including calibrated camera tracks and native studio bridges; see [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.
+Basic scene rendering, calibrated camera tracks, and native studio bridges ship in v3.2.8. This guide also uses newer scene audits, character, direction, and effects APIs: install [current Slopcamera source](how-to/use-current-source.md) for those additions and check [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.
 
 ```sh
 slopcamera scene init product.scene.json --json
@@ -57,6 +57,18 @@ Each sample renders at the camera's calibrated resolution, then resizes into its
 ```
 
 The video profile uses lossless qtrle with straight alpha. Final project delivery converts scene footage through the ordinary project compositor.
+
+## Orbit around live media
+
+The [playable orbit example](https://slopcamera.com/docs/how-to/direct-scenes#orbit-around-live-media) combines an animated editorial film and a vector process diagram on separate planes. Foreground fins reveal depth through occlusion as the camera moves. Both media and camera motion follow the scene clock.
+
+Run the [retained recipe](../examples/showcase/spatial/render-orbit.ts) from a source checkout:
+
+```sh
+bun examples/showcase/spatial/render-orbit.ts
+```
+
+The helper renders the original HTML film, authors and checks the stage, then renders eight seconds through the explicit macOS WebGL2 hardware profile. It retains command results, source, assets and a render receipt, and requires at least 4 GiB of free space before rendering. The public silent MP4 is a delivery encode of the lossless MOV. Other camera tracks in the source are separate recipes and are not established by this orbit result.
 
 ## Select hardware acceleration
 

@@ -7,6 +7,18 @@
       "owner": "apps/web/src/analytics.ts",
       "maxBytesPerEvent": 512,
       "note": "cookieless canonical-production-only"
+    },
+    "static:workflow-examples": {
+      "kind": "served",
+      "retention": "persistent",
+      "owner": "apps/web/scripts/example-assets.ts",
+      "budget": {
+        "maxCollectionBytes": 67108864,
+        "maxPosterBytes": 204800,
+        "maxPreviewBytes": 4194304,
+        "maxManualVideoBytes": 12582912
+      },
+      "note": "Only declared first-party reviewed derivatives; content hashes, bounded reads, no directory publication or raw runtime receipts."
     }
   },
   "exempt": []

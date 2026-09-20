@@ -7,7 +7,7 @@ Slopcamera exposes a portable Bun SDK and a complete local media host. Imports s
 | Import | Contract |
 | --- | --- |
 | `@hraness/slopcamera` | Diagram schemas/rendering, vectorization and portable scene/studio contracts and pure planning helpers. |
-| `@hraness/slopcamera/code` | Declarative authoring and compilation against the portable, fixed four-operation projection. |
+| `@hraness/slopcamera/code` | Declarative authoring and compilation against the fixed portable projection. |
 | `@hraness/slopcamera/code/advanced` | Lower-level portable graph, compiler and planning contracts. |
 | `@hraness/slopcamera/operations` | The fixed portable semantic operation registry. |
 | `@hraness/slopcamera/workflow` | Preserved imperative v0.8 API for explicitly imported trusted Bun workflows. |
@@ -21,7 +21,7 @@ There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slop
 
 ## Portable and local operations
 
-The portable projection contains diagram check/render and image generate/vectorize/icon. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
+The v3.2.8 portable projection contains four operations: diagram check/render and image generate/vectorize. Current source adds image icon/gallery, for six operations. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
 
 The local builder adds `analysis`, `edits`, `gateway`, `iteration`, `studio`, `scene`, `spatialProject`, `media`, `project`, `render` and `recording` operations. Inspect the current registry and built-in schemas through the host:
 
@@ -34,7 +34,7 @@ slopcamera workflows show directed-scene --json
 
 The registries are closed. An operation input is typed data, not a caller-selected executable, shell command, dynamic loader or registration hook.
 
-Local `media.ingest` imports into an existing project. The public CLI creates ordinary projects from a stopped recording, a successful studio/directing assembly, or, in current source, `html render` with an authored scene and optional local soundtrack. There is no public SDK project-create operation for arbitrary independent files. Access to TypeScript types does not authorize calling private storage constructors.
+Local `media.ingest` imports into an existing project. The public CLI creates ordinary projects from an existing finished recording bundle, a successful studio/directing assembly, or `html render` with an authored scene and optional local soundtrack. There is no public SDK project-create operation for arbitrary independent files. Access to TypeScript types does not authorize calling private storage constructors.
 
 ## Music timing for HTML scenes
 
@@ -131,7 +131,7 @@ SlopcameraOverlay.onFrame(({ timeMs }) => {
 
 Here `THREE`, `scene`, `renderer`, and `camera` come from your authored scene. Select specific joints with `rig.boneByName(name)` using the inspection; duplicate names require `rig.nodes[sourceNodeIndex]`. Stage the character through `rig.root`; `resetPose()` preserves that outer position, rotation, and scale. Call `rig.dispose()` when removing the rig. The module awaits declared textures and never uses network model loading or blob URLs.
 
-The profile supports triangle geometry, four skin influences per vertex, TRS or TRS-decomposable node matrices, and bounded base-color PBR materials with embedded PNG/JPEG textures. It admits at most 1,024 nodes, 64 skins, 256 joints per skin, 32 extracted images, and a 32 MiB generated module, within the existing GLB geometry and byte budgets. Draco and other extensions, morph targets, sparse accessors, external dependencies, and embedded animation clips reject. Preserve a decoded derivative's original source and attribution. This helper prepares Three-scene modules; portable spatial-scene GLB admission keeps its own profiles — the static profile rejects skins while the additive `slopcamera.glb-rigged-morph-skin-v1` profile admits them within declared bounds.
+The profile supports triangle geometry, four skin influences per vertex, TRS or TRS-decomposable node matrices, and bounded base-color PBR materials with embedded PNG/JPEG textures. It admits at most 1,024 nodes, 64 skins, 256 joints per skin, 32 extracted images, and a 32 MiB generated module, within the existing GLB geometry and byte budgets. Draco and other extensions, morph targets, sparse accessors, external dependencies, and embedded animation clips reject. Preserve a decoded derivative's original source and attribution. This helper prepares Three-scene modules; portable spatial-scene GLB admission keeps its own profiles — the static profile rejects skins while the current-source `slopcamera.glb-rigged-morph-skin-v1` profile admits them within declared bounds.
 
 ## Checked examples
 
@@ -171,6 +171,6 @@ Effect approval and native source authorization have different scopes. `runs app
 
 ## MCP and canvas interchange
 
-`slopcamera mcp` offers compatibility diagram tools, read-mostly spatial scene tools, and the bounded portable semantic registry. `check_scene`, `inspect_scene`, `audit_scene`, `audit_scene_temporal`, `diff_scenes`, and `evaluate_scene` wrap the pure scene parse, inspect, audit, diff, and evaluate operations over root-relative scene JSON; `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery`, `check_scene_effects`, and `plan_scene_effects` produce the same planning evidence as their CLI counterparts. Paths are root-relative, configuration is inert, diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings, and scene tools cap returned entities, samples, and diff entries. No tool mutates project state. The CLI supports larger checked diagrams and trusted workspace configuration.
+The v3.2.8 MCP server exposes four tools: `check_diagram`, `render_diagram`, `search_slopcamera`, and `execute_slopcamera`. Current source adds thirteen scene tools, for seventeen named tools; these include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection also expands from four to six. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Scene tools cap returned entities, samples, and diff entries. No tool mutates project state. The CLI supports larger checked diagrams and trusted workspace configuration.
 
 Generated `.tldr` is editable interchange for browser-based canvas tooling. Slopcamera does not install or launch a diagram editor or application bundle, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.

@@ -8,7 +8,7 @@ Slopcamera v3.2.8 installs from its [canonical release archive](https://github.c
 
 | Surface | Historical Atet v3.2.3 | Slopcamera v3.2.8 |
 | --- | --- | --- |
-| Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; current source no longer captures new recordings |
+| Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
 | Paid World Labs world commands | Present in the historical release | Removed; saved-world import and historical provenance replay remain |
 | Retained short-video directing: `direct …` | Absent | Available |
@@ -19,6 +19,23 @@ Slopcamera v3.2.8 installs from its [canonical release archive](https://github.c
 
 Use the Slopcamera release installation or a source build for the commands below. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
 
+## Release and current-source additions
+
+The immutable [v3.2.8 release](https://github.com/hraness/slopcamera/releases/tag/v3.2.8) was published on September 16, 2026 from commit `dc5ae8d0b42fa9922ef654bc505428ba022a098e`. The table below separates that archive from later source behavior checked on September 19, 2026. A checkout can still report `3.2.8` after adding commands.
+
+| Capability | v3.2.8 archive | Later source |
+| --- | --- | --- |
+| HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included | Included |
+| Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply | Included |
+| Basic spatial scenes, calibrated camera tracks, hardware/Spark profiles, saved-world import | Included | Included |
+| Static `capabilities --json` manifest; image icon and candidate-gallery recipes | Absent | Included |
+| Scene builders/admission, scene audits, rendered galleries, vision critique, character/performance and cinematic camera APIs | Absent | Included |
+| Scene effects, particles, simulation bakes, semantic direction, temporal/behavior audits, project cinema plans | Absent | Included |
+| Built-in workflows | Seven; inspect `workflows list` | Eight, adding `cinematic-world` |
+| New screen, camera, microphone, or system-audio capture | Absent | Absent |
+
+HTML rigged-GLB preparation and native character authoring already exist in v3.2.8. The newer portable spatial character, rigged/morph, and performance contracts are separate source additions. Model and runtime availability still require inspection on the machine doing the work; presence in an archive is not a live qualification result.
+
 ## Discover the installed contract
 
 | Need | Discovery command |
@@ -27,15 +44,15 @@ Use the Slopcamera release installation or a source build for the commands below
 | Grammar for a command family | `slopcamera help project`, `slopcamera help studio`, `slopcamera help scene` |
 | Local tools and readiness | `slopcamera doctor --json` |
 | Closed local operation catalog and exact schemas | `slopcamera operations list --json`, `slopcamera operations show <kind>[@<version>] --json` |
-| Static capability modules, trust, and qualification metadata | `slopcamera capabilities --json` |
+| Current-source static capability modules, trust, and qualification metadata | `slopcamera capabilities --json` |
 | Built-in workflow input schema | `slopcamera workflows list --json`, `slopcamera workflows show <id> --json` |
 | Live Gateway model capabilities | `slopcamera ai models list --type <type> --json`, `slopcamera ai models show <id> --json` |
 | HTML profile locks | `slopcamera html catalog --json` |
-| Current-source HTML scene export | `slopcamera help html`, `slopcamera html render --input <scene.json> --dry-run --json` |
+| HTML scene export | `slopcamera help html`, `slopcamera html render --input <scene.json> --dry-run --json` |
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-The portable `code search/execute` surface carries six operation codes across the diagram and image recipes; `slopcamera capabilities --json` enumerates the exact portable and complete-host inventories without probing the runtime. The MCP surface adds root-relative scene tools — check, inspect, diff, evaluate, audit, direction check/plan/gallery, effects check/plan, and temporal audit — beside the diagram compatibility tools and bounded `search_slopcamera`/`execute_slopcamera`. The complete local host has a larger closed registry. No surface allows a caller to register arbitrary operations. See [SDK surfaces](sdk.md).
+The v3.2.8 portable projection has four operation codes: diagram check/render and image generate/vectorize. Its MCP server exposes four named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, and `execute_slopcamera`. Current source adds the icon and gallery operation codes and thirteen scene tools, for six portable operations and seventeen named MCP tools. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Local execution profiles
 
@@ -55,9 +72,9 @@ Native studio qualification used Blender 5.2.1 LTS, CadQuery 2.8.0 and Manim Com
 
 The copied macOS executable supports direct studio commands with embedded starters and drivers. Local Code Mode workflows bind a build identity over the installed host source tree, so they run from the installed Bun package or a checkout but not from a copied standalone executable, which embeds no physical source tree. The CLI, its optional unbundled menu-bar companion, and the Bun package are separate interfaces with separate installation requirements.
 
-Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a finished recording bundle, a successful studio/directing assembly, or, in current source, an authored scene rendered with `html render`. The scene command accepts an optional explicit local soundtrack and retains the scene video and original music as separate sources. Arbitrary standalone files alone cannot create an empty project. [Video editing](../how-to/edit-video.md#inspect-the-source-and-project) explains these entry paths.
+Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a finished recording bundle, a successful studio/directing assembly, or an authored scene rendered with `html render`. The scene command accepts an optional explicit local soundtrack and retains the scene video and original music as separate sources. Arbitrary standalone files alone cannot create an empty project. [Video editing](../how-to/edit-video.md#inspect-the-source-and-project) explains these entry paths.
 
-Current-source `html render` exports H.264 video with optional 48 kHz stereo AAC at 320 kb/s and retains a lossless RGB scene intermediate. Duration is explicit and rounds up to whole frames; the audio is trimmed or padded to fit. The music-clock helpers use declared constant tempo and offset, without detecting either from audio. Follow [the music-video guide](../how-to/music-video.md), and inspect `slopcamera help html` before assuming an installed version includes this command.
+Released `html render` exports H.264 video with optional 48 kHz stereo AAC at 320 kb/s and retains a lossless RGB scene intermediate. Duration is explicit and rounds up to whole frames; the audio is trimmed or padded to fit. The music-clock helpers use declared constant tempo and offset, without detecting either from audio. Follow [the music-video guide](../how-to/music-video.md), and inspect `slopcamera help html` before assuming an installed version includes this command.
 
 ## Commands that can cross the network boundary
 

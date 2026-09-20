@@ -12,7 +12,18 @@ direct cameras, edit a composition, and render the result. A separate MCP server
 exposes a fixed diagram and image toolset. There is no Slopcamera account or hosted
 project database.
 
-[Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](docs/README.md) · [slopcamera.com](https://slopcamera.com)
+[Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
+
+## Made with Slopcamera
+
+[![An original brass optical instrument rendered in Blender](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
+
+Watch the [six-second product film](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example),
+then change its [geometry, materials and camera](examples/showcase/native/product).
+For 2D motion, try the [editable editorial animation](https://slopcamera.com/docs/tutorials/first-animation).
+The [portrait geometry lesson](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example)
+adds mathematical typesetting, a presenter and authored captions. Each guide pairs
+the rendered output with source, runtime requirements and reproduction steps.
 
 ## Why Slopcamera
 
@@ -98,7 +109,7 @@ change an existing release.
 
 ## Make your first diagram
 
-After the source build above, this local task needs no model account. In a new directory,
+After installing Slopcamera, this local task needs no model account. In a new directory,
 create the included diagram, check it, and render it:
 
 ```sh
@@ -115,9 +126,9 @@ You now have `example-flow.tldr`, `example-flow.light.svg`,
 editable, and the `.tldr` file is editable tldraw interchange. Rendering again
 replaces those five derived files.
 
-Follow [Your first diagram](docs/tutorials/first-diagram.md) to change a label and
-see the result. For a moving 3D subject, use [Directed scenes](docs/spatial-scenes.md).
-For detailed native 3D from the current source build, follow
+Follow [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) to change a label and
+see the result. To animate type and SVG, [make your first animation](https://slopcamera.com/docs/tutorials/first-animation). For a moving 3D subject, use [Directed scenes](docs/spatial-scenes.md).
+For detailed native 3D, follow
 [Your first native film](docs/tutorials/first-native-film.md).
 
 ## What Slopcamera does
@@ -135,7 +146,7 @@ GPU path. Spark admits saved splat worlds for local camera direction.
 > before rendering the video.
 
 The portable GLB profile has a defined geometry and material subset; the
-additive rigged profile admits bounded skins and morph targets. Saved splats
+current-source rigged profile adds bounded skins and morph targets. Saved splats
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
 
@@ -160,7 +171,7 @@ See [Direct a cinematic world](docs/how-to/direct-cinematic-worlds.md) and the
 
 ### Film native worlds and educational animation
 
-The current source build can direct Blender for detailed sets, materials,
+Slopcamera can direct Blender for detailed sets, materials,
 lighting, skinned characters, cloth and liquid caches; CadQuery for parametric
 solids and STEP; and Manim Community for mathematical animation. Seven editable
 starters include a product, character, shaded street, cloth, liquid, CAD bracket,
@@ -181,10 +192,18 @@ and [Make an educational video](docs/how-to/educational-video.md).
 ### Build diagrams and motion graphics
 
 Create editable diagrams with tldraw, SVG, and PNG outputs, or turn raster artwork
-into SVG locally with VTracer. Animate graphic layers with HTML, SVG, Motion,
+into SVG locally with VTracer. [Compare a color trace and duotone](https://slopcamera.com/docs/how-to/vectorize-images)
+from the same original raster. Animate graphic layers with HTML, SVG, Motion,
 p5, Two, Paper Shaders, or Three.js. Outputs can stand alone or join a video
 project. The optional vgpu example renders programmable WebGPU passes into
 retained raster frames for use on a world-space screen.
+
+[Render motion graphics from HTML](https://slopcamera.com/docs/how-to/render-motion-graphics)
+connects original examples across all seven profiles to editable source and exact
+render requests. Try the [editorial title](examples/showcase/html/editorial.json),
+[kinetic typography](examples/showcase/html/kinetic-title.json), or
+[Three.js island with original music](examples/showcase/html/island-pulse.json).
+These source examples live in the current repository; `html render` ships in v3.2.8.
 
 Use `slopcamera html catalog` to inspect the admitted local creative tools. The
 [creative toolkit reference](docs/html-overlay-creative-toolkit.md) distinguishes
@@ -194,11 +213,12 @@ textures or a Three WebGPU renderer inside the current WebGL2/Spark profile.
 ### Generate and direct media
 
 Discover image, video, speech, and transcription models through your own Vercel
-AI Gateway access. Generate images from text and references, add a voiceover,
+AI Gateway access. Set `AI_GATEWAY_API_KEY` in the local process environment;
+the Vercel CLI is optional. Generate images from text and references, add a voiceover,
 transcribe sound, or create video shots using the selected model's supported
 inputs. Availability and pricing come from the live catalog.
 
-The current source build also provides `direct` shot recipes: retain a film
+The released CLI also provides `direct` shot recipes: retain a film
 budget across attempts, review each take before accepting it, and use an accepted
 clip's last decoded frame as the next shot's reference. Changed predecessors
 invalidate affected continuations while earlier paid results remain retained.
@@ -220,8 +240,11 @@ from the same edit.
 > Edit my product demo: cut the pauses, zoom into each important click, keep the
 > speaker framed, add captions and `logo.svg`, and show a preview before export.
 
-Recording bundles can carry clicks, cursor movement, key activity, and
-focused-input information. Read [`PRIVACY.md`](PRIVACY.md) before editing
+The released and current CLIs edit existing recording bundles; they do not
+capture new recordings. Bundles can carry clicks, cursor movement, key activity,
+and focused-input information. Automatic screen-action zooms need this metadata.
+Standalone media imports need an existing project; `html render`, `studio assemble`,
+or `direct assemble` can create one. Read [`PRIVACY.md`](PRIVACY.md) before editing
 sensitive material.
 
 Start with [Edit a video](docs/how-to/edit-video.md) or inspect a reusable recipe:
@@ -236,7 +259,7 @@ slopcamera workflows show social-variants --json
 Keep the source that owns each creative decision. A native scene owns a rig or
 simulation; a portable scene owns supported geometry, cameras, and media surfaces;
 a diagram owns its objects and labels; a video project owns cuts and delivery.
-SLOPCAMERA connects these through explicit assets and rendered derivatives.
+Slopcamera connects these through explicit assets and rendered derivatives.
 
 1. **Prepare the sources.** Import footage and assets or author a scene, diagram,
    or native program. Inspect available tools before choosing an engine.
@@ -275,7 +298,8 @@ declarative graphs, approvals, and resuming work.
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
 - **MCP is a subset.** Its fixed tools check and render diagrams, plan and audit
-  scenes, and run the bounded portable operations. It does not expose every
+  scenes in current source, and run the bounded portable operations. The v3.2.8
+  release has four MCP tools; current source has seventeen. It does not expose every
   local CLI operation and never mutates project state.
 
 ## Design and trust
@@ -295,7 +319,7 @@ Native tools, providers, codecs, and GPU drivers can affect results, so retained
 source identity alone does not promise identical pixels on another machine.
 
 See [Architecture](docs/architecture.md), [`SECURITY.md`](SECURITY.md),
-[`PRIVACY.md`](PRIVACY.md), and [`NOTICE`](NOTICE) for the detailed boundaries.
+[`PRIVACY.md`](PRIVACY.md), and [`NOTICE.md`](NOTICE.md) for the detailed boundaries.
 
 ## Documentation
 
@@ -347,7 +371,7 @@ changing a package or runtime boundary. Report vulnerabilities through
 
 ## License
 
-[MIT](LICENSE), with third-party notices in [`NOTICE`](NOTICE).
+[MIT](LICENSE), with third-party notices in [`NOTICE.md`](NOTICE.md).
 
 ## Optional support
 
