@@ -1,0 +1,5 @@
+{
+  "engine": "blender",
+  "entrypoint": {"kind": "python", "path": "scene.py"},
+  "files": ["scene.py", "asset_io.py", "scene_checks.py", "studio_scene.py", "asset-facts.json", "assets/field-carton.glb", "textures/field-label.png", "artwork.svg"]
+}

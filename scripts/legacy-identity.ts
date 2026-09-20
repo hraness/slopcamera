@@ -74,6 +74,15 @@ export function isNativeFilmStudioPath(path: string): boolean {
       "apps/desktop/code/semantic-builder-studio.test.ts",
       "apps/desktop/cli/capability-manifest.ts",
       "docs/studio.md",
+      "examples/showcase/native/cad-exploded/studio_scene.py",
+      "examples/showcase/native/cad/studio_scene.py",
+      "examples/showcase/native/character/studio_scene.py",
+      "examples/showcase/native/cloth/studio_scene.py",
+      "examples/showcase/native/fluid/studio_scene.py",
+      "examples/showcase/native/focus-study/studio_scene.py",
+      "examples/showcase/native/imported-model-study/studio_scene.py",
+      "examples/showcase/native/portable-character/studio_scene.py",
+      "examples/showcase/native/product/studio_scene.py",
       "skills/slopcamera/references/native-studio.md",
     ].includes(path)
     || /^apps\/desktop\/cli\/studio-(?:args|assemble|bridge-args|command|custody|encode|exr|files|output-validation|process|runtime|scaffold|service|spatial-asset|template-names|workflow)(?:\.test)?\.ts$/u.test(path)

@@ -502,6 +502,15 @@
     ]
   },
   {
+    "identityLineCount": 1,
+    "identityLinesSha256": "7d463dc77c8b131c145c13554070288d75df35a40f7c4c02e25fc40ce1159f07",
+    "occurrenceCount": 1,
+    "path": "apps/desktop/cli/project-renderer-blend.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
     "identityLineCount": 3,
     "identityLinesSha256": "cde2c07b723e5c8d24a5af917e91a6fe2c1a3429ef40c3b9c94772003a8d7a1f",
     "occurrenceCount": 3,
@@ -1278,7 +1287,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "63bbae7304a4a8a968c79578c26c30d9b72e9613281282561260cc147bc6dd4b",
+    "identityLinesSha256": "7ac5840cdf8420eab85a4fd63ff6cf32714a607a3e7dfddc8180de2f50fcce69",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1440,8 +1449,17 @@
     ]
   },
   {
+    "identityLineCount": 17,
+    "identityLinesSha256": "614372e9cf23a0545ab0b8dee1cfbc3d0eeb5507ed4054cd8881df9d549af98d",
+    "occurrenceCount": 17,
+    "path": "apps/web/media/examples.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "a0665f97bb6145769f533864ae7615a10d13222b8bfa4e9cd43c95f2ac8099e3",
+    "identityLinesSha256": "c5ac7ea12cdb7e50292588f87fa5884e531ba175ffd1d0a3fea3315c908d5d81",
     "occurrenceCount": 1,
     "path": "apps/web/README.md",
     "categories": [
@@ -1458,6 +1476,16 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "a357214ea98a66bd246880914a27b36efe272345fa976101524344120f6dc3e3",
+    "occurrenceCount": 4,
+    "path": "apps/web/scripts/site-examples-profile.ts",
+    "categories": [
+      "native-film-studio",
+      "test-fixture"
+    ]
+  },
+  {
     "identityLineCount": 12,
     "identityLinesSha256": "3a450286421afe435b7827db9cc43d9c98e52fd0828b02030a4b3edaba6985fd",
     "occurrenceCount": 12,
@@ -1467,19 +1495,10 @@
     ]
   },
   {
-    "identityLineCount": 8,
-    "identityLinesSha256": "a89e0d5031e14315bb8f10b326bea5d865147b4562b1f869c0ca84f62ae5596c",
-    "occurrenceCount": 8,
+    "identityLineCount": 5,
+    "identityLinesSha256": "082fca84f1e322b92a8848d5aad666efd3b7ec7e31fea9639b832d1d835e9e9c",
+    "occurrenceCount": 5,
     "path": "apps/web/src/agent-pages.ts",
-    "categories": [
-      "native-film-studio"
-    ]
-  },
-  {
-    "identityLineCount": 2,
-    "identityLinesSha256": "316421a06c147c18590bdd9d309744c55f70d43685852466dfc1cf683dbd1f60",
-    "occurrenceCount": 2,
-    "path": "apps/web/src/doc.html",
     "categories": [
       "native-film-studio"
     ]
@@ -1489,6 +1508,15 @@
     "identityLinesSha256": "c904f57c6bf2d65bcca502bca50a81d5ab0297af09b52dc91d340cef48c10757",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs-registry.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "aaab2e9c0a51b5c739d733a6c1b95e32152df9958596deea92ea61fcd3b375c0",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1504,7 +1532,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "de09886e28fb805e3410efe083c4bba09d67381ec69378bf5a300d4c6bf50dfa",
+    "identityLinesSha256": "1ebabacd7dc8b7784ee41d67f787eebb78f778aeea3fe565ded6579320b51895",
     "occurrenceCount": 2,
     "path": "apps/web/src/docs/how-to/edit-video.md",
     "categories": [
@@ -1513,7 +1541,7 @@
   },
   {
     "identityLineCount": 9,
-    "identityLinesSha256": "431731d5b05d964fc60bc418dd1f6e6e81d2f738d35ffe0cd298fe88bcebf276",
+    "identityLinesSha256": "4d44c8965b949949c4478af3c3a56ac06eaad948032c50b355e5b356431faf3f",
     "occurrenceCount": 10,
     "path": "apps/web/src/docs/how-to/educational-video.md",
     "categories": [
@@ -1522,7 +1550,7 @@
   },
   {
     "identityLineCount": 27,
-    "identityLinesSha256": "eb4f06b93c2a03afdb245502979ae2a7db223ea738c668f21f2841d7aacfd770",
+    "identityLinesSha256": "7c88528043aa628c44fa818c72e3da89b74dc7d6e2a898b3e1e809102ef37dad",
     "occurrenceCount": 38,
     "path": "apps/web/src/docs/how-to/native-films.md",
     "categories": [
@@ -1549,7 +1577,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "0d420a57fc494e3279005dc4a2b0102a540de4068ae76de0d12ead90315ea88a",
+    "identityLinesSha256": "a6bb4532bb6f3b17ea336b957170feaed474ad3e2f6185786cae0bd3e808858f",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1567,7 +1595,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "b438d81c1d5d9bfee4d687ce818584612d0a52c6be343eb935d9ed3fa3b16b26",
+    "identityLinesSha256": "e9f5a25c92e4fe3776c47101cb6ee4e2212b8dd2ed96561e59629b083ca109f0",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/sdk.md",
     "categories": [
@@ -1576,7 +1604,7 @@
   },
   {
     "identityLineCount": 11,
-    "identityLinesSha256": "62c5cf1e1be12046c433fa2c8c8783f3ddf0927a590f67ceff3f5b2329f6f955",
+    "identityLinesSha256": "db82e07fe3261d98eb8e0cc7dc27c8edef582e1ce66b056ba0d191f7c81225c6",
     "occurrenceCount": 15,
     "path": "apps/web/src/docs/tutorials/first-native-film.md",
     "categories": [
@@ -1594,7 +1622,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "f55ace514807de59075a86a80685d872a9fd32d8579e0a21e8e9ec8d3d462604",
+    "identityLinesSha256": "1c6360fc69a482b5e811d0f3d8b1abcfd347cf601e448271d291af83238c6e4a",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/tutorials/other-agents.md",
     "categories": [
@@ -1602,9 +1630,9 @@
     ]
   },
   {
-    "identityLineCount": 14,
-    "identityLinesSha256": "867a01e696586c032229b78cf5b1b910f2e33636ad79cb58c8d804b512848c16",
-    "occurrenceCount": 17,
+    "identityLineCount": 12,
+    "identityLinesSha256": "0ec7b7d53f372cbaf765fb8b87861f28d818955ad7ca01ed5a9bd5394a9c0129",
+    "occurrenceCount": 15,
     "path": "apps/web/src/index.html",
     "categories": [
       "native-film-studio"
@@ -1660,14 +1688,14 @@
     "identityLineCount": 1,
     "identityLinesSha256": "8133b65bc166ad06c416d7c44a0ce7c1f630eec0241e31daac1d633d92ad4f0f",
     "occurrenceCount": 233,
-    "path": "dist/index-gs48afpt.js",
+    "path": "dist/index-r5qknkwe.js",
     "categories": [
       "generated"
     ]
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "b3f1caacc70f837720076bbfb30053af657464adacf667e97098d87b88382b53",
+    "identityLinesSha256": "a9073dcd2fc5ee215a1efd1941fe0774c3a08aef4b3c0c9a084dcf43ce62c692",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1694,7 +1722,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "d4a6e14a1774dac63fdc892d378eb99c490af1aaab9685257506d019669d121d",
+    "identityLinesSha256": "8b30638b7649fdf17b631e0ccfc95d585f46c6804a6d7edd74a2a3e5ac75f5c1",
     "occurrenceCount": 2,
     "path": "docs/how-to/edit-video.md",
     "categories": [
@@ -1703,7 +1731,7 @@
   },
   {
     "identityLineCount": 9,
-    "identityLinesSha256": "0ecdb53302e7accb71797a575a5aac59f438a5496eef9f79e18d1c0f1895d78a",
+    "identityLinesSha256": "9d3a629c7f078d136b86cb48026c4ec151d90033ec49618a3485aa7a143dc300",
     "occurrenceCount": 10,
     "path": "docs/how-to/educational-video.md",
     "categories": [
@@ -1757,7 +1785,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "c14e51aa76b1f49449ec8e74c0f6b473f122b38cc8458b85fd3b6216248a2bb5",
+    "identityLinesSha256": "272552fb9452bf9ee60cd68be60d7f63930b07e8cda93bec626e3ad4a8479bf4",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1766,7 +1794,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "8eac8ed1c6033a6e902f0427177912bdbc67253b776db368c678ff1032a18f0d",
+    "identityLinesSha256": "5b87c5f2748f35012e68db507aa79d50f406bc11d507f494add5208dcf72f3e0",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [
@@ -1775,7 +1803,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "cc1573599bcc95c12530b9db066a5dc744f037b021d03e31828ba7d0dd30317d",
+    "identityLinesSha256": "e1b483705361618415332eaa61dbc67aad33c5557523413edd28c272f1a1d379",
     "occurrenceCount": 2,
     "path": "docs/spatial-scenes.md",
     "categories": [
@@ -1784,7 +1812,7 @@
   },
   {
     "identityLineCount": 41,
-    "identityLinesSha256": "706b54978a88de5c5b479b598dc552ed79b29b13faeabbb9a48bb1f1c8d2aba1",
+    "identityLinesSha256": "1b120c43b71ca3bf2690ba15e07d3cedc1f19481d366610d879fdcae40dc0817",
     "occurrenceCount": 55,
     "path": "docs/studio.md",
     "categories": [
@@ -1793,7 +1821,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "b83aaed5dc1bb85226d6fbe9f3293c891da56c5e16175609796d2088d26ec608",
+    "identityLinesSha256": "75b6b9e1deed8b5be93162f764813e40a1073342f3b2b61d49f10f8a9ee1359d",
     "occurrenceCount": 16,
     "path": "docs/tutorials/first-native-film.md",
     "categories": [
@@ -1841,6 +1869,807 @@
     "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
     "occurrenceCount": 2,
     "path": "examples/design/spiral-stair.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "ba9f1fbdf66e9a9f4912db2529885ab2095793533287a283fe32cf5f1dbe5085",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/cinema/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "6c717ef904c2bcd203c050401763987cb03a2ede30487c1f66f6205ef21f5923",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/cinema/transitions.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 8,
+    "identityLinesSha256": "40c5d326d118d45eea13c72875c543c5ede94e7960e67ac9baaf6d47b88adcdc",
+    "occurrenceCount": 8,
+    "path": "examples/showcase/COVERAGE.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "feee0b896806dd60bead26797c0ba34bd25c84177f53f944f487d762c26aa038",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/edit/ratio-variants.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5065bfdcc36a5e89f43bbfc25cbdc05a9e664cc193823cec35ccf24c7390d885",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/edit/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "b9272f91f1af7b210293f105aa741c5541434f7c2354bc6dd07a4bc8973ba2ef",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/edit/render.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "302fd97edac9cb4d32aaa6fb971eccc339bfcc68e5bca07a53668d5c7479407e",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad-exploded/jobs/01-assembled.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "ea7acf76995ec4045ef3001fdea30e4ffefc3ef4e8a681912db766c2eb5e4b95",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad-exploded/jobs/02-moving.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "9f1f2485eaa3723b3b2dd2795d8356654e004f6bb705547e1c009cce5a3b7090",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad-exploded/jobs/03-exploded.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "93820c138bcfa3b81c40c76d473212d0a7f86f1a51c47fe583e41215427d1119",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad-exploded/jobs/film.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "6968641fc84c8f1e5ac1a76e3f261334e14cc6b3455fd14a34ec15de0bff99a5",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/cad-exploded/parts.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 7,
+    "identityLinesSha256": "b282cc16495905e2c86fe615599910dfd521da745a662fb996cd62595f254249",
+    "occurrenceCount": 14,
+    "path": "examples/showcase/native/cad-exploded/prepare.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "7c48c31f7b403877580b69152a2785740dcd86abd96b784b84b31a8cad3c24c5",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/cad-exploded/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "114d93a2cac1bc801e8bbf8a6e5d14a45c2177a670596f3fe21b48058da41042",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/cad-exploded/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "8105d3c1fc1c9c0e7a23f24e6792a063fb25edddb8c63bc370882b0c2a9565c8",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/cad-exploded/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/cad-exploded/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "a0110b2250728fa438dad1422217f7096d2e259334acccefbb1f14780bbc0631",
+    "occurrenceCount": 11,
+    "path": "examples/showcase/native/cad-variations.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "608ffd163fd8884373a478d41baa2172bb7e31be15473f75fe6cb774b42d2db8",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/cad/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "f4b6fe08a3b3a7218992abb48b3f59deb4ef9c8c25a97184049ca17e1c53cd28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "81a6c0f4560f670573063115718ff9b67677eca7f1db7cff09f3e0eb1447d404",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/cad/preview.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/cad/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d8e5e590d7f7dd3777d760d13457d52f155dad128bcdc593a6882881a9866ee8",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cad/wide.job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 7,
+    "identityLinesSha256": "9cb32aebf5f2513a6d87c17ba9b152000a923245066325c4fb80ca5ae7f5af4d",
+    "occurrenceCount": 7,
+    "path": "examples/showcase/native/character-reload.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "cc8d9771749c85438d05478bb95b089c700e800e4c25e95a34cf25ae033fa5d5",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/character-reload/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d1e09e4293f9c727c3cf4fbb061b1d319406cb9edf9de2ba21eb65ffe1285f73",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/character/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "62b22d1d3d42822c2b5e1cd3070c8e59cdef8efcf009d9ed19c4a239f9ab5b70",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/character/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "137b7a83c2cb84ce0407f9612f9460496f7c05b537f8bd5c7cce17dff390e8d9",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/character/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "804b7aa41633ec669abd67afa2ea4a1a0472b4e3589e333993fb0706a49655a0",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/character/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/character/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 6,
+    "identityLinesSha256": "1171bf026d5f78be751522bbb95141d1047f6caa78ba31b004abc1d9615b76ef",
+    "occurrenceCount": 6,
+    "path": "examples/showcase/native/cloth-pinned.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "95afc396d86a26a62f2c92b64b0794bb73000aec480d90c44c1d093e0b62b820",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cloth-pinned/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d1e09e4293f9c727c3cf4fbb061b1d319406cb9edf9de2ba21eb65ffe1285f73",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cloth/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "0bd495b95a9ff8a87007f344dbf55cb1e0e2cc763e5c4abf3a12b690e2d1db3a",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/cloth/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "16fead793eaeb8b8ce28d6c61c6d80e50310395b50bf5e7b6ab17a6d1379b879",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/cloth/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "804b7aa41633ec669abd67afa2ea4a1a0472b4e3589e333993fb0706a49655a0",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/cloth/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/cloth/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "08f8fa5c509c24f9f632adbeeb94370f38376104463534ef759312a3e4d4cb5e",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/color-alpha-study/jobs/chart.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "dc051776da30ffa504b532fcd9f143c1aae1e9f44043b05259cb2f9a115a8b0f",
+    "occurrenceCount": 5,
+    "path": "examples/showcase/native/color-alpha-study/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "608ffd163fd8884373a478d41baa2172bb7e31be15473f75fe6cb774b42d2db8",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/education/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "26f1cb6a53614a25dcc7e7b3adc54612150666c6eaf3fb760de1a3f3f30fd9dd",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/education/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d1e09e4293f9c727c3cf4fbb061b1d319406cb9edf9de2ba21eb65ffe1285f73",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/fluid/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "673cd757354aa93e45316f882fc25b6103abea104ec300c80aa7c4de7d1f4426",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/fluid/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "16fead793eaeb8b8ce28d6c61c6d80e50310395b50bf5e7b6ab17a6d1379b879",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/fluid/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "804b7aa41633ec669abd67afa2ea4a1a0472b4e3589e333993fb0706a49655a0",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/fluid/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/fluid/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "0113f799f5168e3a7b7891bef323c4bf22e986a8bb1933b8f8c3e616f7d37265",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/focus-study/jobs/01-near.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "f72c00cd0592ecef17b4f787bcd82f067f941ebe1cffbcfb861be710dfe3c271",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/focus-study/jobs/02-middle.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "76485dc45efcafd4c02bebc8e992953647ec247b4aafa4661d6e80aab2b1964f",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/focus-study/jobs/03-far.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "89e96ebb75317972a986c5e94573815ae0fdfd5ffb2c0fb122f95a1cf156e29e",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/focus-study/jobs/film.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "595607033000ef17a82f979721389b8f120c4a57419f36092853a6dcb5cded07",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/focus-study/product_geometry.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "74e538da1fadcc1d8d23596eec2854306f4b8a2cb30ac4878e8b48f3f2f75bd1",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/focus-study/provenance.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "1db43c579a35ecf54ca453c3a29c9d6088484198db402f886bd45949ec8051f6",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/focus-study/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "ff8e8c66f8a66b6ce981268522d5beac2c0f332cfccdbd800433cde850d8c4f3",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/focus-study/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "06d26d5cea08bf52aea6454f40800fef1ba9ca0128bde91197a070fc074a7c38",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/focus-study/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/focus-study/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "ad54e5faf29833b04f8a77d10d430cc1ba010fd3c35cba5f543d8722fc84eb65",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/imported-model-study/jobs/01-hero.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "e004d3a08e57dcc10d7d81e1a05631d80c1dc19d079cce477ca5f9703c7dd0bd",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/imported-model-study/jobs/02-right.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "8bba7ea2d0476df9921079aaae8aa99ea2d337a6c4f842596c59d377d8870bde",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/imported-model-study/jobs/03-back.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "f07ebf3e18e66662be049dd176934ed6216416c74c7ca05d0aa98aeb7f40815d",
+    "occurrenceCount": 20,
+    "path": "examples/showcase/native/imported-model-study/prepare-replay.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 6,
+    "identityLinesSha256": "e5fa389edfb2c8ea54d38f733b8a9c96b47a53f67b86faeba324ebda847811a1",
+    "occurrenceCount": 13,
+    "path": "examples/showcase/native/imported-model-study/prepare.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "118aa81931d4bc242039d3d5689ac97fa23b55cabdbb318bb0bc52d7a0a77439",
+    "occurrenceCount": 9,
+    "path": "examples/showcase/native/imported-model-study/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "594f9f7e3946c49582c024ff8e9b199f7ef7a4f5be76de1a8b7e86c1a45c91a6",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/imported-model-study/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "d4c97b30eed9079ae17076043a18fb06974eb8c5179eb2e74a9f8ec3457b75b7",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/imported-model-study/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/imported-model-study/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "2f9235381f6897bd8212494358da3c2ccc6943f18da94bf3a675fd5b6fa0dde4",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/portable-character.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "65c353806d55bcc31a825506ca4134683f41efde7a92f619026dc3bdce8ffc3c",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/portable-character/export.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "69b68165998a41f277732632cb03b743bd2b7c462c5934d8fe13e4373896957d",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/portable-character/export.source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d1e09e4293f9c727c3cf4fbb061b1d319406cb9edf9de2ba21eb65ffe1285f73",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/portable-character/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "6c9cddfde64aa8982deff14c5ac63986284234360478a1d287e7ec03f8299233",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/portable-character/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "1a350075025ccf2662768c906a99f10d9857b39dc5cd80d093d78357da664054",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/portable-character/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "137b7a83c2cb84ce0407f9612f9460496f7c05b537f8bd5c7cce17dff390e8d9",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/portable-character/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/portable-character/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "2989ca9a040c127ef46b62a3797a7700da6644f4cec439cca8b5a945b6ac1bcf",
+    "occurrenceCount": 16,
+    "path": "examples/showcase/native/prepare-study.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "d1e09e4293f9c727c3cf4fbb061b1d319406cb9edf9de2ba21eb65ffe1285f73",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/product/integrity.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "1a209f7bc40b74f78b37874a1c32b9325b55130cf32c10bb5c18ba5ed7b12ec8",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/native/product/job.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "595607033000ef17a82f979721389b8f120c4a57419f36092853a6dcb5cded07",
+    "occurrenceCount": 3,
+    "path": "examples/showcase/native/product/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "804b7aa41633ec669abd67afa2ea4a1a0472b4e3589e333993fb0706a49655a0",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/native/product/source.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "d53571cbec2c7bd47e4493547a57c691b72ffa2f90b43dfecfc1a990a48c34b7",
+    "occurrenceCount": 4,
+    "path": "examples/showcase/native/product/studio_scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "1618b78a0e0a441c5e5de0651180c41db5f583aa053262d5e2d52012146b98c5",
+    "occurrenceCount": 9,
+    "path": "examples/showcase/native/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "c122cef0cfbc2fc44f9e7a7a137532ac56047cc2a8f53828720538135bf3a3bc",
+    "occurrenceCount": 5,
+    "path": "examples/showcase/native/render.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "75d4b770284e7b021b33e285c893180cf97e92316ce925a8eff2ecd17cafb281",
+    "occurrenceCount": 5,
+    "path": "examples/showcase/native/replay.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/parametric/crescent-pavilion-wide/base.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/parametric/crescent-pavilion/base.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/parametric/modular-bookshelf/base.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/parametric/ribbed-tower/base.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/parametric/spiral-stair/base.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "9828f2c4544be19ff3312f050e9b4db1f768502d26f03c6dab9ca7ed82bafc20",
+    "occurrenceCount": 8,
+    "path": "examples/showcase/spatial/author-character.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "8caae460fdeaa475b1384ff7121cdcfbc86fd15d506ffb48470163f54553daed",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/spatial/author-direction.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "95591da43b40d7e18d41fb5ddf3c5269408e87e6caf467d68bbcbe0e207113fa",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/spatial/author-stage.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1981,9 +2810,9 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "af2cd13ae2d7210c3b87b4c2dcad7b0fe0f25e722a2bf1a63001446bf0400140",
-    "occurrenceCount": 7,
+    "identityLineCount": 6,
+    "identityLinesSha256": "1aa3259816cfd1373eb81ad9f1718625497f8754459ede5c9464eaa8cc590b5c",
+    "occurrenceCount": 8,
     "path": "README.md",
     "categories": [
       "native-film-studio"
@@ -2018,7 +2847,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "63b09b776270be2c470b1834c9856c0e9a618d1f29ad11178bd9dbc0869d3ba9",
+    "identityLinesSha256": "6daf62b12bae03dd5f90712b9a8a0b9625c6ccab32bad436005ace369e61eae7",
     "occurrenceCount": 5,
     "path": "skills/slopcamera/references/educational-video.md",
     "categories": [

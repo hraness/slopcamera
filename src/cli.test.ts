@@ -55,11 +55,11 @@ async function runCli(
 }
 
 describe("Slopcamera CLI", () => {
-  test("reports v3.3.2 and documents namespaced media surfaces", async () => {
+  test("reports v3.3.3 and documents namespaced media surfaces", async () => {
     const version = await runCli(["--version"], process.cwd())
     expect(version).toEqual({
       exitCode: 0,
-      stdout: "3.3.2\n",
+      stdout: "3.3.3\n",
       stderr: "",
     })
     const help = await runCli(["--help"], process.cwd())

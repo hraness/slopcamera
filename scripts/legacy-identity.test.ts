@@ -21,6 +21,40 @@ describe("Slopcamera predecessor identity inventory", () => {
     const changed = legacyIdentitySnapshot(snapshot.path, "export const kind = 'studio.old-brand';")!;
     expect(compareLegacyIdentityInventory([entry], [changed], new Set())).not.toEqual([]);
   });
+  test("admits only reviewed showcase helper paths while retaining exact text review", () => {
+    for (const path of [
+      "examples/showcase/native/cad-exploded/studio_scene.py",
+      "examples/showcase/native/cad/studio_scene.py",
+      "examples/showcase/native/character/studio_scene.py",
+      "examples/showcase/native/cloth/studio_scene.py",
+      "examples/showcase/native/fluid/studio_scene.py",
+      "examples/showcase/native/focus-study/studio_scene.py",
+      "examples/showcase/native/imported-model-study/studio_scene.py",
+      "examples/showcase/native/portable-character/studio_scene.py",
+      "examples/showcase/native/product/studio_scene.py",
+    ]) {
+      expect(isNativeFilmStudioPath(path)).toBe(true);
+      const snapshot = legacyIdentitySnapshot(path, 'scene.world = bpy.data.worlds.new("Studio environment")')!;
+      expect(compareLegacyIdentityInventory([], [snapshot], new Set())).toEqual([
+        `legacy identity inventory is missing ${path}`,
+      ]);
+      const entry = { ...snapshot, categories: ["native-film-studio"] as const };
+      expect(compareLegacyIdentityInventory([entry], [snapshot], new Set())).toEqual([]);
+      const changed = legacyIdentitySnapshot(path, 'scene.world = bpy.data.worlds.new("studio.old-brand")')!;
+      expect(compareLegacyIdentityInventory([entry], [changed], new Set())).not.toEqual([]);
+      for (const unreviewed of [
+        `${path}.backup`,
+        `other/${path}`,
+        path.replace("studio_scene.py", "old-studio.py"),
+        path.replace("studio_scene.py", "hraness.graphics.py"),
+        path.replace("studio_scene.py", "../studio_scene.py"),
+        path.replaceAll("/", "\\"),
+      ]) expect(isNativeFilmStudioPath(unreviewed)).toBe(false);
+    }
+    expect(isNativeFilmStudioPath("examples/showcase/native/unreviewed/studio_scene.py")).toBe(false);
+    expect(isNativeFilmStudioPath("examples/showcase/native/product/extra/studio_scene.py")).toBe(false);
+    expect(isNativeFilmStudioPath("examples/showcase/native/product/./studio_scene.py")).toBe(false);
+  });
   test("fingerprints exact predecessor-bearing lines and counts every occurrence", () => {
     expect(legacyIdentitySnapshot("fixture.ts", [
       "const canonical = 'slopcamera.video-project';",
