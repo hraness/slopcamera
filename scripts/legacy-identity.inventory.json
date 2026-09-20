@@ -1449,9 +1449,9 @@
     ]
   },
   {
-    "identityLineCount": 17,
-    "identityLinesSha256": "614372e9cf23a0545ab0b8dee1cfbc3d0eeb5507ed4054cd8881df9d549af98d",
-    "occurrenceCount": 17,
+    "identityLineCount": 20,
+    "identityLinesSha256": "9e1c102fb9d2c95e8815dc1045b02d5b0c699b049afc70a717f86e4cbf8bbaf6",
+    "occurrenceCount": 20,
     "path": "apps/web/media/examples.json",
     "categories": [
       "native-film-studio"
@@ -1550,7 +1550,7 @@
   },
   {
     "identityLineCount": 27,
-    "identityLinesSha256": "7c88528043aa628c44fa818c72e3da89b74dc7d6e2a898b3e1e809102ef37dad",
+    "identityLinesSha256": "e3a0138a6938bec819fec2bb982fffc4d9dcbfe4008ce2f8cb712aec34c44310",
     "occurrenceCount": 38,
     "path": "apps/web/src/docs/how-to/native-films.md",
     "categories": [
@@ -1892,9 +1892,9 @@
     ]
   },
   {
-    "identityLineCount": 8,
-    "identityLinesSha256": "40c5d326d118d45eea13c72875c543c5ede94e7960e67ac9baaf6d47b88adcdc",
-    "occurrenceCount": 8,
+    "identityLineCount": 7,
+    "identityLinesSha256": "f3fed63347c090a8458750d7e3f2f25d4130ccc74d96c8ceff6c5744a7caf0e9",
+    "occurrenceCount": 7,
     "path": "examples/showcase/COVERAGE.md",
     "categories": [
       "native-film-studio"
@@ -2369,55 +2369,56 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "ad54e5faf29833b04f8a77d10d430cc1ba010fd3c35cba5f543d8722fc84eb65",
-    "occurrenceCount": 2,
-    "path": "examples/showcase/native/imported-model-study/jobs/01-hero.json",
+    "identityLineCount": 7,
+    "identityLinesSha256": "61f572e02d34a2938f0ce86915c1a77069c6c59a8a0aebf7ce7192e8b96be6d9",
+    "occurrenceCount": 14,
+    "path": "examples/showcase/native/imported-model-study/compare-pixels.ts",
     "categories": [
       "native-film-studio"
     ]
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "e004d3a08e57dcc10d7d81e1a05631d80c1dc19d079cce477ca5f9703c7dd0bd",
+    "identityLinesSha256": "7e1e85e93a96846ebd4548f7dd376fb963a12c589a35a42b479fa94b8cd842ff",
     "occurrenceCount": 2,
-    "path": "examples/showcase/native/imported-model-study/jobs/02-right.json",
-    "categories": [
-      "native-film-studio"
-    ]
-  },
-  {
-    "identityLineCount": 2,
-    "identityLinesSha256": "8bba7ea2d0476df9921079aaae8aa99ea2d337a6c4f842596c59d377d8870bde",
-    "occurrenceCount": 2,
-    "path": "examples/showcase/native/imported-model-study/jobs/03-back.json",
+    "path": "examples/showcase/native/imported-model-study/jobs/final-views.json",
     "categories": [
       "native-film-studio"
     ]
   },
   {
     "identityLineCount": 9,
-    "identityLinesSha256": "f07ebf3e18e66662be049dd176934ed6216416c74c7ca05d0aa98aeb7f40815d",
-    "occurrenceCount": 20,
+    "identityLinesSha256": "827ab120de5290390788aeb5fb065c417b2afcaab51ea8bc1ab4c23b6df00e60",
+    "occurrenceCount": 14,
     "path": "examples/showcase/native/imported-model-study/prepare-replay.ts",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 6,
-    "identityLinesSha256": "e5fa389edfb2c8ea54d38f733b8a9c96b47a53f67b86faeba324ebda847811a1",
-    "occurrenceCount": 13,
+    "identityLineCount": 10,
+    "identityLinesSha256": "5568c8cd478ddffd78bf455ba75ab8928c0ef86df6cd0f21b625015ad5c8042f",
+    "occurrenceCount": 18,
     "path": "examples/showcase/native/imported-model-study/prepare.ts",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "118aa81931d4bc242039d3d5689ac97fa23b55cabdbb318bb0bc52d7a0a77439",
-    "occurrenceCount": 9,
-    "path": "examples/showcase/native/imported-model-study/README.md",
+    "identityLineCount": 6,
+    "identityLinesSha256": "dc3abbe60bd2160e695d27a088aa0249d718b9b70335d681732250c396cac105",
+    "occurrenceCount": 8,
+    "path": "examples/showcase/native/imported-model-study/recipes.test.ts",
+    "categories": [
+      "native-film-studio",
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 12,
+    "identityLinesSha256": "ca1825c8ba595c29d4446ef95726961a487833c6d5de6f73e29cc074010655a7",
+    "occurrenceCount": 21,
+    "path": "examples/showcase/native/imported-model-study/recipes.ts",
     "categories": [
       "native-film-studio"
     ]
