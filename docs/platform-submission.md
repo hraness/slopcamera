@@ -19,6 +19,9 @@ Base URL: `https://api.slopcamera.com`
 | `GET /v1/artifacts/{id}` | `200` → ticket meta with `sha256`, `expiresAt` |
 | `GET /v1/artifacts/{id}/content` | `302` → presigned GET; downloaded bytes match the ticket `sha256` |
 | `POST /v1/tools/execute_slopcamera/call` (no token) | `401` → `signup` block describing the self-serve Credits claim flow |
+| `POST /v1/tools/execute_slopcamera/call` (funded `cr_dev_`, 2026-09-21) | `200` in 31s → `slopcamera.image.generate` via `vercel-ai-gateway` (`openai/gpt-image-1`), 1,324,221-byte PNG artifact `c71e8a07-…` served byte-identical under its pinned `sha256`; wallet settled 1200 → 1170 credits |
+| `POST /v1/tools/execute_slopcamera/call` (funded, provider credential absent) | `200` → `isError` result, hold **released** not settled — wallet balance unchanged; verified release-on-failure live |
+| `POST /v1/uploads` → PUT → `files.<name>.upload` in a tool call (2026-09-21) | `201` ticket → `200` presigned PUT → `check_diagram` `200` parsed the uploaded diagram (3 shapes, 2 edges) |
 
 ### Reproducing the evidence
 
@@ -74,6 +77,4 @@ Prompts that exercise the hosted surface end to end without credentials:
 
 ## Not yet evidenced
 
-- A **settled paid call** (`hold → generate → settle → artifact`) requires a funded `cr_dev_` token; the 401 boundary is verified, the money path is exercised by unit tests only. Produce one funded device token and capture the receipt before listing paid generation as live-verified.
-- **Upload-referencing calls** (`files.<name>.upload`) after a real presigned PUT: the PUT itself is verified; a tool call consuming an uploaded input is not yet run in production.
 - Platform-specific submission intake for Grok and Instinct-class clients remains to be filed and observed.
