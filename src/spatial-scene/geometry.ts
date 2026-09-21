@@ -44,6 +44,8 @@ export const SPATIAL_GEOMETRY_LIMITS = Object.freeze({
 
 export const SPATIAL_GEOMETRY_GRAPH_KIND = "slopcamera.spatial-geometry-graph" as const
 export const SPATIAL_GEOMETRY_PROFILE = "slopcamera.parametric-geometry-v1" as const
+/** CSG algorithm identity is separate from the retained GLB/facts format. */
+export const SPATIAL_GEOMETRY_BOOLEAN_COMPILER = "slopcamera.geometry-boolean-v2" as const
 
 const finite = z.number().finite().min(-SPATIAL_GEOMETRY_LIMITS.coordinate).max(SPATIAL_GEOMETRY_LIMITS.coordinate)
 const positive = z.number().finite().min(1e-9).max(SPATIAL_GEOMETRY_LIMITS.coordinate)
@@ -120,6 +122,7 @@ export interface SpatialGeometryEvaluation {
   readonly mesh: SpatialGeometryMesh
   readonly estimate: SpatialGeometryEstimate
   readonly graphSha256: string
+  readonly booleanCompiler?: typeof SPATIAL_GEOMETRY_BOOLEAN_COMPILER
 }
 
 function fail(message: string, path = "geometry"): never {
@@ -747,6 +750,13 @@ function partitionTriangles(input: Builder, planes: readonly Plane[]): Fragment[
     for (const plane of planes) {
       const next: Fragment[] = []
       for (const fragment of fragments) {
+        const signed = fragment.positions.map(point => plane.normal[0] * point[0] + plane.normal[1] * point[1] + plane.normal[2] * point[2] - plane.d)
+        // A one-sided or coplanar polygon is already a single cell. Clipping
+        // it into both inclusive half-spaces duplicates coplanar surfaces.
+        if (!signed.some(value => value < -PLANE_EPS) || !signed.some(value => value > PLANE_EPS)) {
+          next.push(fragment)
+          continue
+        }
         const inner = clipFragment(fragment, plane, true)
         const outer = clipFragment(fragment, plane, false)
         if (inner !== null) next.push(inner)
@@ -759,25 +769,59 @@ function partitionTriangles(input: Builder, planes: readonly Plane[]): Fragment[
   return result
 }
 
-/** Hull-solid membership: the fragment centroid must satisfy every support plane. */
-function fragmentInside(planes: readonly Plane[], fragment: Fragment): boolean {
+function fragmentCentroid(fragment: Fragment): Vec3 {
   const count = fragment.positions.length
-  const centroid: Vec3 = [
+  return [
     fragment.positions.reduce((sum, p) => sum + p[0], 0) / count,
     fragment.positions.reduce((sum, p) => sum + p[1], 0) / count,
     fragment.positions.reduce((sum, p) => sum + p[2], 0) / count,
   ]
-  return planes.every(plane => plane.normal[0] * centroid[0] + plane.normal[1] * centroid[1] + plane.normal[2] * centroid[2] - plane.d <= PLANE_EPS)
+}
+
+function fragmentNormal(fragment: Fragment): Vec3 | null {
+  const origin = fragment.positions[0]!, normal = [0, 0, 0]
+  for (let index = 1; index + 1 < fragment.positions.length; index++) {
+    const a = fragment.positions[index]!, b = fragment.positions[index + 1]!
+    const u = [a[0] - origin[0], a[1] - origin[1], a[2] - origin[2]], v = [b[0] - origin[0], b[1] - origin[1], b[2] - origin[2]]
+    normal[0] = normal[0]! + u[1]! * v[2]! - u[2]! * v[1]!
+    normal[1] = normal[1]! + u[2]! * v[0]! - u[0]! * v[2]!
+    normal[2] = normal[2]! + u[0]! * v[1]! - u[1]! * v[0]!
+  }
+  const length = Math.hypot(...normal)
+  return length < 1e-12 ? null : [normal[0]! / length, normal[1]! / length, normal[2]! / length]
+}
+
+function planeDistance(plane: Plane, point: Vec3): number {
+  return plane.normal[0] * point[0] + plane.normal[1] * point[1] + plane.normal[2] * point[2] - plane.d
+}
+
+/** Symbolic infinitesimal occupancy on each side avoids scale-dependent probe distances. */
+function insideHullSide(planes: readonly Plane[], point: Vec3, normal: Vec3, side: number): boolean {
+  return planes.every(plane => {
+    const signed = planeDistance(plane, point)
+    if (signed > PLANE_EPS) return false
+    if (signed < -PLANE_EPS) return true
+    return side * (plane.normal[0] * normal[0] + plane.normal[1] * normal[1] + plane.normal[2] * normal[2]) <= PLANE_EPS
+  })
+}
+
+function boundsTouch(a: Bounds, b: Bounds): boolean {
+  return [0, 1, 2].every(axis => a.min[axis]! <= b.max[axis]! + PLANE_EPS && b.min[axis]! <= a.max[axis]! + PLANE_EPS)
+}
+
+function builderBounds(input: Builder): Bounds {
+  const low: number[] = [Infinity, Infinity, Infinity], high: number[] = [-Infinity, -Infinity, -Infinity]
+  for (let i = 0; i < input.positions.length; i++) {
+    const axis = i % 3, value = input.positions[i]!
+    low[axis] = Math.min(low[axis]!, value); high[axis] = Math.max(high[axis]!, value)
+  }
+  return { min: low as unknown as Vec3, max: high as unknown as Vec3 }
 }
 
 function emitFragments(b: Builder, fragments: readonly Fragment[], flip: boolean): void {
   for (const fragment of fragments) {
-    let z = 0
-    for (let index = 0; index < fragment.positions.length; index++) {
-      const a = fragment.positions[index]!, c = fragment.positions[(index + 1) % fragment.positions.length]!
-      z += a[0] * c[1] - a[1] * c[0]
-    }
-    const unit: Vec3 = z < 0 ? [0, 0, -1] : [0, 0, 1]
+    const unit = fragmentNormal(fragment)
+    if (unit === null) continue
     const oriented: Vec3 = flip ? [-unit[0], -unit[1], -unit[2]] : unit
     const indices = fragment.positions.map((position, index) => vertex(b, position, oriented, fragment.uvs[index]!))
     for (let index = 1; index + 1 < indices.length; index++) {
@@ -801,30 +845,31 @@ function booleanMesh(input: Extract<SpatialGeometryNode, { kind: "boolean" }>, m
       fail("Boolean inputs exceed the bounded simple-input triangle budget.", `${path}.${index}`)
     }
   }
-  const planesA = uniquePlanes(a, path)
-  const planesC = cutters.map(cutter => uniquePlanes(cutter, path))
-  assertHull(a, planesA, path)
-  cutters.forEach((cutter, index) => assertHull(cutter, planesC[index]!, path))
+  const inputs = [a, ...cutters], hulls = inputs.map(mesh => uniquePlanes(mesh, path)), bounds = inputs.map(builderBounds)
+  inputs.forEach((mesh, index) => assertHull(mesh, hulls[index]!, path))
   const output = builder()
-  if (input.operation === "difference") {
-    const allCutterPlanes = planesC.flat()
-    const kept = partitionTriangles(a, allCutterPlanes).filter(piece => !planesC.some(planes => fragmentInside(planes, piece)))
-    emitFragments(output, kept, false)
-    for (const [index, cutter] of cutters.entries()) {
-      const caps = partitionTriangles(cutter, planesA).filter(piece =>
-        fragmentInside(planesA, piece) && !planesC.some((other, otherIndex) => otherIndex !== index && fragmentInside(other, piece)))
-      emitFragments(output, caps, true)
+  for (const [owner, mesh] of inputs.entries()) {
+    const planes = hulls.flatMap((hull, index) => index !== owner && boundsTouch(bounds[owner]!, bounds[index]!) ? hull : [])
+    const outward: Fragment[] = [], reversed: Fragment[] = []
+    for (const fragment of partitionTriangles(mesh, planes)) {
+      const normal = fragmentNormal(fragment)
+      if (normal === null) continue
+      const point = fragmentCentroid(fragment)
+      const occupied = (side: number): boolean => {
+        const inside = hulls.map(hull => insideHullSide(hull, point, normal, side))
+        return input.operation === "difference" ? inside[0]! && !inside.slice(1).some(Boolean)
+          : input.operation === "intersection" ? inside.every(Boolean) : inside.some(Boolean)
+      }
+      const positive = occupied(1), negative = occupied(-1)
+      if (positive === negative) continue
+      // Coincident boundary faces belong to the earliest source hull. Their
+      // occupancy is shared; retaining both would double area and cause z-fighting.
+      const duplicate = hulls.slice(0, owner).some(hull => hull.every(plane => planeDistance(plane, point) <= PLANE_EPS)
+        && hull.some(plane => Math.abs(planeDistance(plane, point)) <= PLANE_EPS
+          && Math.abs(plane.normal[0] * normal[0] + plane.normal[1] * normal[1] + plane.normal[2] * normal[2]) > 1 - 1e-7))
+      if (!duplicate) (positive ? reversed : outward).push(fragment)
     }
-  } else {
-    const planesB = planesC[0]!, b = cutters[0]!
-    const piecesA = partitionTriangles(a, planesB), piecesB = partitionTriangles(b, planesA)
-    if (input.operation === "intersection") {
-      emitFragments(output, piecesA.filter(piece => fragmentInside(planesB, piece)), false)
-      emitFragments(output, piecesB.filter(piece => fragmentInside(planesA, piece)), false)
-    } else {
-      emitFragments(output, piecesA.filter(piece => !fragmentInside(planesB, piece)), false)
-      emitFragments(output, piecesB.filter(piece => !fragmentInside(planesA, piece)), false)
-    }
+    emitFragments(output, outward, false); emitFragments(output, reversed, true)
   }
   output.uvsSet = [a, ...cutters].some(mesh => mesh.uvsSet)
   if (output.indices.length === 0) fail("Boolean result is empty; the inputs do not overlap as the operation requires.", path)
@@ -1010,8 +1055,15 @@ function estimateNode(node: SpatialGeometryNode, meshEstimates: ReadonlyMap<stri
     case "boolean": {
       const a = mesh(node.a)
       const cutters = node.operation === "difference" ? node.cutters.map(mesh) : [mesh(node.b)]
-      const triangles = a.triangles * (1 + cutters.reduce((sum, cutter) => sum + cutter.planes, 0))
-        + cutters.reduce((sum, cutter) => sum + cutter.triangles * (a.planes + 1), 0)
+      const inputs = [a, ...cutters]
+      // In one source triangle, n plane intersections form at most
+      // 1+n(n+1)/2 cells. Each proper split adds at most two fan triangles,
+      // hence 1+n(n+1) triangles per input triangle, including all cap faces.
+      // Disjoint input bounds cannot cut each other's source triangles.
+      const triangles = inputs.reduce((total, source, index) => {
+        const planes = inputs.reduce((sum, other, otherIndex) => sum + (otherIndex !== index && boundsTouch(source.bounds, other.bounds) ? other.planes : 0), 0)
+        return total + source.triangles * (1 + planes * (planes + 1))
+      }, 0)
       const other = cutters[0]!
       const bounds = node.operation === "intersection"
         ? { min: [Math.max(a.bounds.min[0], other.bounds.min[0]), Math.max(a.bounds.min[1], other.bounds.min[1]), Math.max(a.bounds.min[2], other.bounds.min[2])] as unknown as Vec3,
@@ -1099,7 +1151,8 @@ export function evaluateSpatialGeometry(input: unknown): SpatialGeometryEvaluati
   if (mesh.vertices > estimate.vertices || mesh.triangles > estimate.triangles) {
     fail("Evaluated mesh exceeded its static budget estimate.", "geometry.output")
   }
-  return deepFreezeJson({ mesh, estimate, graphSha256: spatialValueSha256({ domain: "slopcamera.spatial-geometry-graph.v1", graph }) })
+  return deepFreezeJson({ mesh, estimate, graphSha256: spatialValueSha256({ domain: "slopcamera.spatial-geometry-graph.v1", graph }),
+    ...(graph.nodes.some(node => node.kind === "boolean") ? { booleanCompiler: SPATIAL_GEOMETRY_BOOLEAN_COMPILER } : {}) })
 }
 
 // ---------------------------------------------------------------------------

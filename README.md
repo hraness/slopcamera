@@ -44,14 +44,14 @@ the rendered output with source, runtime requirements and reproduction steps.
 
 ## Install Slopcamera
 
-Slopcamera v3.3.2 fixes prop reattachment, canonical scene bindings, and saved behavior-bake auditing.
+Slopcamera v3.3.3 corrects wall openings, arched crowns, and Boolean surfaces, and documents [film integration](docs/how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.3.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.2)
+[Slopcamera v3.3.3 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.3)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.2/hraness-slopcamera-3.3.2.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.3/hraness-slopcamera-3.3.3.tgz
 slopcamera skill install --target agents
 ```
 
