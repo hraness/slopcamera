@@ -8,7 +8,7 @@ const port = Number(process.env.PORT ?? 8787)
 const server = Bun.serve({
   port,
   hostname: process.env.HOST ?? "0.0.0.0",
-  fetch: handler,
+  fetch: (request) => handler(request),
 })
 
 console.log(

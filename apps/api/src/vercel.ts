@@ -1,5 +1,6 @@
 import { createApiHandler } from "./handler.js"
 import { readApiConfig } from "./config.js"
+import { toolEnvironmentWithOidc } from "./oidc.js"
 
 /**
  * Vercel Functions adapter for the hosted API. `vercel.json` rewrites the
@@ -45,12 +46,17 @@ export async function handleVercelRequest(
     chunks.length === 0
       ? undefined
       : Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)))
+  const toolEnv = toolEnvironmentWithOidc(
+    process.env,
+    req.headers["x-vercel-oidc-token"],
+  )
   const response = await handler(
     new Request(url.href, {
       method: req.method ?? "GET",
       headers,
       body,
     }),
+    toolEnv === undefined ? undefined : { toolEnv },
   )
   res.status(response.status)
   for (const [name, value] of response.headers) res.setHeader(name, value)
