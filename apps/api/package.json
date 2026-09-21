@@ -1,0 +1,11 @@
+{
+  "name": "@hraness/slopcamera-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run ./src/server.ts",
+    "start": "bun run ./src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test ./src"
+  }
+}

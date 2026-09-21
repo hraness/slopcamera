@@ -73,6 +73,7 @@
     "packages/scene/**/*.ts",
     "scripts/**/*.ts",
     "examples/**/*.ts",
-    "examples/**/*.tsx"
+    "examples/**/*.tsx",
+    "api/**/*.ts"
   ]
 }

@@ -9,7 +9,7 @@ tags:
 
 # Repository seams
 
-Slopcamera is a standalone public SDK, CLI, desktop host, and static site. Its portable graph and scene contracts may be shared inside this repository, while media-host behavior, native capture, and product presentation remain Slopcamera-owned. External Hraness code is consumed only from immutable reviewed commits or releases; Slopcamera does not acquire Accounts, billing, or suite-auth authority.
+Slopcamera is a standalone public SDK, CLI, desktop host, and static site. Its portable graph and scene contracts may be shared inside this repository, while media-host behavior, native capture, and product presentation remain Slopcamera-owned. External Hraness code is consumed only from immutable reviewed commits or releases; Slopcamera does not acquire Accounts or suite-auth authority. The `apps/api/` hosted adapter is the one billing seam: it spends Hraness Credits on behalf of callers through the Credits product-backend routes and holds no ledger authority of its own.
 
 Shared interfaces are frozen before parallel implementation lanes begin. One integration owner changes manifests, lockfiles, generated registries, or other convergence files. Consumers upgrade immutable releases independently, so no repository requires coordinated `main` branches or a sibling checkout.
 
