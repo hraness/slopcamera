@@ -1,12 +1,12 @@
 ---
 type: plan
 area: hosted-api
-status: in-progress
+status: completed
 ---
 
 # Hosted Slopcamera agent API
 
-Status: in implementation. Decision record for the hosted tool surface that
+Status: completed. Decision record for the hosted tool surface that
 lets cloud agent platforms (Muse connectors, Grok, Instinct-class clients)
 use Slopcamera without a local shell.
 
@@ -19,7 +19,7 @@ response.
 
 ### Surfaces
 
-- `POST /v1/tools/{name}` — call a hosted tool. Inputs arrive as an inline
+- `POST /v1/tools/{name}/call` — call a hosted tool. Inputs arrive as an inline
   `files` map (root-relative path → UTF-8 or base64 content) materialized into
   a per-request temporary workspace, or as `upload:` references to presigned
   R2 uploads for larger inputs.
@@ -47,9 +47,12 @@ response.
 
 ### Billing
 
-Hraness Credits, cost-plus operations. The API holds `ceilingMicroUsd` per
-request (per-model configured ceiling), settles with the reported upstream
-provider cost, and releases on failure. Margin lives inside Credits'
+Hraness Credits, cost-plus operations. The API holds a bounded ceiling
+(`providerCostMicroUsd * 2 + 100_000`, covering take rates up to 200% plus
+buffer), settles with the reported upstream provider cost, and releases on
+failure. The ceiling and the reported cost are decoupled: reporting the
+ceiling as cost would flat-rate every call under cost-plus pricing. Margin
+lives inside Credits'
 pricing revision (take rate + fixed offset); the API only reports provider
 cost with basis `contractual` from a reviewed per-model price table. The
 allowlist of admitted models is itself a spend bound. On `402` the response
@@ -65,6 +68,12 @@ output bytes, `t/{uuid}.json` for the resolvable ticket record, `u/{uuid}`
 for pending uploads. The ticket record carries sha256, byte count, content
 type, tool, model, and timestamps — no database.
 
+The deployed storage path is `slopcamera-objects`, a Cloudflare Worker bound
+to the bucket that serves HMAC-signed PUT/GET/HEAD with per-request size and
+expiry bounds (`apps/objects/`). The API signs requests with a shared secret
+(`R2_PROXY_URL`/`R2_PROXY_SECRET`); direct S3 credentials (`R2_ACCESS_KEY_ID`
+et al.) remain a fallback when no proxy pair is configured.
+
 ## Cost and abuse controls
 
 - Per-IP token buckets for anonymous calls; per-token call counters for paid.
@@ -77,24 +86,62 @@ type, tool, model, and timestamps — no database.
 ## Deployment
 
 Portable `fetch` handler plus a `Bun.serve` entry (`bun run apps/api` for
-local). Production target is a Vercel project (`api.slopcamera.com`) running
-the Node runtime; no database or Accounts dependency.
+local). Production runs on Vercel functions under the auto-detected Bun
+runtime at `api.slopcamera.com`; no database or Accounts dependency.
 
-## Execution state
+Two deployment lessons landed in the merged shape. First, Vercel transpiles
+the function graph to `.js` without rewriting specifier strings, so every
+internal import in `apps/api` uses `.js` specifiers (matching `src/`
+convention). Second, the detected Vite framework preset degenerates optional
+catch-all functions into single-segment routes, so the deployable surface is
+one thin file per endpoint under `api/` that pins its canonical path —
+dynamic segments arrive via `req.query`, which each wrapper substitutes.
+Tool calls inject a process-local host-resource coordinator because
+machine-global admission needs flock state that does not exist in a function
+sandbox.
 
-`apps/api/` landed: config, R2 SigV4 client, artifact store, ephemeral
-workspace, token-bucket limiter, Credits client, tool registry, REST + MCP
-handlers, OpenAPI document, and Bun server entry. 24 focused tests pass;
-`check:api` (typecheck + lint + test) is wired into the repository gate;
-the new surfaces are registered in `costs.json`; operator runbook is
-`docs/hosted-api.md`. The `src/` rule was amended so the canonical modules
-stay transport-free while `apps/api/` owns HTTP, billing, and storage.
+## Result
 
-## Open items
+`apps/api/` shipped in PRs #187 and #188: config, object stores (proxy worker
++ S3 fallback), artifact store, ephemeral workspace, token-bucket limiter,
+Credits client, tool registry, REST + MCP handlers, OpenAPI document, Bun
+server entry, and the Vercel function adapter. 27 focused tests pass;
+`check:api` is wired into the repository gate; the surfaces are registered in
+`costs.json`; the operator runbook is `docs/hosted-api.md`. The `src/` rule
+was amended so canonical modules stay transport-free while `apps/api/` owns
+HTTP, billing, and storage.
 
-- R2 bucket + API token provisioning (Cloudflare account + token needed).
-- Credits product registration for `slopcamera` (admin `product:config`,
-  rate card, Stripe catalog sync) — operator step in the credits repo.
-- Funded `AI_GATEWAY_API_KEY` for the service.
-- Vercel project + `api.slopcamera.com` deploy.
-- `image.gallery` and inbound-media tools once holds cover multi-unit work.
+Production evidence is live at `https://api.slopcamera.com` and recorded in
+`docs/platform-submission.md`: health, tool registry, OpenAPI, MCP
+`initialize`/`tools/list`, a real `check_diagram` call, `render_diagram`
+producing five ticketed artifacts, a presigned upload round trip through the
+worker, and artifact download whose bytes match the ticket sha256.
+
+Infrastructure as deployed: R2 bucket `slopcamera-api-artifacts` with
+lifecycle rules, the `slopcamera-objects` proxy worker with a shared HMAC
+secret, the Vercel project `slopcamera-api` aliased to `api.slopcamera.com`,
+the Credits product `slopcamera` with `image_generate` cost-plus operation,
+and a `slopcamera-api-vercel` product key stored in Convex, Vercel, and
+Keychain. The paid path settles under the decoupled ceiling model; the
+allowlist carries seven models.
+
+## Durable memory
+
+- The reusable onboarding model lives in
+  [[notes/agent-platform-onboarding|agent platform onboarding]]: two wire
+  formats over one registry, tiered tools, claim-ticket byte plane, Credits
+  billing without accounts, ephemeral execution.
+- Submission-ready facts and the per-platform readiness table live in
+  `docs/platform-submission.md`; refresh its verified calls before each
+  filing.
+- Never hold the settlement amount as the ceiling: cost-plus pricing must
+  fit inside the hold, so ceiling and reported provider cost are separate
+  numbers.
+- Serverless hosts break machine-global host-resource admission and
+  catch-all function routing; process-local admission plus per-endpoint
+  function files are the pattern that survived contact with Vercel.
+
+Remaining work, deliberately deferred: `image.gallery` and inbound-media
+tools once holds cover multi-unit work, a funded-token settled paid call for
+the evidence pack, and platform-specific submission intake for Grok and
+Instinct-class clients.
