@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
-import type { ApiConfig } from "./config.ts"
-import { createApiHandler } from "./handler.ts"
+import type { ApiConfig } from "./config.js"
+import { createApiHandler } from "./handler.js"
 
 const DIAGRAM = await readFile(
   join(import.meta.dir, "../../../examples/semantic-flow.diagram.json"),

@@ -1,6 +1,6 @@
 import { createHash, createHmac } from "node:crypto"
 import { describe, expect, test } from "bun:test"
-import { R2Store } from "./r2.ts"
+import { R2Store } from "./r2.js"
 
 const config = {
   accountId: "testaccount123",

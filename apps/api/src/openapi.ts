@@ -1,5 +1,5 @@
-import { hostedTools } from "./tools.ts"
-import { SLOPCAMERA_VERSION } from "../../../src/version.ts"
+import { hostedTools } from "./tools.js"
+import { SLOPCAMERA_VERSION } from "../../../src/version.js"
 
 /**
  * The OpenAPI contract published at /v1/openapi.json. This is the document

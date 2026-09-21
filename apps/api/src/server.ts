@@ -1,5 +1,5 @@
-import { readApiConfig } from "./config.ts"
-import { createApiHandler } from "./handler.ts"
+import { readApiConfig } from "./config.js"
+import { createApiHandler } from "./handler.js"
 
 const config = readApiConfig(process.env)
 const handler = createApiHandler({ config, env: process.env })

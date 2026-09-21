@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
-import { ApiError, isRecord } from "./errors.ts"
-import type { ObjectStore } from "./r2.ts"
+import { ApiError, isRecord } from "./errors.js"
+import type { ObjectStore } from "./r2.js"
 
 /**
  * Artifact tickets. Bytes live at `a/<id>/<safe-name>`; a small JSON record

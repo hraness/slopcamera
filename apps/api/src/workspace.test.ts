@@ -5,7 +5,7 @@ import {
   harvestOutputs,
   materializeWorkspace,
   validateRelativePath,
-} from "./workspace.ts"
+} from "./workspace.js"
 
 const LIMITS = { maximumInlineBytes: 64, maximumUploadBytes: 1024 }
 

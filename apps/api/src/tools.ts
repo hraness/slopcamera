@@ -3,7 +3,7 @@ import {
   SlopcameraMcpToolRuntime,
 } from "../../../src/mcp/tools.js"
 import type { McpToolDefinition, McpToolResult } from "../../../src/mcp/types.js"
-import { invalidRequest, isRecord } from "./errors.ts"
+import { invalidRequest, isRecord } from "./errors.js"
 
 /**
  * The hosted tool surface. Every entry delegates to the canonical MCP

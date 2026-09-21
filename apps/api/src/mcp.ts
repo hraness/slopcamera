@@ -1,7 +1,7 @@
-import { isApiError, isRecord } from "./errors.ts"
-import type { HostedCallRequest, HostedCallResult } from "./handler.ts"
-import { hostedTools } from "./tools.ts"
-import { SLOPCAMERA_VERSION } from "../../../src/version.ts"
+import { isApiError, isRecord } from "./errors.js"
+import type { HostedCallRequest, HostedCallResult } from "./handler.js"
+import { hostedTools } from "./tools.js"
+import { SLOPCAMERA_VERSION } from "../../../src/version.js"
 
 /**
  * Stateless streamable-HTTP MCP endpoint. Each POST carries one JSON-RPC

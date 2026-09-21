@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { RateLimiter } from "./ratelimit.ts"
+import { RateLimiter } from "./ratelimit.js"
 
 describe("RateLimiter", () => {
   test("admits a burst then throttles with a retry hint", () => {

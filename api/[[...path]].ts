@@ -1,5 +1,5 @@
-import { createApiHandler } from "../apps/api/src/handler.ts"
-import { readApiConfig } from "../apps/api/src/config.ts"
+import { createApiHandler } from "../apps/api/src/handler.js"
+import { readApiConfig } from "../apps/api/src/config.js"
 
 /**
  * Vercel Functions adapter for the hosted API. `vercel.json` rewrites every
