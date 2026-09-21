@@ -27,7 +27,7 @@ Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera
 - [Direct a cinematic world end to end](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
 - [Make an educational video](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
 - [Run or recover a workflow](how-to/run-workflows.md): use a built-in recipe or trusted Bun module and inspect its durable run.
-- [Configure Vercel](vercel.md) or [publish Slopcamera](publishing.md): provider and maintainer procedures.
+- [Configure Vercel](vercel.md), [publish Slopcamera](publishing.md), [operate the hosted API](hosted-api.md), or [file a platform submission](platform-submission.md): provider and maintainer procedures.
 
 ## Look up a contract
 

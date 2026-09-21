@@ -1,0 +1,11 @@
+name = "slopcamera-objects"
+main = "src/worker.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Private artifact store for the hosted API. Objects are addressed by
+# unguessable UUID keys; bucket lifecycle rules expire them (see
+# docs/hosted-api.md).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "slopcamera-api-artifacts"

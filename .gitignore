@@ -13,3 +13,6 @@ next-env.d.ts
 .vercel/
 apps/desktop/analysis/dist/
 /desktop/target/
+.vercel
+.env*
+.wrangler/

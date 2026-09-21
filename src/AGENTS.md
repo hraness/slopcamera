@@ -17,5 +17,5 @@
 - Parse every foreign value from `unknown`; bound source bytes, collections, dimensions, subprocess work, responses, and outputs before expensive or privileged work begins.
 - Treat diagram and authored composition inputs as authoritative; make rendered SVG, PNG, tldraw, and vector derivatives reproducible and replaceable.
 - Keep local vectorization authentication-free and network-silent. Send generation directly to the fixed Vercel AI Gateway origin using environment-only credentials, bounded responses, and `maxRetries: 0`.
-- Do not add a hosted Slopcamera API, product account, OAuth flow, credential persistence, or legacy Graphics runtime surface.
+- Keep this source root free of hosted-service concerns: no HTTP routes, product account, OAuth flow, credential persistence, or legacy Graphics runtime surface. The hosted adapter under `apps/api/` consumes these modules through the MCP runtime and owns all transport, billing, and storage state.
 - Pair parsing and compatibility changes with examples and property laws, then run the package `check` gate and clean standalone export.
