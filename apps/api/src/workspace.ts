@@ -1,8 +1,8 @@
 import { mkdtemp, readdir, readFile, rm, stat, writeFile, mkdir } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, normalize, sep } from "node:path"
-import { ApiError, invalidRequest, isRecord } from "./errors.ts"
-import type { ObjectStore } from "./r2.ts"
+import { ApiError, invalidRequest, isRecord } from "./errors.js"
+import type { ObjectStore } from "./r2.js"
 
 /**
  * Per-request ephemeral workspaces. Inputs arrive as an inline `files` map —

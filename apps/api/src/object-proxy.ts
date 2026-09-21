@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto"
-import { ApiError } from "./errors.ts"
+import { ApiError } from "./errors.js"
 
 /**
  * Client for the `slopcamera-objects` worker: the private R2 bucket behind

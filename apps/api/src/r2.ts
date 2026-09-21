@@ -1,5 +1,5 @@
 import { createHash, createHmac } from "node:crypto"
-import { ApiError } from "./errors.ts"
+import { ApiError } from "./errors.js"
 
 /**
  * Minimal Cloudflare R2 client over the S3-compatible API.

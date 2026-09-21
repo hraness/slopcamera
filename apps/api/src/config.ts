@@ -1,5 +1,5 @@
-import type { ObjectProxyConfig } from "./object-proxy.ts"
-import type { R2Config } from "./r2.ts"
+import type { ObjectProxyConfig } from "./object-proxy.js"
+import type { R2Config } from "./r2.js"
 
 /**
  * Runtime configuration for the hosted API. Every field comes from the

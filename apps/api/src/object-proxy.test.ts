@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto"
 import { describe, expect, test } from "bun:test"
-import { ObjectProxyStore } from "./object-proxy.ts"
+import { ObjectProxyStore } from "./object-proxy.js"
 
 const store = new ObjectProxyStore({
   url: "https://objects.example.com/",

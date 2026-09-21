@@ -1,4 +1,4 @@
-import { ApiError, isRecord } from "./errors.ts"
+import { ApiError, isRecord } from "./errors.js"
 
 /**
  * Narrow client for the Hraness Credits product-backend routes.

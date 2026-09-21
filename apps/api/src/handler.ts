@@ -1,27 +1,27 @@
 import { randomUUID } from "node:crypto"
-import type { ApiConfig } from "./config.ts"
-import { CreditsClient, CreditsShortfall } from "./credits.ts"
+import type { ApiConfig } from "./config.js"
+import { CreditsClient, CreditsShortfall } from "./credits.js"
 import {
   ApiError,
   apiErrorResponse,
   invalidRequest,
   isApiError,
   isRecord,
-} from "./errors.ts"
-import { handleMcpRequest } from "./mcp.ts"
-import { openApiDocument } from "./openapi.ts"
-import { RateLimiter } from "./ratelimit.ts"
-import { ObjectProxyStore } from "./object-proxy.ts"
-import { R2Store, type ObjectStore } from "./r2.ts"
-import { ArtifactStore, artifactView } from "./store.ts"
+} from "./errors.js"
+import { handleMcpRequest } from "./mcp.js"
+import { openApiDocument } from "./openapi.js"
+import { RateLimiter } from "./ratelimit.js"
+import { ObjectProxyStore } from "./object-proxy.js"
+import { R2Store, type ObjectStore } from "./r2.js"
+import { ArtifactStore, artifactView } from "./store.js"
 import {
   CREDITS_OPERATION,
   callHostedTool,
   hostedTool,
   hostedTools,
   paidOperationModel,
-} from "./tools.ts"
-import { harvestOutputs, materializeWorkspace } from "./workspace.ts"
+} from "./tools.js"
+import { harvestOutputs, materializeWorkspace } from "./workspace.js"
 
 export interface ApiEnvironment {
   readonly config: ApiConfig
