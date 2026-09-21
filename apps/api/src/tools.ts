@@ -2,6 +2,7 @@ import {
   slopcameraMcpTools,
   SlopcameraMcpToolRuntime,
 } from "../../../src/mcp/tools.js"
+import { createProcessLocalHostResourceCoordinator } from "../../../src/host-resources.js"
 import type { McpToolDefinition, McpToolResult } from "../../../src/mcp/types.js"
 import { invalidRequest, isRecord } from "./errors.js"
 
@@ -140,6 +141,13 @@ export function paidOperationModel(
 }
 
 /**
+ * Machine-global lease coordination needs flock state that does not exist in
+ * a function sandbox. Process-local admission still bounds claims against the
+ * declared capacity profile for concurrent calls inside one warm instance.
+ */
+const hostedHostResourceCoordinator = createProcessLocalHostResourceCoordinator()
+
+/**
  * Invoke one hosted tool inside a prepared workspace. The runtime is created
  * per request so no caller state can leak between calls. Paid calls get a
  * pinned `generated/` output path so artifact harvest is unambiguous.
@@ -165,8 +173,10 @@ export async function callHostedTool(
     }
   }
 
-  const runtime = await SlopcameraMcpToolRuntime.create(workspaceDirectory, {
-    environment,
-  })
+  const runtime = await SlopcameraMcpToolRuntime.create(
+    workspaceDirectory,
+    { environment },
+    hostedHostResourceCoordinator,
+  )
   return await runtime.call(tool.name, effectiveArgs)
 }

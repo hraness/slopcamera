@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "echo 'slopcamera-api: functions only'",
   "functions": {
-    "api/[[...path]].ts": {
+    "api/**/*.ts": {
       "maxDuration": 60
     }
   },
