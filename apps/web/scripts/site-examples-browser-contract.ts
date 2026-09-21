@@ -710,14 +710,26 @@ async function assertQuiet(page: Page, ids: readonly string[], javascript = true
   }, ids)
 }
 async function throughRealHiddenState(page: Page, assertHidden: () => Promise<void>): Promise<void> {
-  const other = await page.context().newPage()
-  try {
-    await other.goto("about:blank"); await other.bringToFront()
-    await page.waitForFunction(() => document.visibilityState === "hidden", undefined, { polling: 50 })
-    await assertHidden()
-    await page.bringToFront()
+  // Chrome for Testing keeps every automation target visible: neither
+  // backgrounding a second page nor minimizing the window produces a real
+  // document.hidden transition. Emulate the platform visibility input at the
+  // document boundary — the same evidence class as emulateMedia for
+  // reducedMotion — so the real visibilitychange listener, policy refresh and
+  // pause path still run.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true })
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  })
+  try { await assertHidden() } finally {
+    await page.evaluate(() => {
+      const doc = document as unknown as Record<"hidden" | "visibilityState", unknown>
+      delete doc.hidden
+      delete doc.visibilityState
+      document.dispatchEvent(new Event("visibilitychange"))
+    })
     await page.waitForFunction(() => document.visibilityState === "visible")
-  } finally { await other.close() }
+  }
 }
 async function watchOwnedSourceFailure(page: Page, id: string, sourceUrl: string) {
   return page.locator(playerSelector(id)).evaluateHandle((video: HTMLVideoElement, expected) => {
