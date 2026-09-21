@@ -3,7 +3,7 @@ export const examplesScope = "workflow-examples-v1"
 export const examplesBaselineProfile = "before-workflow-examples-0e3f8df-v1"
 export const examplesBaselineRevision = "0e3f8df4a1da9c5656a8278bd59afb1fd4d28b32"
 export const examplesBaselineTree = "20fd89fe12b4dbb0276e29455397ca948bef8684"
-export const examplesDeadlineMs = 720_000
+export const examplesDeadlineMs = 1_200_000
 /** Exact immutable textures admitted for paired test-server origin projection. */
 export const examplesHeroTextures = [
   { path: "graphs/site-foundation/assets/grain-DOupJfvn.svg", bytes: 152319, sha256: "b40c33a0e382c8e9d0518b4720321b5c262a929c28d40a190a902d07acd06553" },
