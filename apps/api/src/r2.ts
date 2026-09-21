@@ -73,6 +73,36 @@ export interface PresignOptions {
   readonly now?: Date
 }
 
+/**
+ * The storage surface the API needs: bearer URLs for client traffic plus
+ * server-side object ops. Implemented by `R2Store` (S3-compatible API) and
+ * `ObjectProxyStore` (the signed bucket-proxy worker).
+ */
+export interface ObjectStore {
+  presignPut(
+    key: string,
+    options: {
+      contentType: string
+      maxBytes: number
+      metadata?: Record<string, string>
+      expiresSeconds?: number
+    },
+  ): { url: string; headers: Record<string, string>; expiresSeconds: number }
+  presignGet(key: string, expiresSeconds?: number): string
+  putObject(
+    key: string,
+    body: Uint8Array,
+    options: { contentType: string; metadata?: Record<string, string> },
+  ): Promise<void>
+  getObject(
+    key: string,
+    maximumBytes: number,
+  ): Promise<Uint8Array | undefined>
+  headObject(
+    key: string,
+  ): Promise<{ bytes: number; metadata: Record<string, string> } | undefined>
+}
+
 function presign(
   config: R2Config,
   method: "GET" | "PUT" | "HEAD",

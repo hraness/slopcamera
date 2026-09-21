@@ -12,6 +12,7 @@ const DIAGRAM = await readFile(
 function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
   return {
     publicBaseUrl: "http://localhost:8787",
+    r2Proxy: undefined,
     r2: undefined,
     credits: undefined,
     modelCostsMicroUsd: {},

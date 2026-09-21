@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile, rm, stat, writeFile, mkdir } from "node:fs/
 import { tmpdir } from "node:os"
 import { dirname, join, normalize, sep } from "node:path"
 import { ApiError, invalidRequest, isRecord } from "./errors.ts"
-import type { R2Store } from "./r2.ts"
+import type { ObjectStore } from "./r2.ts"
 
 /**
  * Per-request ephemeral workspaces. Inputs arrive as an inline `files` map —
@@ -50,7 +50,7 @@ export interface MaterializedWorkspace {
 export async function materializeWorkspace(
   files: unknown,
   limits: { maximumInlineBytes: number; maximumUploadBytes: number },
-  r2: R2Store | undefined,
+  r2: ObjectStore | undefined,
 ): Promise<MaterializedWorkspace> {
   const directory = await mkdtemp(join(tmpdir(), "slopcamera-api-"))
   const inputNames = new Set<string>()

@@ -5,6 +5,7 @@
 - `apps/desktop/` – the canonical `slopcamera` CLI, complete local media host, durable scheduler, HTML and Three.js overlays, and the local Vision analysis helper.
 - `apps/web/` – the static `slopcamera.com` site, with a local browser bundle and a production-only anonymous pageview boundary but no API, account, or credential surface.
 - `apps/api/` – the hosted tool adapter for agent platforms: bounded REST and MCP endpoints over the canonical `src/mcp` runtime, per-request ephemeral workspaces, R2 artifact tickets, and Credits-billed image generation.
+- `apps/objects/` – the `slopcamera-objects` Cloudflare Worker: an HMAC-signed request proxy over the private `slopcamera-api-artifacts` R2 bucket, deployed with `wrangler deploy`.
 - `packages/scene/` – the shared local scene-analysis contract.
 - `src/code/` – portable declarative graph authoring, the closed public capability projection, compilation, planning, and execution contracts.
 - `src/spatial-scene/` – portable editable scene contracts, stable identity, semantic patches, calibrated evaluation, and bounded GLB parsing.

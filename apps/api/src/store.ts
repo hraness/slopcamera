@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { ApiError, isRecord } from "./errors.ts"
-import type { R2Store } from "./r2.ts"
+import type { ObjectStore } from "./r2.ts"
 
 /**
  * Artifact tickets. Bytes live at `a/<id>/<safe-name>`; a small JSON record
@@ -31,7 +31,7 @@ export function safeArtifactName(name: string): string {
 
 export class ArtifactStore {
   constructor(
-    private readonly r2: R2Store,
+    private readonly r2: ObjectStore,
     private readonly ttlDays: number,
   ) {}
 

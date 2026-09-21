@@ -11,6 +11,7 @@ const DIAGRAM = await readFile(
 
 const config: ApiConfig = {
   publicBaseUrl: "http://localhost:8787",
+  r2Proxy: undefined,
   r2: undefined,
   credits: undefined,
   modelCostsMicroUsd: {},

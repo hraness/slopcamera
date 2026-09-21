@@ -117,25 +117,26 @@ function paidArguments(
 }
 
 /**
- * The model id a paid call requests, used for admission and ceiling pricing
- * before any provider work begins. Throws unless the model is allowlisted.
+ * The model id a paid call requests and its contractual provider cost in
+ * micro-USD, used for admission and ceiling pricing before any provider work
+ * begins. Throws unless the model is allowlisted.
  */
 export function paidOperationModel(
   args: unknown,
   modelCostsMicroUsd: Readonly<Record<string, number>>,
-): { model: string; ceilingMicroUsd: number } {
+): { model: string; providerCostMicroUsd: number } {
   const { input } = paidArguments(args)
   const model = input.model
   if (typeof model !== "string") {
     throw invalidRequest("input.model must be a provider/model id string.")
   }
-  const ceiling = modelCostsMicroUsd[model]
-  if (ceiling === undefined) {
+  const providerCost = modelCostsMicroUsd[model]
+  if (providerCost === undefined) {
     throw invalidRequest(
       `Model ${JSON.stringify(model)} is not admitted by this service.`,
     )
   }
-  return { model, ceilingMicroUsd: ceiling }
+  return { model, providerCostMicroUsd: providerCost }
 }
 
 /**

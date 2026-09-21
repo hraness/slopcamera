@@ -59,6 +59,16 @@
         "maxCallsPerRequest": 2
       },
       "note": "One hold plus exactly one settle or release per paid call; holds are idempotent on the caller idempotency key."
+    },
+    "worker:slopcamera-objects": {
+      "kind": "served",
+      "retention": "ephemeral",
+      "owner": "apps/objects/src/worker.ts",
+      "budget": {
+        "maxBytesPerRequest": 67108864,
+        "maxKeyLength": 512
+      },
+      "note": "Signed request proxy over the private slopcamera-api-artifacts bucket; stores nothing itself, verifies HMAC(method,key,exp,maxBytes) and enforces the declared cap. Signatures minted by apps/api/src/object-proxy.ts."
     }
   },
   "exempt": []

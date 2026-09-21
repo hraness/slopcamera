@@ -1,3 +1,4 @@
+import type { ObjectProxyConfig } from "./object-proxy.ts"
 import type { R2Config } from "./r2.ts"
 
 /**
@@ -8,6 +9,8 @@ import type { R2Config } from "./r2.ts"
 export interface ApiConfig {
   /** Public base URL used in ticket and documentation URLs. */
   readonly publicBaseUrl: string
+  /** Signed object-proxy worker credentials; preferred over direct S3. */
+  readonly r2Proxy: ObjectProxyConfig | undefined
   readonly r2: R2Config | undefined
   readonly credits:
     | { readonly baseUrl: string; readonly productKey: string }
@@ -69,6 +72,13 @@ function readModelCosts(raw: string | undefined): Record<string, number> {
 export function readApiConfig(
   env: Record<string, string | undefined>,
 ): ApiConfig {
+  const proxyUrl = env.R2_PROXY_URL
+  const proxySecret = env.R2_PROXY_SECRET
+  const r2Proxy =
+    proxyUrl !== undefined && proxySecret !== undefined
+      ? { url: proxyUrl, secret: proxySecret }
+      : undefined
+
   const accountId = env.R2_ACCOUNT_ID
   const accessKeyId = env.R2_ACCESS_KEY_ID
   const secretAccessKey = env.R2_SECRET_ACCESS_KEY
@@ -100,6 +110,7 @@ export function readApiConfig(
     publicBaseUrl:
       env.SLOPCAMERA_API_BASE_URL?.replace(/\/+$/, "") ??
       "http://localhost:8787",
+    r2Proxy,
     r2,
     credits,
     modelCostsMicroUsd: readModelCosts(env.SLOPCAMERA_API_MODEL_COSTS_JSON),

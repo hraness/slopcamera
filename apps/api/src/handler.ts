@@ -11,7 +11,8 @@ import {
 import { handleMcpRequest } from "./mcp.ts"
 import { openApiDocument } from "./openapi.ts"
 import { RateLimiter } from "./ratelimit.ts"
-import { R2Store } from "./r2.ts"
+import { ObjectProxyStore } from "./object-proxy.ts"
+import { R2Store, type ObjectStore } from "./r2.ts"
 import { ArtifactStore, artifactView } from "./store.ts"
 import {
   CREDITS_OPERATION,
@@ -130,7 +131,12 @@ export function paidToolUnauthorizedError(): ApiError {
 export function createApiHandler(environment: ApiEnvironment) {
   const { config } = environment
   const limiter = environment.limiter ?? new RateLimiter()
-  const r2 = config.r2 === undefined ? undefined : new R2Store(config.r2)
+  const r2: ObjectStore | undefined =
+    config.r2Proxy !== undefined
+      ? new ObjectProxyStore(config.r2Proxy)
+      : config.r2 === undefined
+        ? undefined
+        : new R2Store(config.r2)
   const artifacts =
     r2 === undefined
       ? undefined
@@ -170,12 +176,17 @@ export function createApiHandler(environment: ApiEnvironment) {
       if (credits === undefined) {
         throw new ApiError(503, "billing_unavailable", "Billing is not configured.")
       }
-      const { model, ceilingMicroUsd } = paidOperationModel(
+      const { model, providerCostMicroUsd } = paidOperationModel(
         args,
         config.modelCostsMicroUsd,
       )
       paidModel = model
-      settleCostMicroUsd = ceilingMicroUsd
+      settleCostMicroUsd = providerCostMicroUsd
+      // The hold ceiling must cover the priced amount (cost uplifted by the
+      // service's private terms, then rounded), not just the raw cost. A
+      // 2x-plus-$0.10 bound clears any take rate at or below 200% while the
+      // caller still sees a bounded worst case.
+      const ceilingMicroUsd = providerCostMicroUsd * 2 + 100_000
       const idempotencyKey = `slopcamera-api:${call.idempotencyKey ?? randomUUID()}`
       const hold = await credits.hold({
         subjectToken: token,

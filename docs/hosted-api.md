@@ -36,8 +36,9 @@ Outputs are harvested by diffing the workspace after the call. Each new file bec
 | Variable | Purpose |
 | --- | --- |
 | `SLOPCAMERA_API_BASE_URL` | Public base URL used in ticket and OpenAPI URLs. |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 S3 credentials. Without all three, upload and artifact routes answer `503`. |
-| `R2_BUCKET` | Bucket name; default `slopcamera-api-artifacts`. |
+| `R2_PROXY_URL`, `R2_PROXY_SECRET` | Signed object-proxy worker (`apps/objects/`) and its shared HMAC secret — the preferred storage path. Without a working storage group, upload and artifact routes answer `503`. |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Direct R2 S3 credentials, used only when no proxy pair is configured. |
+| `R2_BUCKET` | Bucket name for the S3 path; default `slopcamera-api-artifacts`. |
 | `R2_ENDPOINT` | Optional custom S3 endpoint for the bucket. |
 | `SLOPCAMERA_API_CREDITS_PRODUCT_KEY` | Credits product key (`cr_prod_…`). Without it, paid tools answer `503`. |
 | `CREDITS_BASE_URL` | Credits origin; default `https://credits.hraness.com`. |
@@ -59,7 +60,17 @@ Register the product once against the Credits admin CLI with a `cost-plus` opera
 
 ## R2 setup
 
-One bucket with two lifecycle rules: `a/` and `t/` expire after seven days, `u/` expires after one day. Credentials need object read/write/head on that bucket only. Presigned PUTs are capped by the declared byte count and expire in 15 minutes.
+One bucket with two lifecycle rules: `a/` and `t/` expire after seven days, `u/` expires after one day.
+
+The preferred storage path needs no Cloudflare-issued S3 credential: `apps/objects/` deploys as the `slopcamera-objects` worker with an R2 binding to the bucket. The API mints HMAC-signed bearer URLs (`{method, key, expiry, maxBytes}`); the worker verifies the signature, enforces the declared cap and the `a/`/`t/`/`u/` prefix allowlist, and performs the bucket op. Provision it with:
+
+```sh
+cd apps/objects
+bunx wrangler deploy
+bunx wrangler secret put OBJECT_PROXY_SECRET   # shared with the API
+```
+
+Set `R2_PROXY_URL` to the worker's `workers.dev` URL and `R2_PROXY_SECRET` to the same secret on the API project. As a fallback, direct S3 credentials (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) scoped to object read/write/head on that bucket also work. Presigned PUTs are capped by the declared byte count and expire in 15 minutes either way.
 
 ## Local development
 
