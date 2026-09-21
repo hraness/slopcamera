@@ -824,7 +824,22 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           }
         } else if (name === "player-manual-pause") {
           const manual = ids.find(id => id !== automatic); assert.ok(manual)
-          await assertNativeTarget(page, playerSelector(manual)); await page.keyboard.press("Space"); await waitPlaying(page, manual)
+          await assertNativeTarget(page, playerSelector(manual))
+          // The focus scroll can hand this preview automatic playback before
+          // Space arrives, turning the first press into a real user pause. The
+          // first keydown already claims manual ownership, so no later
+          // automatic start can intervene; bound the manual play to three
+          // presses and require real observed playback.
+          let playing = false
+          for (let press = 0; press < 3 && !playing; press++) {
+            await page.keyboard.press("Space")
+            playing = await page.waitForFunction(id => {
+              const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`)
+              return video !== null && !video.paused
+            }, manual, { timeout: 2_000 }).then(() => true, () => false)
+          }
+          assert.ok(playing, `Manual Space never started ${manual}`)
+          await waitPlaying(page, manual)
           await assertQuiet(page, previews.filter(id => id !== manual))
           await page.keyboard.press("Space"); await assertQuiet(page, ids)
           await page.locator(".topbar").scrollIntoViewIfNeeded(); await page.locator(playerSelector(manual)).scrollIntoViewIfNeeded()
