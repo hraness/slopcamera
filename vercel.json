@@ -3,7 +3,8 @@
   "buildCommand": "echo 'slopcamera-api: functions only'",
   "functions": {
     "api/[[...path]].ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs22.x"
     }
   },
   "rewrites": [
