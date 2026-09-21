@@ -543,6 +543,7 @@ async function settleExamples(page: Page, javascript = true): Promise<void> {
       document.fonts.load('500 16px "Nebula Sans"'),
     ])
     if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
+    await document.fonts.ready
   })
   await page.screenshot({ animations: "allow" })
 }

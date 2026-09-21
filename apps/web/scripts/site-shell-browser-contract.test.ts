@@ -12,7 +12,7 @@ function operationDeferred() {
 }
 
 function restorationFixture(recovery = false) {
-  let now = 0, id = 0, discovered = false, running = true, paint = "0px", frameTime = 0
+  let now = 0, id = 0, discovered = false, running = true, paint = "0px", frameTime = 0, fontReadyReads = 0
   const frames = new Map<number, (time: number) => void>(), timers = new Map<number, () => void>(), events = new Map<string, () => void>()
   const href = "http://127.0.0.1:1/assets/site.css", selected = new Map<string, object[]>()
   const view = { performance: { now: () => now }, scrollY: 0,
@@ -27,7 +27,7 @@ function restorationFixture(recovery = false) {
   const document = { defaultView: view, styleSheets: [] as object[],
     querySelectorAll: (selector: string) => selected.get(selector) ?? [],
     querySelector: (selector: string) => selected.get(selector)?.[0] ?? null,
-    fonts: { ready: Promise.resolve(), load: async () => [{ status: "loaded" }] },
+    fonts: { get ready() { fontReadyReads++; return Promise.resolve() }, load: async () => [{ status: "loaded" }] },
   }
   class Link { ownerDocument = document; isConnected = true; disabled = false; href = href; sheet?: object }
   const link = new Link()
@@ -59,6 +59,7 @@ function restorationFixture(recovery = false) {
     setClock: (value: number) => { now = value },
     setRunning: (value: boolean) => { running = value },
     cancel: () => { events.get("pagehide")?.() },
+    get fontReadyReads() { return fontReadyReads },
     get pending() { return [frames.size, timers.size, events.size] },
   }
 }
@@ -67,6 +68,7 @@ test("restoration sampling discovers the transition that generic two frames miss
   const generic = restorationFixture(), old = generic.generic()
   for (let index = 0; index < 8; index++) await Promise.resolve()
   generic.frame(); generic.frame(); await old
+  expect(generic.fontReadyReads).toBe(2)
   expect(generic.read()).toBe("0px")
   const actual = restorationFixture(), result = actual.start()
   actual.frame(); actual.frame("144px"); actual.frame(); await result
