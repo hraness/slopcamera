@@ -4,6 +4,7 @@
 - `src/` – portable declarative and imperative workflow SDKs, host-resource admission, diagrams, direct Vercel AI Gateway generation, local vectorization, semantic operations, MCP, and canvas integration.
 - `apps/desktop/` – the canonical `slopcamera` CLI, complete local media host, durable scheduler, HTML and Three.js overlays, and the local Vision analysis helper.
 - `apps/web/` – the static `slopcamera.com` site, with a local browser bundle and a production-only anonymous pageview boundary but no API, account, or credential surface.
+- `apps/api/` – the hosted tool adapter for agent platforms: bounded REST and MCP endpoints over the canonical `src/mcp` runtime, per-request ephemeral workspaces, R2 artifact tickets, and Credits-billed image generation.
 - `packages/scene/` – the shared local scene-analysis contract.
 - `src/code/` – portable declarative graph authoring, the closed public capability projection, compilation, planning, and execution contracts.
 - `src/spatial-scene/` – portable editable scene contracts, stable identity, semantic patches, calibrated evaluation, and bounded GLB parsing.
@@ -37,6 +38,7 @@
 - Keep `@hraness/slopcamera` at the repository root. The root package owns both the portable SDK and canonical `slopcamera` binary built from `apps/desktop/cli/main.ts`.
 - Keep canonical commands namespaced as `slopcamera diagram init|check|render`, `slopcamera image generate|vectorize|icon`, and the `code`, `mcp`, `canvas`, `skill`, and `doctor` surfaces.
 - Keep local vectorization authentication-free and network-silent. Gateway generation reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`, never persists credentials, pins the Gateway origin, bounds responses, and sets `maxRetries: 0`.
+- The hosted adapter in `apps/api/` serves only the checked tool registry over per-request ephemeral workspaces, never arbitrary operation or code execution. Billable operations hold and settle through Hraness Credits with caller idempotency; artifacts and uploads are TTL'd R2 objects. No accounts, OAuth, or credential persistence.
 - Keep `/artifacts/`, `.env`, and `.env.*` ignored. Recordings, imported media, private project metadata, Gateway tokens, and provider options must never enter Git or a package artifact.
 - Treat `vercel env run -- <command>` as the ergonomic local Vercel path. Never shell out to infer or scrape a token from the Vercel CLI.
 - Treat Production as Slopcamera's only durable Vercel environment. Do not create a custom environment, persistent Preview domain, or provider-authoritative Preview branch. Pull requests may use Vercel's built-in disposable Preview target, without production-only variables or another durable backend. Follow [the Vercel runbook](docs/vercel.md) and audit provider identity before changing this seam.

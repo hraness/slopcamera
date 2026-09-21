@@ -20,6 +20,45 @@
       "owner": "apps/web/src/analytics.ts",
       "maxBytesPerEvent": 512,
       "note": "cookieless canonical-production-only"
+    },
+    "r2:slopcamera-api-artifacts": {
+      "kind": "served",
+      "retention": "ttl:P7D",
+      "owner": "apps/api/src/store.ts",
+      "budget": {
+        "maxBytesPerArtifact": 134217728,
+        "maxArtifactsPerCall": 24,
+        "maxBytesPerCall": 100663296
+      },
+      "note": "Generated artifact bytes at a/<id>/<name> plus t/<id>.json ticket records; expiry is the bucket lifecycle rule, nothing deletes eagerly."
+    },
+    "r2:slopcamera-api-uploads": {
+      "kind": "served",
+      "retention": "ttl:P1D",
+      "owner": "apps/api/src/workspace.ts",
+      "budget": {
+        "maxBytesPerUpload": 33554432,
+        "maxUploadsPerCall": 24
+      },
+      "note": "Caller-owned inbound objects at u/<uuid> written through 15-minute presigned PUTs; consumed once into an ephemeral workspace."
+    },
+    "provider:vercel-ai-gateway:image-generate": {
+      "kind": "served",
+      "retention": "ephemeral",
+      "owner": "apps/api/src/tools.ts",
+      "budget": {
+        "maxCallsPerRequest": 1
+      },
+      "note": "Paid slopcamera.image.generate calls; per-model ceiling in SLOPCAMERA_API_MODEL_COSTS_JSON bounds spend before the provider call. src/generate.ts owns the provider contract."
+    },
+    "provider:credits:hold-settle": {
+      "kind": "served",
+      "retention": "ephemeral",
+      "owner": "apps/api/src/credits.ts",
+      "budget": {
+        "maxCallsPerRequest": 2
+      },
+      "note": "One hold plus exactly one settle or release per paid call; holds are idempotent on the caller idempotency key."
     }
   },
   "exempt": []
