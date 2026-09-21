@@ -242,7 +242,7 @@
     "prepack": "bun run check",
     "check:effect": "bun run ./scripts/check-effect-policy.ts && bun test ./scripts/check-effect-architecture.test.ts",
     "typecheck:api": "tsc --noEmit -p apps/api/tsconfig.json",
-    "lint:api": "eslint apps/api/src",
+    "lint:api": "eslint apps/api/src api",
     "test:api": "bun test ./apps/api/src",
     "check:api": "bun run typecheck:api && bun run lint:api && bun run test:api"
   },
