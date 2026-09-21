@@ -424,7 +424,7 @@ describe("workflow-examples-v1 independent native contract", () => {
   expect(()=>assertExamplesBaselineManifest(manifest,snapshot)).not.toThrow()
   // The prior release's independently retained evidence cannot be relabeled
   // as this baseline, even when a synthetic fixture shares artifact bytes.
-  const priorManifest={...manifest,baselineProfile:'before-workflow-examples-437a530-v1',checkoutRevision:'437a530ee81bd0816c911f216f4331c88770bf31',sourceRevision:'437a530ee81bd0816c911f216f4331c88770bf31',sourceTree:'4a453ddc4aecd6c68a2135dcf447dc323efa6c6d'}
+  const priorManifest={...manifest,baselineProfile:'before-workflow-examples-4cdfb0b-v1',checkoutRevision:'4cdfb0b3cc9fc23707549b0ee7a0e8cb1179c45b',sourceRevision:'4cdfb0b3cc9fc23707549b0ee7a0e8cb1179c45b',sourceTree:'3148096494b4911f4660d55d5a7840c0e7e53fb5'}
   expect(()=>assertExamplesBaselineManifest(priorManifest,snapshot)).toThrow()
   for(const change of [(r:any)=>{r.sourceTree='a'.repeat(40)},(r:any)=>{r.checkoutRevision='b'.repeat(40)},(r:any)=>{r.artifacts[0].sha256='b'.repeat(64)},(r:any)=>{r.inputs.push({path:'hidden',bytes:1,sha256:hash})},(r:any)=>{r.schemaVersion=5}]) expect(()=>assertExamplesBaselineManifest(mutate(manifest,change),snapshot)).toThrow()
  })

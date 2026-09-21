@@ -1,8 +1,8 @@
 /** Independent current-design acceptance. Historical profiles are unchanged. */
 export const examplesScope = "workflow-examples-v1"
-export const examplesBaselineProfile = "before-workflow-examples-4cdfb0b-v1"
-export const examplesBaselineRevision = "4cdfb0b3cc9fc23707549b0ee7a0e8cb1179c45b"
-export const examplesBaselineTree = "3148096494b4911f4660d55d5a7840c0e7e53fb5"
+export const examplesBaselineProfile = "before-workflow-examples-d203c22-v1"
+export const examplesBaselineRevision = "d203c2263128dd5044217707406f28f257fe9d95"
+export const examplesBaselineTree = "ed5a0fdc0d72c77e2ddbf87282cd0b7a9d65880d"
 export const examplesDeadlineMs = 720_000
 /** Exact immutable textures admitted for paired test-server origin projection. */
 export const examplesHeroTextures = [
@@ -10,7 +10,7 @@ export const examplesHeroTextures = [
   { path: "graphs/site-foundation/assets/cells-B8vUTEH9.svg", bytes: 17102, sha256: "be9b12eefeae91772f024ed24ccda5be6173fb626921374b7e5270c298611b01" },
 ] as const
 export interface ExamplesIsland { readonly selector: string; readonly baseline: string; readonly current: string }
-/** Eight authored body islands independently reviewed against the clean 4cdfb0b baseline.
+/** Eight authored body islands independently reviewed against the clean d203c22 baseline.
  * All body content outside these exact literals remains paired by the native verifier. */
 export const examplesIslands: readonly ExamplesIsland[] = [
   {
