@@ -1,8 +1,8 @@
 /** Independent current-design acceptance. Historical profiles are unchanged. */
 export const examplesScope = "workflow-examples-v1"
-export const examplesBaselineProfile = "before-workflow-examples-d203c22-v1"
-export const examplesBaselineRevision = "d203c2263128dd5044217707406f28f257fe9d95"
-export const examplesBaselineTree = "ed5a0fdc0d72c77e2ddbf87282cd0b7a9d65880d"
+export const examplesBaselineProfile = "before-workflow-examples-0e3f8df-v1"
+export const examplesBaselineRevision = "0e3f8df4a1da9c5656a8278bd59afb1fd4d28b32"
+export const examplesBaselineTree = "20fd89fe12b4dbb0276e29455397ca948bef8684"
 export const examplesDeadlineMs = 720_000
 /** Exact immutable textures admitted for paired test-server origin projection. */
 export const examplesHeroTextures = [
