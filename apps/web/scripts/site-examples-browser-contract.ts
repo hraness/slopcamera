@@ -6,6 +6,7 @@ import { bounded } from "./preview-browser-contract"
 import { assertShellNode, compareShellElements, compareShellEvidence, measure, settle, chooseAppearance,
   shellRecord, shellResource, shellContentType, siteShellCases, siteShellHeaders, shellContextLifecycle,
   shellOperationTracker, denyShellWebSocket, withShellCaseCleanup, workflowExamplesHomeSelectors,
+  settleShellRestoredStyles, shellPaintProperties,
   type ShellPayload, type ShellCase, type ShellElement, type ShellEvidence, type ShellCurrentDesignPosition, type ShellCurrentDesignPositions } from "./site-shell-browser-contract"
 import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
@@ -378,6 +379,11 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
           sheet.disabled = false
         }, href)
         await settle(page, scenario.direction)
+        // A re-enabled link sheet can repaint before its media-conditional
+        // custom properties finish re-evaluating; observe stable restored paint
+        // before the strict comparison, matching the shell lane's restoration.
+        await sheet.evaluate(settleShellRestoredStyles,
+          { href, recovery: false, properties: shellPaintProperties })
       } finally { await sheet.dispose() }
     }
     compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")
@@ -557,6 +563,19 @@ async function assertNativeTarget(page: Page, selector: string, javascript = tru
     if (await target.evaluate(node => document.activeElement === node)) { reached = true; break }
   }
   assert.equal(reached, true, `Native Tab never reached ${selector}`)
+  // Focusing an offscreen target starts the document's smooth scroll. Wait for
+  // the real animation to settle before the strict paint assertions. Consecutive
+  // stable reads span the delayed first scroll frame.
+  const scrollDeadline = performance.now() + 2_000
+  let previousTop = Number.NaN, stableReads = 0
+  while (true) {
+    const top = await target.evaluate(node => node.getBoundingClientRect().top)
+    stableReads = Number.isFinite(top) && Number.isFinite(previousTop) && Math.abs(top - previousTop) <= .5 ? stableReads + 1 : 0
+    if (stableReads >= 3) break
+    assert.ok(performance.now() < scrollDeadline, `Focus scroll never settled for ${selector}`)
+    previousTop = top
+    await new Promise<void>(resolve => setTimeout(resolve, 40))
+  }
   await settleExamples(page, javascript)
   const evidence = await target.evaluate(node => {
     const rect = node.getBoundingClientRect(), style = getComputedStyle(node)
