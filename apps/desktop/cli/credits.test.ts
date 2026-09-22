@@ -324,10 +324,12 @@ describe("credits commands", () => {
             expiresAt: "2027-01-01T00:00:00.000Z",
           });
         }
+        // The service reports "consumed" (not "paid") on the poll that issues
+        // the one-time token; the token must still be persisted.
         return jsonResponse({
           schemaVersion: "hraness-credits-claim-status-v1",
           claimId: CLAIM_ID,
-          state: "paid",
+          state: "consumed",
           expiresAt: "2027-01-01T00:00:00.000Z",
           token: DEVICE_TOKEN,
         });
