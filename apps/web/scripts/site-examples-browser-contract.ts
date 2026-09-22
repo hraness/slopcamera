@@ -863,7 +863,11 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           })
           await assertQuiet(page, ids)
         } else {
-          await page.locator("#closing").scrollIntoViewIfNeeded(); await assertQuiet(page, [automatic])
+          await page.locator("#closing").scrollIntoViewIfNeeded()
+          // The scroll out of view triggers an asynchronous policy pause; wait
+          // for the transition before sampling the quiet settlement window.
+          await page.waitForFunction(id => { const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`); return video !== null && video.paused }, automatic)
+          await assertQuiet(page, [automatic])
           await page.locator(playerSelector(automatic)).scrollIntoViewIfNeeded(); await waitPlaying(page, automatic)
           await throughRealHiddenState(page, async () => {
             assert.equal((await videoState(page, automatic)).paused, true)
