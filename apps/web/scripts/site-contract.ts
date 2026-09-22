@@ -15,9 +15,9 @@ export const siteSha256 = (value: string | Uint8Array): string => createHash("sh
 const foundationRoot = "graphs/site-foundation/"
 const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
-  { name: "@hraness/design-kit", version: "0.9.0" },
-  { name: "@hraness/site-footer", version: "0.14.0" },
-  { name: "@hraness/ui", version: "0.5.12" },
+  { name: "@hraness/design-kit", version: "0.13.0" },
+  { name: "@hraness/site-footer", version: "0.17.0" },
+  { name: "@hraness/ui", version: "0.5.16" },
 ] as const
 
 function record(value: unknown): Record<string, unknown> {
@@ -70,17 +70,18 @@ function packages(value: unknown, order: "identity" | "name"): SitePackage[] {
 function capturedFoundation(value: SiteFoundation): SiteArtifact[] {
   const input = record(value)
   assert.deepEqual(Object.keys(input).sort(), ["artifacts", "cssPath", "privateScriptPath"])
-  assert.ok(Array.isArray(input.artifacts) && input.artifacts.length === 18)
+  assert.ok(Array.isArray(input.artifacts))
   const artifacts = sorted(input.artifacts.map(artifact))
   assert.equal(new Set(artifacts.map(item => item.path)).size, artifacts.length, "Duplicate captured site foundation output")
   const scripts = artifacts.filter(item => /^assets\/site-foundation-[A-Za-z0-9_-]+\.js$/u.test(item.path))
   const css = artifacts.filter(item => /^assets\/[A-Za-z0-9_.-]+\.css$/u.test(item.path))
   const fonts = artifacts.filter(item => /^assets\/[A-Za-z0-9_.-]+\.woff2$/u.test(item.path))
+  const images = artifacts.filter(item => /^assets\/[A-Za-z0-9_.-]+\.svg$/u.test(item.path))
   assert.equal(scripts.length, 1, "Site foundation requires one captured private entry")
   assert.equal(css.length, 1, "Site foundation requires one captured stylesheet")
   assert.equal(fonts.length, 14, "Site foundation requires fourteen captured fonts")
-  const images = artifacts.filter(item => /^assets\/[A-Za-z0-9_.-]+\.svg$/u.test(item.path))
-  assert.equal(images.length, 2, "Site foundation requires two captured textures")
+  assert.ok(images.length >= 2, "Site foundation requires two captured textures plus one mask per foil mark")
+  assert.equal(input.artifacts.length, 16 + images.length, "Site foundation artifact inventory must account for every foil mask")
   assert.equal(input.privateScriptPath, `${foundationRoot}${scripts[0]!.path}`)
   assert.equal(input.cssPath, `${foundationRoot}${css[0]!.path}`)
   return artifacts.map(item => ({ ...item, path: `${foundationRoot}${item.path}` }))
@@ -88,17 +89,23 @@ function capturedFoundation(value: SiteFoundation): SiteArtifact[] {
 
 /** Bind the actual Vite output before finalization, including local font bytes. */
 export function snapshotSiteFoundation(value: unknown, fontHashes: readonly string[], entrypoint: string,
-  inspectCss: (source: string, filename: string) => readonly string[], imageHashes: readonly string[]): SiteFoundation {
+  inspectCss: (source: string, filename: string) => readonly string[], imageHashes: readonly string[],
+  maskHashes: readonly string[] = []): SiteFoundation {
   assert.equal(fontHashes.length, 14)
   fontHashes.forEach(digest)
   assert.equal(new Set(fontHashes).size, 14, "Site foundation font inputs must be distinct")
   assert.equal(imageHashes.length, 2)
   imageHashes.forEach(digest)
   assert.equal(new Set(imageHashes).size, 2, "Site foundation texture inputs must be distinct")
+  maskHashes.forEach(digest)
+  assert.equal(new Set(maskHashes).size, maskHashes.length, "Site foundation mask inputs must be distinct")
+  for (const maskHash of maskHashes) {
+    assert.ok(!imageHashes.includes(maskHash) && !fontHashes.includes(maskHash), "Site foundation mask must be a distinct asset")
+  }
   const results = Array.isArray(value) ? value : [value]
   assert.equal(results.length, 1, "Site foundation requires one Vite output")
   const output = record(results[0]).output
-  assert.ok(Array.isArray(output) && output.length === 18, "Site foundation must emit one private entry, one CSS asset, fourteen WOFF2 assets and two SVG textures")
+  assert.ok(Array.isArray(output) && output.length === 18 + maskHashes.length, "Site foundation must emit one private entry, one CSS asset, fourteen WOFF2 assets and two SVG textures plus one mask per foil mark")
   const chunks = output.map(record).filter(item => item.type === "chunk")
   assert.equal(chunks.length, 1, "Site foundation requires exactly one captured private entry")
   const chunk = chunks[0]!
@@ -129,16 +136,21 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   const fonts = artifacts.filter(item => item.path.endsWith(".woff2"))
   assert.deepEqual(fonts.map(item => item.sha256).sort(), [...fontHashes].sort(), "Emitted site fonts differ from installed approved font inputs")
   const images = artifacts.filter(item => item.path.endsWith(".svg"))
-  assert.deepEqual(images.map(item => item.sha256).sort(), [...imageHashes].sort(), "Emitted site textures differ from approved snapshot inputs")
+  assert.deepEqual(images.map(item => item.sha256).sort(), [...imageHashes, ...maskHashes].sort(),
+    "Emitted site textures differ from approved snapshot inputs")
+  const textures = images.filter(item => imageHashes.includes(item.sha256))
+  const masks = images.filter(item => maskHashes.includes(item.sha256))
   const cssOutput = output.map(record).find(item => item.fileName === css[0]!.path)!
   const cssSource = typeof cssOutput.source === "string" ? cssOutput.source : new TextDecoder("utf-8", { fatal: true }).decode(cssOutput.source as Uint8Array)
   const urls = inspectCss(cssSource, css[0]!.path)
   // The canonical 0.8 preset names each texture in both the editorial field
-  // and material wall. Physical artifacts remain one per admitted byte hash.
+  // and material wall, while a foil-mark mask is named once. Physical
+  // artifacts remain one per admitted byte hash.
   assert.deepEqual(urls.map(url => {
     assert.match(url, /^(?:\.\/)?[A-Za-z0-9_-]+\.(?:woff2|svg)$/u, "Site foundation must use canonical local emitted font and texture URLs")
     return `assets/${url.replace(/^\.\//u, "")}`
-  }).sort(), [...fonts, ...images, ...images].map(item => item.path).sort(), "Site stylesheet must link every captured font and texture with exact canonical multiplicity")
+  }).sort(), [...fonts, ...textures, ...textures, ...masks].map(item => item.path).sort(),
+    "Site stylesheet must link every captured font, texture and mask with exact canonical multiplicity")
   const foundation = { artifacts, cssPath: `${foundationRoot}${css[0]!.path}`, privateScriptPath: `${foundationRoot}${chunk.fileName}` }
   capturedFoundation(foundation)
   return foundation
@@ -205,7 +217,8 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
     return false
   })
   assert.equal(rendererEntries, 1, "Site generation requires one captured renderer entry")
-  assert.equal(publicArtifacts.length, 18 + expected.documents.length)
+  const maskCount = captured.filter(item => item.path.endsWith(".svg")).length - 2
+  assert.equal(publicArtifacts.length, 18 + maskCount + expected.documents.length)
   for (const path of allowed) assert.ok(publicArtifacts.some(item => item.path === path), `Missing public site artifact: ${path}`)
   return sorted(publicArtifacts)
 }

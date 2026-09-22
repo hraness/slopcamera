@@ -37,9 +37,9 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.9.0" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.14.0" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.12" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.13.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.17.0" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),
@@ -185,6 +185,21 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => [], [imageHashes[0]!, imageHashes[0]!])).toThrow("distinct")
   })
 
+  test("admits one declared foil mask referenced exactly once", () => {
+    const maskSource = "<svg>foil mark fixture</svg>"
+    const maskHash = siteSha256(maskSource)
+    const masked = foundationOutput()
+    masked.output.push({ type: "asset", fileName: "assets/mark-fixture.svg", source: maskSource })
+    masked.output[1]!.source = `${String(masked.output[1]!.source)}.mask{--m:url(./mark-fixture.svg)}`
+    const inspect = (source: string) => [...source.matchAll(/url\(([^)]+)\)/gu)].map(match => match[1]!)
+    expect(snapshotWithInspection(masked, fontHashes, entrypoint, inspect, imageHashes, [maskHash]).artifacts).toHaveLength(19)
+    expect(() => snapshotWithInspection(masked, fontHashes, entrypoint, inspect, imageHashes)).toThrow()
+    expect(() => snapshotWithInspection(masked, fontHashes, entrypoint, inspect, imageHashes, [imageHashes[0]!])).toThrow("distinct")
+    const unlinked = foundationOutput()
+    unlinked.output.push({ type: "asset", fileName: "assets/mark-fixture.svg", source: maskSource })
+    expect(() => snapshotWithInspection(unlinked, fontHashes, entrypoint, inspect, imageHashes, [maskHash])).toThrow("multiplicity")
+  })
+
   test.each(["../font-0.woff2", "/font-0.woff2", "%66ont-0.woff2", "font[0].woff2", "font-0.woff2?x", "font-0.woff2#x",
     "data:font/woff2;base64,AA", "https://example.test/font.woff2", "//example.test/font.woff2", "font-0.woff2 "])("rejects an unsafe font URL: %s", url => {
     const output = foundationOutput()
@@ -195,9 +210,9 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
   test("binds each font once and each shared texture twice and propagates parser errors", () => {
     const output = foundationOutput()
     output.output[1]!.source = String(output.output[1]!.source).replace("./font-0.woff2", "./font-1.woff2")
-    expect(() => snapshotSiteFoundation(output)).toThrow("link every captured font and texture")
+    expect(() => snapshotSiteFoundation(output)).toThrow("link every captured font")
     expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => [], imageHashes))
-      .toThrow("link every captured font and texture")
+      .toThrow("link every captured font")
     expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint,
       () => [...fontSources.map((_, index) => `./font-${index}.woff2`), "https://example.test/image-set.png"], imageHashes))
       .toThrow("canonical local emitted font and texture")
@@ -223,12 +238,12 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
       const capture = (values: readonly string[]) => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => values, imageHashes)
       expect(capture(urls).artifacts).toHaveLength(18)
       const index = sample % urls.length
-      expect(() => capture(urls.filter((_, at) => at !== index))).toThrow("link every captured font and texture")
-      expect(() => capture([...urls, urls[index]!])).toThrow("link every captured font and texture")
+      expect(() => capture(urls.filter((_, at) => at !== index))).toThrow("link every captured font")
+      expect(() => capture([...urls, urls[index]!])).toThrow("link every captured font")
     }
     const unbalanced = admitted.map((url, index) => index === admitted.length - 1 ? "./texture-0.svg" : url)
     expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, () => unbalanced, imageHashes))
-      .toThrow("link every captured font and texture")
+      .toThrow("link every captured font")
   })
 
   test.each(["../outside.css", "/outside.css", "graphs//x.css", "graphs/%2e%2e/x.css", "graphs\\other.js", "graphs/./x.js", "graphs/../x.js",
