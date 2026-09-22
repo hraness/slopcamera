@@ -125,6 +125,38 @@ and a `slopcamera-api-vercel` product key stored in Convex, Vercel, and
 Keychain. The paid path settles under the decoupled ceiling model; the
 allowlist carries seven models.
 
+### 2026-09-22 follow-on: paid CLI flow shipped in v3.3.5
+
+The user-facing paid path landed after this plan closed:
+
+- PR #197 (`596d34b`): `slopcamera credits status|topup|wait|forget` over the
+  live Credits claims API, owner-only `0700`/`0600` state under the CLI state
+  root, `ai image --hosted` paid calls against `api.slopcamera.com` with
+  automatic routing when no Gateway credential exists, bounded
+  digest-verified artifact download, and `GET /v1/models` (IDs only, no
+  costs). 22 focused CLI tests + API coverage; `check:desktop` 1933 tests,
+  `check:api`, package smoke (bounds raised to 520 files / 15 MiB tar).
+- PR #199 (`0427a3a`): added the missing `api/v1/models.ts` Vercel entry —
+  the project rewrite requires a pinned `api/**` function file per route, so
+  the merged handler returned `NOT_FOUND` until the entry file shipped.
+- PR #200 (`4aa1b48`): release candidate 3.3.5 (rebuilt `dist/` + CLI bundle
+  + regenerated legacy identity inventory after a same-file collision with
+  #198).
+- `v3.3.5` tagged at `4aa1b48` (CI run 35757616300 Required green); release
+  run 35758508544 published the immutable GitHub Release with five assets
+  and the npm mirror `sha512-ejnmLSaJ…`; the admit job needed one rerun for
+  registry propagation, same as v3.3.4. `gh release verify`, asset download,
+  attestation verify, SHA256SUMS and `package-smoke` all pass on the exact
+  archive (515 files); the installed CLI exposes `credits`.
+- PR #201 (`1af270b`): published-release datum and install surfaces now
+  advertise v3.3.5; verified live on `slopcamera.com` and
+  `api.slopcamera.com/v1/models` (all seven admitted models, 200).
+
+Still open: the funded-token settled paid call — a real claim was created
+(`credits topup`, pending under the local state root) but checkout requires
+the user's payment; `credits wait` then a live `ai image --hosted` run
+completes the evidence pack.
+
 ## Durable memory
 
 - The reusable onboarding model lives in
@@ -139,7 +171,10 @@ allowlist carries seven models.
   numbers.
 - Serverless hosts break machine-global host-resource admission and
   catch-all function routing; process-local admission plus per-endpoint
-  function files are the pattern that survived contact with Vercel.
+  function files are the pattern that survived contact with Vercel. Proven
+  again in #199: a new handler route is not live until its pinned
+  `api/**` entry file ships — the deployed OpenAPI listing the route was not
+  evidence of reachability, only of handler content.
 
 Remaining work, deliberately deferred: `image.gallery` and inbound-media
 tools once holds cover multi-unit work, a funded-token settled paid call for
