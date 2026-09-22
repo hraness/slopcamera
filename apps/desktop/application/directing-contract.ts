@@ -20,6 +20,10 @@ const MoneySchema = z.number().int().safe().positive();
 const TextSchema = z.string().min(1).max(100_000).refine(value => value.trim().length > 0 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value), "Text must be nonempty and contain no disallowed control characters.");
 const ImageSchema = GatewayMediaSourceReferenceSchema.refine(source => source.mediaType.startsWith("image/") && source.bytes <= 50 * 1024 * 1024, "A directing frame must be an image of at most 50 MiB.");
 const VideoSourceSchema = GatewayMediaSourceReferenceSchema.refine(source => source.mediaType.startsWith("video/") && source.facts?.durationSeconds !== undefined, "Endpoint video sources require a measured duration.");
+const ReferenceSchema = GatewayMediaSourceReferenceSchema.refine(source =>
+  (source.mediaType.startsWith("image/") && source.bytes <= 50 * 1024 * 1024)
+  || (source.mediaType.startsWith("video/") && source.bytes <= 256 * 1024 * 1024), "A directing reference must be an image of at most 50 MiB or a video of at most 256 MiB.");
+const DIRECTING_REFERENCE_LIMITS = Object.freeze({ count: 8, totalBytes: 512 * 1024 * 1024 });
 
 function capture(input: unknown, name: string, maximumBytes: number): unknown {
   return createBoundedJsonValueSnapshot(input, maximumBytes, name, { maximumDepth: 32, maximumValues: 1_000_000 }).value;
@@ -39,8 +43,13 @@ export const DirectingShotSchema = z.strictObject({
     z.strictObject({ kind: z.literal("shot-end"), shotId: SlugSchema }),
   ]).optional(),
   lastFrame: ImageSchema.optional(),
+  references: z.array(ReferenceSchema).min(1).max(DIRECTING_REFERENCE_LIMITS.count).optional(),
 }).superRefine((shot, context) => {
   if (shot.lastFrame !== undefined && shot.firstFrame === undefined) context.addIssue({ code: "custom", message: "A last frame requires an authored first-frame reference." });
+  const references = shot.references ?? [];
+  if (references.length > 0 && (shot.firstFrame !== undefined || shot.lastFrame !== undefined)) context.addIssue({ code: "custom", message: "Directing references are mutually exclusive with frame conditioning." });
+  if (references.reduce((total, reference) => total + reference.bytes, 0) > DIRECTING_REFERENCE_LIMITS.totalBytes) context.addIssue({ code: "custom", message: "Directing references exceed the 512 MiB aggregate bound." });
+  if (new Set(references.map(reference => `${reference.path}${reference.sha256}`)).size !== references.length) context.addIssue({ code: "custom", message: "Directing references must be distinct retained media." });
 });
 
 export const DirectingRecipeSchema = z.preprocess(input => capture(input, "directing recipe", 8 * 1024 * 1024), z.strictObject({
@@ -101,7 +110,7 @@ const ReviewSchema = z.strictObject({ decision: z.enum(["accepted", "rejected"])
 const FailureSchema = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/u);
 const VideoRequestSchema = z.strictObject({ operation: z.literal("video"), request: GatewayVideoOperationInputSchema }).superRefine((input, context) => {
   const request = input.request;
-  if (request.providerOptions !== undefined || request.references !== undefined || request.generateAudio !== undefined || (request.n ?? 1) !== 1 || (request.maxVideosPerCall ?? 1) !== 1) context.addIssue({ code: "custom", message: "Directing uses exactly one video with authored frame conditioning and no provider options." });
+  if (request.providerOptions !== undefined || request.generateAudio !== undefined || (request.n ?? 1) !== 1 || (request.maxVideosPerCall ?? 1) !== 1) context.addIssue({ code: "custom", message: "Directing uses exactly one video with authored conditioning and no provider options." });
 });
 const AttemptBase = {
   id: AttemptIdSchema,
@@ -149,7 +158,7 @@ export function directingRequestId(input: {
   return `gateway_${canonicalJsonSha256({ domain: "slopcamera.directing-request/v1", id, attemptId, recipeSha256, shotSha256, request })}`;
 }
 
-/** Verify the submitted request against the authored recipe and retained frames. */
+/** Verify the submitted request against the authored recipe and retained conditioning. */
 export function directingRequestMatchesShot(attempt: DirectingAttempt, shot: DirectingShot, firstFrame: GatewayMediaSourceReference | undefined): boolean {
   const request = attempt.request.request;
   for (const key of ["prompt", "model", "durationSeconds", "resolution", "aspectRatio", "fps", "seed"] as const) if (request[key] !== shot[key]) return false;
@@ -157,7 +166,10 @@ export function directingRequestMatchesShot(attempt: DirectingAttempt, shot: Dir
   const actualFirst = request.promptImage ?? frames.find(frame => frame.frameType === "first_frame")?.source;
   const actualLast = frames.find(frame => frame.frameType === "last_frame")?.source;
   const equal = (left: GatewayMediaSourceReference | undefined, right: GatewayMediaSourceReference | undefined) => left === undefined || right === undefined ? left === right : sameDirectingSource(left, right);
-  return equal(firstFrame, actualFirst) && equal(shot.lastFrame, actualLast);
+  const actualReferences = request.references ?? [];
+  return equal(firstFrame, actualFirst) && equal(shot.lastFrame, actualLast)
+    && actualReferences.length === (shot.references ?? []).length
+    && (shot.references ?? []).every((reference, index) => sameDirectingSource(reference, actualReferences[index]!));
 }
 
 export const DirectingStateSchema = z.preprocess(input => capture(input, "directing state", DIRECTING_LIMITS.stateBytes), z.strictObject({

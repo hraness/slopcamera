@@ -3231,7 +3231,7 @@ function parseDirectingArgs(argv: readonly string[]): DirectingCommand {
   const required = (name: string): string => optionString(parsed, name) ?? fail(`direct ${action} requires ${name}.`);
   const common = { kind: "directing" as const, json: optionFlag(parsed, "--json") };
   if (action === "anchor") {
-    exactPositionals(parsed, 0, "slopcamera direct anchor --input <image>");
+    exactPositionals(parsed, 0, "slopcamera direct anchor --input <media>");
     return { ...common, action, input: required("--input") };
   }
   const [value] = exactPositionals(parsed, 1, `slopcamera direct ${action} <${["init", "plan", "start"].includes(action) ? "recipe.json" : "direct-id"}>`);

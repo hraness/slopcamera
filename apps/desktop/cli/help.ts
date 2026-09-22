@@ -91,7 +91,7 @@ For local SDK workflows, code run, workflows run and runs resume accept
 The fixed local operation is slopcamera.studio.run; its SDK surface is studio.run().`,
   direct: `Usage:
   slopcamera direct init <recipe.json> [--json]
-  slopcamera direct anchor --input <image> [--json]
+  slopcamera direct anchor --input <media> [--json]
   slopcamera direct plan <recipe.json> [--json]
   slopcamera direct start <recipe.json> --budget-usd <USD> [--json]
   slopcamera direct inspect <direct-id> [--json]
@@ -105,13 +105,13 @@ The fixed local operation is slopcamera.studio.run; its SDK surface is studio.ru
   slopcamera direct assemble <direct-id> [--json]
 
 Init writes a new recipe without overwriting. Edit its ID, shots, prompts and settings.
-Anchor imports one explicit local image and returns a hash-bound source reference.
+Anchor imports one explicit local image or video and returns a hash-bound source reference.
 Plan checks live Gateway video capabilities and duration pricing without a paid call.
 Start retains one budget for the direct ID; starting again cannot reset it.
-Generate dispatches at most one new take and requires a unique take_<id>. Local images,
+Generate dispatches at most one new take and requires a unique take_<id>. Local media,
 including a predecessor's endpoint, require --allow-cloud-upload on that invocation.
 URL-only models require --allow-reference-hosting and a private Vercel Blob store.
-Only exact reference images receive short-lived signed read URLs. Signed URLs and
+Only exact shot references receive short-lived signed read URLs. Signed URLs and
 credentials are not saved. Cleanup deletes those exact objects; inspect cleanup
 receipts and use direct cleanup after interruptions. Blob charges are separate
 from the model catalog estimate and require room in your overall spending limit.
