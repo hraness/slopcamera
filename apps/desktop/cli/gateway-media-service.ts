@@ -16,6 +16,7 @@ import {
 } from "./gateway-media-artifacts";
 import {
   GATEWAY_MEDIA_CATALOG_URL,
+  providerVideoResolution,
   type GatewayJsonValue,
   type GatewayMediaCatalogView,
   type GatewayMediaKind,
@@ -26,7 +27,6 @@ import {
   parseGatewayProviderOptions,
   type GatewayProviderOptions,
 } from "./gateway-provider-options";
-import { providerVideoResolution } from "./gateway-provider-resolution";
 import { gatewayMediaBytesMatchType } from "./gateway-media-signature";
 
 export const GATEWAY_MEDIA_API_BASE_URL = "https://ai-gateway.vercel.sh/v4/ai";

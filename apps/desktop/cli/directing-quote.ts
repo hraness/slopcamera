@@ -1,6 +1,5 @@
 import type { DirectingQuote, DirectingShot } from "../application/directing-contract";
-import type { GatewayMediaCatalogView, GatewayJsonValue } from "./gateway-media-catalog";
-import { providerVideoResolution } from "./gateway-provider-resolution";
+import { providerVideoResolution, type GatewayMediaCatalogView, type GatewayJsonValue } from "./gateway-media-catalog";
 import { CliError } from "./errors";
 
 /** Integer microdollars avoid floating point drift across small paid attempts. */
