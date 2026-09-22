@@ -1,0 +1,9 @@
+/* The wordmark carries the shared metallic mark: the paint layer masks to the
+ * Slopcamera logo, and the mark size tracks the SVG box. Site-only — the
+ * preview graph does not admit SVG assets. */
+.topbar .hraness-foil-mark {
+  --hraness-foil-size: 22px;
+}
+.topbar .hraness-foil-mark__paint {
+  --hraness-foil-mask: url("./marks/slopcamera.svg");
+}

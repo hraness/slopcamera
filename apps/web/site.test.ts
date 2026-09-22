@@ -166,7 +166,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required 0.8 foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 316_000) throw new Error(`Combined site CSS exceeds its 316,000-byte budget: ${bytes}`)
+  if (bytes >= 348_000) throw new Error(`Combined site CSS exceeds its 348,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -257,29 +257,29 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(148_799), "x".repeat(167_200))).toBe(315_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(148_800), "x".repeat(167_200)))
-    .toThrow("Combined site CSS exceeds its 316,000-byte budget: 316000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(148_799), `${"x".repeat(167_200)}é`))
-    .toThrow("Combined site CSS exceeds its 316,000-byte budget: 316001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(316_000), ""))
-    .toThrow("Combined site CSS exceeds its 316,000-byte budget: 316000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(316_000)))
-    .toThrow("Combined site CSS exceeds its 316,000-byte budget: 316000")
+  expect(assertCombinedSiteCssBudget("x".repeat(180_799), "x".repeat(167_200))).toBe(347_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(180_800), "x".repeat(167_200)))
+    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(180_799), `${"x".repeat(167_200)}é`))
+    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(348_000), ""))
+    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(348_000)))
+    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
 })
 
 function assertThemeBundleBudget(script: string): number {
   const bytes = Buffer.byteLength(script, "utf8")
-  if (bytes >= 27_500) throw new Error(`Theme bundle exceeds its 27,500-byte budget: ${bytes}`)
+  if (bytes >= 29_500) throw new Error(`Theme bundle exceeds its 29,500-byte budget: ${bytes}`)
   return bytes
 }
 
 test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceiling", () => {
-  expect(assertThemeBundleBudget("x".repeat(27_499))).toBe(27_499)
-  expect(() => assertThemeBundleBudget("x".repeat(27_500)))
-    .toThrow("Theme bundle exceeds its 27,500-byte budget: 27500")
-  expect(() => assertThemeBundleBudget(`${"x".repeat(27_499)}é`))
-    .toThrow("Theme bundle exceeds its 27,500-byte budget: 27501")
+  expect(assertThemeBundleBudget("x".repeat(29_499))).toBe(29_499)
+  expect(() => assertThemeBundleBudget("x".repeat(29_500)))
+    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29500")
+  expect(() => assertThemeBundleBudget(`${"x".repeat(29_499)}é`))
+    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29501")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
@@ -757,9 +757,9 @@ describe("static Slopcamera site", () => {
   test("publishes the sealed ordinary and documentation documents with one complete union and bound local fonts", async () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
-    expect(artifacts).toHaveLength(18 + 2 + docPages.length)
+    expect(artifacts).toHaveLength(19 + 2 + docPages.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(18 + 2 + docPages.length)
+    expect(new Set(paths).size).toBe(19 + 2 + docPages.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
       "404.html", ...docPages.map(docsDocumentForPage), "index.html",
     ].sort())
@@ -778,11 +778,18 @@ describe("static Slopcamera site", () => {
     const fonts = paths.filter(path => path.endsWith(".woff2"))
     expect(fonts).toHaveLength(14)
     const images = paths.filter(path => path.endsWith(".svg"))
-    expect(images).toHaveLength(2)
+    expect(images).toHaveLength(3)
     for (const name of ["grain.svg", "cells.svg"]) {
       const expected = await readFile(join(appDirectory, "vendor/marketing-preset/marketing-assets", name))
       expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(true)
     }
+    // The third SVG is the foil wordmark mask: the canonical product mark bytes.
+    const markBytes = await readFile(join(appDirectory, "src/marks/slopcamera.svg"))
+    const markSha256 = new Bun.CryptoHasher("sha256").update(markBytes).digest("hex")
+    const masks = images.filter(path => artifacts.find(item => item.path === path)!.sha256 === markSha256)
+    const textures = images.filter(path => !masks.includes(path))
+    expect(masks).toHaveLength(1)
+    expect(textures).toHaveLength(2)
     const foundation = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     const union = await readBuilt(builtAssets.stylesPath.slice(1))
     expect(foundation.match(/@font-face\b/gu)).toHaveLength(14)
@@ -790,7 +797,7 @@ describe("static Slopcamera site", () => {
       const url = new URL(match[1]!, "https://slopcamera.com" + builtAssets.siteFoundationPath)
       expect(url.origin).toBe("https://slopcamera.com")
       return url.pathname.slice(1)
-    }).sort()).toEqual([...fonts, ...images, ...images].sort())
+    }).sort()).toEqual([...fonts, ...textures, ...textures, ...masks].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
     expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
     expect(foundation).toContain("components.slopcamera-legacy")
@@ -813,6 +820,10 @@ describe("static Slopcamera site", () => {
         for (const name of classes!) {
           if (marker === "topbar" && path === "index.html" && name === "hraness-material-chrome") {
             expect(foundation).toContain(".hraness-material-chrome")
+            continue
+          }
+          if (marker === "wordmark" && name === "hraness-foil-text") {
+            expect(foundation).toContain(".hraness-foil-text")
             continue
           }
           expect(name).toMatch(/^x[A-Za-z0-9_-]+$/u)
@@ -1320,9 +1331,9 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.9.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.14.0",
-      "@hraness/ui": "github:hraness/ui#v0.5.12",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
+      "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1346,11 +1357,11 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.9.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.13.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.14.0"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
     )
-    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.12"')
+    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
@@ -1617,16 +1628,28 @@ describe("static Slopcamera site", () => {
     expect(stylesAsset).toContain("--hraness-site-footer-social-target")
     expect(stylesAsset).not.toContain("@import \"./dist/stylex.css\"")
     expect(stylesAsset).toMatch(/@media\s*\(pointer:\s*coarse\)/u)
+    // The shared foil contract ships the metallic wordmark, its product-mark
+    // mask, and the pointer-tracking controller.
+    expect(foundationAsset).toContain(".hraness-foil-text")
+    expect(foundationAsset).toContain(".hraness-foil-mark__paint")
+    for (const document of [html, notFound]) {
+      expect(document).toContain('class="wordmark x')
+      expect(document).toContain('hraness-foil-text" data-foil=""')
+      expect(document).toContain('class="hraness-foil-mark" data-foil=""')
+      expect(document).toContain('class="hraness-foil-mark__paint"')
+    }
+    expect(themeAsset).toContain("data-foil")
     // The reviewed 0.8 refinement graph plus the documentation recipes is
     // under 298,500 bytes before compression; the shared-footer v0.12.x
     // optional-support styles and the host scroll-padding rule that keeps
     // keyboard focus above the fixed footer bar measured 310,206 together, and
     // the shared-footer v0.13.x organization-attribution styles measure
-    // 313,229. Keep a strict ceiling over the full sealed union and captured
-    // foundation; no import, recipe, snapshot, or repeated layered rule is
-    // discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(316_000)
-    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(27_500)
+    // 313,229. The design-kit v0.13.0 union with the shared foil wordmark
+    // contract measures 346,025. Keep a strict ceiling over the full sealed
+    // union and captured foundation; no import, recipe, snapshot, or repeated
+    // layered rule is discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(348_000)
+    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(29_500)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })

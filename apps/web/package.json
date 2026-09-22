@@ -6,9 +6,9 @@
   "type": "module",
   "packageManager": "bun@1.3.14",
   "dependencies": {
-    "@hraness/design-kit": "github:hraness/design-kit#v0.9.0",
-    "@hraness/site-footer": "github:hraness/site-footer#v0.14.0",
-    "@hraness/ui": "github:hraness/ui#v0.5.12",
+    "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+    "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
+    "@hraness/ui": "github:hraness/ui#v0.5.16",
     "@resvg/resvg-js": "2.6.2",
     "posthog-js": "1.413.2",
     "react": "19.2.3",

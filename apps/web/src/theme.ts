@@ -1,4 +1,4 @@
-import { installAppearanceMenus } from "@hraness/design-kit/browser"
+import { attachFoil, installAppearanceMenus } from "@hraness/design-kit/browser"
 
 import { installCopyCommands } from "./copy-command"
 import { installExamplePlayers } from "./example-player"
@@ -6,6 +6,7 @@ import { installExamplePlayers } from "./example-player"
 function installPageControls(): void {
   installCopyCommands()
   installExamplePlayers()
+  attachFoil(document.documentElement)
 }
 
 installAppearanceMenus({

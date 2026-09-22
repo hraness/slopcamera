@@ -20,9 +20,9 @@ import { docsDocumentForPage, docPages } from "../src/docs-registry"
 import type { SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.9.0" },
-  { name: "@hraness/site-footer", version: "0.14.0" },
-  { name: "@hraness/ui", version: "0.5.12" },
+  { name: "@hraness/design-kit", version: "0.13.0" },
+  { name: "@hraness/site-footer", version: "0.17.0" },
+  { name: "@hraness/ui", version: "0.5.16" },
 ] as const
 const fontFiles = [
   ...["Light", "Book", "Medium", "Semibold", "Bold", "Black"].flatMap(weight =>
@@ -41,7 +41,7 @@ const sourceFiles = [
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
-  "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/styles.css",
+  "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/site-foil.css", "src/styles.css",
   "vendor/paper-theme/paper-theme.css",
   "scripts/build.ts", "scripts/public-identity.ts", "src/icon.png", "src/apple-touch-icon.png", "scripts/build-site.ts", "scripts/site-contract.ts", "scripts/site-css.ts", "scripts/marketing-preset.ts", "scripts/lantern-material.ts", "scripts/preview-css.ts", "scripts/preview-file.ts",
 ] as const
@@ -104,12 +104,19 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
   })
   fonts.push(...presetAssets.filter(item => item.path.endsWith(".woff2")))
   const images = presetAssets.filter(item => item.path.endsWith(".svg"))
+  // The shared metallic wordmark paints the canonical product mark; its bytes
+  // are admitted once as the foil mask image.
+  const wordmarkMaskPath = join(app, "src/marks/slopcamera.svg")
+  const wordmarkMask = {
+    path: below(root, wordmarkMaskPath),
+    sha256: siteSha256(await bytesAt(wordmarkMaskPath, 2 * 1024 * 1024)),
+  }
   const docsSourceDirectory = join(app, "src/docs")
   const docsSources = (await readdir(docsSourceDirectory, { recursive: true }))
     .filter((entry): entry is string => typeof entry === "string" && entry.endsWith(".md"))
     .map(entry => entry.split(sep).join("/"))
     .sort()
-  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)),
+  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)), wordmarkMaskPath,
     ...[...presetPaths, "provenance.json"].map(path => join(presetRoot, path)), ...materialPaths.map(path => join(materialRoot, path)), ...packageInputs.map(item => item.path), fontCss,
     ...(root === app ? [] : [join(root, "package.json"), join(root, "bun.lock")])]
   const inputs = await Promise.all(sourcePaths.map(async path => ({
@@ -124,7 +131,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
   }
   const snapshot = inputs.map(({ path, bytes }) => ({ path, bytes: bytes.byteLength, sha256: siteSha256(bytes) }))
   const fingerprint = siteSha256(canonicalJson({
-    assets, bun: Bun.version, compilerSha256, fonts, images, inputs: snapshot, marketingSourceCommit: preset.sourceCommit, materialSourceCommit: material.sourceCommit,
+    assets, bun: Bun.version, compilerSha256, fonts, images, inputs: snapshot, marketingSourceCommit: preset.sourceCommit, masks: [wordmarkMask.sha256], materialSourceCommit: material.sourceCommit,
     unionPolicySha256: stylexUnionPolicySha256, vite: viteVersion,
   }))
   const finalCssPath = `assets/site-${fingerprint}.css`
@@ -144,7 +151,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     const foundation = snapshotSiteFoundation(await viteBuild({
       base: "./", configFile: false, envFile: false, mode: "production",
       plugins: [stylexVite({ generation, graphId: "site-foundation", rootDirectory: root })],
-    }), fonts.map(font => font.sha256), join(app, "src/site-foundation.ts"), inspectSiteCssResources, images.map(image => image.sha256))
+    }), fonts.map(font => font.sha256), join(app, "src/site-foundation.ts"), inspectSiteCssResources, images.map(image => image.sha256), [wordmarkMask.sha256])
     const renderer = await collectBunStylexGraph({
       build: { minify: true, sourcemap: "none" }, generation, graphId: "site-renderer", rootDirectory: root,
     })

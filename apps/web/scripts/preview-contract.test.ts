@@ -38,7 +38,7 @@ function completeFixture() {
     ],
     compilerSha256: digest, finalCss, generationId: "slopcamera-preview",
     graphs: ["preview-foundation", "preview-renderer"].map(id => ({ id, receiptSha256: digest })),
-    kind: "hraness-stylex-complete-generation", packages: [{ manifestSha256: digest, name: "@hraness/ui", version: "0.5.12" }],
+    kind: "hraness-stylex-complete-generation", packages: [{ manifestSha256: digest, name: "@hraness/ui", version: "0.5.16" }],
     planSha256: digest, schemaVersion: 2, state: "complete", unionPolicySha256: digest,
   }
   const expected = { compilerSha256: digest, finalCssPath: finalCss.path, foundation, manifestSha256: digest, planSha256: digest, unionPolicySha256: digest }
