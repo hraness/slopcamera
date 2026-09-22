@@ -48,7 +48,7 @@ test("paint projection asserts only owned positive properties and preserves unli
 })
 test("literal fixtures admit only the six reviewed authored islands",()=>{
  expect(Object.keys(refinementIslands)).toEqual([".hraness-marketing-hero__boundary",".hraness-marketing-proof-frame","#install",".hraness-marketing-interface-grid","#questions details:nth-child(7) .hraness-marketing-question__answer",".hraness-marketing-cta__footnote"])
- expect(refinementInstallCommand.split("\n")).toEqual(["bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.4/hraness-slopcamera-3.3.4.tgz","slopcamera skill install --target agents"])
+ expect(refinementInstallCommand.split("\n")).toEqual(["bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.5/hraness-slopcamera-3.3.5.tgz","slopcamera skill install --target agents"])
  const fixture=Object.values(refinementIslands).join("")
  expect(fixture).not.toMatch(/\sstyle=/u);expect(fixture).toContain('syntax-code language-typescript');expect(fixture).toContain("docs/how-to/use-current-source.md")
  expect(fixture).toContain("Illustrative session · included starter");expect(fixture).not.toContain("Start a new source checkout")
