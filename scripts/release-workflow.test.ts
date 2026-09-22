@@ -1175,10 +1175,19 @@ test("package smoke rejects oversized tar framing before installing a package be
     for (const extraByte of [0, 1]) {
       const entries: PackageFixtureEntry[] = [
         { path: "package.json", body: "{}\n", mode: 0o644 },
-        { path: "padding.txt", body: "x".repeat(13_997_056 + extraByte), mode: 0o644 },
+        { path: "padding.txt", body: "x".repeat(13_997_056), mode: 0o644 },
+        // Header-only entries keep content below the unpacked bound while
+        // pushing the framed tar past its 15 MB envelope.
+        ...(extraByte === 0
+          ? []
+          : Array.from({ length: 2_000 }, (_, index) => ({
+              path: `pad-${String(index)}.txt`,
+              body: "",
+              mode: 0o644,
+            }))),
       ]
       const tar = packageFixtureTar(entries)
-      expect(tar.length).toBe(extraByte === 0 ? 13_999_616 : 14_000_128)
+      expect(tar.length).toBe(extraByte === 0 ? 13_999_616 : 15_023_616)
       const archive = gzipSync(tar, { level: 9 })
       const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
       expect(metadata[0]!.unpackedSize).toBeLessThan(14_000_000)
