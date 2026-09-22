@@ -2,7 +2,7 @@
 type: plan
 title: Complete workflow examples and hosted AI
 area: public-workflows
-status: in-progress
+status: completed
 ---
 
 # Slopcamera: complete workflows, visible proof
@@ -142,3 +142,19 @@ Real examples exposed corrections to static overlays (bd011ec), RGB blending (17
 Delivered main d203c22 is integrated, including the verified v3.3.3 installation surface and mainline parametric fixes. The next source candidate is v3.3.4. The workflow-examples browser baseline is exact revision d203c2263128dd5044217707406f28f257fe9d95, tree ed5a0fdc0d72c77e2ddbf87282cd0b7a9d65880d, using schema six. The prior 4cdfb0b and 437a530 baselines and their evidence remain retained. Release parity covers 17 MCP tools, six portable operation codes and eight built-in workflows. Each earlier example retains its actual execution version and source identity. Later renderer corrections need the next verified release.
 
 Inactive hosted request/state code passes 18 deterministic tests with 2,787 assertions, focused TypeScript and lint. Independent review corrected terminal-billing evidence retention and verifies dispatch timing bounds. It has no service endpoint, public adapter, payment or provider call. Existing Credits registration does not prove an active inference backend. Read-only review also located the unmerged credits-service PR 148, which supplies an optional image adapter, model defaults and a separate deployment shell. Its stateless retries, ambiguous settlement and inherited token-pickup defects need repair before reuse and activation. Owning-service recovery, live qualification and deployment remain open. The isolated manifest/lock-only website installation passed. Required final integration, full native browser, release and production gates still apply.
+
+## Result
+
+Delivered 2026-09-22 as release `v3.3.4`. PR #182 (workflow gallery, site + docs) squash-merged to `main` at `81217777f193718e20351a886516ecae445590a9`; post-release datum PR #195 merged at `e02aa6f`. The 133-case `workflow-examples-v1` native browser matrix passed twice on exact merged trees (`ffb2d13`, `a10d78c`) against the immutable `c56e007` baseline, including all negative controls, hidden/offscreen playback, manual pause, failed media, reduced-motion and Save-Data policies, and zero unadmitted media requests.
+
+Release `v3.3.4` (tag `v3.3.4`, run 35678721452) published immutably with five assets; archive `hraness-slopcamera-3.3.4.tgz` sha256 `79dce04cf066a721fa3ed17281eea0d5cccda6b68f6ecf05fadde5cf6e61f1af`; npm mirror admitted after registry propagation (`sha512-ackY7racQizg/sNbrs7EpRj8DbCqWKkIChaYuccPnarl3i3TG6bMxt98VqSy3ww8tfBAzPmA4kMAXwGjdJGIKA==`). Production deployment `dpl_2df5QuKwnh6NzZob7pt1VciTEq6u` built `main@8121777`; the datum deployment `slopcamera-hndadtomb` built `e02aa6f`. Verified live: homepage autoplay previews (muted, controls, playsinline, `preload="none"`, posters), docs manual playback video, `/docs` Diátaxis index with all workflow routes, 206 range-served mp4, markdown content negotiation, `/icon.png` + `/apple-touch-icon.png` 200. `/favicon.ico` returning 404 is intentional — no published page references it.
+
+The hosted lane delivered `apps/api` (PRs #187–#191, closed by [[plans/hosted-agent-api]]): hosted tool calls, presigned upload channel, Vercel OIDC forwarding, and settled paid-call/upload-consuming evidence. Live commercial activation remains a separately conditioned operational step per that plan.
+
+## Durable memory
+
+- `document.fonts.load()`/`fonts.ready` resolve face *loading*, not glyph *application*; under `font-display: swap`, `ch`-resolved metrics can still read fallback for ~90 ms. Settlement barriers must poll an applied `ch` probe across frames, and the probe must be built through CSSOM property sets — a page CSP of `style-src 'self'` rejects `setAttribute("style", …)` and `innerHTML` markup.
+- Chrome for Testing (≥ 131 headless and headful) has no reachable platform path to `document.hidden` — minimize, tab activation, and `Page.setWebLifecycleState` all leave automation targets `visible`. Emulating at the document boundary (overriding `hidden`/`visibilityState` getters plus a real `visibilitychange` dispatch) exercises the product's real listener→pause path, the same evidence class as `emulateMedia`.
+- IntersectionObserver-driven pause is asynchronous: settle assertions must wait for `video.paused` before starting a quiet window.
+- npm registry read-after-write lags provenance-backed publishes by minutes; release admission jobs need a propagation poll or rerun, not a red-flag diagnosis.
+- An exclusive host-scheduler claim waiting on compute strands spare permits for queued shared jobs; cancel-and-requeue the identical claim is free ordering-wise when its head-of-line position cannot admit anyway.
