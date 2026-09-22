@@ -13,6 +13,16 @@ import { generateSlopcameraIcon } from "./icon.js"
 import { generateSlopcameraImageGallery } from "./image-gallery.js"
 import { builtInIcons } from "./icons.js"
 import {
+  checkDrawingFile,
+  drawingPageGeometry,
+  DrawingValidationError,
+  parseDrawingSource,
+  readDrawingFile,
+  renderDrawing,
+  renderDrawingFile,
+  starterDrawingSource,
+} from "./drawing.js"
+import {
   resolveDiagramSource,
   resolveStackLayout,
   stackLayoutDefaults,
@@ -57,6 +67,9 @@ export const slopcameraApi = Object.freeze({
   builtInIcons,
   bundledSkillPath,
   checkDiagramFile,
+  checkDrawingFile,
+  drawingPageGeometry,
+  DrawingValidationError,
   defineSlopcameraWorkflow,
   DiagramValidationError,
   generateSlopcameraImage,
@@ -76,8 +89,12 @@ export const slopcameraApi = Object.freeze({
   mcpSourceByteLimit,
   parseDiagramSource,
   parseDiagramSpec,
+  parseDrawingSource,
   readDiagramFile,
+  readDrawingFile,
   renderDiagramFile,
+  renderDrawing,
+  renderDrawingFile,
   renderPng,
   renderSvg,
   resolveEdge,
@@ -88,6 +105,7 @@ export const slopcameraApi = Object.freeze({
   searchSlopcameraOperations,
   serializeTldr,
   stackLayoutDefaults,
+  starterDrawingSource,
   StackLayoutError,
   SlopcameraWorkflowError,
   vectorizeImage,
@@ -144,6 +162,7 @@ export {
 }
 export * from "./capability-manifest.js"
 export * from "./cloud-errors.js"
+export * from "./drawing.js"
 export * from "./generate.js"
 export * from "./host-resources.js"
 export * from "./icon.js"

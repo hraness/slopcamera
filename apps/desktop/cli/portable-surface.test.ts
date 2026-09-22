@@ -1,13 +1,25 @@
 import { describe, expect, test } from "bun:test";
 
 import { canonicalJson } from "../core/canonical-json";
-import { commandHelp } from "./help";
+import { commandHelp, completions } from "./help";
 import {
   canonicalizeUnifiedCliArgs,
   runPortableSurface,
 } from "./portable-surface";
 
 describe("unified portable Slopcamera CLI surface", () => {
+  test("documents drawing-sheet commands and their separate artifact contract", () => {
+    expect(commandHelp([])).toContain("diagram sheets init|check|render");
+    const help = commandHelp(["diagram"]);
+    for (const command of ["init", "check", "render"]) {
+      expect(help).toContain(`slopcamera diagram sheets ${command} <file.drawing.json>`);
+    }
+    expect(help).toContain("one vector PDF, one SVG per sheet and a drawing receipt");
+    expect(help).toContain("not code/MCP operations");
+    expect(completions(["diagram", ""])).toEqual(["init", "check", "render", "sheets"]);
+    expect(completions(["diagram", "sheets", ""])).toEqual(["init", "check", "render"]);
+  });
+
   test("notifies after scaffold output and transports only a content-free portable completion", async () => {
     const events: string[] = [];
     const onUsefulResult = () => { events.push("complete"); };
@@ -37,6 +49,9 @@ describe("unified portable Slopcamera CLI surface", () => {
       ["diagram", "init", "flow.diagram.json"],
       ["diagram", "check", "flow.diagram.json", "--strict"],
       ["diagram", "render", "flow.diagram.json", "--scale", "2"],
+      ["diagram", "sheets", "init", "sensor.drawing.json", "--json"],
+      ["diagram", "sheets", "check", "sensor.drawing.json", "--json"],
+      ["diagram", "sheets", "render", "sensor.drawing.json", "--out-dir", "sheets", "--json"],
       ["image", "vectorize", "sketch.png", "--output", "sketch.svg"],
       ["image", "generate", "title", "--output", "title.webp"],
     ] as const) {
@@ -46,6 +61,9 @@ describe("unified portable Slopcamera CLI surface", () => {
       ["diagram", "init", "flow.diagram.json"],
       ["diagram", "check", "flow.diagram.json", "--strict"],
       ["diagram", "render", "flow.diagram.json", "--scale", "2"],
+      ["diagram", "sheets", "init", "sensor.drawing.json", "--json"],
+      ["diagram", "sheets", "check", "sensor.drawing.json", "--json"],
+      ["diagram", "sheets", "render", "sensor.drawing.json", "--out-dir", "sheets", "--json"],
       ["image", "vectorize", "sketch.png", "--output", "sketch.svg"],
       ["image", "generate", "title", "--output", "title.webp"],
     ]);

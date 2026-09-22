@@ -1287,7 +1287,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "9b69f4c72951cb3c3fdcd91a9f6b3cc4cbdb85364de56975547912060d40d204",
+    "identityLinesSha256": "31156ae37b7ece20881a39adf0cdfa1e1101534e521f93178dbb638f1e682c24",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1686,16 +1686,16 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "8133b65bc166ad06c416d7c44a0ce7c1f630eec0241e31daac1d633d92ad4f0f",
+    "identityLinesSha256": "a4237df51f4bc7e0e0234fb5dd6f798a75eb1abba039e68076c043d608dba84d",
     "occurrenceCount": 233,
-    "path": "dist/index-c8jpst4g.js",
+    "path": "dist/index-cymdw2p7.js",
     "categories": [
       "generated"
     ]
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "c9277855690ad2958dcdb6eed4337fb3f9de72704c5df305be64b997d375027b",
+    "identityLinesSha256": "dbef02a29548faa1827fa0039a3a38d529b6f665234849d40cd3a265ce552d23",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [

@@ -332,7 +332,7 @@ export function resolveEdgeLabel(resolved: ResolvedEdge): {
   }
 }
 
-function edgeSvg(resolved: ResolvedEdge, theme: ThemeColors, families: FontFamilies): string {
+function edgeSvg(resolved: ResolvedEdge, theme: ThemeColors, families: FontFamilies, strokeWidth: number): string {
   const { edge, start, end, control } = resolved
   const toneName = edge.tone ?? "neutral"
   const tone = theme.tones[toneName]
@@ -348,7 +348,7 @@ function edgeSvg(resolved: ResolvedEdge, theme: ThemeColors, families: FontFamil
     edge.label === undefined
       ? ""
       : `<text x="${labelPoint.x}" y="${labelPoint.y}" text-anchor="middle" dominant-baseline="central" fill="${tone.text}" stroke="${theme.background}" stroke-width="6" paint-order="stroke" font-family="${escapeXml(families[edge.labelFontFamily ?? "default"])}" font-size="${edge.labelFontSize ?? 18}" font-weight="${edge.labelWeight ?? 600}">${escapeXml(edge.label)}</text>`
-  return `<g data-edge-id="${escapeXml(edge.id)}"><path d="${path}" fill="none" stroke="${tone.stroke}" stroke-width="3" stroke-linecap="round" marker-end="${marker}"/>${label}</g>`
+  return `<g data-edge-id="${escapeXml(edge.id)}"><path d="${path}" fill="none" stroke="${tone.stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" marker-end="${marker}"/>${label}</g>`
 }
 
 function shapeSvg(
@@ -382,7 +382,10 @@ export async function renderSvg(
   spec: DiagramSpec,
   mode: ColorMode,
   config: DiagramConfig,
+  options: { readonly edgeStrokeWidth?: number } = {},
 ): Promise<RenderedDiagram> {
+  const edgeStrokeWidth = options.edgeStrokeWidth ?? 3
+  if (!Number.isFinite(edgeStrokeWidth) || edgeStrokeWidth < 0.5 || edgeStrokeWidth > 4) throw new Error("Edge stroke width must be between 0.5 and 4")
   const theme = resolveTheme(mode, config)
   const font = config.font ?? defaultFont
   const families: FontFamilies = {
@@ -400,7 +403,7 @@ export async function renderSvg(
     )
     .join("")
   const edgeMarkup = (spec.edges ?? [])
-    .map((edge) => edgeSvg(resolveEdge(spec, edge), theme, families))
+    .map((edge) => edgeSvg(resolveEdge(spec, edge), theme, families, edgeStrokeWidth))
     .join("")
   const shapeMarkup = spec.shapes
     .map((shape) => shapeSvg(shape, theme, families, icons))

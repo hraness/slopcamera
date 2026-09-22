@@ -5,8 +5,13 @@ import { gunzipSync } from "node:zlib";
 
 const tarBlockBytes = 512;
 const packagePrefix = "package/";
+const maximumEntries = 530;
 const maximumArchiveBytes = 4_800_000;
-const maximumTarBytes = 15_000_000;
+const maximumContentBytes = 14_000_000;
+// Content and USTAR framing have separate budgets: each bounded entry needs a
+// 512-byte header and at most 511 padding bytes, followed by two zero blocks.
+// Keep this conservative framing allowance aligned with the checkout-free reader.
+const maximumTarBytes = maximumContentBytes + maximumEntries * 1_024 + 1_024;
 const ustarSignature = Buffer.from([
   0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30,
 ]);
@@ -84,6 +89,12 @@ function parsePackMetadata(value: unknown, label: string): NpmPackResult {
   const entryCount = nonnegativeInteger(result.entryCount, `${label} entryCount`);
   const size = nonnegativeInteger(result.size, `${label} size`);
   const unpackedSize = nonnegativeInteger(result.unpackedSize, `${label} unpackedSize`);
+  if (entryCount > maximumEntries) {
+    throw new Error(`${label} contains too many entries; maximum is ${String(maximumEntries)}.`);
+  }
+  if (size > maximumArchiveBytes || unpackedSize > maximumContentBytes) {
+    throw new Error(`${label} exceeds the packed or file-content byte limit.`);
+  }
   const filename = nonemptyString(result.filename, `${label} filename`);
   const integrity = nonemptyString(result.integrity, `${label} integrity`);
   const name = nonemptyString(result.name, `${label} name`);
@@ -234,6 +245,7 @@ function canonicalTarEntries(compressed: Buffer, label: string): readonly Canoni
   const seen = new Set<string>();
   let offset = 0;
   let terminated = false;
+  let contentBytes = 0;
   while (offset + tarBlockBytes <= tar.length) {
     const header = tar.subarray(offset, offset + tarBlockBytes);
     if (header.every(byte => byte === 0)) {
@@ -285,6 +297,13 @@ function canonicalTarEntries(compressed: Buffer, label: string): readonly Canoni
     const size = readTarOctal(header, 124, 12, `size for ${path}`);
     if (directory && size !== 0) {
       throw new Error(`${label} tar directory ${path} has a nonzero body.`);
+    }
+    if (entries.length >= maximumEntries) {
+      throw new Error(`${label} tar contains too many entries; maximum is ${String(maximumEntries)}.`);
+    }
+    contentBytes += size;
+    if (!Number.isSafeInteger(contentBytes) || contentBytes > maximumContentBytes) {
+      throw new Error(`${label} tar exceeds the ${String(maximumContentBytes)} file-content byte limit.`);
     }
     const bodyStart = offset + tarBlockBytes;
     const nextOffset = bodyStart + Math.ceil(size / tarBlockBytes) * tarBlockBytes;

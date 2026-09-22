@@ -36,6 +36,7 @@ import {
 import type { HostResourceCoordinator } from "./host-resources.js"
 import { installSkill, type SkillScope, type SkillTarget } from "./skill-install.js"
 import { pathExists } from "./fs.js"
+import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./drawing.js"
 import { SLOPCAMERA_VERSION } from "./version.js"
 import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
 import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
@@ -50,6 +51,9 @@ Usage:
   slopcamera diagram init [file]
   slopcamera diagram check <file> [--config <file>] [--strict]
   slopcamera diagram render <file> [--out-dir <directory>] [--config <file>] [--scale <number>]
+  slopcamera diagram sheets init <file.drawing.json> [--json]
+  slopcamera diagram sheets check <file.drawing.json> [--json]
+  slopcamera diagram sheets render <file.drawing.json> [--out-dir <directory>] [--json]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
   slopcamera image icon <subject> --output <file.svg> [--purpose <mark|illustration>]
@@ -66,7 +70,7 @@ Usage:
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
-Render writes the same five replaceable artifacts on every run:
+Diagram render writes the same five replaceable artifacts on every run:
   <name>.tldr
   <name>.light.svg
   <name>.dark.svg
@@ -75,6 +79,11 @@ Render writes the same five replaceable artifacts on every run:
 
   The .tldr file is editable interchange for browser-based canvas tooling.
   Rendering does not require a desktop application or a bundled UI runtime.
+
+Diagram sheets creates bounded black-and-white drawing sheets from a separate
+.drawing.json source: one vector PDF, one outlined SVG per sheet, and a receipt.
+Check is read-only; init never overwrites. Geometry checks do not certify legal
+compliance. This surface is available through the CLI and root SDK.
 
 Vectorize adaptively traces a raster with a checksum-pinned VTracer binary.
 It enforces bounded input, decode, time, path, and output budgets and emits a
@@ -251,13 +260,88 @@ function hostAdmissionOptions(
     : { hostResourceCoordinator: dependencies.hostResourceCoordinator }
 }
 
+async function runDrawingSheets(
+  args: readonly string[],
+  dependencies: SlopcameraCliDependencies,
+): Promise<void> {
+  const [command, ...rest] = args
+  if (command !== "init" && command !== "check" && command !== "render") {
+    throw new Error("Use slopcamera diagram sheets init, check, or render <file.drawing.json>")
+  }
+  const positionals: string[] = []
+  const seen = new Set<string>()
+  let outDirectory: string | undefined
+  let json = false
+  for (let index = 0; index < rest.length; index += 1) {
+    const argument = rest[index]!
+    if (!argument.startsWith("-")) {
+      positionals.push(argument)
+      continue
+    }
+    if (argument !== "--json" && !(command === "render" && argument === "--out-dir")) {
+      throw new Error(`Unknown diagram sheets ${command} option: ${argument}`)
+    }
+    if (seen.has(argument)) throw new Error(`${argument} may be supplied at most once`)
+    seen.add(argument)
+    if (argument === "--json") {
+      json = true
+    } else {
+      const value = rest[index + 1]
+      if (value === undefined || value.startsWith("-") || value.trim().length === 0) {
+        throw new Error("--out-dir requires a directory")
+      }
+      outDirectory = value
+      index += 1
+    }
+  }
+  if (positionals.length !== 1 || positionals[0]!.trim().length === 0) {
+    throw new Error(`slopcamera diagram sheets ${command} requires exactly one drawing file`)
+  }
+  const filePath = resolve(positionals[0]!)
+  if (!filePath.endsWith(".drawing.json")) throw new Error("Drawing source must end in .drawing.json")
+  const log = dependencies.log ?? console.log
+  if (command === "init") {
+    try {
+      await writeFile(filePath, `${JSON.stringify(starterDrawingSource(), null, 2)}\n`, { flag: "wx" })
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        throw new Error(`Refusing to overwrite existing file: ${filePath}`)
+      }
+      throw error
+    }
+    log(json ? JSON.stringify({ command: "diagram.sheets.init", source: filePath }) : `Created ${filePath}`)
+    reportUsefulResult(dependencies.onUsefulResult)
+    return
+  }
+  if (command === "check") {
+    const checks = await withSlopcameraOperationHostAdmission(
+      "slopcamera.diagram.check",
+      async () => await checkDrawingFile({ filePath }),
+      hostAdmissionOptions(dependencies),
+    )
+    log(json
+      ? JSON.stringify({ command: "diagram.sheets.check", source: filePath, ...checks })
+      : `Valid drawing: ${checks.sheetCount} sheet${checks.sheetCount === 1 ? "" : "s"} (${checks.paper}, ${checks.profile}).`)
+    return
+  }
+  const result = await withSlopcameraOperationHostAdmission(
+    "slopcamera.diagram.render",
+    async () => await renderDrawingFile({ filePath, ...(outDirectory === undefined ? {} : { outDirectory }) }),
+    hostAdmissionOptions(dependencies),
+  )
+  log(json
+    ? JSON.stringify({ command: "diagram.sheets.render", artifacts: result.artifacts, checks: result.checks })
+    : [result.artifacts.pdf, ...result.artifacts.sheets, result.artifacts.receipt].join("\n"))
+  reportUsefulResult(dependencies.onUsefulResult)
+}
+
 function canonicalArguments(args: readonly string[]): readonly string[] {
   const [surface, subcommand, ...rest] = args
   if (surface === "diagram") {
     if (subcommand === "init" || subcommand === "check" || subcommand === "render") {
       return [subcommand, ...rest]
     }
-    throw new Error("Use slopcamera diagram init, check, or render")
+    throw new Error("Use slopcamera diagram init, check, render, or sheets")
   }
   if (surface === "image") {
     if (
@@ -286,6 +370,10 @@ export async function main(
   args: readonly string[],
   dependencies: SlopcameraCliDependencies = {},
 ): Promise<void> {
+  if (args[0] === "diagram" && args[1] === "sheets") {
+    await runDrawingSheets(args.slice(2), dependencies)
+    return
+  }
   if (args[0] === "support") {
     process.exitCode = await runProductSupportCommand(args.slice(1),
       dependencies.supportEnvironment === undefined ? {} : { env: dependencies.supportEnvironment })

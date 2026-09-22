@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hraness/slopcamera/main/schema/drawing.schema.json",
+  "version": 1,
+  "name": "sensor-control",
+  "title": "Fictional sensor and controller drawings",
+  "paper": "us-letter",
+  "sheets": [
+    {
+      "figure": 1,
+      "diagram": {
+        "version": 1,
+        "name": "sensor-system",
+        "canvas": {
+          "width": 480,
+          "height": 500
+        },
+        "shapes": [
+          {
+            "id": "sensor",
+            "type": "rect",
+            "x": 105,
+            "y": 40,
+            "width": 280,
+            "height": 100,
+            "radius": 0,
+            "label": "SENSOR 100",
+            "labelFontSize": 16
+          },
+          {
+            "id": "controller",
+            "type": "rect",
+            "x": 105,
+            "y": 280,
+            "width": 280,
+            "height": 100,
+            "radius": 0,
+            "label": "CONTROLLER 200",
+            "labelFontSize": 16
+          }
+        ],
+        "edges": [
+          {
+            "id": "signal",
+            "from": "sensor",
+            "to": "controller",
+            "label": "SIGNAL",
+            "labelFontSize": 16
+          }
+        ]
+      }
+    },
+    {
+      "figure": 2,
+      "diagram": {
+        "version": 1,
+        "name": "control-flow",
+        "canvas": {
+          "width": 480,
+          "height": 500
+        },
+        "shapes": [
+          {
+            "id": "receive",
+            "type": "rect",
+            "x": 105,
+            "y": 40,
+            "width": 280,
+            "height": 100,
+            "radius": 0,
+            "label": "RECEIVE SIGNAL 210",
+            "labelFontSize": 16
+          },
+          {
+            "id": "actuate",
+            "type": "rect",
+            "x": 105,
+            "y": 280,
+            "width": 280,
+            "height": 100,
+            "radius": 0,
+            "label": "SET OUTPUT 220",
+            "labelFontSize": 16
+          }
+        ],
+        "edges": [
+          {
+            "id": "next",
+            "from": "receive",
+            "to": "actuate"
+          }
+        ]
+      }
+    }
+  ]
+}
