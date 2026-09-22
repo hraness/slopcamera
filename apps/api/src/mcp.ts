@@ -50,6 +50,7 @@ export async function handleMcpRequest(
   request: Request,
   invokeTool: InvokeTool,
   clientKey: string,
+  toolEnv?: Record<string, string | undefined>,
 ): Promise<Response> {
   let body: unknown
   try {
@@ -112,6 +113,7 @@ export async function handleMcpRequest(
               : undefined,
           token: bearerToken(request),
           clientKey,
+          toolEnv,
         })
         const artifactLinks = outcome.artifacts.map((artifact) => ({
           type: "resource_link" as const,

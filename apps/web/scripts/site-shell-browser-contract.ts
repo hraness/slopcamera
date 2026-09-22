@@ -373,11 +373,12 @@ export async function settle(page: Page, direction?: "rtl"): Promise<void> {
     probe.style.visibility = "hidden"
     // style-src 'self' forbids inline style markup, so the probe is styled
     // through CSSOM property sets, which the directive does not govern.
-    for (const [weight, size, family, fallback, measure] of [
+    const specs: readonly (readonly [string, string, string, string, string])[] = [
       ["400", "44px", "Instrument Serif", "serif", "17ch"],
       ["400", "16px", "Nebula Sans", "sans-serif", "48ch"],
       ["500", "16px", "Nebula Sans", "sans-serif", "48ch"],
-    ]) {
+    ]
+    for (const [weight, size, family, fallback, measure] of specs) {
       const node = document.createElement("i")
       node.style.display = "block"
       node.style.fontWeight = weight

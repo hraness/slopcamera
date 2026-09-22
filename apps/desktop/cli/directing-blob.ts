@@ -18,7 +18,7 @@ import { resolveVerifiedProjectMedia } from "./project-media-integrity";
 // put.ts, del.ts, and signed-token.ts in https://github.com/vercel/storage.
 // The SDK's network retry/environment overrides are not part of this adapter.
 const API = "https://vercel.com/api/blob";
-const LIMITS = { imageBytes: 30 * 1024 * 1024, entries: 2, receiptBytes: 64 * 1024, responseBytes: 32 * 1024, requestMs: 60_000, cleanupMs: 120_000, accessMs: 15 * 60_000 } as const;
+const LIMITS = { imageBytes: 30 * 1024 * 1024, videoBytes: 256 * 1024 * 1024, entries: 8, receiptBytes: 64 * 1024, responseBytes: 32 * 1024, requestMs: 60_000, uploadMs: 15 * 60_000, cleanupMs: 120_000, accessMs: 15 * 60_000 } as const;
 const RECEIPT = "receipt.json";
 const NOTICE = "Private reference hosting uses Vercel Blob operations, storage, and transfer billed separately from the Gateway generation budget. Expiring model access does not delete the stored object.";
 const IdSchema = z.string().regex(/^direct_[a-z][a-z0-9_-]{0,63}$/u);
@@ -26,10 +26,15 @@ const TakeSchema = z.string().regex(/^take_[a-z][a-z0-9_-]{0,63}$/u);
 const StoreSchema = z.string().regex(/^[A-Za-z0-9]{1,64}$/u);
 const TimeSchema = z.number().int().safe().positive();
 const EtagSchema = z.string().min(1).max(256).regex(/^[\x21-\x7e]+$/u);
-const SourceSchema = GatewayMediaSourceReferenceSchema.refine(source => ["image/png", "image/jpeg", "image/webp"].includes(source.mediaType) && source.bytes <= LIMITS.imageBytes, "Hosted directing references must be PNG, JPEG, or WebP images at most 30 MiB.");
+const SourceSchema = GatewayMediaSourceReferenceSchema.refine(source =>
+  (["image/png", "image/jpeg", "image/webp"].includes(source.mediaType) && source.bytes <= LIMITS.imageBytes)
+  || (["video/mp4", "video/quicktime"].includes(source.mediaType) && source.bytes <= LIMITS.videoBytes), "Hosted directing references must be PNG, JPEG, or WebP images at most 30 MiB, or MP4/QuickTime video at most 256 MiB.");
+function sourceExtension(mediaType: string): string {
+  return mediaType === "image/jpeg" ? "jpg" : mediaType === "video/quicktime" ? "mov" : mediaType.slice(6);
+}
 const EntrySchema = z.strictObject({
   source: SourceSchema,
-  pathname: z.string().regex(/^slopcamera\/directing\/[a-f0-9]{32}\/[01]-[a-f0-9]{64}\.(?:png|jpg|webp)$/u),
+  pathname: z.string().regex(/^slopcamera\/directing\/[a-f0-9]{32}\/[0-7]-[a-f0-9]{64}\.(?:png|jpg|webp|mp4|mov)$/u),
   putStartedAt: TimeSchema,
   putCompletedAt: TimeSchema.optional(),
   etag: EtagSchema.optional(),
@@ -52,7 +57,7 @@ export const DirectingBlobReceiptSchema = z.strictObject({
   entries: z.array(EntrySchema).max(LIMITS.entries),
 }).superRefine((receipt, context) => {
   for (const [index, entry] of receipt.entries.entries()) {
-    const extension = entry.source.mediaType === "image/jpeg" ? "jpg" : entry.source.mediaType.slice(6);
+    const extension = sourceExtension(entry.source.mediaType);
     if (entry.pathname !== `slopcamera/directing/${receipt.namespace}/${index}-${entry.source.sha256}.${extension}`) context.addIssue({ code: "custom", message: "A hosted object must bind this session's exact private namespace and source bytes." });
   }
 });
@@ -161,12 +166,12 @@ export async function createDirectingBlobSession(options: DirectingBlobOptions):
       const save = async () => { await fs.writeTextAtomicGuarded!(RECEIPT, `${canonicalJson(DirectingBlobReceiptSchema.parse(receipt))}\n`, lease.assertOwned); };
       return await execute(receipt, save, lease.assertOwned);
     });
-  const api = async (receipt: DirectingBlobReceipt, pathname: string, method: "GET" | "PUT" | "POST", body: string | Uint8Array | undefined, headers: Record<string, string>, signal: AbortSignal, assertOwned: () => Promise<void>): Promise<{ status: number; data: Uint8Array }> => {
+  const api = async (receipt: DirectingBlobReceipt, pathname: string, method: "GET" | "PUT" | "POST", body: string | Uint8Array | undefined, headers: Record<string, string>, signal: AbortSignal, assertOwned: () => Promise<void>, timeoutMs: number = LIMITS.requestMs): Promise<{ status: number; data: Uint8Array }> => {
     const auth = credentials(options.environment);
     if (auth.storeId !== receipt.storeId) failure("Blob credentials don't match the retained store.", "authorization-required");
     await assertOwned();
     signal.throwIfAborted();
-    const bounded = AbortSignal.any([signal, AbortSignal.timeout(LIMITS.requestMs)]);
+    const bounded = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]);
     const response = await request(`${API}${pathname}`, { method, redirect: "error", signal: bounded,
       headers: { authorization: `Bearer ${auth.token}`, "x-vercel-blob-store-id": auth.storeId, "x-api-version": "12", "x-api-blob-request-id": `${auth.storeId}:${randomUUID()}`, "x-api-blob-request-attempt": "0", ...headers },
       ...(body === undefined ? {} : { body: typeof body === "string" ? body : Buffer.from(body) }),
@@ -189,7 +194,7 @@ export async function createDirectingBlobSession(options: DirectingBlobOptions):
   };
   const verifyGet = async (receipt: DirectingBlobReceipt, entry: Entry, url: string, signal: AbortSignal): Promise<{ found: false } | { found: true; etag: string }> => {
     exactPrivateUrl(url, receipt.storeId, entry.pathname, true);
-    const bounded = AbortSignal.any([signal, AbortSignal.timeout(LIMITS.requestMs)]);
+    const bounded = AbortSignal.any([signal, AbortSignal.timeout(LIMITS.uploadMs)]);
     const response = await request(url, { method: "GET", redirect: "error", signal: bounded, headers: { "cache-control": "no-cache" } });
     if (response.status === 404) { await response.body?.cancel(); return { found: false }; }
     if (response.status !== 200) { await response.body?.cancel(); failure("Private hosted reference could not be verified."); }
@@ -212,9 +217,9 @@ export async function createDirectingBlobSession(options: DirectingBlobOptions):
     inspect: read,
     resolveSourceUrl: async (input, data, signal) => {
       const source = SourceSchema.parse(input);
-      if (!(data instanceof Uint8Array) || data.length !== source.bytes) failure("Reference hosting requires the exact retained image bytes.", "invalid-data");
+      if (!(data instanceof Uint8Array) || data.length !== source.bytes) failure("Reference hosting requires the exact retained reference bytes.", "invalid-data");
       const uploadBytes = new Uint8Array(data);
-      if (createHash("sha256").update(uploadBytes).digest("hex") !== source.sha256 || !gatewayMediaBytesMatchType(uploadBytes, source.mediaType)) failure("Reference hosting requires the exact retained image bytes.", "invalid-data");
+      if (createHash("sha256").update(uploadBytes).digest("hex") !== source.sha256 || !gatewayMediaBytesMatchType(uploadBytes, source.mediaType)) failure("Reference hosting requires the exact retained reference bytes.", "invalid-data");
       await resolveVerifiedProjectMedia({ repositoryRoot: application.paths.repositoryRoot, path: source.path, expected: source, label: "Directing hosted reference" });
       const activeSignal = AbortSignal.any([options.signal, signal]);
       return await mutate(async (receipt, save, assertOwned) => {
@@ -222,14 +227,14 @@ export async function createDirectingBlobSession(options: DirectingBlobOptions):
         if (receipt.closedAt !== undefined) failure("This reference-hosting session is closed; use a new take for another generation.", "conflict");
         let entry = receipt.entries.find(value => sourceIdentity(value.source) === sourceIdentity(source));
         if (entry === undefined) {
-          if (receipt.entries.length >= LIMITS.entries) failure("One directing take may host at most two exact image references.", "invalid-data");
-          const extension = source.mediaType === "image/jpeg" ? "jpg" : source.mediaType.slice(6);
+          if (receipt.entries.length >= LIMITS.entries) failure("One directing take may host at most eight exact media references.", "invalid-data");
+          const extension = sourceExtension(source.mediaType);
           entry = { source, pathname: `slopcamera/directing/${receipt.namespace}/${receipt.entries.length}-${source.sha256}.${extension}`, putStartedAt: now(), cleanup: "pending", failures: [] };
           receipt.entries.push(entry);
           await save(); // Durable exact upload intent precedes the only PUT.
           try {
             const uploaded = await api(receipt, `/?${new URLSearchParams({ pathname: entry.pathname })}`, "PUT", uploadBytes,
-              { "content-type": source.mediaType, "x-content-type": source.mediaType, "x-vercel-blob-access": "private", "x-add-random-suffix": "0", "x-allow-overwrite": "0", "x-cache-control-max-age": "60" }, activeSignal, assertOwned);
+              { "content-type": source.mediaType, "x-content-type": source.mediaType, "x-vercel-blob-access": "private", "x-add-random-suffix": "0", "x-allow-overwrite": "0", "x-cache-control-max-age": "60" }, activeSignal, assertOwned, LIMITS.uploadMs);
             if (uploaded.status < 200 || uploaded.status > 299) failure("Private reference upload did not complete.");
             const result = z.object({ url: z.string().max(2048), pathname: z.string().max(512), contentType: z.string().max(128), etag: EtagSchema }).parse(JSON.parse(new TextDecoder().decode(uploaded.data)) as unknown);
             exactPrivateUrl(result.url, receipt.storeId, entry.pathname, false);

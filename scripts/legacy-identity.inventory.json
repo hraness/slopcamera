@@ -1287,7 +1287,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "ecb7a95167d0d9d0ebb9ae9214f5dc6bd13f66c84b64f2e34440a7ef7267e102",
+    "identityLinesSha256": "d30d8ccc6f31056a438e89725e7bdc31da424889abf86a166333ceccfcc996d5",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1707,6 +1707,15 @@
     "identityLinesSha256": "d390b460be871971c6be1620a5e8d55f70735f898301a2957138cd00709f1d70",
     "occurrenceCount": 3,
     "path": "docs/architecture.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "d3451eed412a0987dea685ff5cbcf9798414cc7081277135461691c69be977fe",
+    "occurrenceCount": 2,
+    "path": "docs/directing-video.md",
     "categories": [
       "native-film-studio"
     ]

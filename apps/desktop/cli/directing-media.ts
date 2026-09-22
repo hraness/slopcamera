@@ -20,7 +20,7 @@ import { withMutationLock } from "./mutation-lock";
 import { ensurePhysicalPrivateDirectoryWithin } from "./paths";
 import { resolveVerifiedProjectMedia } from "./project-media-integrity";
 
-const LIMITS = { videoBytes: 512 * 1024 * 1024, imageBytes: 30 * 1024 * 1024, probeBytes: 8 * 1024 * 1024, dimension: 4096, frames: 4000, durationUs: 60_000_000 } as const;
+const LIMITS = { videoBytes: 512 * 1024 * 1024, imageBytes: 30 * 1024 * 1024, referenceBytes: 256 * 1024 * 1024, probeBytes: 8 * 1024 * 1024, dimension: 4096, frames: 4000, durationUs: 60_000_000 } as const;
 const INPUT_ARGUMENTS = ["-protocol_whitelist", "file", "-format_whitelist", "mov", "-enable_drefs", "0", "-use_absolute_path", "0", "-max_pixels", String(LIMITS.dimension ** 2), "-threads", "2"] as const;
 const artifactSchema = z.strictObject({ path: RepositoryRelativePathSchema, bytes: z.number().int().safe().positive(), sha256: Sha256Schema });
 const endpointSchema = DirectingEndpointSchema.refine(endpoint => endpoint.frameIndex < LIMITS.frames, "Directing endpoint exceeds the 4000-frame media bound.");
@@ -226,15 +226,25 @@ async function retainVideo(application: ApplicationContext, input: GatewayMediaS
   return GatewayMediaSourceReferenceSchema.parse({ ...artifact, mediaType: source.mediaType });
 }
 
-/** Imports exactly the caller-named still; never uploads it or reads neighboring files. */
+/** Imports exactly the caller-named still or clip; never uploads it or reads neighboring files. */
 export async function importDirectingAnchor(application: ApplicationContext, path: string, signal: AbortSignal): Promise<GatewayMediaSourceReference> {
   await active(application, signal);
   const resolved = resolve(application.paths.repositoryRoot, path);
   if (await realpath(dirname(resolved)) !== dirname(resolved)) throw new CliError("unsafe-path", "Directing anchors require physical parent directories.");
-  const bytes = await fileBytes(resolved, LIMITS.imageBytes, signal);
+  const bytes = await fileBytes(resolved, LIMITS.referenceBytes, signal);
+  const brand = bytes.length >= 12 && Buffer.from(bytes.subarray(4, 8)).toString("ascii") === "ftyp" ? Buffer.from(bytes.subarray(8, 12)).toString("ascii") : undefined;
+  if (brand === "qt  " || brand !== undefined && /^(?:isom|iso2|iso5|iso6|mp41|mp42|avc1|dash|mmp4|M4V )$/u.test(brand)) {
+    const mediaType = brand === "qt  " ? "video/quicktime" : "video/mp4";
+    const artifact = await publishBytes(application, bytes, mediaType === "video/quicktime" ? "mov" : "mp4", signal);
+    const provisional = GatewayMediaSourceReferenceSchema.parse({ ...artifact, mediaType });
+    const ffprobe = await capability(application, "ffprobe");
+    const probed = await probeVideo(application, provisional, ffprobe.command, signal);
+    return GatewayMediaSourceReferenceSchema.parse({ ...provisional, facts: { durationSeconds: probed.media.durationUs / 1_000_000, width: probed.stream.width, height: probed.stream.height } });
+  }
+  if (bytes.length > LIMITS.imageBytes) fail("Directing anchors require a single unrotated PNG, JPEG, or WebP image no larger than 30 MiB.");
   const metadata = await sharp(bytes, { limitInputPixels: LIMITS.dimension ** 2, failOn: "error", animated: true }).metadata();
   const extension = metadata.format === "jpeg" ? "jpg" : metadata.format;
-  if (!extension || !["png", "jpg", "webp"].includes(extension) || metadata.pages !== undefined && metadata.pages !== 1 || !metadata.width || !metadata.height || metadata.width > LIMITS.dimension || metadata.height > LIMITS.dimension || metadata.orientation !== undefined && metadata.orientation !== 1) fail("Directing anchors require a single unrotated PNG, JPEG, or WebP image no larger than 4096 pixels per side.");
+  if (!extension || !["png", "jpg", "webp"].includes(extension) || metadata.pages !== undefined && metadata.pages !== 1 || !metadata.width || !metadata.height || metadata.width > LIMITS.dimension || metadata.height > LIMITS.dimension || metadata.orientation !== undefined && metadata.orientation !== 1) fail("Directing anchors require a single unrotated PNG, JPEG, or WebP image no larger than 4096 pixels per side, or self-contained MP4/QuickTime video.");
   await sharp(bytes, { limitInputPixels: LIMITS.dimension ** 2, failOn: "error" }).raw().toBuffer();
   const artifact = await publishBytes(application, bytes, extension, signal);
   return GatewayMediaSourceReferenceSchema.parse({ ...artifact, mediaType: metadata.format === "jpeg" ? "image/jpeg" : `image/${metadata.format}`, facts: { width: metadata.width, height: metadata.height } });

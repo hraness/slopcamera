@@ -252,6 +252,32 @@ describe("retained directing media", () => {
     await expect(importDirectingAnchor(f.application, "link.png", signal())).rejects.toThrow();
     expect(f.calls).toHaveLength(0);
   });
+  test.skipIf(process.platform === "win32")("retains one explicit MP4 or QuickTime clip with measured facts", async () => {
+    const f = await fixture();
+    const mp4 = Buffer.from("0000ftypisom0000-anchor-clip-bytes");
+    await writeFile(join(f.root, "anchor.mp4"), mp4);
+    const reference = await importDirectingAnchor(f.application, "anchor.mp4", signal());
+    expect(reference.mediaType).toBe("video/mp4");
+    expect(reference.path).toEndWith(".mp4");
+    expect(reference.sha256).toBe(digest(mp4));
+    expect(reference.facts).toEqual({ durationSeconds: 1, width: 16, height: 12 });
+    const mov = Buffer.from("0000ftypqt  0000-anchor-clip-bytes");
+    await writeFile(join(f.root, "anchor.mov"), mov);
+    const quicktime = await importDirectingAnchor(f.application, "anchor.mov", signal());
+    expect(quicktime.mediaType).toBe("video/quicktime");
+    expect(quicktime.path).toEndWith(".mov");
+    expect(f.calls.every(call => call[0] === "ffprobe")).toBe(true);
+  });
+  test.skipIf(process.platform === "win32")("rejects non-video ISO-BMFF brands and unqualified anchor clips", async () => {
+    const f = await fixture();
+    await writeFile(join(f.root, "anchor.heic"), Buffer.from("0000ftypmif10000-not-a-video"));
+    await expect(importDirectingAnchor(f.application, "anchor.heic", signal())).rejects.toThrow();
+    const hdr = probeFixture();
+    Object.assign(hdr.streams[0]!, { side_data_list: [{ side_data_type: "Mastering display metadata" }] });
+    const g = await fixture({ probe: hdr });
+    await writeFile(join(g.root, "anchor.mp4"), Buffer.from("0000ftypisom0000-anchor-clip-bytes"));
+    await expect(importDirectingAnchor(g.application, "anchor.mp4", signal())).rejects.toThrow();
+  });
   test("assembles accepted clips at exact ordered boundaries and preserves its initial receipt", async () => {
     const f = await fixture({ probe: rgbProbeFixture() });
     const input = { id: "directing_example", title: "Two directed shots", recipeSha256: "a".repeat(64), clips: [

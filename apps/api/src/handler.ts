@@ -48,6 +48,11 @@ export interface HostedCallRequest {
   readonly idempotencyKey: string | undefined
   readonly token: string | undefined
   readonly clientKey: string
+  readonly toolEnv: Record<string, string | undefined> | undefined
+}
+
+export interface ApiCallOptions {
+  readonly toolEnv?: Record<string, string | undefined>
 }
 
 export interface HostedCallResult {
@@ -222,7 +227,7 @@ export function createApiHandler(environment: ApiEnvironment) {
         tool,
         args,
         workspace.directory,
-        environment.env,
+        call.toolEnv ?? environment.env,
       )
       if (result.isError === true && holdId !== undefined) {
         await credits?.release(holdId)
@@ -290,7 +295,11 @@ export function createApiHandler(environment: ApiEnvironment) {
     }
   }
 
-  async function callToolRoute(request: Request, name: string): Promise<Response> {
+  async function callToolRoute(
+    request: Request,
+    name: string,
+    toolEnv: Record<string, string | undefined> | undefined,
+  ): Promise<Response> {
     const body = await readJsonBody(request)
     if (!isRecord(body)) {
       throw invalidRequest("Body must be a JSON object.")
@@ -316,6 +325,7 @@ export function createApiHandler(environment: ApiEnvironment) {
           : undefined,
       token: bearerToken(request),
       clientKey: clientKey(request),
+      toolEnv,
     })
     return jsonResponse({
       ok: outcome.ok,
@@ -407,7 +417,10 @@ export function createApiHandler(environment: ApiEnvironment) {
     })
   }
 
-  return async function apiHandler(request: Request): Promise<Response> {
+  return async function apiHandler(
+    request: Request,
+    options?: ApiCallOptions,
+  ): Promise<Response> {
     try {
       const url = new URL(request.url)
       const path = url.pathname.replace(/\/+$/, "") || "/"
@@ -450,7 +463,11 @@ export function createApiHandler(environment: ApiEnvironment) {
       }
       const toolMatch = path.match(/^\/v1\/tools\/([a-z_]+)\/call$/u)
       if (method === "POST" && toolMatch !== null) {
-        return await callToolRoute(request, toolMatch[1] ?? "")
+        return await callToolRoute(
+          request,
+          toolMatch[1] ?? "",
+          options?.toolEnv,
+        )
       }
       if (method === "POST" && path === "/v1/uploads") {
         return await createUpload(request)
@@ -465,7 +482,12 @@ export function createApiHandler(environment: ApiEnvironment) {
           : await getArtifact(id)
       }
       if (method === "POST" && path === "/v1/mcp") {
-        return await handleMcpRequest(request, invokeTool, clientKey(request))
+        return await handleMcpRequest(
+          request,
+          invokeTool,
+          clientKey(request),
+          options?.toolEnv,
+        )
       }
       throw new ApiError(404, "not_found", "Unknown route.")
     } catch (error) {
