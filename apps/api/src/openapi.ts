@@ -30,6 +30,14 @@ export function openApiDocument(baseUrl: string): Record<string, unknown> {
           responses: { "200": { description: "Hosted tool registry." } },
         },
       },
+      "/v1/models": {
+        get: {
+          operationId: "listModels",
+          summary:
+            "List the provider/model ids admitted for paid generation. Model ids are public; provider costs never leave the service.",
+          responses: { "200": { description: "Admitted paid model ids." } },
+        },
+      },
       "/v1/tools/{name}/call": {
         post: {
           operationId: "callTool",

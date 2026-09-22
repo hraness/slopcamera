@@ -43,7 +43,7 @@ import {
 import { executeSpatialProjectCommand } from "./spatial-project-service";
 import { executeSpatialWorldCommand } from "./spatial-world-service";
 import { constants } from "node:fs";
-import { link, lstat, mkdir, open, realpath, rm } from "node:fs/promises";
+import { link, lstat, mkdir, open, realpath, rename, rm } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   createDefaultHostResourceCoordinator,
@@ -264,6 +264,13 @@ import {
   inspectGatewayCredential,
   loadGatewayCredential,
 } from "./gateway-credential";
+import {
+  CreditsClient,
+  CreditsStore,
+  creditsErrorToCli,
+  loadCreditsToken,
+  type CreditsBalance,
+} from "./credits";
 import {
   createGatewaySceneProvider,
   type GatewaySceneProviderOptions,
@@ -5328,6 +5335,25 @@ async function handleAiImageGenerate(
   context: CommandContext,
   command: Extract<CliCommand, { readonly kind: "ai-image-generate" }>,
 ): Promise<void> {
+  const gatewayConfigured = inspectGatewayCredential(context.io.env).configured;
+  if (command.hosted) {
+    await handleHostedImageGenerate(context, command);
+    return;
+  }
+  if (!gatewayConfigured) {
+    const creditsToken = await loadCreditsToken(
+      context.io.env,
+      new CreditsStore(context.stateRoot),
+    );
+    if (creditsToken !== undefined) {
+      await handleHostedImageGenerate(context, command);
+      return;
+    }
+    throw new CliError(
+      "authorization-required",
+      "Image generation needs a credential: set AI_GATEWAY_API_KEY (or `vercel env run -- …` for VERCEL_OIDC_TOKEN), or run `slopcamera credits topup` then `slopcamera credits wait` to use prepaid hosted generation.",
+    );
+  }
   await withGatewayErrors(async () => {
     const hasLocalMedia = command.images.length > 0 || command.mask !== undefined;
     if (hasLocalMedia && !command.allowCloudUpload) {
@@ -5457,6 +5483,516 @@ async function handleAiImageGenerate(
       () => gatewayArtifactHuman(summary),
     );
   });
+}
+
+function creditsClient(context: CommandContext): CreditsClient {
+  return new CreditsClient({ fetch: context.fetch });
+}
+
+function packSummaries(packs: readonly { readonly id: string; readonly usd: number; readonly credits: number; readonly bonusCredits: number; readonly label: string }[]) {
+  return packs.map(pack => ({
+    bonusCredits: pack.bonusCredits,
+    credits: pack.credits,
+    id: pack.id,
+    label: pack.label,
+    usd: pack.usd,
+  }));
+}
+
+async function handleCreditsStatus(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "credits-status" }>,
+): Promise<void> {
+  const store = new CreditsStore(context.stateRoot);
+  const pending = await store.readPendingClaim();
+  const loaded = await loadCreditsToken(context.io.env, store);
+  if (loaded === undefined) {
+    const view = {
+      configured: false,
+      ...(pending === undefined
+        ? {}
+        : {
+            pendingClaim: {
+              claimId: pending.claimId,
+              expiresAt: pending.expiresAt,
+              url: pending.url,
+            },
+          }),
+      next: pending === undefined
+        ? ["slopcamera credits topup [--pack <id>]"]
+        : ["slopcamera credits wait"],
+    };
+    writeValue(context.io, command.json, view, () => [
+      "credits\tnot configured",
+      ...(pending === undefined
+        ? ["", "Top up hosted credits:", "  slopcamera credits topup [--pack <id>]"]
+        : [
+            "",
+            `pending claim\t${pending.url}`,
+            "Finish payment, then run:",
+            "  slopcamera credits wait",
+          ]),
+    ].join("\n"));
+    return;
+  }
+  let balance: CreditsBalance;
+  try {
+    balance = await creditsClient(context).balance(loaded.token);
+  } catch (error) {
+    throw creditsErrorToCli(error);
+  }
+  const view = {
+    configured: true,
+    tokenSource: loaded.source,
+    product: balance.product,
+    balance: balance.balance,
+    heldMicroUsd: balance.heldMicroUsd,
+    lowBalance: balance.lowBalance,
+    ...(balance.topup === null ? {} : { topup: {
+      url: balance.topup.url,
+      packs: packSummaries(balance.topup.packs),
+      suggestedPackId: balance.topup.suggestedPackId,
+    } }),
+    ...(pending === undefined
+      ? {}
+      : {
+          pendingClaim: {
+            claimId: pending.claimId,
+            expiresAt: pending.expiresAt,
+            url: pending.url,
+          },
+        }),
+  };
+  writeValue(context.io, command.json, view, () => [
+    `product\t${balance.product.name} (${balance.product.id})`,
+    `balance\t${balance.balance.usd} USD (${balance.balance.credits} credits)`,
+    `held\t$${(balance.heldMicroUsd / 1_000_000).toFixed(2)}`,
+    `lowBalance\t${balance.lowBalance}`,
+    `token\t${loaded.source === "env" ? "environment" : "local state"}`,
+    ...(balance.topup === null || !balance.lowBalance
+      ? []
+      : ["", `Top up: ${balance.topup.url}`, "  slopcamera credits topup"]),
+  ].join("\n"));
+}
+
+async function handleCreditsTopup(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "credits-topup" }>,
+): Promise<void> {
+  const store = new CreditsStore(context.stateRoot);
+  const client = creditsClient(context);
+  const loaded = await loadCreditsToken(context.io.env, store);
+
+  if (loaded !== undefined) {
+    let balance: CreditsBalance;
+    try {
+      balance = await client.balance(loaded.token);
+    } catch (error) {
+      throw creditsErrorToCli(error);
+    }
+    const walletTopup = balance.topup;
+    if (walletTopup !== null) {
+      const view = {
+        balance: balance.balance,
+        packs: packSummaries(walletTopup.packs),
+        suggestedPackId: walletTopup.suggestedPackId,
+        url: walletTopup.url,
+        walletBound: true,
+        next: ["slopcamera credits status"],
+      };
+      writeValue(context.io, command.json, view, () => [
+        `pay\t${walletTopup.url}`,
+        `balance\t${balance.balance.usd} USD (${balance.balance.credits} credits)`,
+        "",
+        "Open the URL, pay, then check:",
+        "  slopcamera credits status",
+      ].join("\n"));
+      return;
+    }
+  }
+
+  // A configured wallet without a bound top-up URL cannot be credited by a new
+  // or pending unbound claim: paying it would issue a different wallet's token
+  // on `wait` and replace the stored one. Refuse instead of switching wallets.
+  if (loaded !== undefined) {
+    throw new CliError(
+      "unavailable",
+      "The configured wallet does not expose a bound top-up right now. Run `slopcamera credits forget` to abandon this wallet, or retry `slopcamera credits topup` later.",
+    );
+  }
+
+  const now = context.clock();
+  const pending = await store.readPendingClaim();
+  if (
+    pending !== undefined
+    && Date.parse(pending.expiresAt) > now + 60_000
+  ) {
+    const view = {
+      claimId: pending.claimId,
+      expiresAt: pending.expiresAt,
+      packs: packSummaries(pending.packs),
+      suggestedPackId: pending.suggestedPackId,
+      url: pending.url,
+      walletBound: false,
+      reused: true,
+      next: ["slopcamera credits wait"],
+    };
+    writeValue(context.io, command.json, view, () => [
+      `pay\t${pending.url}`,
+      `claim\t${pending.claimId} (existing, expires ${pending.expiresAt})`,
+      "",
+      "Open the URL to pay, then run:",
+      "  slopcamera credits wait",
+    ].join("\n"));
+    return;
+  }
+
+  const identity = await store.deviceIdentity();
+  let claim;
+  try {
+    claim = await client.createClaim({
+      deviceId: identity.deviceId,
+      deviceLabel: identity.label,
+      ...(command.email === undefined ? {} : { email: command.email }),
+      ...(command.pack === undefined ? {} : { packId: command.pack }),
+      resumeArgv: ["slopcamera", "credits", "wait"],
+    });
+  } catch (error) {
+    throw creditsErrorToCli(error);
+  }
+  await store.writePendingClaim({
+    claimId: claim.claimId,
+    claimSecret: claim.claimSecret,
+    url: claim.url,
+    expiresAt: claim.expiresAt,
+    packs: claim.packs,
+    suggestedPackId: claim.suggestedPackId,
+    createdAt: new Date(now).toISOString(),
+  });
+  const view = {
+    claimId: claim.claimId,
+    expiresAt: claim.expiresAt,
+    packs: packSummaries(claim.packs),
+    suggestedPackId: claim.suggestedPackId,
+    url: claim.url,
+    walletBound: false,
+    reused: false,
+    next: ["slopcamera credits wait"],
+  };
+  writeValue(context.io, command.json, view, () => [
+    `pay\t${claim.url}`,
+    `claim\t${claim.claimId} (expires ${claim.expiresAt})`,
+    ...(claim.packs.length === 0
+      ? []
+      : [
+          "",
+          "packs:",
+          ...claim.packs.map(pack => `  ${pack.id}\t${pack.label}`),
+        ]),
+    "",
+    "Open the URL to pay, then run:",
+    "  slopcamera credits wait",
+  ].join("\n"));
+}
+
+async function handleCreditsWait(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "credits-wait" }>,
+): Promise<void> {
+  const store = new CreditsStore(context.stateRoot);
+  const client = creditsClient(context);
+  const pending = await store.readPendingClaim();
+  if (pending === undefined) {
+    throw new CliError(
+      "usage",
+      "No pending credits top-up. Run `slopcamera credits topup` first.",
+    );
+  }
+  const bearer = pending.claimSecret;
+  const deadline = context.clock() + gatewayTimeoutMs(command.timeout);
+  const claimExpiry = Date.parse(pending.expiresAt);
+  const effectiveDeadline = Number.isFinite(claimExpiry)
+    ? Math.min(deadline, claimExpiry + 5 * 60_000)
+    : deadline;
+
+  for (;;) {
+    let status;
+    try {
+      status = await client.claimStatus(pending.claimId, bearer);
+    } catch (error) {
+      throw creditsErrorToCli(error);
+    }
+    if (status.state === "paid") {
+      if (status.deviceToken !== undefined) {
+        // The token is returned exactly once; persist before reporting.
+        await store.writeDeviceToken(status.deviceToken);
+        await store.clearPendingClaim();
+        const view = {
+          claimId: pending.claimId,
+          configured: true,
+          state: "paid" as const,
+          next: ["slopcamera credits status", "slopcamera ai image generate --hosted --model <id> --prompt <text>"],
+        };
+        writeValue(context.io, command.json, view, () => [
+          "paid\tcredits wallet is configured on this device",
+          "",
+          "Next:",
+          "  slopcamera credits status",
+          "  slopcamera ai image generate --hosted --model <id> --prompt <text>",
+        ].join("\n"));
+        return;
+      }
+      await store.clearPendingClaim();
+      const view = {
+        claimId: pending.claimId,
+        configured: true,
+        state: "paid" as const,
+        walletBound: true,
+        next: ["slopcamera credits status"],
+      };
+      writeValue(context.io, command.json, view, () => [
+        "paid\ttop-up applied to the configured wallet",
+        "",
+        "  slopcamera credits status",
+      ].join("\n"));
+      return;
+    }
+    if (status.state === "consumed") {
+      await store.clearPendingClaim();
+      const stored = await store.readDeviceToken();
+      if (stored !== undefined) {
+        const view = {
+          claimId: pending.claimId,
+          configured: true,
+          state: "consumed" as const,
+          next: ["slopcamera credits status"],
+        };
+        writeValue(context.io, command.json, view, () =>
+          "paid\tcredits wallet is configured on this device\n\n  slopcamera credits status");
+        return;
+      }
+      throw new CliError(
+        "conflict",
+        "The claim was consumed elsewhere and no device token is stored locally. Run `slopcamera credits topup` to start a new top-up.",
+      );
+    }
+    if (status.state === "expired") {
+      await store.clearPendingClaim();
+      throw new CliError(
+        "cancelled",
+        "The checkout expired before payment. Run `slopcamera credits topup` for a fresh link.",
+      );
+    }
+    if (context.clock() >= effectiveDeadline) {
+      const view = {
+        claimId: pending.claimId,
+        configured: false,
+        expiresAt: pending.expiresAt,
+        state: "pending" as const,
+        url: pending.url,
+        next: ["slopcamera credits wait"],
+      };
+      writeValue(context.io, command.json, view, () => [
+        `pending\t${pending.url}`,
+        `claim expires\t${pending.expiresAt}`,
+        "",
+        "Payment is not complete yet. Re-run:",
+        "  slopcamera credits wait",
+      ].join("\n"));
+      return;
+    }
+    await context.sleep(2_500);
+  }
+}
+
+async function handleCreditsForget(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "credits-forget" }>,
+): Promise<void> {
+  const store = new CreditsStore(context.stateRoot);
+  const [tokenRemoved, claimRemoved] = await Promise.all([
+    store.clearDeviceToken(),
+    store.clearPendingClaim(),
+  ]);
+  const view = {
+    claimRemoved,
+    configured: false,
+    tokenRemoved,
+  };
+  writeValue(context.io, command.json, view, () => [
+    tokenRemoved
+      ? "removed the stored device token"
+      : "no stored device token",
+    claimRemoved
+      ? "removed the pending claim"
+      : "no pending claim",
+    ...(tokenRemoved
+      ? ["", "The wallet still exists; a removed token cannot be re-read. Run `slopcamera credits topup` to configure a new one."]
+      : []),
+  ].join("\n"));
+}
+
+function hostedImageFlagViolation(
+  command: Extract<CliCommand, { readonly kind: "ai-image-generate" }>,
+): string | undefined {
+  if (command.images.length > 0) return "--image";
+  if (command.mask !== undefined) return "--mask";
+  if (command.aspectRatio !== undefined) return "--aspect-ratio";
+  if (command.size !== undefined) return "--size";
+  if (command.seed !== undefined) return "--seed";
+  if (command.temperature !== undefined) return "--temperature";
+  if (command.stopSequences.length > 0) return "--stop";
+  if (command.maxOutputTokens !== undefined) return "--max-output-tokens";
+  if (command.providerOptions !== undefined) return "--provider-options";
+  if (command.count !== 1) return "--count";
+  if (command.maxPerCall !== undefined) return "--max-per-call";
+  if (command.allowCloudUpload) return "--allow-cloud-upload";
+  return undefined;
+}
+
+async function handleHostedImageGenerate(
+  context: CommandContext,
+  command: Extract<CliCommand, { readonly kind: "ai-image-generate" }>,
+): Promise<void> {
+  const unsupported = hostedImageFlagViolation(command);
+  if (unsupported !== undefined) {
+    throw new CliError(
+      "usage",
+      `${unsupported} is not supported by hosted generation; hosted image generation admits a prompt and model only. Drop ${unsupported} or run without --hosted against your own Gateway credential.`,
+    );
+  }
+  const prompt = await gatewayCommandText(context, command.prompt, command.promptFile);
+  if (prompt === undefined || prompt.trim() === "") {
+    throw new CliError(
+      "usage",
+      "Hosted image generation requires --prompt or --prompt-file.",
+    );
+  }
+  const store = new CreditsStore(context.stateRoot);
+  const loaded = await loadCreditsToken(context.io.env, store);
+  if (loaded === undefined) {
+    const pending = await store.readPendingClaim();
+    throw new CliError(
+      "authorization-required",
+      pending === undefined
+        ? "Hosted generation needs a Slopcamera credits device token. Run `slopcamera credits topup`, then `slopcamera credits wait`."
+        : `Hosted generation needs a paid top-up first: finish payment at ${pending.url} then run \`slopcamera credits wait\`.`,
+    );
+  }
+  const client = creditsClient(context);
+  const idempotencyKey = `cli:${randomUUID()}`;
+  let call;
+  try {
+    call = await client.executeHostedImage({
+      deviceToken: loaded.token,
+      idempotencyKey,
+      model: command.model,
+      prompt,
+      outputName: "output.png",
+    });
+  } catch (error) {
+    throw creditsErrorToCli(error);
+  }
+  if (!call.ok) {
+    throw new CliError(
+      "unavailable",
+      "The hosted generation failed.",
+    );
+  }
+  const artifact = call.artifacts.find(entry => /^image\//u.test(entry.contentType));
+  if (artifact === undefined) {
+    throw new CliError(
+      "invalid-data",
+      "The hosted generation returned no image artifact.",
+    );
+  }
+  const bytes = await client.downloadArtifact(artifact);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  if (digest !== artifact.sha256) {
+    throw new CliError(
+      "invalid-data",
+      "The hosted artifact bytes did not match the returned sha256.",
+    );
+  }
+  const extension = artifact.contentType === "image/jpeg"
+    ? ".jpg"
+    : artifact.contentType === "image/webp"
+      ? ".webp"
+      : ".png";
+  const outputs = await resolveGeneratedOutputPaths(
+    context.paths,
+    "image",
+    undefined,
+    extension,
+  );
+  const staged = `${outputs.outputPath}.${randomUUID()}.tmp`;
+  {
+    const handle = await open(
+      staged,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY
+        | (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+    try {
+      await handle.writeFile(bytes);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await rename(staged, outputs.outputPath);
+  }
+  const receipt = {
+    schemaVersion: 1,
+    kind: "slopcamera.hosted-media-receipt",
+    createdAt: context.io.now().toISOString(),
+    provider: "hosted",
+    operation: "slopcamera.image.generate",
+    model: command.model,
+    idempotencyKey,
+    request: {
+      promptCharacters: prompt.length,
+      promptSha256: sha256Hex(prompt),
+    },
+    artifact: {
+      bytes: artifact.bytes,
+      contentType: artifact.contentType,
+      expiresAt: artifact.expiresAt,
+      id: artifact.id,
+      name: artifact.name,
+      sha256: artifact.sha256,
+      url: artifact.url,
+    },
+    outputs: [
+      {
+        bytes: bytes.byteLength,
+        file: basename(outputs.outputPath),
+        mediaType: artifact.contentType,
+        sha256: digest,
+      },
+    ],
+  };
+  await publishGeneratedReceipt(context.paths, outputs.receiptPath, receipt);
+  const summary = {
+    artifact: {
+      id: artifact.id,
+      expiresAt: artifact.expiresAt,
+      url: artifact.url,
+    },
+    model: command.model,
+    output: displayPath(context.paths.repositoryRoot, outputs.outputPath),
+    provider: "hosted",
+    receipt: displayPath(context.paths.repositoryRoot, outputs.receiptPath),
+    sha256: digest,
+    bytes: bytes.byteLength,
+  };
+  writeValue(context.io, command.json, summary, () => [
+    `provider\thosted (Hraness Credits)`,
+    `model\t${command.model}`,
+    `output\t${displayPath(context.paths.repositoryRoot, outputs.outputPath)}`,
+    `sha256\t${digest}`,
+    `receipt\t${displayPath(context.paths.repositoryRoot, outputs.receiptPath)}`,
+    `artifact\t${artifact.url} (expires ${artifact.expiresAt})`,
+  ].join("\n"));
 }
 
 async function dispatchGalleryCandidate(
@@ -7468,6 +8004,10 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "ai-video-generate": await handleAiVideoGenerate(context, command); return;
     case "ai-speech-generate": await handleAiSpeechGenerate(context, command); return;
     case "ai-transcribe": await handleAiTranscribe(context, command); return;
+    case "credits-status": await handleCreditsStatus(context, command); return;
+    case "credits-topup": await handleCreditsTopup(context, command); return;
+    case "credits-wait": await handleCreditsWait(context, command); return;
+    case "credits-forget": await handleCreditsForget(context, command); return;
     case "media-audio": await handleMediaAudio(context, command); return;
     case "media-color": await handleMediaColor(context, command); return;
     case "menubar": {
@@ -7767,6 +8307,12 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "ai-video-generate":
     case "ai-speech-generate":
     case "ai-transcribe": return undefined;
+    // Credits commands mutate only the private per-machine state root, which
+    // owns its own file-level writes; no bundle lease applies.
+    case "credits-status":
+    case "credits-topup":
+    case "credits-wait":
+    case "credits-forget": return undefined;
     case "help":
     case "version":
     case "capabilities":

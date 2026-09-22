@@ -31,6 +31,8 @@ Commands:
   doctor                         Check local render and asset capabilities
   ai models|image|video|speech|transcribe
                                  Discover and run Vercel AI Gateway media models
+  credits status|topup|wait|forget
+                                 Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
   menubar [--background]         Run the prebuilt menu-bar companion
   menubar install|uninstall|status  Manage its per-user LaunchAgent
@@ -378,7 +380,7 @@ run journal.`,
         [--size <width>x<height>] [--aspect-ratio <width>:<height>] [--seed <n>]
         [--max-output-tokens <n>] [--temperature <n>] [--stop <text> ...]
         [--provider-options <json-file>] [--timeout <time>]
-        [--allow-cloud-upload] [--json]
+        [--allow-cloud-upload] [--hosted] [--json]
   slopcamera ai image gallery <subject> --model <id> --output-dir <directory>
         [--kind <image|texture|skybox|backdrop|sprite>] [--count <n>]
         [--vary <axis[=v1,v2][;axis...]>] [--candidates <json-file>]
@@ -405,6 +407,15 @@ run journal.`,
 Set AI_GATEWAY_API_KEY in the process environment, or run through a linked Vercel project with
 \`vercel env run -- slopcamera …\` so VERCEL_OIDC_TOKEN is injected. Slopcamera never persists,
 prints, or accepts either credential through argv.
+
+Alternatively, prepaid hosted generation bills Hraness Credits instead of your own Gateway
+credential: run \`slopcamera credits topup\` to buy a pack, \`slopcamera credits wait\` to install
+the device token, then \`slopcamera ai image generate --hosted --model <id> --prompt <text>\`.
+Hosted mode admits one prompt-only image per call: --image, --mask, --count, --size,
+--aspect-ratio, --seed, --temperature, --stop, --max-output-tokens, --provider-options and
+--allow-cloud-upload are rejected because the hosted operation currently exposes no input media
+or provider knobs. When no Gateway credential is configured but a credits device token exists,
+ai image generate routes to the hosted service automatically.
 
 The media-model catalog is fetched live from Vercel AI Gateway and cached with a deterministic
 revision. Every image, video, speech, and batch-transcription model of the matching operation is
@@ -542,6 +553,25 @@ All mutations support --json and return the resulting plan hash.`,
 Options: --kind <kind[,kind]> (repeatable) --from <time> --to <time>
          --around <time> --limit <1..10000> --json | --jsonl`,
   inspect: `Usage: slopcamera inspect <recording> [--fields <csv>] [--json]`,
+  credits: `Usage:
+  slopcamera credits status [--json]
+  slopcamera credits topup [--pack <id>] [--email <address>] [--json]
+  slopcamera credits wait [--timeout <time>] [--json]
+  slopcamera credits forget [--json]
+
+Prepaid credits power hosted Slopcamera generation at api.slopcamera.com — an alternative to
+running your own Vercel AI Gateway credential. \`topup\` opens a hosted checkout page and prints
+its URL; the page renders the current pack list and prices from the live rate card. \`wait\`
+polls the pending claim until payment lands, then stores the returned device token with 0600
+permissions below the CLI state root. \`status\` reads the wallet balance and held amount.
+\`forget\` removes the locally stored token and pending claim; the wallet and its balance are
+unaffected, but a removed token cannot be re-read, so a new top-up issues a fresh token.
+
+Set SLOPCAMERA_CREDITS_TOKEN to supply the device token from the environment instead of local
+state — useful for agents in ephemeral environments. Tokens and claim secrets never appear in
+argv, receipts, or logs. When a configured wallet runs out, paid calls fail with the top-up URL;
+\`credits topup\` on a configured wallet reuses its bound claim so one wallet keeps one identity.`,
+
   media: `Usage:
   slopcamera media audio <media-path> [effects] [--audio-stream <index>]
         [--output <relative-path>] [--json]
@@ -643,7 +673,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -676,6 +706,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "align") return ["analyze", "apply"];
   if (command === "fillers") return ["list", "apply"];
   if (command === "ai") return ["models", "provider-options", "image", "video", "speech", "transcribe"];
+  if (command === "credits") return ["status", "topup", "wait", "forget"];
   if (command === "media") return ["audio", "color"];
   if (command === "render") return ["plan", "run"];
   if (command === "assets") return ["emoji"];

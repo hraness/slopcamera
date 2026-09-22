@@ -239,6 +239,13 @@ export function commandHostResourceClaims(
     case "ai-models-list":
     case "ai-models-show":
       return claims(coordinator, ["network"]);
+    case "credits-status":
+    case "credits-topup":
+    case "credits-wait":
+      // Bounded hosted-service calls; `wait` polls one claim until payment.
+      return claims(coordinator, ["network"]);
+    case "credits-forget":
+      return [];
     case "ai-provider-options-inspect":
     case "align-apply":
     case "code-init":
