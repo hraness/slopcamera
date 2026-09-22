@@ -3897,6 +3897,11 @@ async function inspectStagedGatewayMediaFile(
   ffprobe: string,
   signal?: AbortSignal,
 ): Promise<LoadedGatewayPhysicalFile> {
+  // On-disk JPEG files probe through ffmpeg's image2 sequence demuxer, which the
+  // whitelist deliberately omits; pin the single-image pipe demuxer instead.
+  const forcedInputFormat = file.mediaType === "image/jpeg"
+    ? ["-f", "jpeg_pipe"]
+    : [];
   const probe = await context.runner.run([
     ffprobe,
     "-hide_banner",
@@ -3906,6 +3911,7 @@ async function inspectStagedGatewayMediaFile(
     "-show_entries",
     "format=duration:stream=codec_type,width,height,duration,channels,sample_rate,avg_frame_rate,r_frame_rate",
     "-of", "json",
+    ...forcedInputFormat,
     inspectionPath,
   ], {
     ...(signal === undefined ? {} : { abortSignal: signal }),
@@ -4078,6 +4084,7 @@ async function inspectStagedGatewayMediaFile(
     "-xerror",
     ...SELF_CONTAINED_MEDIA_INPUT_ARGUMENTS,
     "-threads", "1",
+    ...forcedInputFormat,
     "-i", inspectionPath,
     "-map", "0:V?",
     "-map", "0:a?",

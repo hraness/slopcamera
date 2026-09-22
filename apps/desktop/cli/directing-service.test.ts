@@ -94,6 +94,20 @@ test("decimal budgets and exact catalog duration quotes use integer microdollars
   expect(() => quoteDirectingShot({ ...ambiguous, snapshot: { ...ambiguous.snapshot, models: [{ ...model, pricing: { video_duration_pricing: [{ cost_per_second: "0.1", audio: true }] } }] } }, shot, now)).toThrow("pricing conditions");
 });
 
+test("a Wan shot binds the catalog price row only when the provider can express the resolution", () => {
+  const wanCatalog = { source: "network", status: "fresh", snapshot: parseGatewayMediaCatalog({ data: [{
+    id: "alibaba/wan-v2.6-r2v-flash", name: "Wan", description: "Fixture", owned_by: "alibaba", type: "video", modalities: { input: ["text"], output: ["video"] },
+    video_capabilities: { supported_operations: ["reference-to-video"], supported_resolutions: ["480p", "720p", "1080p"], supported_aspect_ratios: ["16:9", "4:3"], supported_durations_seconds: [5], supported_fps: [24] },
+    pricing: { video_duration_pricing: [{ resolution: "480p", cost_per_second: "0.02" }, { resolution: "720p", cost_per_second: "0.05" }] },
+  }] }, { fetchedAt: now.toISOString() }) } as GatewayMediaCatalogView;
+  const wanShot = { ...shot, model: "alibaba/wan-v2.6-r2v-flash", resolution: "720p", aspectRatio: "16:9", references: [imageReference("moodboard")] };
+  expect(quoteDirectingShot(wanCatalog, wanShot, now).costMicroUsd).toBe(250_000);
+  // The 480p tier has no provider size for 4:3, so the mapped check fails
+  // even though the catalog lists both settings.
+  expect(() => quoteDirectingShot(wanCatalog, { ...wanShot, resolution: "480p", aspectRatio: "4:3" }, now))
+    .toThrow("cannot express resolution 480p at aspect 4:3");
+});
+
 test("a film retains budget, reuses completed takes, explicitly reviews and assembles", async () => {
   const h = await harness();
   await h.execute("plan", "recipe.json"); expect(h.calls.paid).toBe(0);
