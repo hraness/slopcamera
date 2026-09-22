@@ -30,8 +30,8 @@ function restorationFixture(recovery = false) {
     fonts: { get ready() { fontReadyReads++; return Promise.resolve() }, load: async () => [{ status: "loaded" }] },
     body: { append: () => {} },
     createElement: () => {
-      const element: { children: object[], setAttribute: () => void, remove: () => void, innerHTML: string } =
-        { children: [], setAttribute: () => {}, remove: () => {}, innerHTML: "" }
+      const element: { children: object[], style: Record<string, string>, remove: () => void, append: (node: object) => void } =
+        { children: [], style: {}, remove: () => {}, append: node => element.children.push(node) }
       return element
     },
   }

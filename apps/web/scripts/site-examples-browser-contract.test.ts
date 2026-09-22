@@ -155,7 +155,7 @@ function disabledStyleFixture() {
  let fontReads=0
  class Sheet { href=href;disabled=true }
  const sheet=new Sheet(),document={styleSheets:[sheet],fonts:{ready:Promise.resolve(),load:async()=>{fontReads++;return sheet.disabled?[]:[{status:"loaded"}]}},
-  body:{append:()=>{}},createElement:()=>({children:[] as object[],setAttribute:()=>{},remove:()=>{},innerHTML:""})}
+  body:{append:()=>{}},createElement:()=>{const element:{children:object[],style:Record<string,string>,remove:()=>void,append:(node:object)=>void}={children:[],style:{},remove:()=>{},append:node=>element.children.push(node)};return element}}
  const execute=(callback:Function,...args:unknown[])=>runInNewContext(`(${callback.toString()})(...args)`,{document,CSSStyleSheet:Sheet,requestAnimationFrame:(callback:()=>void)=>frames.push(callback),getComputedStyle:()=>({getPropertyValue:()=>"0px"}),args}) as Promise<void>
  return {sheet,document,href,frames,execute,start:()=>execute(settleExamplesDisabledStyles,sheet,href),frame:()=>{const callbacks=frames.splice(0);for(const callback of callbacks)callback()},get fontReads(){return fontReads}}
 }

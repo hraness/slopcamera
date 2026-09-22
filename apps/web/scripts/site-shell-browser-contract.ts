@@ -364,10 +364,28 @@ export async function settle(page: Page, direction?: "rtl"): Promise<void> {
     // so the probe shares the real elements' fallback state, then require two
     // consecutive frames to agree that the swap has landed.
     const probe = document.createElement("div")
-    probe.setAttribute("style", "position:absolute;inset-inline-start:-10000px;top:0;block-size:1px;inline-size:1px;overflow:hidden;visibility:hidden")
-    probe.innerHTML = "<i style='display:block;font:400 44px \"Instrument Serif\",serif;max-inline-size:17ch'></i>" +
-      "<i style='display:block;font:400 16px \"Nebula Sans\",sans-serif;max-inline-size:48ch'></i>" +
-      "<i style='display:block;font:500 16px \"Nebula Sans\",sans-serif;max-inline-size:48ch'></i>"
+    probe.style.position = "absolute"
+    probe.style.insetInlineStart = "-10000px"
+    probe.style.top = "0"
+    probe.style.blockSize = "1px"
+    probe.style.inlineSize = "1px"
+    probe.style.overflow = "hidden"
+    probe.style.visibility = "hidden"
+    // style-src 'self' forbids inline style markup, so the probe is styled
+    // through CSSOM property sets, which the directive does not govern.
+    for (const [weight, size, family, fallback, measure] of [
+      ["400", "44px", "Instrument Serif", "serif", "17ch"],
+      ["400", "16px", "Nebula Sans", "sans-serif", "48ch"],
+      ["500", "16px", "Nebula Sans", "sans-serif", "48ch"],
+    ]) {
+      const node = document.createElement("i")
+      node.style.display = "block"
+      node.style.fontWeight = weight
+      node.style.fontSize = size
+      node.style.fontFamily = `"${family}",${fallback}`
+      node.style.maxInlineSize = measure
+      probe.append(node)
+    }
     document.body.append(probe)
     try {
       await document.fonts.ready
