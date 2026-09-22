@@ -48,9 +48,19 @@ Then give your coding agent the matching guidance:
 - [Capabilities, versions, and platforms](/docs/reference/capabilities): release availability, supported profiles, and runtime requirements.
 - [SDK surfaces](/docs/reference/sdk): portable and local imports, operation projections, and execution contracts.
 - [The Slopcamera engine stack](/docs/reference/engines): what each part of the multimedia engine does, needs, and where its limits are.
+- [The .diagram.json format](/docs/reference/diagram-format): the version-one diagram source, its five exports, and .tldr interchange.
+- [HTML render profiles](/docs/reference/html-profiles): the seven locked browser profiles, from Motion and p5.js to Three.js and vgpu.
+- [Spatial scenes, cameras, and saved worlds](/docs/reference/spatial-scenes): the .scene.json contract, hardware profiles, and bounded splats.
+- [Local raster-to-SVG vectorization](/docs/reference/vectorization): the checksum-pinned VTracer profile, fidelity gates, and provenance.
+- [Vercel AI Gateway media generation](/docs/reference/gateway-generation): credentials, live model discovery, upload acknowledgements, and receipts.
+- [Video editing, compositing, and delivery](/docs/reference/video-pipeline): the FFmpeg-backed project model, typed edits, and delivery variants.
+- [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the studio adapter's trust envelope and job lifecycle.
+- [The Slopcamera MCP toolset](/docs/reference/mcp-tools): the 17 fixed tools, their bounds, and what stays CLI-only.
 
 ## Understand the design
 
+- [Slopcamera use cases](/docs/explanation/use-cases): the jobs the studio covers, the surface each uses, and where it is not the right tool.
+- [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
 - [Source, representations, and projects](/docs/explanation/architecture): what stays editable, what a receipt proves, and how local and cloud work fit together.
 - [Why Slopcamera](/docs/explanation/why-slopcamera): what a retained-source local studio gives an agent that a loose toolchain does not.
 - [Extend Slopcamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
