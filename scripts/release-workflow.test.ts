@@ -1094,8 +1094,8 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.3.3")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.3.3/hraness-slopcamera-3.3.3.tgz")
+  expect(publishedRelease.version).toBe("3.3.4")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.3.4/hraness-slopcamera-3.3.4.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
