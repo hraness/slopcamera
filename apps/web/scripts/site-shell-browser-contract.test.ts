@@ -28,6 +28,12 @@ function restorationFixture(recovery = false) {
     querySelectorAll: (selector: string) => selected.get(selector) ?? [],
     querySelector: (selector: string) => selected.get(selector)?.[0] ?? null,
     fonts: { get ready() { fontReadyReads++; return Promise.resolve() }, load: async () => [{ status: "loaded" }] },
+    body: { append: () => {} },
+    createElement: () => {
+      const element: { children: object[], setAttribute: () => void, remove: () => void, innerHTML: string } =
+        { children: [], setAttribute: () => {}, remove: () => {}, innerHTML: "" }
+      return element
+    },
   }
   class Link { ownerDocument = document; isConnected = true; disabled = false; href = href; sheet?: object }
   const link = new Link()
@@ -41,7 +47,7 @@ function restorationFixture(recovery = false) {
     }
     selected.set(selector, [owner]); return owner
   })
-  const context = { document, HTMLLinkElement: Link, CSSStyleSheet: Sheet, requestAnimationFrame: view.requestAnimationFrame }
+  const context = { document, HTMLLinkElement: Link, CSSStyleSheet: Sheet, requestAnimationFrame: view.requestAnimationFrame, getComputedStyle: view.getComputedStyle }
   const execute = (callback: (...values: never[]) => unknown, ...args: unknown[]) => runInNewContext(`(${callback.toString()})(...args)`, { ...context, args }) as Promise<void>
   const start = () => {
     const result = execute(settleShellRestoredStyles, sheet, { href, recovery, properties: ["padding-left", "font-weight"] })
@@ -67,7 +73,8 @@ function restorationFixture(recovery = false) {
 test("restoration sampling discovers the transition that generic two frames miss", async () => {
   const generic = restorationFixture(), old = generic.generic()
   for (let index = 0; index < 8; index++) await Promise.resolve()
-  generic.frame(); generic.frame(); await old
+  for (let index = 0; index < 8; index++) { generic.frame(); await Promise.resolve() }
+  await old
   expect(generic.fontReadyReads).toBe(2)
   expect(generic.read()).toBe("0px")
   const actual = restorationFixture(), result = actual.start()

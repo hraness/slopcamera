@@ -154,8 +154,9 @@ function disabledStyleFixture() {
  const href="http://127.0.0.1:1234/graphs/site-foundation/style.css",frames: (()=>void)[]=[]
  let fontReads=0
  class Sheet { href=href;disabled=true }
- const sheet=new Sheet(),document={styleSheets:[sheet],fonts:{ready:Promise.resolve(),load:async()=>{fontReads++;return sheet.disabled?[]:[{status:"loaded"}]}}}
- const execute=(callback:Function,...args:unknown[])=>runInNewContext(`(${callback.toString()})(...args)`,{document,CSSStyleSheet:Sheet,requestAnimationFrame:(callback:()=>void)=>frames.push(callback),args}) as Promise<void>
+ const sheet=new Sheet(),document={styleSheets:[sheet],fonts:{ready:Promise.resolve(),load:async()=>{fontReads++;return sheet.disabled?[]:[{status:"loaded"}]}},
+  body:{append:()=>{}},createElement:()=>({children:[] as object[],setAttribute:()=>{},remove:()=>{},innerHTML:""})}
+ const execute=(callback:Function,...args:unknown[])=>runInNewContext(`(${callback.toString()})(...args)`,{document,CSSStyleSheet:Sheet,requestAnimationFrame:(callback:()=>void)=>frames.push(callback),getComputedStyle:()=>({getPropertyValue:()=>"0px"}),args}) as Promise<void>
  return {sheet,document,href,frames,execute,start:()=>execute(settleExamplesDisabledStyles,sheet,href),frame:()=>{const callbacks=frames.splice(0);for(const callback of callbacks)callback()},get fontReads(){return fontReads}}
 }
 describe("exact held examples stylesheet negative control",()=>{
@@ -174,7 +175,9 @@ describe("exact held examples stylesheet negative control",()=>{
   await expect(f.start()).rejects.toThrow("Lost exact disabled examples stylesheet")
   const restored=settle({evaluate:(callback:Function,...args:unknown[])=>f.execute(callback,...args)} as never)
   for(let i=0;i<12;i++)await Promise.resolve()
-  expect(f.fontReads).toBe(3);f.frame();f.frame();await restored
+  expect(f.fontReads).toBe(3)
+  for(let i=0;i<8;i++){f.frame();await Promise.resolve()}
+  await restored
  })
  const corruptions:Record<string,(fixture:ReturnType<typeof disabledStyleFixture>)=>void>={
   detached:f=>{f.document.styleSheets=[]},

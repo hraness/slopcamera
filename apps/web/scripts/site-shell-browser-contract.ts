@@ -357,17 +357,41 @@ export async function settle(page: Page, direction?: "rtl"): Promise<void> {
     // RTL is an explicit paired browser fixture, applied to each new document
     // after navigation. The authoritative served HTML and CSS remain intact.
     if (direction === "rtl") document.documentElement.setAttribute("dir", direction)
-    await document.fonts.ready
-    const fonts = await Promise.all([
-      document.fonts.load('400 44px "Instrument Serif"'),
-      document.fonts.load('400 16px "Nebula Sans"'),
-      document.fonts.load('500 16px "Nebula Sans"'),
-    ])
-    if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
-    // An explicit load can start a new FontFaceSet loading cycle after the
-    // document's initial ready promise. Await the current cycle as well so
-    // Chromium has completed the corresponding layout before evidence is read.
-    await document.fonts.ready
+    // A resolved fonts.load marks the face loaded in the FontFaceSet, but
+    // font-display:swap lets Chromium apply the swap into the font-resolution
+    // state that ch/ex metrics read a frame or more later. Probe the exact
+    // resolution path the hero copy assertions depend on before any loading,
+    // so the probe shares the real elements' fallback state, then require two
+    // consecutive frames to agree that the swap has landed.
+    const probe = document.createElement("div")
+    probe.setAttribute("style", "position:absolute;inset-inline-start:-10000px;top:0;block-size:1px;inline-size:1px;overflow:hidden;visibility:hidden")
+    probe.innerHTML = "<i style='display:block;font:400 44px \"Instrument Serif\",serif;max-inline-size:17ch'></i>" +
+      "<i style='display:block;font:400 16px \"Nebula Sans\",sans-serif;max-inline-size:48ch'></i>" +
+      "<i style='display:block;font:500 16px \"Nebula Sans\",sans-serif;max-inline-size:48ch'></i>"
+    document.body.append(probe)
+    try {
+      await document.fonts.ready
+      const fonts = await Promise.all([
+        document.fonts.load('400 44px "Instrument Serif"'),
+        document.fonts.load('400 16px "Nebula Sans"'),
+        document.fonts.load('500 16px "Nebula Sans"'),
+      ])
+      if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
+      // An explicit load can start a new FontFaceSet loading cycle after the
+      // document's initial ready promise. Await the current cycle as well so
+      // Chromium has completed the corresponding layout before evidence is read.
+      await document.fonts.ready
+      const nodes = [...probe.children]
+      const read = () => nodes.map(node => getComputedStyle(node).getPropertyValue("max-inline-size")).join(",")
+      let previous = read()
+      for (let frame = 0, stable = 0; stable < 2 && frame < 60; frame++) {
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+        const value = read()
+        stable = value === previous ? stable + 1 : 0
+        previous = value
+        if (frame === 59 && stable < 2) throw new Error("Local font application did not settle")
+      }
+    } finally { probe.remove() }
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   }, direction)
 }
