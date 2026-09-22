@@ -47,10 +47,32 @@ This release corrects wall-opening elevations, arched crowns, and Boolean surfac
 
 ## Discover the installed contract
 
+### Patent-style drawing sheets in current source
+
+Current source adds `diagram sheets init|check|render` for version-one
+`.drawing.json` documents. This capability is not part of the verified releases
+listed above. It retains one authored diagram per sheet and produces outlined
+monochrome SVGs, a multipage PDF, and a receipt binding source and output hashes.
+It runs locally with bundled rendering dependencies and needs no browser,
+credentials, or network request. The CLI and root SDK expose this surface; it
+does not add an MCP tool or Code Mode operation.
+
+The existing `.diagram.json` version-one contract and its five ordinary render
+outputs remain unchanged; `.drawing.json` is a separate sheet manifest.
+
+The fixed `patent-line-art-v1` profile checks its supported physical page bounds
+and minimum letter height. It accepts A4 or US Letter and uses US-style figure
+numbering. These checks do not establish technical disclosure or filing
+compliance. See [prepare drawing sheets](../how-to/patent-drawings.md) for source
+editing, outputs, and the required visual review.
+
+### Command discovery
+
 | Need | Discovery command |
 | --- | --- |
 | CLI version and top-level commands | `slopcamera --version`, `slopcamera --help` |
 | Grammar for a command family | `slopcamera help project`, `slopcamera help studio`, `slopcamera help scene` |
+| Drawing-sheet commands in current source | `slopcamera help diagram` |
 | Local tools and readiness | `slopcamera doctor --json` |
 | Closed local operation catalog and exact schemas | `slopcamera operations list --json`, `slopcamera operations show <kind>[@<version>] --json` |
 | Static capability modules, trust, and qualification metadata | `slopcamera capabilities --json` |

@@ -110,9 +110,12 @@ const capabilityModules = Object.freeze([
       { effect: "pure", name: "capabilities" },
       { effect: "local-read", name: "diagram check" },
       { effect: "local-derived-write", name: "diagram render" },
+      { effect: "local-derived-write", name: "diagram sheets init" },
+      { effect: "local-read", name: "diagram sheets check" },
+      { effect: "local-derived-write", name: "diagram sheets render" },
       { effect: "local-derived-write", name: "image vectorize" },
     ],
-    description: "Portable diagrams, local vectorization, and the bounded semantic operation projection.",
+    description: "Portable diagrams, CLI/SDK drawing sheets, local vectorization, and the bounded semantic operation projection.",
     moduleId: "slopcamera.capability.diagram-image",
     operationKeys: diagramImageOperations,
     profiles: [{

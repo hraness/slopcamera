@@ -416,6 +416,7 @@ type ArchiveTarMutation = (tar: Buffer) => void
 async function writeReleaseArtifactFixture(
   root: string,
   mutation?: ArchiveTarMutation,
+  envelope?: Readonly<{ entries?: number; contentBytes?: number; serializedBytes?: number }>,
 ): Promise<Readonly<{ archiveSha256: string; metadata: string; metadataSha256: string; registryView: string; tarball: string }>> {
   const artifactDirectory = join(root, "slopcamera-release")
   const tarballName = "hraness-slopcamera-3.2.0.tgz"
@@ -430,8 +431,22 @@ async function writeReleaseArtifactFixture(
     mode: 0o644,
     path,
   }))
-  const tar = packageFixtureTar(entries)
+  if (envelope?.entries !== undefined) {
+    if (envelope.entries < entries.length) throw new Error("Envelope fixture needs its required files")
+    while (entries.length < envelope.entries) entries.push({ path: `fixture-${String(entries.length)}.txt`, body: "", mode: 0o644 })
+  }
+  if (envelope?.contentBytes !== undefined) {
+    const contentBytes = entries.reduce((total, entry) => total + Buffer.byteLength(entry.body), 0)
+    if (envelope.contentBytes < contentBytes) throw new Error("Envelope fixture cannot truncate its required files")
+    const last = entries.at(-1)!
+    entries[entries.length - 1] = { ...last, body: `${last.body}${"x".repeat(envelope.contentBytes - contentBytes)}` }
+  }
+  let tar = packageFixtureTar(entries)
   mutation?.(tar)
+  if (envelope?.serializedBytes !== undefined) {
+    if (envelope.serializedBytes < tar.length || envelope.serializedBytes % 512 !== 0) throw new Error("Envelope fixture needs block-aligned bounded framing")
+    tar = Buffer.concat([tar, Buffer.alloc(envelope.serializedBytes - tar.length)])
+  }
   const archive = gzipSync(tar, { level: 9 })
   const pack = npmPackFixture(archive, entries)
   const packResult = pack[0]!
@@ -858,7 +873,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 520")
+  expect(publishJob).toContain("const maximumFiles = 530")
   expect(publishJob).toContain("const maximumPackedBytes = 4_800_000")
   expect(publishJob).toContain("const maximumUnpackedBytes = 14_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
@@ -1164,6 +1179,66 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   }
 })
 
+test("both tar readers bound file count and content independently of USTAR framing", async () => {
+  const workflow = await readWorkflow("public-release.yml", "release.yml")
+  const script = workflowStepScript(workflow, "Rebind attested package before OIDC")
+  const packageRoot = join(import.meta.dir, "..")
+  const [identitySource, smoke] = await Promise.all([
+    readFile(join(import.meta.dir, "npm-package-identity.ts"), "utf8"),
+    readFile(join(packageRoot, "scripts/package-smoke.ts"), "utf8"),
+  ])
+  expect(identitySource).toContain("const maximumEntries = 530;")
+  expect(identitySource).toContain("const maximumArchiveBytes = 4_800_000;")
+  expect(identitySource).toContain("const maximumContentBytes = 14_000_000;")
+  expect(identitySource).toContain("maximumContentBytes + maximumEntries * 1_024 + 1_024")
+  expect(smoke).toContain("const maximumPackedFiles = 530;")
+  expect(smoke).toContain("const maximumPackedBytes = 4_800_000;")
+  expect(smoke).toContain("const maximumUnpackedBytes = 14_000_000;")
+  expect(script).toContain("const maximumFiles = 530;")
+  expect(script).toContain("maxOutputLength: maximumUnpackedBytes + maximumFiles * 1_024 + 1_024")
+  const maximumAlignedTarBytes = Math.floor((14_000_000 + 530 * 1_024 + 1_024) / 512) * 512
+  expect(maximumAlignedTarBytes).toBe(14_543_360)
+  const root = await mkdtemp(join(tmpdir(), "slopcamera-tar-budgets-"))
+  try {
+    for (const scenario of ["at-all-limits", "content-over", "count-over", "framing-over"] as const) {
+      await rm(join(root, "slopcamera-release"), { recursive: true, force: true })
+      const artifact = await writeReleaseArtifactFixture(root, undefined, {
+        entries: scenario === "count-over" ? 531 : 530,
+        contentBytes: scenario === "content-over" ? 14_000_001 : 14_000_000,
+        serializedBytes: maximumAlignedTarBytes + (scenario === "framing-over" ? 512 : 0),
+      })
+      // Advertise an in-budget inventory for the hostile archives. The actual
+      // USTAR reader must enforce its limits independently of these claims.
+      const metadata = JSON.parse(await readFile(artifact.metadata, "utf8")) as { entryCount: number; files: { path: string; size: number; mode: number }[]; unpackedSize: number }[]
+      if (scenario === "count-over") {
+        const removed = metadata[0]!.files.findIndex(file => file.path.startsWith("fixture-") && file.size === 0)
+        if (removed < 0) throw new Error("Fixture has no empty extra file")
+        metadata[0]!.files.splice(removed, 1)
+        metadata[0]!.entryCount = 530
+      } else if (scenario === "content-over") {
+        metadata[0]!.files.at(-1)!.size -= 1
+        metadata[0]!.unpackedSize = 14_000_000
+      }
+      const metadataBytes = JSON.stringify(metadata)
+      await writeFile(artifact.metadata, metadataBytes)
+      const verification = verifyArchive(artifact.tarball, artifact.metadata, "fixture", "@hraness/slopcamera", "3.2.0", "hraness-slopcamera-3.2.0.tgz")
+      if (scenario === "at-all-limits") await expect(verification).resolves.toBeDefined()
+      else if (scenario === "count-over") await expect(verification).rejects.toThrow("too many entries")
+      else if (scenario === "content-over") await expect(verification).rejects.toThrow("file-content byte limit")
+      else await expect(verification).rejects.toMatchObject({ code: "ERR_BUFFER_TOO_LARGE" })
+      const stage = await runWorkflowScript(script, {
+        EXPECTED_ARCHIVE_NAME: "hraness-slopcamera-3.2.0.tgz",
+        EXPECTED_ARCHIVE_SHA256: artifact.archiveSha256,
+        EXPECTED_PACK_SHA256: createHash("sha256").update(metadataBytes).digest("hex"),
+        EXPECTED_VERSION: "3.2.0",
+        GITHUB_OUTPUT: join(root, "github-output.txt"),
+        RUNNER_TEMP: root,
+      })
+      expect(stage.exitCode === 0, `${scenario}: ${stage.stderr}`).toBe(scenario === "at-all-limits")
+    }
+  } finally { await rm(root, { recursive: true, force: true }) }
+}, 30_000)
+
 test("package smoke rejects oversized tar framing before installing a package below the content-byte limit", async () => {
   const packageRoot = join(import.meta.dir, "..")
   const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as { version: string }
@@ -1172,32 +1247,25 @@ test("package smoke rejects oversized tar framing before installing a package be
   try {
     const guard = join(work, "deny-processes.ts")
     await writeFile(guard, `for (const name of ["spawn", "spawnSync"]) Object.defineProperty(Bun, name, { value: () => { throw new Error("PACKAGE_SMOKE_INSTALL_REACHED"); } });\n`)
-    for (const extraByte of [0, 1]) {
+    const maximumAlignedTarBytes = Math.floor((14_000_000 + 530 * 1_024 + 1_024) / 512) * 512
+    for (const extraBlock of [0, 1]) {
       const entries: PackageFixtureEntry[] = [
         { path: "package.json", body: "{}\n", mode: 0o644 },
         { path: "padding.txt", body: "x".repeat(13_997_056), mode: 0o644 },
-        // Header-only entries keep content below the unpacked bound while
-        // pushing the framed tar past its 15 MB envelope.
-        ...(extraByte === 0
-          ? []
-          : Array.from({ length: 2_000 }, (_, index) => ({
-              path: `pad-${String(index)}.txt`,
-              body: "",
-              mode: 0o644,
-            }))),
       ]
-      const tar = packageFixtureTar(entries)
-      expect(tar.length).toBe(extraByte === 0 ? 13_999_616 : 15_023_616)
+      const contents = packageFixtureTar(entries)
+      const tar = Buffer.concat([contents, Buffer.alloc(maximumAlignedTarBytes + extraBlock * 512 - contents.length)])
+      expect(tar.length).toBe(extraBlock === 0 ? 14_543_360 : 14_543_872)
       const archive = gzipSync(tar, { level: 9 })
       const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
       expect(metadata[0]!.unpackedSize).toBeLessThan(14_000_000)
       expect(archive.length).toBeLessThan(4_800_000)
-      const directory = join(work, String(extraByte))
+      const directory = join(work, String(extraBlock))
       await mkdir(directory)
       const archivePath = join(directory, filename), metadataPath = join(directory, "npm-pack.json")
       await writeFile(archivePath, archive)
       await writeFile(metadataPath, JSON.stringify(metadata))
-      if (extraByte === 0) {
+      if (extraBlock === 0) {
         await expect(verifyArchive(archivePath, metadataPath, "fixture", "@hraness/slopcamera", manifest.version, filename)).resolves.toBeDefined()
         continue
       }
