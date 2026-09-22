@@ -5722,26 +5722,28 @@ async function handleCreditsWait(
     } catch (error) {
       throw creditsErrorToCli(error);
     }
+    // The issuing poll reports state "consumed" alongside the one-time token,
+    // so the token check must precede state matching.
+    if (status.deviceToken !== undefined) {
+      // The token is returned exactly once; persist before reporting.
+      await store.writeDeviceToken(status.deviceToken);
+      await store.clearPendingClaim();
+      const view = {
+        claimId: pending.claimId,
+        configured: true,
+        state: "paid" as const,
+        next: ["slopcamera credits status", "slopcamera ai image generate --hosted --model <id> --prompt <text>"],
+      };
+      writeValue(context.io, command.json, view, () => [
+        "paid\tcredits wallet is configured on this device",
+        "",
+        "Next:",
+        "  slopcamera credits status",
+        "  slopcamera ai image generate --hosted --model <id> --prompt <text>",
+      ].join("\n"));
+      return;
+    }
     if (status.state === "paid") {
-      if (status.deviceToken !== undefined) {
-        // The token is returned exactly once; persist before reporting.
-        await store.writeDeviceToken(status.deviceToken);
-        await store.clearPendingClaim();
-        const view = {
-          claimId: pending.claimId,
-          configured: true,
-          state: "paid" as const,
-          next: ["slopcamera credits status", "slopcamera ai image generate --hosted --model <id> --prompt <text>"],
-        };
-        writeValue(context.io, command.json, view, () => [
-          "paid\tcredits wallet is configured on this device",
-          "",
-          "Next:",
-          "  slopcamera credits status",
-          "  slopcamera ai image generate --hosted --model <id> --prompt <text>",
-        ].join("\n"));
-        return;
-      }
       await store.clearPendingClaim();
       const view = {
         claimId: pending.claimId,
