@@ -199,3 +199,16 @@ change in `reference/capabilities` or `reference/engines`.
   pinned-Chromium (153.0.8010.48) preview proof with zero resource or CSP
   errors. `llms.txt` copy updated the stale v3.3.1 literal; the matching
   assertion in `site-copy-content.test.ts` was updated in the same change.
+- `check:standalone` required reviewed `legacy-identity.inventory.json` rows:
+  "studio" is the pre-Slopcamera identity sentinel, so the six new pages
+  naming the native film studio got `native-film-studio` rows and the five
+  touched files got refreshed hashes. Inventory order is `localeCompare`.
+- Rebased onto `e568424` (foil wordmark) after the first CI run measured the
+  merge at 39,190 authored bytes — the wordmark consumed headroom, so the
+  quiet-note was compressed to a single "Contracts:" paragraph and the
+  section header was tightened. Final authored size: 38,985 bytes.
+- PR: https://github.com/hraness/slopcamera/pull/208 — all checks green
+  (site, standalone boundary, SDK, local runtime, desktop, packed consumer,
+  hosted API, five VTracer lanes, CodeQL, Required), plus both Vercel
+  deploys. The native marketing-acceptance lane (reviewed baseline
+  manifest) remains the maintainer gate disclosed in the PR body.
