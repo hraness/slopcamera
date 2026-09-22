@@ -152,10 +152,31 @@ The user-facing paid path landed after this plan closed:
   advertise v3.3.5; verified live on `slopcamera.com` and
   `api.slopcamera.com/v1/models` (all seven admitted models, 200).
 
-Still open: the funded-token settled paid call — a real claim was created
-(`credits topup`, pending under the local state root) but checkout requires
-the user's payment; `credits wait` then a live `ai image --hosted` run
-completes the evidence pack.
+### 2026-09-22 closeout: funded paid call verified, pickup fix in v3.3.6
+
+The deferred live proof completed, and surfaced one shipped bug:
+
+- The user paid claim `j57bkwg8v7egas9tv8bzhrn1bh8exwqk` (p10, live Stripe
+  checkout). The claims table showed `paidAt`→`consumedAt` 19.5s apart: the
+  first `credits wait` poll was itself the issuing request, but the handler
+  only read `token` under `state: "paid"` — the service returns
+  `state: "consumed"` alongside the one-time token — so the token was
+  dropped and the funded wallet unreachable.
+- Operator recovery (additive, no second charge): a fresh `cr_dev_` token
+  was generated locally and its SHA-256 row inserted into `deviceTokens`
+  via `bunx convex import --append --prod`, bound to the same
+  (account, device, product). `credits status` then reported the funded
+  balance.
+- Real paid call: `ai image generate --hosted --model
+  openai/gpt-image-1-mini` returned artifact
+  `e45f02da-631c-4dcc-9f16-4bdf59d17d20` — a 1024×1536 PNG, 2,385,916
+  bytes, sha256 `b3d86e12…4852f` matching the published receipt; the wallet
+  settled $21.70→$21.60 with no residual hold.
+- PR #203 (`74201a7`) made the token check precede state matching and
+  corrected the test fixture to the real response shape; PR #204
+  (`fc43a44`) shipped it as `v3.3.6` (release run 35771872075, npm
+  `sha512-LOcs9703…`, admit rerun for registry propagation as before); PR
+  #205 (`522c542`) advertises v3.3.6 live on `slopcamera.com`.
 
 ## Durable memory
 
@@ -175,8 +196,11 @@ completes the evidence pack.
   again in #199: a new handler route is not live until its pinned
   `api/**` entry file ships — the deployed OpenAPI listing the route was not
   evidence of reachability, only of handler content.
+- On a one-shot credential pickup, the read that issues the secret also
+  mutates state — match on the secret's presence, not the state label, and
+  persist before reporting. A fixture that models a non-existent response
+  shape (paid+token) lets a guaranteed-loss bug ship as "tested".
 
 Remaining work, deliberately deferred: `image.gallery` and inbound-media
-tools once holds cover multi-unit work, a funded-token settled paid call for
-the evidence pack, and platform-specific submission intake for Grok and
-Instinct-class clients.
+tools once holds cover multi-unit work, and platform-specific submission
+intake for Grok and Instinct-class clients.
