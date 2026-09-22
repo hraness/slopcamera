@@ -10,7 +10,7 @@ export const refinementMaterialRevision = "0e089bc18f9a0409f0e74b1fb7192f468956e
 export const refinementCopyProfile = "archive-refinement-v1"
 
 /** Independent expected text, not imported from the producer being checked. */
-export const refinementInstallCommand = "bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.5/hraness-slopcamera-3.3.5.tgz\nslopcamera skill install --target agents"
+export const refinementInstallCommand = "bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz\nslopcamera skill install --target agents"
 export const refinementAlternateCommand = "slopcamera skill install --target claude"
 export const refinementDiagramSession = `#    __
 #  _|__|_

@@ -13,7 +13,7 @@ export const supportFooterDigests = {
 } as const
 export const supportHref = "https://account.hraness.com/support?product=slopcamera&source=web#support"
 /** The immutable support baseline (425066a) advertises v3.2.6; the current page
- * advertises the verified v3.3.5 release, so the copy scope compares each side
+ * advertises the verified v3.3.6 release, so the copy scope compares each side
  * against its own exact install command while the copy state machine stays
  * paired. The full-page optional-support-v1 pairing was accepted at 8ba5b24,
  * before v3.2.8 was advertised. */

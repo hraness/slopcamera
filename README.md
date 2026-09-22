@@ -44,14 +44,14 @@ the rendered output with source, runtime requirements and reproduction steps.
 
 ## Install Slopcamera
 
-Slopcamera v3.3.5 adds paid hosted image generation through Hraness Credits top-up (`slopcamera credits`, `ai image --hosted`), public hosted model discovery, and checked patent-style vector drawing sheets.
+Slopcamera v3.3.6 fixes `credits wait` dropping the issued device token on pickup, on top of v3.3.5's paid hosted image generation through Hraness Credits top-up (`slopcamera credits`, `ai image --hosted`), public hosted model discovery, and checked patent-style vector drawing sheets.
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.3.5 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.5)
+[Slopcamera v3.3.6 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.6)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.5/hraness-slopcamera-3.3.5.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz
 slopcamera skill install --target agents
 ```
 
