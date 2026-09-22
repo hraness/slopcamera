@@ -26,6 +26,7 @@ import {
   parseGatewayProviderOptions,
   type GatewayProviderOptions,
 } from "./gateway-provider-options";
+import { providerVideoResolution } from "./gateway-provider-resolution";
 import { gatewayMediaBytesMatchType } from "./gateway-media-signature";
 
 export const GATEWAY_MEDIA_API_BASE_URL = "https://ai-gateway.vercel.sh/v4/ai";
@@ -2930,6 +2931,12 @@ export function createGatewayMediaService(options: Readonly<{
         execution.signal,
       );
       assertVideoCapabilities(catalog.model, request);
+      const wireResolution = providerVideoResolution(
+        catalog.model.id,
+        request.resolution,
+        request.aspectRatio,
+      );
+      if (wireResolution === null) unsupportedModelSetting();
       const dispatchAt = now();
       const credential = await options.loadCredential(dispatchAt);
       const timeout = combineAbortSignals(
@@ -2989,9 +2996,9 @@ export function createGatewayMediaService(options: Readonly<{
             ...(request.providerOptions === undefined
               ? {}
               : { providerOptions: request.providerOptions }),
-            ...(request.resolution === undefined
+            ...(wireResolution === undefined
               ? {}
-              : { resolution: request.resolution }),
+              : { resolution: wireResolution }),
             ...(request.seed === undefined ? {} : { seed: request.seed }),
           });
           return parseGeneratedFiles(sdkResult, "videos", ["video/"]);
@@ -3025,6 +3032,9 @@ export function createGatewayMediaService(options: Readonly<{
             generateAudio: optionalSummaryValue(request.generateAudio),
             maxVideosPerCall: optionalSummaryValue(request.maxVideosPerCall),
             n: optionalSummaryValue(request.n),
+            providerResolution: optionalSummaryValue(
+              wireResolution === request.resolution ? undefined : wireResolution,
+            ),
             resolution: optionalSummaryValue(request.resolution),
             seed: optionalSummaryValue(request.seed),
           }), request.prompt, request.providerOptions),

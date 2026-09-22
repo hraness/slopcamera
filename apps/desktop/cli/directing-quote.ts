@@ -1,5 +1,6 @@
 import type { DirectingQuote, DirectingShot } from "../application/directing-contract";
 import type { GatewayMediaCatalogView, GatewayJsonValue } from "./gateway-media-catalog";
+import { providerVideoResolution } from "./gateway-provider-resolution";
 import { CliError } from "./errors";
 
 /** Integer microdollars avoid floating point drift across small paid attempts. */
@@ -56,6 +57,9 @@ export function quoteDirectingShot(
   ] as const) {
     const supported = capability?.[key];
     if (!Array.isArray(supported) || !supported.includes(value)) unsupported(`the catalog does not confirm ${key}=${value}.`);
+  }
+  if (providerVideoResolution(model.id, shot.resolution, shot.aspectRatio) === null) {
+    unsupported(`the provider cannot express resolution ${shot.resolution} at aspect ${shot.aspectRatio}.`);
   }
   if (model.pricing.varies_by_provider === true) unsupported("provider-dependent pricing cannot establish a bounded reservation.");
   const rows = model.pricing.video_duration_pricing;
