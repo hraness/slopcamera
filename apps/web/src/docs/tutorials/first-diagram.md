@@ -39,6 +39,52 @@ slopcamera diagram render first.diagram.json
 
 Open the PNG again. The right-hand box now reads **Reviewed**. The render command replaced the five exports while keeping your JSON source. Editing a PNG directly would not have preserved that relationship.
 
+## Try a larger diagram
+
+This separate example applies the same source-and-revision pattern to a branching flow. Three kinds of media enter a project, then leave as a preview or delivery. Its positions and colors distinguish inputs, the project, and outputs; labels and arrows preserve the meaning without color.
+
+::example[source-to-film]
+
+Download the diagram source above and save it as `source-to-film.diagram.json`, then check and render it with the installed CLI:
+
+```sh
+slopcamera diagram check source-to-film.diagram.json --strict
+slopcamera diagram render source-to-film.diagram.json
+```
+
+The revised source changes “Delivery” to “Social delivery” while preserving the positions, connectors, and other labels. Compare both light outputs and check the dark exports for contrast.
+
+::example[source-to-film-revised]
+
+The diagram illustrates media relationships. Importing arbitrary source files does not create a new Slopcamera project; [editing and delivery](/docs/how-to/edit-video) explains the supported entry paths.
+
+## Stack layout
+
+For an ordered pipeline, let a stack position equal cards. This source lists five
+steps and four explicit arrows without giving the cards `x` or `y` coordinates.
+Array order controls placement; the edges still state the relationships.
+
+::example[production-pipeline]
+
+The diagram describes a working sequence. Its check and review cards do not run
+an automatic scheduler. Download either theme or the editable canvas, or use the
+[source recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/diagram/production-pipeline)
+to render both versions from a checkout with locked dependencies.
+
+## Custom fonts and icons
+
+Keep the graph and change its presentation. The second source retains all five
+labels, the four arrows and every card dimension. Its configuration supplies
+warm light and ink dark palettes, local Nebula Sans Bold files and five original
+line icons. The first version uses Book labels without icons.
+
+::example[production-pipeline-themed]
+
+SVG and PNG preserve the chosen font and palette. The editable canvas preserves
+the cards, labels, bound arrows and movable icons, but uses tldraw's own named
+font and color styles. The recipe records font and icon provenance; no external
+font service or paid model is required.
+
 ## What you learned
 
 You now have one editable source and five derived outputs. This is the pattern behind every Slopcamera workflow: keep the source, re-render the derivatives, and let your agent inspect or revise either.

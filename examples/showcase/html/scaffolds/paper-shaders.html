@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"@paper-design/shaders":"/.slopcamera-overlay/libraries/4b7f8d053f6c91b4d3ec6abdcfd4b07b9fce7ec2b8086a0f0781f485c59d097e.mjs"}}</script>
+  </head>
+  <body>
+    <div class="shader" aria-hidden="true"></div>
+    <style>
+      .shader {
+        position: absolute;
+        inset: 10%;
+        overflow: hidden;
+        border-radius: min(8vw, 96px);
+        filter: drop-shadow(0 24px 64px rgb(21 9 60 / 25%));
+      }
+    </style>
+    <script type="module">
+      import {
+        ShaderFitOptions,
+        ShaderMount,
+        getShaderColorFromString,
+        meshGradientFragmentShader,
+      } from "@paper-design/shaders";
+
+      const colors = ["#6d5dfc", "#ff67c7", "#56e0d3", "#ffd166"];
+      const shader = new ShaderMount(
+        document.querySelector(".shader"),
+        meshGradientFragmentShader,
+        {
+          u_colors: colors.map(getShaderColorFromString),
+          u_colorsCount: colors.length,
+          u_distortion: 0.8,
+          u_fit: ShaderFitOptions.cover,
+          u_grainMixer: 0.16,
+          u_grainOverlay: 0.08,
+          u_offsetX: 0,
+          u_offsetY: 0,
+          u_originX: 0.5,
+          u_originY: 0.5,
+          u_rotation: 0,
+          u_scale: 1,
+          u_swirl: 0.35,
+          u_worldHeight: SlopcameraOverlay.height,
+          u_worldWidth: SlopcameraOverlay.width,
+        },
+        { alpha: true, premultipliedAlpha: false },
+        0,
+      );
+
+      SlopcameraOverlay.onFrame(({ timeMs }) => shader.setFrame(timeMs));
+    </script>
+  </body>
+</html>

@@ -25,16 +25,16 @@
     <meta property="og:title" content="{{DOC_TITLE}} · Slopcamera">
     <meta property="og:description" content="{{DOC_DESCRIPTION}}">
     <meta property="og:url" content="{{DOC_CANONICAL}}">
-    <meta property="og:image" content="https://slopcamera.com/og.png">
-    <meta property="og:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image" content="{{DOC_IMAGE_URL}}">
+    <meta property="og:image:alt" content="{{DOC_IMAGE_ALT}}">
+    <meta property="og:image:width" content="{{DOC_IMAGE_WIDTH}}">
+    <meta property="og:image:height" content="{{DOC_IMAGE_HEIGHT}}">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{DOC_TITLE}} · Slopcamera">
     <meta name="twitter:description" content="{{DOC_DESCRIPTION}}">
-    <meta name="twitter:image" content="https://slopcamera.com/og.png">
-    <meta name="twitter:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">
+    <meta name="twitter:image" content="{{DOC_IMAGE_URL}}">
+    <meta name="twitter:image:alt" content="{{DOC_IMAGE_ALT}}">
 
     <script type="application/ld+json">
 {{DOC_JSONLD}}
@@ -53,9 +53,7 @@
       </div>
     </header>
     <div class="{{DOCS_LAYOUT_CLASS}}">
-      <nav aria-label="Documentation" class="{{DOCS_NAV_CLASS}}">
-        {{DOC_NAV}}
-      </nav>
+      {{DOC_NAV}}
       <main id="main" tabindex="-1">
         <article class="{{DOCS_ARTICLE_CLASS}}">
           {{DOC_HEADER}}

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import { createStylexTransformCollector, type StylexTransformResult } from "@hraness/ui/stylex-build"
+import { docPages, renderDocsNav } from "../src/docs"
 import { assertCompiledSiteClass, replaceSiteSlot } from "../src/site-template"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
@@ -117,8 +118,25 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(missing.match(/\{\{SITE_RECOVERY_PARAGRAPH_CLASS\}\}/gu)).toHaveLength(2)
     expect(doc.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
     expect(doc).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
-    for (const slot of ["LAYOUT", "NAV", "ARTICLE", "FOOTER"]) {
+    for (const slot of ["LAYOUT", "ARTICLE", "FOOTER"]) {
       expect(doc.match(new RegExp(`\\{\\{DOCS_${slot}_CLASS\\}\\}`, "gu"))).toHaveLength(1)
+    }
+    // DOC_NAV owns both landmarks; the document must not wrap them in a
+    // third navigation landmark or move their class slots outside that owner.
+    expect(doc).toContain('<div class="{{DOCS_LAYOUT_CLASS}}">\n      {{DOC_NAV}}\n      <main')
+    expect(doc).not.toContain("{{DOCS_NAV_CLASS}}")
+    for (const page of docPages) {
+      const navigation = renderDocsNav(page)
+      expect(navigation).toMatch(/^<details class="\{\{DOCS_MOBILE_NAV_CLASS\}\}" data-docs-menu>\n<summary/u)
+      expect(navigation.match(/<nav\b/gu)).toHaveLength(2)
+      expect(navigation).toContain('aria-label="Documentation menu" class="{{DOCS_MOBILE_LINKS_CLASS}}" data-docs-navigation="mobile"')
+      expect(navigation).toContain('aria-label="Documentation" class="{{DOCS_NAV_CLASS}}" data-docs-navigation="desktop"')
+      expect(navigation).not.toMatch(/<details\b[^>]*\sopen(?:\s|=|>)/iu)
+      expect(navigation).not.toMatch(/\s(?:open|id)=|<script\b|\sstyle\s*=/u)
+      for (const [slot, recipe] of [["NAV", "nav"], ["MOBILE_NAV", "mobileNav"], ["NAV_SUMMARY", "navSummary"], ["NAV_CONTEXT", "navContext"], ["MOBILE_LINKS", "mobileLinks"]]) {
+        expect(navigation.match(new RegExp(`\\{\\{DOCS_${slot}_CLASS\\}\\}`, "gu"))).toHaveLength(1)
+        expect(renderer).toContain(`"{{DOCS_${slot}_CLASS}}": siteDocsClassNames.${recipe},`)
+      }
     }
     for (const slot of ["TITLE", "DESCRIPTION", "CANONICAL", "MARKDOWN", "JSONLD", "NAV", "HEADER", "BODY", "FOOTER"]) {
       expect(doc.match(new RegExp(`\\{\\{DOC_${slot}\\}\\}`, "gu"))).not.toBeNull()

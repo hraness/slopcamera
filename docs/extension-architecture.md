@@ -2,6 +2,8 @@
 
 Slopcamera has no plugin API and no open operation-registration hook. Everything an agent or integrator can do composes a fixed, host-owned operation registry through a small set of bounded surfaces, each with an explicit trust level. This document explains why the model is shaped this way and which surface fits which job.
 
+The static capability manifest, recipe packs, and cinematic-world workflow ship in v3.3.1. See [release and platform support](reference/capabilities.md) for installation and runtime requirements.
+
 ## The closed registry
 
 Every unit of work is a registered operation: `scene.render@1`, `media.overlay@1`, `iteration.select@1`, and so on. The catalog lives in host source (`apps/desktop/application/default-registry.ts`), each operation declares a versioned input/output schema, a lifecycle class (pure, media effect, project mutation, paid call), resource claims, cache and resume semantics, and a discovery entry. Nothing outside the host can add, replace, or wrap an operation — there is deliberately no registration hook for authored code.

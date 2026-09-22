@@ -2,19 +2,22 @@
 
 Slopcamera retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 
-These pages describe Slopcamera from current source. [Install that source](how-to/use-current-source.md) to use the newest CLI, SDK and matching Agent Skill. The [installation guide](../README.md#install-slopcamera) also links the currently verified release archive. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any later correction that requires [current source](how-to/use-current-source.md). Example helpers that import repository TypeScript also need a checkout; that requirement does not mean their CLI commands are unreleased. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
 - [Create and revise your first diagram](tutorials/first-diagram.md): make a two-node diagram, inspect its five exports, then change its source.
+- [Create and revise your first animation](tutorials/first-animation.md): render an eight-second title, change its copy and color, and keep both sources.
 - [Render your first native film](tutorials/first-native-film.md): retain a Blender source, render a small shot, and export an ordinary Slopcamera project.
 
 ## Complete a task
 
 - [Run current-source commands](how-to/use-current-source.md): build an exact checkout of Slopcamera.
 
+- [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](how-to/edit-video.md): import footage, align related tracks, place overlays, and check a delivery.
 - [Make a music video from an HTML scene](how-to/music-video.md): render authored visuals with a local track and retain separate sources in an editable project.
+- [Convert raster images to SVG](how-to/vectorize-images.md): trace artwork locally, compare a duotone treatment, and inspect fidelity.
 - [Generate images, video, or narration](how-to/generate-media.md): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
 - [Direct short generated clips](directing-video.md): budget, review takes, preserve endpoint continuity, and recover uncertain work.
 - [Author a native film](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
@@ -40,4 +43,4 @@ These pages describe Slopcamera from current source. [Install that source](how-t
 
 ## Work with an agent
 
-The [Slopcamera Agent Skill](../skills/slopcamera/SKILL.md) routes an agent to the relevant task reference. Install the skill from the same source build as your CLI; installing a skill alone does not install the CLI or native tools. See the [installation instructions](../README.md#install-slopcamera).
+The [Slopcamera Agent Skill](../skills/slopcamera/SKILL.md) routes an agent to the relevant task reference. Install the skill from the same release or source build as your CLI; installing a skill alone does not install the CLI or native tools. See the [installation instructions](../README.md#install-slopcamera).

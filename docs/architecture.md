@@ -4,7 +4,7 @@ Slopcamera keeps authored source available while turning it into inspectable vis
 
 ## One local host, several authoring representations
 
-The portable SDK owns diagram, graph, spatial-scene and native-job contracts. The local CLI host adds durable jobs, media import, rendering, project storage and resource admission. An optional Rust menu-bar companion renders the agent outputs directory and holds no product authority. The [SDK reference](reference/sdk.md) distinguishes the portable four-operation projection from the complete local registry.
+The portable SDK owns diagram, graph, spatial-scene and native-job contracts. The local CLI host adds durable jobs, media import, rendering, project storage and resource admission. An optional Rust menu-bar companion renders the agent outputs directory and holds no product authority. The [SDK reference](reference/sdk.md) distinguishes the versioned portable projection from the complete local registry.
 
 Structured spatial scenes give agents named entities, calibrated cameras and typed patches. Three renders the supported mesh and media-surface profile; Spark adds bounded saved splat environments. These sources expose a deliberately bounded editing contract.
 

@@ -1,0 +1,70 @@
+{
+  "bundleSha256": "f14691024dfc99d52e67871d3a923c356532046487292137d21bedfa693040d2",
+  "engine": {
+    "denoise": true,
+    "device": "gpu",
+    "engine": "blender",
+    "renderer": "cycles",
+    "samples": 32,
+    "seed": 0,
+    "transparent": false,
+    "viewTransform": "AgX"
+  },
+  "execution": {
+    "hermetic": false,
+    "isolation": "none",
+    "trust": "trusted-current-user"
+  },
+  "jobId": "studio_showcase_character_v1",
+  "kind": "slopcamera.studio-job",
+  "limits": {
+    "maximumOutputBytes": 2147483648,
+    "maximumOutputFiles": 2048,
+    "timeoutSeconds": 900
+  },
+  "outputs": [
+    {
+      "format": "png",
+      "id": "beauty",
+      "interpretation": {
+        "alpha": "opaque",
+        "channels": [
+          "R",
+          "G",
+          "B"
+        ],
+        "colorSpace": "srgb",
+        "dataType": "uint8",
+        "kind": "raster",
+        "semantic": "color",
+        "unit": "unitless"
+      },
+      "kind": "sequence",
+      "pathPattern": "frames/%06d.png",
+      "role": "beauty"
+    },
+    {
+      "format": "blend",
+      "id": "native",
+      "interpretation": {
+        "kind": "native-source"
+      },
+      "kind": "file",
+      "path": "native/scene.blend",
+      "role": "native-source"
+    }
+  ],
+  "parameters": {},
+  "render": {
+    "endFrameExclusive": 144,
+    "frameRate": {
+      "denominator": 1,
+      "numerator": 24
+    },
+    "height": 720,
+    "startFrame": 0,
+    "width": 1280
+  },
+  "schemaVersion": 1,
+  "stage": "render"
+}

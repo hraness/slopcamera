@@ -1,4 +1,5 @@
 import { renderDocsMarkdown } from "./docs-markdown"
+import { exampleUrl, workflowExamples } from "./example-registry"
 import {
   docsCanonicalUrl, docsOrigin, docsPageForSlug, docsSectionLabels, docsSectionOrder,
   docPages, resolveDocsContent, type DocsPage,
@@ -32,12 +33,20 @@ export function renderDocsNav(current: DocsPage): string {
       `<ul class="{{DOCS_NAV_LIST_CLASS}}">${links.join("")}</ul></div>`,
     )
   }
-  return items.join("\n")
+  const links = items.join("\n")
+  const section = current.section === "index" ? "Documentation" : docsSectionLabels[current.section]
+  const context = current.section === "index" ? current.title : `${section} · ${current.title}`
+  return `<details class="{{DOCS_MOBILE_NAV_CLASS}}" data-docs-menu>
+<summary class="{{DOCS_NAV_SUMMARY_CLASS}}"><span>Browse documentation</span><span class="{{DOCS_NAV_CONTEXT_CLASS}}">${escapeHtml(context)}</span></summary>
+<nav aria-label="Documentation menu" class="{{DOCS_MOBILE_LINKS_CLASS}}" data-docs-navigation="mobile">${links}</nav>
+</details>
+<nav aria-label="Documentation" class="{{DOCS_NAV_CLASS}}" data-docs-navigation="desktop">${links}</nav>`
 }
 
 /** Per-page JSON-LD: a TechArticle bound to its breadcrumb and site graph. */
 export function docsJsonLd(page: DocsPage): string {
   const canonical = docsCanonicalUrl(page)
+  const media = workflowExamples.filter(example => example.guideSlug === page.slug)
   const graph: Record<string, unknown>[] = [
     { "@id": "https://hraness.com/#organization", "@type": "Organization", name: "Hraness", url: "https://hraness.com/" },
     { "@id": `${docsOrigin}/#website`, "@type": "WebSite", name: "Slopcamera", publisher: { "@id": "https://hraness.com/#organization" }, url: `${docsOrigin}/` },
@@ -58,9 +67,20 @@ export function docsJsonLd(page: DocsPage): string {
       mainEntityOfPage: canonical,
       publisher: { "@id": "https://hraness.com/#organization" },
       url: canonical,
+      ...(media.length ? { image: media.map(example => ({
+        "@type": "ImageObject", contentUrl: `${docsOrigin}${exampleUrl(example.poster)}`,
+        caption: example.poster.alt, width: example.poster.width, height: example.poster.height,
+      })) } : {}),
     },
   ]
   return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</gu, "\\u003c")
+}
+
+export function docsSocialImage(page: DocsPage): Readonly<{ url: string; alt: string; width: number; height: number }> {
+  const example = workflowExamples.find(example => example.guideSlug === page.slug)
+  return example ? { url: `${docsOrigin}${exampleUrl(example.poster)}`, alt: example.poster.alt,
+    width: example.poster.width, height: example.poster.height }
+    : { url: `${docsOrigin}/og.png`, alt: "Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif", width: 1200, height: 630 }
 }
 
 export function renderDocsBody(body: string): string {

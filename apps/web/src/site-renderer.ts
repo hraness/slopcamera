@@ -47,6 +47,10 @@ const docsSlots = [
 const docsClassSlots = {
   "{{DOCS_LAYOUT_CLASS}}": siteDocsClassNames.layout,
   "{{DOCS_NAV_CLASS}}": siteDocsClassNames.nav,
+  "{{DOCS_MOBILE_NAV_CLASS}}": siteDocsClassNames.mobileNav,
+  "{{DOCS_NAV_SUMMARY_CLASS}}": siteDocsClassNames.navSummary,
+  "{{DOCS_NAV_CONTEXT_CLASS}}": siteDocsClassNames.navContext,
+  "{{DOCS_MOBILE_LINKS_CLASS}}": siteDocsClassNames.mobileLinks,
   "{{DOCS_NAV_HOME_CLASS}}": siteDocsClassNames.navHome,
   "{{DOCS_NAV_SECTION_CLASS}}": siteDocsClassNames.navSection,
   "{{DOCS_NAV_SECTION_LABEL_CLASS}}": siteDocsClassNames.navSectionLabel,

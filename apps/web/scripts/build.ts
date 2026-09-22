@@ -9,6 +9,8 @@ import { buildPreview } from "./build-preview"
 import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
 import { publicIdentity, readPublicIcons } from "./public-identity"
+import { readExampleAssets } from "./example-assets"
+import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
 import { docsCanonicalUrl, docsMarkdownUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
@@ -89,27 +91,29 @@ function assetPath(name: string, bytes: Uint8Array): string {
   return `/assets/${stem}-${digest}${extension}`
 }
 
-function renderSitemapUrl(path: string): string {
+function renderSitemapUrl(path: string, examples: readonly WorkflowExample[] = []): string {
+  const escapeXml = (value: string) => value.replace(/[&<>"']/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[character]!)
   return `  <url>
     <loc>${siteOrigin}${path}</loc>
+${examples.map(example => `    <image:image><image:loc>${siteOrigin}${exampleUrl(example.poster)}</image:loc><image:caption>${escapeXml(example.poster.alt)}</image:caption></image:image>`).join("\n")}
   </url>`
 }
 
 export function renderSitemapXml(): string {
   const entries = [
-    renderSitemapUrl("/"),
+    renderSitemapUrl("/", workflowExamples.filter(example => example.featured)),
     renderSitemapUrl("/index.md"),
     ...docPages.flatMap(page => {
       const canonical = docsCanonicalUrl(page).slice(siteOrigin.length)
       const mirror = docsMarkdownUrl(page)
       return [
-        renderSitemapUrl(canonical),
+        renderSitemapUrl(canonical, workflowExamples.filter(example => example.guideSlug === page.slug)),
         renderSitemapUrl(mirror),
       ]
     }),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${entries.join("\n")}
 </urlset>
 `
@@ -223,6 +227,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const icons = await readPublicIcons(appDirectory)
   const marketingIcons = await readMarketingIcons()
   const brandMarks = await readBrandMarks()
+  const examples = await readExampleAssets(appDirectory)
 
   await rm(outputDirectory, { force: true, recursive: true })
   await mkdir(join(outputDirectory, "assets"), { recursive: true })
@@ -240,7 +245,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks]) {
+  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks, ...examples]) {
     const destination = join(outputDirectory, path)
     await mkdir(dirname(destination), { recursive: true })
     await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })

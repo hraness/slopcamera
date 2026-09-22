@@ -44,8 +44,8 @@ Codex should run `slopcamera diagram init`, edit the JSON source, run `slopcamer
 
 - Generate images, video clips, and narration through your own Vercel AI Gateway credential; see [generate media](/docs/how-to/generate-media).
 - Edit footage and deliver multiple aspect ratios; see [edit video](/docs/how-to/edit-video).
-- Direct spatial scenes and native films on a source build; see [spatial scenes](/docs/how-to/direct-scenes) and [native films](/docs/how-to/native-films).
-- Give Codex's MCP support the fixed diagram and image toolset instead of the skill; see [MCP clients](/docs/tutorials/mcp).
+- Direct spatial scenes and native films with the released CLI; see [spatial scenes](/docs/how-to/direct-scenes) and [native films](/docs/how-to/native-films).
+- Give Codex's MCP support fixed tools for diagrams, images, and scene inspection and planning; see [MCP clients](/docs/tutorials/mcp).
 
 ## Troubleshooting
 

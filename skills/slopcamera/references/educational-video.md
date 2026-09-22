@@ -1,6 +1,6 @@
 # Make an educational film
 
-Use current-source `studio init lesson --template manim-lesson` for Manim visuals, or combine existing diagrams and spatial scenes when they better express the subject. Read [native studio](native-studio.md) for retained jobs and [video projects](video-projects.md) for composition.
+Use `studio init lesson --template manim-lesson` for Manim visuals, or combine existing diagrams and spatial scenes when they better express the subject. Read [native studio](native-studio.md) for retained jobs and [video projects](video-projects.md) for composition.
 
 Preserve supplied mathematical facts, units and labels. Separate an explanatory illustration from a measured simulation or formal proof. Use tested lesson helpers for layout, axes, typography, equations and camera framing; inspect the actual rendered notation and endpoints rather than trusting syntactically valid code.
 

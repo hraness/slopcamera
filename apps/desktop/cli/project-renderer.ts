@@ -959,6 +959,7 @@ function overlayVideoChain(
   } else {
     filters.push(
       `trim=duration=${seconds(sliceDurationUs)}`,
+      "settb=AVTB",
       `setpts=PTS-STARTPTS+${seconds(resolved.outputRange.startUs)}/TB`,
     );
   }
@@ -1246,7 +1247,7 @@ export async function buildProjectFfmpegInvocation(
     if (overlayInputIndex.has(overlay.overlayId)) continue;
     overlayInputIndex.set(overlay.overlayId, mediaInputIndex.size + overlayInputIndex.size);
     if (overlay.source.kind === "image" || overlay.source.kind === "svg" || overlay.source.kind === "emoji") {
-      inputArguments.push("-loop", "1");
+      inputArguments.push("-loop", "1", "-framerate", emittedRate);
     }
     const prepared = await prepareProjectOverlayMedia(overlay, options);
     preparedOverlayMedia.set(overlay.overlayId, prepared);
@@ -1309,6 +1310,7 @@ export async function buildProjectFfmpegInvocation(
     } else {
       const transparent = `video_blend_canvas_${serial++}`;
       const positioned = `video_blend_positioned_${serial++}`;
+      const layerColorSource = `video_blend_color_source_${serial++}`;
       const layerColor = `video_blend_color_${serial++}`;
       const layerAlphaSource = `video_blend_alpha_source_${serial++}`;
       const layerMask = `video_blend_mask_${serial++}`;
@@ -1317,10 +1319,13 @@ export async function buildProjectFfmpegInvocation(
       const blended = `video_blend_result_${serial++}`;
       filters.push(
         `color=c=black@0:s=${plan.output.pixelWidth}x${plan.output.pixelHeight}:r=${emittedRate}:d=${seconds(plan.output.durationUs)},format=rgba[${transparent}]`,
-        `[${transparent}][${label}]overlay=x=${transform.x}:y=${transform.y}:eof_action=repeat:repeatlast=1:enable='${enable}'[${positioned}]`,
-        `[${positioned}]format=rgba,split=2[${layerColor}][${layerAlphaSource}]`,
+        // Preserve the positioned layer's alpha and blend color channels in RGB.
+        // YUV blend arithmetic changes even uncovered pixels (neutral chroma is 128).
+        `[${transparent}][${label}]overlay=x=${transform.x}:y=${transform.y}:eof_action=repeat:repeatlast=1:enable='${enable}':format=auto[${positioned}]`,
+        `[${positioned}]format=rgba,split=2[${layerColorSource}][${layerAlphaSource}]`,
+        `[${layerColorSource}]format=gbrp[${layerColor}]`,
         `[${layerAlphaSource}]alphaextract[${layerMask}]`,
-        `[${currentVideo}]split=2[${baseBlend}][${baseMerge}]`,
+        `[${currentVideo}]format=gbrp,split=2[${baseBlend}][${baseMerge}]`,
         `[${baseBlend}][${layerColor}]blend=all_mode=${slice.presentation.blendMode}[${blended}]`,
         `[${baseMerge}][${blended}][${layerMask}]maskedmerge[${next}]`,
       );
@@ -1365,15 +1370,23 @@ export async function buildProjectFfmpegInvocation(
     const x = overlayPositionExpression(overlay, "x", bounds.startUs, visibleFullEndUs, animations.entranceUs, animations.exitUs);
     const y = overlayPositionExpression(overlay, "y", bounds.startUs, visibleFullEndUs, animations.entranceUs, animations.exitUs);
     const next = `canvas_${serial++}`;
-    const enable = `between(t,${seconds(resolvedOverlay.outputRange.startUs)},${seconds(chain.visibleEndUs)})`;
+    const staticSource = source.kind === "image" || source.kind === "svg" || source.kind === "emoji";
+    // A still's last decoded PTS can precede the final output frame, especially
+    // after cuts or speed edits. Hold it only inside its half-open interval;
+    // animated sources retain their explicit hide/freeze/loop behavior.
+    const enable = staticSource
+      ? `gte(t,${seconds(resolvedOverlay.outputRange.startUs)})*lt(t,${seconds(chain.visibleEndUs)})`
+      : `between(t,${seconds(resolvedOverlay.outputRange.startUs)},${seconds(chain.visibleEndUs)})`;
+    const terminal = staticSource ? "eof_action=repeat:repeatlast=1" : "eof_action=pass:repeatlast=0";
     const blendMode = overlay.blendMode ?? "normal";
     if (blendMode === "normal") {
       filters.push(
-        `[${currentVideo}][${label}]overlay=x='${x}':y='${y}':eof_action=pass:repeatlast=0:enable='${enable}'[${next}]`,
+        `[${currentVideo}][${label}]overlay=x='${x}':y='${y}':${terminal}:enable='${enable}'[${next}]`,
       );
     } else {
       const transparent = `graphic_blend_canvas_${serial++}`;
       const positioned = `graphic_blend_positioned_${serial++}`;
+      const layerColorSource = `graphic_blend_color_source_${serial++}`;
       const layerColor = `graphic_blend_color_${serial++}`;
       const layerAlphaSource = `graphic_blend_alpha_source_${serial++}`;
       const layerMask = `graphic_blend_mask_${serial++}`;
@@ -1382,10 +1395,11 @@ export async function buildProjectFfmpegInvocation(
       const blended = `graphic_blend_result_${serial++}`;
       filters.push(
         `color=c=black@0:s=${plan.output.pixelWidth}x${plan.output.pixelHeight}:r=${emittedRate}:d=${seconds(plan.output.durationUs)},format=rgba[${transparent}]`,
-        `[${transparent}][${label}]overlay=x='${x}':y='${y}':eof_action=pass:repeatlast=0:enable='${enable}'[${positioned}]`,
-        `[${positioned}]format=rgba,split=2[${layerColor}][${layerAlphaSource}]`,
+        `[${transparent}][${label}]overlay=x='${x}':y='${y}':${terminal}:enable='${enable}':format=auto[${positioned}]`,
+        `[${positioned}]format=rgba,split=2[${layerColorSource}][${layerAlphaSource}]`,
+        `[${layerColorSource}]format=gbrp[${layerColor}]`,
         `[${layerAlphaSource}]alphaextract[${layerMask}]`,
-        `[${currentVideo}]split=2[${baseBlend}][${baseMerge}]`,
+        `[${currentVideo}]format=gbrp,split=2[${baseBlend}][${baseMerge}]`,
         `[${baseBlend}][${layerColor}]blend=all_mode=${blendMode}[${blended}]`,
         `[${baseMerge}][${blended}][${layerMask}]maskedmerge[${next}]`,
       );

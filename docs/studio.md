@@ -4,7 +4,37 @@ Slopcamera lets an agent retain a production scene, direct a native renderer, in
 
 Native authoring preserves the engine's control. A Blender source can use armatures, skinning, IK, shape keys, geometry nodes, materials, lights, cameras and simulation caches. A CadQuery program preserves dimensions and solid operations. A Manim scene preserves mathematical objects and timing. Portable meshes and finished videos are derivatives; retain the native source when later edits require it.
 
-Use the [Slopcamera source installation](how-to/use-current-source.md) for the `studio` commands described here. Start with the [one-second native film tutorial](tutorials/first-native-film.md) for a bounded CPU shot, or use [educational animation with narration](how-to/educational-video.md) for Manim.
+The `studio` commands described here ship in the [verified Slopcamera release](reference/capabilities.md). Start with the [one-second native film tutorial](tutorials/first-native-film.md) for a bounded CPU shot, or use [educational animation with narration](how-to/educational-video.md) for Manim.
+
+## Inspect retained simulation examples
+
+The [cloth example](https://slopcamera.com/docs/how-to/native-films#inspect-the-cloth-cache) retains 40 actual solver frames and replays them at 24 fps in a fresh process. The [fluid example](https://slopcamera.com/docs/how-to/native-films#inspect-the-fluid-cache) retains 32 actual Mantaflow frames, with both volume data and surface meshes. Their 1280×800 and1280×960 viewing frames keep the complete subjects visible. The liquid's low-resolution surface has visible facets; this short study does not establish physical accuracy.
+
+Use the [native reproduction helpers](../examples/showcase/native/README.md) to bake, retain and replay each source. Changing physics requires a new bake. A camera-only change can reuse the exact existing cache.
+
+
+## Move focus through a shot
+
+A fixed camera makes a focus pull easy to inspect. This three-second study keeps
+the optical instrument, 44mm lens, materials and lights still while focus moves
+from the front rim and screws toward the housing and side knob.
+
+[View the focus study](https://slopcamera.com/docs/how-to/native-films#move-focus-through-a-shot).
+
+The camera uses f/0.9, holds its near setting for frames 0–12, moves through
+frames 13–58, and holds its far setting for frames 59–71. The endpoints are
+different; this is a short shot, not a seamless loop. Play the film once and
+compare the sharp edges at each end.
+
+The [source recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/focus-study)
+keeps the focus schedule editable and provides three small smoke jobs before the
+full film. Review those frames before spending time on the full 960×540 render.
+The example was qualified on Blender 5.2.1 using Cycles on CPU.
+
+## Inspect the native character example
+
+[Watch the rendered character](https://slopcamera.com/docs/how-to/native-films#animate-a-native-character), then inspect its [editable source](../examples/showcase/native/character). The six-second Blender film uses a continuous weighted arm mesh, an IK target and facial shape keys for a wave, two blinks and a smile. Its nine-bone native rig is distinct from the portable canonical humanoid retargeting contract. The MP4 retains rendered motion; keep the native source when revising the rig.
+
 
 ## Make the first shot
 
@@ -89,7 +119,7 @@ slopcamera studio assets import asset-plan.json --json
 
 A search input is `{"provider":"poly-haven","query":"football","type":"models","limit":5}`. A model selection is `{"provider":"poly-haven","assetId":"dirty_football","resolution":"1k","kind":"model","format":"gltf"}`. Save the complete JSON plan returned by the plan command before importing it. The default total download bound is 50 MiB. Include the returned source files explicitly in a studio bundle; acquisition never executes or inserts an asset into a native scene. See the [asset adapter contract](../apps/desktop/studio/assets/README.md) for texture/HDRI selections, current terms and supported dependencies.
 
-Use Blender's native importers for supplied GLB/glTF, OBJ/MTL, FBX and other supported formats. Retain all required textures, buffers and animation files. `examples/studio/blender/import_model.py` and the CadQuery STEP example show explicit local-input routes. Native imports have a broader feature set tha Slopcamera's deliberately bounded portable GLB parser; an imported native control rig is not automatically editable through portable spatial patches.
+Use Blender's native importers for supplied GLB/glTF, OBJ/MTL, FBX and other supported formats. Retain all required textures, buffers and animation files. `examples/studio/blender/import_model.py` and the CadQuery STEP example show explicit local-input routes. Native imports have a broader feature set than Slopcamera's deliberately bounded portable GLB parser; an imported native control rig is not automatically editable through portable spatial patches.
 
 The original character example includes a deforming skeleton, blended weights, an IK target and facial shape keys. Keep control names and source parameters stable when directing later takes. Full upstream rigging APIs remain available to trusted authoring code, but arbitrary rig retargeting, production facial systems and third-party add-ons require their own setup and qualification.
 
@@ -104,7 +134,7 @@ Keep each native source alongside its portable representations. Use `.blend` for
 | Representation | Useful transfer | Boundary |
 | --- | --- | --- |
 | Native `.blend`, STEP and caches | Edit or rerender in the originating tool | Native rig controls, solids, solvers and procedural materials remain engine-specific |
-| Portable GLB | Share measured geometry, supported base-color materials and node TRS clips with Three | Admission rejects skins, morph targets and unsupported texture/material features; export an explicit compatible derivative |
+| Portable GLB | Share measured geometry, supported base-color materials and node TRS clips with Three | The static profile rejects skins and morph targets. Slopcamera v3.3.1 also includes `slopcamera.glb-rigged-morph-skin-v1` for supported skins, morphs and STEP/LINEAR clips; sparse accessors, cubic animation and unsupported features still reject. Native control rigs and IK remain engine-specific |
 | sRGB PNG or retained RGB(A) video | Mount a diagram, avatar, generated shot or GPU graphic in either scene | Preserve pixel size, alpha, color interpretation and the exact source clock |
 | Splats | Film a captured appearance through the qualified Three/Spark profile | Appearance capture does not establish collision geometry, relighting or native mesh editability |
 
@@ -150,6 +180,32 @@ The product source demonstrates beveled geometry, textured materials, glass, are
 Blender review PNGs use the chosen view transform and sRGB display output. Linear EXR beauty uses Linear Rec.709 and the declared half/full floating-point precision. Transparent PNG is straight alpha; transparent EXR is premultiplied. Auxiliary depth, normal, mask or object-ID files remain explicitly authored compositor outputs with data-space semantics. The host checks actual EXR channel precision and framing and decodes output files; physical units and coordinate meaning still need correct source and fixture validation.
 
 Keep linear masters when grading or compositing requires them. Do not tone-map a review PNG a second time, apply a beauty transform to data passes or assume an exported GLB can reproduce arbitrary procedural materials. A splat capture describes observed appearance; it does not automatically provide editable objects, collision geometry or physically relightable materials.
+
+## Preserve color and alpha
+
+Keep a display image and a compositing master when the next application needs
+different color or transparency conventions. This original chart saves one
+Blender Render Result as a 16-bit sRGB PNG with straight alpha and a half-float,
+linear Rec.709 EXR with premultiplied alpha.
+
+[View the color and alpha chart](https://slopcamera.com/docs/how-to/native-films#preserve-color-and-alpha).
+
+Straight alpha stores the color separately from its coverage. Premultiplied alpha
+stores color multiplied by coverage. The two half-transparent patches measured
+alpha `0.5` in the EXR; the PNG measured `0.50000763` after 16-bit quantization.
+The HDR patch retained linear EXR RGBA `[2, 0.5, 0.125, 1]`, while its display PNG
+clipped the red channel to `1`.
+
+The source includes a qualifier that reads the saved pixels, checks 26 numerical
+conditions and makes dark and light composites for edge inspection. The dark
+composite above is an SDR presentation image. The downloadable EXR preview uses
+an explicit SDR conversion; neither preview displays the master's HDR range or
+promises identical appearance between the two encodings.
+
+Use the [source recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/color-alpha-study)
+to prepare a fresh job, run it with Blender 5.2.1 on CPU, and check its actual PNG
+and EXR files. It keeps both masters and the native scene. The light composite is
+a diagnostic for transparent edges; its pale labels have limited contrast.
 
 ## Educational films and generated media
 
@@ -225,3 +281,7 @@ success does not qualify Cycles/Metal, and its frames need separate visual revie
 The supervisor bounds combined logs, the job deadline and termination/pipe-drain grace. It monitors output and scratch budgets, retains failure evidence and tracks native process groups. Live scans tolerate bounded disappearance of temporary cache entries; final output, source and scratch scans remain strict. Budget-monitor and validation failures retain a safe failed host stage separately from authored-process logs, without storing foreign exception text. A machine-wide durable activity marker survives CLI death; unresolved custody blocks later native dispatch. Detached sessions from authored source are unsupported. Do not delete an unresolved marker to bypass admission; inspect and resolve the actual process ownership first.
 
 The native profile is trusted current-user execution without an OS sandbox. Private roots, clean environment variables, hashes and process supervision provide operational control and provenance. They do not confine arbitrary Python, installed plugins or native libraries. Keep unreviewed downloaded source inert until execution is explicitly authorized.
+
+## Canonical CAD variation
+
+The [native film guide](https://slopcamera.com/docs/how-to/native-films#change-the-cad-dimensions) includes a real comparison of the 100 mm and 132 mm brackets. [Reproduce the retained solids and Blender presentation](../examples/showcase/native/README.md#build-a-cad-variation-and-round-trip-the-solid) with the exact source and measured STEP round-trip.

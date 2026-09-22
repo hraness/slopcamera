@@ -6,6 +6,12 @@ import { expectedPreviewHeaders, previewCases, type BrowserPayload, type Preview
 import { readPreviewFile } from "./preview-file"
 
 export const workerProtocolLimit = 32 * 1024
+export const examplesWorkerProtocolLimit = 128 * 1024
+export type WorkerProtocolProfile = "workflow-examples-v1"
+function profiledProtocolLimit(profile: WorkerProtocolProfile): number {
+  assert.equal(profile, "workflow-examples-v1", "Unknown worker protocol profile")
+  return examplesWorkerProtocolLimit
+}
 export const workerPhaseFiles = ["started.json", "connected.json", "result.json"] as const
 export const workerStartupMs = 10_000
 export const workerAttachmentMs = 10_000
@@ -104,7 +110,15 @@ function string(value: unknown, maximum: number): asserts value is string {
 
 /** Canonical JSON also rejects duplicate keys, invalid UTF-8 and trailing data. */
 export function decodeWorkerJson(bytes: Uint8Array): unknown {
-  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerProtocolLimit, "Excessive worker protocol bytes")
+  return decodeBoundedWorkerJson(bytes, workerProtocolLimit)
+}
+
+export function decodeProfiledWorkerJson(bytes: Uint8Array, profile: WorkerProtocolProfile): unknown {
+  return decodeBoundedWorkerJson(bytes, profiledProtocolLimit(profile))
+}
+
+function decodeBoundedWorkerJson(bytes: Uint8Array, maximum: number): unknown {
+  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= maximum, "Excessive worker protocol bytes")
   const text = Buffer.from(bytes).toString("utf8")
   assert.ok(Buffer.from(text).equals(Buffer.from(bytes)), "Invalid worker UTF-8")
   const value: unknown = JSON.parse(text)
@@ -113,8 +127,16 @@ export function decodeWorkerJson(bytes: Uint8Array): unknown {
 }
 
 export function encodeWorkerJson(value: unknown): Uint8Array {
+  return encodeBoundedWorkerJson(value, workerProtocolLimit)
+}
+
+export function encodeProfiledWorkerJson(value: unknown, profile: WorkerProtocolProfile): Uint8Array {
+  return encodeBoundedWorkerJson(value, profiledProtocolLimit(profile))
+}
+
+function encodeBoundedWorkerJson(value: unknown, maximum: number): Uint8Array {
   const bytes = Buffer.from(`${JSON.stringify(value)}\n`)
-  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerProtocolLimit, "Excessive worker protocol bytes")
+  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= maximum, "Excessive worker protocol bytes")
   return bytes
 }
 
@@ -210,9 +232,18 @@ export function parseWorkerPhase(value: unknown, sequence: 0 | 1 | 2, request: P
  * hard-link publication refuses an existing phase instead of overwriting it.
  * Retain the staging link so publication never changes the observed nlink. */
 export async function publishWorkerPhase(directory: string, sequence: 0 | 1 | 2, value: unknown): Promise<void> {
+  return publishWorkerPhaseBytes(directory, sequence, encodeWorkerJson(value))
+}
+
+export async function publishProfiledWorkerPhase(directory: string, sequence: 0 | 1 | 2, value: unknown,
+  profile: WorkerProtocolProfile): Promise<void> {
+  return publishWorkerPhaseBytes(directory, sequence, encodeProfiledWorkerJson(value, profile))
+}
+
+async function publishWorkerPhaseBytes(directory: string, sequence: 0 | 1 | 2, bytes: Uint8Array): Promise<void> {
   const name = workerPhaseFiles[sequence]
   const temporary = join(directory, `.${name}.tmp`)
-  await writeFile(temporary, encodeWorkerJson(value), { flag: "wx", mode: 0o600 })
+  await writeFile(temporary, bytes, { flag: "wx", mode: 0o600 })
   await link(temporary, join(directory, name))
 }
 

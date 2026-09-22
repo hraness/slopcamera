@@ -8,7 +8,7 @@ For architecture and furniture that must regenerate from dimensions, use [parame
 
 ## Render an editable scene
 
-Install [current Slopcamera source](how-to/use-current-source.md) for these commands, including calibrated camera tracks and native studio bridges; see [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.
+Scene rendering, calibrated camera tracks, native studio bridges, scene audits, character/performance, direction, and effects APIs ship in v3.3.1. Install the [verified release](../README.md#install-slopcamera) or a [source build](how-to/use-current-source.md), and check [capability support](reference/capabilities.md). Check `slopcamera scene --help` and `slopcamera doctor` first. Source inspection and edits need Bun; rendering also needs the admitted local Chrome runtime, and video decoding or encoding needs FFmpeg and FFprobe.
 
 ```sh
 slopcamera scene init product.scene.json --json
@@ -61,6 +61,61 @@ Each sample renders at the camera's calibrated resolution, then resizes into its
 ```
 
 The video profile uses lossless qtrle with straight alpha. Final project delivery converts scene footage through the ordinary project compositor.
+
+## Orbit around live media
+
+The [playable orbit example](https://slopcamera.com/docs/how-to/direct-scenes#orbit-around-live-media) combines an animated editorial film and a vector process diagram on separate planes. Foreground fins reveal depth through occlusion as the camera moves. Both media and camera motion follow the scene clock.
+
+Run the [retained recipe](../examples/showcase/spatial/render-orbit.ts) from a source checkout:
+
+```sh
+bun examples/showcase/spatial/render-orbit.ts
+```
+
+The helper renders the original HTML film, authors and checks the stage, then renders eight seconds through the explicit macOS WebGL2 hardware profile. It retains command results, source, assets and a render receipt, and requires at least 4 GiB of free space before rendering. The public silent MP4 is a delivery encode of the lossless MOV. Other camera tracks in the source are separate recipes and are not established by this orbit result.
+
+## Compare camera moves
+
+The five studies below keep the stage, media and render settings fixed. Watch the coral foreground fin against the panels to see how each camera changes the view. Each silent clip contains 192 rendered frames at 24fps. The earlier orbit example was rendered separately; use these five studies for a controlled comparison.
+
+From a source checkout, first render the [HTML editorial example](https://github.com/hraness/slopcamera/tree/main/examples/showcase/html) and retain its JSON result. Build the stage and render one move:
+
+```sh
+bun examples/showcase/spatial/author-stage.ts artifacts/showcase/html/editorial.render.json
+bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/dolly.scene.json --request artifacts/showcase/spatial/source/dolly.request.json --json
+```
+
+Use the matching `crane`, `rail`, `tripod` or `handheld` file pair for another move. The retained requests use the macOS WebGL2 hardware profile. Keep the generated source directory together, including its film, diagram and licensed font. Each track contains explicit camera samples; these examples do not infer camera motion from a recording.
+
+### Move closer with a dolly
+
+[View the dolly study](https://slopcamera.com/docs/how-to/direct-scenes#move-closer-with-a-dolly).
+
+A straight push toward the display makes both media panels larger while keeping the aim fixed. The foreground fin makes the changing distance visible.
+
+### Raise the view with a crane
+
+[View the crane study](https://slopcamera.com/docs/how-to/direct-scenes#raise-the-view-with-a-crane).
+
+The camera rises while keeping the display in view, revealing more of the plinth. The playing film and diagram keep their positions in the scene.
+
+### Move laterally on a rail
+
+[View the rail study](https://slopcamera.com/docs/how-to/direct-scenes#move-laterally-on-a-rail).
+
+A camera follows an eased straight track across the display. The foreground fin shifts against the two media panels, making lateral parallax visible.
+
+### Hold a tripod view
+
+[View the tripod study](https://slopcamera.com/docs/how-to/direct-scenes#hold-a-tripod-view).
+
+A fixed camera holds the scene composition while the embedded editorial film continues to animate. It provides a steady reference for the moving-camera studies.
+
+### Add subtle handheld motion
+
+[View the handheld study](https://slopcamera.com/docs/how-to/direct-scenes#add-subtle-handheld-motion).
+
+Small seeded camera movements add a restrained handheld drift to the fixed composition. The media panels stay framed while the foreground fin shifts slightly against them.
 
 ## Select hardware acceleration
 

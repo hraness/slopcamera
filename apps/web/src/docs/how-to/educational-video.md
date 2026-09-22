@@ -1,6 +1,14 @@
 Produce a mathematical explainer that stays editable after delivery: Manim Community renders the visuals, while narration, music, and sound effects live in an ordinary Slopcamera project you can keep revising. When the explanation depends on detailed 3D, author a Blender scene instead; when named geometry and world-space media need an editable camera, use a spatial scene. [Author a native film](/docs/how-to/native-films) covers the other engines and shared assets.
 
-This path uses the `slopcamera studio` commands, which require a [source build](/docs/how-to/install-from-source). You also need a selected Python environment with Manim Community and its Typst optional dependency, plus local FFmpeg and FFprobe. The qualified observation is Manim Community 0.21.0 on the CPU Cairo renderer; run `{{DOCTOR_COMMAND}}` and check [capabilities](/docs/reference/capabilities) for your install.
+This path uses the `slopcamera studio` commands, which ship in v{{PUBLISHED_VERSION}}. You also need a selected Python environment with Manim Community and its Typst optional dependency, plus local FFmpeg and FFprobe. The qualified observation is Manim Community 0.21.0 on the CPU Cairo renderer; run `{{DOCTOR_COMMAND}}` and check [capabilities](/docs/reference/capabilities) for your install.
+
+## Inspect the finished example
+
+::example[education-luma]
+
+This actual ten-second Manim render contains 240 frames at 24 fps in a 720×1280 portrait composition. Inspect the tile transitions, the presenter and the caption rail, then open the [complete lesson source](https://github.com/hraness/slopcamera/tree/main/examples/showcase/native/education) to change the authored timings. It is silent: the mouth cues and visible captions do not establish speech alignment. The geometry illustrates the 3–4–5 case, not a general proof.
+
+The showcase reproduction helper uses a [source installation](/docs/how-to/install-from-source). To build a lesson with the verified release, follow the scaffold and rendering commands below.
 
 ## Author the lesson
 

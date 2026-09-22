@@ -3,12 +3,13 @@ import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
-  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument,
+  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument, docsSocialImage,
   renderDocsArticleHeader, renderDocsBody, renderDocsNav,
 } from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
-import { diagramSession, interfaceExamples } from "./site-code-examples"
+import { interfaceExamples } from "./site-code-examples"
+import { renderExampleGallery, renderExampleHero } from "./example-gallery"
 
 // Existing content producers run within the ordinary page's captured SSR
 // graph. They introduce no client renderer and retain their public APIs.
@@ -137,12 +138,17 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   if (docsPage !== undefined) {
     const body = assets.docBodies?.[document]
     if (body === undefined) throw new Error(`Documentation body missing for ${document}`)
+    const social = docsSocialImage(docsPage)
     return [...common,
       ["{{DOC_TITLE}}", escapeHtml(docsPage.title), 3],
       ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],
       ["{{DOC_CANONICAL}}", docsCanonicalUrl(docsPage), 2],
       ["{{DOC_MARKDOWN}}", docsMarkdownUrl(docsPage), 1],
       ["{{DOC_JSONLD}}", docsJsonLd(docsPage), 1],
+      ["{{DOC_IMAGE_URL}}", social.url, 2],
+      ["{{DOC_IMAGE_ALT}}", escapeHtml(social.alt), 2],
+      ["{{DOC_IMAGE_WIDTH}}", String(social.width), 1],
+      ["{{DOC_IMAGE_HEIGHT}}", String(social.height), 1],
       ["{{DOC_NAV}}", renderDocsNav(docsPage), 1],
       ["{{DOC_HEADER}}", renderDocsArticleHeader(docsPage), 1],
       ["{{DOC_BODY}}", renderDocsBody(body), 1],
@@ -154,7 +160,8 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{RELEASE_VERSION}}", publishedRelease.version, 1],
     ["{{RELEASE_URL}}", publishedRelease.releaseUrl, 1],
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
-    ["{{DIAGRAM_SESSION}}", renderHighlightedCode(diagramSession, "shell"), 1],
+    ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
+    ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
     ["{{SKILL_EXAMPLE}}", renderHighlightedCode(interfaceExamples.skill, "shell"), 1],
     ["{{CLI_EXAMPLE}}", renderHighlightedCode(interfaceExamples.cli, "shell"), 1],
     ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],

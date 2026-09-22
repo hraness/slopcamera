@@ -1,6 +1,12 @@
 import { installAppearanceMenus } from "@hraness/design-kit/browser"
 
 import { installCopyCommands } from "./copy-command"
+import { installExamplePlayers } from "./example-player"
+
+function installPageControls(): void {
+  installCopyCommands()
+  installExamplePlayers()
+}
 
 installAppearanceMenus({
   darkThemeColor: "#12100f",
@@ -9,7 +15,7 @@ installAppearanceMenus({
 })
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => installCopyCommands(), { once: true })
+  document.addEventListener("DOMContentLoaded", installPageControls, { once: true })
 } else {
-  installCopyCommands()
+  installPageControls()
 }

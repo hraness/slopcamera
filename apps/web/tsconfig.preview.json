@@ -82,6 +82,16 @@
     "scripts/public-identity.test.ts",
     "scripts/verify-site-refinement.ts",
     "scripts/verify-site-refinement-copy.ts",
-    "scripts/site-refinement-browser-contract.test.ts"
+    "scripts/site-refinement-browser-contract.test.ts",
+    "src/example-player.ts",
+    "src/example-player.test.ts",
+    "src/example-registry.test.ts",
+    "scripts/example-assets.ts",
+    "scripts/example-sources.ts",
+    "scripts/verify-example-sources.ts",
+    "scripts/site-examples-browser-contract.ts",
+    "scripts/site-examples-browser-contract.test.ts",
+    "scripts/site-examples-profile.ts",
+    "scripts/verify-site-examples.ts"
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "engine": "blender",
+  "entrypoint": {
+    "kind": "python",
+    "path": "export.py"
+  },
+  "files": [
+    "export.py",
+    "scene.py",
+    "studio_scene.py"
+  ]
+}

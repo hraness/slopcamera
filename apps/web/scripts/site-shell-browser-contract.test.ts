@@ -12,7 +12,7 @@ function operationDeferred() {
 }
 
 function restorationFixture(recovery = false) {
-  let now = 0, id = 0, discovered = false, running = true, paint = "0px", frameTime = 0
+  let now = 0, id = 0, discovered = false, running = true, paint = "0px", frameTime = 0, fontReadyReads = 0
   const frames = new Map<number, (time: number) => void>(), timers = new Map<number, () => void>(), events = new Map<string, () => void>()
   const href = "http://127.0.0.1:1/assets/site.css", selected = new Map<string, object[]>()
   const view = { performance: { now: () => now }, scrollY: 0,
@@ -27,7 +27,13 @@ function restorationFixture(recovery = false) {
   const document = { defaultView: view, styleSheets: [] as object[],
     querySelectorAll: (selector: string) => selected.get(selector) ?? [],
     querySelector: (selector: string) => selected.get(selector)?.[0] ?? null,
-    fonts: { ready: Promise.resolve(), load: async () => [{ status: "loaded" }] },
+    fonts: { get ready() { fontReadyReads++; return Promise.resolve() }, load: async () => [{ status: "loaded" }] },
+    body: { append: () => {} },
+    createElement: () => {
+      const element: { children: object[], style: Record<string, string>, remove: () => void, append: (node: object) => void } =
+        { children: [], style: {}, remove: () => {}, append: node => element.children.push(node) }
+      return element
+    },
   }
   class Link { ownerDocument = document; isConnected = true; disabled = false; href = href; sheet?: object }
   const link = new Link()
@@ -41,7 +47,7 @@ function restorationFixture(recovery = false) {
     }
     selected.set(selector, [owner]); return owner
   })
-  const context = { document, HTMLLinkElement: Link, CSSStyleSheet: Sheet, requestAnimationFrame: view.requestAnimationFrame }
+  const context = { document, HTMLLinkElement: Link, CSSStyleSheet: Sheet, requestAnimationFrame: view.requestAnimationFrame, getComputedStyle: view.getComputedStyle }
   const execute = (callback: (...values: never[]) => unknown, ...args: unknown[]) => runInNewContext(`(${callback.toString()})(...args)`, { ...context, args }) as Promise<void>
   const start = () => {
     const result = execute(settleShellRestoredStyles, sheet, { href, recovery, properties: ["padding-left", "font-weight"] })
@@ -59,6 +65,7 @@ function restorationFixture(recovery = false) {
     setClock: (value: number) => { now = value },
     setRunning: (value: boolean) => { running = value },
     cancel: () => { events.get("pagehide")?.() },
+    get fontReadyReads() { return fontReadyReads },
     get pending() { return [frames.size, timers.size, events.size] },
   }
 }
@@ -66,7 +73,9 @@ function restorationFixture(recovery = false) {
 test("restoration sampling discovers the transition that generic two frames miss", async () => {
   const generic = restorationFixture(), old = generic.generic()
   for (let index = 0; index < 8; index++) await Promise.resolve()
-  generic.frame(); generic.frame(); await old
+  for (let index = 0; index < 8; index++) { generic.frame(); await Promise.resolve() }
+  await old
+  expect(generic.fontReadyReads).toBe(2)
   expect(generic.read()).toBe("0px")
   const actual = restorationFixture(), result = actual.start()
   actual.frame(); actual.frame("144px"); actual.frame(); await result

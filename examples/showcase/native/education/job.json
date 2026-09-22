@@ -1,0 +1,78 @@
+{
+  "bundleSha256": "305f3c3d5ec12a1745181eca43ed4d0cc4b5afcda560ba6703563c99ece64f6b",
+  "engine": {
+    "engine": "manim",
+    "renderer": "cairo",
+    "scene": "PythagoreanLesson",
+    "transparent": false
+  },
+  "execution": {
+    "hermetic": false,
+    "isolation": "none",
+    "trust": "trusted-current-user"
+  },
+  "jobId": "studio_showcase_education_v1",
+  "kind": "slopcamera.studio-job",
+  "limits": {
+    "maximumOutputBytes": 2147483648,
+    "maximumOutputFiles": 2048,
+    "timeoutSeconds": 900
+  },
+  "outputs": [
+    {
+      "format": "png",
+      "id": "beauty",
+      "interpretation": {
+        "alpha": "opaque",
+        "channels": [
+          "R",
+          "G",
+          "B"
+        ],
+        "colorSpace": "srgb",
+        "dataType": "uint8",
+        "kind": "raster",
+        "semantic": "color",
+        "unit": "unitless"
+      },
+      "kind": "sequence",
+      "pathPattern": "frames/%06d.png",
+      "role": "beauty"
+    },
+    {
+      "format": "mp4",
+      "id": "movie",
+      "interpretation": {
+        "alpha": "opaque",
+        "channels": [
+          "R",
+          "G",
+          "B"
+        ],
+        "colorSpace": "srgb",
+        "dataType": "uint8",
+        "kind": "raster",
+        "semantic": "color",
+        "unit": "unitless"
+      },
+      "kind": "file",
+      "path": "lesson.mp4",
+      "role": "beauty"
+    }
+  ],
+  "parameters": {
+    "lessonFile": "lesson.json"
+  },
+  "render": {
+    "endFrameExclusive": 240,
+    "frameRate": {
+      "denominator": 1,
+      "numerator": 24
+    },
+    "height": 1280,
+    "startFrame": 0,
+    "width": 720
+  },
+  "schemaVersion": 1,
+  "stage": "render"
+}

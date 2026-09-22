@@ -2,12 +2,25 @@
 
 Render an authored HTML or Three.js scene with a local soundtrack into an MP4 and an ordinary editable Slopcamera project. The project keeps the rendered scene and original music as separate sources, so you can continue editing without extracting audio from the finished movie.
 
-Use a [current-source build](use-current-source.md) whose `slopcamera help html` lists `html render`. Rendering requires the admitted local Chrome runtime and FFmpeg/FFprobe. Check the host before preparing a full render:
+Install the [verified release](../reference/capabilities.md) and confirm its `slopcamera help html` lists `html render`. Rendering requires the admitted local Chrome runtime and FFmpeg/FFprobe. Check the host before preparing a full render:
 
 ```sh
 slopcamera help html
 slopcamera doctor --json
 ```
+
+## Inspect the island example
+
+[Watch Island Pulse](https://slopcamera.com/docs/how-to/music-video#inspect-the-island-example).
+
+This eight-second Three.js scene combines named rigid joints, a camera and lighting changes on an original procedural island. Its source uses an authored 120 BPM clock. The published preview is silent; it demonstrates the visual choreography, with no claim that its soundtrack has passed a listening review. To reproduce the full source, generate the original track and render the request:
+
+```sh
+python3 examples/showcase/html/synth-island.py
+slopcamera html render --input examples/showcase/html/island-pulse.json --json
+```
+
+Run from the repository checkout. [The source and request](https://github.com/hraness/slopcamera/tree/main/examples/showcase/html) retain the independent track and visual decisions.
 
 ## Prepare the scene request
 

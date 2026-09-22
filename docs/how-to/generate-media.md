@@ -16,10 +16,12 @@ Check the model's actual input types and settings. A video model may not accept 
 
 ## Supply credentials for this invocation
 
-Slopcamera reads `AI_GATEWAY_API_KEY`, falling back to `VERCEL_OIDC_TOKEN`. Set an existing credential in the process environment or use an already linked Vercel project:
+Slopcamera reads `AI_GATEWAY_API_KEY`, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the `slopcamera` commands directly. This path needs no Vercel CLI, linked project, or deployment.
+
+If you already use a linked Vercel project, environment injection is an optional alternative:
 
 ```sh
-vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" ai models list --type image --json
+vercel env run -- slopcamera ai models list --type image --json
 ```
 
 Do not put credentials on argv, in source, in a project, or in a provider-options file. The [Vercel runbook](../vercel.md) covers that integration. Generation can incur provider charges; discovery does not authorize spending beyond the task's scope.
@@ -35,7 +37,7 @@ slopcamera ai speech generate --model <speech-model-id> --text-file script.txt -
 slopcamera ai transcribe interview.wav --model <transcription-model-id> --format all --allow-cloud-audio-upload --json
 ```
 
-If credentials come from Vercel, replace the leading `slopcamera` in each command above with `vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js"`. The [source installation](use-current-source.md) defines that exported root; its shell function cannot be launched by Vercel. Environment injection applies only to the invoked child, not subsequent commands.
+For optional Vercel injection, prefix each command with `vercel env run --`. If `slopcamera` is a shell function from [source installation](use-current-source.md), use `vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js"` instead: a child process cannot launch a shell function. Environment injection applies only to that invocation.
 
 A local reference requires acknowledgement of uploading those exact files. Transcription has its separate audio-upload flag. Ordinary user-supplied URLs must meet the public-reference rules; do not put a signed or credential-bearing URL into shell history.
 
@@ -43,7 +45,7 @@ Use `slopcamera help ai` for masks, references, counts and other common flags. W
 
 ## Review alternatives as a gallery
 
-When the request leaves visual alternatives open — texture maps, skyboxes, backdrops, sprites, or competing design directions — generate a labelled candidate gallery instead of a single output:
+Image galleries ship in v3.3.1. When the request leaves visual alternatives open — texture maps, skyboxes, backdrops, sprites, or competing design directions — generate a labelled candidate gallery instead of a single output:
 
 ```sh
 slopcamera ai image gallery 'weathered copper panel' \
@@ -77,10 +79,10 @@ When an ordinary project should consume a result, use the exact suggested `proje
 
 Do not automatically repeat an ambiguous paid call. Zero client retries do not prove the provider performed only one internal attempt. Inspect the receipt, reconcile supported retained state, and make any new paid request an explicit decision within the existing authorization.
 
-For several shots, accepted takes, endpoint continuity and one retained budget, use [short-video directing](../directing-video.md) on a compatible current-source CLI. Its private reference-hosting adapter is separate from ordinary URL inputs; Blob charges remain outside the model estimate.
+For several shots, accepted takes, endpoint continuity and one retained budget, use [short-video directing](../directing-video.md). Its private reference-hosting adapter is separate from ordinary URL inputs; Blob charges remain outside the model estimate.
 
 For one explicitly named output file, the portable lane is `slopcamera image generate '<prompt>' --output image.webp`. That lane has its own bounded model contract and does not expose the full content-addressed `ai` grammar. Vectorization is a separate local operation and requires no Gateway credential.
 
-Use `slopcamera image icon '<subject>' --purpose mark --output mark.svg` for a compact product mark. Marks use bold masses and negative space, are reviewed for recognition at 16 and 32 pixels, and reject sparse, elongated, or overly complex vectors. Use `--purpose illustration` for the related marketing illustration. Illustrations permit simple isometric structure but reject hairlines, dense fills, and detail that disappears at 64 pixels. `illustration` remains the compatibility default.
+In v3.3.1, use `slopcamera image icon '<subject>' --purpose mark --output mark.svg` for a compact product mark. Marks use bold masses and negative space, are reviewed for recognition at 16 and 32 pixels, and reject sparse, elongated, or overly complex vectors. Use `--purpose illustration` for the related marketing illustration. Illustrations permit simple isometric structure but reject hairlines, dense fills, and detail that disappears at 64 pixels. `illustration` remains the compatibility default.
 
 Both purposes normalize one style-locked Gateway raster to canonical ink-on-transparent pixels, trace it with the local vectorizer, run deterministic geometry gates, and, unless `--rounds 1`, use a purpose-specific vision critique whose correction drives the next attempt. `--ink` selects the single ink color and `--keep-raster` retains the normalized intermediate PNG.

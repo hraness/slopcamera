@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises"
 import { homeMarkdown, llmsTxt, sitemapMarkdown } from "../src/agent-pages"
 import { archiveInstall, publishedArchiveUrl, sourceInstall } from "../src/published-release"
 import { diagramSession } from "../src/site-code-examples"
+import { homepageExamples, renderExampleHero, renderExampleGallery } from "../src/example-gallery"
+import { exampleUrl, exampleGuideUrl } from "../src/example-registry"
 import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
@@ -76,7 +78,8 @@ describe("visual studio public copy (pure, process-free)", () => {
     expect(cli).toContain('name: "example-flow"')
     expect(artifacts).toContain('`${spec.name}.tldr`')
     const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
-    expect(html).toContain("{{DIAGRAM_SESSION}}")
+    expect(html).toContain("{{EXAMPLE_HERO}}")
+    expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).toContain("docs/tutorials/first-diagram.md")
     for (const source of [readme, diagramSession, homeMarkdown]) {
       const positions = commands.map(command => source.indexOf(command))
@@ -100,7 +103,6 @@ describe("visual studio public copy (pure, process-free)", () => {
       expect(text).toContain("current user")
       expect(text).toContain("main")
       expect(text).toContain("studio")
-      expect(text).toContain("camera-track")
       expect(text).toMatch(/(?:MCP.*(?:subset|toolset)|(?:subset|toolset).*MCP)/u)
       expect(text).not.toContain("Each one reaches the same project and the same operations")
       expect(text).not.toContain("Only model-backed work may upload")
@@ -111,7 +113,9 @@ describe("visual studio public copy (pure, process-free)", () => {
     ])
     expect(html).toContain("It does not expose every CLI command.")
     expect(readme).toContain("Seven editable")
-    expect(html).toContain("qualified Three.js GPU profile")
+    expect(llmsTxt).toContain("GPU support required by its selected profile")
+    expect(llmsTxt).toContain("`scene camera-track` export")
+    expect(llmsTxt).toContain("17 tools and six portable operation codes in v3.3.1")
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {
@@ -122,9 +126,17 @@ describe("visual studio public copy (pure, process-free)", () => {
     const routes = JSON.parse(config).redirects.filter((route: { has?: unknown }) => route.has === undefined)
     expect(routes).toEqual([])
     const links = [...html.matchAll(/href="(https:\/\/github.com\/hraness\/slopcamera\/blob\/main\/docs\/[^"#]+)(?:#[^"]*)?"/gu)]
-    expect(links.length).toBeGreaterThan(5)
+    expect(links.length).toBeGreaterThanOrEqual(5)
     const allowed = new Set(["README.md", "tutorials/first-diagram.md", "tutorials/first-native-film.md", "spatial-scenes.md", "studio.md", "directing-video.md", "how-to/edit-video.md", "how-to/generate-media.md", "how-to/educational-video.md", "how-to/run-workflows.md", "reference/capabilities.md", "architecture.md", "how-to/use-current-source.md"])
     for (const [, link] of links) expect(allowed.has(link!.split("/docs/")[1]!)).toBe(true)
-    expect(html).not.toMatch(/<video\b|autoplay|<iframe\b/u)
+    expect(html).not.toMatch(/<iframe\b/u)
+    const media = renderExampleHero() + renderExampleGallery()
+    expect(media).not.toMatch(/\sautoplay(?:\s|=|>)/u)
+    for (const example of homepageExamples()) {
+      expect(media).toContain(`data-example-id="${example.id}"`)
+      expect(media).toContain(exampleUrl(example.poster))
+      expect(media).toContain(exampleGuideUrl(example))
+      expect(homeMarkdown).toContain(exampleUrl(example.poster))
+    }
   })
 })

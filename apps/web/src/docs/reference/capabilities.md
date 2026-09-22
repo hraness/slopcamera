@@ -11,7 +11,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 | TypeScript SDK | `@hraness/slopcamera` portable imports plus the complete-local-host `./local/*` surfaces; see [SDK surfaces](/docs/reference/sdk) |
 | MCP server | `slopcamera mcp --root <workspace>` exposes a fixed toolset inside one selected root; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp) |
 
-The portable `code search` and `code execute` surface carries six operation codes: diagram check, diagram render, image generation, vectorization, and the icon and gallery image recipes. The MCP server adds root-relative scene planning and audit tools beside those operations and the diagram compatibility tools. The complete local host has a larger closed registry. Neither surface allows a caller to register arbitrary operations.
+Slopcamera v3.3.1 exposes six portable operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Install the release
 
@@ -25,7 +25,7 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 | Surface | Historical Atet v3.2.3 | Slopcamera v{{PUBLISHED_VERSION}} |
 | --- | --- | --- |
-| Diagrams, vectorization, Gateway media, recording, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available |
+| Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
 | Paid World Labs world commands | Present in the historical release | Removed; saved-world import and historical provenance replay remain |
 | Retained short-video directing: `direct` | Absent | Available |
@@ -35,9 +35,28 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 | Parametric architectural designs: `scene design` | Absent | Available |
 | External vgpu 0.4.1 native example | Absent | Explicit example runtime; not a new registered studio engine |
 
+## Verified release contents
+
+The immutable [v3.3.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.1), published on September 19, 2026, contains the following command families. Its canonical archive is built from `88aa724005ed924b6763f9a0fe39505d632c6191`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+
+| Capability | Slopcamera v3.3.1 |
+| --- | --- |
+| HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
+| Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
+| Spatial scenes, calibrated camera tracks, hardware/Spark profiles, saved-world import | Included |
+| Static `capabilities --json` manifest; image icon and candidate-gallery recipes | Included |
+| Scene builders/admission, audits, rendered galleries, vision critique, character/performance and cinematic camera APIs | Included |
+| Scene effects, particles, simulation bakes, semantic direction, temporal/behavior audits, project cinema plans | Included |
+| Built-in workflows | Eight, including `cinematic-world`; inspect `workflows list` |
+| New screen, camera, microphone, or system-audio capture | Absent |
+
+The static and rigged/morph GLB profiles have separate admission limits within this release. Model, browser, native-engine and hardware availability still require inspection on the machine doing the work; presence in an archive is not a live qualification result.
+
+Later source corrects static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. These corrections are absent from v3.3.1. Examples that depend on them identify the required source revision beside their commands. The project-cinema commands also ship in v3.3.1, but later renderer corrections must be checked separately before reproducing a source example.
+
 ## Parametric architectural designs
 
-Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named dimensions and constraints compile into retained geometry and ordinary scenes. Four original starters include materials, lights, and cameras. Inspection and compilation run locally with the Slopcamera CLI; rendering uses the existing spatial browser runtime. Follow the [parametric design guide](https://github.com/hraness/slopcamera/blob/main/docs/how-to/parametric-design.md).
+Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named dimensions and constraints compile into retained geometry and ordinary scenes. Four original starters include materials, lights, and cameras. Inspection and compilation run locally with the Slopcamera CLI; rendering uses the existing spatial browser runtime. Follow the [parametric design guide](/docs/how-to/parametric-design).
 
 ## What requires the source-backed distribution
 
@@ -55,6 +74,8 @@ Read-only catalog commands such as `workflows list`, `workflows show`, `runs lis
 | Closed operation catalog and exact schemas | `slopcamera operations list --json`, `slopcamera operations show <kind>[@<version>] --json` |
 | Built-in workflow input schema | `slopcamera workflows list --json`, `slopcamera workflows show <id> --json` |
 | Live Gateway model capabilities | `slopcamera ai models list --type <type> --json`, `slopcamera ai models show <id> --json` |
+| Static capability manifest | `slopcamera capabilities --json` |
+| HTML scene export | `slopcamera help html`, `slopcamera html render --input <scene.json> --dry-run --json` |
 | HTML profile locks | `slopcamera html catalog --json` |
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 
@@ -65,7 +86,6 @@ Read-only catalog commands such as `workflows list`, `workflows show`, `runs lis
 | Diagram JSON, SVG/PNG, and tldraw export | Bun package and bundled rendering dependencies; no tldraw app required |
 | Vectorization | Bounded macOS/Linux profile; checksum-pinned VTracer can be obtained on first use. Windows deliberately rejects this profile |
 | Ordinary media and delivery | FFmpeg and FFprobe; `doctor` reports additional analysis dependencies |
-| Screen, camera, microphone, and system-audio recording | Native macOS capture support and the selected operating-system permissions |
 | HTML or Three rendering | Admitted local Chrome runtime and declared assets; dependencies may need initial verified provisioning |
 | `three-webgl2-hardware-v1` | Qualified macOS ANGLE Metal WebGL2 context; software or unknown fallback rejects |
 | `three-spark-webgl2-hardware-v1` | Separate qualified Spark profile for bounded saved splats; its format, camera, and output limits apply |
@@ -75,7 +95,7 @@ Read-only catalog commands such as `workflows list`, `workflows show`, `runs lis
 
 Native studio qualification used Blender 5.2.1 LTS on an Apple M4 Max, CadQuery 2.8.0, and Manim Community 0.21.0. These observations do not certify every plugin, solver, device, or imported asset. [The engine stack](/docs/reference/engines) describes what each part does, needs, and where its limits are.
 
-Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a stopped recording, a successful studio or directing assembly, or, in current source, an authored scene rendered with `slopcamera html render`. Arbitrary standalone files alone cannot create an empty project.
+Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from an existing finished recording bundle, a successful studio or directing assembly, or an authored scene rendered with `slopcamera html render`. Arbitrary standalone files alone cannot create an empty project.
 
 ## Trust boundaries
 

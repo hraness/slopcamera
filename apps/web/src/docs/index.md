@@ -17,23 +17,27 @@ Then give your coding agent the matching guidance:
 ## Learn by making something
 
 - [Create and revise your first diagram](/docs/tutorials/first-diagram): make a two-node flow, inspect its five exports, then change a label by editing the source.
+- [Create and revise your first animation](/docs/tutorials/first-animation): render an eight-second title, change its copy and color, and keep both sources.
 - [Render your first native film](/docs/tutorials/first-native-film): retain a Blender source, render a small shot, and export an ordinary project.
 
 ## Set up your coding agent
 
 - [Claude Code](/docs/tutorials/claude-code): install the release and the Agent Skill so Claude Code can create visual media.
 - [Codex](/docs/tutorials/codex): install the release and the Agent Skill inside a repository.
-- [MCP clients](/docs/tutorials/mcp): expose the fixed diagram and image toolset to Cursor, Claude Desktop, and other MCP-capable clients.
+- [MCP clients](/docs/tutorials/mcp): expose fixed tools for diagrams, images, and scene inspection and planning to Cursor, Claude Desktop, and other MCP-capable clients.
 - [Other agents](/docs/tutorials/other-agents): the portable skill target and plain CLI access.
 
 ## Complete a task
 
 - [Build Slopcamera from source](/docs/how-to/install-from-source): record the commit, install locked dependencies, and build the SDK and CLI.
+- [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.
+- [Convert raster images to SVG](/docs/how-to/vectorize-images): trace artwork locally, compare a duotone treatment, and inspect fidelity.
 - [Generate images, video, and narration](/docs/how-to/generate-media): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
 - [Make an educational video](/docs/how-to/educational-video): keep mathematical visuals, narration, and timing evidence revisable.
 - [Make a music video](/docs/how-to/music-video): render authored HTML visuals with a local track.
 - [Render and edit spatial scenes](/docs/how-to/direct-scenes): patch named entities, use hardware rendering, or import a saved world.
+- [Build and revise a parametric design](/docs/how-to/parametric-design): compile an architectural or furniture study, change its dimensions, and compare the rendered result.
 - [Direct a cinematic world](/docs/how-to/cinematic-worlds): pack direction, galleries, effects, and an audit into the cinematic-world workflow.
 - [Author a native film](/docs/how-to/native-films): use Blender, CadQuery, or Manim and share assets across renderers.
 - [Direct short generated clips](/docs/how-to/direct-takes): budget, review takes, and preserve endpoint continuity.

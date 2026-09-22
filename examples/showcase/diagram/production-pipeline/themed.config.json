@@ -1,0 +1,85 @@
+{
+  "font": {
+    "family": "Nebula Sans",
+    "files": [
+      {
+        "path": "../../../../src/assets/fonts/nebula-sans/NebulaSans-Book.woff2",
+        "weight": 400,
+        "embed": true
+      },
+      {
+        "path": "../../../../src/assets/fonts/nebula-sans/NebulaSans-Bold.woff2",
+        "weight": 700,
+        "embed": true
+      },
+      {
+        "path": "../../../../src/assets/fonts/nebula-sans/NebulaSans-Book.otf",
+        "weight": 400,
+        "embed": false
+      },
+      {
+        "path": "../../../../src/assets/fonts/nebula-sans/NebulaSans-Bold.otf",
+        "weight": 700,
+        "embed": false
+      }
+    ]
+  },
+  "icons": {
+    "pipeline-author": {
+      "viewBox": "0 0 24 24",
+      "body": "<path d=\"M8 6 3 12l5 6M16 6l5 6-5 6M14 4l-4 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    },
+    "pipeline-check": {
+      "viewBox": "0 0 24 24",
+      "body": "<path d=\"M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6zM8 12l3 3 5-6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    },
+    "pipeline-render": {
+      "viewBox": "0 0 24 24",
+      "body": "<path d=\"M5 4h14v16H5zM10 8l6 4-6 4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    },
+    "pipeline-review": {
+      "viewBox": "0 0 24 24",
+      "body": "<path d=\"M2 12c3-5 6-7 10-7s7 2 10 7c-3 5-6 7-10 7S5 17 2 12z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/>"
+    },
+    "pipeline-deliver": {
+      "viewBox": "0 0 24 24",
+      "body": "<path d=\"M12 3v12M7 10l5 5 5-5M4 15v5h16v-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+    }
+  },
+  "theme": {
+    "light": {
+      "background": "#f7f5ee",
+      "foreground": "#202b32",
+      "stroke": "#607078",
+      "tones": {
+        "neutral": {
+          "fill": "#fffefa",
+          "stroke": "#607078",
+          "text": "#202b32"
+        },
+        "green": {
+          "fill": "#e4f0df",
+          "stroke": "#477044",
+          "text": "#254425"
+        }
+      }
+    },
+    "dark": {
+      "background": "#121d25",
+      "foreground": "#f2f3ec",
+      "stroke": "#9eafb7",
+      "tones": {
+        "neutral": {
+          "fill": "#22323d",
+          "stroke": "#9eafb7",
+          "text": "#f2f3ec"
+        },
+        "green": {
+          "fill": "#233f32",
+          "stroke": "#9bbc95",
+          "text": "#e3f1dd"
+        }
+      }
+    }
+  }
+}

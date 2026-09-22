@@ -1,0 +1,56 @@
+{
+  "bundleSha256": "7feb138f036cd5b66cea68bf12894b1e589b6ff72da9437d682d2ae01540cb2f",
+  "engine": {
+    "angularTolerance": 0.1,
+    "engine": "cadquery",
+    "exportVariable": "model",
+    "tolerance": 0.05
+  },
+  "execution": {
+    "hermetic": false,
+    "isolation": "none",
+    "trust": "trusted-current-user"
+  },
+  "jobId": "studio_showcase_cad_v1",
+  "kind": "slopcamera.studio-job",
+  "limits": {
+    "maximumOutputBytes": 2147483648,
+    "maximumOutputFiles": 2048,
+    "timeoutSeconds": 900
+  },
+  "outputs": [
+    {
+      "format": "glb",
+      "id": "preview",
+      "interpretation": {
+        "kind": "model",
+        "sourceSpace": {
+          "handedness": "right",
+          "units": "meters",
+          "upAxis": "y"
+        }
+      },
+      "kind": "file",
+      "path": "model.glb",
+      "role": "model"
+    },
+    {
+      "format": "step",
+      "id": "solid",
+      "interpretation": {
+        "kind": "model",
+        "sourceSpace": {
+          "handedness": "right",
+          "units": "millimeters",
+          "upAxis": "z"
+        }
+      },
+      "kind": "file",
+      "path": "model.step",
+      "role": "model"
+    }
+  ],
+  "parameters": {},
+  "schemaVersion": 1,
+  "stage": "build"
+}

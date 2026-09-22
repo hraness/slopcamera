@@ -1,0 +1,19 @@
+{
+  "status": "source-authored-pending-native-render",
+  "license": "MIT",
+  "baseEngineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
+  "copiedInputs": [
+    {
+      "source": "examples/showcase/native/product/scene.py",
+      "local": "product_geometry.py",
+      "sha256": "3f7f6c1b9bf215e8891271396a77fc3260980c62693ce703cab6ad19b886a984"
+    },
+    {
+      "source": "examples/showcase/native/product/studio_scene.py",
+      "local": "studio_scene.py",
+      "sha256": "ae4cf31fb4600da69074ee6e8adb3065c33b76cc7c87974d1bc4108ef7bea419"
+    }
+  ],
+  "change": "Separate fixed-camera near-to-far focus study; original admitted product geometry/materials/helpers copied byte-for-byte. No original source or rendered film changed.",
+  "runtime": "Blender5.2.1LTS Cycles; exact fresh probe required"
+}

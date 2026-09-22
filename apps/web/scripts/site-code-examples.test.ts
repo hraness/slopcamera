@@ -21,11 +21,12 @@ test("one copy target installs the verified archive before its matching skill", 
   expect(slots.has("{{SOURCE_CHECKOUT_COMMAND}}")).toBe(false)
 })
 
-test("the example shows supported local commands and labels the session as illustrative", async () => {
+test("retained illustrative commands stay valid while the homepage shows actual media", async () => {
   const home = await read("src/index.html")
-  expect(home).toContain('aria-label="Illustrative Slopcamera terminal session"')
-  expect(home).toContain("Illustrative session · included starter")
-  expect(home).toContain("{{DIAGRAM_SESSION}}")
+  expect(home).not.toContain('aria-label="Illustrative Slopcamera terminal session"')
+  expect(home).not.toContain("{{DIAGRAM_SESSION}}")
+  expect(home).toContain("{{EXAMPLE_HERO}}")
+  expect(home).toContain("{{EXAMPLE_GALLERY}}")
   expect(home).not.toMatch(/transcript__prompt|transcript__note/u)
   const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
   expect(commands.map(command => diagramSession.indexOf(command))).toEqual([...commands.map(command => diagramSession.indexOf(command))].sort((a, b) => a - b))

@@ -3,6 +3,9 @@
 // emits {{DOCS_*_CLASS}} placeholders on every element; the sealed graph fills
 // them from its closed recipe inventory, so this module stays import-safe
 // outside the compiler.
+import { exampleDirective, renderRegisteredExample } from "./example-content"
+import { workflowExamples, type WorkflowExample } from "./example-registry"
+
 export const docsMarkdownMaxBytes = 64 * 1024
 
 const tokenPattern = /\{\{[A-Z_]+\}\}/u
@@ -60,13 +63,14 @@ function splitTableRow(line: string): string[] {
 }
 
 /** Render one authored Markdown body to sealed-ready HTML. */
-export function renderDocsMarkdown(source: string): string {
+export function renderDocsMarkdown(source: string, examples: readonly WorkflowExample[] = workflowExamples): string {
   if (Buffer.byteLength(source, "utf8") > docsMarkdownMaxBytes) {
     throw new Error("Documentation source exceeds its byte bound")
   }
   const lines = source.replace(/\r\n/gu, "\n").split("\n")
   const html: string[] = []
   const usedIds = new Set<string>()
+  const usedExamples = new Set<string>()
   let index = 0
 
   const headingId = (text: string): string => {
@@ -81,6 +85,15 @@ export function renderDocsMarkdown(source: string): string {
   while (index < lines.length) {
     const line = lines[index]!
     if (line.trim() === "") {
+      index += 1
+      continue
+    }
+
+    const exampleId = exampleDirective(line)
+    if (exampleId !== null) {
+      if (usedExamples.has(exampleId)) throw new Error(`Duplicate workflow example: ${exampleId}`)
+      usedExamples.add(exampleId)
+      html.push(renderRegisteredExample(exampleId, examples))
       index += 1
       continue
     }
@@ -169,7 +182,7 @@ export function renderDocsMarkdown(source: string): string {
 
     const paragraph: string[] = []
     while (index < lines.length && lines[index]!.trim() !== ""
-      && !/^(#{1,}\s|```|>|\s*[-*]\s|\s*\d+\.\s|\s*\|)/u.test(lines[index]!)
+      && !/^(#{1,}\s|```|>|\s*[-*]\s|\s*\d+\.\s|\s*\||\s*::example)/u.test(lines[index]!)
       && !/^---+\s*$/u.test(lines[index]!)) {
       paragraph.push(lines[index]!.trim())
       index += 1

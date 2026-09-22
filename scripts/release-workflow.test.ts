@@ -175,7 +175,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
     "bun run check:effect", "bun run typecheck:desktop", "bun run lint:desktop",
     "bun run test:desktop", "bun run build:desktop",
   ])
-  expect(root.scripts["check:web"]).toBe("bun run --cwd apps/web check")
+  expect(root.scripts["check:web"]).toBe("bun apps/web/scripts/verify-example-sources.ts && bun run --cwd apps/web check")
   expect(site.scripts.check.split(" && ")).toEqual([
     "bun run check:theme", "bun run typecheck:preview", "bun run test", "bun run build", "bun run verify:preview",
   ])
@@ -1089,7 +1089,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.3.3")
+  expect(manifest.version).toBe("3.3.4")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })

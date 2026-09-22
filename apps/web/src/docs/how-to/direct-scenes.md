@@ -1,6 +1,6 @@
 A spatial scene is an editable JSON document: named entities, calibrated cameras, asset manifests, and animation channels rendered through the local Three.js renderer. You inspect stable entity IDs, apply typed patches to retained source, and read receipts that name the exact source, request, runtime, and output behind every frame.
 
-The `slopcamera scene` commands ship in the verified release. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
+`slopcamera scene` rendering and patching, scene audits, character/performance authoring, cinematic direction, effects, and galleries ship in v3.3.1. Install the [verified release](/docs/reference/capabilities#install-the-release) or use [source](/docs/how-to/install-from-source); the capability reference identifies later renderer corrections separately. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
 
 ## Create and inspect a scene
 
@@ -38,6 +38,65 @@ slopcamera scene render product.scene.json --request frame.json --json
 | `video` | `range` (`startUs`, `endUs`), `frameRate` | Lossless qtrle MOV with straight alpha |
 
 Frame sampling uses the rational frame rate before one-microsecond quantization, and ranges are half-open. Final delivery converts scene footage through the ordinary project compositor described in [Edit and deliver video](/docs/how-to/edit-video).
+
+## Orbit around live media
+
+::example[camera-orbit]
+
+This eight-second scene places a playing editorial film and a vector process diagram on separate planes. Dark fins pass in front of them as the camera follows an orbit, making the depth visible. The film keeps playing on the scene clock throughout the move.
+
+Run the retained recipe from a source checkout:
+
+```sh
+bun examples/showcase/spatial/render-orbit.ts
+```
+
+The helper first renders the original HTML film, then authors and checks the stage before rendering its orbit. It retains each command result and the exact scene, assets and render request. The recipe uses the macOS WebGL2 hardware profile and needs at least 4 GiB of free space before either render. The published MP4 is a silent delivery encode of the retained lossless MOV.
+
+The source also authors other camera tracks. The reviewed dolly, crane, rail, tripod and handheld studies below show five more ways to frame the same stage.
+
+## Compare camera moves
+
+The five studies below keep the stage, media and render settings fixed. Watch the coral foreground fin against the panels to see how each camera changes the view. Each silent clip contains 192 rendered frames at 24fps. The earlier orbit example was rendered separately; use these five studies for a controlled comparison.
+
+From a source checkout, first render the [HTML editorial example](https://github.com/hraness/slopcamera/tree/main/examples/showcase/html) and retain its JSON result. Build the stage and render one move:
+
+```sh
+bun examples/showcase/spatial/author-stage.ts artifacts/showcase/html/editorial.render.json
+bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/source/dolly.scene.json --request artifacts/showcase/spatial/source/dolly.request.json --json
+```
+
+Use the matching `crane`, `rail`, `tripod` or `handheld` file pair for another move. The retained requests use the macOS WebGL2 hardware profile. Keep the generated source directory together, including its film, diagram and licensed font. Each track contains explicit camera samples; these examples do not infer camera motion from a recording.
+
+### Move closer with a dolly
+
+::example[camera-dolly]
+
+A straight push toward the display makes both media panels larger while keeping the aim fixed. The foreground fin makes the changing distance visible.
+
+### Raise the view with a crane
+
+::example[camera-crane]
+
+The camera rises while keeping the display in view, revealing more of the plinth. The playing film and diagram keep their positions in the scene.
+
+### Move laterally on a rail
+
+::example[camera-rail]
+
+A camera follows an eased straight track across the display. The foreground fin shifts against the two media panels, making lateral parallax visible.
+
+### Hold a tripod view
+
+::example[camera-tripod]
+
+A fixed camera holds the scene composition while the embedded editorial film continues to animate. It provides a steady reference for the moving-camera studies.
+
+### Add subtle handheld motion
+
+::example[camera-handheld]
+
+Small seeded camera movements add a restrained handheld drift to the fixed composition. The media panels stay framed while the foreground fin shifts slightly against them.
 
 ## Render on the GPU
 

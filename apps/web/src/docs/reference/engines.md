@@ -1,4 +1,4 @@
-Slopcamera divides media work among engine families with different trust and runtime requirements. Some are bundled and deterministic, some are separately installed native tools, and one crosses the network boundary to paid models. Run `{{DOCTOR_COMMAND}}` to see which engines the installed host can use on this machine, and check [release and platform support](/docs/reference/capabilities) for current-source additions.
+Slopcamera divides media work among engine families with different trust and runtime requirements. Some are bundled and deterministic, some are separately installed native tools, and one crosses the network boundary to paid models. Run `{{DOCTOR_COMMAND}}` to see which engines the installed host can use on this machine, and check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
 
 ## Engine families
 
@@ -10,7 +10,7 @@ Slopcamera divides media work among engine families with different trust and run
 | HTML and Three.js overlay | Renders an authored browser document or spatial scene on one absolute clock with declared assets | An admitted local Chrome runtime and exact versioned library locks verified before each render | Seven pinned profiles; ambient network is denied during a render; no caller-selected remote URLs or dynamic evaluation |
 | Hardware scene profiles | GPU rasterization for spatial scenes, including bounded saved splats | macOS WebGL2 through ANGLE Metal; the Spark profile adds a separate qualified worker and WASM closure | Software or unknown fallback rejects; receipts record observed hardware; cross-driver regeneration need not be pixel-identical |
 | Native studio adapter | Runs a retained, hash-bound Blender, CadQuery, or Manim bundle as trusted current-user code | An explicitly selected engine executable or Python environment and an invocation-scoped `--allow-trusted-code` envelope | Explicitly nonhermetic with no OS sandbox; a GPU request never falls back to CPU; native jobs are production assets, not a third timeline system |
-| Video assembly | Imports media, applies bounded non-destructive edits, and encodes deliveries through the project compositor | FFmpeg and FFprobe; macOS native helpers for screen, camera, microphone, and system-audio recording | Assembly uses verified video spans; a successful preview exercises the timeline but is not creative acceptance |
+| Video assembly | Imports media, applies bounded non-destructive edits, and encodes deliveries through the project compositor | FFmpeg and FFprobe; an existing project or a supported project-creation path | Assembly uses verified video spans; a successful preview exercises the timeline but is not creative acceptance |
 
 ## Deterministic local engines
 
@@ -34,7 +34,7 @@ Execution requires a separate `--allow-trusted-code` envelope per invocation: im
 
 ## Video assembly and capture
 
-The project compositor turns imported footage, rendered scenes, native output, and generated media into deliveries through FFmpeg. Edits are typed, bounded, non-destructive transforms; media assembly uses verified video spans so container audio padding cannot introduce a black frame at a cut. Screen, camera, microphone, and system-audio recording need the macOS capture helpers and the corresponding operating-system permissions.
+The project compositor turns imported footage, rendered scenes, native output, and generated media into deliveries through FFmpeg. Edits are typed, bounded, non-destructive transforms; media assembly uses verified video spans so container audio padding cannot introduce a black frame at a cut. The released and current CLIs do not capture new recordings. Existing recording bundles may retain the cursor and input metadata needed for screen-action effects; generic imported video does not acquire that metadata.
 
 Ready work is bounded by resource claims, and expensive encodes serialize by default. A preview exercises the complete authored timeline at lower cost, but final dimensions, frame count, color, sound, and first and last frames still need inspection before delivery.
 

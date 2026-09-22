@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"p5":"/.slopcamera-overlay/libraries/78062f4b654ec2d7eab8391cb9f960720e90a379789974f27b6fc4aed94fae21.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="sketch" aria-hidden="true"></canvas>
+    <style>
+      .sketch {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import p5 from "p5";
+
+      // p5 owns drawing, while Slopcamera remains the only clock and entropy source.
+      // Keep this P2D starter seek-stable: no hidden frame state, mutable RNG,
+      // native frame scheduler, live input, loaders, or cumulative drawing.
+      p5.disableFriendlyErrors = true;
+      const canvas = document.querySelector(".sketch");
+      const particleCount = 48;
+      const particles = Object.freeze(Array.from(
+        { length: particleCount },
+        (_, index) => Object.freeze({
+          angle: SlopcameraOverlay.randomFor("p5-angle-" + index) * Math.PI * 2,
+          orbit: SlopcameraOverlay.randomFor("p5-orbit-" + index),
+          phase: SlopcameraOverlay.randomFor("p5-phase-" + index),
+          size: SlopcameraOverlay.randomFor("p5-size-" + index),
+        }),
+      ));
+      let currentFrame = Object.freeze({ progress: 0, timeMs: 0 });
+      let sketch = null;
+
+      const initialization = new Promise((resolve, reject) => {
+        try {
+          sketch = new p5((p) => {
+            let startupDraw = true;
+            let startupSettled = false;
+            const redraw = p.redraw.bind(p);
+            p.redraw = async (...args) => {
+              try {
+                await redraw(...args);
+                if (!startupSettled) {
+                  startupSettled = true;
+                  resolve();
+                }
+              } catch (error) {
+                reject(error);
+                throw error;
+              }
+            };
+
+            p.setup = () => {
+              try {
+                p.createCanvas(
+                  SlopcameraOverlay.width,
+                  SlopcameraOverlay.height,
+                  p.P2D,
+                  canvas,
+                  {
+                    alpha: true,
+                    colorSpace: "srgb",
+                    desynchronized: false,
+                  },
+                );
+                p.pixelDensity(devicePixelRatio);
+                p.noLoop();
+              } catch (error) {
+                reject(error);
+                throw error;
+              }
+            };
+
+            p.draw = () => {
+              // p5 performs one mandatory startup draw even after noLoop().
+              // The redraw wrapper resolves readiness only after p5 completes
+              // this empty draw, including its postdraw and finishDraw work.
+              if (startupDraw) {
+                startupDraw = false;
+                return;
+              }
+              const { progress, timeMs } = currentFrame;
+              const width = SlopcameraOverlay.width;
+              const height = SlopcameraOverlay.height;
+              const unit = Math.min(width, height);
+              const phase = progress * Math.PI * 2;
+              p.clear();
+              p.resetMatrix();
+              p.blendMode(p.BLEND);
+              p.noStroke();
+
+              for (let index = 0; index < particles.length; index += 1) {
+                const particle = particles[index];
+                const angle = particle.angle
+                  + phase * (0.18 + particle.phase * 0.42);
+                const orbit = unit * (0.14 + particle.orbit * 0.34);
+                const wobble = Math.sin(
+                  timeMs / 700 + particle.phase * Math.PI * 2,
+                ) * unit * 0.018;
+                const x = width / 2 + Math.cos(angle) * (orbit + wobble);
+                const y = height / 2 + Math.sin(angle) * orbit * 0.62;
+                const diameter = unit * (0.008 + particle.size * 0.026);
+                p.fill(
+                  94 + particle.phase * 122,
+                  102 + particle.orbit * 92,
+                  255,
+                  72 + particle.size * 130,
+                );
+                p.circle(x, y, diameter);
+              }
+
+              const pulse = 0.92 + Math.sin(phase) * 0.08;
+              p.fill(105, 82, 255, 72);
+              p.circle(width / 2, height / 2, unit * 0.28 * pulse);
+              p.fill(104, 232, 255, 185);
+              p.circle(width / 2, height / 2, unit * 0.13 * pulse);
+              p.fill(255, 255, 255, 255);
+              p.circle(width / 2, height / 2, unit * 0.034);
+            };
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      SlopcameraOverlay.ready(initialization);
+      SlopcameraOverlay.onFrame(async (frame) => {
+        currentFrame = frame;
+        await initialization;
+        await sketch.redraw();
+      });
+
+      addEventListener("pagehide", () => {
+        sketch?.remove();
+      }, { once: true });
+    </script>
+  </body>
+</html>

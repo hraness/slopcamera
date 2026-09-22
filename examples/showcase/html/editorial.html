@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Form follows a frame</title>
+  <style>
+    * { box-sizing: border-box; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:transparent; }
+    body { font-family:Arial,Helvetica,sans-serif; color:#f4f1e8; }
+    .page { position:absolute; inset:0; padding:5.3%; background:#192521; }
+    .eyebrow { display:flex; justify-content:space-between; font-size:1.3vw; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { position:absolute; left:5.3%; top:23%; margin:0; font-size:10.7vw; font-weight:500; line-height:.85; letter-spacing:-.075em; }
+    h1 span { display:block; }
+    h1 .second { color:#d8fa7b; }
+    .footer { position:absolute; bottom:7%; left:5.3%; right:5.3%; border-top:1px solid #607062; padding-top:1.4%; display:flex; justify-content:space-between; font-size:1.4vw; line-height:1.4; }
+    .small { max-width:28%; color:#cad2c9; }
+    svg { position:absolute; width:45%; height:78%; right:3.5%; top:8%; overflow:visible; }
+    .arc { fill:none; stroke:#d8fa7b; stroke-width:2; }
+    .badge { fill:#192521; stroke:#d8fa7b; stroke-width:1; }
+  </style>
+</head>
+<body>
+<main class="page">
+  <div class="eyebrow"><span>Slopcamera / Motion studies</span><span>01 — Native HTML + SVG</span></div>
+  <h1><span>Form follows</span><span class="second">a frame.</span></h1>
+  <svg viewBox="0 0 500 500" aria-label="A lime wire sculpture opens and closes around a fixed circular orbit">
+    <g id="sculpture" transform="translate(290 260)"></g>
+  </svg>
+  <div class="footer"><span class="small">Editable words.<br>Precisely authored motion.</span><span>One source. Every frame.</span><span id="frame">000 / 192</span></div>
+</main>
+<script type="module">
+  // Authored graphics are a study, not a measured scientific simulation.
+  const ns='http://www.w3.org/2000/svg';
+  const group=document.querySelector('#sculpture');
+  const rings=Array.from({length:18},(_,i)=>{
+    const e=document.createElementNS(ns,'ellipse');e.setAttribute('class','arc');
+    e.setAttribute('rx','174');e.setAttribute('ry',String(27+i*7.4));group.append(e);return e;
+  });
+  const title=document.querySelector('.second');
+  const accent=SlopcameraOverlay.parameters.accent;
+  if(typeof accent==='string' && /^#[0-9a-fA-F]{6}$/.test(accent)) {
+    title.style.color=accent; rings.forEach(r=>r.style.stroke=accent);
+  }
+  if(SlopcameraOverlay.parameters.variant==='revision') title.textContent='your idea.';
+  SlopcameraOverlay.onFrame(({timeMs})=>{
+    const angle=timeMs/8000*Math.PI*2;
+    rings.forEach((ring,i)=>{
+      ring.setAttribute('ry',String(24+Math.abs(Math.sin(angle+i*.092))*145));
+      ring.setAttribute('transform',`rotate(${i*10+Math.sin(angle)*22})`);
+      ring.style.opacity=String(.32+i/18*.68);
+    });
+    document.querySelector('#frame').textContent=String(Math.floor(timeMs/1000*24)).padStart(3,'0')+' / 192';
+  });
+</script>
+</body>
+</html>

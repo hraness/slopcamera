@@ -41,7 +41,7 @@ Finished renders cross these boundaries freely: exported images and video can be
 ## Requirements and limits
 
 - Rendering uses the admitted local Chrome runtime and declared assets only. First use may download verified tool dependencies; rendering then runs offline.
-- `slopcamera html render` is a current-source command that exports H.264 video with optional 48 kHz stereo AAC audio trimmed or padded to the declared duration, retaining a lossless RGB intermediate. Check `slopcamera help html` and `{{DOCTOR_COMMAND}}` on the installed host, and see the [music-video guide](/docs/how-to/music-video) for a complete scene request with a local track.
+- `slopcamera html render` ships in v{{PUBLISHED_VERSION}} and exports H.264 video with optional 48 kHz stereo AAC audio trimmed or padded to the declared duration, retaining a lossless RGB intermediate. Check `slopcamera help html` and `{{DOCTOR_COMMAND}}` on the installed host, and see the [music-video guide](/docs/how-to/music-video) for a complete scene request with a local track.
 - Only the exact tested locks execute; a later upstream release changes nothing until it passes admission. p5.js is LGPL-2.1, so conveying its cached artifact carries license obligations, and Paper Shaders is Apache-2.0 with notice preservation.
 - Determinism is partly the author's job. Visible state must derive from absolute time, declared parameters and assets, and keyed randomness. Cumulative simulation needs a fixed-step checkpoint and replay model; a `deltaMs` update loop is not absolute seek.
 - The `vgpu` overlay profile does not enable shared GPU textures or a Three WebGPU renderer inside the WebGL2 and Spark scene profiles. The separate vgpu native example uses its own provisioned Node/Dawn runtime.

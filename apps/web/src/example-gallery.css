@@ -1,0 +1,48 @@
+.slopcamera-work-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3rem 2rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slopcamera-work-gallery > li {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.slopcamera-work-gallery > li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.slopcamera-work-gallery .slopcamera-example__media {
+  aspect-ratio: 16 / 9;
+}
+
+.slopcamera-techniques {
+  margin-block-start: 3rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--line-strong);
+}
+
+.slopcamera-techniques ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.slopcamera-techniques a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+}
+
+@media (max-width: 48rem) {
+  .slopcamera-work-gallery {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+}

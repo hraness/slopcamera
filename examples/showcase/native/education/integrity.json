@@ -1,0 +1,31 @@
+{
+  "kind": "slopcamera.studio-source-bundle",
+  "schemaVersion": 1,
+  "engine": "manim",
+  "entrypoint": {
+    "kind": "python",
+    "path": "scene.py"
+  },
+  "files": [
+    {
+      "path": "lesson.json",
+      "sha256": "b307683363dd5823ce1788bdf252dcc32c2a35fa348f5471089adbb2d7b08cce",
+      "bytes": 3799
+    },
+    {
+      "path": "lesson.py",
+      "sha256": "17bdd81695e61520d91d43a85f2f8f8d251c415ac7c0f9a7175afe899c5d07d5",
+      "bytes": 8125
+    },
+    {
+      "path": "scene.py",
+      "sha256": "a0b913f0ed5f0c1e106e1e68805668a0579fe1ec154227adb582bca641e90814",
+      "bytes": 241
+    },
+    {
+      "path": "toolkit.py",
+      "sha256": "d9e2f92c55d8cd84d9f13242ea054b8dd261b194c95101e76a329acfa2425711",
+      "bytes": 15441
+    }
+  ]
+}

@@ -207,6 +207,12 @@ export interface ShellFocusedSkip extends ShellElement {
   readonly scrollY: number
   readonly documentRect: readonly number[]
 }
+export interface ShellCurrentDesignPosition { readonly key: string; readonly scrollY: number; readonly fixed: boolean }
+export interface ShellCurrentDesignPositions {
+  readonly elements: readonly ShellCurrentDesignPosition[]
+  readonly focus: readonly ShellCurrentDesignPosition[]
+  readonly hover: readonly ShellCurrentDesignPosition[]
+}
 export interface ShellEvidence {
   readonly direction: "ltr" | "rtl"
   readonly dom: string
@@ -252,6 +258,8 @@ const commonSelectors = ["body", ".skip-link", ".topbar", ".wordmark", ".topbar-
   ".hraness-site-footer__social-link", ".hraness-site-footer__social-icon"]
 const homeSelectors = ["#page-title", ".hraness-marketing-hero", ".hraness-marketing-hero__summary", "#install", "#examples",
   "#workflow", "#interfaces", "#design", "#questions", "#maker", "#closing", ".slopcamera-ask-ai", ".slopcamera-ask-ai *"]
+export const workflowExamplesHomeSelectors = ["#page-title", ".hraness-marketing-hero", ".hraness-marketing-hero__summary", "#install", "#examples",
+  "#workflow", "#interfaces", "#design", "#questions", "#closing", ".slopcamera-ask-ai", ".slopcamera-ask-ai *"] as const
 const recoverySelectors = [".route-state", ".route-state h1", ".route-state p", ".route-state a"]
 const properties = ["display", "position", "box-sizing", "width", "height", "min-width", "max-width", "min-height", "max-height",
   "font-family", "font-size", "font-weight", "line-height", "letter-spacing", "text-align", "text-decoration-line", "text-decoration-color",
@@ -349,13 +357,60 @@ export async function settle(page: Page, direction?: "rtl"): Promise<void> {
     // RTL is an explicit paired browser fixture, applied to each new document
     // after navigation. The authoritative served HTML and CSS remain intact.
     if (direction === "rtl") document.documentElement.setAttribute("dir", direction)
-    await document.fonts.ready
-    const fonts = await Promise.all([
-      document.fonts.load('400 44px "Instrument Serif"'),
-      document.fonts.load('400 16px "Nebula Sans"'),
-      document.fonts.load('500 16px "Nebula Sans"'),
-    ])
-    if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
+    // A resolved fonts.load marks the face loaded in the FontFaceSet, but
+    // font-display:swap lets Chromium apply the swap into the font-resolution
+    // state that ch/ex metrics read a frame or more later. Probe the exact
+    // resolution path the hero copy assertions depend on before any loading,
+    // so the probe shares the real elements' fallback state, then require two
+    // consecutive frames to agree that the swap has landed.
+    const probe = document.createElement("div")
+    probe.style.position = "absolute"
+    probe.style.insetInlineStart = "-10000px"
+    probe.style.top = "0"
+    probe.style.blockSize = "1px"
+    probe.style.inlineSize = "1px"
+    probe.style.overflow = "hidden"
+    probe.style.visibility = "hidden"
+    // style-src 'self' forbids inline style markup, so the probe is styled
+    // through CSSOM property sets, which the directive does not govern.
+    const specs: readonly (readonly [string, string, string, string, string])[] = [
+      ["400", "44px", "Instrument Serif", "serif", "17ch"],
+      ["400", "16px", "Nebula Sans", "sans-serif", "48ch"],
+      ["500", "16px", "Nebula Sans", "sans-serif", "48ch"],
+    ]
+    for (const [weight, size, family, fallback, measure] of specs) {
+      const node = document.createElement("i")
+      node.style.display = "block"
+      node.style.fontWeight = weight
+      node.style.fontSize = size
+      node.style.fontFamily = `"${family}",${fallback}`
+      node.style.maxInlineSize = measure
+      probe.append(node)
+    }
+    document.body.append(probe)
+    try {
+      await document.fonts.ready
+      const fonts = await Promise.all([
+        document.fonts.load('400 44px "Instrument Serif"'),
+        document.fonts.load('400 16px "Nebula Sans"'),
+        document.fonts.load('500 16px "Nebula Sans"'),
+      ])
+      if (fonts.some(group => group.length === 0 || group.some(font => font.status !== "loaded"))) throw new Error("Local fonts did not load")
+      // An explicit load can start a new FontFaceSet loading cycle after the
+      // document's initial ready promise. Await the current cycle as well so
+      // Chromium has completed the corresponding layout before evidence is read.
+      await document.fonts.ready
+      const nodes = [...probe.children]
+      const read = () => nodes.map(node => getComputedStyle(node).getPropertyValue("max-inline-size")).join(",")
+      let previous = read()
+      for (let frame = 0, stable = 0; stable < 2 && frame < 60; frame++) {
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+        const value = read()
+        stable = value === previous ? stable + 1 : 0
+        previous = value
+        if (frame === 59 && stable < 2) throw new Error("Local font application did not settle")
+      }
+    } finally { probe.remove() }
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   }, direction)
 }
@@ -1162,15 +1217,15 @@ export function shellContextLifecycle(error: (message: string) => void) {
 
 /** The new profile binds current footer 0.11.2/0.12.1 (four social links).
  * Historical migration/refinement profiles retain their five-link contract. */
-export function assertFooterKeyboardCoverage(focus: readonly ShellElement[], profile?: "marketing-refinement-v1" | "optional-support-v1"): void {
-  assert.ok(profile === undefined || profile === "marketing-refinement-v1" || profile === "optional-support-v1", "Unknown ordinary DOM profile")
+export function assertFooterKeyboardCoverage(focus: readonly ShellElement[], profile?: "marketing-refinement-v1" | "optional-support-v1" | "workflow-examples-v1"): void {
+  assert.ok(profile === undefined || profile === "marketing-refinement-v1" || profile === "optional-support-v1" || profile === "workflow-examples-v1", "Unknown ordinary DOM profile")
   assert.equal(focus.filter(item => item.key.startsWith(".hraness-site-footer__social-link[")).length,
-    profile === "optional-support-v1" ? 4 : 5, "Footer keyboard coverage incomplete")
+    profile === "optional-support-v1" || profile === "workflow-examples-v1" ? 4 : 5, "Footer keyboard coverage incomplete")
 }
 export async function checkShellCase(browser: Browser, payload: ShellPayload, scenario: ShellCase,
   source: "current" | "baseline", negative: boolean,
-  observeCurrentDesign?: (page: Page) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1"): Promise<ShellEvidence> {
-  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1" || domProfile === "optional-support-v1", "Unknown ordinary DOM profile")
+  observeCurrentDesign?: (page: Page, positions?: ShellCurrentDesignPositions) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1" | "workflow-examples-v1"): Promise<ShellEvidence> {
+  assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1" || domProfile === "optional-support-v1" || domProfile === "workflow-examples-v1", "Unknown ordinary DOM profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height },
     deviceScaleFactor: scenario.reflowEquivalent ? 2 : 1, colorScheme: scenario.system, forcedColors: scenario.forced,
     hasTouch: scenario.coarse, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
@@ -1286,7 +1341,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
       forced: scenario.forced === "active", dark: scenario.system === "dark", direction: scenario.direction ?? "ltr", overflow: false })
     const direction = media.direction
     assert.ok(direction === "ltr" || direction === "rtl")
-    const selectors = [...commonSelectors, ...(scenario.route === "/" ? homeSelectors : recoverySelectors)]
+    const selectors = [...commonSelectors, ...(scenario.route === "/" ? domProfile === "workflow-examples-v1" ? workflowExamplesHomeSelectors : homeSelectors : recoverySelectors)]
     const serializedDom = await page.evaluate(() => {
       const root = document.body.cloneNode(true) as HTMLElement
       for (const element of root.querySelectorAll("script")) element.remove()
@@ -1301,6 +1356,18 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     // Refinement keeps the full serialized body for its own closed current-design
     // oracle. Historical callers retain the exact original transport projection.
     const dom = domProfile === undefined ? normalizeInstallTransport(serializedDom, source === "current") : serializedDom
+    // New-profile side channel records the actual scroll space and fixed
+    // ancestry without changing historical ShellElement samples or oracles.
+    const positions = async (selected: readonly string[]): Promise<ShellCurrentDesignPosition[]> => domProfile !== "workflow-examples-v1" ? [] : page.evaluate(selectors => selectors.flatMap(selector => {
+      const elements = [...document.querySelectorAll<HTMLElement>(selector)]
+      if (elements.length === 0) throw Error(`Missing position target: ${selector}`)
+      return elements.map((element, index) => {
+        let fixed = false
+        for (let owner: HTMLElement | null = element; owner; owner = owner.parentElement) if (getComputedStyle(owner).position === "fixed") fixed = true
+        return { key: `${selector}[${index}]`, scrollY, fixed }
+      })
+    }), [...selected])
+    const elementPositions = await positions(selectors), hoverPositions: ShellCurrentDesignPosition[] = [], focusPositions: ShellCurrentDesignPosition[] = []
     const elements = await measure(page, selectors)
     assertShellFocusUnchanged(transferred, elements, `${source} ${scenario.name} reload transfer`)
     const nav = elements.filter(item => item.key.startsWith('.topbar nav[aria-label="Primary"] a['))
@@ -1329,14 +1396,23 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
         await target.hover()
         await settleCase()
         hover.push(...await measure(page, [selector]))
+        hoverPositions.push(...await positions([selector]))
       }
     }
     await page.mouse.move(scenario.width - 1, 1)
     await page.goto(`${payload.origin}${scenario.route}`, { waitUntil: "load" }); await settleCase()
     const total = await page.locator('a[href],button:not([disabled]),summary,[tabindex="0"]').count()
     assert.ok(total > 5 && total < 200)
+    // Native media contributes shadow controls absent from the authored DOM
+    // count. Only the new examples profile gets a finite additional allowance.
+    // A complete return to the skip target is required, never inferred from
+    // spending the allowance. Its dedicated media cases inspect native focus.
+    const nativeMedia = domProfile === "workflow-examples-v1" ? await page.locator("video[controls]").count() : 0
+    assert.ok(nativeMedia <= 32)
+    const tabLimit = total + 2 + nativeMedia * 12
+    let wrapped = false
     const seen = new Set<string>()
-    for (let tab = 0; tab <= total + 2; tab++) {
+    for (let tab = 0; tab <= tabLimit; tab++) {
       await page.keyboard.press("Tab")
       // Match the appearance-menu path: observe native focus after style/paint
       // settlement, never the pre-paint outline of the previously focused node.
@@ -1351,7 +1427,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
         for (const selector of selectors) if (active.matches(selector)) return `${selector}|${[...document.querySelectorAll(selector)].indexOf(active)}`
         return null
       })
-      if (key === "skip" && seen.size > 0) break
+      if (key === "skip" && seen.size > 0) { wrapped = true; break }
       if (key === null || key === "skip" || seen.has(key)) continue
       seen.add(key)
       const [selector, index] = key.split("|")
@@ -1371,7 +1447,14 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
       assert.ok(measured.styles["outline-style"] !== "none" && Number.parseFloat(measured.styles["outline-width"]!) > 0,
         `Visible focus outline missing: ${key}`)
       focus.push(measured)
+      if (domProfile === "workflow-examples-v1") {
+        const position = (await positions([selector!]))[Number(index)]
+        assert.ok(position && position.key === measured.key)
+        assert.equal(position.scrollY, measured.rect[1]! - viewport[1], "Native focus scroll changed during observation")
+        focusPositions.push(position)
+      }
     }
+    if (domProfile === "workflow-examples-v1") assert.equal(wrapped, true, "Native Tab loop did not return to the skip target")
     assert.equal(focus.filter(item => item.key.startsWith(".topbar a[")).length,
       nav.filter(item => item.styles.display !== "none").length + 1, "Header keyboard coverage incomplete")
     assert.equal(focus.filter(item => item.key.startsWith("[data-hraness-appearance-menu] button[")).length, 1,
@@ -1412,7 +1495,8 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     // A separate current-design verifier may add observations inside this same
     // owned context. Historical callers omit the hook and retain their exact
     // comparison. All network, error, deadline and cleanup checks still follow.
-    if (observeCurrentDesign !== undefined) await observeCurrentDesign(page)
+    if (observeCurrentDesign !== undefined) await observeCurrentDesign(page, domProfile === "workflow-examples-v1"
+      ? { elements: elementPositions, hover: hoverPositions, focus: focusPositions } : undefined)
     let recovery = false
     if (scenario.route === "/404.html") {
       await page.locator('.route-state a[href="/"]').last().click()

@@ -142,11 +142,11 @@ function sliceChain(slice: CinemaMediaSlice, inputIndex: ReadonlyMap<string, num
   const inputDurationUs = slice.fileRange.endUs - slice.fileRange.startUs;
   const outputDurationUs = slice.outputRange.endUs - slice.outputRange.startUs;
   return [
-    `[${inputSpecifier(input, slice.streamIndex)}]`,
-    `trim=start=${seconds(slice.fileRange.startUs)}:end=${seconds(slice.fileRange.endUs)}`,
+    `[${inputSpecifier(input, slice.streamIndex)}]trim=start=${seconds(slice.fileRange.startUs)}:end=${seconds(slice.fileRange.endUs)}`,
     "settb=AVTB",
-    // Source clocks may be coarse; cinema offsets stay in integer microseconds.
-    `setpts=(PTS-STARTPTS)*${decimal(outputDurationUs / inputDurationUs)}+${seconds(slice.outputRange.startUs)}/TB`,
+    // Concat requires each member to start at zero. Position the complete
+    // window once after joining, so internal slice boundaries stay contiguous.
+    `setpts=(PTS-STARTPTS)*${decimal(outputDurationUs / inputDurationUs)}`,
     "format=rgba",
   ].join(",");
 }
@@ -173,7 +173,7 @@ function windowChain(
     : `scale=w=${outputWidth}:h=${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2:color=black@0`;
   const joined = label(context, prefix);
   parts.push(
-    `${members.map(member => `[${member}]`).join("")}concat=n=${members.length}:v=1:a=0,${geometry},format=rgba${gradeFilter === undefined ? "" : `,${gradeFilter}`}[${joined}]`,
+    `${members.map(member => `[${member}]`).join("")}concat=n=${members.length}:v=1:a=0,setpts=PTS+${seconds(slices[0]!.outputRange.startUs)}/TB,${geometry},format=rgba${gradeFilter === undefined ? "" : `,${gradeFilter}`}[${joined}]`,
   );
   context.filters.push(...parts);
   return joined;
@@ -255,8 +255,11 @@ function transitionWindowChain(
       stream = windowChain(context, slices, shot.fit, grade, outputWidth, outputHeight, prefix);
     }
     const zeroed = label(context, `${prefix}_zero`);
+    // A dip/flash reveals only the tail of the incoming handle. Its hidden
+    // prefix still consumes source time, so the tail must meet the shot body
+    // without skipping the last part of the handle at the transition boundary.
     context.filters.push(
-      `[${stream}]setpts=PTS-STARTPTS,fps=${context.rate}${limitUs === undefined ? "" : `,trim=end=${seconds(limitUs)},setpts=PTS-STARTPTS`}[${zeroed}]`,
+      `[${stream}]setpts=PTS-STARTPTS${limitUs === undefined ? "" : `,trim=start=${seconds(durationUs - limitUs)}:end=${seconds(durationUs)},setpts=PTS-STARTPTS`},fps=${context.rate}[${zeroed}]`,
     );
     return zeroed;
   };

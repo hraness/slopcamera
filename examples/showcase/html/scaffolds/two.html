@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"two.js":"/.slopcamera-overlay/libraries/0e98a999fcb47006add9425200b18fab26eb09a154665b2893371d74e0a862d4.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="scene" aria-hidden="true"></canvas>
+    <style>
+      .scene {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import Two from "two.js";
+
+      // Keep Two.js on its explicit WebGL renderer with autostart disabled.
+      // Slopcamera remains the only clock and entropy source; this starter uses no
+      // textures, loaders, live input, or Two.js animation state.
+      let contextError = null;
+      let disposing = false;
+      const canvas = document.querySelector(".scene");
+      const two = new Two({
+        alpha: true,
+        antialias: false,
+        autostart: false,
+        domElement: canvas,
+        height: SlopcameraOverlay.height,
+        overdraw: false,
+        premultipliedAlpha: true,
+        preserveDrawingBuffer: true,
+        ratio: devicePixelRatio,
+        type: Two.Types.webgl,
+        width: SlopcameraOverlay.width,
+      });
+      two.renderer.ctx.clearColor(0, 0, 0, 0);
+      const stage = new Two.Group();
+      two.add(stage);
+      const objectCount = 56;
+      const colors = [
+        "rgba(117, 104, 255, 0.72)",
+        "rgba(82, 217, 255, 0.72)",
+        "rgba(255, 100, 183, 0.72)",
+        "rgba(255, 209, 102, 0.72)",
+      ];
+      const objects = Object.freeze(Array.from(
+        { length: objectCount },
+        (_, index) => {
+          const angle = SlopcameraOverlay.randomFor("two-angle-" + index)
+            * Math.PI * 2;
+          const orbit = SlopcameraOverlay.randomFor("two-orbit-" + index);
+          const phase = SlopcameraOverlay.randomFor("two-phase-" + index);
+          const size = SlopcameraOverlay.randomFor("two-size-" + index);
+          const shape = new Two.Circle(0, 0, 4 + size * 18, 24);
+          shape.fill = colors[index % colors.length];
+          shape.noStroke();
+          stage.add(shape);
+          return Object.freeze({ angle, orbit, phase, shape, size });
+        },
+      ));
+      const core = new Two.Circle(0, 0, 18, 32);
+      core.fill = "rgba(255, 255, 255, 1)";
+      core.noStroke();
+      stage.add(core);
+
+      const handleContextLoss = (event) => {
+        event.preventDefault();
+        if (!disposing) {
+          contextError = new Error("The Two.js rendering context was lost.");
+          throw contextError;
+        }
+      };
+      canvas.addEventListener("webglcontextlost", handleContextLoss);
+
+      SlopcameraOverlay.onFrame(({ progress, timeMs }) => {
+        if (contextError !== null) throw contextError;
+        const width = SlopcameraOverlay.width;
+        const height = SlopcameraOverlay.height;
+        const unit = Math.min(width, height);
+        const absolutePhase = progress * Math.PI * 2;
+        for (const object of objects) {
+          const angle = object.angle
+            + absolutePhase * (0.16 + object.phase * 0.44);
+          const orbit = unit * (0.13 + object.orbit * 0.36);
+          const wobble = Math.sin(
+            timeMs / 760 + object.phase * Math.PI * 2,
+          ) * unit * 0.016;
+          object.shape.translation.set(
+            width / 2 + Math.cos(angle) * (orbit + wobble),
+            height / 2 + Math.sin(angle) * orbit * 0.58,
+          );
+          object.shape.rotation = angle + Math.PI / 2;
+        }
+        core.translation.set(width / 2, height / 2);
+        two.render();
+      });
+
+      addEventListener("pagehide", () => {
+        disposing = true;
+        canvas.removeEventListener("webglcontextlost", handleContextLoss);
+        two.pause();
+        two.release();
+        two.clear();
+        two.unbind();
+        two.renderer.unbind();
+        const index = Two.Instances.indexOf(two);
+        if (index >= 0) Two.Instances.splice(index, 1);
+        two.renderer.ctx.getExtension("WEBGL_lose_context")?.loseContext();
+      }, { once: true });
+    </script>
+  </body>
+</html>

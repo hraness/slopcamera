@@ -1,6 +1,6 @@
 Turn a shot recipe into reviewed, retained video takes and an editable project. Each shot names its prompt, model, duration, and output settings, and a later shot can open on the accepted predecessor's final decoded frame. Slopcamera retains the requests, media, review decisions, dependency identities, and estimated spending across revisions.
 
-The `slopcamera direct` commands require a [source build](/docs/how-to/install-from-source). Generation uses a caller-owned Vercel AI Gateway credential, and endpoint extraction and assembly use local FFmpeg and FFprobe. Check `slopcamera help direct` and `{{DOCTOR_COMMAND}}` first. For one generated artifact without takes or continuity, use [Generate images, video, and narration](/docs/how-to/generate-media).
+The `slopcamera direct` commands ship in v{{PUBLISHED_VERSION}}. Generation uses a caller-owned Vercel AI Gateway credential, and endpoint extraction and assembly use local FFmpeg and FFprobe. Check `slopcamera help direct` and `{{DOCTOR_COMMAND}}` first. For one generated artifact without takes or continuity, use [Generate images, video, and narration](/docs/how-to/generate-media).
 
 Continuity comes from images and explicit prompts. An endpoint image does not preserve a model's neural checkpoint, motion history, hidden surfaces, or complete world state, so inspect every join before accepting a continuation.
 
@@ -70,7 +70,7 @@ slopcamera direct start film.recipe.json --budget-usd 5.00 --json
 
 Starting retains the recipe and budget without generating video, and reusing the ID cannot reset its spending. Budgets accept positive values with at most six decimal places and are stored as integer microdollars. The retained amounts are catalog estimates rather than settled invoices or a provider-enforced cap, and completed, rejected, and ambiguous calls all keep their reservations against the budget.
 
-Make the credential available to the process, then generate the first take. Slopcamera reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`. With a linked Vercel workspace, `vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" direct generate <arguments>` injects credentials for that invocation only: the `slopcamera` shell function cannot be launched by Vercel, so the command uses the built entrypoint that the [source build](/docs/how-to/install-from-source) defines through `SLOPCAMERA_SOURCE_ROOT`. Keep credentials out of recipes, prompts, command arguments, and retained output.
+Make `AI_GATEWAY_API_KEY` available in the local process environment, then generate the first take. Slopcamera falls back to `VERCEL_OIDC_TOKEN` when the key is absent. The Vercel CLI is optional; a linked workspace can prefix an installed CLI command with `vercel env run --`. [Credential setup](/docs/how-to/generate-media) also covers the source-build shell function. Keep credentials out of recipes, prompts, command arguments, and retained output.
 
 ```sh
 slopcamera direct generate direct_atrium --shot opening --attempt take_opening_v1 \

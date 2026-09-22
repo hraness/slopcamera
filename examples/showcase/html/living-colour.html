@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"@paper-design/shaders":"/.slopcamera-overlay/libraries/4b7f8d053f6c91b4d3ec6abdcfd4b07b9fce7ec2b8086a0f0781f485c59d097e.mjs"}}</script>
+  <style>.base{position:absolute;inset:0;background:#f1eee5}.shader{inset:0!important;border-radius:0!important;filter:none!important}.head,.bottom{position:absolute;left:5.5%;font:1.2vw Arial;letter-spacing:.14em;color:#143337}.head{top:7%}.bottom{bottom:6%}h1{position:absolute;left:5%;top:15%;font:500 12.6vw/.87 Arial;letter-spacing:-.085em;color:#f7f2df;margin:0;text-shadow:0 2px 30px #15383225}h1 em{font:italic 1em Georgia;letter-spacing:-.07em}.note{position:absolute;right:7%;bottom:20%;font:1.5vw/1.4 Arial;color:#f7f2df;text-align:right}</style></head>
+  <body>
+    <div class="base"></div><div class="shader" aria-hidden="true"></div><div class="head">MATERIAL STUDY / PAPER SHADERS</div><h1>Living<br><em>colour.</em></h1><div class="note">Texture is a direction.<br>Keep the treatment editable.</div><div class="bottom">04 — MESH FIELD · GRAIN · ABSOLUTE TIME</div>
+    <style>
+      .shader {
+        position: absolute;
+        inset: 10%;
+        overflow: hidden;
+        border-radius: min(8vw, 96px);
+        filter: drop-shadow(0 24px 64px rgb(21 9 60 / 25%));
+      }
+    </style>
+    <script type="module">
+      import {
+        ShaderFitOptions,
+        ShaderMount,
+        getShaderColorFromString,
+        meshGradientFragmentShader,
+      } from "@paper-design/shaders";
+
+      const colors = ["#174b53", "#cedba5", "#ed743e", "#d394ce"];
+      const shader = new ShaderMount(
+        document.querySelector(".shader"),
+        meshGradientFragmentShader,
+        {
+          u_colors: colors.map(getShaderColorFromString),
+          u_colorsCount: colors.length,
+          u_distortion: 0.6,
+          u_fit: ShaderFitOptions.cover,
+          u_grainMixer: 0.09,
+          u_grainOverlay: 0.04,
+          u_offsetX: 0,
+          u_offsetY: 0,
+          u_originX: 0.5,
+          u_originY: 0.5,
+          u_rotation: 0,
+          u_scale: 1,
+          u_swirl: 0.65,
+          u_worldHeight: SlopcameraOverlay.height,
+          u_worldWidth: SlopcameraOverlay.width,
+        },
+        { alpha: true, premultipliedAlpha: false },
+        0,
+      );
+
+      SlopcameraOverlay.onFrame(({ timeMs }) => shader.setFrame(3500 + 3000 * Math.sin(timeMs / 8000 * Math.PI * 2)));
+    </script>
+  </body>
+</html>

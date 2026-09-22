@@ -1,4 +1,4 @@
-An agent without a dedicated Slopcamera integration still has two routes in: the portable Agent Skill directory for agents that read the `agents` convention, and the plain `slopcamera` command for agents that only run shell commands. Both come from the same install. If the client speaks MCP instead, the fixed diagram and image toolset is covered in [Use Slopcamera from an MCP client](/docs/tutorials/mcp).
+An agent without a dedicated Slopcamera integration still has two routes in: the portable Agent Skill directory for agents that read the `agents` convention, and the plain `slopcamera` command for agents that only run shell commands. Both come from the same install. If the client speaks MCP, its fixed tools cover diagrams, images, and scene inspection and planning; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp).
 
 ## Install the portable skill
 
@@ -32,4 +32,4 @@ An agent embedding TypeScript can skip the shell and import the same contracts: 
 
 - Generation needs the caller's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` in the process environment; this site never receives either.
 - Native engines such as Blender, CadQuery, and Manim install separately, and running authored native source additionally needs the invocation-scoped `--allow-trusted-code` flag, which grants current-user execution without an operating-system sandbox.
-- Scene, studio, and durable-run surfaces are documented against the [source build](/docs/how-to/install-from-source); the [capability reference](/docs/reference/capabilities) lists what each install includes and its platform requirements.
+- Basic scene, studio, and durable-run surfaces ship in the verified release; newer scene APIs require a [source build](/docs/how-to/install-from-source); the [capability reference](/docs/reference/capabilities) lists what each install includes and its platform requirements.

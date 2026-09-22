@@ -1,0 +1,5 @@
+import {test,expect} from "bun:test";
+import {measure} from "./compare-pixels";
+test("identical RGB and inclusive mean boundary",()=>{expect(measure(new Uint8Array(1000),new Uint8Array(1000)).accepted).toBe(true);const b=new Uint8Array(1000);b.fill(1,0,500);expect(measure(new Uint8Array(1000),b).accepted).toBe(true);b[500]=1;expect(measure(new Uint8Array(1000),b).accepted).toBe(false);});
+test("strict over8 count and inclusive one per thousand boundary",()=>{const a=new Uint8Array(1000),b=new Uint8Array(1000);b[0]=8;expect(measure(a,b).channelsAbove8).toBe(0);b[0]=9;expect(measure(a,b).accepted).toBe(true);b[1]=9;expect(measure(a,b).accepted).toBe(false);expect(measure(a,b).channelsAbove8).toBe(2);});
+test("absolute differences are symmetric, mismatch and empty inputs reject",()=>{const a=new Uint8Array([0,255]),b=new Uint8Array([255,0]);expect(measure(a,b).totalAbsoluteChannelError).toBe(510);expect(measure(a,b).maximumChannelError).toBe(255);expect(measure(a,b)).toEqual(measure(b,a));expect(()=>measure(new Uint8Array(),new Uint8Array())).toThrow();expect(()=>measure(a,new Uint8Array(1))).toThrow();});

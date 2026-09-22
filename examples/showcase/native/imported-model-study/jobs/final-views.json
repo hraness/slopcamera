@@ -1,0 +1,70 @@
+{
+  "kind": "slopcamera.studio-job",
+  "schemaVersion": 1,
+  "jobId": "studio_imported_model_final_views_v1",
+  "bundleSha256": "5d9464894c70c9d8ffe2298c362d3782b0be400dacd42869b8df5393be04ccea",
+  "stage": "render",
+  "parameters": {},
+  "engine": {
+    "engine": "blender",
+    "renderer": "cycles",
+    "device": "cpu",
+    "samples": 128,
+    "transparent": false,
+    "viewTransform": "AgX",
+    "denoise": true,
+    "seed": 0
+  },
+  "render": {
+    "width": 960,
+    "height": 540,
+    "frameRate": {
+      "numerator": 24,
+      "denominator": 1
+    },
+    "startFrame": 0,
+    "endFrameExclusive": 3
+  },
+  "outputs": [
+    {
+      "id": "beauty",
+      "role": "beauty",
+      "format": "png",
+      "interpretation": {
+        "kind": "raster",
+        "colorSpace": "srgb",
+        "alpha": "opaque",
+        "dataType": "uint8",
+        "channels": [
+          "R",
+          "G",
+          "B"
+        ],
+        "semantic": "color",
+        "unit": "unitless"
+      },
+      "kind": "sequence",
+      "pathPattern": "frames/%06d.png"
+    },
+    {
+      "id": "native",
+      "role": "native-source",
+      "format": "blend",
+      "interpretation": {
+        "kind": "native-source"
+      },
+      "kind": "file",
+      "path": "native/scene.blend"
+    }
+  ],
+  "limits": {
+    "timeoutSeconds": 360,
+    "maximumOutputBytes": 8388608,
+    "maximumOutputFiles": 32
+  },
+  "execution": {
+    "trust": "trusted-current-user",
+    "isolation": "none",
+    "hermetic": false
+  }
+}

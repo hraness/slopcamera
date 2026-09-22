@@ -1,0 +1,62 @@
+{
+  "kind": "slopcamera.showcase-pinned-cloth-qualification",
+  "sourceBundleSha256": "fcf8af29b3ee70a63b099d7769376744e29659e520aa645df59a6bb903ec86a2",
+  "parameters": {
+    "pinBackCorners": true
+  },
+  "bakeReceiptSha256": "890ab03d52d586fb78bbb73ee51d85de6dcb6325d15abfaf7ae62d48fb86856e",
+  "replayReceiptSha256": "f6c8d3c74c7b1dbf512a01914fc50595e8aef48d3b5394a5c62d64af383ae86a",
+  "replayBundleSha256": "58c234e7bde65620e4143965029a37c7809996f951a7d2426ad162e04f21e44e",
+  "runtime": "Blender 5.2.1 LTS; CPU cloth bake then Cycles Metal replay",
+  "isBaked": true,
+  "solverFrames": 40,
+  "frameRate": 24,
+  "render": {
+    "width": 1280,
+    "height": 800,
+    "frames": 40,
+    "durationSeconds": 1.6666666666666667
+  },
+  "pinFramesMeasured": 40,
+  "pinnedPositionsMeters": [
+    [
+      -0.800000011920929,
+      0.800000011920929,
+      1.1200000047683716
+    ],
+    [
+      0.800000011920929,
+      0.800000011920929,
+      1.1200000047683716
+    ]
+  ],
+  "maximumAbsolutePinCoordinateDisplacementMeters": 0.0,
+  "geometrySamples": [
+    {
+      "frame": 1,
+      "vertices": 9242,
+      "minZ": 1.1150000095367432,
+      "maxZ": 1.1200000047683716
+    },
+    {
+      "frame": 16,
+      "vertices": 9242,
+      "minZ": 0.22028958797454834,
+      "maxZ": 1.1101881265640259
+    },
+    {
+      "frame": 32,
+      "vertices": 9242,
+      "minZ": 0.12320035696029663,
+      "maxZ": 1.1095201969146729
+    },
+    {
+      "frame": 40,
+      "vertices": 9242,
+      "minZ": 0.137986958026886,
+      "maxZ": 1.11007821559906
+    }
+  ],
+  "preservation": "Original free-cloth source and completed cache were preserved. The pinned variant used its own job, native file and cache; replay loaded that retained file with embedded scripts disabled.",
+  "execution": "Retained private harness ran the declared recipe and fresh replay. The public helper additionally bundles the source and assigns fresh timestamped job/output identities; those wrapper-only changes do not represent an additional native qualification run."
+}

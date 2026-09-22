@@ -1,0 +1,44 @@
+{
+  "kind": "slopcamera.showcase.cad-exploded-parts",
+  "schemaVersion": 1,
+  "asset": {
+    "path": "assets/baseline.glb",
+    "bytes": 186384,
+    "sha256": "8ccf7e4f343d348d16996d31f8d7c159f1542204ed6371556b285ad7a7a87a02",
+    "sourceUnits": "meters",
+    "sourceUp": "y",
+    "externalDependencies": []
+  },
+  "assembly": "InstrumentMount",
+  "parts": [
+    {
+      "name": "MachinedBracket",
+      "primitiveCount": 33,
+      "blenderDimensionsMeters": [0.100, 0.064, 0.064],
+      "role": "fixed-machined-bracket",
+      "nominalWidthMm": 100
+    },
+    {
+      "name": "IsolationPad",
+      "primitiveCount": 6,
+      "blenderDimensionsMeters": [0.068, 0.036, 0.002],
+      "role": "moving-isolation-pad",
+      "nominalThicknessMm": 2
+    }
+  ],
+  "expectedTriangles": 5624,
+  "dimensionToleranceMeters": 0.000002,
+  "sourceClearancePlanesMeters": {
+    "baseTopZ": 0.004,
+    "uprightFrontY": 0.024,
+    "presentationRootZ": 0.018
+  },
+  "sourceNativeJobId": "studio_showcase_cad_smoke_v1",
+  "sourceNativeReceiptSha256": "1c3b0d411d67cc97a131a0670ba1687f9a85e7c17f8ac5696cb5f9ea105fb675",
+  "originalStep": {
+    "bytes": 135398,
+    "sha256": "31a50ce2a9367cd48d393fa62c612443cf2ccdc8a986ff7c8383c2df9d03579b",
+    "units": "millimeters",
+    "up": "z"
+  }
+}

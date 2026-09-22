@@ -355,7 +355,7 @@ import {
   workflowRunStore,
 } from "./workflow-runs";
 
-export const SLOPCAMERA_VERSION = "3.3.3";
+export const SLOPCAMERA_VERSION = "3.3.4";
 
 // Legacy direct renders predate per-target output contracts. Keep them
 // bounded generously enough for long-form production while preventing one

@@ -1,0 +1,162 @@
+{
+  "kind": "slopcamera.showcase-native-reload-qualification",
+  "originalSourceSha256": "dd782f9d795206d5863ffdb1807c95a66cc769c4b081e848ea33d30562747a33",
+  "originalReceiptSha256": "6da7cfbdeaf26dd9c2a1b78590e57238837b6c9257583067314aee8a9132d373",
+  "inspectionReceiptSha256": "17a71577e8ec60059eaa41b7f249360b0b19f142735e30dbaed5856014e03115",
+  "inspectionSourceSha256": "0c905853561bb52e3110f4ba012cd8dbc6854a29bf9c470ceecd75769821ed99",
+  "runtime": "Blender 5.2.1 LTS; Cycles Metal",
+  "facts": {
+    "kind": "slopcamera.showcase-character-reload",
+    "embeddedScriptsEnabled": false,
+    "sourceSha256": "dd782f9d795206d5863ffdb1807c95a66cc769c4b081e848ea33d30562747a33",
+    "bones": [
+      "chest",
+      "forearm.L",
+      "forearm.R",
+      "head",
+      "leg.L",
+      "leg.R",
+      "root",
+      "upper_arm.L",
+      "upper_arm.R"
+    ],
+    "ik": {
+      "bone": "forearm.R",
+      "target": "Right hand IK goal",
+      "pole": "Elbow pole",
+      "chainLength": 2,
+      "stretch": false
+    },
+    "armVertices": 400,
+    "blendedVertices": 64,
+    "maximumWeightSumError": 2.9802322387695312e-08,
+    "weightsSha256": "69b0476fe9dd746451641e84a7a23d26ff97d5ef73f5a0b7660bc615e2df3b2d",
+    "morphs": {
+      "Animated smile": [
+        "Basis",
+        "Smile",
+        "MouthOpen"
+      ],
+      "Expressive head": [
+        "Basis",
+        "JawOpen"
+      ],
+      "Eye.L": [
+        "Basis",
+        "Blink"
+      ],
+      "Eye.R": [
+        "Basis",
+        "Blink"
+      ]
+    },
+    "observations": [
+      {
+        "frame": 0,
+        "firstVertex": [
+          0.2936602234840393,
+          0.0634046196937561,
+          1.1859923601150513
+        ],
+        "minimum": [
+          0.2680302858352661,
+          -0.11818639934062958,
+          1.020871877670288
+        ],
+        "maximum": [
+          0.9022282361984253,
+          0.07208472490310669,
+          1.2707700729370117
+        ],
+        "positionSha256": "cc3fe383b14191c4df393169af031fb985d47d3731e6daf64bd0300700442287"
+      },
+      {
+        "frame": 72,
+        "firstVertex": [
+          0.2639959454536438,
+          0.05590176582336426,
+          1.1890869140625
+        ],
+        "minimum": [
+          0.2206529974937439,
+          -0.1970924288034439,
+          1.1109131574630737
+        ],
+        "maximum": [
+          0.7244552969932556,
+          0.06468284130096436,
+          1.5990296602249146
+        ],
+        "positionSha256": "979956c432008c6bb1853377afb5e84393319deb6d6bfe567844992b74a1d36d"
+      },
+      {
+        "frame": 143,
+        "firstVertex": [
+          0.2936219573020935,
+          0.06337571144104004,
+          1.1860471963882446
+        ],
+        "minimum": [
+          0.267660915851593,
+          -0.11886374652385712,
+          1.022047996520996
+        ],
+        "maximum": [
+          0.9017786383628845,
+          0.07186296582221985,
+          1.2721750736236572
+        ],
+        "positionSha256": "5c7d1b23f715866145a36cb8e5581eabb75891161cac6be5696f27a1edb448fc"
+      }
+    ]
+  },
+  "samples": [
+    {
+      "frame": 0,
+      "receiptSha256": "22a5105a496246f28f8d0e0471b8883f36a3527ccce5cba4cd53540836d5d1f4",
+      "pixelComparison": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "identical": false,
+        "maximumDifference": 1,
+        "meanAbsoluteDifference": 4.0147569444444445e-05,
+        "fractionAbove8": 0.0
+      }
+    },
+    {
+      "frame": 72,
+      "receiptSha256": "7f5b2f88290515b86f9b8578db3240c5c9f4ea7ef246ff83080449d3d0a0469d",
+      "pixelComparison": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "identical": false,
+        "maximumDifference": 1,
+        "meanAbsoluteDifference": 4.050925925925926e-05,
+        "fractionAbove8": 0.0
+      }
+    },
+    {
+      "frame": 143,
+      "receiptSha256": "0a09f43e0bb2c907ff2a168dec05afb071586e0c138eff02a04e97fac0388e0a",
+      "pixelComparison": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "identical": false,
+        "maximumDifference": 1,
+        "meanAbsoluteDifference": 4.810474537037037e-05,
+        "fractionAbove8": 0.0
+      }
+    }
+  ],
+  "execution": "Retained private harness performed three new native-entrypoint renders and a separate fresh-load inspection. The public helper adapts that harness to explicit runtime paths and timestamped output identities; no second render batch was run solely to validate those argument/path changes.",
+  "visualReview": "Full-resolution reloaded frames 0, 72 and 143 inspected alongside numeric comparisons; framing, pose, smile and surface appearance retained."
+}

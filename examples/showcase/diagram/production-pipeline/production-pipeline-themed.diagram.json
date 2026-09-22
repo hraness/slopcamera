@@ -1,0 +1,105 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hraness/slopcamera/main/schema/diagram.schema.json",
+  "version": 1,
+  "name": "production-pipeline-themed",
+  "canvas": {
+    "width": 720,
+    "height": 1232,
+    "padding": 64
+  },
+  "layout": {
+    "type": "stack",
+    "direction": "vertical",
+    "gap": 96,
+    "align": "center"
+  },
+  "shapes": [
+    {
+      "id": "author",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Author",
+      "labelFontSize": 44,
+      "labelWeight": 700,
+      "tone": "neutral",
+      "icon": "pipeline-author",
+      "iconSize": 48
+    },
+    {
+      "id": "check",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Check",
+      "labelFontSize": 44,
+      "labelWeight": 700,
+      "tone": "neutral",
+      "icon": "pipeline-check",
+      "iconSize": 48
+    },
+    {
+      "id": "render",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Render",
+      "labelFontSize": 44,
+      "labelWeight": 700,
+      "tone": "neutral",
+      "icon": "pipeline-render",
+      "iconSize": 48
+    },
+    {
+      "id": "review",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Review",
+      "labelFontSize": 44,
+      "labelWeight": 700,
+      "tone": "neutral",
+      "icon": "pipeline-review",
+      "iconSize": 48
+    },
+    {
+      "id": "deliver",
+      "type": "rect",
+      "width": 480,
+      "height": 144,
+      "radius": 24,
+      "label": "Deliver",
+      "labelFontSize": 44,
+      "labelWeight": 700,
+      "tone": "green",
+      "icon": "pipeline-deliver",
+      "iconSize": 48
+    }
+  ],
+  "edges": [
+    {
+      "id": "author-check",
+      "from": "author",
+      "to": "check"
+    },
+    {
+      "id": "check-render",
+      "from": "check",
+      "to": "render"
+    },
+    {
+      "id": "render-review",
+      "from": "render",
+      "to": "review"
+    },
+    {
+      "id": "review-deliver",
+      "from": "review",
+      "to": "deliver"
+    }
+  ]
+}

@@ -36,7 +36,7 @@ Claude Code should run `slopcamera diagram init`, edit the JSON source, run `slo
 
 - Generate images, video clips, and narration through your own Vercel AI Gateway credential. See [generate media](/docs/how-to/generate-media).
 - Edit footage and deliver multiple aspect ratios. See [edit video](/docs/how-to/edit-video).
-- Direct spatial scenes and native films on a source build. See [spatial scenes](/docs/how-to/direct-scenes) and [native films](/docs/how-to/native-films).
+- Direct spatial scenes and native films with the released CLI. See [spatial scenes](/docs/how-to/direct-scenes) and [native films](/docs/how-to/native-films).
 
 ## Troubleshooting
 

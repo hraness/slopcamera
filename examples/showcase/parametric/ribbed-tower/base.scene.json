@@ -1,0 +1,332 @@
+{
+  "kind": "slopcamera.spatial-scene",
+  "schemaVersion": 1,
+  "sceneId": "scene_design_ribbed_tower",
+  "coordinates": "right-handed-y-up-meters",
+  "durationUs": 4000000,
+  "entities": [
+    {
+      "entityId": "entity_ambient",
+      "name": "Soft sky fill",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "ambient",
+      "color": "#e0ecf1",
+      "intensity": 0.7
+    },
+    {
+      "entityId": "entity_backdrop",
+      "name": "Seamless studio backdrop",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          20,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "mesh",
+      "geometry": {
+        "kind": "sphere",
+        "radius": 150
+      },
+      "material": {
+        "kind": "pbr",
+        "color": "#000000",
+        "opacity": 1,
+        "roughness": 1,
+        "metalness": 1,
+        "emissive": {
+          "color": "#344245",
+          "intensity": 1
+        },
+        "doubleSided": true
+      }
+    },
+    {
+      "entityId": "entity_fill",
+      "name": "fill",
+      "parentId": null,
+      "transform": {
+        "position": [
+          17,
+          11.9,
+          5.1
+        ],
+        "rotation": [
+          -0.0865985618309,
+          0.593442985141,
+          0.0644319843253,
+          0.797605561585
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#c6dbef",
+      "intensity": 0.7,
+      "shadow": false
+    },
+    {
+      "entityId": "entity_ground",
+      "name": "Matte studio ground",
+      "parentId": null,
+      "transform": {
+        "position": [
+          0,
+          -0.14,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "mesh",
+      "geometry": {
+        "kind": "box",
+        "size": [
+          200,
+          0.25,
+          200
+        ]
+      },
+      "material": {
+        "kind": "standard",
+        "color": "#283739",
+        "opacity": 1,
+        "roughness": 0.94,
+        "metalness": 0
+      },
+      "receiveShadow": true
+    },
+    {
+      "entityId": "entity_key",
+      "name": "key",
+      "parentId": null,
+      "transform": {
+        "position": [
+          -17,
+          28.9,
+          17
+        ],
+        "rotation": [
+          -0.323558958797,
+          -0.358447452911,
+          -0.134022508961,
+          0.865368702216
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#fff2df",
+      "intensity": 2.2,
+      "shadow": true
+    },
+    {
+      "entityId": "entity_rim",
+      "name": "rim",
+      "parentId": null,
+      "transform": {
+        "position": [
+          5.1,
+          17,
+          -17
+        ],
+        "rotation": [
+          -0.0337623714439,
+          0.962286745553,
+          0.23003774026,
+          0.141233705835
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "placement": {
+        "kind": "world"
+      },
+      "origin": {
+        "kind": "authored"
+      },
+      "visible": true,
+      "kind": "light",
+      "light": "directional",
+      "color": "#ffffff",
+      "intensity": 1.2,
+      "shadow": false
+    }
+  ],
+  "cameras": [
+    {
+      "cameraId": "camera_detail",
+      "name": "Material and connection study",
+      "pose": {
+        "position": [
+          14.4,
+          12.5,
+          17.4
+        ],
+        "rotation": [
+          -0.0923668409171,
+          0.337188902997,
+          0.0332638412321,
+          0.93630418522
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1696.21370339,
+        "fy": 1696.21370339,
+        "cx": 720,
+        "cy": 540
+      }
+    },
+    {
+      "cameraId": "camera_hero",
+      "name": "Architectural three-quarter",
+      "pose": {
+        "position": [
+          24,
+          17,
+          29
+        ],
+        "rotation": [
+          -0.110147181856,
+          0.336495714781,
+          0.0396670312966,
+          0.934379344213
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1617.14647721,
+        "fy": 1617.14647721,
+        "cx": 720,
+        "cy": 540
+      }
+    },
+    {
+      "cameraId": "camera_plan",
+      "name": "Plan and structural rhythm",
+      "pose": {
+        "position": [
+          0.01,
+          42.5,
+          0
+        ],
+        "rotation": [
+          -0.499941173012,
+          0.500058820068,
+          0.499941173012,
+          0.500058820068
+        ]
+      },
+      "projection": {
+        "kind": "perspective",
+        "width": 1440,
+        "height": 1080,
+        "near": 0.05,
+        "far": 300,
+        "fx": 1476.21876594,
+        "fy": 1476.21876594,
+        "cx": 720,
+        "cy": 540
+      }
+    }
+  ],
+  "assets": [],
+  "animations": [],
+  "generators": [],
+  "overrides": []
+}

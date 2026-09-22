@@ -1,0 +1,104 @@
+{
+  "kind": "slopcamera.authored-color-alpha-targets",
+  "schemaVersion": 1,
+  "status": "expected-values-not-render-evidence",
+  "camera": {
+    "orthoWidth": 6.4,
+    "resolution": [
+      512,
+      288
+    ]
+  },
+  "patchSize": [
+    1.5,
+    0.72
+  ],
+  "patches": [
+    {
+      "id": "gray18",
+      "label": "LINEAR 0.18",
+      "center": [
+        -2,
+        0.65
+      ],
+      "linearRGB": [
+        0.18,
+        0.18,
+        0.18
+      ],
+      "alpha": 1
+    },
+    {
+      "id": "red",
+      "label": "RED / OPAQUE",
+      "center": [
+        0,
+        0.65
+      ],
+      "linearRGB": [
+        1,
+        0,
+        0
+      ],
+      "alpha": 1
+    },
+    {
+      "id": "hdr",
+      "label": "HDR / 2.0",
+      "center": [
+        2,
+        0.65
+      ],
+      "linearRGB": [
+        2,
+        0.5,
+        0.125
+      ],
+      "alpha": 1
+    },
+    {
+      "id": "cyan-half",
+      "label": "CYAN / HALF ALPHA",
+      "center": [
+        -2,
+        -0.65
+      ],
+      "linearRGB": [
+        0.04,
+        0.48,
+        0.64
+      ],
+      "alpha": 0.5
+    },
+    {
+      "id": "brass-half",
+      "label": "BRASS / HALF ALPHA",
+      "center": [
+        0,
+        -0.65
+      ],
+      "linearRGB": [
+        0.72,
+        0.36,
+        0.08
+      ],
+      "alpha": 0.5
+    },
+    {
+      "id": "clear",
+      "label": "CLEAR / ZERO ALPHA",
+      "center": [
+        2,
+        -0.65
+      ],
+      "linearRGB": [
+        0,
+        0,
+        0
+      ],
+      "alpha": 0
+    }
+  ],
+  "expectedBackgroundAlpha": 0,
+  "sampleMethod": "Center9x9 ROI; exact pixel projection must be confirmed from observed native camera before sampling. Never unpremultiply alpha0."
+}

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"two.js":"/.slopcamera-overlay/libraries/0e98a999fcb47006add9425200b18fab26eb09a154665b2893371d74e0a862d4.mjs"}}</script>
+  <style>.backdrop{position:absolute;inset:0;background:#e9e4d5}.scene{position:absolute;inset:0}.header{position:absolute;top:7%;left:5.5%;right:5.5%;display:flex;justify-content:space-between;font:1.2vw Arial;letter-spacing:.15em;color:#253837}.caption{position:absolute;left:5.5%;bottom:14%;color:#253837}h1{font:500 4.7vw/1.01 Arial;letter-spacing:-.055em;margin:0}h1 em{font-family:Georgia;font-weight:400}p{font:1.15vw/1.5 Arial;margin-top:18%}.bottom{position:absolute;bottom:5%;left:5.5%;font:1.05vw Arial;color:#77766b}</style></head>
+  <body>
+    <div class="backdrop"></div><canvas class="scene" aria-hidden="true"></canvas><div class="header"><span>ORBITAL ASSEMBLY</span><span>03 — TWO.JS / RETAINED VECTOR</span></div><div class="caption"><h1>Many parts.<br><em>One rhythm.</em></h1><p>Sixty elements. Five editable orbits.<br>Every position can be revisited.</p></div><div class="bottom">A geometric motion study, built from editable shapes.</div>
+    <style>
+      .scene {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import Two from "two.js";
+
+      // Keep Two.js on its explicit WebGL renderer with autostart disabled.
+      // Slopcamera remains the only clock and entropy source; this starter uses no
+      // textures, loaders, live input, or Two.js animation state.
+      let contextError = null;
+      let disposing = false;
+      const canvas = document.querySelector(".scene");
+      const two = new Two({
+        alpha: true,
+        antialias: false,
+        autostart: false,
+        domElement: canvas,
+        height: SlopcameraOverlay.height,
+        overdraw: false,
+        premultipliedAlpha: true,
+        preserveDrawingBuffer: true,
+        ratio: devicePixelRatio,
+        type: Two.Types.webgl,
+        width: SlopcameraOverlay.width,
+      });
+      two.renderer.ctx.clearColor(0, 0, 0, 0);
+      const stage = new Two.Group();
+      two.add(stage);
+      const w=SlopcameraOverlay.width,h=SlopcameraOverlay.height;
+      const cx=w*.60,cy=h*.50;
+      const colors=['#e47d50','#315a62','#e6c34e','#8fa49a'];
+      const objects=[];
+      for(let orbit=0;orbit<5;orbit++){
+        const radius=h*(.13+orbit*.060);
+        const path=new Two.Ellipse(cx,cy,radius*1.35,radius*.75,96);
+        path.noFill();path.stroke='#a49e90';path.linewidth=1;stage.add(path);
+        for(let i=0;i<12;i++){
+          const shape=new Two.Circle(0,0,i%4===0?11:3.8,24);
+          shape.fill=colors[orbit%4];shape.noStroke();stage.add(shape);
+          objects.push({shape,radius,phase:i/12*Math.PI*2,orbit});
+        }
+      }
+      const core=new Two.Circle(cx,cy,35,48);core.fill='#202e2e';core.noStroke();stage.add(core);
+      const pupil=new Two.Circle(cx,cy,8,24);pupil.fill='#e6c34e';pupil.noStroke();stage.add(pupil);
+
+      const handleContextLoss = (event) => {
+        event.preventDefault();
+        if (!disposing) {
+          contextError = new Error("The Two.js rendering context was lost.");
+          throw contextError;
+        }
+      };
+      canvas.addEventListener("webglcontextlost", handleContextLoss);
+
+      SlopcameraOverlay.onFrame(({ progress, timeMs }) => {
+        if (contextError !== null) throw contextError;
+        const phase=timeMs/8000*Math.PI*2;
+        for(const object of objects){
+          const angle=object.phase+phase*(object.orbit%2===0?1:-1);
+          object.shape.translation.set(cx+Math.cos(angle)*object.radius*1.35,cy+Math.sin(angle)*object.radius*.75);
+          object.shape.scale=1+.16*Math.sin(angle);
+        }
+        two.render();
+      });
+
+      addEventListener("pagehide", () => {
+        disposing = true;
+        canvas.removeEventListener("webglcontextlost", handleContextLoss);
+        two.pause();
+        two.release();
+        two.clear();
+        two.unbind();
+        two.renderer.unbind();
+        const index = Two.Instances.indexOf(two);
+        if (index >= 0) Two.Instances.splice(index, 1);
+        two.renderer.ctx.getExtension("WEBGL_lose_context")?.loseContext();
+      }, { once: true });
+    </script>
+  </body>
+</html>

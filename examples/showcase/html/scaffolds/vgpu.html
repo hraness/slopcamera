@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"vgpu":"/.slopcamera-overlay/libraries/f7ef874ca3dd29b165beaaf77297d64e06b65db1c48819ac472446da46f2cc9f.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="effect" aria-hidden="true"></canvas>
+    <style>
+      .effect {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import { effect, frame, init, surface, target } from "vgpu";
+
+      // Keep this starter seek-stable: derive every value from the absolute
+      // Slopcamera frame and submit one bounded fullscreen pass per output frame.
+      const canvas = document.querySelector(".effect");
+      const shaderSource = `
+        struct Params {
+          time: f32,
+          resolution: vec2f,
+          intensity: f32,
+        }
+
+        @group(0) @binding(0) var<uniform> params: Params;
+
+        fn palette(value: f32) -> vec3f {
+          let phase = vec3f(0.08, 0.31, 0.58) + value;
+          return vec3f(0.55) + 0.45 * cos(6.2831853 * phase);
+        }
+
+        @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+          let safeHeight = max(params.resolution.y, 1.0);
+          let aspect = params.resolution.x / safeHeight;
+          let point = (uv - vec2f(0.5)) * vec2f(aspect, 1.0);
+          let wave = sin(point.x * 5.0 + params.time * 1.4) * 0.08
+            + sin(point.x * 11.0 - params.time * 0.9) * 0.035;
+          let band = exp(-abs(point.y - wave) * 18.0);
+          let halo = exp(-length(point) * 3.4);
+          let alpha = clamp(
+            (band * 0.72 + halo * 0.22) * params.intensity,
+            0.0,
+            0.86,
+          );
+          let color = palette(point.x * 0.16 + params.time * 0.035);
+          return vec4f(color * alpha, alpha);
+        }
+      `;
+
+      const numberParameter = (name, fallback, minimum, maximum) => {
+        const value = SlopcameraOverlay.parameters[name];
+        return typeof value === "number" && Number.isFinite(value)
+          ? Math.min(maximum, Math.max(minimum, value))
+          : fallback;
+      };
+      const intensity = numberParameter("intensity", 1, 0, 2);
+      const speed = numberParameter("speed", 1, -8, 8);
+      const initialization = (async () => {
+        if (navigator.gpu === undefined) {
+          throw new Error("The vgpu scaffold requires WebGPU in the selected browser runtime.");
+        }
+        const gpu = await init({ powerPreference: "high-performance" });
+        let asynchronousError = null;
+        const releaseErrorListener = gpu.onError((error) => {
+          asynchronousError ??= error;
+        });
+        void gpu.gpu.lost.then(() => {
+          if (!gpu.disposed) {
+            asynchronousError ??= new Error(
+              "The WebGPU device was lost during the HTML overlay render.",
+            );
+          }
+        });
+        try {
+          const output = surface(gpu, canvas, {
+            alphaMode: "premultiplied",
+            autoResize: false,
+            clearColor: [0, 0, 0, 0],
+            dpr: devicePixelRatio,
+          });
+          const shader = effect(gpu, shaderSource, {
+            set: {
+              params: {
+                intensity,
+                resolution: output.size,
+                time: 0,
+              },
+            },
+          });
+          const pipelineTarget = target(gpu, {
+            format: output.format,
+            size: [1, 1],
+          });
+          try {
+            await shader.compile(pipelineTarget);
+          } finally {
+            pipelineTarget.destroy();
+          }
+          await gpu.settled();
+          if (asynchronousError !== null) throw asynchronousError;
+          return {
+            dispose() {
+              releaseErrorListener();
+              gpu.dispose();
+            },
+            gpu,
+            output,
+            shader,
+            takeError() {
+              const error = asynchronousError;
+              asynchronousError = null;
+              return error;
+            },
+          };
+        } catch (error) {
+          try {
+            releaseErrorListener();
+            gpu.dispose();
+          } catch {
+            // Preserve the initialization failure if cleanup also fails.
+          }
+          throw error;
+        }
+      })();
+
+      SlopcameraOverlay.ready(initialization);
+      SlopcameraOverlay.onFrame(async ({ timeMs }) => {
+        const state = await initialization;
+        state.shader.set({
+          params: {
+            intensity,
+            resolution: state.output.size,
+            time: timeMs * speed / 1000,
+          },
+        });
+        const submitted = frame(state.gpu, (currentFrame) => {
+          currentFrame.pass(
+            { clear: [0, 0, 0, 0], target: state.output },
+            state.shader,
+          );
+        });
+        await submitted.done;
+        await state.gpu.settled();
+        const error = state.takeError();
+        if (error !== null) throw error;
+      });
+
+      addEventListener("pagehide", () => {
+        void initialization.then((state) => state.dispose()).catch(() => undefined);
+      }, { once: true });
+    </script>
+  </body>
+</html>

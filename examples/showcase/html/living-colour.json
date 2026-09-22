@@ -1,0 +1,24 @@
+{
+  "kind": "slopcamera.html-scene",
+  "schemaVersion": 1,
+  "name": "Living colour",
+  "document": {
+    "path": "examples/showcase/html/living-colour.html"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "deviceScaleFactor": 1
+  },
+  "timing": {
+    "durationUs": 8000000,
+    "fps": 24
+  },
+  "libraries": [
+    "@paper-design/shaders"
+  ],
+  "seed": 20260919,
+  "background": "#11191b",
+  "parameters": {},
+  "resources": []
+}

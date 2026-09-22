@@ -18,6 +18,12 @@ renderer.readRenderTargetPixelsAsync=async(target,x,y,width,height,buffer,face,a
 const spark=new SparkRenderer({renderer,autoUpdate:false,preUpdate:false,enableLod:false,enableDriveLod:false,enableLodFetching:false,
   maxPagedSplats:65536,numLodFetchers:0,lodRaycast:0,accumExtSplats:true,premultipliedAlpha:true,encodeLinear:true,sortRadial:false,minSortIntervalMs:0,depthTest:true,depthWrite:false,
   preBlurAmount:input.splatKernel.preBlurAmount,blurAmount:input.splatKernel.blurAmount});
+// SPZ preserves signed SH radiance; fractional gamma is undefined below zero.
+// Guard the physical radiance domain after SH reconstruction and before blending.
+// Keep positive HDR values and the pinned Spark transfer function unchanged.
+const linearRgbAnchor="rgba.rgb = srgbToLinear(rgba.rgb);";
+if(spark.material.fragmentShader.split(linearRgbAnchor).length!==2)throw new Error("Spark linear-RGB shader anchor changed; review the pinned renderer adapter.");
+spark.material.fragmentShader=spark.material.fragmentShader.replace(linearRgbAnchor,"rgba.rgb = srgbToLinear(max(rgba.rgb, vec3(0.0)));");
 spark.readPause=0;spark.sortPause=0;spark.sortDelay=0;
 const splatMeshes=new Map();
 const disposeSplats=()=>{for(const mesh of splatMeshes.values())mesh.dispose();splatMeshes.clear();spark.dispose();};

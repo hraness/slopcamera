@@ -1,4 +1,4 @@
-An MCP-capable client can check and render diagrams, vectorize rasters, generate images, and plan and audit spatial scenes inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
+An MCP-capable client can check and render diagrams, inspect scenes, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
 
 ## Install the CLI
 
@@ -31,7 +31,7 @@ Clients register it as a stdio command with arguments. Claude Desktop's `claude_
 
 The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, server name `hraness-slopcamera`). Protocol messages are the only stdout surface; diagnostics go to stderr. Restart the client after editing its configuration so it launches a fresh server.
 
-## What the tools expose
+## Use the released tools
 
 | Tool | Effect |
 | --- | --- |
@@ -39,12 +39,22 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 | `render_diagram` | Write the same five artifacts the CLI render produces: `.tldr`, light and dark SVG, and light and dark PNG. |
 | `search_slopcamera` | Search the fixed Slopcamera operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
+
+`execute_slopcamera` in v3.3.1 admits six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+
+## Inspect and plan scenes
+
+The v3.3.1 server exposes 17 named tools: the four above plus these 13 scene tools. A source build is optional for this toolset.
+
+| Scene tools | Effect |
+| --- | --- |
 | `check_scene`, `inspect_scene`, `diff_scenes` | Validate, summarize, or compare scene JSON sources. Read-only. |
 | `evaluate_scene`, `audit_scene`, `audit_scene_temporal` | Sample world state and report spatial or temporal findings. Read-only. |
 | `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery` | Check a direction document, compile proposals, plan bounded variants. Read-only. |
 | `check_scene_effects`, `plan_scene_effects` | Check declared effects and bind them to a render plan. Read-only. |
+| `check_scene_behavior`, `audit_scene_behavior` | Check a behavior document and audit its declared behavior. Read-only. |
 
-`execute_slopcamera` admits exactly six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+Discover the installed server's tools after restarting the client. Older releases have a smaller toolset, and a package version string alone does not identify a source checkout.
 
 ## Path and limit rules
 
@@ -57,7 +67,7 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 
 ## Credentials and scope
 
-`slopcamera.image.generate` uses the server process's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN`; a client `env` block is the usual way to supply one. Vectorization needs no credential and no network, and on Windows that profile deliberately fails closed. Everything else runs locally against the workspace.
+`slopcamera.image.generate` uses the server process's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN`; supply it through the client's environment or secret configuration. A direct Gateway key needs no Vercel CLI. Vectorization needs no credential and no network, and on Windows that profile deliberately fails closed. Image icon and gallery operations also use the Gateway credential and can make paid requests. Scene inspection and planning run locally against the workspace.
 
 The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full local surface, install the Agent Skill for [Codex](/docs/tutorials/codex) or [Claude Code](/docs/tutorials/claude-code), or give another agent the [portable skill or plain CLI](/docs/tutorials/other-agents).
 

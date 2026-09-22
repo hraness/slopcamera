@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Make every frame count</title>
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"motion":"/.slopcamera-overlay/libraries/0d89a96784df54ed726443ebd09be2bee6118d9f1e074166df580bce632c5b62.mjs"}}</script>
+  </head>
+  <body>
+<main class="canvas"><div class="meta"><span>SLOPCAMERA / TITLES</span><span>MOTION · 08 SECONDS</span></div><div class="words"><div class="line"><span>Make every</span></div><div class="line"><span>frame <em>count.</em></span></div></div><div class="rule"></div><div class="strips"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i><i style="--n:4"></i><i style="--n:5"></i><i style="--n:6"></i><i style="--n:7"></i><i style="--n:8"></i><i style="--n:9"></i><i style="--n:10"></i><i style="--n:11"></i></div><div class="foot"><span>Type. Rhythm. Intention.</span><span>Editable all the way down.</span></div></main>
+<style>
+.canvas{position:absolute;inset:0;background:#fc693e;color:#211c1a;padding:5.5%;font-family:Arial,Helvetica,sans-serif}.meta,.foot{display:flex;justify-content:space-between;font-size:1.25vw;letter-spacing:.13em}.words{position:absolute;left:5.5%;top:23%;font-size:11.2vw;letter-spacing:-.07em;line-height:1.01;font-weight:600}.line{overflow:hidden;padding:0 .06em}.line span{display:block;transform:translateY(110%)}em{font-family:Georgia,serif;font-weight:400}.rule{position:absolute;top:18%;left:5.5%;right:5.5%;height:1px;background:#402216;transform-origin:left}.foot{position:absolute;left:5.5%;right:5.5%;bottom:6.5%;font-size:1.15vw;letter-spacing:0}.strips{position:absolute;right:6%;bottom:15%;height:10%;width:30%;display:flex;gap:4%}.strips i{display:block;flex:1;background:#211c1a;transform-origin:bottom;transform:scaleY(.1)}
+</style>
+<script type="module">
+import {animate} from 'motion';
+// Each animation is paused and sought by Slopcamera's absolute clock.
+const total=SlopcameraOverlay.durationMs/1000;
+document.querySelectorAll('.line span').forEach((el,i)=>SlopcameraOverlay.trackAnimation(animate(el,{transform:['translateY(110%)','translateY(0%)','translateY(0%)','translateY(-110%)'],opacity:[0,1,1,0]},{duration:total,times:[0,.16+i*.055,.78+i*.025,1],ease:['easeOut','linear','easeIn']})));
+document.querySelectorAll('.strips i').forEach((el,i)=>SlopcameraOverlay.trackAnimation(animate(el,{transform:['scaleY(.1)','scaleY(1)','scaleY(.55)','scaleY(.1)']},{duration:total,times:[0,.28+i*.018,.66+i*.01,1],ease:'easeInOut'})));
+SlopcameraOverlay.trackAnimation(animate('.rule',{transform:['scaleX(0)','scaleX(1)','scaleX(1)','scaleX(0)']},{duration:total,times:[0,.22,.83,1],ease:'easeInOut'}));
+</script>
+</body>
+</html>

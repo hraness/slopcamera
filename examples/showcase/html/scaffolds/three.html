@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+    </style>
+    <script type="importmap">{"imports":{"three":"/.slopcamera-overlay/libraries/12e6dd7a5cceb3efd76f8c65acbf5aa55c74820115d9ebae874b28456b9ddb5c.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="scene" aria-hidden="true"></canvas>
+    <style>
+      .scene {
+        display: block;
+        width: 100%;
+        height: 100%;
+        contain: strict;
+      }
+    </style>
+    <script type="module">
+      import * as THREE from "three";
+
+      // Keep this scene seek-stable: derive motion from progress/timeMs and use
+      // SlopcameraOverlay.randomFor(key), never requestAnimationFrame or mutable RNG.
+      const MAX_DRAW_CALLS = 64;
+      const MAX_TRIANGLES = 200_000;
+      const canvas = document.querySelector(".scene");
+      const renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true,
+        canvas,
+        powerPreference: "high-performance",
+        premultipliedAlpha: false,
+      });
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1;
+      renderer.shadowMap.enabled = false;
+      // The authoring canvas owns preview/final supersampling. Use 1x for
+      // iteration and raise deviceScaleFactor only for a selected final render.
+      renderer.setPixelRatio(devicePixelRatio);
+      renderer.setSize(SlopcameraOverlay.width, SlopcameraOverlay.height, false);
+      renderer.setClearColor(0x000000, 0);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        42,
+        SlopcameraOverlay.width / SlopcameraOverlay.height,
+        0.1,
+        100,
+      );
+
+      const disposable = new Set();
+      const track = (resource) => {
+        disposable.add(resource);
+        return resource;
+      };
+
+      // Replace only this function when generating a subject. Reuse geometry
+      // and materials, prefer instancing for repeated forms, and track every
+      // GPU resource created outside this starter.
+      function createSubject() {
+        const subject = new THREE.Group();
+        const geometry = track(new THREE.IcosahedronGeometry(0.72, 1));
+        const material = track(new THREE.MeshStandardMaterial({
+          color: 0x7c6cff,
+          flatShading: true,
+          metalness: 0.18,
+          roughness: 0.42,
+        }));
+        for (const [x, y, z, scale] of [
+          [-0.72, 0, 0, 1],
+          [0.72, 0, 0, 0.82],
+          [0, 0.72, -0.08, 0.68],
+          [0, -0.72, 0.08, 0.58],
+        ]) {
+          const part = new THREE.Mesh(geometry, material);
+          part.position.set(x, y, z);
+          part.scale.setScalar(scale);
+          subject.add(part);
+        }
+        return subject;
+      }
+
+      const subject = createSubject();
+      scene.add(subject);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x20243a, 2.1));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+      keyLight.position.set(3, 5, 4);
+      scene.add(keyLight);
+
+      const bounds = new THREE.Box3().setFromObject(subject);
+      const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+      const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+      const horizontalHalfFov = Math.atan(
+        Math.tan(verticalHalfFov) * camera.aspect,
+      );
+      const fitHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+      const framingDistance = Math.max(
+        0.01,
+        (sphere.radius / Math.sin(fitHalfFov)) * 1.25,
+      );
+      camera.near = Math.max(0.01, framingDistance / 100);
+      camera.far = framingDistance * 20;
+      camera.updateProjectionMatrix();
+      const cameraDirection = new THREE.Vector3(0.42, 0.24, 1).normalize();
+      camera.position.copy(sphere.center).addScaledVector(
+        cameraDirection,
+        framingDistance,
+      );
+      camera.lookAt(sphere.center);
+
+      const explodeParts = subject.children.map((part) => {
+        const home = part.position.clone();
+        const direction = home.clone();
+        if (direction.lengthSq() === 0) direction.set(0, 1, 0);
+        direction.normalize();
+        return { direction, home, part };
+      });
+      const numberParameter = (name, fallback, minimum, maximum) => {
+        const value = SlopcameraOverlay.parameters[name];
+        return typeof value === "number" && Number.isFinite(value)
+          ? THREE.MathUtils.clamp(value, minimum, maximum)
+          : fallback;
+      };
+      const explodeDistance = numberParameter("explode", 0.45, 0, 4);
+      const orbitTurns = numberParameter("orbitTurns", 1, -8, 8);
+      const zoom = numberParameter("zoom", 1, 0.25, 4);
+
+      canvas.addEventListener("webglcontextlost", (event) => {
+        event.preventDefault();
+        throw new Error("The Three.js rendering context was lost.");
+      });
+      // Prepare shaders without making frame zero await asynchronous polling.
+      renderer.compile(scene, camera);
+
+      SlopcameraOverlay.onFrame(({ progress }) => {
+        const phase = progress * Math.PI * 2;
+        subject.rotation.set(
+          Math.sin(phase) * 0.08,
+          phase * orbitTurns,
+          Math.cos(phase) * 0.04,
+        );
+        const explode = Math.sin(progress * Math.PI) ** 2 * explodeDistance;
+        for (const { direction, home, part } of explodeParts) {
+          part.position.copy(home).addScaledVector(direction, explode);
+        }
+        camera.position.copy(sphere.center).addScaledVector(
+          cameraDirection,
+          framingDistance / zoom,
+        );
+        camera.lookAt(sphere.center);
+        renderer.render(scene, camera);
+        if (
+          renderer.info.render.calls > MAX_DRAW_CALLS
+          || renderer.info.render.triangles > MAX_TRIANGLES
+        ) {
+          throw new Error(
+            "Three.js render budget exceeded: "
+              + renderer.info.render.calls
+              + " calls, "
+              + renderer.info.render.triangles
+              + " triangles.",
+          );
+        }
+      });
+
+      addEventListener("pagehide", () => {
+        for (const resource of disposable) resource.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+      }, { once: true });
+    </script>
+  </body>
+</html>
