@@ -55,6 +55,14 @@ const TRANSCRIPT_TEXT = "Hello world";
 const PNG_BYTES = new Uint8Array(
   await readFile(join(import.meta.dir, "..", "assets", "icon.png")),
 );
+const JPEG_BYTES = new Uint8Array(
+  await readFile(join(
+    import.meta.dir,
+    "..",
+    "analysis",
+    "face-positive-fixture.jpg",
+  )),
+);
 const INVALID_MP4_BYTES = Uint8Array.of(
   0x00, 0x00, 0x00, 0x0c,
   0x66, 0x74, 0x79, 0x70,
@@ -242,6 +250,7 @@ const WAV_BYTES = silentPcmWav();
 class CapturingGatewaySdk implements GatewayMediaSdk {
   failVideo = false;
   invalidVideoOutput = false;
+  jpegImageOutputBytes: Uint8Array | undefined;
   readonly imageCalls: GatewaySdkImageRequest[] = [];
   readonly languageImageCalls: GatewaySdkLanguageImageRequest[] = [];
   readonly speechCalls: GatewaySdkSpeechRequest[] = [];
@@ -263,8 +272,10 @@ class CapturingGatewaySdk implements GatewayMediaSdk {
     this.imageCalls.push(request);
     return Promise.resolve({
       images: [{
-        mediaType: "image/png",
-        uint8Array: PNG_BYTES,
+        mediaType: this.jpegImageOutputBytes === undefined
+          ? "image/png"
+          : "image/jpeg",
+        uint8Array: this.jpegImageOutputBytes ?? PNG_BYTES,
       }],
       warnings: [],
     });
@@ -1690,6 +1701,50 @@ describe("Gateway CLI commands", () => {
       await rm(fixture.root, { force: true, recursive: true });
     }
   });
+
+  test("stages and decode-validates JPEG media through the single-image pipe demuxer", async () => {
+    const fixture = await createFixture();
+    try {
+      await configureGatewayKey(fixture);
+      await writeFile(join(fixture.root, "source.jpg"), JPEG_BYTES, {
+        mode: 0o600,
+      });
+      fixture.sdk.jpegImageOutputBytes = JPEG_BYTES;
+      const generated = await fixture.execute([
+        "ai",
+        "image",
+        "generate",
+        "--model",
+        "bfl/flux-command",
+        "--prompt",
+        IMAGE_PROMPT,
+        "--image",
+        "source.jpg",
+        "--allow-cloud-upload",
+        "--json",
+      ]);
+      expect(generated).toMatchObject({ exitCode: 0, stderr: "" });
+      expect(fixture.sdk.imageCalls).toHaveLength(1);
+      const imagePrompt = fixture.sdk.imageCalls[0]?.prompt;
+      expect(typeof imagePrompt).toBe("object");
+      if (typeof imagePrompt === "object") {
+        expect(imagePrompt.images).toEqual([JPEG_BYTES]);
+      }
+      const summary = parseJsonRecord(generated.stdout);
+      expect(outputWithMediaType(summary, "image/jpeg")).toMatchObject({
+        bytes: JPEG_BYTES.byteLength,
+      });
+      const receipt = parseJsonRecord(await readRelative(
+        fixture,
+        requiredString(summary, "receiptPath"),
+      ));
+      expect(receipt.localValidation).toMatchObject({
+        status: "decode-passed",
+      });
+    } finally {
+      await rm(fixture.root, { force: true, recursive: true });
+    }
+  }, 30_000);
 
   test("leaves one ambiguous no-retry job after a dispatched SDK failure", async () => {
     const fixture = await createFixture();

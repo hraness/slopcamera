@@ -730,6 +730,100 @@ describe("Gateway media execution service", () => {
     });
   });
 
+  test("translates Wan catalog resolutions into provider pixel sizes", async () => {
+    const artifactStore = new CapturingArtifactStore();
+    const { sdk, service } = testService({
+      artifactStore,
+      catalog: catalogViewFromRows([
+        row("video", "alibaba/wan-v2.6-r2v-flash", {
+          video_capabilities: {
+            supported_aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4"],
+            supported_durations_seconds: [5],
+            supported_operations: ["reference-to-video"],
+            supported_resolutions: ["720p", "1080p"],
+          },
+        }),
+      ]),
+    });
+    await service.generateVideo({
+      aspectRatio: "16:9",
+      consent,
+      duration: 5,
+      inputReferences: [{ data: PNG_BYTES, mediaType: "image/png" }],
+      model: "alibaba/wan-v2.6-r2v-flash",
+      prompt: "character1 orbits the sphere",
+      resolution: "720p",
+    });
+    expect(sdk.videoCalls).toHaveLength(1);
+    expect(sdk.videoCalls[0]).toMatchObject({
+      aspectRatio: "16:9",
+      modelId: "alibaba/wan-v2.6-r2v-flash",
+      resolution: "1280x720",
+    });
+    expect(artifactStore.calls[0]?.request).toMatchObject({
+      providerResolution: "1280x720",
+      resolution: "720p",
+    });
+
+    await service.generateVideo({
+      aspectRatio: "9:16",
+      consent,
+      duration: 5,
+      inputReferences: [{ data: PNG_BYTES, mediaType: "image/png" }],
+      model: "alibaba/wan-v2.6-r2v-flash",
+      prompt: "character1 orbits the sphere",
+      resolution: "1080p",
+    });
+    expect(sdk.videoCalls[1]?.resolution).toBe("1080x1920");
+
+    await service.generateVideo({
+      consent,
+      duration: 5,
+      inputReferences: [{ data: PNG_BYTES, mediaType: "image/png" }],
+      model: "alibaba/wan-v2.6-r2v-flash",
+      prompt: "character1 orbits the sphere",
+      resolution: "720p",
+    });
+    expect(sdk.videoCalls[2]?.resolution).toBe("1280x720");
+  });
+
+  test("rejects a Wan resolution the provider cannot express before dispatch", async () => {
+    const { sdk, service } = testService({
+      catalog: catalogViewFromRows([
+        row("video", "alibaba/wan-v2.5-t2v-preview", {
+          video_capabilities: {
+            supported_aspect_ratios: ["4:3"],
+            supported_durations_seconds: [5],
+            supported_operations: ["text-to-video"],
+            supported_resolutions: ["480p"],
+          },
+        }),
+      ]),
+    });
+    expect(await rejection(service.generateVideo({
+      aspectRatio: "4:3",
+      consent,
+      duration: 5,
+      model: "alibaba/wan-v2.5-t2v-preview",
+      prompt: "an aspect Wan does not offer at 480p",
+      resolution: "480p",
+    }))).toMatchObject({ code: "model-operation-unsupported" });
+    expect(sdk.videoCalls).toHaveLength(0);
+  });
+
+  test("passes normalized resolutions through unchanged for other providers", async () => {
+    const { sdk, service } = testService();
+    await service.generateVideo({
+      aspectRatio: "16:9",
+      consent,
+      duration: 8,
+      model: "google/veo",
+      prompt: "wide dolly",
+      resolution: "720p",
+    });
+    expect(sdk.videoCalls[0]?.resolution).toBe("720p");
+  });
+
   test("forwards every speech setting and transcribes bounded audio", async () => {
     const artifactStore = new CapturingArtifactStore();
     const { sdk, service } = testService({ artifactStore });
