@@ -431,6 +431,7 @@ export function createApiHandler(environment: ApiEnvironment) {
           service: "slopcamera-api",
           endpoints: {
             tools: "GET /v1/tools",
+            models: "GET /v1/models",
             call: "POST /v1/tools/{name}/call",
             uploads: "POST /v1/uploads",
             artifacts: "GET /v1/artifacts/{id}",
@@ -445,6 +446,11 @@ export function createApiHandler(environment: ApiEnvironment) {
           storage: r2 !== undefined,
           billing: credits !== undefined,
           models: Object.keys(config.modelCostsMicroUsd).length,
+        })
+      }
+      if (method === "GET" && path === "/v1/models") {
+        return jsonResponse({
+          models: Object.keys(config.modelCostsMicroUsd).sort(),
         })
       }
       if (method === "GET" && path === "/v1/tools") {

@@ -449,7 +449,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "c3637a44b7781d6d3dd4bced778753c9b3e43f0ee417f113b54428c00265b2b6",
+    "identityLinesSha256": "e423169b0bf5db318aa4a0052f25dadb5f9bb04ba6d3a1b6ddcb4c61da811410",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -1287,7 +1287,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "d2593957028cdc12dc309c536779becc5ed97832155bc0a6afe360263891bdba",
+    "identityLinesSha256": "9b69f4c72951cb3c3fdcd91a9f6b3cc4cbdb85364de56975547912060d40d204",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [

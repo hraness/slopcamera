@@ -217,6 +217,7 @@ export type CliCommand =
       readonly allowCloudUpload: boolean;
       readonly aspectRatio: string | undefined;
       readonly count: number;
+      readonly hosted: boolean;
       readonly images: readonly string[];
       readonly kind: "ai-image-generate";
       readonly mask: string | undefined;
@@ -334,6 +335,14 @@ export type CliCommand =
     } & JsonOption)
   | ({ readonly kind: "menubar"; readonly action: "run" | "install" | "uninstall" | "status"; readonly mode: "foreground" | "background" } & JsonOption)
   | ({ readonly kind: "outputs" } & JsonOption)
+  | ({ readonly kind: "credits-status" } & JsonOption)
+  | ({
+      readonly email: string | undefined;
+      readonly kind: "credits-topup";
+      readonly pack: string | undefined;
+    } & JsonOption)
+  | ({ readonly kind: "credits-wait"; readonly timeout: string } & JsonOption)
+  | ({ readonly kind: "credits-forget" } & JsonOption)
   | ({ readonly kind: "recordings-list"; readonly limit: number } & JsonOption)
   | ({ readonly kind: "projects-list"; readonly limit: number } & JsonOption)
   | ({
@@ -997,6 +1006,7 @@ function parseAiImage(argv: readonly string[]): CliCommand {
     "--allow-cloud-upload": "flag",
     "--aspect-ratio": "value",
     "--count": "value",
+    "--hosted": "flag",
     "--image": "repeat",
     "--mask": "value",
     "--max-per-call": "value",
@@ -1031,6 +1041,7 @@ function parseAiImage(argv: readonly string[]): CliCommand {
     allowCloudUpload: optionFlag(parsed, "--allow-cloud-upload"),
     aspectRatio: optionString(parsed, "--aspect-ratio"),
     count,
+    hosted: optionFlag(parsed, "--hosted"),
     images,
     json: optionFlag(parsed, "--json"),
     kind: "ai-image-generate",
@@ -1343,6 +1354,55 @@ function parseAiTranscribe(argv: readonly string[]): CliCommand {
     providerOptions: optionString(parsed, "--provider-options"),
     timeout: optionString(parsed, "--timeout") ?? "30m",
   };
+}
+
+function parseCredits(argv: readonly string[]): CliCommand {
+  const action = argv[0];
+  if (action === "status") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    exactPositionals(parsed, 0, "slopcamera credits status [--json]");
+    return { kind: "credits-status", json: optionFlag(parsed, "--json") };
+  }
+  if (action === "topup") {
+    const parsed = parseOptions(argv.slice(1), {
+      ...JSON_SPEC,
+      "--email": "value",
+      "--pack": "value",
+    });
+    exactPositionals(parsed, 0, "slopcamera credits topup [--pack <id>] [--email <address>] [--json]");
+    const email = optionString(parsed, "--email");
+    if (email !== undefined && (email.length > 320 || /[\s\u0000-\u001f\u007f]/u.test(email))) {
+      fail("--email must be a nonempty email address without whitespace or control characters.");
+    }
+    const pack = optionString(parsed, "--pack");
+    if (pack !== undefined && !/^[a-z0-9][a-z0-9_-]{0,63}$/u.test(pack)) {
+      fail("--pack must be a pack id such as p10, p25, p50, or p100.");
+    }
+    return {
+      email,
+      json: optionFlag(parsed, "--json"),
+      kind: "credits-topup",
+      pack,
+    };
+  }
+  if (action === "wait") {
+    const parsed = parseOptions(argv.slice(1), {
+      ...JSON_SPEC,
+      "--timeout": "value",
+    });
+    exactPositionals(parsed, 0, "slopcamera credits wait [--timeout <time>] [--json]");
+    return {
+      kind: "credits-wait",
+      json: optionFlag(parsed, "--json"),
+      timeout: optionString(parsed, "--timeout") ?? "30m",
+    };
+  }
+  if (action === "forget") {
+    const parsed = parseOptions(argv.slice(1), JSON_SPEC);
+    exactPositionals(parsed, 0, "slopcamera credits forget [--json]");
+    return { kind: "credits-forget", json: optionFlag(parsed, "--json") };
+  }
+  fail("Usage: slopcamera credits <status|topup|wait|forget> [options]");
 }
 
 function parseAi(argv: readonly string[]): CliCommand {
@@ -3589,6 +3649,7 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "runs": return parseRuns(argv.slice(1));
     case "doctor": return parseDoctor(argv.slice(1));
     case "ai": return parseAi(argv.slice(1));
+    case "credits": return parseCredits(argv.slice(1));
     case "media": return parseMedia(argv.slice(1));
     case "recordings": return parseRecordings(argv.slice(1));
     case "projects": return parseProjects(argv.slice(1));
