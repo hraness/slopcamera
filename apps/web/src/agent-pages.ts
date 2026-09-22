@@ -52,9 +52,9 @@ Real outputs, editable sources, and a guide for each workflow. Start with an exa
 
 ${homepageExampleMarkdown()}
 
-The verified v3.3.1 release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender/CadQuery/Manim studio, cinematic direction, performance, effects, behavior, and parametric design. Later renderer corrections and repository example inputs have separate source requirements. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
+The verified v${publishedRelease.version} release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender/CadQuery/Manim studio, cinematic direction, performance, effects, behavior, and parametric design. Later renderer corrections and repository example inputs have separate source requirements. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
-Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md).
+Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md). Browse the [use cases](https://slopcamera.com/docs/explanation/use-cases.md) by job, or look up a tool contract: [.diagram.json](https://slopcamera.com/docs/reference/diagram-format.md), [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md), [spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md), [vectorization](https://slopcamera.com/docs/reference/vectorization.md), [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md), [the video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md), [native engines](https://slopcamera.com/docs/reference/native-engines.md), or [the MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md).
 
 ## From source to a finished film
 
@@ -90,7 +90,9 @@ The [documentation index](https://slopcamera.com/docs) connects learning, task g
 - [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram)
 - [Set up your coding agent](https://slopcamera.com/docs/tutorials/claude-code)
 - [Run a workflow](https://slopcamera.com/docs/how-to/run-workflows)
+- [Use cases](https://slopcamera.com/docs/explanation/use-cases)
 - [Capabilities and requirements](https://slopcamera.com/docs/reference/capabilities)
+- [The engine stack](https://slopcamera.com/docs/reference/engines)
 - [Architecture](https://slopcamera.com/docs/explanation/architecture)
 
 ## Before you install
@@ -152,7 +154,7 @@ export const llmsTxt = `# Slopcamera
 
 > Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
 
-Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes 17 tools and six portable operation codes in v3.3.1, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
+Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six portable operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
 ## When to use Slopcamera
 
@@ -208,6 +210,16 @@ Use \`support dismiss\` or \`HRANESS_SUPPORT_AUDIENCE=off\` to decline invitatio
 - [Capabilities](https://slopcamera.com/docs/reference/capabilities.md): Release availability, supported profiles, runtime requirements, and limits
 - [SDK entrypoints](https://slopcamera.com/docs/reference/sdk.md): Import surfaces and execution effects
 - [Engine stack](https://slopcamera.com/docs/reference/engines.md): What each part of the multimedia engine does and needs
+- [Diagram format](https://slopcamera.com/docs/reference/diagram-format.md): The .diagram.json source, five exports, and .tldr interchange
+- [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md): Motion, p5.js, Two.js, Paper Shaders, Three.js, and vgpu under one deterministic contract
+- [Spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md): The .scene.json contract, cameras, and GPU profiles
+- [Vectorization](https://slopcamera.com/docs/reference/vectorization.md): Local VTracer tracing, fidelity gates, and provenance
+- [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md): Credential, discovery, acknowledgement, and billing boundaries
+- [Video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md): The FFmpeg-backed project model, edits, and delivery formats
+- [Native engines](https://slopcamera.com/docs/reference/native-engines.md): Blender, CadQuery, and Manim adapter contract
+- [MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md): The 17 fixed tools, bounds, and CLI-only remainder
+- [Use cases](https://slopcamera.com/docs/explanation/use-cases.md): Jobs, surfaces, requirements, and honest limits
+- [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
 - [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): What a retained-source local studio gives an agent
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
