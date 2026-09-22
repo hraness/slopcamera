@@ -58,35 +58,52 @@ Model availability and settings are live capabilities. Run `plan` after editing 
 slopcamera direct plan film.recipe.json --json
 ```
 
-Recipes contain one to 64 ordered shots with unique IDs. A `shot-end` reference must name an earlier shot. Each shot requires a nonempty prompt, model, integer duration from 1 to 60 seconds, resolution, and aspect ratio; optional controls are `fps`, `seed`, `firstFrame`, and `lastFrame`. The model must explicitly support the chosen operation and settings. A `lastFrame` requires a `firstFrame` and a model that supports first-and-last-frame conditioning. Recipes don't accept raw provider options, multiple samples per take, video references, or an audio-generation setting. One directing ID retains up to 128 recipe versions and 1024 attempts within a 32 MiB state bound.
+Recipes contain one to 64 ordered shots with unique IDs. A `shot-end` reference must name an earlier shot. Each shot requires a nonempty prompt, model, integer duration from 1 to 60 seconds, resolution, and aspect ratio; optional controls are `fps`, `seed`, `firstFrame`, `lastFrame`, and `references`. The model must explicitly support the chosen operation and settings. A `lastFrame` requires a `firstFrame` and a model that supports first-and-last-frame conditioning.
+
+A shot's `references` lists up to eight retained media sources that condition the generation: images at most 50 MiB each, or MP4 and QuickTime video at most 256 MiB each, within a 512 MiB aggregate bound. References are ordered, must be distinct retained objects, and are mutually exclusive with `firstFrame` and `lastFrame`. Planning requires the live catalog to confirm `reference-to-video` for image references, or `reference-to-video`, `video-editing`, `motion-control`, or `extend-video` when a video reference is present. MiniMax H3 and ByteDance Seedance are examples of catalog models that advertise reference operations; the plan re-verifies support on each run rather than trusting a fixed list.
+
+Recipes don't accept raw provider options, multiple samples per take, or an audio-generation setting. One directing ID retains up to 128 recipe versions and 1024 attempts within a 32 MiB state bound.
 
 The directing preflight currently admits batch video models with unambiguous per-second catalog pricing for the selected resolution. Models with unavailable capabilities, provider-dependent prices, or additional pricing conditions need a separately reviewed ordinary Gateway workflow.
 
-## Use an authored scene as a reference
+## Use authored media as references
 
-Render a calibrated frame with the [scene workflow](spatial-scenes.md). For example, after creating a scene and a frame request:
-
-```sh
-slopcamera scene render product.scene.json --request frame.json --json
-```
-
-Import the exact PNG path returned by the renderer. Replace `path/to/rendered-frame.png` below with that returned path:
+Generate moodboard or character stills with `slopcamera ai image generate`, render a calibrated frame or clip with the [scene workflow](spatial-scenes.md), or encode a rigged prototype through the [native studio](studio.md). Import each exact returned path:
 
 ```sh
 slopcamera direct anchor --input path/to/rendered-frame.png --json
+slopcamera direct anchor --input path/to/rig-motion.mp4 --json
 ```
 
-The command copies only the named image into retained local storage and returns its path, byte count, SHA-256, media type, and dimensions. Set a shot's `firstFrame` to an object with `kind: "image"` and `source` equal to that complete returned reference. Set `lastFrame` to another returned reference when you want to constrain the shot's ending composition. Preserve the returned fields; don't invent or hand-edit hashes.
+The command copies only the named file into retained local storage and returns its path, byte count, SHA-256, media type, and measured facts. For an image anchor, set a shot's `firstFrame` to an object with `kind: "image"` and `source` equal to that complete returned reference; set `lastFrame` to another returned reference when you want to constrain the shot's ending composition. For any anchor, add the complete returned reference to a shot's `references` array instead:
 
-Importing an anchor is local and doesn't upload it. Supported anchors are single unrotated PNG, JPEG, or WebP images, at most 30 MiB and 4096 pixels per side. A later generation call must separately acknowledge uploading its exact retained image references. Rendering with a hardware scene profile accelerates local scene rasterization; the video model still runs through Gateway.
+```json
+{
+  "id": "hero",
+  "prompt": "A chrome sphere rests in a warm mountain meadow, shot on grainy film. Match the referenced composition and the rig's slow orbital motion.",
+  "model": "bytedance/seedance-2.5",
+  "durationSeconds": 5,
+  "resolution": "720p",
+  "aspectRatio": "16:9",
+  "fps": 24,
+  "references": [
+    { "path": "artifacts/slopcamera/generated/directing-media/<image-sha256>.png", "bytes": 132104, "sha256": "<image-sha256>", "mediaType": "image/png", "facts": { "width": 1280, "height": 720 } },
+    { "path": "artifacts/slopcamera/generated/directing-media/<video-sha256>.mp4", "bytes": 2048102, "sha256": "<video-sha256>", "mediaType": "video/mp4", "facts": { "durationSeconds": 4, "width": 1280, "height": 720 } }
+  ]
+}
+```
+
+Preserve the returned fields; don't invent or hand-edit hashes.
+
+Importing an anchor is local and doesn't upload it. Image anchors are single unrotated PNG, JPEG, or WebP images, at most 30 MiB and 4096 pixels per side. Video anchors are self-contained MP4 or QuickTime clips at most 256 MiB that pass the same admission probe as other directing video: one playable stream, at most 60 seconds, 4096 pixels per side, and a supported SDR interpretation. A later generation call must separately acknowledge uploading its exact retained media. Rendering with a hardware scene profile accelerates local scene rasterization; the video model still runs through Gateway.
 
 ## Configure private references for URL-only models
 
-Check each shot's `inputTransport` in the plan. `none` means the shot has no image references. `inline` sends the exact retained image bytes with the Gateway request. `url` requires temporary hosting because the model accepts image URLs. H3 Max currently uses the URL path for image conditioning; the text-only opening shot above needs no Blob store.
+Check each shot's `inputTransport` in the plan. `none` means the shot has no media inputs. `inline` sends the exact retained bytes with the Gateway request. `url` requires temporary hosting because the model accepts only media URLs for at least one referenced kind. H3 Max currently uses the URL path for image conditioning; Seedance 2.5 accepts references only by URL, including video references. The text-only opening shot above needs no Blob store.
 
 For a `url` shot, make credentials for an existing private Vercel Blob store available to the CLI process. Slopcamera prefers `VERCEL_OIDC_TOKEN` together with `BLOB_STORE_ID`; otherwise it uses `BLOB_READ_WRITE_TOKEN`. If you also set `BLOB_STORE_ID` with a read-write token, both must identify the same store. Gateway authentication remains separate: it reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`. A Gateway API key alone doesn't authorize Blob access. Use the [Vercel configuration guide](vercel.md) and [Blob authentication documentation](https://vercel.com/docs/vercel-blob/using-blob-sdk#authentication) for the environment setup. Slopcamera doesn't provision a store or refresh credentials through the Vercel CLI.
 
-Authorize each generation with both `--allow-cloud-upload` and `--allow-reference-hosting`. The latter permits private copies of only that take's exact first and last images, at most two images of 30 MiB each. Slopcamera verifies the copied bytes and private access before giving Gateway a signed GET URL. Each URL expires 15 minutes after it is issued and stays in memory; credentials and signed URLs are absent from retained receipts. This workflow doesn't publish public image URLs. Signed GET access covers that object and operation only, so it doesn't imply compatibility with every provider's downloader. [Vercel signed URLs](https://vercel.com/docs/vercel-blob/vercel-signed-urls) describes this access scope.
+Authorize each generation with both `--allow-cloud-upload` and `--allow-reference-hosting`. The latter permits private copies of only that take's exact referenced media, at most eight objects: PNG, JPEG, or WebP images of 30 MiB each, or MP4 and QuickTime video of 256 MiB each. Slopcamera verifies the copied bytes and private access before giving Gateway a signed GET URL. Each URL expires 15 minutes after it is issued and stays in memory; credentials and signed URLs are absent from retained receipts. This workflow doesn't publish public media URLs. Signed GET access covers that object and operation only, so it doesn't imply compatibility with every provider's downloader. [Vercel signed URLs](https://vercel.com/docs/vercel-blob/vercel-signed-urls) describes this access scope.
 
 Allow for Blob storage, operations, and transfer charges separately from the model budget. Expiry ends access through that URL; it doesn't delete the stored object. Generation attempts cleanup after a completed call or a call proven not dispatched. Use the retained cleanup receipt to confirm deletion, as described below.
 
@@ -107,7 +124,7 @@ slopcamera direct generate direct_atrium --shot opening --attempt take_opening_v
   --allow-paid-generation --json
 ```
 
-Each new `take_<id>` permits at most one new Gateway dispatch. The command rechecks the live catalog, retains its reservation before dispatch, and saves the resulting video and Gateway receipt before extracting the endpoint. A shot with a local anchor also needs `--allow-cloud-upload` on this invocation, plus `--allow-reference-hosting` when its plan requires `url` transport.
+Each new `take_<id>` permits at most one new Gateway dispatch. The command rechecks the live catalog, retains its reservation before dispatch, and saves the resulting video and Gateway receipt before extracting the endpoint. A shot with local media conditioning — a first frame, last frame, or `references` entries — also needs `--allow-cloud-upload` on this invocation, plus `--allow-reference-hosting` when its plan requires `url` transport.
 
 Inspect the returned video and final frame before accepting the take. Look for the requested subject, useful camera movement, stable geometry, and an ending composition suitable for the next shot. Record that review explicitly:
 
@@ -191,6 +208,12 @@ Assembly sums native rational video durations before flooring cumulative cuts to
 For admitted YUV sources, assembly creates a retained RGB video using the same BT.709-to-sRGB interpretation as endpoint extraction. FFmpeg `libx264rgb` encodes these converted pixels losslessly and copies the complete source audio without re-encoding. The project placement applies the audio trims; the derivative retains the full source timing. Slopcamera checks native frame timestamps, final-frame duration, video and audio timing, frame count, and dimensions before using the derivative. Original source bytes remain unchanged; normalization receipts bind their hashes to the derivative, color interpretation, and encoder version. Already admitted opaque sRGB sources can be reused directly.
 
 This conversion adds local encoding time and storage. Each derivative must finish within 120 seconds and fit the 512 MiB media bound; failure retains the source instead of lowering quality automatically. Keep the derivative and its receipts with the generated project. Final delivery still uses the ordinary project's chosen output encoding.
+
+When a shot needs exact typography — title cards, retro serif treatments, or terminal-style text — keep the wording out of the generation prompt and composite it on the assembled project instead. Project overlays accept SVG and HTML documents with bounded local assets, so text renders deterministically on top of the generated footage:
+
+```sh
+slopcamera project edit <returned-project-id> overlay add --kind svg --source <document.svg> --from <time> --to <time>
+```
 
 Use the returned project ID to inspect and render the composition:
 

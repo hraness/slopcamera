@@ -8,9 +8,9 @@ import type { ApplicationContext } from "../application/context";
 import type { GatewayPortRequest, GatewayVideoOperationResult } from "../application/gateway-port";
 import { canonicalJsonSha256 } from "../core/canonical-json";
 import { parseCliArgs, type DirectingCommand } from "./args";
-import { parseGatewayMediaCatalog, type GatewayMediaCatalogView } from "./gateway-media-catalog";
+import { parseGatewayMediaCatalog, type GatewayJsonValue, type GatewayMediaCatalogView } from "./gateway-media-catalog";
 import { executeDirectingCommand, type DirectingServiceAdapters } from "./directing-service";
-import { parseDirectingUsd, quoteDirectingShot } from "./directing-quote";
+import { directingInputTransport, parseDirectingUsd, quoteDirectingShot } from "./directing-quote";
 import { parseDirectingRecipe } from "../application/directing-plan";
 import { CliError } from "./errors";
 import type { DirectingBlobReceipt } from "./directing-blob";
@@ -31,7 +31,7 @@ function catalog(): GatewayMediaCatalogView {
 async function harness() {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-directing-test-")); roots.push(root);
   const source = recipe(); await writeFile(join(root, "recipe.json"), JSON.stringify(source));
-  const calls = { paid: 0, endpoint: 0, assembled: 0, mode: "complete" as "complete" | "before" | "after" | "lost-completion", corruptEndpoint: false, failEndpoint: false, urlOnly: false, cleanup: 0, cleanupFails: false };
+  const calls = { paid: 0, endpoint: 0, assembled: 0, mode: "complete" as "complete" | "before" | "after" | "lost-completion", corruptEndpoint: false, failEndpoint: false, urlOnly: false, cleanup: 0, cleanupFails: false, operations: undefined as string[] | undefined };
   const journal = new Map<string, { request: GatewayPortRequest; result?: GatewayVideoOperationResult }>();
   const application: ApplicationContext = { ...operationApplicationContext(root, { now }), gatewayPort: {
     prepare: async input => input.request,
@@ -56,8 +56,10 @@ async function harness() {
   } };
   const adapters: DirectingServiceAdapters = { catalog: { get: async () => {
     const value = catalog();
-    if (!calls.urlOnly) return value;
-    return { ...value, snapshot: { ...value.snapshot, models: value.snapshot.models.map(model => ({ ...model, capabilities: { ...model.capabilities, input_limits: { image: { supported_sources: ["url"] } } } })) } };
+    if (!calls.urlOnly && calls.operations === undefined) return value;
+    return { ...value, snapshot: { ...value.snapshot, models: value.snapshot.models.map(model => ({ ...model, capabilities: { ...model.capabilities,
+      ...(calls.operations === undefined ? {} : { supported_operations: calls.operations }),
+      ...(calls.urlOnly ? { input_limits: { image: { supported_sources: ["url"] }, video: { supported_sources: ["url"] } } } : {}) } })) } };
   } }, media: {
     anchor: async () => { throw new Error("unused anchor"); },
     endpoint: async (_app, video) => { calls.endpoint++; if (calls.failEndpoint) throw new Error("unsupported color metadata"); return {
@@ -250,4 +252,52 @@ test("cleanup uncertainty and endpoint failures retain private hosting recovery 
   expect((error as CliError).details).toMatchObject({ referenceHosting: { cleanupRequired: true, cleanupCommand: `slopcamera direct cleanup ${h.source.id} --attempt take_hosted_two --json` } });
   expect(h.calls.cleanup).toBe(2); expect(h.calls.paid).toBe(2);
   expect((await h.state()).attempts.every(attempt => attempt.state === "completed")).toBe(true);
+});
+
+const imageReference = (name: string) => ({ path: `artifacts/slopcamera/generated/${name}.png`, bytes: 50, sha256: hash(name), mediaType: "image/png", facts: { width: 16, height: 12 } });
+const videoReference = (name: string) => ({ path: `artifacts/slopcamera/generated/${name}.mp4`, bytes: 5_000, sha256: hash(name), mediaType: "video/mp4", facts: { durationSeconds: 2, width: 16, height: 12 } });
+const catalogWith = (inputLimits: GatewayJsonValue) => {
+  const value = catalog(), model = value.snapshot.models[0]!;
+  return { ...value, snapshot: { ...value.snapshot, models: [{ ...model, capabilities: { ...model.capabilities, input_limits: inputLimits } }] } };
+};
+
+test("reference-conditioned shots require a confirmed live operation and upload consent", async () => {
+  const h = await harness();
+  h.source.shots[0]!.references = [imageReference("moodboard"), videoReference("rig-motion")];
+  await writeFile(join(h.root, "recipe.json"), JSON.stringify(h.source));
+  await expect(h.execute("plan", "recipe.json")).rejects.toThrow("operations");
+  h.calls.operations = ["text-to-video", "image-to-video"];
+  await expect(h.execute("plan", "recipe.json")).rejects.toThrow("operations");
+  h.calls.operations = ["video-editing"];
+  await h.execute("plan", "recipe.json");
+  await h.execute("start", "recipe.json", "--budget-usd", "1");
+  await expect(h.generate()).rejects.toThrow("allow-cloud-upload");
+  await h.execute("generate", h.source.id, "--shot", "opening", "--attempt", "take_refs", "--allow-paid-generation", "--allow-cloud-upload");
+  expect(h.calls.paid).toBe(1);
+  const dispatched = [...h.journal.values()][0]!.request;
+  if (dispatched.operation !== "video") throw new Error("Expected a video dispatch.");
+  expect(dispatched.request.references).toEqual(h.source.shots[0]!.references);
+  expect(dispatched.request.frames).toBeUndefined(); expect(dispatched.request.promptImage).toBeUndefined();
+});
+
+test("inspect reports reference conditioning without a catalog or credential", async () => {
+  const h = await harness();
+  h.source.shots[0]!.references = [imageReference("moodboard")];
+  await writeFile(join(h.root, "recipe.json"), JSON.stringify(h.source));
+  h.calls.operations = ["reference-to-video"];
+  await h.execute("start", "recipe.json", "--budget-usd", "1");
+  const result = await h.execute("inspect", h.source.id) as { shots: { conditioning: string; referenceCount: number }[] };
+  expect(result.shots[0]).toMatchObject({ conditioning: "references", referenceCount: 1 });
+});
+
+test("input transport covers every referenced media kind through one route", () => {
+  expect(directingInputTransport(catalog(), shot)).toBe("none");
+  expect(directingInputTransport(catalog(), { ...shot, references: [imageReference("a"), videoReference("b")] })).toBe("inline");
+  const urlOnly = catalogWith({ image: { supported_sources: ["url"] }, video: { supported_sources: ["url"] } });
+  expect(directingInputTransport(urlOnly, { ...shot, references: [imageReference("a"), videoReference("b")] })).toBe("url");
+  const mixed = catalogWith({ image: { supported_sources: ["base64"] }, video: { supported_sources: ["url"] } });
+  expect(() => directingInputTransport(mixed, { ...shot, references: [imageReference("a"), videoReference("b")] })).toThrow("hosted image");
+  const videoUrlImageUnset = catalogWith({ video: { supported_sources: ["url"] } });
+  expect(directingInputTransport(videoUrlImageUnset, { ...shot, references: [imageReference("a"), videoReference("b")] })).toBe("url");
+  expect(() => directingInputTransport(catalogWith({ video: { supported_sources: [] } }), { ...shot, references: [videoReference("b")] })).toThrow("no supported video");
 });

@@ -44,6 +44,43 @@ function accepted(state: DirectingState, shotId: string, slug = shotId): Directi
 }
 function acceptedFilm(): DirectingState { return recipe().shots.reduce((state, shot) => accepted(state, shot.id), createDirectingState(recipe(), 5_000_000)); }
 
+const imageReference = (name: string, bytes = 100) => ({ path: `artifacts/slopcamera/generated/${name}.png`, bytes, sha256: hash(name), mediaType: "image/png", facts: { width: 16, height: 12 } });
+const videoReference = (name: string, bytes = 2000) => ({ path: `artifacts/slopcamera/generated/${name}.mp4`, bytes, sha256: hash(name), mediaType: "video/mp4", facts: { durationSeconds: 2, width: 16, height: 12 } });
+
+describe("reference-conditioned directing shots", () => {
+  test("authored references bind the shot, request, and durable attempt identity", () => {
+    const authored = recipe();
+    authored.shots[0]!.references = [imageReference("moodboard"), videoReference("rig-motion")];
+    const state = createDirectingState(authored, 5_000_000), take = reservation(state, "establish");
+    expect(take.request.request.references).toEqual(authored.shots[0]!.references);
+    expect(directingRecipeSha256(authored)).not.toBe(directingRecipeSha256(recipe()));
+    const reversed = recipe(); reversed.shots[0]!.references = [videoReference("rig-motion"), imageReference("moodboard")];
+    expect(directingRecipeSha256(reversed)).not.toBe(directingRecipeSha256(authored));
+    expect(DirectingStateSchema.parse(reserveDirectingAttempt(state, take)).attempts[0]?.shotId).toBe("establish");
+    const forged = structuredClone(reserveDirectingAttempt(state, take));
+    forged.attempts[0]!.request.request.references![0]!.sha256 = hash("forged");
+    expect(() => DirectingStateSchema.parse(forged)).toThrow("differs");
+    const dropped = structuredClone(reserveDirectingAttempt(state, take));
+    dropped.attempts[0]!.request.request.references = [dropped.attempts[0]!.request.request.references![0]!];
+    expect(() => DirectingStateSchema.parse(dropped)).toThrow("differs");
+  });
+  test("references are mutually exclusive with frame conditioning and media bounded", () => {
+    const original = recipe(), shot = original.shots[0]!;
+    const frame = { kind: "image", source: imageReference("frame") };
+    for (const mutation of [
+      { references: [imageReference("a")], firstFrame: frame },
+      { references: [imageReference("a")], firstFrame: frame, lastFrame: imageReference("last") },
+    ]) expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, ...mutation }, ...original.shots.slice(1)] })).toThrow("mutually exclusive");
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [] }, ...original.shots.slice(1)] })).toThrow();
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: Array.from({ length: 9 }, (_, index) => imageReference(`ref_${index}`)) }, ...original.shots.slice(1)] })).toThrow();
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [videoReference("big", 256 * 1024 * 1024), videoReference("also-big", 256 * 1024 * 1024), imageReference("extra")] }, ...original.shots.slice(1)] })).toThrow("512 MiB");
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [imageReference("dup"), imageReference("dup")] }, ...original.shots.slice(1)] })).toThrow("distinct");
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [{ ...imageReference("audio"), mediaType: "audio/wav" }] }, ...original.shots.slice(1)] })).toThrow();
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [imageReference("oversized", 50 * 1024 * 1024 + 1)] }, ...original.shots.slice(1)] })).toThrow();
+    expect(() => parseDirectingRecipe({ ...original, shots: [{ ...shot, references: [videoReference("oversized", 256 * 1024 * 1024 + 1)] }, ...original.shots.slice(1)] })).toThrow();
+  });
+});
+
 describe("retained directing recipes and lineage", () => {
   test("strict ordered recipes reject impossible references and executable provider fields", () => {
     const original = recipe();

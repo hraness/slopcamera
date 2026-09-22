@@ -42,9 +42,13 @@ export function quoteDirectingShot(
   const model = catalog.snapshot.models.find(value => value.id === shot.model);
   if (model?.kind !== "video" || model.executionMode !== "video-model") unsupported("the selected model is not a batch video model.");
   const capability = model.capabilities;
-  const operation = shot.lastFrame !== undefined ? "first-last-frame" : shot.firstFrame !== undefined ? "image-to-video" : "text-to-video";
+  const hasVideoReference = (shot.references ?? []).some(reference => reference.mediaType.startsWith("video/"));
+  const operations = (shot.references?.length ?? 0) > 0
+    ? ["reference-to-video", ...(hasVideoReference ? ["video-editing", "motion-control", "extend-video"] : [])]
+    : [shot.lastFrame !== undefined ? "first-last-frame" : shot.firstFrame !== undefined ? "image-to-video" : "text-to-video"];
+  const supportedOperations = capability?.["supported_operations"];
+  if (!Array.isArray(supportedOperations) || !operations.some(operation => supportedOperations.includes(operation))) unsupported(`the catalog does not confirm any of the shot's operations (${operations.join(", ")}).`);
   for (const [key, value] of [
-    ["supported_operations", operation],
     ["supported_resolutions", shot.resolution],
     ["supported_aspect_ratios", shot.aspectRatio],
     ["supported_durations_seconds", shot.durationSeconds],
@@ -76,14 +80,25 @@ export function quoteDirectingShot(
 
 /** Determine transport from the same catalog used to price the shot. */
 export function directingInputTransport(catalog: GatewayMediaCatalogView, shot: DirectingShot): "none" | "inline" | "url" {
-  if (shot.firstFrame === undefined && shot.lastFrame === undefined) return "none";
+  const kinds = new Set((shot.references ?? []).map(reference => reference.mediaType.split("/")[0]!));
+  if (shot.firstFrame !== undefined || shot.lastFrame !== undefined) kinds.add("image");
+  if (kinds.size === 0) return "none";
   const model = catalog.snapshot.models.find(value => value.id === shot.model);
   const inputLimits = record(model?.capabilities?.input_limits);
-  const images = record(inputLimits?.image);
-  const sources = images?.supported_sources;
-  if (sources === undefined || sources === null) return "inline";
-  if (!Array.isArray(sources) || sources.some(value => typeof value !== "string")) unsupported("invalid image transport capabilities.");
-  if (sources.includes("base64") || sources.includes("buffer")) return "inline";
-  if (sources.includes("url")) return "url";
-  return unsupported("the model has no supported image transport.");
+  let needsUrl = false;
+  for (const kind of kinds) {
+    const sources = record(inputLimits?.[kind])?.supported_sources;
+    if (sources === undefined || sources === null) continue;
+    if (!Array.isArray(sources) || sources.some(value => typeof value !== "string")) unsupported("invalid input transport capabilities.");
+    if (sources.includes("base64") || sources.includes("buffer")) continue;
+    if (sources.includes("url")) { needsUrl = true; continue; }
+    unsupported(`the model has no supported ${kind} input transport.`);
+  }
+  if (needsUrl) {
+    for (const kind of kinds) {
+      const sources = record(inputLimits?.[kind])?.supported_sources;
+      if (Array.isArray(sources) && !sources.includes("url")) unsupported(`the model cannot receive hosted ${kind} references.`);
+    }
+  }
+  return needsUrl ? "url" : "inline";
 }

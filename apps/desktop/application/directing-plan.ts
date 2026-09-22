@@ -28,6 +28,7 @@ export interface ResolvedDirectingShot {
   readonly dependencies: DirectingDependency[];
   readonly firstFrame?: GatewayMediaSourceReference;
   readonly lastFrame?: GatewayMediaSourceReference;
+  readonly references?: readonly GatewayMediaSourceReference[];
 }
 
 function resolveShot(shot: DirectingShot, accepted: ReadonlyMap<string, CompletedDirectingAttempt>): ResolvedDirectingShot | undefined {
@@ -43,7 +44,7 @@ function resolveShot(shot: DirectingShot, accepted: ReadonlyMap<string, Complete
     boundDependencies.push({ ...dependency, shotSha256: predecessor.shotSha256 });
     firstFrame = predecessor.endpoint.image;
   }
-  return { shot, shotSha256: directingBoundShotSha256(shot, boundDependencies), dependencies, ...(firstFrame === undefined ? {} : { firstFrame }), ...(shot.lastFrame === undefined ? {} : { lastFrame: shot.lastFrame }) };
+  return { shot, shotSha256: directingBoundShotSha256(shot, boundDependencies), dependencies, ...(firstFrame === undefined ? {} : { firstFrame }), ...(shot.lastFrame === undefined ? {} : { lastFrame: shot.lastFrame }), ...(shot.references === undefined ? {} : { references: shot.references }) };
 }
 
 function acceptedSelections(state: DirectingState): Map<string, CompletedDirectingAttempt> {

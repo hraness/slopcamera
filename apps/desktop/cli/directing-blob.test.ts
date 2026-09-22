@@ -25,7 +25,7 @@ async function harness() {
   await mkdir(join(root, "images")); await writeFile(join(root, "images/frame.png"), bytes);
   const source: GatewayMediaSourceReference = { path: "images/frame.png", bytes: bytes.length, sha256: hash(bytes), mediaType: "image/png", facts: { width: 16, height: 12 } };
   const calls: { url: string; method: string; headers: Headers; body?: unknown }[] = [];
-  const objects = new Map<string, { data: Uint8Array; etag: string }>();
+  const objects = new Map<string, { data: Uint8Array; etag: string; contentType: string }>();
   const controls = { put: "ok" as "ok" | "lost-response" | "no-write" | "wrong-store" | "public" | "oversized", sign: "ok" as "ok" | "wrong-store" | "wildcard" | "write-access" | "long-expiry", get: "ok" as "ok" | "wrong-bytes" | "oversized" | "redirect", delete: "ok" as "ok" | "fails" | "lost-response" | "retained", publiclyReadable: false, callback: undefined as undefined | (() => Promise<void>) };
   const transport = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url), method = init?.method ?? "GET", headers = new Headers(init?.headers);
@@ -47,7 +47,7 @@ async function harness() {
         await controls.callback?.();
         if (controls.put === "no-write") throw new Error(`network failure ${credential}`);
         const data = new Uint8Array(init?.body as Uint8Array), etag = `"${hash(data)}"`;
-        objects.set(pathname, { data, etag });
+        objects.set(pathname, { data, etag, contentType: headers.get("x-content-type") ?? "application/octet-stream" });
         if (controls.put === "lost-response") throw new Error(`lost response ${credential}`);
         if (controls.put === "oversized") return new Response("x".repeat(32 * 1024 + 1));
         return json({ pathname, contentType: headers.get("x-content-type"), etag,
@@ -65,7 +65,7 @@ async function harness() {
       if (url.pathname === "/api/blob/delete") {
         expect(method).toBe("POST");
         const paths = body.urls as string[];
-        expect(paths).toHaveLength(1); expect(paths[0]).toMatch(/^slopcamera\/directing\/[a-f0-9]{32}\/[01]-/u);
+        expect(paths).toHaveLength(1); expect(paths[0]).toMatch(/^slopcamera\/directing\/[a-f0-9]{32}\/[0-7]-/u);
         const object = objects.get(paths[0]!);
         expect(object).toBeDefined();
         expect(headers.get("x-if-match")).toBe(object!.etag);
@@ -85,7 +85,7 @@ async function harness() {
     if (object === undefined) return new Response(null, { status: 404 });
     if (controls.get === "redirect") return new Response(null, { status: 302, headers: { location: "https://example.com/credential-sink" } });
     const data = controls.get === "wrong-bytes" ? Buffer.alloc(object.data.length) : controls.get === "oversized" ? new Uint8Array(object.data.length + 1) : object.data;
-    return new Response(new Uint8Array(data).buffer, { headers: { "content-type": "image/png", etag: object.etag, "content-length": String(data.length) } });
+    return new Response(new Uint8Array(data).buffer, { headers: { "content-type": object.contentType, etag: object.etag, "content-length": String(data.length) } });
   }) as typeof fetch;
   const abort = new AbortController();
   const options: DirectingBlobOptions = { application, environment: { VERCEL_OIDC_TOKEN: credential, BLOB_STORE_ID: `store_${store}`, VERCEL_BLOB_API_URL: "https://example.com/credential-sink", VERCEL_BLOB_RETRIES: "100" }, directingId: "direct_fixture", attemptId: "take_fixture", signal: abort.signal, fetch: transport };
@@ -211,13 +211,38 @@ test("private hostname alone is insufficient if the object is anonymously readab
   expect((await h.session.cleanup()).entries[0]?.cleanup).toBe("deleted");
 });
 
-test("two explicit sources bound session size and repeated sources reuse their exact object", async () => {
+test("eight explicit sources bound session size and repeated sources reuse their exact object", async () => {
   const h = await harness();
   await h.session.resolveSourceUrl(h.source, h.bytes, new AbortController().signal);
-  await writeFile(join(h.root, "images/second.png"), h.bytes); await writeFile(join(h.root, "images/third.png"), h.bytes);
-  await h.session.resolveSourceUrl({ ...h.source, path: "images/second.png" }, h.bytes, new AbortController().signal);
+  for (let index = 1; index < 9; index++) await writeFile(join(h.root, `images/ref_${index}.png`), h.bytes);
+  for (let index = 1; index < 8; index++) await h.session.resolveSourceUrl({ ...h.source, path: `images/ref_${index}.png` }, h.bytes, new AbortController().signal);
   await h.session.resolveSourceUrl(h.source, h.bytes, new AbortController().signal);
-  await expect(h.session.resolveSourceUrl({ ...h.source, path: "images/third.png" }, h.bytes, new AbortController().signal)).rejects.toThrow("at most two");
-  expect(h.calls.filter(call => call.method === "PUT")).toHaveLength(2);
+  await expect(h.session.resolveSourceUrl({ ...h.source, path: "images/ref_8.png" }, h.bytes, new AbortController().signal)).rejects.toThrow("at most eight");
+  expect(h.calls.filter(call => call.method === "PUT")).toHaveLength(8);
   expect((await h.session.cleanup()).entries.every(entry => entry.cleanup === "deleted")).toBe(true);
+});
+
+test("hosts an exact MP4 or QuickTime reference under a matching bounded pathname", async () => {
+  const h = await harness();
+  const mp4 = Buffer.from("0000ftypisom0000000000000000hosted-video");
+  await writeFile(join(h.root, "images/clip.mp4"), mp4);
+  const video: GatewayMediaSourceReference = { path: "images/clip.mp4", bytes: mp4.length, sha256: hash(mp4), mediaType: "video/mp4", facts: { durationSeconds: 2, width: 16, height: 12 } };
+  const url = await h.session.resolveSourceUrl(video, mp4, new AbortController().signal);
+  expect(url).toContain("vercel-blob-signature=");
+  const pathname = [...h.objects.keys()][0]!;
+  expect(pathname).toMatch(/^slopcamera\/directing\/[a-f0-9]{32}\/0-[a-f0-9]{64}\.mp4$/u);
+  const receipt = await h.session.inspect();
+  expect(receipt.entries[0]?.source.mediaType).toBe("video/mp4");
+  expect((await h.session.cleanup()).entries[0]?.cleanup).toBe("deleted");
+});
+
+test("rejects oversized and non-admitted video references before network", async () => {
+  const h = await harness();
+  const video = { ...h.source, mediaType: "video/mp4" };
+  await expect(h.session.resolveSourceUrl({ ...video, bytes: 256 * 1024 * 1024 + 1 }, h.bytes, new AbortController().signal)).rejects.toThrow();
+  await expect(h.session.resolveSourceUrl({ ...video, mediaType: "video/webm" }, h.bytes, new AbortController().signal)).rejects.toThrow();
+  const bytes = Buffer.from("0000ftypisom0000000000000000hosted-video");
+  await writeFile(join(h.root, "images/clip.mp4"), bytes);
+  await expect(h.session.resolveSourceUrl({ ...video, path: "images/clip.mp4", bytes: bytes.length, sha256: hash(bytes) }, Buffer.from("0000ftypisom-different"), new AbortController().signal)).rejects.toThrow("exact retained");
+  expect(h.calls).toHaveLength(0); expect((await h.session.inspect()).entries).toHaveLength(0);
 });

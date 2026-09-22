@@ -56,6 +56,8 @@ function snapshot(state: DirectingState) {
     budget: { maximumMicroUsd: state.budgetMicroUsd, reservedMicroUsd, remainingMicroUsd: state.budgetMicroUsd - reservedMicroUsd, notice: BUDGET_NOTICE },
     shots: currentRecipe(state).shots.map(shot => ({
       id: shot.id, prompt: shot.prompt, model: shot.model,
+      conditioning: shot.references === undefined ? shot.firstFrame === undefined ? "none" : "frames" : "references",
+      referenceCount: shot.references?.length ?? 0,
       selectedAttempt: Object.hasOwn(state.selections, shot.id) ? state.selections[shot.id] : null,
       selectionStatus: Object.hasOwn(active, shot.id) ? "accepted" : Object.hasOwn(state.selections, shot.id) ? "stale" : "unselected",
     })),
@@ -189,11 +191,12 @@ async function executeDirectingCommandBody(
       const dependencies = resolveDirectingShot(state, command.shot).dependencies;
       for (const dependency of dependencies) await finishEndpoint(dependency.attemptId);
       const resolved = resolveDirectingShot(state, command.shot), shot = resolved.shot;
-      if ((resolved.firstFrame !== undefined || resolved.lastFrame !== undefined) && !command.allowCloudUpload) throw new CliError("authorization-required", "This take uploads its exact retained image references. Supply --allow-cloud-upload for this request.");
+      const hasLocalInputs = resolved.firstFrame !== undefined || resolved.lastFrame !== undefined || (shot.references?.length ?? 0) > 0;
+      if (hasLocalInputs && !command.allowCloudUpload) throw new CliError("authorization-required", "This take uploads its exact retained media references. Supply --allow-cloud-upload for this request.");
       const catalog = await adapters.catalog.get({ forceRefresh: true, freshness: "require-fresh", signal });
       const quote = quoteDirectingShot(catalog, shot, application.clock.now());
       const needsHosting = directingInputTransport(catalog, shot) === "url";
-      if (needsHosting && (!command.allowReferenceHosting || adapters.createReferenceHosting === undefined)) throw new CliError("authorization-required", "This model requires image URLs. Configure a private Vercel Blob store and supply --allow-reference-hosting for expiring access to these exact reference frames; --allow-cloud-upload is also required.");
+      if (needsHosting && (!command.allowReferenceHosting || adapters.createReferenceHosting === undefined)) throw new CliError("authorization-required", "This model requires media URLs. Configure a private Vercel Blob store and supply --allow-reference-hosting for expiring access to these exact retained references; --allow-cloud-upload is also required.");
       if (quote.costMicroUsd > state.budgetMicroUsd - totalDirectingReservedMicroUsd(state)) throw new CliError("authorization-required", "This take exceeds the remaining directing budget. No paid request was dispatched.");
       const request = await prepareGatewayOperation(application, {
         signal,
@@ -207,6 +210,7 @@ async function executeDirectingCommandBody(
             { frameType: "first_frame" as const, source: resolved.firstFrame },
             ...(resolved.lastFrame === undefined ? [] : [{ frameType: "last_frame" as const, source: resolved.lastFrame }]),
           ] }),
+          ...(resolved.references === undefined ? {} : { references: resolved.references.map(reference => ({ ...reference })) }),
         } },
       });
       const requestId = directingRequestId({ id: state.id, attemptId: command.attempt, recipeSha256: state.activeRecipeSha256, shotSha256: resolved.shotSha256, request });
