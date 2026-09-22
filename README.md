@@ -219,6 +219,13 @@ the Vercel CLI is optional. Generate images from text and references, add a voic
 transcribe sound, or create video shots using the selected model's supported
 inputs. Availability and pricing come from the live catalog.
 
+Without a Gateway credential, prepaid Hraness Credits run prompt-only image
+generation through the hosted API: `slopcamera credits topup` prints a hosted
+checkout, `slopcamera credits wait` installs the returned device token, and
+`slopcamera ai image generate --hosted` bills that wallet instead of your own
+Gateway key. A stored token also routes `ai image generate` to the hosted API
+automatically when no Gateway credential is configured.
+
 The released CLI also provides `direct` shot recipes: retain a film
 budget across attempts, review each take before accepting it, and use an accepted
 clip's last decoded frame as the next shot's reference. Changed predecessors
@@ -307,7 +314,10 @@ declarative graphs, approvals, and resuming work.
 There is no Slopcamera account, hosted project database, or browser generation service.
 Ordinary editing and rendering remain local. Gateway generation and selected
 cloud analysis use credentials from the local process and request explicit
-acknowledgement before uploading named media. This website never accepts a
+acknowledgement before uploading named media. The optional hosted API runs each
+paid image call in an ephemeral workspace against a Hraness Credits device token
+and keeps no credentials or projects; the device token lives in owner-only files
+under the CLI state root and never reaches argv or receipts. This website never accepts a
 Gateway credential. Native Python requires separate authorization. Custom Bun
 workflow modules execute when loaded, including during check and plan; review
 their source first. Both have the current user's access, including potential

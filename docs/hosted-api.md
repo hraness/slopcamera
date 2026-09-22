@@ -9,6 +9,7 @@ The canonical tool semantics live in `src/mcp/tools.ts`. This app owns transport
 | Route | Purpose |
 | --- | --- |
 | `GET /v1/health` | Configured capabilities (`storage`, `billing`, `models`). |
+| `GET /v1/models` | Sorted paid-model allowlist (`provider/model` ids). Provider costs never leave the service. |
 | `GET /v1/tools` | Hosted tool registry with tiers and input schemas. |
 | `POST /v1/tools/{name}/call` | Invoke one tool. Body: `{arguments, files?, idempotencyKey?}`. |
 | `POST /v1/uploads` | Mint a 15-minute presigned R2 PUT for one inbound file. |
@@ -53,6 +54,10 @@ Outputs are harvested by diffing the workspace after the call. Each new file bec
 | `PORT`, `HOST` | Listen address; default `0.0.0.0:8787`. |
 
 Rate limiting is in-memory per process. Paid calls are bounded by Credits holds, not the limiter.
+
+## Calling from the CLI
+
+The Slopcamera CLI can drive the paid operation directly: `slopcamera credits topup` prints a Credits checkout URL, `slopcamera credits wait` polls the claim and stores the returned `cr_dev_…` device token under the CLI state root in owner-only files, and `slopcamera ai image generate --hosted` calls `execute_slopcamera` with `{model, prompt, outputPath}` and writes the verified artifact below `artifacts/slopcamera/generated/`. When no Gateway credential is configured, a stored token routes `ai image generate` here automatically; `SLOPCAMERA_CREDITS_TOKEN` overrides the stored token for ephemeral environments.
 
 ## Credits setup
 

@@ -26,6 +26,22 @@ vercel env run -- slopcamera ai models list --type image --json
 
 Do not put credentials on argv, in source, in a project, or in a provider-options file. The [Vercel runbook](../vercel.md) covers that integration. Generation can incur provider charges; discovery does not authorize spending beyond the task's scope.
 
+## Or use hosted image generation
+
+Without a Gateway credential, prepaid Hraness Credits run prompt-only image generation through the hosted API at `api.slopcamera.com`:
+
+```sh
+slopcamera credits topup        # prints a hosted checkout URL
+slopcamera credits wait         # installs the returned device token
+slopcamera credits status       # reports balance and pending claims
+```
+
+```sh
+slopcamera ai image generate --hosted --model openai/gpt-image-1 --prompt 'a brass astrolabe on a map' --json
+```
+
+The hosted operation accepts a model and a prompt only; Gateway-only flags such as `--image`, `--aspect-ratio`, and `--count` are rejected. The admitted model ids are listed at `https://api.slopcamera.com/v1/models`. With a stored device token and no Gateway credential, `ai image generate` uses the hosted API automatically; `--hosted` forces it when both are configured. `SLOPCAMERA_CREDITS_TOKEN` overrides the stored token for ephemeral environments, and `slopcamera credits forget` removes local state. The token is stored owner-only under the CLI state root and never appears in argv, receipts, or output.
+
 ## Generate the selected media
 
 Run the command that matches the required output:

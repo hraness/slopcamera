@@ -67,6 +67,22 @@ describe("api handler", () => {
       tools.tools.find((tool) => tool.name === "render_diagram")?.tier,
     ).toBe("render")
 
+    const modelsHandler = createApiHandler({
+      config: testConfig({
+        modelCostsMicroUsd: {
+          "openai/gpt-image-1": 40_000,
+          "black-forest-labs/flux-schnell": 3_000,
+        },
+      }),
+      env: {},
+    })
+    const models = (await (
+      await modelsHandler(new Request("http://localhost:8787/v1/models"))
+    ).json()) as { models: string[] }
+    expect(models).toEqual({
+      models: ["black-forest-labs/flux-schnell", "openai/gpt-image-1"],
+    })
+
     const spec = (await (
       await handler(new Request("http://localhost:8787/v1/openapi.json"))
     ).json()) as { openapi: string; paths: Record<string, unknown> }
