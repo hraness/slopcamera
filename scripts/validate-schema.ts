@@ -150,3 +150,25 @@ if (
 process.stdout.write(
   "diagram schema is valid, accepts rich labels and ports, and rejects conflicting text states\n",
 )
+
+// Physical drawing sheets have a separate envelope around the existing v1 diagram.
+const drawingSchemaId = "https://raw.githubusercontent.com/hraness/slopcamera/main/schema/drawing.schema.json"
+const drawingSchema: unknown = JSON.parse(await readFile(join(repository, "schema/drawing.schema.json"), "utf8"))
+if (!isRecord(drawingSchema) || drawingSchema.$id !== drawingSchemaId || !ajv.validateSchema(drawingSchema)) {
+  throw new Error("Drawing schema must be valid Draft 2020-12 with its canonical identity.")
+}
+const validateDrawing = ajv.compile(drawingSchema)
+const drawingExample: unknown = JSON.parse(await readFile(join(repository, "examples/sensor-control.drawing.json"), "utf8"))
+if (!validateDrawing(drawingExample)) {
+  throw new Error(`Drawing example does not satisfy the public schema:\n${formatErrors(validateDrawing.errors)}`)
+}
+if (!isRecord(drawingExample)) throw new Error("Drawing example must be an object.")
+for (const invalid of [
+  { ...drawingExample, version: 2 },
+  { ...drawingExample, paper: "poster" },
+  { ...drawingExample, sheets: [] },
+  { ...drawingExample, unknown: true },
+]) {
+  if (validateDrawing(invalid)) throw new Error("Drawing schema accepted an invalid envelope.")
+}
+process.stdout.write("drawing schema is valid, accepts its retained example, and rejects invalid envelopes\n")

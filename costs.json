@@ -81,6 +81,19 @@
         "maxKeyLength": 512
       },
       "note": "Signed request proxy over the private slopcamera-api-artifacts bucket; stores nothing itself, verifies HMAC(method,key,exp,maxBytes) and enforces the declared cap. Signatures minted by apps/api/src/object-proxy.ts."
+    },
+    "local:drawing-sheets": {
+      "kind": "derived",
+      "retention": "persistent",
+      "owner": "src/drawing.ts",
+      "source": "Caller-retained drawing manifest with embedded version-one diagrams",
+      "budget": {
+        "maximumSourceBytes": 1048576,
+        "maximumSheets": 20,
+        "maximumSvgBytesPerSheet": 2097152,
+        "maximumPdfBytes": 33554432
+      },
+      "note": "Local replaceable vector PDF and SVG outputs with a source-and-output hash receipt; caller-managed retention, no provider calls or metering."
     }
   },
   "exempt": []

@@ -13,6 +13,7 @@ Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera
 ## Complete a task
 
 - [Run current-source commands](how-to/use-current-source.md): build an exact checkout of Slopcamera.
+- [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF; requires current source.
 
 - [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](how-to/edit-video.md): import footage, align related tracks, place overlays, and check a delivery.

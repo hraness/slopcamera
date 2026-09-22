@@ -73,6 +73,10 @@ const requiredPackedPaths = [
   "dist/NebulaSans-Book-8cenzchw.otf",
   "package.json",
   "schema/diagram.schema.json",
+  "schema/drawing.schema.json",
+  "src/drawing.ts",
+  "src/drawing-pdf.ts",
+  "skills/slopcamera/references/patent-drawings.md",
   "src/studio/index.ts",
   "apps/desktop/studio/drivers/blender_driver.py",
   "apps/desktop/studio/drivers/cadquery_driver.py",
@@ -899,6 +903,25 @@ if (Buffer.from(pngs[0]).equals(Buffer.from(pngs[1]))) throw new Error("Packed S
   await run([
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "--help",
+  ], consumer);
+  const drawingSourcePath = join(consumer, "installed-drawing.drawing.json");
+  const drawingCli = join(consumer, "node_modules", ".bin", "slopcamera");
+  for (const command of ["init", "check", "render"]) {
+    const output = record(JSON.parse(await runOutput([
+      drawingCli, "diagram", "sheets", command, drawingSourcePath, "--json",
+    ], consumer)) as unknown, `installed drawing ${command}`);
+    if (output.command !== `diagram.sheets.${command}`) throw new Error("Packed drawing CLI returned the wrong command result.");
+    if (command === "check" && output.sheetCount !== 2) throw new Error("Packed drawing check lost a starter sheet.");
+  }
+  await run([
+    process.execPath,
+    "-e",
+    `const { readDrawingFile, renderDrawing } = await import("@hraness/slopcamera");
+const { source, sourceSha256 } = await readDrawingFile("installed-drawing.drawing.json");
+const one = await renderDrawing(source, sourceSha256);
+const two = await renderDrawing(source, sourceSha256);
+if (Buffer.from(one.pdf).subarray(0, 5).toString() !== "%PDF-" || !Buffer.from(one.pdf).equals(Buffer.from(two.pdf))) throw new Error("Packed drawing PDF is missing or nondeterministic.");
+if (one.sheets.length !== source.sheets.length || one.sheets.some(sheet => /<(?:text|image)\\b/u.test(sheet.svg))) throw new Error("Packed drawing sheet must retain vector outlines.");`,
   ], consumer);
   const htmlCatalogText = await runOutput([
     join(consumer, "node_modules", ".bin", "slopcamera"),

@@ -18,6 +18,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Requested result | Read |
 | --- | --- |
 | Editable diagram, flowchart or visual explanation | [Diagrams](references/diagrams.md) and [visual communication](references/visual-communication.md) |
+| Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md); requires current source |
 | Custom diagram themes, fonts or icon packages | [Customization](references/customization.md) |
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
 | Record, clean up, caption, frame or deliver video | [Video projects](references/video-projects.md) |

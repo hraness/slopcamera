@@ -11,6 +11,8 @@ Commands:
   capabilities                   Discover the exact static capability modules and qualification status
   operations list|show           Discover host-owned typed operations and policies
   diagram init|check|render      Create, validate, or render portable diagram sources
+  diagram sheets init|check|render
+                                 Create and render black-and-white drawing sheets
   scene init|check|inspect|diff|patch|evaluate|audit|render-audit|solve|review|camera-track|generate|plan|render|direction|effects|behavior|temporal-audit
                                  Author and inspect editable directed 3D scene sources
   scene design catalog|init|inspect|set|compile|gallery
@@ -250,11 +252,19 @@ reconciliation and never automatically overwrites a later revision.`,
   slopcamera diagram check <diagram.json> [--config <file>] [--strict]
   slopcamera diagram render <diagram.json> [--out-dir <directory>]
         [--config <file>] [--scale <number>]
+  slopcamera diagram sheets init <file.drawing.json> [--json]
+  slopcamera diagram sheets check <file.drawing.json> [--json]
+  slopcamera diagram sheets render <file.drawing.json> [--out-dir <directory>] [--json]
 
 These commands delegate to the canonical @hraness/slopcamera parser. Init never overwrites.
 Check parses and lints without writing; --strict exits 2 on findings. Render replaces the same five
 portable derivatives: editable .tldr plus light/dark SVG and PNG. The registered Slopcamera diagram
-operations separately publish equivalent derivatives by content hash for workflow composition.`,
+operations separately publish equivalent derivatives by content hash for workflow composition.
+
+Sheets use a separate .drawing.json format with explicit US Letter or A4 page geometry, black
+line art and outlined uppercase labels. Init never overwrites; check is read-only; render writes
+one vector PDF, one SVG per sheet and a drawing receipt. Geometry checks do not certify legal
+compliance. Drawing sheets are exposed through this CLI and the root SDK, not code/MCP operations.`,
   image: `Usage:
   slopcamera image vectorize <raster-path> --output <file.svg> [--json]
         [--duotone '<#primary,#secondary>'] [--alpha-cutoff <n>] [--timeout-ms <n>]
@@ -642,7 +652,9 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
   if (command === "operations") return ["list", "show"];
-  if (command === "diagram") return ["check", "render"];
+  if (command === "diagram") return words[1] === "sheets"
+    ? ["init", "check", "render"]
+    : ["init", "check", "render", "sheets"];
   if (command === "image") return ["vectorize", "generate", "gallery", "icon"];
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
