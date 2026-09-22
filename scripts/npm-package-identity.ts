@@ -6,7 +6,7 @@ import { gunzipSync } from "node:zlib";
 const tarBlockBytes = 512;
 const packagePrefix = "package/";
 const maximumArchiveBytes = 4_800_000;
-const maximumTarBytes = 14_000_000;
+const maximumTarBytes = 15_000_000;
 const ustarSignature = Buffer.from([
   0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30,
 ]);
