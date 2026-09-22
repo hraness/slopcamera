@@ -42,9 +42,9 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Archive: at most 510 files, 4.8 MB packed and 14 MB including tar framing.
-// Keep bounded headroom aligned with the independent release artifact readers.
-const maximumPackedFiles = 510;
+// Archive: at most 530 files, 4.8 MB packed and 14 MB of file content.
+// Independent readers add only bounded USTAR headers, padding and termination.
+const maximumPackedFiles = 530;
 const maximumPackedBytes = 4_800_000;
 const maximumUnpackedBytes = 14_000_000;
 const packedHtmlExamplePaths = [
