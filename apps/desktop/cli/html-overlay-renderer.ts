@@ -2332,6 +2332,25 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
                 );
               }
               await inspectGpu();
+              // Wait for the compositor to present the frame the callbacks
+              // just produced. renderFrame resolves when authored work returns,
+              // not when the new surface reaches the screen; under heavy GPU
+              // load a screenshot taken immediately can capture the previous
+              // presented frame. Two animation frames bound the wait: the draw
+              // is committed before the first callback fires and presented
+              // before the second.
+              await boundedBrowserStep(
+                async () => await host.evaluate(
+                  async () => await new Promise<void>((resolve) => {
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => resolve());
+                    });
+                  }),
+                ),
+                signal,
+                this.#browserStepTimeoutMs,
+                `frame ${String(frameIndex)} presentation settle`,
+              );
               await boundedBrowserStep(
                 async () => await page.screenshot({
                   omitBackground: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.omitBackground,
