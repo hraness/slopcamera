@@ -24,6 +24,7 @@ Commands:
   image vectorize|generate|gallery|icon
                                  Create local SVGs, generated images, or review galleries
   html catalog|scaffold|render   Author HTML scenes and export video with local audio
+  style list|show                Discover reusable art direction and review criteria
   workflows list|show|plan|run   Plan or run a reviewed reusable workflow
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
   runs list|show|resume|approve|cancel
@@ -293,6 +294,15 @@ composes a labelled contact sheet plus receipt for agent review. Texture cells r
 candidate 2×2 so seams are inspectable (--tile/--no-tile overrides). It never replaces existing
 outputs and never promotes a candidate into authored source; review the sheet and select
 explicitly.`,
+  style: `Usage:
+  slopcamera style list [--json]
+  slopcamera style show <id> [--json]
+
+Styles describe palette, shape, materials, camera, exposure cadence, finishing targets,
+recommended delivery, and visual review criteria. They work across authored scenes and
+generation prompts, independently of the seven HTML library profiles. Discovery is local
+and read-only: it does not render, select a model, or apply an effect. A profile is art
+direction, not proof of visual quality or historically authentic footage.`,
   html: `Usage:
   slopcamera html catalog [--json]
   slopcamera html scaffold <${HTML_OVERLAY_SCAFFOLD_KIND_HELP}> --output <file.html>
@@ -673,12 +683,13 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
   if (command === "html") return ["catalog", "scaffold", "render"];
+  if (command === "style") return ["list", "show"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
   if (command === "operations") return ["list", "show"];

@@ -105,6 +105,19 @@ const gatewayOperations = [
 
 const capabilityModules = Object.freeze([
   defineSlopcameraCapabilityModule({
+    commands: [{ effect: "pure", name: "style list" }, { effect: "pure", name: "style show" }],
+    description: "Renderer-independent visual direction, delivery recommendations, and deterministic exposure timing for film and animation.",
+    moduleId: "slopcamera.capability.visual-style",
+    operationKeys: [],
+    profiles: [{
+      id: "visual-style-direction-v1", kind: "authoring",
+      qualification: { evidence: ["src/visual-style.test.ts", "src/visual-style.property.test.ts"], level: "unit", status: "qualified" },
+      requirements: [],
+    }],
+    stability: "stable", title: "Visual style direction", toolNames: [],
+    trust: "portable", version: 1, workflowKeys: [],
+  }),
+  defineSlopcameraCapabilityModule({
     commands: [
       { effect: "pure", name: "operations list" },
       { effect: "pure", name: "capabilities" },
