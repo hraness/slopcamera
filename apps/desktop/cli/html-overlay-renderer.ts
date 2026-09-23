@@ -135,6 +135,7 @@ type BrowserRuntimeSnapshotLease = Readonly<
 interface HtmlOverlayHostController {
   renderFrame(frame: HtmlOverlayRuntimeFrame): Promise<void>;
   securityViolationCount(): number;
+  settlePresentation(): Promise<void>;
 }
 
 interface PreparedRoute {
@@ -2341,11 +2342,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
               // before the second.
               await boundedBrowserStep(
                 async () => await host.evaluate(
-                  async () => await new Promise<void>((resolve) => {
-                    requestAnimationFrame(() => {
-                      requestAnimationFrame(() => resolve());
-                    });
-                  }),
+                  async (controller) => await controller.settlePresentation(),
                 ),
                 signal,
                 this.#browserStepTimeoutMs,
