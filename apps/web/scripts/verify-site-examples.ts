@@ -203,13 +203,16 @@ async function executableIdentity(path: string): Promise<readonly number[]> {
   assert.ok(stat.isFile() && stat.size > 0 && stat.size <= 1024 * 1024 * 1024)
   return [stat.dev, stat.ino, stat.size, stat.mode, stat.nlink, stat.mtimeMs, stat.ctimeMs]
 }
-async function buildDriver(profile: string): Promise<{ path: string; bytes: Uint8Array }> {
+/** Compact the private transport without syntax rewrites. Browser callbacks
+ * still serialize from their compiled function bodies; source remains readable. */
+export const examplesWorkerMinify = Object.freeze({ identifiers: true, whitespace: true, syntax: false, keepNames: false })
+export async function buildExamplesDriver(profile: string): Promise<{ path: string; bytes: Uint8Array }> {
   assert.equal(Bun.version, "1.3.14")
   const result = await Bun.build({ entrypoints: [join(appDirectory, "scripts/site-examples-browser-driver.mjs")], target: "node",
-    env: "disable", format: "esm", minify: false, sourcemap: "none", packages: "external" })
+    env: "disable", format: "esm", minify: examplesWorkerMinify, sourcemap: "none", packages: "external" })
   assert.ok(result.success && result.outputs.length === 1, "Could not compile the private Node shell worker")
   const bytes = new Uint8Array(await result.outputs[0]!.arrayBuffer())
-  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerDriverLimit)
+  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerDriverLimit, `Examples worker ${bytes.byteLength} bytes exceeds ${workerDriverLimit}-byte transport bound`)
   assert.ok(!/\bBun\s*\.|["'](?:bun|@hraness\/direct)(?:["'/])/u.test(Buffer.from(bytes).toString()), "Node worker gained a Bun/Direct runtime edge")
   const path = join(profile, "site-examples-browser-driver.mjs")
   await writeFile(path, bytes, { flag: "wx", mode: 0o600 })
@@ -327,7 +330,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       executableInputs = await Promise.all([node, browserPath].map(async path => ({ path, identity: await executableIdentity(path) })))
       profile = await mkdtemp(join(await realpath(tmpdir()), "slopcamera-site-examples-"))
       signal.throwIfAborted()
-      const driver = await step(() => buildDriver(profile!))
+      const driver = await step(() => buildExamplesDriver(profile!))
       const currentServer = serve(current); servers.push(currentServer)
       const baselineServer = serve(baseline); servers.push(baselineServer)
       signal.throwIfAborted()

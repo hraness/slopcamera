@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, readFile, realpath, rm } from "node:fs/promises"
+import { mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { runInNewContext } from "node:vm"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
   examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesScope, examplesBaselineProfile,
@@ -10,10 +11,10 @@ import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelec
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { archiveInstall } from "../src/published-release"
-import { assertExamplesBaselineManifest, assertExamplesHeroTextures } from "./verify-site-examples"
+import { assertExamplesBaselineManifest, assertExamplesHeroTextures, buildExamplesDriver, examplesWorkerMinify } from "./verify-site-examples"
 import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures, examplesBaselineInstallCommand, examplesIslands } from "./site-examples-profile"
 import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodeProfiledWorkerJson,
-  publishWorkerPhase, publishProfiledWorkerPhase, examplesWorkerProtocolLimit, workerProtocolLimit } from "./preview-browser-protocol"
+  publishWorkerPhase, publishProfiledWorkerPhase, examplesWorkerProtocolLimit, workerProtocolLimit, workerDriverLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
 import { projectExamplesHeroActions } from "./site-examples-cta"
 import { compareRefinementHeroCopies } from "./site-refinement-browser-contract"
@@ -352,7 +353,7 @@ describe("examples-only native CTA intrinsic width proof",()=>{
 
 // A parse5-backed detached-DOM adapter exercises exact HTML/state admission
 // without launching a browser; native line layout remains a separate gate.
-function installDomFixture(current: boolean, state: "idle" | "copied" | "failed") {
+function installDomFixture(current: boolean, state: "idle" | "copied" | "failed", admitCallback = admitExamplesInstallDom) {
  type Node = DefaultTreeAdapterMap["node"]
  type Element = DefaultTreeAdapterMap["element"]
  class Detached {
@@ -388,9 +389,66 @@ function installDomFixture(current: boolean, state: "idle" | "copied" | "failed"
   if (tag !== "template") throw Error("Only a detached template is allowed")
   return { content: new Detached(parseFragment("")), set innerHTML(value: string) { this.content = new Detached(parseFragment(value)) } }
  } }
- const admit = (copying: boolean) => runInNewContext(`(${admitExamplesInstallDom.toString()})(root, input)`, { root, input: { fixture, copying }, document })
+ const admit = (copying: boolean) => runInNewContext(`(${admitCallback.toString()})(root, input)`, { root, input: { fixture, copying }, document })
  return { root, button, status, fixture, admit }
 }
+describe("bounded private examples worker transport", () => {
+ test("the real private bundle retains its original byte cap, runtime boundary and exclusive publication", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "slopcamera-examples-worker-bundle-"))
+  try {
+   const driver = await buildExamplesDriver(directory), bytes = await readFile(driver.path)
+   expect(bytes).toEqual(Buffer.from(driver.bytes)); expect(bytes.length).toBeGreaterThan(0); expect(bytes.length).toBeLessThanOrEqual(workerDriverLimit)
+   expect(workerDriverLimit).toBe(262144); expect((await stat(driver.path)).mode & 0o777).toBe(0o600)
+   expect(bytes.toString()).not.toMatch(/\bBun\s*\.|["'](?:bun|@hraness\/direct)(?:["'/])/u)
+   await expect(buildExamplesDriver(directory)).rejects.toThrow()
+   expect(await readFile(driver.path)).toEqual(bytes)
+  } finally { await rm(directory, { recursive: true, force: true }) }
+ })
+ test("the same minifier leaves the browser callback self-contained after function serialization", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "slopcamera-examples-callback-bundle-"))
+  try {
+   const source = fileURLToPath(new URL("./site-examples-install.ts", import.meta.url))
+   const result = await Bun.build({ entrypoints: ["examples-callback-probe"], target: "node", env: "disable", format: "esm",
+    minify: examplesWorkerMinify, sourcemap: "none", packages: "external", plugins: [{ name: "exact-exported-browser-callback", setup(build) {
+     build.onResolve({ filter: /^examples-callback-probe$/u }, () => ({ path: "examples-callback-probe", namespace: "callback" }))
+     build.onLoad({ filter: /.*/u, namespace: "callback" }, () => ({ contents: `export { admitExamplesInstallDom } from ${JSON.stringify(source)}; export { installCopyProofPorts } from ${JSON.stringify(fileURLToPath(new URL("./site-copy-browser-contract.ts", import.meta.url)))}`, loader: "ts", resolveDir: directory }))
+    } }] })
+   expect(result.success).toBe(true); expect(result.outputs).toHaveLength(1)
+   const output = join(directory, "callback.mjs"); await writeFile(output, new Uint8Array(await result.outputs[0]!.arrayBuffer()), { flag: "wx" })
+   const compiled = await import(pathToFileURL(output).href)
+   const callback = compiled.admitExamplesInstallDom as typeof admitExamplesInstallDom
+   for (const current of [false, true]) for (const state of ["idle", "copied", "failed"] as const) {
+    const fixture = installDomFixture(current, state, callback), raw = fixture.root.outerHTML
+    expect(fixture.admit(true)).toEqual({ raw, admitted: fixture.fixture })
+    if (state === "idle") expect(fixture.admit(false)).toEqual({ raw, admitted: fixture.fixture })
+    else expect(() => fixture.admit(false)).toThrow()
+    fixture.button.setAttribute("aria-label", "unreviewed")
+    expect(() => fixture.admit(true)).toThrow()
+   }
+   let now = 0
+   const callbacks: (() => void)[] = []
+   class Textarea {
+    value = "bounded command"; readOnly = true; selectionStart = 0; selectionEnd = this.value.length
+    getBoundingClientRect() { return { right: -1 } }
+   }
+   const input = new Textarea(), window = { setTimeout(handler: () => void) { callbacks.push(handler); return callbacks.length }, clearTimeout() {} }
+   const ports = runInNewContext(`(${compiled.installCopyProofPorts.toString()})(); ({window,navigator,document})`, {
+    window, navigator: {}, document: { activeElement: input }, HTMLTextAreaElement: Textarea,
+    getComputedStyle: () => ({ position: "fixed", opacity: "0" }), performance: { now: () => now },
+   })
+   await ports.navigator.clipboard.writeText(input.value)
+   expect(ports.window.__slopcameraCopyProof.writes).toEqual([input.value])
+   expect(ports.document.execCommand("copy")).toBe(true)
+   expect(ports.window.__slopcameraCopyProof.fallbacks).toEqual([{ value: input.value, readonly: true, start: 0, end: input.value.length, focused: true, offscreen: true }])
+   let fired = false
+   ports.window.setTimeout(() => { fired = true }, 2500); now = 2500; callbacks[0]!()
+   expect(fired).toBe(true)
+   expect(ports.window.__slopcameraCopyProof.timers[0]).toEqual({ delay: 2500, started: 0, fired: 2500, cancelled: false })
+   const cancelled = ports.window.setTimeout(() => {}, 2500); ports.window.clearTimeout(cancelled)
+   expect(ports.window.__slopcameraCopyProof.timers[1].cancelled).toBe(true)
+  } finally { await rm(directory, { recursive: true, force: true }) }
+ })
+})
 describe("exact per-side released install copy and natural note flow", () => {
  const evidence = (current: boolean, negative = false): CopyEvidence => ({ command: current ? refinementInstallCommand : examplesBaselineInstallCommand,
   negativeControls: negative ? copyNegativeControls : [], ports: ports(current ? refinementInstallCommand : examplesBaselineInstallCommand),
