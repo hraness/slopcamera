@@ -34,7 +34,11 @@ class ReverseFrameOrderHtmlOverlayRenderer
   }
 }
 
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// A task-owned signed Chrome copy keeps an automatic application update from
+// changing the source during qualification. Binding still verifies the full
+// supported-browser provenance and immutable snapshot; this is only a path.
+const CHROME = process.env.SLOPCAMERA_HTML_BROWSER
+  ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const RUN_RENDERER_SMOKE =
   process.env.SLOPCAMERA_RUN_HTML_OVERLAY_RENDERER_SMOKE === "1";
 const RENDERER_SMOKE_UNAVAILABLE =
@@ -281,6 +285,111 @@ async function render(root: string): Promise<readonly Buffer[]> {
       `frame-${String(frame).padStart(8, "0")}.png`,
     ))));
 }
+
+test.skipIf(RENDERER_SMOKE_UNAVAILABLE)(
+  "presentation capture preserves the full WebGL frame, viewport, alpha, and authored clock",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-html-presentation-"));
+    roots.push(root);
+    const html = `<!doctype html>
+<style>
+  html, body { width: 100%; height: 100%; margin: 0; background: transparent; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #clock { position: absolute; left: 20px; top: 18px; width: 8px; height: 8px; background: white; }
+</style>
+<canvas></canvas><div id="clock"></div>
+<script>
+  const width = SlopcameraOverlay.width, height = SlopcameraOverlay.height;
+  const density = devicePixelRatio;
+  const canvas = document.querySelector("canvas");
+  canvas.width = width * density;
+  canvas.height = height * density;
+  const gl = canvas.getContext("webgl2", {
+    alpha: true, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: false,
+  });
+  if (!gl) throw new Error("WebGL 2 is required by this presentation regression");
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  const animation = document.querySelector("#clock").animate(
+    [{ opacity: 0 }, { opacity: 1 }], { duration: 1000, fill: "both" },
+  );
+  const assertViewport = () => {
+    if (innerWidth !== width || innerHeight !== height || devicePixelRatio !== density) {
+      throw new Error("Presentation capture changed the authored viewport");
+    }
+  };
+  addEventListener("resize", assertViewport);
+  let draws = 0, scheduledFrames = 0;
+  requestAnimationFrame(() => { scheduledFrames += 1; });
+  SlopcameraOverlay.onFrame(({ frame, timeMs }) => {
+    assertViewport();
+    if (SlopcameraOverlay.parameters.order[draws] !== frame || scheduledFrames !== draws + 1) {
+      throw new Error("Presentation capture advanced authored callbacks");
+    }
+    if (animation.playState !== "paused" || animation.currentTime !== timeMs) {
+      throw new Error("Presentation capture changed the animation clock");
+    }
+    draws += 1;
+    requestAnimationFrame(() => { scheduledFrames += 1; });
+    gl.disable(gl.SCISSOR_TEST);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
+    const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    gl.clearColor(...colors[frame], 1);
+    for (const [x, y] of [[0, 0], [width - 8, 0], [0, height - 8], [width - 8, height - 8]]) {
+      gl.scissor(x * density, y * density, 8 * density, 8 * density);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.scissor(32 * density, 20 * density, 8 * density, 8 * density);
+    gl.clearColor(0.8, 0.2, 0.4, 0.5);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
+  });
+</script>`;
+    const renderOrder = async (reverse: boolean): Promise<readonly Buffer[]> => {
+      const frames = join(root, reverse ? "reverse" : "forward");
+      await mkdir(frames, { mode: 0o700 });
+      const Renderer = reverse ? ReverseFrameOrderHtmlOverlayRenderer : PlaywrightHtmlOverlayRenderer;
+      const renderer = new Renderer({
+        cacheRoot: join(root, "cache"),
+        browserStepTimeoutMs: 10_000,
+        fetch: () => { throw new Error("The presentation fixture has no library downloads"); },
+      });
+      const authoring = HtmlOverlayAuthoringInputSchema.parse({
+        canvas: { deviceScaleFactor: 2, height: 48, width: 72 },
+        html, kind: "slopcamera.html-overlay", libraries: [],
+        parameters: { order: reverse ? [2, 1, 0] : [0, 1, 2] },
+        resources: [], schemaVersion: 1, seed: 42,
+        timing: { durationUs: 1_500_000, fps: 2 },
+      });
+      const result = await renderer.renderFrames({
+        authoring, browserRuntime: await browserRuntime(), outputDirectory: frames, resources: [],
+      }, new AbortController().signal);
+      expect(result.frameCount).toBe(3);
+      expect((await readdir(join(frames, "frames"))).sort()).toEqual([
+        "frame-00000000.png", "frame-00000001.png", "frame-00000002.png",
+      ]);
+      return await Promise.all([0, 1, 2].map(async index =>
+        await readFile(join(frames, "frames", `frame-${String(index).padStart(8, "0")}.png`))));
+    };
+    const forward = await renderOrder(false);
+    const reverse = await renderOrder(true);
+    expect(reverse.map(digest)).toEqual(forward.map(digest));
+    for (const [index, png] of forward.entries()) {
+      expect(png.readUInt32BE(16)).toBe(72);
+      expect(png.readUInt32BE(20)).toBe(48);
+      const expectedColor: readonly [number, number, number, number] = index === 0
+        ? [255, 0, 0, 255] : index === 1 ? [0, 255, 0, 255] : [0, 0, 255, 255];
+      for (const [x, y] of [[2, 2], [69, 2], [2, 45], [69, 45]]) {
+        expect(readRgbaPngPixel(png, x!, y!)).toEqual(expectedColor);
+      }
+      expect(readRgbaPngPixel(png, 12, 12)[3]).toBe(0);
+      expect(Math.abs(readRgbaPngPixel(png, 35, 24)[3] - 128)).toBeLessThanOrEqual(1);
+      expect(Math.abs(readRgbaPngPixel(png, 24, 22)[3] - Math.round(index * 127.5))).toBeLessThanOrEqual(1);
+    }
+  },
+  600_000,
+);
 
 test.skipIf(RENDERER_SMOKE_UNAVAILABLE)(
   "renders deterministic transparent frames with the runtime installed before author code",

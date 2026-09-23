@@ -135,6 +135,7 @@ type BrowserRuntimeSnapshotLease = Readonly<
 interface HtmlOverlayHostController {
   renderFrame(frame: HtmlOverlayRuntimeFrame): Promise<void>;
   securityViolationCount(): number;
+  settlePresentation(): Promise<void>;
 }
 
 interface PreparedRoute {
@@ -2334,20 +2335,15 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
               await inspectGpu();
               // Wait for the compositor to present the frame the callbacks
               // just produced. renderFrame resolves when authored work returns,
-              // not when the new surface reaches the screen; a screenshot taken
-              // immediately can capture the previous presented frame. A cheap
-              // throwaway capture forces one BeginFrame/present and gives the
-              // draw's queued commands time to land — a requestAnimationFrame
-              // pair is not a safe barrier here because BeginFrame-controlled
-              // headless runtimes only produce frames on embedder request, so
-              // an idle page's callbacks can wait forever.
+              // not when the new surface reaches the screen; under heavy GPU
+              // load a screenshot taken immediately can capture the previous
+              // presented frame. Two animation frames bound the wait: the draw
+              // is committed before the first callback fires and presented
+              // before the second.
               await boundedBrowserStep(
-                async () => await page.screenshot({
-                  clip: { x: 0, y: 0, width: 1, height: 1 },
-                  omitBackground: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.omitBackground,
-                  scale: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.scale,
-                  type: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.type,
-                }),
+                async () => await host.evaluate(
+                  async (controller) => await controller.settlePresentation(),
+                ),
                 signal,
                 this.#browserStepTimeoutMs,
                 `frame ${String(frameIndex)} presentation settle`,
