@@ -3,7 +3,7 @@ title: Neumorphic site polish and a flagship multi-technique example
 description: Apply the Lantern material system to the marketing surface and publish a rendered example that visibly blends several Slopcamera techniques in one directed take.
 type: plan
 area: site-presentation
-status: in-progress
+status: completed
 repository_scopes:
   - apps/web/src/styles.css
   - apps/web/src/example-gallery.css
@@ -69,8 +69,21 @@ showing isolated primitives.
 
 ## Result
 
-To be filled on merge.
+Merged and live on slopcamera.com ([PR #220](https://github.com/hraness/slopcamera/pull/220),
+squash `a5e1300`). Production serves the premiere-wall card and its
+fingerprinted video (exact 3,236,247-byte registry match) plus the Lantern
+material rules in the foundation CSS. All 22 CI lanes green, `Required` pass.
 
 ## Durable memory
 
-To be filled on merge.
+- The gallery's hero is always one of the featured set; `#examples` renders
+  the remaining five. New featured entries therefore shift markup in both the
+  hero island and the gallery island.
+- "Presentation settle" timeouts in the browser render lanes were
+  environmental (shared-host GPU/CPU contention), not scene defects — the
+  checked-in pavilion scene failed identically. Verified by retrying a proven
+  checked-in scene and by the `html render` lane failing the same way.
+- ffmpeg overlay composites over checked-in authored assets are a viable
+  fallback showcase shape when the spatial renderer cannot run; the pattern
+  keeps provenance by binding every input by sha256 and emitting a
+  source-lineage receipt.
