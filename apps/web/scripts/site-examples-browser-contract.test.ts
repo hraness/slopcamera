@@ -22,6 +22,7 @@ import { collectExamplesFontDiagnostic, encodeExamplesFailureDiagnostic, Example
   examplesFontOwners, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 import type { Page } from "playwright-core"
 import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
+import { renderExampleHero } from "../src/example-gallery"
 import { admitExamplesInstallDom, compareExamplesInstall, examplesInstallLines, examplesInstallNote, parseExamplesInstallReceipt, parseExamplesInstallPair, projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
@@ -110,7 +111,7 @@ function terminal(req = request()) {
   }
   if (name === "player-captions") return {name,passed:true,captions:"not-present",media:[],initialMediaRequests:0}
   return {name,passed:true,media:[{id:"editorial",paused:!['player-visible-auto','player-offscreen-hidden'].includes(name),
-   time:name==='player-failed-media'?0:1,controls:true,readyState:3,muted:true,
+   time:name==='player-failed-media'?0:1,controls:true,readyState:3,muted:true,loop:['player-visible-auto','player-offscreen-hidden'].includes(name),
    error:null,source:`${req.current.origin}${media[0]!.path}`}],
    ...(name==='player-save-data'?{policyInput:'emulated-navigator-save-data'}:{}), ...(['player-offscreen-hidden','player-manual-pause'].includes(name)?{hiddenObserved:true}:{}),
    ...(['player-no-js','player-docs-manual','player-reduced-motion','player-save-data','player-failed-media'].includes(name)?{initialMediaRequests:0}:{}),
@@ -646,6 +647,42 @@ describe("examples-only finite worker protocol", () => {
 })
 
 describe("workflow-examples-v1 independent native contract", () => {
+ test("current hero and trust literals match authored content before reduced-motion enhancement", async () => {
+  const source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
+  expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
+  const tree = parseFragment(source.replace("{{EXAMPLE_HERO}}", () => renderExampleHero()))
+  type Node = DefaultTreeAdapterMap["node"]
+  type Element = DefaultTreeAdapterMap["element"]
+  const descendants = (node: Node): Element[] => "childNodes" in node
+   ? node.childNodes.flatMap(child => [...("tagName" in child ? [child] : []), ...descendants(child)]) : []
+  const nodes = descendants(tree)
+  for (const selector of [".hraness-marketing-hero", "#design"]) {
+   const actual = nodes.filter(node => selector.startsWith(".")
+    ? node.attrs.some(attribute => attribute.name === "class" && attribute.value.split(" ").includes(selector.slice(1)))
+    : node.attrs.some(attribute => attribute.name === "id" && attribute.value === selector.slice(1)))
+   expect(actual).toHaveLength(1)
+   // Independent literal stays authored in the profile. This source-rendered
+   // regression does not prove native layout or automatic-player behavior.
+   expect(serializeOuter(actual[0]!)).toBe(examplesIslands.find(item => item.selector === selector)!.current)
+   if (selector === ".hraness-marketing-hero") {
+    const videos = descendants(actual[0]!).filter(node => node.tagName === "video")
+    expect(videos).toHaveLength(1)
+    expect(videos[0]!.attrs.some(attribute => attribute.name === "loop")).toBe(false)
+   }
+  }
+ })
+ test.each(examplesPlayerCases.filter(name => name !== "player-captions"))("loop receipt follows observed automatic versus quiet/manual state: %s", name => {
+  const req = request(), receipt = terminal(req)
+  expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
+  for (const invalid of [undefined, "true", !["player-visible-auto", "player-offscreen-hidden"].includes(name)]) {
+   const forged = mutate(receipt, value => {
+    const sample = value.observations.find((item: { name: string }) => item.name === name).media[0]
+    if (invalid === undefined) delete sample.loop
+    else sample.loop = invalid
+   })
+   expect(() => parseExamplesPhase(forged, 2, req)).toThrow()
+  }
+ })
  test("retains the exact76 shell cases and adds mandatory copy/docs/media cases in order", () => {
   expect(siteShellCases).toHaveLength(76)
   expect(examplesCaseNames.slice(0,76)).toEqual(siteShellCases.map(item=>item.name))

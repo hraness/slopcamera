@@ -149,9 +149,11 @@ function parsePlayerObservation(item: Record<string, unknown>, request: Examples
   const seen = new Set<string>(); let playing = 0, advanced = 0
   for (const value of item.media) {
     const sample = shellRecord(value)
-    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "error", "source"])
+    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "loop", "error", "source"])
     assert.equal(typeof sample.id, "string"); const expected = request.media.find(media => media.id === sample.id); assert.ok(expected && !seen.has(expected.id)); seen.add(expected.id)
     assert.equal(sample.controls, true); assert.equal(typeof sample.paused, "boolean"); assert.equal(typeof sample.muted, "boolean")
+    // Automatic previews loop; manually controlled and quiet samples do not.
+    assert.equal(sample.loop, (name === "player-visible-auto" || name === "player-offscreen-hidden") && !sample.paused)
     assert.ok(typeof sample.time === "number" && sample.time >= 0 && sample.time <= expected.durationSeconds + .1)
     assert.ok(Number.isSafeInteger(sample.readyState) && Number(sample.readyState) >= 0 && Number(sample.readyState) <= 4)
     assert.equal(sample.source, `${request.current.origin}${expected.path}`)
@@ -699,7 +701,7 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
 const playerSelector = (id: string) => `figure[data-example-id="${id}"] video`
 async function videoState(page: Page, id: string) {
   return page.locator(playerSelector(id)).evaluate((video: HTMLVideoElement) => ({ paused: video.paused, time: video.currentTime,
-    controls: video.controls, readyState: video.readyState, muted: video.muted, error: video.error?.code ?? null, source: video.currentSrc || video.querySelector("source")?.src || "" }))
+    controls: video.controls, readyState: video.readyState, muted: video.muted, loop: video.loop, error: video.error?.code ?? null, source: video.currentSrc || video.querySelector("source")?.src || "" }))
 }
 async function waitPlaying(page: Page, id: string, javascript = true): Promise<void> {
   if (!javascript) {
@@ -718,7 +720,11 @@ async function assertQuiet(page: Page, ids: readonly string[], javascript = true
   if (!javascript) {
     const deadline = performance.now() + 350
     do {
-      for (const id of ids) assert.equal((await videoState(page, id)).paused, true, "Unexpected native no-JavaScript playback")
+      for (const id of ids) {
+        const state = await videoState(page, id)
+        assert.equal(state.paused, true, "Unexpected native no-JavaScript playback")
+        assert.equal(state.loop, false, "Quiet native no-JavaScript video must not loop")
+      }
       await delay(20)
     } while (performance.now() < deadline)
     return
@@ -728,7 +734,7 @@ async function assertQuiet(page: Page, ids: readonly string[], javascript = true
     const start = performance.now()
     await new Promise<void>((resolve, reject) => {
       const frame = () => {
-        if (ids.some(id => { const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`); return video && !video.paused })) { reject(new Error("Unexpected playback during policy settlement")); return }
+        if (ids.some(id => { const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`); return video && (!video.paused || video.loop) })) { reject(new Error("Unexpected playback or looping during policy settlement")); return }
         if (performance.now() - start >= 350) resolve(); else requestAnimationFrame(frame)
       }; requestAnimationFrame(frame)
     })
@@ -821,6 +827,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           })
         } else {
           await waitPlaying(page, target.id, javascript)
+          assert.equal((await videoState(page, target.id)).loop, false, "Native manual playback must not loop")
           if (name === "player-captions") {
             const track = page.locator(`${playerSelector(target.id)} track[kind="captions"]`)
             assert.equal(await track.getAttribute("src"), target.captions!)
@@ -834,6 +841,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         assert.equal(name === "player-save-data" ? await page.evaluate(() => (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) : await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches), true)
         const manual = ids[0]!
         await assertNativeTarget(page, playerSelector(manual)); await page.keyboard.press("Space"); await waitPlaying(page, manual)
+        assert.equal((await videoState(page, manual)).loop, false, "Policy-permitted manual playback must not loop")
         await assertQuiet(page, ids.filter(id => id !== manual))
         await page.keyboard.press("Space"); await assertQuiet(page, ids)
       } else {
@@ -842,6 +850,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         const automatic = previews[0]!
         await page.locator(playerSelector(automatic)).scrollIntoViewIfNeeded(); await waitPlaying(page, automatic)
         assert.equal((await videoState(page, automatic)).muted, true)
+        assert.equal((await videoState(page, automatic)).loop, true, "Automatic preview must loop")
         const playing = await page.locator("video").evaluateAll(elements => elements.filter(video => !(video as HTMLVideoElement).paused).length)
         assert.equal(playing, 1)
         if (name === "player-visible-auto") {
@@ -856,7 +865,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
               if (active.length !== 1) return false
               const video = active[0]!, rect = video.getBoundingClientRect()
               const area = Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0)) * Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0))
-              return video.muted && video.currentTime > .04 && area / (rect.width * rect.height) >= .5
+              return video.muted && video.loop && video.currentTime > .04 && area / (rect.width * rect.height) >= .5
             })
           }
         } else if (name === "player-manual-pause") {
@@ -877,13 +886,17 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           }
           assert.ok(playing, `Manual Space never started ${manual}`)
           await waitPlaying(page, manual)
+          assert.equal((await videoState(page, manual)).loop, false, "Manual takeover must clear automatic looping")
           await assertQuiet(page, previews.filter(id => id !== manual))
           await page.keyboard.press("Space"); await assertQuiet(page, ids)
           await page.locator(".topbar").scrollIntoViewIfNeeded(); await page.locator(playerSelector(manual)).scrollIntoViewIfNeeded()
           await chooseAppearance(page, "dark", "light"); await page.emulateMedia({ reducedMotion: "reduce" }); await page.emulateMedia({ reducedMotion: "no-preference" })
           await assertQuiet(page, ids)
           await throughRealHiddenState(page, async () => {
-            for (const id of ids) assert.equal((await videoState(page, id)).paused, true)
+            for (const id of ids) {
+              const state = await videoState(page, id)
+              assert.equal(state.paused, true); assert.equal(state.loop, false)
+            }
             hiddenObserved = true
           })
           await assertQuiet(page, ids)
@@ -895,7 +908,8 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           await assertQuiet(page, [automatic])
           await page.locator(playerSelector(automatic)).scrollIntoViewIfNeeded(); await waitPlaying(page, automatic)
           await throughRealHiddenState(page, async () => {
-            assert.equal((await videoState(page, automatic)).paused, true)
+            const state = await videoState(page, automatic)
+            assert.equal(state.paused, true); assert.equal(state.loop, false)
             hiddenObserved = true
           })
           await waitPlaying(page, automatic)

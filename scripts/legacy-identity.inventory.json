@@ -1477,7 +1477,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "1a6554e25aa1dfeddb776e3fa197568d903644c6fdf76ee3918b3e8506af4aed",
+    "identityLinesSha256": "986a65db927d6698db090832084808797096f0f17c66ee48d4f6f65e50945516",
     "occurrenceCount": 9,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
