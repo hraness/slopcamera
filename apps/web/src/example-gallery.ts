@@ -3,7 +3,7 @@ import { renderExampleMedia } from "./example-media"
 import { workflowExamples, type WorkflowExample } from "./example-registry"
 
 export function homepageExamples(examples: readonly WorkflowExample[] = workflowExamples): readonly WorkflowExample[] {
-  const order = ["native-product", "editorial", "island-pulse", "education-luma", "source-to-film"]
+  const order = ["native-product", "premiere-wall", "island-pulse", "interference-field", "native-character", "education-luma"]
   return examples.filter(example => example.featured).sort((a, b) => {
     const left = order.indexOf(a.id), right = order.indexOf(b.id)
     return (left < 0 ? order.length : left) - (right < 0 ? order.length : right)

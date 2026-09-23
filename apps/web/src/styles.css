@@ -329,7 +329,7 @@ h3 {
 
 .hraness-marketing-interface-grid {
   grid-template-columns: minmax(0, 1fr);
-  gap: 0;
+  gap: 1.25rem;
 }
 
 .hraness-marketing-interface {
@@ -338,12 +338,11 @@ h3 {
   align-items: start;
   gap: 1.5rem 2rem;
   min-inline-size: 0;
-  padding: 1.75rem 0;
-  border: 0;
-  border-block-end: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 1.75rem;
+  background: var(--hraness-material-plane);
+  border: 1px solid var(--hraness-material-seam);
+  border-radius: var(--radius-lg, .875rem);
+  box-shadow: var(--hraness-material-lift);
 }
 
 .interface-copy {
@@ -354,8 +353,10 @@ h3 {
 }
 
 .hraness-marketing-interface .hraness-material-code {
-  border: 1px solid var(--line);
-  border-radius: .875rem;
+  border: 1px solid var(--hraness-material-seam);
+  border-radius: .75rem;
+  background: color-mix(in oklch, var(--background, Canvas) 70%, var(--hraness-material-plane));
+  box-shadow: var(--hraness-material-inset);
 }
 
 /* Editorial display digits for the workflow steps. */

@@ -9,7 +9,7 @@
     ],
     "guideSlug": "tutorials/first-diagram",
     "guideAnchor": "",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8 and Bun. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -197,7 +197,7 @@
     ],
     "guideSlug": "tutorials/first-animation",
     "guideAnchor": "render-and-inspect-the-title",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8, Bun, a local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -326,7 +326,7 @@
   {
     "id": "native-product",
     "title": "An optical instrument, in motion",
-    "description": "A six-second camera move around original brass, rubber and optical glass. Geometry, materials, lighting and focus remain editable in Blender.",
+    "description": "A camera move around original brass and glass; the Blender scene stays editable.",
     "family": "native",
     "techniques": [
       "native.product"
@@ -403,7 +403,7 @@
   {
     "id": "education-luma",
     "title": "Why the long side is five",
-    "description": "A portrait lesson turns the areas of a 3–4–5 triangle into 25 tiles, with an original presenter and authored captions. This silent example illustrates one triangle.",
+    "description": "A portrait lesson tiles a 3–4–5 triangle into 25 areas.",
     "family": "education",
     "techniques": [
       "education.manim-lesson"
@@ -553,7 +553,7 @@
   {
     "id": "kinetic-title",
     "title": "Make every frame count",
-    "description": "Seeked typography enters, holds and leaves on an authored timeline, accompanied by staggered bars.",
+    "description": "Typography enters, holds and exits on an authored timeline.",
     "family": "html",
     "techniques": [
       "html.motion"
@@ -813,14 +813,14 @@
   {
     "id": "interference-field",
     "title": "Patterns from a program",
-    "description": "One full-screen WGSL pass renders a changing interference field. This is an authored pattern, not a physical simulation.",
+    "description": "One authored WGSL pass renders a living interference field.",
     "family": "html",
     "techniques": [
       "html.vgpu"
     ],
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "write-a-wgsl-field",
-    "featured": false,
+    "featured": true,
     "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -878,7 +878,7 @@
   {
     "id": "island-pulse",
     "title": "Island Pulse",
-    "description": "An original articulated robot dances above a procedural island through day, night and sunrise. This published preview is silent.",
+    "description": "An articulated robot dances over a procedural island through day and night.",
     "family": "music",
     "techniques": [
       "html.three"
@@ -1012,14 +1012,14 @@
   {
     "id": "native-character",
     "title": "A wave, a blink and a smile",
-    "description": "An original weighted Blender character follows an IK target and facial shape keys through a six-second greeting. The native rig remains editable.",
+    "description": "A weighted Blender character follows IK and shape keys.",
     "family": "native",
     "techniques": [
       "native.character"
     ],
     "guideSlug": "how-to/native-films",
     "guideAnchor": "animate-a-native-character",
-    "featured": false,
+    "featured": true,
     "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -3735,6 +3735,92 @@
       "date": "2026-09-20",
       "still": "passed",
       "motion": "not-applicable",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "premiere-wall",
+    "title": "A wall of authored work",
+    "description": "A camera pushes across a cinema wall: a live film, a print and an editable diagram.",
+    "family": "video-editing",
+    "techniques": [
+      "edit.overlays",
+      "camera.dolly"
+    ],
+    "guideSlug": "how-to/edit-video",
+    "guideAnchor": "place-overlays-without-clipping",
+    "featured": true,
+    "requirements": "Slopcamera CLI, FFmpeg and rsvg-convert.",
+    "source": {
+      "engineRevision": "0519b9da03c77fe7fe8479ac09b85bd0c234c335",
+      "files": [
+        {
+          "path": "examples/showcase/workflows/render-premiere-wall.ts",
+          "sha256": "a9643558b9721eb309aa0639f5b3c85441c9518f57058fc1baaa7bc00c08c0cc"
+        },
+        {
+          "path": "examples/showcase/workflows/premiere-wall.svg",
+          "sha256": "cdac753a4c15c95f18dfe36718f38c503340de33680bbc92cafc3e695790b16d"
+        },
+        {
+          "path": "examples/showcase/workflows/premiere-diagram.diagram.json",
+          "sha256": "f7357761b2327b5ab8f00d9d8f3ce8c60eb15bf21014339342422cff9f5d42ac"
+        },
+        {
+          "path": "examples/showcase/html/island-pulse.json",
+          "sha256": "950e9a7e19f9f8a6532d4e83d0bf69847696e6d7c903a7298d27708a0b5c4e00"
+        },
+        {
+          "path": "examples/showcase/html/island-pulse.html",
+          "sha256": "bfbc369374c425e9340260f3e87b6d088bf8daab0f191ba993c6c6d2e4e364cc"
+        },
+        {
+          "path": "examples/showcase/html/interference-field.json",
+          "sha256": "57ad00fb1db24168d1ace6783e3a4b4e219d48a2db6b0408eab8a102188f2f33"
+        },
+        {
+          "path": "examples/showcase/html/interference-field.html",
+          "sha256": "face4a196995c28713c04a31a39025ca53d64353f88552d2f44475f683945a8b"
+        }
+      ],
+      "command": "bun examples/showcase/workflows/render-premiere-wall.ts",
+      "toolVersion": "3.3.6 (source checkout)",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg 7.1.5",
+        "rsvg-convert 2.63.0",
+        "macOS arm64"
+      ],
+      "license": "MIT"
+    },
+    "poster": {
+      "file": "premiere-wall-poster-c5867fc0bbf7.webp",
+      "sha256": "c5867fc0bbf7ec63bbd886f29e03614eba557795aa1d412a5dfc7ac506aa1122",
+      "bytes": 94600,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A dark cinema wall: a screen playing an island robot film, a mounted interference print, and a three-step diagram board."
+    },
+    "video": {
+      "file": "premiere-wall-video-e9e0225b7603.mp4",
+      "sha256": "e9e0225b76039fb42c41e47002833366cdb8ede5eb19fda81b35f54cbc04cea1",
+      "bytes": 3236247,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: chronological frame sheets across the full take and the final poster",
+      "date": "2026-09-23",
+      "still": "passed",
+      "motion": "passed",
       "sound": "silent",
       "captions": "not-applicable"
     }

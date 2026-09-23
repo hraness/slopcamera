@@ -96,6 +96,10 @@ To center an overlay, use `--anchor center --position 0,0`. A full-frame still u
 
 The overlay grammar accepts image, SVG, GIF, video, and checked emoji sources. For an HTML, Three, or WGSL layer in an existing project, render a reviewed document through the `media.htmlOverlay` workflow operation and use the returned video layer. For a complete authored scene with its own new project, use `html render`; [make a music video](/docs/how-to/music-video) shows the pattern with a local soundtrack.
 
+::example[premiere-wall]
+
+This eight-second composite mounts the reviewed Island Pulse film on a cinema-wall screen, the reviewed Interference Field poster as a print, and an editable `premiere-diagram.diagram.json` board inside one smootherstep camera push finished with grain and vignette. Its [checked-in wall, diagram, and script](https://github.com/hraness/slopcamera/tree/main/examples/showcase/workflows) reproduce the film through the diagram and FFmpeg pipelines.
+
 ## Directed delivery variants
 
 These four compositions start from the same six-second native product film. Each is a separate ordinary project with its own camera framing and SVG title layout. The retained recipe applies the same timing edit to each project:
