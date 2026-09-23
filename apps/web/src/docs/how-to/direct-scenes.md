@@ -98,6 +98,21 @@ A fixed camera holds the scene composition while the embedded editorial film con
 
 Small seeded camera movements add a restrained handheld drift to the fixed composition. The media panels stay framed while the foreground fin shifts slightly against them.
 
+## Dress a whole premiere wall
+
+::example[premiere-scene]
+
+This eight-second take builds an entire cinema wall as one scene: the Island Pulse film plays on the main screen, the Interference Field poster hangs as a mounted print, and an editable `.diagram.json` board stands beside a brass calibration cube. A rail camera eases along the wall while a foreground column crosses the frame for parallax.
+
+Author and render it from a source checkout:
+
+```sh
+bun examples/showcase/spatial/author-premiere.ts
+slopcamera scene render artifacts/showcase/spatial/premiere/premiere.scene.json --request artifacts/showcase/spatial/premiere/premiere.request.json --json
+```
+
+The script binds the two published films by exact sha256, derives the bounded screen and print media, authors the scene with an audited rail rig, and emits the render request. The published MP4 is a silent delivery encode of the retained lossless MOV.
+
 ## Render on the GPU
 
 ```sh

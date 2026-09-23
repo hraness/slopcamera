@@ -3824,5 +3824,93 @@
       "sound": "silent",
       "captions": "not-applicable"
     }
+  },
+  {
+    "id": "premiere-scene",
+    "title": "One scene holds the whole wall",
+    "description": "A playing film, a mounted print and an editable diagram stand inside one rendered showroom while a rail camera pushes past a foreground column.",
+    "family": "spatial-scenes",
+    "techniques": [
+      "camera.rail",
+      "scene.world-media"
+    ],
+    "guideSlug": "how-to/direct-scenes",
+    "guideAnchor": "dress-a-whole-premiere-wall",
+    "featured": false,
+    "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
+    "source": {
+      "engineRevision": "72a0f217412d675528a1544ec6c8daf21e32d9be",
+      "files": [
+        {
+          "path": "examples/showcase/spatial/author-premiere.ts",
+          "sha256": "7132fac67e0172d075814bea657a27138e1534fdc88ffc7647dcd53b826b340b"
+        },
+        {
+          "path": "examples/showcase/spatial/README.md",
+          "sha256": "39c7fc40228e172c7827efc154fda4f7ce10676b8449d51963332f66bc2220f8"
+        },
+        {
+          "path": "examples/showcase/html/island-pulse.json",
+          "sha256": "950e9a7e19f9f8a6532d4e83d0bf69847696e6d7c903a7298d27708a0b5c4e00"
+        },
+        {
+          "path": "examples/showcase/html/island-pulse.html",
+          "sha256": "bfbc369374c425e9340260f3e87b6d088bf8daab0f191ba993c6c6d2e4e364cc"
+        },
+        {
+          "path": "examples/showcase/html/interference-field.json",
+          "sha256": "57ad00fb1db24168d1ace6783e3a4b4e219d48a2db6b0408eab8a102188f2f33"
+        },
+        {
+          "path": "examples/showcase/html/interference-field.html",
+          "sha256": "face4a196995c28713c04a31a39025ca53d64353f88552d2f44475f683945a8b"
+        },
+        {
+          "path": "examples/showcase/html/README.md",
+          "sha256": "09c75b4d2ebe5becd92b4d2eec61b10240d61c86c82e438afea1fffe4dbe4b2e"
+        }
+      ],
+      "command": "bun examples/showcase/spatial/author-premiere.ts && bun apps/desktop/cli/main.ts scene render artifacts/showcase/spatial/premiere/premiere.scene.json --request artifacts/showcase/spatial/premiere/premiere.request.json --json",
+      "toolVersion": "3.3.6 (source checkout)",
+      "runtimes": [
+        "Bun1.3.14",
+        "Three0.185.1",
+        "Chrome153.0.8010.53",
+        "FFmpeg7.1.5",
+        "FFprobe7.1.5",
+        "WebGL2 ANGLE-Metal Apple M5 Max"
+      ],
+      "license": "MIT original scene; Nebula Sans under SIL OFL 1.1"
+    },
+    "poster": {
+      "file": "premiere-scene-poster-1e147de3b2ae.webp",
+      "sha256": "1e147de3b2ae9e304772457b81efcea698fc15e1864cb4cd7df8f71c8e604ffb",
+      "bytes": 50446,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "A cinema wall inside a 3D scene: a playing robot film on the main screen, an interference-field print, and a diagram board behind a brass cube."
+    },
+    "video": {
+      "file": "premiere-scene-video-11a380856462.mp4",
+      "sha256": "11a3808564628ec2d3039ddb5750dc0ab24d9f04c8bfdec035bd94d1a38dd37d",
+      "bytes": 1441114,
+      "mime": "video/mp4",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 8,
+      "fps": 24,
+      "frames": 192,
+      "hasAudio": false
+    },
+    "downloads": [],
+    "review": {
+      "agent": "root: all 192 rendered frames via 4-frame contact sheets, full-size poster, and retained source",
+      "date": "2026-09-23",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "silent",
+      "captions": "not-applicable"
+    }
   }
 ]
