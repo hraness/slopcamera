@@ -7,6 +7,14 @@ description: Create, inspect, edit and render visual media with the Slopcamera C
 
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
 
+For creative film and animation, choose coherent art direction before rendering.
+Use [visual style direction](references/visual-style-direction.md) for historical
+footage, animation families, resolution, and visual review. Default to native 4K
+for an unspecified creative master when the renderer and source support it;
+preserve deliberate pixel grids, period aspect ratios, source limits, and the
+user's explicit settings. Treat quality as staging,
+materials, movement, and finishing together.
+
 ## Establish the host
 
 Run `slopcamera --help` and use `slopcamera doctor --json` for the selected local tools. If installation or a version mismatch blocks the task, read [installation and readiness](references/install.md). A skill installation does not install the CLI or native engines.
@@ -17,6 +25,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 
 | Requested result | Read |
 | --- | --- |
+| Historical film, cel animation, pixel art, classic animation styles, or a demo portfolio | [Visual style direction](references/visual-style-direction.md) |
 | Editable diagram, flowchart or visual explanation | [Diagrams](references/diagrams.md) and [visual communication](references/visual-communication.md) |
 | Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md); requires current source |
 | Custom diagram themes, fonts or icon packages | [Customization](references/customization.md) |

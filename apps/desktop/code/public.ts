@@ -10,6 +10,7 @@ export {
 } from "./define-workflow";
 export * from "../../../src/spatial-scene/index";
 export * from "../../../src/studio/index";
+export { createVisualStyleVideoLook, VisualStyleVideoLookOptionsSchema } from "../core/visual-style-look";
 export { StudioRunInputSchema, BoundStudioRunInputSchema, StudioRunOutputSchema, type StudioRunInput, type BoundStudioRunInput, type StudioRunOutput } from "../application/studio-port";
 export type { SpatialRenderInput, BoundSpatialRenderInput } from "../application/operations/spatial-render";
 export type { SpatialRenderRequest, SpatialRenderResult } from "../application/spatial-render";

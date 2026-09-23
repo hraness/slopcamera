@@ -220,12 +220,14 @@ export async function runPortableSurface(
   dependencies: PortableSurfaceDependencies = {},
 ): Promise<number | undefined> {
   const argv = canonicalizeUnifiedCliArgs(argvInput);
+  if (argv[0] === "style" && (argv.includes("--help") || argv.includes("-h"))) return undefined;
   if (argv[0] === "html") {
     if (argv[1] === "render" || argv.includes("--help") || argv.includes("-h")) return undefined;
     if (argv[1] === "catalog") return runHtmlCatalog(argv, dependencies);
     return await runHtmlScaffold(argv, dependencies);
   }
   const delegatesToHeadless = argv[0] === "diagram"
+    || argv[0] === "style"
     || argv[0] === "mcp"
     || argv[0] === "canvas"
     || argv[0] === "skill"
