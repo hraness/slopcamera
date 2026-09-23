@@ -323,6 +323,13 @@ describe("ordered beauty post-processing", () => {
       expect(result.authoring.html).toContain(marker);
     }
     expect(result.authoring.html).toContain("frame.timeUs");
+    /* The final composite samples the last ping-pong buffer; it must return to
+     * the default framebuffer first or the draw feeds back on itself. */
+    const chain = result.authoring.html.indexOf("runPostChain(frame,index,track)");
+    const release = result.authoring.html.indexOf("setRenderTarget(null)", chain);
+    const composite = result.authoring.html.indexOf("postMesh.material=postOutputMaterial", chain);
+    expect(release).toBeGreaterThan(chain);
+    expect(release).toBeLessThan(composite);
   });
 
   test("motion-blur activates the velocity pass with per-frame previous transforms", () => {
