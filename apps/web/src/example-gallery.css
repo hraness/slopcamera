@@ -17,7 +17,10 @@
 }
 
 .slopcamera-work-gallery .slopcamera-example__media {
-  aspect-ratio: 16 / 9;
+  inline-size: auto;
+  max-inline-size: 100%;
+  block-size: auto;
+  margin-inline: auto;
 }
 
 .slopcamera-techniques {
