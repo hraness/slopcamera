@@ -26,6 +26,7 @@ interface PublicOverlayApi {
 
 interface HostController {
   renderFrame(frame: unknown): Promise<void>;
+  settlePresentation(): Promise<void>;
 }
 
 function runtimeFixture(parameters: HtmlOverlayParameters = { label: "hello" }) {
@@ -100,6 +101,29 @@ describe("injected HTML overlay browser runtime", () => {
       "callback",
     ]);
     expect(() => overlay.onFrame(() => undefined)).toThrow("before the first");
+  });
+
+  test("settlePresentation awaits the compositor's own animation frames", async () => {
+    // The deterministic scheduler replaces globalThis.requestAnimationFrame;
+    // the host's presentation wait must use the callback captured before that
+    // replacement, or it deadlocks waiting for callbacks nothing pumps.
+    let presented = 0;
+    const context: {
+      document: { getAnimations(): FakeAnimation[] };
+      requestAnimationFrame(callback: (time: number) => void): number;
+      SlopcameraOverlay?: PublicOverlayApi;
+    } = {
+      document: { getAnimations: () => [] },
+      requestAnimationFrame: (callback) => {
+        presented += 1;
+        queueMicrotask(() => callback(0));
+        return presented;
+      },
+    };
+    const { source } = runtimeFixture();
+    const host = runInNewContext(source, context) as HostController;
+    await host.settlePresentation();
+    expect(presented).toBe(2);
   });
 
   test("shares the pinned random algorithm and rejects forged frames", () => {

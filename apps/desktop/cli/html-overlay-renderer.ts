@@ -135,6 +135,7 @@ type BrowserRuntimeSnapshotLease = Readonly<
 interface HtmlOverlayHostController {
   renderFrame(frame: HtmlOverlayRuntimeFrame): Promise<void>;
   securityViolationCount(): number;
+  settlePresentation(): Promise<void>;
 }
 
 interface PreparedRoute {
@@ -2334,21 +2335,15 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
               await inspectGpu();
               // Wait for the compositor to present the frame the callbacks
               // just produced. renderFrame resolves when authored work returns,
-              // not when the new surface reaches the screen. A throwaway
-              // capture asks the browser to present the queued draw before the
-              // retained screenshot, without resizing the viewport. Do not wait
-              // on page requestAnimationFrame here: the Slopcamera runtime owns
-              // that queue and drains it only inside renderFrame, so a callback
-              // awaited between authored frames cannot settle. Screenshot
-              // preparation runs outside that authored clock; it must not
-              // advance the frame or invoke another author callback.
+              // not when the new surface reaches the screen; under heavy GPU
+              // load a screenshot taken immediately can capture the previous
+              // presented frame. Two animation frames bound the wait: the draw
+              // is committed before the first callback fires and presented
+              // before the second.
               await boundedBrowserStep(
-                async () => await page.screenshot({
-                  clip: { x: 0, y: 0, width: 1, height: 1 },
-                  omitBackground: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.omitBackground,
-                  scale: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.scale,
-                  type: HTML_OVERLAY_RENDERER_CONTRACT.screenshot.type,
-                }),
+                async () => await host.evaluate(
+                  async (controller) => await controller.settlePresentation(),
+                ),
                 signal,
                 this.#browserStepTimeoutMs,
                 `frame ${String(frameIndex)} presentation settle`,

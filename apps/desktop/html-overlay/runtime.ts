@@ -520,6 +520,11 @@ export function createHtmlOverlayBrowserRuntimeSource(
   };
   installGlobalFunction("clearTimeout", clearTimer);
   installGlobalFunction("clearInterval", clearTimer);
+  // The host's presentation-settle wait needs the compositor's real callback,
+  // not the deterministic scheduler below; capture it before the replacement.
+  const nativeRequestAnimationFrame = typeof globalThis.requestAnimationFrame === "function"
+    ? globalThis.requestAnimationFrame.bind(globalThis)
+    : undefined;
   installGlobalFunction("requestAnimationFrame", (callback) => {
     if (typeof callback !== "function") {
       throw new TypeError("requestAnimationFrame requires a function callback.");
@@ -811,6 +816,16 @@ export function createHtmlOverlayBrowserRuntimeSource(
     },
     securityViolationCount() {
       return securityViolations;
+    },
+    async settlePresentation() {
+      if (nativeRequestAnimationFrame === undefined) {
+        throw new TypeError("The browser does not expose requestAnimationFrame.");
+      }
+      await new Promise((resolve) => {
+        nativeRequestAnimationFrame(() => {
+          nativeRequestAnimationFrame(() => resolve());
+        });
+      });
     },
   });
 })()`;
