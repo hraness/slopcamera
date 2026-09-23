@@ -164,7 +164,8 @@ describe("release-copy-v1 has an independent closed identity", () => {
   expect(() => parseExamplesRequest(req)).toThrow()
   expect(parseExamplesPhase(receipt, 2, req)).toEqual(receipt)
   expect(parseExamplesCaseFailure(failure, req)).toEqual(failure)
-  for (const [field, value] of [["scope", examplesScope], ["baselineProfile", examplesBaselineProfile], ["baselineRevision", examplesBaselineRevision], ["baselineTree", examplesBaselineTree], ["scope", "unknown"]]) {
+  for (const [field, value] of [["scope", examplesScope], ["baselineProfile", examplesBaselineProfile], ["baselineRevision", examplesBaselineRevision], ["baselineTree", examplesBaselineTree], ["scope", "unknown"],
+   ["baselineProfile", "before-release-copy-e08bacf-v1"], ["baselineRevision", "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7"], ["baselineTree", "d7c1e70f77255d38a80acd8184654910be473f46"]]) {
    expect(() => parseExamplesRequest({ ...req, [field!]: value }, releaseCopyScope)).toThrow()
    expect(() => parseExamplesPhase({ ...receipt, [field!]: value }, 2, req)).toThrow()
    expect(() => parseExamplesCaseFailure({ ...failure, [field!]: value }, req)).toThrow()
@@ -209,7 +210,8 @@ describe("release-copy-v1 has an independent closed identity", () => {
   const historical = { ...manifest, schemaVersion: 6, baselineProfile: examplesBaselineProfile, checkoutRevision: examplesBaselineRevision, sourceRevision: examplesBaselineRevision, sourceTree: examplesBaselineTree }
   expect(() => assertExamplesBaselineManifest(historical, snapshot)).not.toThrow()
   expect(() => assertExamplesBaselineManifest(historical, snapshot, releaseCopyScope)).toThrow()
-  for (const change of [{ schemaVersion: 6 }, { baselineProfile: examplesBaselineProfile }, { sourceRevision: examplesBaselineRevision }, { sourceTree: examplesBaselineTree }, { checkoutRevision: examplesBaselineRevision }, { extra: true }])
+  for (const change of [{ schemaVersion: 6 }, { baselineProfile: examplesBaselineProfile }, { sourceRevision: examplesBaselineRevision }, { sourceTree: examplesBaselineTree }, { checkoutRevision: examplesBaselineRevision }, { extra: true },
+   { baselineProfile: "before-release-copy-e08bacf-v1" }, { sourceRevision: "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7" }, { sourceTree: "d7c1e70f77255d38a80acd8184654910be473f46" }])
    expect(() => assertExamplesBaselineManifest({ ...manifest, ...change }, snapshot, releaseCopyScope)).toThrow()
  })
 })
