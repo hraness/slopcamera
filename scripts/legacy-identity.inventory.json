@@ -1477,7 +1477,7 @@
   },
   {
     "identityLineCount": 4,
-    "identityLinesSha256": "e1c9a86ae73441ccfd2fd1bdaa6b18f3ed72fe58f2acc566821c98c14e51b20f",
+    "identityLinesSha256": "c1f6873d0f0c818ae3dfc70ab2cfdf4368dbd5ede6c5ea8881d58fe922b91f30",
     "occurrenceCount": 6,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
@@ -1497,7 +1497,7 @@
   {
     "path": "apps/web/scripts/site-refinement-fixtures.ts",
     "identityLineCount": 2,
-    "identityLinesSha256": "c3d513281a419318f878577735525e0bfa26e9c502f706a28ba3387e9c7bb4ce",
+    "identityLinesSha256": "63ab1ff21c71a5852b7408c5c47e0d437250823ff43ba9f546f361643c75ee13",
     "occurrenceCount": 2,
     "categories": [
       "native-film-studio"
@@ -1703,7 +1703,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "dc27a82a185c1458e0e31bc0fb6e0d579b49497251bf10954b6fc8f37691f3f7",
+    "identityLinesSha256": "dfd7e9bc8645075f782df2ce9f851b718d02c86007901a001d851ec9c779b70f",
     "occurrenceCount": 15,
     "path": "apps/web/src/index.html",
     "categories": [
