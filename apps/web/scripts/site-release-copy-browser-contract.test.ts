@@ -384,3 +384,47 @@ test("the full strict comparator rejects outside DOM, hero/CTA/wordmark paint an
   (side: any) => { side.positions.focus[0].fixed = false },
  ]) expect(() => compare(mutate(current, change) as ReturnType<typeof ordinaryFixture>)).toThrow()
 })
+
+test("release hero paint pairs the native URL-free gradients in both flow and shell observations", () => {
+ // Original paired /-320-light-dark samples from the retained native failure.
+ const firstLayer = "linear-gradient(oklch(0.976064 0.00413431 none / 0.07) 1px, rgba(0, 0, 0, 0) 1px)"
+ const secondLayer = "linear-gradient(90deg, oklch(0.976064 0.00413431 none / 0.07) 1px, rgba(0, 0, 0, 0) 1px)"
+ const gradient = `${firstLayer}, ${secondLayer}, none`
+ const pair = (currentPaint: string, baselinePaint: string) => {
+  const withPaint = (current: boolean, paint: string) => {
+   const side = ordinaryFixture(current)
+   const rows = (items: readonly ShellElement[]) => items.map(item => item.key === ".hraness-marketing-hero[0]"
+    ? { ...item, styles: { ...item.styles, "background-image": paint } } : item)
+   return { ...side, design: { ...side.design, flow: rows(side.design.flow) },
+    evidence: { ...side.evidence, elements: rows(side.evidence.elements) } }
+  }
+  return { current: withPaint(true, currentPaint), baseline: withPaint(false, baselinePaint) }
+ }
+ const compare = ({ current, baseline }: ReturnType<typeof pair>, ports = origins) => compareReleaseCopyEvidence(
+  current.evidence, baseline.evidence, siteShellCases[0]!, current.design, baseline.design,
+  current.dom, baseline.dom, current.positions, baseline.positions, ports)
+ for (const paint of [gradient, "none"]) expect(() => compare(pair(paint, paint))).not.toThrow()
+ for (const paint of [undefined, null, ""])
+  expect(() => compare(pair(paint as unknown as string, paint as unknown as string))).toThrow()
+ for (const paint of [gradient.replace("1px", "2px"), gradient.replace("0.07", "0.08"),
+  gradient.replace("0.976064", "0.876064"), `${secondLayer}, ${firstLayer}, none`,
+  gradient.replace("90deg", "91deg"), gradient.replace(", none", ""), "none",
+  background(origins.current), `${gradient}, url(\"https://unreviewed.example/paint.png\")`]) {
+  const data = pair(gradient, gradient)
+  for (const field of ["flow", "elements"] as const) {
+   const changed = structuredClone(data)
+   const rows = (items: readonly ShellElement[]) => items.map(item => item.key === ".hraness-marketing-hero[0]"
+    ? { ...item, styles: { ...item.styles, "background-image": paint } } : item)
+   if (field === "flow") changed.current.design = { ...changed.current.design, flow: rows(changed.current.design.flow) }
+   else changed.current.evidence = { ...changed.current.evidence, elements: rows(changed.current.evidence.elements) }
+   expect(() => compare(changed)).toThrow()
+  }
+ }
+ // Equal textured strings still require each side's own reviewed texture origin.
+ for (const paint of [background(origins.current), 'url("https://unreviewed.example/paint.png")',
+  'URL("https://unreviewed.example/paint.png")']) expect(() => compare(pair(paint, paint))).toThrow()
+ expect(() => compare(pair(background(origins.current), background(origins.baseline)))).not.toThrow()
+ for (const ports of [{ ...origins, current: origins.baseline }, { ...origins, current: "https://127.0.0.1:1234" },
+  { ...origins, current: "http://localhost:1234" }, { ...origins, baseline: "http://127.0.0.1:0" },
+  { ...origins, current: "http://127.0.0.1:65536" }]) expect(() => compare(pair(gradient, gradient), ports)).toThrow()
+})

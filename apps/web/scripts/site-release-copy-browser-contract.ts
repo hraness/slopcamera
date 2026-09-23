@@ -8,6 +8,23 @@ import { projectExamplesState, compareExamplesHeroBackgroundImage, type Examples
 import { releaseCopyBaselineInstall, releaseCopyScope } from "./site-release-copy-profile"
 
 const near = (actual: number, expected: number, label: string) => assert.ok(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= .5, label)
+/** URL-free paint needs exact equality, without a texture-origin projection. */
+function compareReleaseHeroBackgroundImage(actual: string, baseline: string,
+  origins: Readonly<{ current: string; baseline: string }>): string {
+  assert.equal(typeof actual, "string"); assert.equal(typeof baseline, "string")
+  assert.ok(actual.length > 0 && baseline.length > 0)
+  if (!/\burl\(/iu.test(actual) && !/\burl\(/iu.test(baseline)) {
+    for (const origin of [origins.current, origins.baseline]) {
+      assert.match(origin, /^http:\/\/127\.0\.0\.1:\d{1,5}$/u)
+      const port = Number(new URL(origin).port)
+      assert.ok(port > 0 && port <= 65535)
+    }
+    assert.notEqual(origins.current, origins.baseline)
+    assert.equal(actual, baseline, "Every URL-free hero background byte remains paired")
+    return baseline
+  }
+  return compareExamplesHeroBackgroundImage(actual, baseline, origins)
+}
 /** Admit one complete install island. Every other body byte remains paired. */
 export async function releaseCopyDom(page: Page, current: boolean, scenario: ShellCase): Promise<ExamplesDomProjection> {
   const fixture = current ? examplesIslands.find(item => item.selector === "#install")!.current : releaseCopyBaselineInstall
@@ -39,7 +56,7 @@ export function compareReleaseCopyFlow(current: readonly ShellElement[], baselin
     near(item.rect[3]! - old.rect[3]!, install ? installDelta : 0, `${item.key}: only install height changes`)
     if (install) afterInstall = true
     const styles = install ? projectHeight(item, old, installDelta) : { ...item.styles }
-    if (item.key === ".hraness-marketing-hero[0]") styles["background-image"] = compareExamplesHeroBackgroundImage(item.styles["background-image"]!, old.styles["background-image"]!, origins)
+    if (item.key === ".hraness-marketing-hero[0]") styles["background-image"] = compareReleaseHeroBackgroundImage(item.styles["background-image"]!, old.styles["background-image"]!, origins)
     return { ...item, rect: [item.rect[0]!, old.rect[1]!, item.rect[2]!, old.rect[3]!],
       styles, text: install ? old.text : item.text }
   })
@@ -84,7 +101,7 @@ export function compareReleaseCopyEvidence(actual: ShellEvidence, baseline: Shel
     const old = baseline.elements[index]!, heightOwner = ["body[0]", "#main[0]", "#install[0]"].includes(item.key)
     if (heightOwner) near(item.rect[3]! - old.rect[3]!, delta, `${item.key}: install-derived content height`)
     const styles = heightOwner ? projectHeight(item, old, delta) : { ...item.styles }
-    if (item.key === ".hraness-marketing-hero[0]") styles["background-image"] = compareExamplesHeroBackgroundImage(item.styles["background-image"]!, old.styles["background-image"]!, origins)
+    if (item.key === ".hraness-marketing-hero[0]") styles["background-image"] = compareReleaseHeroBackgroundImage(item.styles["background-image"]!, old.styles["background-image"]!, origins)
     return { ...item, styles, rect: [item.rect[0]!, item.rect[1]!, item.rect[2]!, heightOwner ? old.rect[3]! : item.rect[3]!], text: currentDom.text[item.key] ?? item.text }
   })
   compareShellEvidence({ ...actual, dom: currentDom.dom, elements,
