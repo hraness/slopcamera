@@ -9,9 +9,10 @@ Start from the requested result and existing source. Use the installed `slopcame
 
 For creative film and animation, choose coherent art direction before rendering.
 Use [visual style direction](references/visual-style-direction.md) for historical
-footage, animation families, resolution, and visual review. Prefer native 1080p
-or better for an unspecified final delivery; preserve deliberate pixel grids,
-period aspect ratios, and the user's explicit settings. Treat quality as staging,
+footage, animation families, resolution, and visual review. Default to native 4K
+for an unspecified creative master when the renderer and source support it;
+preserve deliberate pixel grids, period aspect ratios, source limits, and the
+user's explicit settings. Treat quality as staging,
 materials, movement, and finishing together.
 
 ## Establish the host

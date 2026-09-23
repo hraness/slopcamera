@@ -37,10 +37,11 @@ A photo-textured background does not make moving geometry photorealistic. A
 Canvas material study does not demonstrate a physical clay simulation. Name the
 actual method in a portfolio caption.
 
-For creative delivery without specified dimensions, start at 1920×1080 or an
-equivalent frame in the intended aspect ratio. Use 3840×2160 for a still or short
-master when the renderer and content benefit. Render previews smaller only for
-iteration, and label them as previews. Do not upscale a draft and call it native
+For creative delivery without specified dimensions, default to a native
+3840×2160 master or an equivalent frame in the intended aspect ratio when the
+renderer and source support it. Use explicit 1920×1080 previews for iteration.
+Respect source-image dimensions and a provider's actual output limits; state a
+lower native delivery clearly. Do not upscale a draft and call it native
 high-resolution detail. A 4:3 silent-film composition and a low-resolution pixel
 grid are deliberate exceptions to widescreen layout, not lower quality targets.
 

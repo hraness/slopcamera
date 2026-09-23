@@ -13,13 +13,14 @@ Run these commands from a Slopcamera source checkout or installed source package
 ```sh
 slopcamera style list --json
 slopcamera style show theatrical-cel --json
-bun examples/style-portfolio/render.ts --style theatrical-cel --width 1920 --run first-film --dry-run
-bun examples/style-portfolio/render.ts --style theatrical-cel --width 1920 --run first-film
-bun examples/style-portfolio/render.ts --all --width 1920 --run selected-films
+bun examples/style-portfolio/render.ts --style theatrical-cel --width 1920 --run train-preview --dry-run
+bun examples/style-portfolio/render.ts --style theatrical-cel --width 1920 --run train-preview
+bun examples/style-portfolio/render.ts --style theatrical-cel --run train-master
+bun examples/style-portfolio/render.ts --all --width 1920 --run collection-previews
 bun examples/style-portfolio/render.ts --all --still --width 3840 --offset 3 --run selected-stills
 ```
 
-`--all` selects the twelve implemented Canvas studies. Choose either `--all` or `--style`. Films run for six seconds at 24 fps. `--still` renders one exposure at the requested `--offset` in seconds. The supported widths are 1280, 1920, 2560, and 3840; height follows the study's 16:9 canvas. These are native render sizes, not enlargement claims.
+`--all` selects the twelve implemented Canvas studies. Choose either `--all` or `--style`. Films run for six seconds at 24 fps. Movies and stills default to native 3840×2160; pass `--width 1920` for a smaller preview. `--still` renders one exposure at the requested `--offset` in seconds. The supported widths are 1280, 1920, 2560, and 3840; height follows the study's 16:9 canvas. These are native render sizes, not enlargement claims.
 
 Dry runs keep separate `.plan.*` attempts and never replace render evidence.
 Every run retains its scene request, operation result, log, and intent under `artifacts/style-portfolio/<run>`. An existing intent makes the runner report `already-attempted`. Inspect that attempt's host receipts before selecting a new run name; do not use a new name to hide an uncertain native operation.

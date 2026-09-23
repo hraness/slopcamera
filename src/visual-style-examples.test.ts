@@ -69,14 +69,15 @@ test("a dry run retains separate evidence and cannot overwrite an existing execu
     const directory = join(workspace, "artifacts/style-portfolio/retained");
     const evidence = ["intent.json", "scene.json", "log", "result.json"];
     const before = await Promise.all(evidence.map(name => readFile(join(directory, `theatrical-cel.${name}`))));
-    await renderStudies([...args, "--width", "3840", "--dry-run"], workspace, () => {});
+    expect(JSON.parse(await readFile(join(directory, "theatrical-cel.scene.json"), "utf8")).canvas).toEqual({ width: 3840, height: 2160, deviceScaleFactor: 1 });
+    await renderStudies([...args, "--width", "1920", "--dry-run"], workspace, () => {});
     const after = await Promise.all(evidence.map(name => readFile(join(directory, `theatrical-cel.${name}`))));
     expect(after).toEqual(before);
-    expect(JSON.parse(await readFile(join(directory, "theatrical-cel.plan.scene.json"), "utf8")).canvas.width).toBe(3840);
+    expect(JSON.parse(await readFile(join(directory, "theatrical-cel.plan.scene.json"), "utf8")).canvas.width).toBe(1920);
     const messages: string[] = [];
     await renderStudies([...args, "--dry-run"], workspace, message => { messages.push(message); });
     expect(JSON.parse(messages[0]!).state).toBe("already-attempted");
-    expect(JSON.parse(await readFile(join(directory, "theatrical-cel.plan.scene.json"), "utf8")).canvas.width).toBe(3840);
+    expect(JSON.parse(await readFile(join(directory, "theatrical-cel.plan.scene.json"), "utf8")).canvas.width).toBe(1920);
   });
 }, 20_000);
 

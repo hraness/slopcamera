@@ -20,8 +20,9 @@ alter a render or make a model request.
 
 Keep explicit user dimensions and timing. For a new creative delivery, the
 profiles recommend native 4K, with a 4:3 composition for historical film and an
-integer-scaled logical grid for pixel art. The sample movies use native 1080p to
-keep local render jobs short; their still mode renders native 4K. Resolution alone
+integer-scaled logical grid for pixel art. The sample runner defaults to native
+4K for both movies and stills; pass `--width 1920` for shorter preview jobs. Respect
+source dimensions and provider limits for photographic assets. Resolution alone
 does not establish detail or visual quality.
 
 Choose a renderer after the style. Use [HTML scenes](render-motion-graphics.md)
@@ -48,8 +49,8 @@ produces a one-frame movie and retained full-resolution PNG in the render job.
 
 Use `--all` instead of `--style` to render all twelve animation studies
 sequentially. `--width` accepts 1280, 1920, 2560, or 3840; pixel art remains on its
-320×180 logical grid at every supported size. `--still` defaults to 3840, while
-movies default to 1920. Use a new `--run` for a deliberate revision. A retained
+320×180 logical grid at every supported size. Movies and `--still` default to
+3840. Use a new `--run` for a deliberate revision. A retained
 attempt is never resubmitted automatically; inspect its log and native receipts
 if it did not complete.
 

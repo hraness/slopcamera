@@ -23,7 +23,7 @@ export async function renderStudies(args: readonly string[], workspaceRoot = roo
     } else throw new Error(`Unknown or incomplete option ${arg}`);
   }
   const still = flags.has("--still");
-  const width = Number(options.get("--width") ?? (still ? 3840 : 1920));
+  const width = Number(options.get("--width") ?? 3840);
   const offset = Number(options.get("--offset") ?? (still ? 3 : 0));
   const run = options.get("--run") ?? (still ? "stills" : "films");
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(run)) throw new Error("--run must be a short lowercase filename token.");
