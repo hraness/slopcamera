@@ -10,8 +10,8 @@ Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill match
 to the CLI version, so it can inspect sources, set up cameras, edit a composition,
 and render. `slopcamera mcp` runs an MCP server with a smaller, fixed set of diagram,
 image, and scene tools. Projects stay in local files, and there is no Slopcamera
-account. Generation uses your own Vercel AI Gateway key or, for prompt-only images,
-prepaid Hraness Credits.
+account. Generation uses your own Vercel AI Gateway account or, for prompt-only
+images, prepaid Hraness Credits.
 
 [Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
 

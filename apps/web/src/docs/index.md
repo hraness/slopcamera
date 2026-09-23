@@ -33,7 +33,7 @@ Then give your coding agent the matching guidance:
 - [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.
 - [Convert raster images to SVG](/docs/how-to/vectorize-images): trace artwork locally, compare a duotone treatment, and inspect fidelity.
-- [Generate images, video, and narration](/docs/how-to/generate-media): use your own Vercel AI Gateway key, or prepaid Hraness Credits for prompt-only images.
+- [Generate images, video, and narration](/docs/how-to/generate-media): use your own Vercel AI Gateway account, or prepaid Hraness Credits for prompt-only images.
 - [Make an educational video](/docs/how-to/educational-video): keep mathematical visuals, narration, and timing evidence revisable.
 - [Make a music video](/docs/how-to/music-video): render authored HTML visuals with a local track.
 - [Render and edit spatial scenes](/docs/how-to/direct-scenes): patch named entities, use hardware rendering, or import a saved world.

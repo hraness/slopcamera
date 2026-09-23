@@ -71,7 +71,7 @@ export const docPages: readonly DocsPage[] = [
     description: "Trace a raster illustration locally, inspect its SVG and fidelity measurements, and make a separate two-color treatment.",
     section: "how-to" },
   { slug: "how-to/generate-media", title: "Generate images, video, and narration",
-    description: "Generate images, video, speech, and transcripts with your own Vercel AI Gateway key, or prompt-only images with prepaid Hraness Credits.",
+    description: "Generate images, video, speech, and transcripts with your own Vercel AI Gateway account, or prompt-only images with prepaid Hraness Credits.",
     section: "how-to" },
   { slug: "how-to/educational-video", title: "Make an educational video",
     description: "Keep mathematical visuals, narration, and timing evidence revisable.",
