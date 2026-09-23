@@ -92,7 +92,8 @@ changes are constrained by the reviewed browser-contract lattice:
 ## Result
 
 Both passes shipped and verified live at slopcamera.com: #209 (squash
-`e6cef0f`) and #211 (squash `9c6057f`). Production serves the new h1,
+`e6cef0f`), #211 (squash `9c6057f`), and #214 (squash
+`64244b7`, intrinsic-aspect example media). Production serves the new h1,
 agent-delegating install note, plain-language workflow and interface
 copy, the new FAQ entries, and closing; all CI lanes pass including
 `Required`, plus both Vercel deployments.
