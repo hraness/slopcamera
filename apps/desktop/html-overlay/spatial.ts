@@ -1271,6 +1271,7 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
       renderer.setRenderTarget(null);renderer.clear(true,true,true);
       if(hasPost){
         postOutputMaterial.uniforms.source.value=runPostChain(frame,index,track);
+        renderer.setRenderTarget(null);
         postMesh.material=postOutputMaterial;renderer.render(postScene,outputCamera);
       }else renderer.render(outputScene,outputCamera);
     }
