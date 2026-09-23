@@ -20,16 +20,20 @@ import { assertOwnedPreviewEndpoint, closeOwnedPreviewBrowser } from "./preview-
 import { checkCopyCase, siteCopyCases, copySteps } from "./site-copy-browser-contract"
 import { collectExamplesFontDiagnostic, ExamplesDiagnosticSizeError, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 
+import { releaseCopyScope, releaseCopyBaselineCommand } from "./site-release-copy-profile"
+import { releaseCopyDom, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
+
 // This entry is bundled by the Bun parent, then executed by genuine pinned
 // Node. The temporary bundle resolves dependencies only from the explicit app.
 async function main() {
   const started = performance.now()
   const node = assertShellNode(process.versions)
-  assert.equal(process.argv.length, 4)
+  assert.ok(process.argv.length === 4 || process.argv.length === 5 && process.argv[4] === releaseCopyScope)
+  const scope = process.argv.length === 5 ? releaseCopyScope : examplesScope
   const appDirectory = process.argv[2], requestPath = process.argv[3]
   assert.ok(isAbsolute(appDirectory) && isAbsolute(requestPath))
   assert.equal(await realpath(appDirectory), appDirectory)
-  const request = parseExamplesRequest(decodeProfiledWorkerJson(await readPreviewFile(requestPath, examplesWorkerProtocolLimit), examplesScope))
+  const request = parseExamplesRequest(decodeProfiledWorkerJson(await readPreviewFile(requestPath, examplesWorkerProtocolLimit), scope), scope)
   const selectedDeadline = examplesDeadlineMs
   const parsePhase = parseExamplesPhase
   assert.equal(request.appDirectory, appDirectory)
@@ -45,16 +49,17 @@ async function main() {
   const browserManifest = JSON.parse(Buffer.from(await readPreviewFile(join(dirname(packagePath), "browsers.json"), 64 * 1024)).toString())
   const pinnedBrowser = browserManifest.browsers.filter(value => value.name === "chromium")
   assert.equal(pinnedBrowser.length, 1)
-  const common = { schemaVersion: 1, token: request.token, scope: request.scope, baselineProfile: request.baselineProfile }, runtime = { node, playwright: "1.62.0" }
+  const common = { schemaVersion: 1, token: request.token, scope: request.scope, baselineProfile: request.baselineProfile,
+    ...(scope === releaseCopyScope ? { baselineRevision: request.baselineRevision, baselineTree: request.baselineTree } : {}) }, runtime = { node, playwright: "1.62.0" }
   let browser, connection, activePair, signal, matrixCompleted = false
   const result = await withPreviewCancellation(process, async cancellation => {
     signal = cancellation.signal
-    await publishProfiledWorkerPhase(directory, 0, { ...common, ...runtime, sequence: 0, kind: "started" }, examplesScope)
+    await publishProfiledWorkerPhase(directory, 0, { ...common, ...runtime, sequence: 0, kind: "started" }, scope)
     browser = await cancellation.wait(() => {
       connection = chromium.connectOverCDP(request.endpoint, { timeout: workerAttachmentMs })
       return connection
     })
-    await publishProfiledWorkerPhase(directory, 1, { ...common, sequence: 1, kind: "connected" }, examplesScope)
+    await publishProfiledWorkerPhase(directory, 1, { ...common, sequence: 1, kind: "connected" }, scope)
     assert.equal(browser.version(), pinnedBrowser[0].browserVersion, "Connected browser version differs from pinned Chrome for Testing")
     const cases = [], observations = []
     const runCase = async (name, stage, operation) => {
@@ -70,7 +75,7 @@ async function main() {
         if (error instanceof ShellPairFailure) stage = error.stage
         try {
           await bounded(writeFile(join(dirname(requestPath), "site-examples-case-failure.json"),
-            encodeProfiledWorkerJson(examplesCaseFailure(request, name, stage, cases, error), examplesScope), { flag: "wx", mode: 0o600 }),
+            encodeProfiledWorkerJson(examplesCaseFailure(request, name, stage, cases, error), scope), { flag: "wx", mode: 0o600 }),
           "Partial examples failure evidence", 5_000)
         } catch (receiptError) { throw new AggregateError([error, receiptError], "Examples case failure and receipt publication failed") }
         throw error
@@ -95,15 +100,15 @@ async function main() {
         const [current, baseline] = await settleShellPair(
           () => checkShellCase(browser, request.current, scenario, "current", negative, async (page, positions) => {
             currentPositions = positions;
-            currentDom = await examplesDom(page, true, scenario)
-            design = await observeExamplesDesign(page, scenario, request.current, negative && scenario.route === "/")
+            currentDom = await (scope === releaseCopyScope ? releaseCopyDom : examplesDom)(page, true, scenario)
+            design = await observeExamplesDesign(page, scenario, request.current, negative && scenario.route === "/", true, scope)
             Object.assign(retained.current, { original: { dom: currentDom, design, positions } })
             if (scenario.route === "/") await captureFonts(page, retained.current, request.current.origin)
           }, "workflow-examples-v1"),
           () => checkShellCase(browser, request.baseline, scenario, "current", false, async (page, positions) => {
             baselinePositions = positions;
-            baselineDom = await examplesDom(page, false, scenario)
-            baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
+            baselineDom = await (scope === releaseCopyScope ? releaseCopyDom : examplesDom)(page, false, scenario)
+            baselineDesign = scope === releaseCopyScope ? await observeExamplesDesign(page, scenario, request.baseline, false, false, scope) : { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
               actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined,
               install: scenario.route === "/" ? await observeExamplesInstall(page, false) : undefined }
             Object.assign(retained.baseline, { original: { dom: baselineDom, design: baselineDesign, positions } })
@@ -113,10 +118,11 @@ async function main() {
         // The raw observer records obstruction evidence only. This new oracle
         // requires zero on both trees and uses no historical support allowance.
         assert.ok(currentDom && baselineDom && design && baselineDesign && currentPositions && baselinePositions)
-        compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
+        const compareEvidence = scope === releaseCopyScope ? compareReleaseCopyEvidence : compareExamplesEvidence
+        compareEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
           { current: request.current.origin, baseline: request.baseline.origin })
         return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions,
-          install: scenario.route === "/" ? compareExamplesInstall(design.install, baselineDesign.install, `${scenario.name}: receipt`) : null }
+          install: scenario.route === "/" ? compareExamplesInstall(design.install, baselineDesign.install, `${scenario.name}: receipt`, scope) : null }
       } catch (error) {
         await retainExamplesFailureDiagnostic(error, retained, text => bounded(writeFile(
           join(dirname(requestPath), "site-examples-comparison-diagnostic.json"), text, { flag: "wx", mode: 0o600 }),
@@ -127,12 +133,12 @@ async function main() {
       const negative = scenario === siteCopyCases[0], currentInstall = [], baselineInstall = []
       const [current, baseline] = await settleShellPair(
         () => checkCopyCase(browser, request.current, scenario, negative, refinementCopyProfile, async (page, name, elements) => {
-          assert.equal(name, copySteps[currentInstall.length]); currentInstall.push(await observeExamplesInstall(page, true, elements))
+          assert.equal(name, copySteps[currentInstall.length]); currentInstall.push(await observeExamplesInstall(page, true, elements, scope))
         }),
         () => checkCopyCase(browser, request.baseline, scenario, false, refinementCopyProfile, async (page, name, elements) => {
-          assert.equal(name, copySteps[baselineInstall.length]); baselineInstall.push(await observeExamplesInstall(page, false, elements))
-        }, examplesBaselineInstallCommand))
-      return compareExamplesCopy(current, baseline, scenario, negative, currentInstall, baselineInstall)
+          assert.equal(name, copySteps[baselineInstall.length]); baselineInstall.push(await observeExamplesInstall(page, false, elements, scope))
+        }, scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand))
+      return compareExamplesCopy(current, baseline, scenario, negative, currentInstall, baselineInstall, scope)
     })
     for (const scenario of [...examplesDocsCases, ...examplesDocsExtraCases])
       await runCase(scenario.name, "docs", () => checkExamplesDocs(browser, request, scenario))
@@ -157,7 +163,7 @@ async function main() {
     if (failures.length > 0) throw new AggregateError(failures, "Shell browser protocol collection failed")
   })
   parsePhase(result, 2, request)
-  await publishProfiledWorkerPhase(directory, 2, result, examplesScope)
+  await publishProfiledWorkerPhase(directory, 2, result, scope)
 }
 
 await main()

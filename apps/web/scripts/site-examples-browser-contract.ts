@@ -15,17 +15,20 @@ import { observeExamplesActions, projectExamplesHeroActions, type ExamplesAction
 import { observeExamplesInstall, compareExamplesInstall, parseExamplesInstallPair, admitExamplesInstallDom, type ExamplesInstall } from "./site-examples-install"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
   examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures, examplesBaselineInstallCommand } from "./site-examples-profile"
+import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, releaseCopyBaselineCommand, type SiteAcceptanceScope } from "./site-release-copy-profile"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
   readonly id: string; readonly path: string; readonly sha256: string; readonly poster: string; readonly guide: string
   readonly width: number; readonly height: number; readonly durationSeconds: number; readonly hasAudio: boolean; readonly captions?: string
 }
-export interface ExamplesRequest {
-  readonly schemaVersion: 1; readonly token: string; readonly scope: typeof examplesScope; readonly baselineProfile: typeof examplesBaselineProfile
+interface ExamplesRequestCommon {
+  readonly schemaVersion: 1; readonly token: string
   readonly appDirectory: string; readonly chromeExecutable: string; readonly endpoint: string
   readonly current: ShellPayload; readonly baseline: ShellPayload; readonly media: readonly ExampleVideoInput[]
 }
+export type ExamplesRequest = ExamplesRequestCommon & ({ readonly scope: typeof examplesScope; readonly baselineProfile: typeof examplesBaselineProfile } |
+  { readonly scope: typeof releaseCopyScope; readonly baselineProfile: typeof releaseCopyBaselineProfile; readonly baselineRevision: typeof releaseCopyBaselineRevision; readonly baselineTree: typeof releaseCopyBaselineTree })
 const keys = (value: Record<string, unknown>, expected: readonly string[]) => assert.deepEqual(Object.keys(value).sort(), [...expected].sort())
 const docsRoutes = ["/docs", "/docs/tutorials/first-diagram", "/docs/tutorials/first-animation", "/docs/how-to/render-motion-graphics", "/docs/how-to/vectorize-images", "/docs/reference/capabilities", "/docs/how-to/parametric-design", "/docs/how-to/edit-video"] as const
 export const examplesDocsCases = Object.freeze(docsRoutes.flatMap(route => [390, 1440].flatMap(width => (["light", "dark"] as const).map(theme => ({
@@ -51,10 +54,12 @@ function payload(value: unknown): void {
   for (const path of item.stylesheets) { shellResource(path); assert.ok(path.endsWith(".css") && item.resources.includes(path)) }
   assert.equal(item.finalCss, item.stylesheets[1]); assert.match(String(item.finalCss), /^\/assets\/site-[a-f0-9]{64}\.css$/u)
 }
-export function parseExamplesRequest(value: unknown): ExamplesRequest {
+export function parseExamplesRequest(value: unknown, scope: SiteAcceptanceScope = examplesScope): ExamplesRequest {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
   const item = shellRecord(value)
-  keys(item, ["schemaVersion", "token", "scope", "baselineProfile", "appDirectory", "chromeExecutable", "endpoint", "current", "baseline", "media"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.scope, examplesScope); assert.equal(item.baselineProfile, examplesBaselineProfile)
+  keys(item, ["schemaVersion", "token", "scope", "baselineProfile", "appDirectory", "chromeExecutable", "endpoint", "current", "baseline", "media", ...(scope === releaseCopyScope ? ["baselineRevision", "baselineTree"] : [])])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.scope, scope); assert.equal(item.baselineProfile, scope === releaseCopyScope ? releaseCopyBaselineProfile : examplesBaselineProfile)
+  if (scope === releaseCopyScope) { assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
   assert.ok(typeof item.token === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u.test(item.token))
   for (const key of ["appDirectory", "chromeExecutable"]) assert.ok(typeof item[key] === "string" && item[key].length <= 4096 && isAbsolute(item[key]))
   assert.ok(typeof item.endpoint === "string" && /^ws:\/\/127\.0\.0\.1:\d{1,5}\/devtools\/browser\/[a-f0-9-]+$/u.test(item.endpoint))
@@ -62,7 +67,10 @@ export function parseExamplesRequest(value: unknown): ExamplesRequest {
   payload(item.current); payload(item.baseline)
   const current = item.current as ShellPayload, baseline = item.baseline as ShellPayload
   assert.notEqual(current.origin, baseline.origin)
-  for (const route of docsRoutes) assert.ok(current.resources.includes(route), `Missing mandatory docs page ${route}`)
+  for (const route of docsRoutes) {
+    assert.ok(current.resources.includes(route), `Missing mandatory docs page ${route}`)
+    if (scope === releaseCopyScope) assert.ok(baseline.resources.includes(route), `Missing release baseline docs page ${route}`)
+  }
   assert.ok(Array.isArray(item.media) && item.media.length >= 2 && item.media.length <= 64)
   const ids = new Set<string>()
   for (const value of item.media) {
@@ -72,6 +80,7 @@ export function parseExamplesRequest(value: unknown): ExamplesRequest {
     assert.ok(typeof video.sha256 === "string" && /^[a-f0-9]{64}$/u.test(video.sha256))
     for (const field of ["path", "poster", "guide", ...(video.captions ? ["captions"] : [])]) {
       shellResource(video[field]); assert.ok(current.resources.includes(video[field] as string))
+      if (scope === releaseCopyScope) assert.ok(baseline.resources.includes(video[field] as string), "Release baseline must bind the same media/guide closure")
     }
     assert.match(String(video.path), /^\/assets\/examples\/[a-z0-9-]+\.mp4$/u)
     assert.match(String(video.poster), /^\/assets\/examples\/[a-z0-9-]+\.(?:webp|png)$/u)
@@ -88,10 +97,12 @@ export function parseExamplesRequest(value: unknown): ExamplesRequest {
   return item as unknown as ExamplesRequest
 }
 export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request: ExamplesRequest): Record<string, unknown> {
-  const item = shellRecord(value), common = ["schemaVersion", "token", "scope", "baselineProfile", "sequence", "kind"]
+  parseExamplesRequest(request, request.scope)
+  const item = shellRecord(value), common = ["schemaVersion", "token", "scope", "baselineProfile", "sequence", "kind", ...(request.scope === releaseCopyScope ? ["baselineRevision", "baselineTree"] : [])]
   keys(item, sequence === 1 ? common : sequence === 0 ? [...common, "node", "playwright"] : [...common, "node", "playwright", "browser", "cases", "closed", "negativeControls", "observations"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, examplesScope)
-  assert.equal(item.baselineProfile, examplesBaselineProfile); assert.equal(item.sequence, sequence); assert.equal(item.kind, ["started", "connected", "result"][sequence])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, request.scope)
+  if (request.scope === releaseCopyScope) { assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
+  assert.equal(item.baselineProfile, request.baselineProfile); assert.equal(item.sequence, sequence); assert.equal(item.kind, ["started", "connected", "result"][sequence])
   if (sequence !== 1) { assertShellNode({ node: String(item.node) }); assert.equal(item.playwright, "1.62.0") }
   if (sequence === 2) {
     assert.match(String(item.browser), /^\d+\.\d+\.\d+\.\d+$/u); assert.equal(item.closed, true)
@@ -104,17 +115,17 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
         keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", "install"])
         if (siteShellCases[index]!.route === "/") {
           const install = shellRecord(observation.install); keys(install, ["current", "baseline"])
-          parseExamplesInstallPair({ current: install.current, baseline: install.baseline })
+          parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
         } else assert.equal(observation.install, null)
         assert.deepEqual(observation.currentObstructions, []); assert.deepEqual(observation.baselineObstructions, [])
       } else if (index < siteShellCases.length + siteCopyCases.length) {
         keys(observation, ["name", "passed", "command", "current", "baseline", "install"])
         const install = shellRecord(observation.install); keys(install, ["current", "baseline", "states"])
-        parseExamplesInstallPair({ current: install.current, baseline: install.baseline })
+        parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
         assert.deepEqual(install.states, copySteps)
         assert.equal(observation.command, refinementInstallCommand)
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
-        assertCopyPorts(observation.baseline as CopyEvidence["ports"], examplesBaselineInstallCommand)
+        assertCopyPorts(observation.baseline as CopyEvidence["ports"], request.scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand)
       } else if (!name.startsWith("player-")) {
         keys(observation, ["name", "passed", "figures", "videos", "shellPaired", "navigation"]); assert.equal(observation.shellPaired, true)
         const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(candidate => candidate.name === name)!
@@ -178,9 +189,11 @@ function parsePlayerObservation(item: Record<string, unknown>, request: Examples
   }
 }
 export function parseExamplesCaseFailure(value: unknown, request: ExamplesRequest): Record<string, unknown> {
+  parseExamplesRequest(request, request.scope)
   const item = shellRecord(value)
-  keys(item, ["schemaVersion", "token", "scope", "accepted", "completed", "scenario", "stage", "comparedCases", "error"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, examplesScope)
+  keys(item, ["schemaVersion", "token", "scope", "accepted", "completed", "scenario", "stage", "comparedCases", "error", ...(request.scope === releaseCopyScope ? ["baselineProfile", "baselineRevision", "baselineTree"] : [])])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, request.scope)
+  if (request.scope === releaseCopyScope) { assert.equal(item.baselineProfile, releaseCopyBaselineProfile); assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
   assert.equal(item.accepted, false); assert.equal(item.completed, false)
   assert.ok(["current", "baseline", "pair", "comparison", "docs", "player"].includes(String(item.stage)))
   assert.ok(Array.isArray(item.comparedCases) && item.comparedCases.length < examplesCaseNames.length)
@@ -189,7 +202,7 @@ export function parseExamplesCaseFailure(value: unknown, request: ExamplesReques
   return item
 }
 export function examplesCaseFailure(request: ExamplesRequest, scenario: string, stage: string, comparedCases: readonly string[], error: unknown) {
-  return parseExamplesCaseFailure({ schemaVersion: 1, token: request.token, scope: examplesScope, accepted: false, completed: false,
+  return parseExamplesCaseFailure({ schemaVersion: 1, token: request.token, scope: request.scope, ...(request.scope === releaseCopyScope ? { baselineProfile: request.baselineProfile, baselineRevision: request.baselineRevision, baselineTree: request.baselineTree } : {}), accepted: false, completed: false,
     scenario, stage, comparedCases: [...comparedCases], error: String(error).replace(/[\x00-\x1f]/gu, " ").slice(0, 2048) || "Unknown failure" }, request)
 }
 export function examplesContentType(path: string): string {
@@ -363,10 +376,10 @@ export async function settleExamplesDisabledStyles(sheet: CSSStyleSheet, href: s
   await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   assertDisabled()
 }
-export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean) {
+export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean, current = true, scope: SiteAcceptanceScope = examplesScope) {
   if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined, install: undefined }
   const flow = await measure(page, examplesFlowSections), hero = await observeRefinementHero(page, scenario)
-  const actions = await observeExamplesActions(page, true), install = await observeExamplesInstall(page, true)
+  const actions = await observeExamplesActions(page, true), install = await observeExamplesInstall(page, current, undefined, scope)
   const ids = await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id")))
   assert.deepEqual(ids, examplesHomeIds, "Reviewed homepage example inventory")
   await assertExampleGeometry(page, scenario.width)
@@ -412,18 +425,20 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
   }
   return { flow, hero, actions, install }
 }
-export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean, currentInstall: readonly ExamplesInstall[], baselineInstall: readonly ExamplesInstall[]) {
-  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, examplesBaselineInstallCommand)
+export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean, currentInstall: readonly ExamplesInstall[], baselineInstall: readonly ExamplesInstall[], scope: SiteAcceptanceScope = examplesScope) {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const baselineCommand = scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand
+  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, baselineCommand)
   assert.deepEqual(actual.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
   for (const side of [actual, baseline]) {
-    assertCopyPorts(side.ports, side === actual ? refinementInstallCommand : examplesBaselineInstallCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
+    assertCopyPorts(side.ports, side === actual ? refinementInstallCommand : baselineCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
     for (const step of side.steps) assert.deepEqual(step.elements.map(item => item.key), refinementCopyElementKeys)
   }
   assert.equal(currentInstall.length, copySteps.length); assert.equal(baselineInstall.length, copySteps.length)
   const observations = actual.steps.map((step, index) => {
     assert.deepEqual(currentInstall[index]!.elements, step.elements)
     assert.deepEqual(baselineInstall[index]!.elements, baseline.steps[index]!.elements)
-    return compareExamplesInstall(currentInstall[index]!, baselineInstall[index]!, `${scenario.name} ${step.name}`)
+    return compareExamplesInstall(currentInstall[index]!, baselineInstall[index]!, `${scenario.name} ${step.name}`, scope)
   })
   // All ten states carry the same note/line/layout proof; raw controls and
   // clipped status boxes were compared in their own state above.

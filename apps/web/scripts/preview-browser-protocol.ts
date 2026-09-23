@@ -7,9 +7,9 @@ import { readPreviewFile } from "./preview-file"
 
 export const workerProtocolLimit = 32 * 1024
 export const examplesWorkerProtocolLimit = 128 * 1024
-export type WorkerProtocolProfile = "workflow-examples-v1"
+export type WorkerProtocolProfile = "workflow-examples-v1" | "release-copy-v1"
 function profiledProtocolLimit(profile: WorkerProtocolProfile): number {
-  assert.equal(profile, "workflow-examples-v1", "Unknown worker protocol profile")
+  assert.ok(profile === "workflow-examples-v1" || profile === "release-copy-v1", "Unknown worker protocol profile")
   return examplesWorkerProtocolLimit
 }
 export const workerPhaseFiles = ["started.json", "connected.json", "result.json"] as const

@@ -25,6 +25,8 @@ import { examplesHeroTextures } from "./site-examples-profile"
 import { parseExamplesCaseFailure, parseExamplesPhase, parseExamplesRequest, examplesCaseNames, examplesDeadlineMs,
   examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesContentType,
   parseExampleByteRange, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
+import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, type SiteAcceptanceScope } from "./site-release-copy-profile"
+import { parsePublishedRelease, publishedRelease } from "../src/published-release"
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
 async function inventory(directory: string, root = directory, depth = 0): Promise<string[]> {
@@ -150,12 +152,58 @@ export async function readExamplesSnapshot(directory: string, current = true): P
   return { inputs: input.artifacts.sort((a,b) => a.path.localeCompare(b.path)), artifacts: output.artifacts,
     files, stylesheets: sheets[0]!, media, presetSourceCommit: preset.sourceCommit, materialSourceCommit: material.sourceCommit }
 }
-export function assertExamplesBaselineManifest(value: unknown, snapshot: ShellSnapshot): void {
+/** Schema seven extends, rather than relabels, the historical media closure. */
+export async function readReleaseCopySnapshot(directory: string): Promise<ExamplesSnapshot> {
+  const snapshot = await readExamplesSnapshot(directory, true)
+  const additional = await readInventory(directory, ["../../package.json", "../../bun.lock", "vendor/paper-theme/paper-theme.css"], 128 * 1024 * 1024)
+  const inputs = [...snapshot.inputs, ...additional.artifacts].sort((a, b) => a.path.localeCompare(b.path))
+  assert.ok(inputs.length <= 512, "Release-copy source inventory bound")
+  assert.equal(new Set(inputs.map(item => item.path)).size, inputs.length)
+  assert.ok(inputs.reduce((total, item) => total + item.bytes, 0) <= 128 * 1024 * 1024, "Release-copy complete input byte bound")
+  return { ...snapshot, inputs }
+}
+// Closed verifier/config/test inventory reviewed for this acceptance identity.
+// Product inputs and build/runtime scripts are deliberately absent.
+export const releaseCopyVerifierInputs = Object.freeze([
+  "AGENTS.md", "tsconfig.preview.json", "site.test.ts",
+  "scripts/preview-browser-protocol.ts", "scripts/site-copy-content.test.ts",
+  "scripts/site-examples-browser-contract.test.ts", "scripts/site-examples-browser-contract.ts",
+  "scripts/site-examples-browser-driver.mjs", "scripts/site-examples-install.ts", "scripts/site-examples-profile.ts",
+  "scripts/site-refinement-browser-contract.test.ts", "scripts/site-refinement-fixtures.ts", "scripts/site-refinement-profile.ts",
+  "scripts/site-support-browser-contract.test.ts", "scripts/site-support-profile.ts", "scripts/verify-site-examples.ts",
+  "scripts/site-release-copy-profile.ts", "scripts/site-release-copy-browser-contract.ts",
+  "scripts/site-release-copy-browser-contract.test.ts", "scripts/verify-site-release-copy.ts",
+])
+export function assertReleaseCopyInputs(current: Pick<ShellSnapshot, "inputs">, baseline: Pick<ShellSnapshot, "inputs">,
+  currentPackage: unknown, baselinePackage: unknown, currentDatum: unknown, baselineDatum: unknown): void {
+  const exceptions = new Set([...releaseCopyVerifierInputs, "package.json", "published-release.json"])
+  for (const side of [current, baseline]) {
+    assert.ok(side.inputs.length > 0 && side.inputs.length <= 512)
+    assert.equal(new Set(side.inputs.map(item => item.path)).size, side.inputs.length)
+  }
+  assert.deepEqual(current.inputs.filter(item => !exceptions.has(item.path)), baseline.inputs.filter(item => !exceptions.has(item.path)),
+    "Release-copy product source, media, build scripts, workspace dependencies and vendor inputs must pair")
+  for (const path of ["package.json", "published-release.json", "../../package.json", "../../bun.lock", "bun.lock", "vendor/paper-theme/paper-theme.css"])
+    for (const side of [current, baseline]) assert.equal(side.inputs.filter(item => item.path === path).length, 1, `Required release-copy input ${path}`)
+  const now = shellRecord(currentPackage), before = shellRecord(baselinePackage)
+  const currentScripts = shellRecord(now.scripts), oldScripts = shellRecord(before.scripts)
+  assert.equal(currentScripts["verify:release-copy"], "bun run ./scripts/verify-site-release-copy.ts")
+  assert.equal(Object.hasOwn(oldScripts, "verify:release-copy"), false)
+  assert.equal(currentScripts.test, `${String(oldScripts.test)} ./scripts/site-release-copy-browser-contract.test.ts`)
+  const retained = { ...currentScripts }; delete retained["verify:release-copy"]; retained.test = oldScripts.test
+  assert.deepEqual(retained, oldScripts, "Only the named verifier and its test entry may change package scripts")
+  assert.deepEqual({ ...now, scripts: oldScripts }, before, "Every package field and dependency remains exact")
+  assert.deepEqual(parsePublishedRelease(baselineDatum), { version: "3.3.6", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.3.6" })
+  assert.deepEqual(parsePublishedRelease(currentDatum), publishedRelease)
+}
+export function assertExamplesBaselineManifest(value: unknown, snapshot: ShellSnapshot, scope: SiteAcceptanceScope = examplesScope): void {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const release = scope === releaseCopyScope
   const manifest = shellRecord(value)
   assert.deepEqual(Object.keys(manifest).sort(), ["artifacts", "baselineProfile", "checkoutRevision", "inputs", "schemaVersion", "sourceRevision", "sourceTree"])
-  assert.equal(manifest.schemaVersion, 6); assert.equal(manifest.baselineProfile, examplesBaselineProfile)
-  assert.equal(manifest.checkoutRevision, examplesBaselineRevision); assert.equal(manifest.sourceRevision, examplesBaselineRevision)
-  assert.equal(manifest.sourceTree, examplesBaselineTree); assert.equal(snapshot.stylesheets.length, 2)
+  assert.equal(manifest.schemaVersion, release ? 7 : 6); assert.equal(manifest.baselineProfile, release ? releaseCopyBaselineProfile : examplesBaselineProfile)
+  assert.equal(manifest.checkoutRevision, release ? releaseCopyBaselineRevision : examplesBaselineRevision); assert.equal(manifest.sourceRevision, release ? releaseCopyBaselineRevision : examplesBaselineRevision)
+  assert.equal(manifest.sourceTree, release ? releaseCopyBaselineTree : examplesBaselineTree); assert.equal(snapshot.stylesheets.length, 2)
   assert.deepEqual(manifest.inputs, snapshot.inputs); assert.deepEqual(manifest.artifacts, snapshot.artifacts)
 }
 /** Bind the only origin-projected paint resources to exact immutable bytes on
@@ -236,7 +284,7 @@ async function observe(directory: string, request: ExamplesRequest, signal: Abor
           "Worker phase read deadline", Math.max(1, deadline - performance.now()))
         signal.throwIfAborted()
         assert.ok(performance.now() < deadline, "Worker phase arrived after its deadline")
-        result = parseExamplesPhase(decodeProfiledWorkerJson(bytes, examplesScope), sequence, request)
+        result = parseExamplesPhase(decodeProfiledWorkerJson(bytes, request.scope), sequence, request)
         phases.push(Uint8Array.from(bytes))
         break
       } catch (error) {
@@ -250,7 +298,7 @@ async function observe(directory: string, request: ExamplesRequest, signal: Abor
       })
     }
   }
-  assert.equal(result!.node, shellRecord(decodeProfiledWorkerJson(phases[0]!, examplesScope)).node)
+  assert.equal(result!.node, shellRecord(decodeProfiledWorkerJson(phases[0]!, request.scope)).node)
   return { result: result!, phases }
 }
 async function collectProtocol(directory: string, observation: ShellObservation): Promise<void> {
@@ -268,7 +316,7 @@ async function collectProtocol(directory: string, observation: ShellObservation)
 }
 async function readCaseFailure(profile: string, request: ExamplesRequest) {
   try {
-    const value = decodeProfiledWorkerJson(await readPreviewFile(join(profile, "site-examples-case-failure.json"), examplesWorkerProtocolLimit), examplesScope)
+    const value = decodeProfiledWorkerJson(await readPreviewFile(join(profile, "site-examples-case-failure.json"), examplesWorkerProtocolLimit), request.scope)
     return parseExamplesCaseFailure(value, request)
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return undefined
@@ -276,8 +324,10 @@ async function readCaseFailure(profile: string, request: ExamplesRequest) {
   }
 }
 
-export async function verifySiteExamples(args: readonly string[]): Promise<void> {
-  const scope = examplesScope, baselineProfile = examplesBaselineProfile, limit = examplesDeadlineMs
+export async function verifySiteExamples(args: readonly string[], scope: SiteAcceptanceScope = examplesScope): Promise<void> {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const release = scope === releaseCopyScope, baselineProfile = release ? releaseCopyBaselineProfile : examplesBaselineProfile, limit = examplesDeadlineMs
+  const snapshot = (directory: string, current: boolean) => release ? readReleaseCopySnapshot(directory) : readExamplesSnapshot(directory, current)
   const options = parseShellArguments(args), deadline = performance.now() + limit
   const actualApp = await realpath(appDirectory)
   assert.notEqual(options.baseline, actualApp, "Baseline must be separate from the changed app")
@@ -310,11 +360,16 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       }
       candidate = await step(async () => candidateIdentity(actualApp))
       baselineIdentity = await step(async () => candidateIdentity(options.baseline))
-      assert.equal(baselineIdentity.sha, examplesBaselineRevision); assert.equal(baselineIdentity.tree, examplesBaselineTree)
-      current = await step(() => readExamplesSnapshot(actualApp))
-      baseline = await step(() => readExamplesSnapshot(options.baseline, false))
+      assert.equal(baselineIdentity.sha, release ? releaseCopyBaselineRevision : examplesBaselineRevision); assert.equal(baselineIdentity.tree, release ? releaseCopyBaselineTree : examplesBaselineTree)
+      current = await step(() => snapshot(actualApp, true))
+      baseline = await step(() => snapshot(options.baseline, false))
+      if (release) {
+        const json = async (directory: string, path: string) => JSON.parse(Buffer.from(await readPreviewFile(join(directory, path), 64 * 1024)).toString()) as unknown
+        assertReleaseCopyInputs(current, baseline, await step(() => json(actualApp, "package.json")), await step(() => json(options.baseline, "package.json")),
+          await step(() => json(actualApp, "published-release.json")), await step(() => json(options.baseline, "published-release.json")))
+      }
       manifestBefore = Uint8Array.from(await step(() => readPreviewFile(options.manifest, 128 * 1024)))
-      assertExamplesBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
+      assertExamplesBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline, scope)
       assertExamplesHeroTextures(current); assertExamplesHeroTextures(baseline)
       const node = await step(() => executable("NODE_EXECUTABLE_PATH")), browserPath = await step(() => executable("SLOPCAMERA_CHROME_PATH"))
       assert.ok(process.env.PLAYWRIGHT_BROWSERS_PATH !== undefined && isAbsolute(process.env.PLAYWRIGHT_BROWSERS_PATH),
@@ -342,9 +397,10 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       protocolDirectory = join(profile, "worker-protocol")
       await mkdir(protocolDirectory, { mode: 0o700 })
       const request = parseExamplesRequest({ schemaVersion: 1, token: randomUUID(), scope, baselineProfile, appDirectory: actualApp, chromeExecutable: browserPath,
-        endpoint, current: browserPayload(current, currentServer.server.url.origin), baseline: browserPayload(baseline, baselineServer.server.url.origin), media: current.media })
+        endpoint, current: browserPayload(current, currentServer.server.url.origin), baseline: browserPayload(baseline, baselineServer.server.url.origin), media: current.media,
+        ...(release ? { baselineRevision: releaseCopyBaselineRevision, baselineTree: releaseCopyBaselineTree } : {}) }, scope)
       workerRequest = request
-      const requestPath = join(profile, "site-examples-browser-request.json"), bytes = encodeProfiledWorkerJson(request, examplesScope)
+      const requestPath = join(profile, "site-examples-browser-request.json"), bytes = encodeProfiledWorkerJson(request, scope)
       await writeFile(requestPath, bytes, { flag: "wx", mode: 0o600 })
       inputs = [await readWorkerInput(driver.path, workerDriverLimit), await readWorkerInput(requestPath, examplesWorkerProtocolLimit)]
       assert.ok(Buffer.from(inputs[0]!.bytes).equals(Buffer.from(driver.bytes)))
@@ -357,7 +413,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       await writeFile(join(profile, "site-examples-request.snapshot.json"), inputs[1]!.bytes, { flag: "wx", mode: 0o600 })
       signal.throwIfAborted()
       worker = spawnVerificationServer({ cwd: actualApp, detachedProcessGroup: true, logLimit: 12_000,
-        omitEnvironment: ["NODE_OPTIONS", "NODE_PATH"], command: [node, driver.path, actualApp, requestPath] })
+        omitEnvironment: ["NODE_OPTIONS", "NODE_PATH"], command: [node, driver.path, actualApp, requestPath, ...(release ? [releaseCopyScope] : [])] })
       console.error(`slopcamera-site-examples: verifying ${examplesCaseNames.length} mandatory ${scope} current/baseline cases`)
       observation = await observe(protocolDirectory, request, signal, worker.exited, deadline)
       await step(() => bounded(worker!.exited, "Shell worker successful exit", 5_000))
@@ -369,7 +425,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
         pairedHeroTextures: examplesHeroTextures,
         materialSourceCommit: current.materialSourceCommit,
         presetSourceCommit: current.presetSourceCommit,
-        expectationsSha256: current.inputs.find(input => input.path === "scripts/site-examples-browser-contract.ts")!.sha256 }
+        expectationsSha256: current.inputs.find(input => input.path === (release ? "scripts/site-release-copy-browser-contract.ts" : "scripts/site-examples-browser-contract.ts"))!.sha256 }
     }, async () => {
       const failures: unknown[] = []
       const collect = async (operation: () => Promise<unknown>, role?: "worker" | "chrome") => {
@@ -404,8 +460,8 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
           assert.ok(Buffer.from(after.bytes).equals(Buffer.from(input.bytes)), "Installed package manifest bytes changed")
         }
         assert.ok(manifestBefore !== undefined && Buffer.from(await readPreviewFile(options.manifest, 128 * 1024)).equals(Buffer.from(manifestBefore)), "Baseline input manifest changed")
-        assertShellSnapshotUnchanged(current!, await readExamplesSnapshot(actualApp))
-        assertShellSnapshotUnchanged(baseline!, await readExamplesSnapshot(options.baseline, false))
+        assertShellSnapshotUnchanged(current!, await snapshot(actualApp, true))
+        assertShellSnapshotUnchanged(baseline!, await snapshot(options.baseline, false))
         assert.deepEqual(candidateIdentity(actualApp), candidate, "Candidate Git identity changed")
         assert.deepEqual(candidateIdentity(options.baseline), baselineIdentity, "Baseline Git identity changed")
         for (const server of servers) assert.deepEqual(server.rejected, [], "Unadmitted or late server request")

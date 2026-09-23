@@ -3,19 +3,22 @@ import type { Page } from "playwright-core"
 import { compareShellElements, measure, shellRecord, type ShellElement } from "./site-shell-browser-contract"
 import { refinementCopyElementKeys, refinementCopySelectors, refinementInstallCommand } from "./site-refinement-profile"
 import { examplesBaselineInstallCommand, examplesIslands } from "./site-examples-profile"
+import { releaseCopyScope, releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall, type SiteAcceptanceScope } from "./site-release-copy-profile"
 
 const near = (actual: number, expected: number, label: string) => assert.ok(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= .5, label)
 type Rect = readonly [number, number, number, number]
 const noteKey = ".install-note[0]", headingKey = ".hraness-marketing-install__heading-group[0]", commandsKey = ".hraness-marketing-install__commands[0]"
 const titleSelector = ".hraness-marketing-install__heading"
-export function examplesInstallNote(current: boolean): string {
+export function examplesInstallNote(current: boolean, scope: SiteAcceptanceScope = "workflow-examples-v1"): string {
+  assert.ok(scope === "workflow-examples-v1" || scope === releaseCopyScope)
+  if (!current && scope === releaseCopyScope) return releaseCopyBaselineNote
   const command = current ? refinementInstallCommand : examplesBaselineInstallCommand
   const version = /^bun add --global https:\/\/github\.com\/hraness\/slopcamera\/releases\/download\/v(\d+\.\d+\.\d+)\/hraness-slopcamera-\1\.tgz\nslopcamera skill install --target agents$/u.exec(command)
   assert.ok(version, "One exact canonical archive and matching skill")
   return `${current ? "Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs " : ""}Bun 1.3.14 or newer on macOS, Linux, or Windows. Verified release v${version[1]}.`
 }
 /** Six fixed text owners, with each complete admitted fragment exactly once. */
-export function projectExamplesBaselineCopyElements(elements: readonly ShellElement[]): readonly ShellElement[] {
+export function projectExamplesBaselineCopyElements(elements: readonly ShellElement[], scope: SiteAcceptanceScope = "workflow-examples-v1"): readonly ShellElement[] {
   assert.deepEqual(elements.map(item => item.key), refinementCopyElementKeys)
   const notes = new Set(["#install[0]", noteKey, headingKey])
   const commands = new Set(["#install[0]", commandsKey, "[data-copy-command][0]", "[data-copy-command-value][0]"])
@@ -25,9 +28,9 @@ export function projectExamplesBaselineCopyElements(elements: readonly ShellElem
     return parts[0]! + after + parts[1]!
   }
   return elements.map(item => ({ ...item, text: commands.has(item.key)
-    ? replace(notes.has(item.key) ? replace(item.text, examplesInstallNote(false), examplesInstallNote(true)) : item.text,
-      examplesBaselineInstallCommand.replace(/\s+/gu, " "), refinementInstallCommand.replace(/\s+/gu, " "))
-    : notes.has(item.key) ? replace(item.text, examplesInstallNote(false), examplesInstallNote(true)) : item.text }))
+    ? replace(notes.has(item.key) ? replace(item.text, examplesInstallNote(false, scope), examplesInstallNote(true, scope)) : item.text,
+      (scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand).replace(/\s+/gu, " "), refinementInstallCommand.replace(/\s+/gu, " "))
+    : notes.has(item.key) ? replace(item.text, examplesInstallNote(false, scope), examplesInstallNote(true, scope)) : item.text }))
 }
 export interface ExamplesInstall {
   readonly elements: readonly ShellElement[]
@@ -63,12 +66,13 @@ export function admitExamplesInstallDom(root: HTMLElement, input: { fixture: str
 }
 /** Observe real text-node fragments, never count an inline anchor's Range box
  * as another line. The detached clone admits only the existing copy states. */
-export async function observeExamplesInstall(page: Page, current: boolean, elements?: readonly ShellElement[]): Promise<ExamplesInstall> {
+export async function observeExamplesInstall(page: Page, current: boolean, elements?: readonly ShellElement[], scope: SiteAcceptanceScope = "workflow-examples-v1"): Promise<ExamplesInstall> {
+  assert.ok(scope === "workflow-examples-v1" || scope === releaseCopyScope)
   const measured = elements ?? await measure(page, refinementCopySelectors)
   const [title] = await measure(page, [titleSelector])
   assert.ok(title)
   const fixture = examplesIslands.find(item => item.selector === "#install")!
-  const dom = await page.locator("#install").evaluate(admitExamplesInstallDom, { fixture: current ? fixture.current : fixture.baseline, copying: elements !== undefined })
+  const dom = await page.locator("#install").evaluate(admitExamplesInstallDom, { fixture: current ? fixture.current : scope === releaseCopyScope ? releaseCopyBaselineInstall : fixture.baseline, copying: elements !== undefined })
   const metadata = await page.evaluate(({ selectors, raw }) => {
     const root = document.querySelector<HTMLElement>("#install")
     if (!root || document.querySelectorAll("#install").length !== 1) throw Error("One install owner")
@@ -140,7 +144,7 @@ function px(item: ShellElement, property: string): number {
   assert.ok(value !== undefined && /^-?\d+(?:\.\d+)?px$/u.test(value), `${item.key}: finite ${property}`)
   const result = parseFloat(value); assert.ok(Number.isFinite(result)); return result
 }
-function validate(side: ExamplesInstall, current: boolean): ExamplesInstallReceipt {
+function validate(side: ExamplesInstall, current: boolean, scope: SiteAcceptanceScope): ExamplesInstallReceipt {
   assert.deepEqual(side.elements.map(item => item.key), refinementCopyElementKeys)
   assert.equal(side.clientRects.length, side.elements.length)
   assert.ok(Number.isFinite(side.scrollY) && side.scrollY >= 0 && side.scrollY <= 1_000_000)
@@ -148,7 +152,7 @@ function validate(side: ExamplesInstall, current: boolean): ExamplesInstallRecei
   const item = (key: string) => side.elements.find(item => item.key === key)!
   const install = item("#install[0]"), note = item(noteKey), heading = item(headingKey), commands = item(commandsKey), title = side.title
   for (const element of [install, note, heading, commands, title]) rectangle(element.rect)
-  assert.equal(title.key, `${titleSelector}[0]`); assert.equal(note.text, examplesInstallNote(current))
+  assert.equal(title.key, `${titleSelector}[0]`); assert.equal(note.text, examplesInstallNote(current, scope))
   assert.equal(install.styles.display, "grid"); assert.equal(heading.styles.display, "grid"); assert.equal(heading.styles["align-content"], "start")
   assert.ok(["normal", "stretch"].includes(install.styles["align-items"]!)); assert.deepEqual(side.alignSelf, ["auto", "auto"])
   for (const element of [note, heading, title, commands]) for (const edge of ["top", "bottom"]) near(px(element, `margin-${edge}`), 0, "Unchanged zero install margins")
@@ -188,12 +192,12 @@ function validate(side: ExamplesInstall, current: boolean): ExamplesInstallRecei
     headingNatural, headingHeight: heading.rect[3]!, commandHeight: commands.rect[3]!, installHeight: install.rect[3]!, insets: [top, bottom], gap,
     commandOffset: commands.rect[1]! - install.rect[1]! }
 }
-export function compareExamplesInstall(current: ExamplesInstall, baseline: ExamplesInstall, label: string) {
-  const receipt = { current: validate(current, true), baseline: validate(baseline, false) }
+export function compareExamplesInstall(current: ExamplesInstall, baseline: ExamplesInstall, label: string, scope: SiteAcceptanceScope = "workflow-examples-v1") {
+  const receipt = { current: validate(current, true, scope), baseline: validate(baseline, false, scope) }
   assert.equal(receipt.current.mode, receipt.baseline.mode)
   const offset = current.elements[0]!.rect[1]! - baseline.elements[0]!.rect[1]!
   const commandDelta = receipt.current.commandOffset - receipt.baseline.commandOffset
-  const previous = projectExamplesBaselineCopyElements(baseline.elements)
+  const previous = projectExamplesBaselineCopyElements(baseline.elements, scope)
   const projected = current.elements.map((item, index) => {
     const old = previous[index]!, visible = current.clientRects[index]! > 0
     assert.equal(visible, baseline.clientRects[index]! > 0, `${item.key}: layout participation`)
@@ -214,10 +218,10 @@ export function compareExamplesInstall(current: ExamplesInstall, baseline: Examp
 }
 /** Closed, finite worker evidence; source validation retains full paint and
  * relative geometry before this compact receipt is emitted. */
-export function parseExamplesInstallReceipt(value: unknown, current: boolean): ExamplesInstallReceipt {
+export function parseExamplesInstallReceipt(value: unknown, current: boolean, scope: SiteAcceptanceScope = "workflow-examples-v1"): ExamplesInstallReceipt {
   const item = shellRecord(value)
   assert.deepEqual(Object.keys(item).sort(), ["note", "lines", "lineHeight", "mode", "noteWidth", "titleHeight", "headingGap", "noteHeight", "headingNatural", "headingHeight", "commandHeight", "installHeight", "insets", "gap", "commandOffset"].sort())
-  assert.equal(item.note, examplesInstallNote(current)); assert.ok(item.mode === "column" || item.mode === "row")
+  assert.equal(item.note, examplesInstallNote(current, scope)); assert.ok(item.mode === "column" || item.mode === "row")
   for (const key of ["lineHeight", "noteWidth", "titleHeight", "headingGap", "noteHeight", "headingNatural", "headingHeight", "commandHeight", "installHeight", "gap", "commandOffset"]) assert.ok(typeof item[key] === "number" && Number.isFinite(item[key]) && Number(item[key]) >= 0 && Number(item[key]) <= 10_000)
   assert.ok(Array.isArray(item.insets) && item.insets.length === 2 && item.insets.every(value => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100))
   assert.ok(Array.isArray(item.lines) && item.lines.length >= 1 && item.lines.length <= 16)
@@ -238,10 +242,10 @@ export function parseExamplesInstallReceipt(value: unknown, current: boolean): E
   near(result.commandOffset, result.insets[0] + (result.mode === "column" ? height + result.gap : 0), "Receipt command offset")
   return result
 }
-export function parseExamplesInstallPair(value: unknown) {
+export function parseExamplesInstallPair(value: unknown, scope: SiteAcceptanceScope = "workflow-examples-v1") {
   const item = shellRecord(value)
   assert.deepEqual(Object.keys(item).sort(), ["baseline", "current"])
-  const current = parseExamplesInstallReceipt(item.current, true), baseline = parseExamplesInstallReceipt(item.baseline, false)
+  const current = parseExamplesInstallReceipt(item.current, true, scope), baseline = parseExamplesInstallReceipt(item.baseline, false, scope)
   for (const field of ["mode", "noteWidth", "lineHeight", "titleHeight", "headingGap", "insets", "gap", "commandHeight"] as const)
     assert.deepEqual(current[field], baseline[field], `Paired receipt ${field}`)
   return { current, baseline }

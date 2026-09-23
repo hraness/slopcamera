@@ -16,6 +16,15 @@ A restricted shell can omit package-manager paths. Check known host installation
 
 Slopcamera installs from its verified release archive: `bun add --global https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz`, then `slopcamera doctor --json`. Building from source is the contributor path. Historical Atet archives do not install the renamed CLI; never substitute `slopcamera` into an old archive URL.
 
+If an update from a previous local archive reports `DependencyLoop`, use Bun's
+[named tarball syntax](https://bun.com/docs/pm/cli/add#tarball-dependencies) with
+the same verified archive:
+
+```sh
+bun add --global @hraness/slopcamera@https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz
+slopcamera --version
+```
+
 Use an existing compatible source build when available. Otherwise follow the [complete source-install guide](https://github.com/hraness/slopcamera/blob/main/docs/how-to/use-current-source.md): clone into a new directory, record its exact commit, install locked dependencies without lifecycle scripts, build the SDK and source CLI, then define the shell command against that checkout. A clone or skill installation alone does not install the executable. Do not alter an existing active checkout to satisfy this path.
 
 For a new source checkout:

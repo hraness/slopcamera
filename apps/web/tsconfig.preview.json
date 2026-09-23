@@ -92,6 +92,10 @@
     "scripts/site-examples-browser-contract.ts",
     "scripts/site-examples-browser-contract.test.ts",
     "scripts/site-examples-profile.ts",
-    "scripts/verify-site-examples.ts"
+    "scripts/verify-site-examples.ts",
+    "scripts/site-release-copy-profile.ts",
+    "scripts/site-release-copy-browser-contract.ts",
+    "scripts/site-release-copy-browser-contract.test.ts",
+    "scripts/verify-site-release-copy.ts"
   ]
 }
