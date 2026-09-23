@@ -144,8 +144,8 @@ describe("examples diagnostic evidence never changes acceptance",()=>{
   await expect(retainExamplesFailureDiagnostic(error,{original:42},async text=>{written.push(text)})).rejects.toBe(error)
   expect(JSON.parse(written[0]!)).toEqual({evidence:{original:42},diagnosticOverflow:error.metadata})
  })
- test("closing failure includes the authoritative numeric rectangles without admitting their difference",()=>{
-  const item={key:"#closing[0]",rect:[0,100,545,300],styles:{},text:"",semantics:{}} as unknown as ShellElement
+ test("non-owner failure includes the authoritative numeric rectangles without admitting their difference",()=>{
+  const item={key:"#interfaces[0]",rect:[0,100,545,300],styles:{},text:"",semantics:{}} as unknown as ShellElement
   expect(()=>compareExamplesFlow([item],[{...item,rect:[0,100,545,320]}])).toThrow('"actual":[0,100,545,300],"baseline":[0,100,545,320],"heightDelta":-20')
  })
 })
