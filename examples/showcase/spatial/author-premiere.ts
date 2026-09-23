@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  applySpatialScenePatch, auditSpatialCameraTrack, compileSpatialCameraRig,
+  auditSpatialCameraTrack, compileSpatialCameraRig,
   parseSpatialScene, planSpatialRenderEffects, spatialSceneSha256,
 } from "../../../src/spatial-scene/index.ts";
 import { SpatialRenderRequestSchema } from "../../../apps/desktop/application/spatial-render.ts";
