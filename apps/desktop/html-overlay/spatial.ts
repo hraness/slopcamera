@@ -1115,6 +1115,7 @@ function makeMaterial(object,frame,track){
   }
   const material=track(m.kind==="unlit"?new THREE.MeshBasicMaterial(options):new THREE.MeshStandardMaterial({...options,roughness:m.roughness,metalness:m.metalness}));
   if(object.linearColor)material.color.setRGB(...object.linearColor,THREE.LinearSRGBColorSpace);
+  if(m.kind==="standard"&&m.emissive){material.emissive=new THREE.Color(m.emissive.color);material.emissiveIntensity=m.emissive.intensity;}
   return material;
 }
 function makeCamera(data){
