@@ -79,10 +79,14 @@ material rules in the foundation CSS. All 22 CI lanes green, `Required` pass.
 - The gallery's hero is always one of the featured set; `#examples` renders
   the remaining five. New featured entries therefore shift markup in both the
   hero island and the gallery island.
-- "Presentation settle" timeouts in the browser render lanes were
-  environmental (shared-host GPU/CPU contention), not scene defects — the
-  checked-in pavilion scene failed identically. Verified by retrying a proven
-  checked-in scene and by the `html render` lane failing the same way.
+- The frame-0 "presentation settle" timeouts were a code bug, not the
+  environment: PR #213's settle step evaluated `requestAnimationFrame` in a
+  page whose global the injected runtime had already replaced with the
+  deterministic scheduler, deadlocking every browser-overlay render. Fixed in
+  #222 by capturing the compositor callback before the replacement and
+  exposing `settlePresentation()` on the host controller. Diagnostic rule:
+  retest a known-good checked-in scene before blaming contention — the
+  pavilion failure fingerprint was identical because the cause was identical.
 - ffmpeg overlay composites over checked-in authored assets are a viable
   fallback showcase shape when the spatial renderer cannot run; the pattern
   keeps provenance by binding every input by sha256 and emitting a
