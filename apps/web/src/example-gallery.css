@@ -37,10 +37,19 @@
   list-style: none;
 }
 
-.slopcamera-techniques a {
+.slopcamera-techniques ul a {
   display: inline-flex;
   align-items: center;
   min-block-size: 2.75rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.slopcamera-techniques ul a:hover {
+  border-color: var(--line-strong);
+  background: var(--paper-raised);
 }
 
 @media (max-width: 48rem) {

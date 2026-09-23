@@ -46,8 +46,8 @@ test("paint projection asserts only owned positive properties and preserves unli
  expect(()=>projectRefinementPaint({...item,styles:{...item.styles,"border-bottom-color":"red"}},old,paint)).toThrow()
  expect(projectRefinementPaint({...item,styles:{...item.styles,color:"red"}},old,paint).styles.color).toBe("red")
 })
-test("literal fixtures admit only the six reviewed authored islands",()=>{
- expect(Object.keys(refinementIslands)).toEqual([".hraness-marketing-hero__boundary",".hraness-marketing-proof-frame","#install","#page-title",".hraness-marketing-hero__summary","#questions","#closing","#workflow","#interfaces","#design",".hraness-marketing-facts"])
+test("literal fixtures admit only the eight reviewed authored islands",()=>{
+ expect(Object.keys(refinementIslands)).toEqual([".hraness-marketing-hero",".hraness-marketing-proof-frame","#install","#questions","#closing","#workflow","#interfaces","#design"])
  expect(refinementInstallCommand.split("\n")).toEqual(["bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz","slopcamera skill install --target agents"])
  const fixture=Object.values(refinementIslands).join("")
  expect(fixture).not.toMatch(/\sstyle=/u);expect(fixture).toContain('syntax-code language-typescript');expect(fixture).toContain("docs/how-to/use-current-source.md")

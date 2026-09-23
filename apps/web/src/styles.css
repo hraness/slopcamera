@@ -141,8 +141,18 @@ a {
 }
 
 /* The legacy link reset must not replace primary actions' contrast ink. */
-#main[data-hraness-marketing-preset="editorial"] .hraness-marketing-action[data-emphasis="primary"] {
+#main[data-hraness-marketing-preset="editorial"] .hraness-marketing-action[data-emphasis="primary"]:not([data-tone="accent"] *) {
   color: var(--hraness-marketing-accent-ink);
+}
+/* Inside accent-tone surfaces the same reset hides the inversion. */
+#main :is(.hraness-marketing-cta[data-tone="accent"], .hraness-marketing-hero[data-tone="accent"]) .hraness-marketing-action[data-emphasis="primary"] {
+  color: var(--hraness-marketing-accent);
+}
+
+/* Example captions follow the accent surface inside an accent hero. */
+.hraness-marketing-hero[data-tone="accent"] .slopcamera-example {
+  --ink: var(--hraness-marketing-accent-ink);
+  --muted: color-mix(in oklch, var(--hraness-marketing-accent-ink) 78%, transparent);
 }
 
 @media (forced-colors: active) {
@@ -344,7 +354,18 @@ h3 {
 }
 
 .hraness-marketing-interface .hraness-material-code {
+  border: 1px solid var(--line);
   border-radius: .875rem;
+}
+
+/* Editorial display digits for the workflow steps. */
+.hraness-marketing-flow__number {
+  font-family: var(--hraness-marketing-display-font);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--muted);
+  padding-block-start: 0;
 }
 
 .hraness-marketing-primitive blockquote p {
