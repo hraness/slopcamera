@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createFilmFinishPlan, parseFilmProbe } from "../examples/style-portfolio/finish-film";
+import { createFilmFinishPlan, finishFilm, parseFilmProbe } from "../examples/style-portfolio/finish-film";
 import { renderStudies } from "../examples/style-portfolio/render";
 
 const video = { index: 1, codec_type: "video", width: 128, height: 96, avg_frame_rate: "24/1" };
@@ -42,6 +42,25 @@ async function withFakeHost(run: (workspace: string) => Promise<void>): Promise<
     await run(workspace);
   } finally { await rm(workspace, { recursive: true, force: true }); }
 }
+
+test("finishing rejects an existing output entry, including a dangling symlink, before probing", async () => {
+  await withFakeHost(async workspace => {
+    const directory = join(workspace, "artifacts/style-portfolio");
+    await mkdir(directory, { recursive: true });
+    const input = join(workspace, "unprobed.mp4");
+    await writeFile(input, "This deliberately is not valid media.\n");
+    const target = join(workspace, "unselected-target.mp4");
+    await symlink(target, join(directory, "dangling.mp4"));
+    await writeFile(join(directory, "existing.mp4"), "retained output\n");
+    for (const name of ["dangling", "existing"]) {
+      await expect(finishFilm([input, "silent-actuality", `artifacts/style-portfolio/${name}.mp4`], workspace, () => {}))
+        .rejects.toThrow("Output already exists");
+      expect(await Bun.file(join(directory, `${name}.mp4.intent.json`)).exists()).toBe(false);
+    }
+    expect(await Bun.file(target).exists()).toBe(false);
+    expect(await readFile(join(directory, "existing.mp4"), "utf8")).toBe("retained output\n");
+  });
+});
 
 test("a dry run retains separate evidence and cannot overwrite an existing execution", async () => {
   await withFakeHost(async workspace => {

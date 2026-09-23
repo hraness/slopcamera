@@ -181,7 +181,7 @@ export const VISUAL_STYLE_PROFILES: readonly VisualStyleProfile[] = Object.freez
     material: ["Use opaque flat ink and warm paper-like backgrounds with sparse decorative detail.", "Keep line weight and facial registration stable as the body deforms."],
     camera: ["Favor a fixed theatrical view and whole-body acting.", "Author anticipation, action, overshoot, and settle; preserve foot contact during planted poses."],
     finishing: { grain: 0.04, grainSizePxAt1080: 0.8, halation: 0, gateWeavePxAt1080: 0.08, vignette: 0.06, saturation: 0.15, contrast: 1.05 },
-    avoid: ["Avoid sliding feet, unexplained limb length changes, and constant sine-wave movement without acting beats.", "Use original characters and props rather than recognizable studio mascots."],
+    avoid: ["Avoid sliding feet, unexplained limb length changes, and constant sine-wave movement without acting beats.", "Use original characters and props rather than familiar cartoon mascots."],
     acceptance: ["Anticipation, elastic action, follow-through, and a settled pose can be identified in the complete clip.", "Feet and hands make intentional contact, and facial features remain readable through deformation."],
   }),
   profile({

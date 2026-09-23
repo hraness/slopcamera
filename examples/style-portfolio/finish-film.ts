@@ -1,7 +1,7 @@
 /** Bounded local finishing example using Slopcamera's typed video-look compiler. */
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, realpath, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -113,6 +113,14 @@ export async function finishFilm(args: readonly string[], workspaceRoot = root, 
   const outputRoot = resolve(canonicalRoot, "artifacts/style-portfolio");
   const outputRelative = relative(outputRoot, output);
   if (isAbsolute(outputRelative) || outputRelative.startsWith("..") || !output.endsWith(".mp4")) throw new Error("Output must be a new .mp4 within artifacts/style-portfolio.");
+  // FFmpeg's existence check can follow a dangling symlink to a new target.
+  // Reject the directory entry itself before any media work; retain -n as well.
+  try {
+    await lstat(output);
+    throw new Error("Output already exists, including a symlink. Choose a new output path.");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const inputStat = await stat(input);
   if (input === output || !inputStat.isFile() || inputStat.size < 1 || inputStat.size > maxInputBytes) throw new Error("Input must be a distinct regular file no larger than 512 MiB.");
   const { facts, look, compiled } = createFilmFinishPlan(style, await probe(input));

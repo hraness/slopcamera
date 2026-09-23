@@ -449,7 +449,7 @@
   },
   {
     "identityLineCount": 22,
-    "identityLinesSha256": "e423169b0bf5db318aa4a0052f25dadb5f9bb04ba6d3a1b6ddcb4c61da811410",
+    "identityLinesSha256": "29322b08075420632fd9fe6f75eabf8e3d8ca085be583f98a0e4692d3fe41faf",
     "occurrenceCount": 31,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -1287,7 +1287,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "b1a68515264bb31de48042f6a217206e59561e11e79eb9e6c0769a40c9f1cc65",
+    "identityLinesSha256": "4ce47df51bba858100d4cd8d78e5bb52216d308398707a9b6e8643ed47d8c3f2",
     "occurrenceCount": 450,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1749,15 +1749,6 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "a4237df51f4bc7e0e0234fb5dd6f798a75eb1abba039e68076c043d608dba84d",
-    "occurrenceCount": 233,
-    "path": "dist/index-10bz03js.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
-    "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
     "path": "dist/index-a3vvs3rf.js",
@@ -1766,8 +1757,17 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "eb3056c69a99340d4906c251f906d7bf0456e4f496d34175b00adb21c107986e",
+    "occurrenceCount": 233,
+    "path": "dist/index-abnk4h9c.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "241f77ed94f484a6c798d5954c460d64405cdfea6e16a8953c1ecb662b229212",
+    "identityLinesSha256": "4c7db6565db7a0a64d63f9f21ad35678fe92c4b7e547e8a6a14b1a4d669c97af",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1797,6 +1797,15 @@
     "identityLinesSha256": "35bc26c9c786855e8f3156489c018281d0d6e689107dcc56b0d0100ce0010634",
     "occurrenceCount": 2,
     "path": "docs/extension-architecture.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "0cf3949a9b65d0451c81aca4948b83503899bbf13ea9d1783d702124539e8f82",
+    "occurrenceCount": 2,
+    "path": "docs/how-to/direct-visual-styles.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1878,6 +1887,15 @@
     "identityLinesSha256": "5b87c5f2748f35012e68db507aa79d50f406bc11d507f494add5208dcf72f3e0",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5b00dec7c95e673df163a0d79661aac0a194e32271b796fe1eebb8dce283aff9",
+    "occurrenceCount": 4,
+    "path": "docs/research/tesseract-public-ideas.md",
     "categories": [
       "native-film-studio"
     ]
@@ -2883,6 +2901,24 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "e832dcf8af3d591c68aa24848df4d7f479ce1a446a3208ca4acdf2ec15d419b2",
+    "occurrenceCount": 2,
+    "path": "examples/style-portfolio/market-street/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "ab8bbb5676d8696c68c8a892913ab08c13c40a9ffa0fbcb516f8b86528dbba25",
+    "occurrenceCount": 1,
+    "path": "examples/style-portfolio/market-street/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 17,
     "identityLinesSha256": "6f7adc7e3c513c517083cdd747b1410cc4313538d22aab79fb46759aa50a98a6",
     "occurrenceCount": 17,
@@ -2901,9 +2937,9 @@
     ]
   },
   {
-    "identityLineCount": 17,
-    "identityLinesSha256": "ee91d3ca33794d60f31becf836a4b3211dc8f6ae0a0b39582f0addd51133d843",
-    "occurrenceCount": 17,
+    "identityLineCount": 18,
+    "identityLinesSha256": "1bdf2cdd0b5da1c7e2f1ec3c4a8e510de6186cd9ea0f21052df0d2182a389549",
+    "occurrenceCount": 18,
     "path": "scripts/package-smoke.ts",
     "categories": [
       "native-film-studio"
@@ -2968,6 +3004,15 @@
     "identityLinesSha256": "3a448fc2dd66943323deb6d2a440819e37b5539a509c1c341284749ea14f872e",
     "occurrenceCount": 1,
     "path": "skills/slopcamera/references/video-projects.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "88b30e69a3c9b7e576d3ac7bc53db5e13280dd0b3864fedbb4bc90fb6ea3d6fe",
+    "occurrenceCount": 2,
+    "path": "skills/slopcamera/references/visual-style-direction.md",
     "categories": [
       "native-film-studio"
     ]
