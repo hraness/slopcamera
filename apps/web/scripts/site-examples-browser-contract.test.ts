@@ -5,12 +5,13 @@ import { join } from "node:path"
 import { runInNewContext } from "node:vm"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
   examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesScope, examplesBaselineProfile,
-  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, compareExamplesHeroBackgroundImage, settleExamplesDisabledStyles, type ExamplesRequest } from "./site-examples-browser-contract"
+  examplesDirectedRatios, assertExamplesRatioGeometry, examplesContentType, parseExampleByteRange, compareExamplesFlow, projectExamplesState, compareExamplesHeroBackgroundImage, settleExamplesDisabledStyles, compareExamplesCopy, type ExamplesRequest } from "./site-examples-browser-contract"
 import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelectors, settle, type ShellElement } from "./site-shell-browser-contract"
-import { siteCopyCases } from "./site-copy-browser-contract"
-import { refinementInstallCommand } from "./site-refinement-profile"
+import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
+import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
+import { archiveInstall } from "../src/published-release"
 import { assertExamplesBaselineManifest, assertExamplesHeroTextures } from "./verify-site-examples"
-import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures } from "./site-examples-profile"
+import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures, examplesBaselineInstallCommand, examplesIslands } from "./site-examples-profile"
 import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodeProfiledWorkerJson,
   publishWorkerPhase, publishProfiledWorkerPhase, examplesWorkerProtocolLimit, workerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
@@ -19,6 +20,8 @@ import { compareRefinementHeroCopies } from "./site-refinement-browser-contract"
 import { collectExamplesFontDiagnostic, encodeExamplesFailureDiagnostic, ExamplesDiagnosticSizeError,
   examplesFontOwners, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 import type { Page } from "playwright-core"
+import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
+import { admitExamplesInstallDom, compareExamplesInstall, examplesInstallLines, examplesInstallNote, parseExamplesInstallReceipt, parseExamplesInstallPair, projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
   poster: "/assets/examples/editorial-aaaaaaaaaaaa.webp", guide: "/docs/tutorials/first-animation", width: 1280, height: 720, durationSeconds: 8, hasAudio: false },
@@ -31,13 +34,73 @@ const resources = [...new Set(["/", "/404.html", "/docs", "/docs/tutorials/first
 const payload = (port: number) => ({ origin: `http://127.0.0.1:${port}`, resources, stylesheets: ["/graphs/site-foundation/style.css", `/assets/site-${hash}.css`], finalCss: `/assets/site-${hash}.css` })
 function request(): ExamplesRequest { return parseExamplesRequest({ schemaVersion: 1, token: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", scope: examplesScope,
   baselineProfile: examplesBaselineProfile, appDirectory: "/tmp/app", chromeExecutable: "/tmp/chrome", endpoint: "ws://127.0.0.1:3211/devtools/browser/aaaaaaaa", current: payload(3212), baseline: payload(3213), media }) }
-const ports = () => ({ write: "success", fallback: "throw", writes: Array.from({length:5},()=>refinementInstallCommand),
-  fallbacks: Array.from({length:3},()=>({value:refinementInstallCommand,readonly:true,start:0,end:refinementInstallCommand.length,focused:true,offscreen:true})),
+const ports = (command = refinementInstallCommand): CopyEvidence["ports"] => ({ write: "success", fallback: "throw", writes: Array.from({length:5},()=>command),
+  fallbacks: Array.from({length:3},()=>({value:command,readonly:true,start:0,end:command.length,focused:true,offscreen:true})),
   timers: [{delay:2500,started:1,fired:2501,cancelled:false},{delay:2500,started:1,fired:null,cancelled:true},{delay:2500,started:1,fired:null,cancelled:false}] })
+// Text is reconstructed from the real independently authored HTML island,
+// including hidden disclosure content. Geometry below is a synthetic pure
+// contract fixture; only the native observer supplies actual line evidence.
+function installText(current: boolean): Readonly<Record<string, string>> {
+ const source = examplesIslands.find(item => item.selector === "#install")!
+ const tree = parseFragment(current ? source.current : source.baseline)
+ type Node = DefaultTreeAdapterMap["node"]
+ type Element = DefaultTreeAdapterMap["element"]
+ const descendants = (node: Node): Element[] => "childNodes" in node ? node.childNodes.flatMap(child => [...("tagName" in child ? [child] : []), ...descendants(child)]) : []
+ const nodes = descendants(tree)
+ const simple = (node: Element, selector: string): boolean => selector.startsWith(".") ? (node.attrs.find(a => a.name === "class")?.value.split(" ") ?? []).includes(selector.slice(1))
+  : selector.startsWith("#") ? node.attrs.some(a => a.name === "id" && a.value === selector.slice(1))
+  : selector.startsWith("[") ? node.attrs.some(a => a.name === selector.slice(1, -1)) : node.tagName === selector
+ const matches = (node: Element, selector: string): boolean => {
+  const direct = selector.split(" > "), parts = direct.length === 2 ? direct : selector.split(" ")
+  if (parts.length === 1) return simple(node, selector)
+  if (!simple(node, parts[1]!)) return false
+  let parent = node.parentNode
+  while (parent && "tagName" in parent) {
+   if (simple(parent, parts[0]!)) return true
+   if (direct.length === 2) return false
+   parent = parent.parentNode
+  }
+  return false
+ }
+ const text = (node: Node): string => "value" in node ? node.value : "childNodes" in node ? node.childNodes.map(text).join("") : ""
+ return Object.fromEntries(refinementCopyElementKeys.map(key => {
+  const selector = key.replace(/\[\d+\]$/u, ""), index = Number(/\[(\d+)\]$/u.exec(key)![1])
+  const found = nodes.filter(node => matches(node, selector)); if (!found[index]) throw Error(`Missing fixture owner ${key}`)
+  return [key, text(found[index]!).replace(/\s+/gu, " ").trim()]
+ }))
+}
+function installFixture(current: boolean, row = false): ExamplesInstall {
+ const texts = installText(current), top = current ? 500 : 100, scrollY = current ? 300 : 20, noteHeight = current ? 80 : 40
+ const natural = 40 + 8 + noteHeight, headingHeight = row ? 240 : natural, commandTop = top + 25 + (row ? 0 : natural + 24)
+ const width = row ? 626 : 350, installHeight = row ? 290 : 50 + natural + 24 + 240
+ const commandX = row ? 10 + 25 + 276 : 35
+ const boxes: Record<string, number[]> = {
+  "#install[0]": [10, top, width, installHeight], ".install-note[0]": [35, top + 73, row ? 252 : 300, noteHeight],
+  ".hraness-marketing-install__heading-group[0]": [35, top + 25, row ? 252 : 300, headingHeight],
+  ".hraness-marketing-install__commands[0]": [commandX, commandTop, 300, 240],
+ }
+ const zero = new Set([".source-install .hraness-marketing-question__answer[0]", ".panel-note[1]", ".panel-note a[1]"])
+ const elements = refinementCopyElementKeys.map((key, index): ShellElement => {
+  const rect = (boxes[key] ?? (zero.has(key) ? [0, scrollY, 0, 0] : [commandX + 5, commandTop + index * 4, 100, 10])) as [number, number, number, number]
+  const styles: Record<string, string> = { color: "black", height: `${rect[3]}px`, "box-sizing": "border-box", "line-height": "20px", direction: "ltr", "max-width": "500px", "align-content": "start", "align-items": "normal", display: "grid", "grid-template-columns": key === "#install[0]" && row ? "252px 300px" : "300px", "row-gap": key === "#install[0]" ? "24px" : "8px", "column-gap": "24px" }
+  for (const side of ["top", "bottom", "left", "right"]) { styles[`margin-${side}`] = "0px"; styles[`padding-${side}`] = key === "#install[0]" ? "24px" : "0px"; styles[`border-${side}-width`] = key === "#install[0]" ? "1px" : "0px" }
+  if (key === "[data-copy-command-status][0]") { styles.position = "absolute"; styles["clip-path"] = "inset(50%)"; rect[2] = 1; rect[3] = 1; styles.height = "1px" }
+  return { key, rect, styles, text: texts[key]!, semantics: { role: null, href: null } }
+ })
+ const note = elements[1]!, count = current ? 4 : 2
+ const fragments: [number, number, number, number][] = Array.from({ length: count }, (_, index) => [note.rect[0]!, note.rect[1]! + 2 + index * 20, 200, 16] as [number, number, number, number])
+ // Three text nodes share the last line: prefix, release anchor, final period.
+ const last = fragments.pop()!
+ fragments.push([last[0], last[1], 100, 16], [last[0] + 100, last[1], 90, 16], [last[0] + 190, last[1], 10, 16])
+ return { elements, title: { key: ".hraness-marketing-install__heading[0]", rect: [35, top + 25, 240, 40], text: "Install Slopcamera for your agent.", semantics: {}, styles: { ...elements[2]!.styles, height: "40px" } }, scrollY,
+  clientRects: elements.map(item => zero.has(item.key) ? 0 : 1), fragments,
+  rows: [row ? [240] : [natural, 240], [40, noteHeight]], alignSelf: ["auto", "auto"] }
+}
+const installReceipt = () => compareExamplesInstall(installFixture(true), installFixture(false), "receipt fixture")
 function terminal(req = request()) {
  const observations = examplesCaseNames.map((name, index) => {
-  if (index < siteShellCases.length) return {name,passed:true,currentObstructions:[],baselineObstructions:[]}
-  if (index < siteShellCases.length + siteCopyCases.length) return {name,passed:true,command:refinementInstallCommand,current:ports(),baseline:ports()}
+  if (index < siteShellCases.length) return {name,passed:true,currentObstructions:[],baselineObstructions:[],install:siteShellCases[index]!.route==="/"?installReceipt():null}
+  if (index < siteShellCases.length + siteCopyCases.length) return {name,passed:true,command:refinementInstallCommand,current:ports(),baseline:ports(examplesBaselineInstallCommand),install:{...installReceipt(),states:copySteps}}
   if (!name.startsWith("player-")) {
    const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(item => item.name === name)!
    return {name,passed:true,figures:name.includes("parametric-design")?5:name.includes("/edit-video-")?7:2,videos:name.includes("first-animation")?2:name.includes("/edit-video-")?7:0,shellPaired:true,
@@ -285,6 +348,177 @@ describe("examples-only native CTA intrinsic width proof",()=>{
   expect(()=>compareCta(current,baseline)).toThrow()
  })
 })
+
+
+// A parse5-backed detached-DOM adapter exercises exact HTML/state admission
+// without launching a browser; native line layout remains a separate gate.
+function installDomFixture(current: boolean, state: "idle" | "copied" | "failed") {
+ type Node = DefaultTreeAdapterMap["node"]
+ type Element = DefaultTreeAdapterMap["element"]
+ class Detached {
+  constructor(readonly node: Node) {}
+  get children(): Detached[] { return "childNodes" in this.node ? this.node.childNodes.filter((node): node is Element => "tagName" in node).map(node => new Detached(node)) : [] }
+  querySelectorAll(selector: string): Detached[] {
+   const name = /^\[([^\]]+)\]$/u.exec(selector)![1]!
+   return this.children.flatMap(child => [...(child.getAttribute(name) !== null ? [child] : []), ...child.querySelectorAll(selector)])
+  }
+  querySelector(selector: string) { return this.querySelectorAll(selector)[0] ?? null }
+  cloneNode() { return new Detached(structuredClone(this.node)) }
+  get attributes() { return (this.node as Element).attrs.map(attribute => ({ name: attribute.name, value: attribute.value })) }
+  getAttributeNames() { return this.attributes.map(attribute => attribute.name) }
+  getAttribute(name: string) { return (this.node as Element).attrs.find(attribute => attribute.name === name)?.value ?? null }
+  setAttribute(name: string, value: string) { const node = this.node as Element, old = node.attrs.find(attribute => attribute.name === name); if (old) old.value = value; else node.attrs.push({ name, value }) }
+  removeAttribute(name: string) { (this.node as Element).attrs = (this.node as Element).attrs.filter(attribute => attribute.name !== name) }
+  get className() { return this.getAttribute("class") ?? "" }
+  set className(value: string) { this.setAttribute("class", value) }
+  get hidden() { return this.getAttribute("hidden") !== null }
+  set hidden(value: boolean) { if (value) this.setAttribute("hidden", ""); else this.removeAttribute("hidden") }
+  get dataset() { return { copyState: this.getAttribute("data-copy-state") ?? undefined } }
+  get textContent(): string { const text = (node: Node): string => "value" in node ? node.value : "childNodes" in node ? node.childNodes.map(text).join("") : ""; return text(this.node) }
+  set textContent(value: string) { const node = this.node as Element; node.childNodes = value ? [{ nodeName: "#text", value, parentNode: node }] : [] }
+  get outerHTML() { return serializeOuter(this.node) }
+ }
+ const island = examplesIslands.find(item => item.selector === "#install")!, fixture = current ? island.current : island.baseline
+ const root = new Detached(parseFragment(fixture).childNodes[0]!), button = root.querySelector("[data-copy-command-button]")!, status = root.querySelector("[data-copy-command-status]")!
+ button.hidden = false; button.className = button.getAttribute(`data-copy-${state}-class`)!
+ if (state !== "idle") button.setAttribute("data-copy-state", state)
+ button.textContent = state === "copied" ? "Copied" : "Copy"
+ status.textContent = state === "idle" ? "" : state === "copied" ? "Install command copied." : "Could not copy the command. Select it and copy it manually."
+ const document = { createElement: (tag: string) => {
+  if (tag !== "template") throw Error("Only a detached template is allowed")
+  return { content: new Detached(parseFragment("")), set innerHTML(value: string) { this.content = new Detached(parseFragment(value)) } }
+ } }
+ const admit = (copying: boolean) => runInNewContext(`(${admitExamplesInstallDom.toString()})(root, input)`, { root, input: { fixture, copying }, document })
+ return { root, button, status, fixture, admit }
+}
+describe("exact per-side released install copy and natural note flow", () => {
+ const evidence = (current: boolean, negative = false): CopyEvidence => ({ command: current ? refinementInstallCommand : examplesBaselineInstallCommand,
+  negativeControls: negative ? copyNegativeControls : [], ports: ports(current ? refinementInstallCommand : examplesBaselineInstallCommand),
+  steps: copySteps.map(name => ({ name, elements: installFixture(current).elements })) })
+ const designs = (current: boolean) => copySteps.map(() => installFixture(current))
+ const compare = (current: CopyEvidence, baseline: CopyEvidence) => compareExamplesCopy(current, baseline, siteCopyCases[0]!, true, designs(true), designs(false))
+ test("line grouping is invariant under fragment permutation and document translation over its complete line-count domain", () => {
+  for (let count = 1; count <= 16; count++) for (const x of [-200, 0, 17, 1000]) for (const y of [0, 97, 100000]) {
+   const fragments = Array.from({ length: count }, (_, line) => [[x, y + 2 + line * 20, 50, 16], [x + 50, y + 2 + line * 20, 60, 16], [x + 110, y + 2 + line * 20, 90, 16]] as [number, number, number, number][]).flat()
+   const expected = Array.from({ length: count }, (_, line) => [0, 2 + line * 20, 200, 16] as const)
+   expect(examplesInstallLines(fragments.reverse(), [x, y, 300, count * 20], 20)).toEqual(expected)
+  }
+ })
+ test("ordinary idle and all copy states admit exact active DOM despite hidden attribute order", () => {
+  for (const current of [false, true]) for (const state of ["idle", "copied", "failed"] as const) {
+   const fixture = installDomFixture(current, state), before = fixture.root.outerHTML
+   expect(fixture.admit(true)).toEqual({ raw: before, admitted: fixture.fixture })
+   if (state === "idle") expect(fixture.admit(false)).toEqual({ raw: before, admitted: fixture.fixture })
+   else expect(() => fixture.admit(false)).toThrow()
+   expect(fixture.root.outerHTML).toBe(before)
+  }
+  for (const change of [
+   (fixture: ReturnType<typeof installDomFixture>) => fixture.button.setAttribute("title", "extra"),
+   (fixture: ReturnType<typeof installDomFixture>) => fixture.button.setAttribute("aria-label", "wrong"),
+   (fixture: ReturnType<typeof installDomFixture>) => { fixture.button.className += " extra" },
+   (fixture: ReturnType<typeof installDomFixture>) => { fixture.status.textContent = "wrong" },
+   (fixture: ReturnType<typeof installDomFixture>) => { fixture.root.children[0]!.children[1]!.textContent += " Extra note." },
+   (fixture: ReturnType<typeof installDomFixture>) => { fixture.root.children[0]!.children[1]!.setAttribute("data-extra", "") },
+  ]) { const fixture = installDomFixture(true, "idle"); change(fixture); expect(() => fixture.admit(false)).toThrow() }
+ })
+ test("receipt admission preserves per-side positive bounds and every paired layout input", () => {
+  const receipt = installReceipt()
+  expect(() => parseExamplesInstallPair(receipt)).not.toThrow()
+  for (const action of [
+   (value: any) => { value.current.lineHeight = 0 }, (value: any) => { value.current.lineHeight = 101 },
+   (value: any) => { value.current.noteWidth += 1 }, (value: any) => { value.current.commandHeight += 1 },
+   (value: any) => { value.current.mode = "row" }, (value: any) => { value.current.insets[0] += 1 },
+   (value: any) => { value.current.note = examplesInstallNote(false) }, (value: any) => { value.current.lines.push([0, 0, 1, 1]) },
+   (value: any) => { value.current.lines[0][0] = -1 }, (value: any) => { value.current.extra = true },
+   (value: any) => { [value.current, value.baseline] = [value.baseline, value.current] },
+  ]) expect(() => parseExamplesInstallPair(mutate(receipt, action))).toThrow()
+  const stretched = compareExamplesInstall(installFixture(true, true), installFixture(false, true), "row fixture").current
+  // All other row equations remain internally consistent: only the missing
+  // stretch of the command block distinguishes this rejected receipt.
+  expect(() => parseExamplesInstallReceipt({ ...stretched, commandHeight: 100, headingHeight: stretched.headingNatural,
+   installHeight: stretched.insets[0] + stretched.insets[1] + stretched.headingNatural, commandOffset: stretched.insets[0] }, true)).toThrow()
+ })
+ test("real HTML fixtures reproduce the complete six-owner difference, including the existing intro", () => {
+  const current = installFixture(true), baseline = installFixture(false)
+  expect(current.elements[1]!.text).toBe(examplesInstallNote(true))
+  expect(baseline.elements[1]!.text).toBe(examplesInstallNote(false))
+  const projected = projectExamplesBaselineCopyElements(baseline.elements)
+  expect(projected.map(item => item.text)).toEqual(current.elements.map(item => item.text))
+  expect(current.elements.filter((item, index) => item.text !== baseline.elements[index]!.text)).toHaveLength(6)
+  // The old version-only replacement really does fail on these three owners.
+  for (const index of [0, 1, 2]) expect(baseline.elements[index]!.text.replaceAll("3.3.3", /v(\d+\.\d+\.\d+)\//u.exec(refinementInstallCommand)![1]!)).not.toBe(current.elements[index]!.text)
+  expect(refinementInstallCommand).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
+  expect(examplesBaselineInstallCommand).toContain("/v3.3.3/hraness-slopcamera-3.3.3.tgz")
+  expect(() => compare(evidence(true, true), evidence(false))).not.toThrow()
+  for (const row of [false, true]) {
+   const receipt = compareExamplesInstall(installFixture(true, row), installFixture(false, row), "layout")
+   expect(receipt.current.lines).toHaveLength(4); expect(receipt.baseline.lines).toHaveLength(2)
+   expect(receipt.current.installHeight - receipt.baseline.installHeight).toBe(row ? 0 : 40)
+   expect(receipt.current.commandOffset - receipt.baseline.commandOffset).toBe(row ? 0 : 40)
+   expect(() => parseExamplesInstallReceipt(receipt.current, true)).not.toThrow()
+  }
+  expect(examplesCaseNames).toHaveLength(133); expect(siteShellCases).toHaveLength(76); expect(siteCopyCases).toHaveLength(8)
+  expect([...examplesDocsCases, ...examplesDocsExtraCases]).toHaveLength(40); expect(examplesPlayerCases).toHaveLength(9)
+ })
+ test("rejects stale, wrong, reversed and corrupt command/clipboard/fallback evidence", () => {
+  const current = evidence(true, true), baseline = evidence(false)
+  for (const [actual, old] of [[evidence(false, true), baseline], [current, evidence(true)],
+   [{ ...current, command: refinementInstallCommand.replace("--global", "--unsafe") }, baseline],
+   [{ ...current, ports: ports(examplesBaselineInstallCommand) }, baseline], [current, { ...baseline, ports: ports(refinementInstallCommand) }]])
+   expect(() => compare(actual!, old!)).toThrow()
+  const req = request(), receipt = terminal(req), at = siteShellCases.length
+  expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
+  for (const action of [
+   (item: any) => { item.current = ports(examplesBaselineInstallCommand) }, (item: any) => { item.baseline = ports(refinementInstallCommand) },
+   (item: any) => { [item.current, item.baseline] = [item.baseline, item.current] }, (item: any) => { item.command = examplesBaselineInstallCommand },
+   (item: any) => { item.baseline.fallbacks[0].value = "wrong" }, (item: any) => { item.current.timers[0].fired = 2500 },
+   (item: any) => { item.install.current.lines.pop() }, (item: any) => { item.install.states.pop() },
+  ]) expect(() => parseExamplesPhase(mutate(receipt, value => action(value.observations[at])), 2, req)).toThrow()
+ })
+ test("rejects extra or missing note/command fragments without touching unrelated historical strings", () => {
+  const baseline = installFixture(false).elements
+  for (const text of ["wrong", `${examplesInstallNote(false)} ${examplesInstallNote(false)}`])
+   expect(() => projectExamplesBaselineCopyElements(baseline.map((item, index) => index === 1 ? { ...item, text } : item))).toThrow()
+  expect(() => projectExamplesBaselineCopyElements(baseline.map(item => item.key === "[data-copy-command-value][0]" ? { ...item, text: `${item.text} ${item.text}` } : item))).toThrow()
+  const unrelated = baseline.map((item, index) => index === 3 ? { ...item, text: "Historical Verified release v3.3.3", semantics: { href: "/v3.3.3", role: null } } : item)
+  expect(projectExamplesBaselineCopyElements(unrelated)[3]).toEqual(unrelated[3])
+ })
+ test("rejects false line counts, overlap, escape, width, line-height, paint, sibling and semantic changes", () => {
+  for (const change of [
+   (side: any) => { side.fragments.splice(0, 1) },
+   (side: any) => { side.fragments[0][0] -= 1 },
+   (side: any) => { side.fragments[1][1] += 2 },
+   (side: any) => { side.fragments.push(side.fragments[0]) },
+   (side: any) => { side.elements[1].styles["line-height"] = "21px" },
+   (side: any) => { side.elements[1].rect[2] += 1 },
+   (side: any) => { side.elements[1].text += " Extra note." },
+   (side: any) => { side.elements[3].rect[1] += 1 },
+   (side: any) => { side.elements[3].styles.color = "red" },
+   (side: any) => { side.elements[3].semantics.href = "https://example.invalid" },
+   (side: any) => { side.rows[0][0] += 1 },
+   (side: any) => { side.elements[4].rect[3] += 1 },
+   (side: any) => { side.title.rect[3] += 1 },
+  ]) {
+   const side = structuredClone(installFixture(true)); change(side)
+   expect(() => compareExamplesInstall(side, installFixture(false), "hostile")).toThrow()
+  }
+  const fixture = installFixture(true), note = fixture.elements[1]!.rect as [number, number, number, number]
+  expect(examplesInstallLines(fixture.fragments, note, 20)).toHaveLength(4)
+  expect(() => examplesInstallLines(Array.from({ length: 49 }, () => fixture.fragments[0]!), note, 20)).toThrow()
+ })
+ test("zero-layout children use observed scroll, while clipped real status retains command-relative placement", () => {
+  const current = installFixture(true), baseline = installFixture(false)
+  expect(() => compareExamplesInstall(current, baseline, "hidden")).not.toThrow()
+  for (const action of [
+   (side: any) => { side.elements[7].rect[1] += 1 },
+   (side: any) => { side.clientRects[7] = 1 },
+   (side: any) => { side.clientRects[17] = 0 },
+   (side: any) => { side.elements[17].rect[1] += 1 },
+   (side: any) => { side.elements[17].styles.position = "fixed" },
+  ]) { const side = structuredClone(current); action(side); expect(() => compareExamplesInstall(side, baseline, "hostile hidden")).toThrow() }
+ })
+})
+
 
 describe("examples-only finite worker protocol", () => {
  test("roundtrips the complete 133-case receipt without dropping copy or media evidence", async () => {

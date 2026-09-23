@@ -12,8 +12,9 @@ import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type C
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { observeRefinementHero, compareRefinementHeroCopies, type RefinementHero } from "./site-refinement-browser-contract"
 import { observeExamplesActions, projectExamplesHeroActions, type ExamplesActions } from "./site-examples-cta"
+import { observeExamplesInstall, compareExamplesInstall, parseExamplesInstallPair, admitExamplesInstallDom, type ExamplesInstall } from "./site-examples-install"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
-  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures } from "./site-examples-profile"
+  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures, examplesBaselineInstallCommand } from "./site-examples-profile"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
@@ -100,13 +101,20 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
       const observation = shellRecord(value), name = examplesCaseNames[index]!
       assert.equal(observation.name, name); assert.equal(observation.passed, true)
       if (index < siteShellCases.length) {
-        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions"])
+        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", "install"])
+        if (siteShellCases[index]!.route === "/") {
+          const install = shellRecord(observation.install); keys(install, ["current", "baseline"])
+          parseExamplesInstallPair({ current: install.current, baseline: install.baseline })
+        } else assert.equal(observation.install, null)
         assert.deepEqual(observation.currentObstructions, []); assert.deepEqual(observation.baselineObstructions, [])
       } else if (index < siteShellCases.length + siteCopyCases.length) {
-        keys(observation, ["name", "passed", "command", "current", "baseline"])
+        keys(observation, ["name", "passed", "command", "current", "baseline", "install"])
+        const install = shellRecord(observation.install); keys(install, ["current", "baseline", "states"])
+        parseExamplesInstallPair({ current: install.current, baseline: install.baseline })
+        assert.deepEqual(install.states, copySteps)
         assert.equal(observation.command, refinementInstallCommand)
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
-        assertCopyPorts(observation.baseline as CopyEvidence["ports"], refinementInstallCommand)
+        assertCopyPorts(observation.baseline as CopyEvidence["ports"], examplesBaselineInstallCommand)
       } else if (!name.startsWith("player-")) {
         keys(observation, ["name", "passed", "figures", "videos", "shellPaired", "navigation"]); assert.equal(observation.shellPaired, true)
         const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(candidate => candidate.name === name)!
@@ -204,7 +212,10 @@ export function parseExampleByteRange(value: string, bytes: number, path: string
  * obstruction allowlist is imported; both sides must be entirely unobstructed. */
 export interface ExamplesDomProjection { readonly dom: string; readonly text: Readonly<Record<string, string>> }
 export async function examplesDom(page: Page, current: boolean, scenario: ShellCase): Promise<ExamplesDomProjection> {
-  return page.evaluate(({ current, home, islands, selectors }) => {
+  const install = examplesIslands.find(item => item.selector === "#install")!
+  const installDom = scenario.route === "/" ? await page.locator("#install").evaluate(admitExamplesInstallDom,
+    { fixture: current ? install.current : install.baseline, copying: false }) : null
+  return page.evaluate(({ current, home, islands, selectors, installDom }) => {
     const body = document.body.cloneNode(true) as HTMLElement
     for (const script of body.querySelectorAll("script")) script.remove()
     const textOwners = selectors.flatMap(selector => (body.matches(selector) ? [body] : [...body.querySelectorAll(selector)])
@@ -213,12 +224,13 @@ export async function examplesDom(page: Page, current: boolean, scenario: ShellC
       const selected = body.querySelectorAll(fixture.selector)
       if (selected.length !== 1) throw new Error(`Example fixture owner count: ${fixture.selector}`)
       const element = selected[0]!
-      if (element.outerHTML !== (current ? fixture.current : fixture.baseline)) throw new Error(`Unreviewed example island: ${fixture.selector}`)
+      if (fixture.selector === "#install" && element.outerHTML !== installDom?.raw) throw new Error("Install changed between admission and body projection")
+      if ((fixture.selector === "#install" ? installDom?.admitted : element.outerHTML) !== (current ? fixture.current : fixture.baseline)) throw new Error(`Unreviewed example island: ${fixture.selector}`)
       element.replaceWith(document.createComment(`reviewed-example-island-${index}`))
     }
     return { dom: body.outerHTML, text: Object.fromEntries(textOwners.map(({ key, node }) => [key,
       body.contains(node) ? node.textContent?.replace(/\s+/gu, " ").trim() ?? "" : ""])) }
-  }, { current, home: scenario.route === "/", islands: examplesIslands, selectors: ["body", "#main", ...workflowExamplesHomeSelectors] })
+  }, { current, home: scenario.route === "/", islands: examplesIslands, installDom, selectors: ["body", "#main", ...workflowExamplesHomeSelectors] })
 }
 const near = (actual: number, expected: number, label: string) => assert.ok(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= .5, label)
 export function compareExamplesHeroBackgroundImage(actual: string, baseline: string,
@@ -263,6 +275,7 @@ export interface ExamplesDesign {
   readonly flow: readonly ShellElement[]
   readonly hero: RefinementHero | undefined
   readonly actions: ExamplesActions | undefined
+  readonly install: ExamplesInstall | undefined
 }
 /** Ordinary flow coordinates are document-relative. A fixed ancestor instead
  * requires strict viewport coordinates from the independently observed scroll. */
@@ -292,6 +305,13 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
   if (scenario.route === "/404.html") { compareShellEvidence(actual, baseline, scenario.name); return }
   const currentFlow = currentDesign.flow, baselineFlow = baselineDesign.flow
   const total = compareExamplesFlow(currentFlow, baselineFlow)
+  assert.ok(currentDesign.install && baselineDesign.install)
+  compareExamplesInstall(currentDesign.install, baselineDesign.install, `${scenario.name}: install`)
+  for (const [side, original] of [[currentDesign, actual], [baselineDesign, baseline]] as const) {
+    const section = side.flow.find(item => item.key === "#install[0]")!
+    assert.deepEqual(section, side.install!.elements[0], "Install flow is bound to the positively measured layout")
+    assert.deepEqual(original.elements.find(item => item.key === "#install[0]"), section, "Original shell install height is bound to the same proof")
+  }
   const hero = currentDesign.hero, oldHero = baselineDesign.hero
   assert.ok(hero && oldHero && currentDesign.actions && baselineDesign.actions)
   const retained = projectExamplesHeroActions(hero, oldHero, currentDesign.actions, baselineDesign.actions)
@@ -342,9 +362,9 @@ export async function settleExamplesDisabledStyles(sheet: CSSStyleSheet, href: s
   assertDisabled()
 }
 export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean) {
-  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined }
+  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined, install: undefined }
   const flow = await measure(page, examplesFlowSections), hero = await observeRefinementHero(page, scenario)
-  const actions = await observeExamplesActions(page, true)
+  const actions = await observeExamplesActions(page, true), install = await observeExamplesInstall(page, true)
   const ids = await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id")))
   assert.deepEqual(ids, examplesHomeIds, "Reviewed homepage example inventory")
   await assertExampleGeometry(page, scenario.width)
@@ -388,21 +408,26 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
     }
     compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")
   }
-  return { flow, hero, actions }
+  return { flow, hero, actions, install }
 }
-export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
-  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, refinementInstallCommand)
+export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean, currentInstall: readonly ExamplesInstall[], baselineInstall: readonly ExamplesInstall[]) {
+  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, examplesBaselineInstallCommand)
   assert.deepEqual(actual.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
   for (const side of [actual, baseline]) {
-    assertCopyPorts(side.ports, refinementInstallCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
+    assertCopyPorts(side.ports, side === actual ? refinementInstallCommand : examplesBaselineInstallCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
     for (const step of side.steps) assert.deepEqual(step.elements.map(item => item.key), refinementCopyElementKeys)
   }
-  for (const [index, step] of actual.steps.entries()) {
-    const previous = baseline.steps[index]!.elements
-    const offset = step.elements[0]!.rect[1]! - previous[0]!.rect[1]!
-    compareShellElements(step.elements.map(item => ({ ...item, rect: [item.rect[0]!, item.rect[1]! - offset, item.rect[2]!, item.rect[3]!] as const })), previous, `${scenario.name} ${step.name}`)
-  }
-  return { name: scenario.name, passed: true, command: refinementInstallCommand, current: actual.ports, baseline: baseline.ports }
+  assert.equal(currentInstall.length, copySteps.length); assert.equal(baselineInstall.length, copySteps.length)
+  const observations = actual.steps.map((step, index) => {
+    assert.deepEqual(currentInstall[index]!.elements, step.elements)
+    assert.deepEqual(baselineInstall[index]!.elements, baseline.steps[index]!.elements)
+    return compareExamplesInstall(currentInstall[index]!, baselineInstall[index]!, `${scenario.name} ${step.name}`)
+  })
+  // All ten states carry the same note/line/layout proof; raw controls and
+  // clipped status boxes were compared in their own state above.
+  for (const observation of observations) assert.deepEqual(observation, observations[0])
+  return { name: scenario.name, passed: true, command: refinementInstallCommand, current: actual.ports, baseline: baseline.ports,
+    install: { ...observations[0]!, states: copySteps } }
 }
 export const examplesDirectedRatios = [
   { id: "edit-directed-landscape", width: 1280, height: 720 },

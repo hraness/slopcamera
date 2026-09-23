@@ -4,9 +4,9 @@ This reference describes the current Slopcamera CLI and its runtime requirements
 
 ## Current Slopcamera and historical Atet
 
-Slopcamera v3.3.6 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
+Slopcamera v3.4.0 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
-| Surface | Historical Atet v3.2.3 | Slopcamera v3.3.6 |
+| Surface | Historical Atet v3.2.3 | Slopcamera v3.4.0 |
 | --- | --- | --- |
 | Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
@@ -17,6 +17,7 @@ Slopcamera v3.3.6 installs from its [canonical release archive](https://github.c
 | Calibrated camera samples: `scene camera-track` | Absent | Available |
 | Parametric architectural designs: `scene design` | Absent | Available |
 | External vgpu 0.4.1 native example | Absent | Explicit example runtime; not a new registered studio engine |
+| Film and animation direction: `style list`, `style show` | Absent | 17 profiles and SDK direction, exposure, and finishing helpers |
 
 Use the Slopcamera release installation or a source build for the commands below. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
 
@@ -41,17 +42,31 @@ Later source corrects static-overlay duration and positioned-layer RGB blending 
 
 ## Parametric architectural designs
 
-Slopcamera v3.3.6 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+Slopcamera v3.4.0 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
-This release corrects wall-opening elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
+Wall openings use corrected elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
+
+## Film and animation direction
+
+`style list` and `style show <id> --json` read 17 profiles covering palette,
+drawing or material treatment, camera, exposure cadence, resolution, finishing,
+and review criteria. Reading a profile supplies authoring guidance; it does not
+change a render or make a model request.
+
+The portable SDK exports `getVisualStyleProfile`, `createVisualStyleDirection`,
+`sampleVisualStyleExposure`, and `visualStyleFrameVariation`.
+`@hraness/slopcamera/local/code` exports `createVisualStyleVideoLook` for supported
+local finishing effects. The [style direction guide](../how-to/direct-visual-styles.md)
+includes editable examples whose movie and still runner defaults to native 4K.
+Explicit user dimensions, logical pixel grids, and source-image limits still
+apply. A resolution recommendation does not establish visual quality.
 
 ## Discover the installed contract
 
-### Patent-style drawing sheets in current source
+### Patent-style drawing sheets
 
-Current source adds `diagram sheets init|check|render` for version-one
-`.drawing.json` documents. This capability is not part of the verified releases
-listed above. It retains one authored diagram per sheet and produces outlined
+Slopcamera v3.4.0 includes `diagram sheets init|check|render` for version-one
+`.drawing.json` documents. It retains one authored diagram per sheet and produces outlined
 monochrome SVGs, a multipage PDF, and a receipt binding source and output hashes.
 It runs locally with bundled rendering dependencies and needs no browser,
 credentials, or network request. The CLI and root SDK expose this surface; it
@@ -72,12 +87,13 @@ editing, outputs, and the required visual review.
 | --- | --- |
 | CLI version and top-level commands | `slopcamera --version`, `slopcamera --help` |
 | Grammar for a command family | `slopcamera help project`, `slopcamera help studio`, `slopcamera help scene` |
-| Drawing-sheet commands in current source | `slopcamera help diagram` |
+| Drawing-sheet commands | `slopcamera help diagram` |
 | Local tools and readiness | `slopcamera doctor --json` |
 | Closed local operation catalog and exact schemas | `slopcamera operations list --json`, `slopcamera operations show <kind>[@<version>] --json` |
 | Static capability modules, trust, and qualification metadata | `slopcamera capabilities --json` |
 | Built-in workflow input schema | `slopcamera workflows list --json`, `slopcamera workflows show <id> --json` |
 | Live Gateway model capabilities | `slopcamera ai models list --type <type> --json`, `slopcamera ai models show <id> --json` |
+| Film and animation direction profiles | `slopcamera style list --json`, `slopcamera style show <id> --json` |
 | HTML profile locks | `slopcamera html catalog --json` |
 | HTML scene export | `slopcamera help html`, `slopcamera html render --input <scene.json> --dry-run --json` |
 | Version-matched packaged agent instructions | `slopcamera skill path` |

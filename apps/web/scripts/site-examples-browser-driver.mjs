@@ -10,13 +10,14 @@ import { parseExamplesRequest, parseExamplesPhase, examplesCaseNames, examplesDe
   examplesDocsCases, examplesDocsExtraCases, examplesPlayerCases, examplesNegativeControls, examplesScope } from "./site-examples-browser-contract"
 import { observeRefinementHero } from "./site-refinement-browser-contract"
 import { observeExamplesActions } from "./site-examples-cta"
-import { examplesFlowSections } from "./site-examples-profile"
+import { observeExamplesInstall, compareExamplesInstall } from "./site-examples-install"
+import { examplesBaselineInstallCommand, examplesFlowSections } from "./site-examples-profile"
 import { refinementCopyProfile } from "./site-refinement-profile"
 import { measure, siteShellCases } from "./site-shell-browser-contract"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, publishProfiledWorkerPhase, workerAttachmentMs, examplesWorkerProtocolLimit } from "./preview-browser-protocol"
 import { readPreviewFile } from "./preview-file"
 import { assertOwnedPreviewEndpoint, closeOwnedPreviewBrowser } from "./preview-browser-shutdown"
-import { checkCopyCase, siteCopyCases } from "./site-copy-browser-contract"
+import { checkCopyCase, siteCopyCases, copySteps } from "./site-copy-browser-contract"
 import { collectExamplesFontDiagnostic, ExamplesDiagnosticSizeError, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 
 // This entry is bundled by the Bun parent, then executed by genuine pinned
@@ -103,7 +104,8 @@ async function main() {
             baselinePositions = positions;
             baselineDom = await examplesDom(page, false, scenario)
             baselineDesign = { flow: scenario.route === "/" ? await measure(page, examplesFlowSections) : [], hero: await observeRefinementHero(page, scenario),
-              actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined }
+              actions: scenario.route === "/" ? await observeExamplesActions(page, false) : undefined,
+              install: scenario.route === "/" ? await observeExamplesInstall(page, false) : undefined }
             Object.assign(retained.baseline, { original: { dom: baselineDom, design: baselineDesign, positions } })
             if (scenario.route === "/") await captureFonts(page, retained.baseline, request.baseline.origin)
           }, "workflow-examples-v1"))
@@ -113,7 +115,8 @@ async function main() {
         assert.ok(currentDom && baselineDom && design && baselineDesign && currentPositions && baselinePositions)
         compareExamplesEvidence(current, baseline, scenario, design, baselineDesign, currentDom, baselineDom, currentPositions, baselinePositions,
           { current: request.current.origin, baseline: request.baseline.origin })
-        return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions }
+        return { name: scenario.name, passed: true, currentObstructions: current.obstructions, baselineObstructions: baseline.obstructions,
+          install: scenario.route === "/" ? compareExamplesInstall(design.install, baselineDesign.install, `${scenario.name}: receipt`) : null }
       } catch (error) {
         await retainExamplesFailureDiagnostic(error, retained, text => bounded(writeFile(
           join(dirname(requestPath), "site-examples-comparison-diagnostic.json"), text, { flag: "wx", mode: 0o600 }),
@@ -121,11 +124,15 @@ async function main() {
       }
     })
     for (const scenario of siteCopyCases) await runCase(scenario.name, "pair", async () => {
-      const negative = scenario === siteCopyCases[0]
+      const negative = scenario === siteCopyCases[0], currentInstall = [], baselineInstall = []
       const [current, baseline] = await settleShellPair(
-        () => checkCopyCase(browser, request.current, scenario, negative, refinementCopyProfile),
-        () => checkCopyCase(browser, request.baseline, scenario, false, refinementCopyProfile))
-      return compareExamplesCopy(current, baseline, scenario, negative)
+        () => checkCopyCase(browser, request.current, scenario, negative, refinementCopyProfile, async (page, name, elements) => {
+          assert.equal(name, copySteps[currentInstall.length]); currentInstall.push(await observeExamplesInstall(page, true, elements))
+        }),
+        () => checkCopyCase(browser, request.baseline, scenario, false, refinementCopyProfile, async (page, name, elements) => {
+          assert.equal(name, copySteps[baselineInstall.length]); baselineInstall.push(await observeExamplesInstall(page, false, elements))
+        }, examplesBaselineInstallCommand))
+      return compareExamplesCopy(current, baseline, scenario, negative, currentInstall, baselineInstall)
     })
     for (const scenario of [...examplesDocsCases, ...examplesDocsExtraCases])
       await runCase(scenario.name, "docs", () => checkExamplesDocs(browser, request, scenario))
