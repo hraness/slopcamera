@@ -130,7 +130,7 @@ describe("Slopcamera MCP stdio server", () => {
       expect(responses[0]?.result).toMatchObject({
         protocolVersion: "2025-11-25",
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "hraness-slopcamera", version: "3.3.6" },
+        serverInfo: { name: "hraness-slopcamera", version: "3.4.0" },
       })
       const listed = responses[2]?.result as {
         readonly tools: readonly Readonly<Record<string, unknown>>[]

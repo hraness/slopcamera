@@ -6,8 +6,11 @@ import { runInNewContext } from "node:vm";
 import { getVisualStyleProfile } from "../../src/visual-style.ts";
 
 const html = await readFile(new URL("./animation-studies.html", import.meta.url), "utf8");
-const script = html.match(/<script>([\s\S]*)<\/script>/u)?.[1];
-assert.ok(script, "The self-contained scene has one inline script.");
+const scripts = [...html.matchAll(/<script\s*>([\s\S]*?)<\/script\s*>/giu)];
+assert.equal((html.match(/<script\b/giu) ?? []).length, 1, "The self-contained scene has one script element.");
+assert.equal(scripts.length, 1, "The scene script is inline and has no attributes.");
+const script = scripts[0]?.[1];
+assert.ok(script, "The inline scene script is nonempty.");
 new Function(script);
 let digest = createHash("sha256");
 const contexts = [];

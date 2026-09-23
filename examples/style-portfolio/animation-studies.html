@@ -564,7 +564,21 @@ function render(time,style,direction){
   if(style==='pixel-art'){const pixelScale=Math.floor(Math.min(cw/320,ch/180));if(pixelScale<1)fail('Pixel study canvas must fit its 320 × 180 grid.');scale=pixelScale/6}
   c.setTransform(scale,0,0,scale,(cw-W*scale)/2,(ch-H*scale)/2);
   activeCadence=direction?.cadence;
-  scenes[style](time);
+  switch(style){
+    case 'theatrical-cel':anime(time);break;
+    case 'math-explainer':mathematical(time);break;
+    case 'pixel-art':pixel(time);break;
+    case 'cut-paper':cutPaper(time);break;
+    case 'watercolor-storybook':watercolor(time);break;
+    case 'midcentury-limited':midcentury(time);break;
+    case 'rubber-hose':rubberHose(time);break;
+    case 'stopmotion-clay':clay(time);break;
+    case 'engraving':engraving(time);break;
+    case 'ink-sketch':inkSketch(time);break;
+    case 'rotoscope':rotoscope(time);break;
+    case 'clean-motion':cleanMotion(time);break;
+    default:fail(`Unsupported style ${String(style)}.`);
+  }
   activeCadence=undefined;
 }
 window.PortfolioDrawing=Object.freeze({render,validateDirection:directionProfile,styles:Object.freeze(Object.keys(scenes)),durationSeconds:6});
