@@ -1678,7 +1678,7 @@
     ],
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "crescent-pavilion",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",

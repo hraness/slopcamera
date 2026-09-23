@@ -205,3 +205,16 @@ paper/editorial system and pushed the preset's designed accent variant:
   rows refreshed; 212 contract tests + standalone + theme check pass.
   `site.test.ts` in-band build timed out under machine load ~44 twice —
   same environmental flake as the media pass; CI is the clean gate.
+
+### Fifth pass — unfeature the weakest example
+
+Owner feedback: the full-span `crescent-pavilion` still was the biggest
+card yet the weakest — a static poster whose caption did not convey the
+parametric story. Set `featured: false` on its registry entry (the
+example, source links, and guide anchor stay in the reviewed registry
+and docs), removed it from the homepage order and `examplesHomeIds`,
+and re-synced the `#examples` island current literal. The gallery now
+shows four cards in a clean 2×2 — three videos plus the
+source-to-delivery diagram, which reads as information rather than a
+single opaque render. `verify-example-sources` still verifies all 44
+registry entries; 207 contract tests pass.
