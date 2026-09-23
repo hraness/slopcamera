@@ -352,7 +352,7 @@ test.skipIf(RENDERER_SMOKE_UNAVAILABLE)(
       const Renderer = reverse ? ReverseFrameOrderHtmlOverlayRenderer : PlaywrightHtmlOverlayRenderer;
       const renderer = new Renderer({
         cacheRoot: join(root, "cache"),
-        browserStepTimeoutMs: 10_000,
+        // Qualify presentation with the production browser and frame deadlines.
         fetch: () => { throw new Error("The presentation fixture has no library downloads"); },
       });
       const authoring = HtmlOverlayAuthoringInputSchema.parse({
