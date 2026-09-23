@@ -931,11 +931,13 @@ export function createSpatialOverlayBatch(input: unknown) {
   return Object.freeze({ authoring: Object.freeze(authoring), metadata: metadata.value as unknown as DeepReadonly<typeof metadataValue>, metadataSha256: metadata.sha256 });
 }
 
-/** Fixed golden-spiral gather taps; computed on the host so generated shaders contain no transcendentals. */
+/** Fixed golden-spiral gather taps and bloom weights; computed on the host and
+ * bound as uniform arrays because the overlay compiles GLSL ES 1.00, which has
+ * no array constructors. Generated shaders contain no transcendentals. */
 const DOF_TAPS = Object.freeze(Array.from({ length: 16 }, (_, index) => {
   const angle = index * 2.399_963_229_728_653;
   const radius = Math.sqrt((index + 0.5) / 16);
-  return `vec2(${(Math.cos(angle) * radius).toFixed(7)},${(Math.sin(angle) * radius).toFixed(7)})`;
+  return `new THREE.Vector2(${(Math.cos(angle) * radius).toFixed(7)},${(Math.sin(angle) * radius).toFixed(7)})`;
 }).join(","));
 const BLOOM_WEIGHTS = Object.freeze([0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162].map(weight => weight.toFixed(10)).join(","));
 
@@ -1113,6 +1115,7 @@ function makeMaterial(object,frame,track){
   }
   const material=track(m.kind==="unlit"?new THREE.MeshBasicMaterial(options):new THREE.MeshStandardMaterial({...options,roughness:m.roughness,metalness:m.metalness}));
   if(object.linearColor)material.color.setRGB(...object.linearColor,THREE.LinearSRGBColorSpace);
+  if(m.kind==="standard"&&m.emissive){material.emissive=new THREE.Color(m.emissive.color);material.emissiveIntensity=m.emissive.intensity;}
   return material;
 }
 function makeCamera(data){
@@ -1170,16 +1173,16 @@ const buildStepPasses=(step,frame,index,track,read)=>{
     case "vignette":return[{target:"write",material:track(postMaterial(postHeader+"uniform float intensity;uniform float radius;void main(){vec4 c=texture2D(source,sampleUv);float d=length((sampleUv-0.5)*1.41421356);gl_FragColor=vec4(c.rgb*(1.0-intensity*smoothstep(radius,1.0,d)),c.a);}",u({intensity:{value:step.intensity},radius:{value:step.radius}})))}];
     case "chromatic-aberration":return[{target:"write",material:track(postMaterial(postHeader+"uniform float offsetPixels;uniform float radialFalloff;void main(){vec2 dir=sampleUv-0.5;float len=max(length(dir),0.000001);vec2 off=dir/len*offsetPixels*pow(len*1.41421356,radialFalloff)/resolution;vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(texture2D(source,sampleUv+off).r,c.g,texture2D(source,sampleUv-off).b,c.a);}",u({offsetPixels:{value:step.offsetPixels},radialFalloff:{value:step.radialFalloff}})))}];
     case "grain":return[{target:"write",material:track(postMaterial(postHeader+"uniform float intensity;uniform float seed;float grainHash(vec2 p){vec3 q=fract(vec3(p.xyx)*0.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}void main(){vec4 c=texture2D(source,sampleUv);float n=grainHash(floor(sampleUv*resolution)+vec2(seed,seed*1.618034));gl_FragColor=vec4(max(c.rgb+vec3((n-0.5)*intensity),vec3(0.0)),c.a);}",u({intensity:{value:step.intensity},seed:{value:step.seed+frame.timeUs%7919}})))}];
-    case "depth-of-field":return[{target:"write",material:track(postMaterial(postHeader+"uniform sampler2D depthTex;uniform float nearClip;uniform float farClip;uniform float focusDistance;uniform float aperture;uniform float focalLength;uniform float sensorWidth;uniform bool isPerspective;const vec2 dofTaps[16]=vec2[16](${DOF_TAPS});float viewZ(float d){return isPerspective?nearClip*farClip/max(farClip-d*(farClip-nearClip),0.000001):nearClip+d*(farClip-nearClip);}void main(){vec4 c=texture2D(source,sampleUv);float z=viewZ(texture2D(depthTex,sampleUv).x);float coc=clamp(aperture*focalLength*abs(focusDistance-z)/(focusDistance*max(z,0.0001))*resolution.x/sensorWidth,0.0,32.0);vec3 acc=c.rgb;for(int i=0;i<16;i++){acc+=texture2D(source,sampleUv+dofTaps[i]*coc/resolution).rgb;}gl_FragColor=vec4(acc/17.0,c.a);}",u({depthTex:{value:beautyTarget.depthTexture},nearClip:{value:frame.camera.near},farClip:{value:frame.camera.far},focusDistance:{value:step.focusDistance},aperture:{value:step.aperture},focalLength:{value:step.focalLength},sensorWidth:{value:frame.camera.lens?frame.camera.lens.sensorWidthMm:36},isPerspective:{value:frame.camera.kind==="perspective"}})))}];
+    case "depth-of-field":return[{target:"write",material:track(postMaterial(postHeader+"uniform sampler2D depthTex;uniform float nearClip;uniform float farClip;uniform float focusDistance;uniform float aperture;uniform float focalLength;uniform float sensorWidth;uniform bool isPerspective;uniform vec2 dofTaps[16];float viewZ(float d){return isPerspective?nearClip*farClip/max(farClip-d*(farClip-nearClip),0.000001):nearClip+d*(farClip-nearClip);}void main(){vec4 c=texture2D(source,sampleUv);float z=viewZ(texture2D(depthTex,sampleUv).x);float coc=clamp(aperture*focalLength*abs(focusDistance-z)/(focusDistance*max(z,0.0001))*resolution.x/sensorWidth,0.0,32.0);vec3 acc=c.rgb;for(int i=0;i<16;i++){acc+=texture2D(source,sampleUv+dofTaps[i]*coc/resolution).rgb;}gl_FragColor=vec4(acc/17.0,c.a);}",u({depthTex:{value:beautyTarget.depthTexture},nearClip:{value:frame.camera.near},farClip:{value:frame.camera.far},focusDistance:{value:step.focusDistance},aperture:{value:step.aperture},focalLength:{value:step.focalLength},sensorWidth:{value:frame.camera.lens?frame.camera.lens.sensorWidthMm:36},isPerspective:{value:frame.camera.kind==="perspective"},dofTaps:{value:[${DOF_TAPS}]}})))}];
     case "motion-blur":return[{target:"write",material:track(postMaterial(postHeader+"uniform sampler2D velocityTex;uniform int samples;uniform float shutter;void main(){vec4 c=texture2D(source,sampleUv);vec2 v=texture2D(velocityTex,sampleUv).xy*shutter/resolution;vec3 acc=c.rgb;float n=1.0;for(int i=1;i<64;i++){if(i>=samples)break;float t=float(i)/float(samples-1)-0.5;acc+=texture2D(source,sampleUv+v*t).rgb;n+=1.0;}gl_FragColor=vec4(acc/n,c.a);}",u({velocityTex:{value:velocityTarget.texture},samples:{value:step.samples},shutter:{value:step.shutterAngle/360}})))}];
     case "bloom":{
       const bright=postHeader+"uniform float threshold;void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(max(c.rgb-vec3(threshold),vec3(0.0)),1.0);}";
-      const blur=postHeader+"uniform vec2 texel;uniform float spread;uniform vec2 direction;const float bloomW[5]=float[5](${BLOOM_WEIGHTS});void main(){vec3 acc=texture2D(source,sampleUv).rgb*bloomW[0];for(int i=1;i<5;i++){vec2 o=direction*float(i)*spread*0.125*texel;acc+=(texture2D(source,sampleUv+o).rgb+texture2D(source,sampleUv-o).rgb)*bloomW[i];}gl_FragColor=vec4(acc,1.0);}";
+      const blur=postHeader+"uniform vec2 texel;uniform float spread;uniform vec2 direction;uniform float bloomW[5];void main(){vec3 acc=texture2D(source,sampleUv).rgb*bloomW[0];for(int i=1;i<5;i++){vec2 o=direction*float(i)*spread*0.125*texel;acc+=(texture2D(source,sampleUv+o).rgb+texture2D(source,sampleUv-o).rgb)*bloomW[i];}gl_FragColor=vec4(acc,1.0);}";
       const composite=postHeader+"uniform sampler2D bright;uniform float intensity;void main(){vec4 c=texture2D(source,sampleUv);gl_FragColor=vec4(c.rgb+texture2D(bright,sampleUv).rgb*intensity,c.a);}";
       const halfTexel=new THREE.Vector2(1/brightA.width,1/brightA.height);
       return[{target:brightA,material:track(postMaterial(bright,u({threshold:{value:step.threshold}})))},
-        {target:brightB,material:track(postMaterial(blur,{source:{value:brightA.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(1,0)}}))},
-        {target:brightA,material:track(postMaterial(blur,{source:{value:brightB.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(0,1)}}))},
+        {target:brightB,material:track(postMaterial(blur,{source:{value:brightA.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(1,0)},bloomW:{value:[${BLOOM_WEIGHTS}]}}))},
+        {target:brightA,material:track(postMaterial(blur,{source:{value:brightB.texture},resolution:{value:resolution},texel:{value:halfTexel},spread:{value:step.radius},direction:{value:new THREE.Vector2(0,1)},bloomW:{value:[${BLOOM_WEIGHTS}]}}))},
         {target:"write",material:track(postMaterial(composite,u({bright:{value:brightA.texture},intensity:{value:step.intensity}})))}];
     }
     case "flare":{
@@ -1271,6 +1274,7 @@ SlopcameraOverlay.onFrame(({frame:index})=>{
       renderer.setRenderTarget(null);renderer.clear(true,true,true);
       if(hasPost){
         postOutputMaterial.uniforms.source.value=runPostChain(frame,index,track);
+        renderer.setRenderTarget(null);
         postMesh.material=postOutputMaterial;renderer.render(postScene,outputCamera);
       }else renderer.render(outputScene,outputCamera);
     }
