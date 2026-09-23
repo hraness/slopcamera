@@ -11,7 +11,7 @@ import { siteCopyCases, siteCopyDeadlineMs } from "./site-copy-browser-contract"
 const css=`/assets/site-${"a".repeat(64)}.css`
 const payload=(origin:string)=>({origin,resources:["/","/404.html","/assets/foundation.css",css,"/cells.svg","/grain.svg",...Array.from({length:14},(_,i)=>`/font-${i}.woff2`)].sort(),stylesheets:["/assets/foundation.css",css],finalCss:css})
 const request=(scope:typeof refinementScope|typeof refinementCopyScope=refinementScope)=>parseRefinementRequest({schemaVersion:1,token:"12345678-1234-1234-1234-123456789abc",scope,baselineProfile:refinementBaselineProfile,appDirectory:"/work/apps/web",chromeExecutable:"/work/chrome",endpoint:"ws://127.0.0.1:54321/devtools/browser/1234-abcd",current:payload("http://127.0.0.1:54322"),baseline:payload("http://127.0.0.1:54323"),fieldAssets:["/grain.svg","/cells.svg"]})
-const result=()=>({schemaVersion:1,token:request().token,scope:refinementScope,baselineProfile:refinementBaselineProfile,sequence:2,kind:"result",node:"24.18.1",playwright:"1.62.0",browser:"145.0.0.0",cases:siteShellCases.map(item=>item.name),comparison:"unchanged-shell-with-closed-refinement-islands",closed:true,negativeControls:["/-final-css","/-foundation-css","/404.html-final-css"],observations:siteShellCases.map(s=>({name:s.name,islands:s.route==="/"?9:0,codeBlocks:s.route==="/"?6:0,interfaceRows:s.route==="/"?4:0,sourceDisclosure:s.route==="/",material:s.route==="/",foundationRestored:s.route==="/"&&s.width===1440&&s.theme==="system"&&s.system==="light",transparencyRestored:s.route==="/"&&(s.width===390||s.width===1440)&&s.theme!=="system"&&s.direction===undefined&&!s.coarse&&s.forced==="none"}))})
+const result=()=>({schemaVersion:1,token:request().token,scope:refinementScope,baselineProfile:refinementBaselineProfile,sequence:2,kind:"result",node:"24.18.1",playwright:"1.62.0",browser:"145.0.0.0",cases:siteShellCases.map(item=>item.name),comparison:"unchanged-shell-with-closed-refinement-islands",closed:true,negativeControls:["/-final-css","/-foundation-css","/404.html-final-css"],observations:siteShellCases.map(s=>({name:s.name,islands:s.route==="/"?11:0,codeBlocks:s.route==="/"?6:0,interfaceRows:s.route==="/"?4:0,sourceDisclosure:s.route==="/",material:s.route==="/",foundationRestored:s.route==="/"&&s.width===1440&&s.theme==="system"&&s.system==="light",transparencyRestored:s.route==="/"&&(s.width===390||s.width===1440)&&s.theme!=="system"&&s.direction===undefined&&!s.coarse&&s.forced==="none"}))})
 test("explicit refinement identities retain the original complete separate matrices and deadlines",()=>{
  expect(refinementCases(refinementScope)).toBe(siteShellCases);expect(siteShellCases).toHaveLength(76)
  expect(refinementCases(refinementCopyScope)).toBe(siteCopyCases);expect(siteCopyCases).toHaveLength(8)
@@ -47,7 +47,7 @@ test("paint projection asserts only owned positive properties and preserves unli
  expect(projectRefinementPaint({...item,styles:{...item.styles,color:"red"}},old,paint).styles.color).toBe("red")
 })
 test("literal fixtures admit only the six reviewed authored islands",()=>{
- expect(Object.keys(refinementIslands)).toEqual([".hraness-marketing-hero__boundary",".hraness-marketing-proof-frame","#install",".hraness-marketing-interface-grid","#page-title",".hraness-marketing-hero__summary","#questions","#design .hraness-marketing-trust__header","#closing"])
+ expect(Object.keys(refinementIslands)).toEqual([".hraness-marketing-hero__boundary",".hraness-marketing-proof-frame","#install","#page-title",".hraness-marketing-hero__summary","#questions","#closing","#workflow","#interfaces","#design",".hraness-marketing-facts"])
  expect(refinementInstallCommand.split("\n")).toEqual(["bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz","slopcamera skill install --target agents"])
  const fixture=Object.values(refinementIslands).join("")
  expect(fixture).not.toMatch(/\sstyle=/u);expect(fixture).toContain('syntax-code language-typescript');expect(fixture).toContain("docs/how-to/use-current-source.md")
@@ -73,7 +73,7 @@ test("copy acceptance binds both different commands and exact 18/22 inventories 
 
 test("the single Sugar High structural line is separately admitted and never mistaken for a syntax token",async()=>{
  const source=await readFile(new URL("./site-refinement-browser-contract.ts",import.meta.url),"utf8")
- expect(refinementIslands[".hraness-marketing-interface-grid"].match(/class="sh__line"/gu)).toHaveLength(1)
+ expect(refinementIslands["#interfaces"].match(/class="sh__line"/gu)).toHaveLength(1)
  expect(source).toContain('wrappers.length!==1');expect(source).toContain('wrappers[0]!.className!=="sh__line"')
  expect(source).toContain('.syntax-code span:not(.sh__line)');expect(source).toContain('throw Error("Missing syntax kind")')
 })

@@ -28,7 +28,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 
 ## Install
 
-Install the verified Slopcamera v${publishedRelease.version} release with Bun 1.3.14 or newer:
+Tell your agent: “install Slopcamera and its skill.” Or install the verified Slopcamera v${publishedRelease.version} release yourself with Bun 1.3.14 or newer:
 
 \`\`\`sh
 ${archiveInstall.command}

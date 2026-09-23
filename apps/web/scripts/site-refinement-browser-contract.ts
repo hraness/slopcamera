@@ -52,7 +52,7 @@ export function parseRefinementPhase(value: unknown, sequence: 0 | 1 | 2, reques
       } else {
         keys(observation, ["name", "islands", "codeBlocks", "interfaceRows", "sourceDisclosure", "material", "foundationRestored", "transparencyRestored"])
         const home = scenario.route === "/"
-        assert.equal(observation.islands, home ? 9 : 0); assert.equal(observation.codeBlocks, home ? 6 : 0)
+        assert.equal(observation.islands, home ? 11 : 0); assert.equal(observation.codeBlocks, home ? 6 : 0)
         assert.equal(observation.interfaceRows, home ? 4 : 0); assert.equal(observation.sourceDisclosure, home)
         assert.equal(observation.material, home); assert.equal(observation.foundationRestored, home && scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light")
         assert.equal(observation.transparencyRestored, needsLanternTransparency(scenario))
