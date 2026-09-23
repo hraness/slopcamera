@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { runInNewContext } from "node:vm"
 import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
 import { compareReleaseCopyFlow, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
+import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree,
   releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall } from "./site-release-copy-profile"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
@@ -15,7 +16,7 @@ import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, exa
 import { compareExamplesInstall, admitExamplesInstallDom, examplesInstallNote, parseExamplesInstallPair,
   projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
-import { siteShellCases, shellAppearanceSteps, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
+import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify } from "./verify-site-examples"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, examplesWorkerProtocolLimit, workerDriverLimit, workerAttachmentMs } from "./preview-browser-protocol"
@@ -306,16 +307,149 @@ describe("product input and dependency closure stays exact", () => {
   const f = inputFixture(), check = () => assertReleaseCopyInputs(f.current, f.baseline, f.currentPackage, f.oldPackage, publishedRelease, f.datum)
   expect(check).not.toThrow()
   f.current.inputs.push({ path: "scripts/site-release-copy-profile.ts", bytes: 30, sha256: "b".repeat(64) }); expect(check).not.toThrow()
+  for (const path of ["scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts"]) {
+   f.current.inputs.push({ path, bytes: 30, sha256: "b".repeat(64) }); expect(check).not.toThrow()
+  }
   for (const path of ["src/index.html", "scripts/build-site.ts", "media/examples.json", "../../examples/showcase/example.ts", "vendor/paper-theme/paper-theme.css", "../../package.json", "../../bun.lock", "bun.lock"]) {
    const changed = structuredClone(f.current); changed.inputs.find(item => item.path === path)!.sha256 = "c".repeat(64)
    expect(() => assertReleaseCopyInputs(changed, f.baseline, f.currentPackage, f.oldPackage, publishedRelease, f.datum)).toThrow()
   }
-  for (const path of ["scripts/new-product.ts", "src/extra.ts", "../../secret"]) expect(() => assertReleaseCopyInputs({ inputs: [...f.current.inputs, { path, bytes: 1, sha256: hash }] }, f.baseline, f.currentPackage, f.oldPackage, publishedRelease, f.datum)).toThrow()
+  for (const path of ["scripts/new-product.ts", "src/extra.ts", "../../secret", "scripts/site-release-copy-focus-runtime.ts", "src/site-release-copy-focus.ts", "scripts/site-shell-runtime.ts"]) expect(() => assertReleaseCopyInputs({ inputs: [...f.current.inputs, { path, bytes: 1, sha256: hash }] }, f.baseline, f.currentPackage, f.oldPackage, publishedRelease, f.datum)).toThrow()
   for (const change of [
    (value: any) => { value.dependencies.example = "2.0.0" }, (value: any) => { value.scripts.build += " --unsafe" },
    (value: any) => { value.scripts.test = "bun test only-new.test.ts" }, (value: any) => { value.scripts["verify:release-copy"] += " --skip" },
   ]) expect(() => assertReleaseCopyInputs(f.current, f.baseline, mutate(f.currentPackage, change), f.oldPackage, publishedRelease, f.datum)).toThrow()
   expect(() => assertReleaseCopyInputs(f.current, f.baseline, f.currentPackage, f.oldPackage, f.datum, publishedRelease)).toThrow()
+ })
+})
+function focusGuardFixture(install = installReleaseCopyFocusGuard) {
+ const listeners = new Map<string, Set<(event: any) => void>>()
+ class Owner {
+  readonly ownerDocument: object
+  isConnected = true
+  constructor(readonly selectors: string[] = [], owner?: object) { this.ownerDocument = owner ?? document }
+  matches(selector: string) { return this.selectors.includes(selector) }
+ }
+ const owners: Owner[] = []
+ const document = { activeElement: null as Owner | null, querySelectorAll: (selector: string) => owners.filter(owner => owner.isConnected && owner.matches(selector)) }
+ const node = (selectors: string[] = []) => { const owner = new Owner(selectors); owners.push(owner); return owner }
+ const body = node(), unnamed = node(), skip = node([".skip-link"]), named = node([".topbar a"]), other = node([".topbar a"])
+ document.activeElement = body
+ const window = {
+  addEventListener(type: string, listener: (event: any) => void, options: any) {
+   expect(options).toEqual({ capture: true, passive: true })
+   if (!listeners.has(type)) listeners.set(type, new Set())
+   listeners.get(type)!.add(listener)
+  },
+  removeEventListener(type: string, listener: (event: any) => void, capture: boolean) {
+   expect(capture).toBe(true); listeners.get(type)?.delete(listener)
+  },
+ }
+ const emit = (type: string, event: object) => { for (const listener of [...(listeners.get(type) ?? [])]) listener(event) }
+ const guard = runInNewContext(`(${install.toString()})()`, { window, document, Element: Owner, HTMLElement: Owner }) as ReturnType<typeof installReleaseCopyFocusGuard>
+ const keydown = (extra: object = {}) => emit("keydown", { key: "Tab", isTrusted: true, shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, ...extra })
+ const gain = (owner: Owner) => { document.activeElement = owner; emit("focusin", { target: owner }) }
+ const dispatch = (owner?: Owner) => { guard.prepare(); keydown(); if (owner) gain(owner); return guard.read() }
+ const listenerCount = () => [...listeners.values()].reduce((count, values) => count + values.size, 0)
+ return { guard, owners, node, body, unnamed, skip, named, other, document, keydown, gain, emit, dispatch, listenerCount, Owner }
+}
+describe("release-only native Tab seek keeps every named observation guarded", () => {
+ test("invalid scope is rejected before context creation", async () => {
+  let contexts = 0
+  const browser = { newContext() { contexts++; throw new Error("unexpected context") } } as any
+  for (const [profile, mode] of [[undefined, "release-copy-v1"], ["marketing-refinement-v1", "release-copy-v1"],
+   ["optional-support-v1", "release-copy-v1"], ["workflow-examples-v1", "other"], ["workflow-examples-v1", false]] as any[]) {
+   await expect(checkShellCase(browser, payload(3212), siteShellCases[0]!, "current", false, undefined, profile, mode)).rejects.toThrow(/Unknown native Tab settlement profile/u)
+  }
+  expect(contexts).toBe(0)
+ })
+ test("unnamed document stops seek; skip, duplicates and named stops require settlement", () => {
+  const f = focusGuardFixture()
+  expect(f.dispatch(f.unnamed)).toBeNull()
+  expect(f.dispatch(f.skip)).toBe("skip"); expect(f.guard.settled()).toBe("skip")
+  expect(f.dispatch(f.named)).toBe(".topbar a|0"); expect(f.guard.settled()).toBe(".topbar a|0")
+  expect(f.dispatch()).toBe(".topbar a|0"); expect(f.guard.settled()).toBe(".topbar a|0")
+  f.guard.prepare(); f.keydown(); f.document.activeElement = f.body
+  expect(f.guard.read()).toBeNull()
+  f.guard.finish(); expect(f.listenerCount()).toBe(0)
+  expect(() => f.guard.prepare()).toThrow(/disposed/u); f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+ })
+ test("all pairs of focus gains fail, even the same owner or a transient null-to-named redirect", () => {
+  for (const first of ["unnamed", "named", "other"] as const) for (const second of ["unnamed", "named", "other"] as const) {
+   const f = focusGuardFixture(); f.guard.prepare(); f.keydown(); f.gain(f[first]); f.gain(f[second])
+   expect(() => f.guard.read()).toThrow(/multiple focus gains/u); f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+  }
+  const f = focusGuardFixture(); f.guard.prepare(); f.keydown(); f.gain(f.unnamed); f.gain(f.named); f.gain(f.unnamed)
+  expect(() => f.guard.read()).toThrow(/multiple focus gains/u); f.guard.dispose()
+ })
+ test("capture sees the first target before a nested redirect changes activeElement", () => {
+  const f = focusGuardFixture(); f.guard.prepare(); f.keydown()
+  f.gain(f.named) // Window capture runs before a later target handler redirects.
+  f.gain(f.other); f.gain(f.named)
+  expect(() => f.guard.read()).toThrow(/multiple focus gains/u); f.guard.dispose()
+ })
+ test("delayed gains between read, prepare and actual keydown stay fatal", () => {
+  for (const prepared of [false, true]) {
+   const f = focusGuardFixture(); expect(f.dispatch(f.unnamed)).toBeNull()
+   if (prepared) f.guard.prepare()
+   f.gain(f.named); f.gain(f.unnamed)
+   if (prepared) f.keydown()
+   expect(() => prepared ? f.guard.read() : f.guard.prepare()).toThrow(/outside native Tab dispatch/u)
+   expect(() => f.guard.finish()).toThrow(/outside native Tab dispatch/u); expect(f.listenerCount()).toBe(0)
+  }
+ })
+ test("full settlement rejects redirects, replacement nodes and changed inventory indices", () => {
+  for (const change of [
+   (f: ReturnType<typeof focusGuardFixture>) => { f.gain(f.other); f.gain(f.named) },
+   (f: ReturnType<typeof focusGuardFixture>) => {
+    const replacement = f.node([".topbar a"]); f.owners.splice(f.owners.indexOf(replacement), 1)
+    f.owners.splice(f.owners.indexOf(f.named), 1, replacement); f.named.isConnected = false; f.document.activeElement = replacement
+    expect(f.document.querySelectorAll(".topbar a")[0]).toBe(replacement)
+   },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.owners.splice(f.owners.indexOf(f.named), 1); f.owners.push(f.named) },
+  ]) {
+   const f = focusGuardFixture(); expect(f.dispatch(f.named)).toBe(".topbar a|0"); change(f)
+   expect(() => f.guard.settled()).toThrow(); f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+  }
+  const f = focusGuardFixture(); f.dispatch(f.named)
+  expect(() => f.guard.prepare()).toThrow(/incomplete/u); f.guard.dispose()
+ })
+ test("event owner, active owner and named key must agree in one atomic read", () => {
+  for (const change of [
+   (f: ReturnType<typeof focusGuardFixture>) => { f.gain(f.named); f.document.activeElement = f.unnamed },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.document.activeElement = f.named },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.gain(new f.Owner([".topbar a"], {})) },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.named.isConnected = false; f.gain(f.named) },
+  ]) {
+   const f = focusGuardFixture(); f.guard.prepare(); f.keydown(); change(f)
+   expect(() => f.guard.read()).toThrow(); f.guard.dispose()
+  }
+ })
+ test("queue overflow and invalid native dispatch cannot recover into a successful epoch", () => {
+  const f = focusGuardFixture(); f.guard.prepare(); f.keydown()
+  for (let index = 0; index < 9; index++) f.gain(f.unnamed)
+  expect(() => f.guard.read()).toThrow(/overflow/u); expect(() => f.guard.read()).toThrow(/overflow/u); f.guard.dispose()
+  for (const extra of [{ isTrusted: false }, { key: "Enter" }, { shiftKey: true }, { altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+   const invalid = focusGuardFixture(); invalid.guard.prepare(); invalid.keydown(extra); invalid.keydown()
+   expect(() => invalid.guard.read()).toThrow(/unexpected native key/u); invalid.guard.dispose()
+  }
+  const repeated = focusGuardFixture(); repeated.guard.prepare(); repeated.keydown(); repeated.keydown()
+  expect(() => repeated.guard.read()).toThrow(/unprepared/u); repeated.guard.dispose()
+ })
+ test("final validation removes both listeners even on a late gain or silent owner change", () => {
+  for (const gained of [false, true]) {
+   const f = focusGuardFixture(); f.dispatch(f.named); f.guard.settled()
+   if (gained) { f.gain(f.other); f.gain(f.named) } else f.document.activeElement = f.other
+   expect(() => f.guard.finish()).toThrow(); expect(f.listenerCount()).toBe(0)
+   expect(() => f.guard.read()).toThrow(); f.guard.dispose()
+  }
+ })
+ test("failure and cancellation cleanup preserve the original error without a retry", async () => {
+  for (const error of [new Error("measurement failed"), new Error("cancelled")]) {
+   const f = focusGuardFixture(); f.dispatch(f.named)
+   await expect(withShellCaseCleanup(async () => { throw error }, async () => { f.guard.dispose() })).rejects.toBe(error)
+   expect(f.listenerCount()).toBe(0); expect(() => f.guard.prepare()).toThrow(/disposed/u)
+  }
  })
 })
 describe("private worker retains its cap and serializable release callbacks", () => {
@@ -329,11 +463,19 @@ describe("private worker retains its cap and serializable release callbacks", ()
    const result = await Bun.build({ entrypoints: [callbackSource], target: "node", env: "disable", format: "esm", minify: examplesWorkerMinify, packages: "external", sourcemap: "none" })
    expect(result.success).toBe(true); expect(result.outputs).toHaveLength(1)
    const output = join(directory, "callback.mjs"); await writeFile(output, new Uint8Array(await result.outputs[0]!.arrayBuffer()), { flag: "wx" })
+   const focusResult = await Bun.build({ entrypoints: [fileURLToPath(new URL("./site-release-copy-focus.ts", import.meta.url))], target: "node", env: "disable", format: "esm", minify: examplesWorkerMinify, packages: "external", sourcemap: "none" })
+   expect(focusResult.success).toBe(true); expect(focusResult.outputs).toHaveLength(1)
+   const focusOutput = join(directory, "focus.mjs"); await writeFile(focusOutput, new Uint8Array(await focusResult.outputs[0]!.arrayBuffer()), { flag: "wx" })
    const compiled = await import(pathToFileURL(output).href)
    for (const current of [false, true]) for (const state of ["idle", "copied", "failed"] as const) {
     const fixture = installDomFixture(current, state, compiled.admitExamplesInstallDom as typeof admitExamplesInstallDom)
     expect(fixture.admit(true)).toEqual({ raw: fixture.root.outerHTML, admitted: fixture.fixture })
    }
+   const focusCompiled = await import(pathToFileURL(focusOutput).href)
+   const focus = focusGuardFixture(focusCompiled.installReleaseCopyFocusGuard as typeof installReleaseCopyFocusGuard)
+   expect(focus.dispatch(focus.unnamed)).toBeNull(); expect(focus.dispatch(focus.named)).toBe(".topbar a|0")
+   expect(focus.guard.settled()).toBe(".topbar a|0"); focus.guard.prepare(); focus.gain(focus.other); focus.keydown()
+   expect(() => focus.guard.read()).toThrow(/outside native Tab dispatch/u); focus.guard.dispose(); expect(focus.listenerCount()).toBe(0)
    expect(await readFile(driver.path)).toEqual(Buffer.from(driver.bytes))
   } finally { await rm(directory, { recursive: true, force: true }) }
  })

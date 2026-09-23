@@ -173,6 +173,7 @@ export const releaseCopyVerifierInputs = Object.freeze([
   "scripts/site-support-browser-contract.test.ts", "scripts/site-support-profile.ts", "scripts/verify-site-examples.ts",
   "scripts/site-release-copy-profile.ts", "scripts/site-release-copy-browser-contract.ts",
   "scripts/site-release-copy-browser-contract.test.ts", "scripts/verify-site-release-copy.ts",
+  "scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts",
 ])
 export function assertReleaseCopyInputs(current: Pick<ShellSnapshot, "inputs">, baseline: Pick<ShellSnapshot, "inputs">,
   currentPackage: unknown, baselinePackage: unknown, currentDatum: unknown, baselineDatum: unknown): void {

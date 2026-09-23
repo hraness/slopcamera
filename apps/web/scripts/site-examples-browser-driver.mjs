@@ -104,7 +104,7 @@ async function main() {
             design = await observeExamplesDesign(page, scenario, request.current, negative && scenario.route === "/", true, scope)
             Object.assign(retained.current, { original: { dom: currentDom, design, positions } })
             if (scenario.route === "/") await captureFonts(page, retained.current, request.current.origin)
-          }, "workflow-examples-v1"),
+          }, "workflow-examples-v1", scope === releaseCopyScope ? releaseCopyScope : undefined),
           () => checkShellCase(browser, request.baseline, scenario, "current", false, async (page, positions) => {
             baselinePositions = positions;
             baselineDom = await (scope === releaseCopyScope ? releaseCopyDom : examplesDom)(page, false, scenario)
@@ -113,7 +113,7 @@ async function main() {
               install: scenario.route === "/" ? await observeExamplesInstall(page, false) : undefined }
             Object.assign(retained.baseline, { original: { dom: baselineDom, design: baselineDesign, positions } })
             if (scenario.route === "/") await captureFonts(page, retained.baseline, request.baseline.origin)
-          }, "workflow-examples-v1"))
+          }, "workflow-examples-v1", scope === releaseCopyScope ? releaseCopyScope : undefined))
         retained.current.shell = current; retained.baseline.shell = baseline
         // The raw observer records obstruction evidence only. This new oracle
         // requires zero on both trees and uses no historical support allowance.
