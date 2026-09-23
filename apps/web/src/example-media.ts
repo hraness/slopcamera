@@ -69,7 +69,7 @@ export function renderExampleMedia(record: ExampleMediaRecord, options: Readonly
     // No autoplay attribute: JavaScript may opt in only after observing visibility and preferences.
     media = `<video class="slopcamera-example__media" data-example-player${options.autoplayPreview ? ' data-example-preview="true" muted' : ""} controls playsinline preload="none" poster="${poster}" width="${dimension(video.width)}" height="${dimension(video.height)}" aria-labelledby="${id}-title" aria-describedby="${id}-description"><source src="${url}" type="${video.mime}">${track}<a href="${url}">Open ${title} video</a></video>`
     videoLink = `<a href="${url}">Open video</a>`
-    details = `<p class="slopcamera-example__details">${Number(video.durationSeconds.toFixed(1))} seconds · ${video.hasAudio ? "Sound available in video controls" : "Silent video"}</p>`
+    details = `<p class="slopcamera-example__details">${Number(video.durationSeconds.toFixed(1))}s · ${video.hasAudio ? "Sound available in video controls" : "Silent"}</p>`
   } else {
     const alt = escapeHtml(record.poster.alt ?? record.title)
     media = `<a class="slopcamera-example__image-link" href="${poster}" aria-label="Open ${title} image"><img class="slopcamera-example__media" src="${poster}" width="${posterWidth}" height="${posterHeight}" alt="${alt}" loading="${options.eagerPoster ? "eager" : "lazy"}"${options.eagerPoster ? ' fetchpriority="high"' : ""} decoding="async"></a>`
