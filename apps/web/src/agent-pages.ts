@@ -99,7 +99,7 @@ The [documentation index](https://slopcamera.com/docs) connects learning, task g
 
 ### Does Slopcamera require an account or subscription?
 
-No. Slopcamera has no account or subscription. Generation uses your own Vercel AI Gateway key, which works without the Vercel CLI, or prepaid Hraness Credits for hosted image generation.
+No. Slopcamera has no account or subscription. Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits for hosted image generation. A Gateway API key works without the Vercel CLI.
 
 ### What does it cost?
 
@@ -158,7 +158,7 @@ Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK sup
 
 ## When to use Slopcamera
 
-Use Slopcamera to author portable scenes and direct cameras; film saved worlds; create diagrams and motion graphics; edit footage and deliver multiple formats; or generate images, video, speech, and transcripts through your own Vercel AI Gateway access. Prompt-only images can also run on the hosted API at api.slopcamera.com, paid with prepaid Hraness Credits (\`slopcamera credits topup\`, then \`slopcamera ai image generate --hosted\`). Native Blender, CadQuery, and Manim workflows add detailed worlds and educational films in the current release; engines install separately.
+Use Slopcamera to author portable scenes and direct cameras; film saved worlds; create diagrams and motion graphics; edit footage and deliver multiple formats; or generate images, video, speech, and transcripts through your own Vercel AI Gateway access. Prompt-only images can also run on the hosted API at api.slopcamera.com, paid with prepaid Hraness Credits (\`slopcamera credits topup\`, then \`slopcamera credits wait\` after payment, then \`slopcamera ai image generate --hosted\`). Native Blender, CadQuery, and Manim workflows add detailed worlds and educational films in the current release; engines install separately.
 
 Install the verified release with \`${archiveInstall.command}\`, then its matching Agent Skill with \`${archiveInstall.skillCommand}\` (Bun 1.3.14 or newer). The release includes \`scene camera-track\` export. Spatial rendering needs a local Chrome or Chromium runtime and the GPU support required by its selected profile. Native studio engines need separately installed executables or Python environments. Follow the [source-install guide](${sourceInstall.guideUrl}) to develop Slopcamera or follow main.
 

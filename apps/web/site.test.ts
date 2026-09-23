@@ -1097,7 +1097,7 @@ describe("static Slopcamera site", () => {
 
   test("uses the camera identity without rewriting historical mythology", async () => {
     const html = await readSource("index.html")
-    expect(html.replace(/\s+/gu, " ")).toContain("is a local visual studio for coding agents.")
+    expect(html.replace(/\s+/gu, " ")).toContain(searchDescription)
     expect(html).toContain("camera-frame and lens motif")
     expect(html).not.toMatch(/Atum|solar barque|Benben|hieroglyph|pharaoh|ankh/u)
   })

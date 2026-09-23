@@ -1,6 +1,6 @@
 Claude Code can create diagrams, images, animations, and video through Slopcamera once two pieces are installed: the `slopcamera` command, which does the local media work, and the Slopcamera Agent Skill, which teaches Claude Code which operation to reach for.
 
-You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. Slopcamera edits recordings you already have; it does not record. There is no Slopcamera account.
+You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization, local audio and color effects (`media audio` and `media color`), and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. Slopcamera edits recordings you already have; it does not record. There is no Slopcamera account.
 
 ## Install the CLI
 
