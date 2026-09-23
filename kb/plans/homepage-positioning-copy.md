@@ -160,3 +160,19 @@ toward "tell your agent and go":
 - Authored shell: 38,994 / 39,000 bytes.
 - `bun run check` (apps/web), `check:standalone`, and
   `verify-example-sources` pass locally.
+
+### Third pass — example media presentation
+
+Owner feedback: the examples section still looked unpolished because the
+gallery forced `aspect-ratio: 16/9` on every media element, letterboxing
+the portrait video and non-16:9 posters against the dark `--night`
+matte. Replaced the forced ratio with intrinsic-fit sizing
+(`inline-size: auto; max-inline-size: 100%; block-size: auto;
+margin-inline: auto`): replaced-element constraint transfer preserves
+each asset's own ratio under the existing `max-block-size` cap, so every
+card hugs its media — portrait video renders 365×648 centered, the
+full-spanning pavilion centers at 896×672, landscape clips stay
+edge-to-edge. Pure CSS; markup, island literals, and the
+`object-fit: contain`/height-cap invariants in
+`assertExampleGeometry` are untouched. Verified with pinned-Chromium
+screenshots at 1280 and 390.
