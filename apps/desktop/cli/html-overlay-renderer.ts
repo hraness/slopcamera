@@ -2334,13 +2334,14 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
               await inspectGpu();
               // Wait for the compositor to present the frame the callbacks
               // just produced. renderFrame resolves when authored work returns,
-              // not when the new surface reaches the screen; a screenshot taken
-              // immediately can capture the previous presented frame. A cheap
-              // throwaway capture forces one BeginFrame/present and gives the
-              // draw's queued commands time to land — a requestAnimationFrame
-              // pair is not a safe barrier here because BeginFrame-controlled
-              // headless runtimes only produce frames on embedder request, so
-              // an idle page's callbacks can wait forever.
+              // not when the new surface reaches the screen. A throwaway
+              // capture asks the browser to present the queued draw before the
+              // retained screenshot, without resizing the viewport. Do not wait
+              // on page requestAnimationFrame here: the Slopcamera runtime owns
+              // that queue and drains it only inside renderFrame, so a callback
+              // awaited between authored frames cannot settle. Screenshot
+              // preparation runs outside that authored clock; it must not
+              // advance the frame or invoke another author callback.
               await boundedBrowserStep(
                 async () => await page.screenshot({
                   clip: { x: 0, y: 0, width: 1, height: 1 },
