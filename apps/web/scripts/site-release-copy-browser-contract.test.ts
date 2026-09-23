@@ -330,10 +330,13 @@ function focusGuardFixture(install = installReleaseCopyFocusGuard) {
   constructor(readonly selectors: string[] = [], owner?: object) { this.ownerDocument = owner ?? document }
   matches(selector: string) { return this.selectors.includes(selector) }
  }
+ class Video extends Owner { controls = true }
+ class Audio extends Owner { controls = true }
  const owners: Owner[] = []
  const document = { activeElement: null as Owner | null, querySelectorAll: (selector: string) => owners.filter(owner => owner.isConnected && owner.matches(selector)) }
  const node = (selectors: string[] = []) => { const owner = new Owner(selectors); owners.push(owner); return owner }
  const body = node(), unnamed = node(), skip = node([".skip-link"]), named = node([".topbar a"]), other = node([".topbar a"])
+ const video = new Video(), audio = new Audio(); owners.push(video, audio)
  document.activeElement = body
  const window = {
   addEventListener(type: string, listener: (event: any) => void, options: any) {
@@ -346,12 +349,12 @@ function focusGuardFixture(install = installReleaseCopyFocusGuard) {
   },
  }
  const emit = (type: string, event: object) => { for (const listener of [...(listeners.get(type) ?? [])]) listener(event) }
- const guard = runInNewContext(`(${install.toString()})()`, { window, document, Element: Owner, HTMLElement: Owner }) as ReturnType<typeof installReleaseCopyFocusGuard>
+ const guard = runInNewContext(`(${install.toString()})()`, { window, document, Element: Owner, HTMLElement: Owner, HTMLVideoElement: Video }) as ReturnType<typeof installReleaseCopyFocusGuard>
  const keydown = (extra: object = {}) => emit("keydown", { key: "Tab", isTrusted: true, shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, ...extra })
  const gain = (owner: Owner) => { document.activeElement = owner; emit("focusin", { target: owner }) }
  const dispatch = (owner?: Owner) => { guard.prepare(); keydown(); if (owner) gain(owner); return guard.read() }
  const listenerCount = () => [...listeners.values()].reduce((count, values) => count + values.size, 0)
- return { guard, owners, node, body, unnamed, skip, named, other, document, keydown, gain, emit, dispatch, listenerCount, Owner }
+ return { guard, owners, node, body, unnamed, skip, named, other, video, audio, document, keydown, gain, emit, dispatch, listenerCount, Owner, Video }
 }
 describe("release-only native Tab seek keeps every named observation guarded", () => {
  test("invalid scope is rejected before context creation", async () => {
@@ -373,6 +376,61 @@ describe("release-only native Tab seek keeps every named observation guarded", (
   expect(f.guard.read()).toBeNull()
   f.guard.finish(); expect(f.listenerCount()).toBe(0)
   expect(() => f.guard.prepare()).toThrow(/disposed/u); f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+ })
+ test("opaque native video epochs preserve null seeking and subsequent named settlement for every eight-epoch sequence", () => {
+  // Exhaust the ordering law over every mixture of document-observed and
+  // opaque native-control Tabs; the host's real keyboard call remains native.
+  for (let mask = 0; mask < 256; mask++) {
+   const f = focusGuardFixture(); expect(f.dispatch(f.video)).toBeNull()
+   for (let epoch = 0; epoch < 8; epoch++) {
+    f.guard.prepare(); if (mask & (1 << epoch)) f.keydown()
+    expect(f.guard.read()).toBeNull()
+   }
+   expect(f.dispatch(f.named)).toBe(".topbar a|0")
+   expect(f.guard.settled()).toBe(".topbar a|0")
+   f.guard.finish(); expect(f.listenerCount()).toBe(0)
+  }
+ })
+ test("a missing document keydown admits only the same previously controlled unnamed video", () => {
+  for (const kind of ["body", "unnamed", "audio", "uncontrolled", "named"] as const) {
+   const f = focusGuardFixture()
+   if (kind === "uncontrolled") f.video.controls = false
+   const owner = kind === "uncontrolled" ? f.video : f[kind]
+   const key = f.dispatch(owner); if (key !== null) f.guard.settled()
+   f.guard.prepare(); expect(() => f.guard.read()).toThrow(/native Tab dispatch missing/u)
+   f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+  }
+  for (const before of [false, true]) {
+   const f = focusGuardFixture(); f.video.controls = before; expect(f.dispatch(f.video)).toBeNull()
+   f.guard.prepare(); f.video.controls = !before
+   expect(() => f.guard.read()).toThrow(/native Tab dispatch missing/u); f.guard.dispose()
+  }
+  const toggled = focusGuardFixture(); expect(toggled.dispatch(toggled.video)).toBeNull()
+  toggled.video.controls = false; toggled.guard.prepare(); toggled.video.controls = true
+  expect(() => toggled.guard.read()).toThrow(/native Tab dispatch missing/u); toggled.guard.dispose()
+ })
+ test("opaque video seeking never admits a focus gain, exit, changed owner, or named video", () => {
+  for (const change of [
+   (f: ReturnType<typeof focusGuardFixture>) => { f.document.activeElement = f.body },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.document.activeElement = f.named },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.document.activeElement = new f.Video() },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.document.activeElement = new f.Video([], {}) },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.video.isConnected = false },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.video.selectors.push(".topbar a") },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.gain(f.video) },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.gain(f.named); f.gain(f.video) },
+   (f: ReturnType<typeof focusGuardFixture>) => { f.keydown({ isTrusted: false }) },
+  ]) {
+   const f = focusGuardFixture(); expect(f.dispatch(f.video)).toBeNull(); f.guard.prepare(); change(f)
+   expect(() => f.guard.read()).toThrow(); expect(() => f.guard.read()).toThrow()
+   f.guard.dispose(); expect(f.listenerCount()).toBe(0)
+  }
+  const named = focusGuardFixture(); named.video.selectors.push(".topbar a")
+  expect(named.dispatch(named.video)).toBe(".topbar a|2"); named.guard.settled(); named.guard.prepare()
+  expect(() => named.guard.read()).toThrow(/native Tab dispatch missing/u); named.guard.dispose()
+  const repeated = focusGuardFixture(); repeated.dispatch(repeated.video); repeated.guard.prepare()
+  expect(repeated.guard.read()).toBeNull(); expect(() => repeated.guard.read()).toThrow(/native Tab dispatch missing/u)
+  repeated.guard.dispose()
  })
  test("all pairs of focus gains fail, even the same owner or a transient null-to-named redirect", () => {
   for (const first of ["unnamed", "named", "other"] as const) for (const second of ["unnamed", "named", "other"] as const) {
@@ -472,6 +530,13 @@ describe("private worker retains its cap and serializable release callbacks", ()
     expect(fixture.admit(true)).toEqual({ raw: fixture.root.outerHTML, admitted: fixture.fixture })
    }
    const focusCompiled = await import(pathToFileURL(focusOutput).href)
+   const opaque = focusGuardFixture(focusCompiled.installReleaseCopyFocusGuard as typeof installReleaseCopyFocusGuard)
+   expect(opaque.dispatch(opaque.video)).toBeNull(); opaque.guard.prepare(); expect(opaque.guard.read()).toBeNull()
+   expect(opaque.dispatch(opaque.named)).toBe(".topbar a|0"); expect(opaque.guard.settled()).toBe(".topbar a|0")
+   opaque.guard.finish(); expect(opaque.listenerCount()).toBe(0)
+   const opaqueExit = focusGuardFixture(focusCompiled.installReleaseCopyFocusGuard as typeof installReleaseCopyFocusGuard)
+   opaqueExit.dispatch(opaqueExit.video); opaqueExit.guard.prepare(); opaqueExit.document.activeElement = opaqueExit.body
+   expect(() => opaqueExit.guard.read()).toThrow(/outside native Tab dispatch/u); opaqueExit.guard.dispose()
    const focus = focusGuardFixture(focusCompiled.installReleaseCopyFocusGuard as typeof installReleaseCopyFocusGuard)
    expect(focus.dispatch(focus.unnamed)).toBeNull(); expect(focus.dispatch(focus.named)).toBe(".topbar a|0")
    expect(focus.guard.settled()).toBe(".topbar a|0"); focus.guard.prepare(); focus.gain(focus.other); focus.keydown()

@@ -4,8 +4,9 @@
 export function installReleaseCopyFocusGuard() {
   const selectors = ['.topbar a', '[data-hraness-appearance-menu] button', '.hraness-site-footer__brand',
     '.hraness-site-footer__social-link', '.slopcamera-ask-ai a', '.route-state a']
-  type Stop = { node: Element; key: string | null }
+  type Stop = { node: Element; key: string | null; controlledVideo: boolean }
   let phase: "idle" | "prepared" | "dispatched" | "settling" | "closed" = "idle"
+  let preparedControlledVideo = false
   let failure: string | undefined
   const gains: Stop[] = []
   function fail(message: string): never {
@@ -28,13 +29,15 @@ export function installReleaseCopyFocusGuard() {
         break
       }
     }
-    return { node, key }
+    return { node, key, controlledVideo: node instanceof HTMLVideoElement && node.controls }
   }
   const same = (left: Stop, right: Stop) => left.node === right.node && left.key === right.key
   let checkpoint = snapshot(document.activeElement)
   const quiet = () => {
     healthy()
-    if (gains.length !== 0 || !same(snapshot(document.activeElement), checkpoint)) fail("focus changed outside native Tab dispatch")
+    const active = snapshot(document.activeElement)
+    if (gains.length !== 0 || !same(active, checkpoint)) fail("focus changed outside native Tab dispatch")
+    return active
   }
   const capture = (operation: () => void) => {
     try { operation() } catch (error) { failure ??= `Release-copy focus guard: ${String(error).slice(0, 256)}` }
@@ -64,12 +67,23 @@ export function installReleaseCopyFocusGuard() {
   try { window.addEventListener("keydown", keydown, { capture: true, passive: true }) } catch (error) { dispose(); throw error }
   return {
     prepare() {
-      quiet()
+      const active = quiet()
       if (phase !== "idle") fail("previous focus observation incomplete")
+      preparedControlledVideo = active.controlledVideo
       phase = "prepared"
     },
     read() {
       healthy()
+      if (phase === "prepared") {
+        // Chromium can consume Tab inside native video controls without a
+        // document keydown. The host still awaited that real native Tab. Admit
+        // only the unchanged unnamed controlled video, never an unseen exit.
+        const active = quiet()
+        if (checkpoint.key !== null || !checkpoint.controlledVideo || !preparedControlledVideo || !active.controlledVideo)
+          fail("native Tab dispatch missing")
+        phase = "idle"
+        return null
+      }
       if (phase !== "dispatched") fail("native Tab dispatch missing")
       const active = snapshot(document.activeElement)
       if (gains.length > 1) fail("multiple focus gains in one Tab epoch")
