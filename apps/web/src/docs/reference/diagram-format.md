@@ -28,7 +28,7 @@ Rendering again replaces the five derived files while the JSON source survives u
 
 A `slopcamera.config.*` file beside the source extends what the renderer draws: a configured font with local files, named icon bodies as sanitized SVG geometry, and light and dark theme overrides. A JSON config is inert data; a TypeScript or JavaScript config is imported as trusted workspace code and evaluates as your current user.
 
-Current source also adds `diagram sheets`, which compiles a source into patent-style monochrome drawing sheets with physical margins and a PDF; it requires a [source build](/docs/how-to/install-from-source).
+Since v3.3.5, `diagram sheets` compiles a source into patent-style monochrome drawing sheets with physical margins and a PDF.
 
 ## Bounds
 

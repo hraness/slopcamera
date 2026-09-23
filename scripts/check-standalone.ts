@@ -324,14 +324,13 @@ const problems = [
   ...inventoryUpdate.problems,
 ];
 const rootPackage = await readJson(join(ROOT, "package.json"));
-const expectedDescription = "A local visual studio for coding agents: author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.";
+const expectedDescription = "A local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.";
 const expectedKeywords = [
   "ai-media-generation",
   "ai-video-generation",
   "video-generation",
   "video-editing",
   "image-generation",
-  "screen-recording",
   "motion-graphics",
   "captions",
   "speech-generation",

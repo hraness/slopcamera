@@ -9,7 +9,7 @@ import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
+const definition = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit."
 
 describe("visual studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
@@ -28,7 +28,7 @@ describe("visual studio public copy (pure, process-free)", () => {
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')
     expect(homeMarkdown).toContain(archiveInstall.skillCommand)
-    expect(llmsTxt).toContain("Spatial rendering needs the admitted local browser runtime and the GPU support required by its selected profile")
+    expect(llmsTxt).toContain("Spatial rendering needs a local Chrome or Chromium runtime and the GPU support required by its selected profile")
     expect(llmsTxt).toContain("Native studio engines need separately installed executables or Python environments")
     expect(llmsTxt).not.toContain("camera-track export require the current source build")
     expect(llmsTxt).toContain("scene design catalog|init|inspect|set|compile|gallery")

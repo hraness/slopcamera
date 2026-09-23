@@ -1,6 +1,6 @@
 A spatial scene is an editable JSON document: named entities, calibrated cameras, asset manifests, and animation channels rendered through the local Three.js renderer. You inspect stable entity IDs, apply typed patches to retained source, and read receipts that name the exact source, request, runtime, and output behind every frame.
 
-`slopcamera scene` rendering and patching, scene audits, character/performance authoring, cinematic direction, effects, and galleries ship in v3.3.1. Install the [verified release](/docs/reference/capabilities#install-the-release) or use [source](/docs/how-to/install-from-source); the capability reference identifies later renderer corrections separately. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
+`slopcamera scene` rendering and patching, scene audits, character/performance authoring, cinematic direction, effects, and galleries ship in v3.3.1 and later releases. Install the [verified release](/docs/reference/capabilities#install-the-release) or use [source](/docs/how-to/install-from-source); the capability reference names the release that added the later renderer corrections. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
 
 ## Create and inspect a scene
 

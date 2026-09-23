@@ -1,6 +1,6 @@
 Codex can create diagrams, images, animations, and video through Slopcamera once two pieces are installed: the `slopcamera` command, which does the local media work, and the Slopcamera Agent Skill, which teaches Codex which operation to reach for.
 
-You need Bun 1.3.14 or newer. Recording features need macOS; everything else runs on macOS, Linux, and Windows. No Slopcamera account exists, and nothing here asks for one.
+You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. Slopcamera edits recordings you already have; it does not record. There is no Slopcamera account.
 
 ## Install the CLI
 
@@ -14,7 +14,7 @@ Confirm the install:
 {{DOCTOR_COMMAND}}
 ```
 
-The doctor reports which parts of the multimedia engine are available on this machine. Diagram and video editing always are; native engines such as Blender install separately.
+The doctor reports which parts of Slopcamera work on this machine. Diagrams need nothing more, video editing needs FFmpeg and FFprobe, and native engines such as Blender install separately.
 
 ## Install the Agent Skill for Codex
 
@@ -52,4 +52,4 @@ Codex should run `slopcamera diagram init`, edit the JSON source, run `slopcamer
 - **`slopcamera: command not found`**: the global Bun bin directory is not on your `PATH`, or the install ran in a different shell. Re-open the terminal and re-run `{{DOCTOR_COMMAND}}`.
 - **The skill is not loading**: skills install per target. The Codex form installs to a `.codex/skills` directory; `--target agents` is the generic convention and `--target claude` is Claude Code. Re-run the command above, not a different target, then start a new session.
 - **Install reports a legacy `diagram` skill**: remove or move the old `diagram` directory inside the target's `skills` root, then re-run the install. Slopcamera will not place both skills side by side.
-- **Generation asks for a key**: model-backed operations use caller-owned Vercel AI Gateway access. Set `AI_GATEWAY_API_KEY`, or with a linked Vercel project use `vercel env run -- <command>` so the credential is injected for one command without being written to the project. This website never receives it.
+- **Generation asks for a key**: model-backed operations use caller-owned Vercel AI Gateway access. Set `AI_GATEWAY_API_KEY`, or with a linked Vercel project use `vercel env run -- <command>` so the credential is injected for one command without being written to the project. This website never receives it. For prompt-only images, `slopcamera credits topup` and `slopcamera credits wait` set up prepaid Hraness Credits instead; see [generate media](/docs/how-to/generate-media).

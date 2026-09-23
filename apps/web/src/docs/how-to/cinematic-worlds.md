@@ -1,6 +1,6 @@
 The `cinematic-world` built-in workflow runs the complete planning-and-review loop for one admitted spatial scene: inspect the world, check and compile authored direction, plan a bounded gallery per axis, bind declared effects into each preview render, and audit sampled temporal evidence. Its input is one inert `slopcamera.spatial-recipe-pack` document — bounded JSON data, never code.
 
-This guide is the durable-graph counterpart of the scene, direction, and effects commands covered in [Render and edit spatial scenes](/docs/how-to/direct-scenes). The commands ship in v3.3.1; install the [verified release](/docs/reference/capabilities#install-the-release) or build from source. Check `slopcamera help scene` and `slopcamera workflows show cinematic-world --json` for the installed contract.
+This guide is the durable-graph counterpart of the scene, direction, and effects commands covered in [Render and edit spatial scenes](/docs/how-to/direct-scenes). The commands ship in v3.3.1 and later releases; install the [verified release](/docs/reference/capabilities#install-the-release) or build from source. Check `slopcamera help scene` and `slopcamera workflows show cinematic-world --json` for the installed contract.
 
 ## Author and check the direction
 
