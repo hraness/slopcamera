@@ -29,6 +29,7 @@
   inline-size: auto;
   max-inline-size: 100%;
   block-size: auto;
+  max-block-size: min(52vh, 24rem);
   margin-inline: auto;
   border-radius: .5rem;
 }
