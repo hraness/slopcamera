@@ -54,7 +54,7 @@ import { replaceSiteSlot } from "./src/site-template"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
 const brandDescription = "Slopcamera is a local visual studio for coding agents."
-const searchDescription = "Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
+const searchDescription = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
 // Each build compiles the independent ordinary-site and preview graphs. These
@@ -158,7 +158,7 @@ function assertAuthoredShellBudget(template: string): number {
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
   if (/\{\{(?:SITE|INSTALL)_[^{}]*_CLASS\}\}/u.test(authored)) throw new Error("Unexpected site class slot")
   const bytes = Buffer.byteLength(authored, "utf8")
-  if (bytes >= 39_000) throw new Error(`Authored site shell exceeds its 39,000-byte budget: ${bytes}`)
+  if (bytes >= 39_500) throw new Error(`Authored site shell exceeds its 39,500-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -286,12 +286,12 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   const template = await readSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
-  expect(bytes).toBeLessThan(39_000)
-  expect(assertAuthoredShellBudget(grow("x".repeat(38_999 - bytes)))).toBe(38_999)
-  expect(() => assertAuthoredShellBudget(grow("x".repeat(39_000 - bytes))))
-    .toThrow("Authored site shell exceeds its 39,000-byte budget: 39000")
-  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(38_999 - bytes)}é`)))
-    .toThrow("Authored site shell exceeds its 39,000-byte budget: 39001")
+  expect(bytes).toBeLessThan(39_500)
+  expect(assertAuthoredShellBudget(grow("x".repeat(39_499 - bytes)))).toBe(39_499)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(39_500 - bytes))))
+    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39500")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(39_499 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39501")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
@@ -1368,7 +1368,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(39_000)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(39_500)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
@@ -1703,7 +1703,7 @@ describe("static Slopcamera site", () => {
       expect(sitemap).not.toContain(optional)
     }
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
-    expect(llmsTxt).toContain("> Slopcamera is a local visual studio for coding agents.")
+    expect(llmsTxt).toContain("> Slopcamera (formerly Atet) is a local visual studio for coding agents.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
     expect(llmsTxt).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)

@@ -2,7 +2,7 @@
 
 [![Slopcamera: a visual studio for coding agents](https://slopcamera.com/og.png)](https://slopcamera.com)
 
-**Slopcamera is a local visual studio for coding agents. Author scenes, combine
+**Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine
 generated and recorded media, and export images, diagrams, animation, and video
 from retained sources.**
 
@@ -133,6 +133,8 @@ For detailed native 3D, follow
 architecture from dimensions, [build a parametric design](https://slopcamera.com/docs/how-to/parametric-design).
 
 ## What Slopcamera does
+
+Slopcamera is a local visual studio for coding agents.
 
 ### Author scenes and direct cameras
 

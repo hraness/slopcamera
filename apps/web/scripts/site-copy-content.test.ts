@@ -9,7 +9,7 @@ import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
+const definition = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
 
 describe("visual studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
