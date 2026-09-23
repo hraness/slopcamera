@@ -3,7 +3,7 @@ title: Sharpen the homepage positioning copy
 description: Rewrite the hero, trust, FAQ, and closing copy so the homepage states what Slopcamera is, why it beats prompting a bare coding agent, and stays factual inside the reviewed-island contract.
 type: plan
 area: site-content
-status: in-progress
+status: completed
 repository_scopes:
   - apps/web/src/index.html
   - apps/web/src/agent-pages.ts
@@ -88,3 +88,25 @@ changes are constrained by the reviewed browser-contract lattice:
   occurrences.
 - Native marketing acceptance remains the maintainer gate, disclosed in the
   PR.
+
+## Result
+
+Shipped and verified live at slopcamera.com in PR #209 (squash `e6cef0f`).
+Production serves the new h1, FAQ entry, and closing; all CI lanes pass
+including `Required`, plus both Vercel deployments.
+
+## Durable memory
+
+- Homepage copy edits are declared through reviewed islands: regions added
+  to `examplesIslands`/`refinementIslands` get exact baseline/current
+  literals, and sections whose authored height changes are declared in
+  `examplesHeightOwners`. Edits outside islands are byte-paired — adding
+  words to a non-islanded section fails the pairing, not a test.
+- The authored-shell budget (39,000 bytes) binds every homepage sentence;
+  compress inside islanded sections to fund additions.
+- The canonical definition sentence is pinned verbatim across meta,
+  JSON-LD, `llms.txt`, `index.md`, and README — visible summary copy can
+  diverge, the canonical string cannot.
+- The legacy-identity inventory hashes identity-bearing LINES, so any edit
+  on a line containing "studio" (including the JSON-LD blob line) needs a
+  fresh `legacyIdentitySnapshot` — run it last, after copy stops moving.
