@@ -145,7 +145,7 @@ describe("examples diagnostic evidence never changes acceptance",()=>{
   expect(JSON.parse(written[0]!)).toEqual({evidence:{original:42},diagnosticOverflow:error.metadata})
  })
  test("non-owner failure includes the authoritative numeric rectangles without admitting their difference",()=>{
-  const item={key:"#interfaces[0]",rect:[0,100,545,300],styles:{},text:"",semantics:{}} as unknown as ShellElement
+  const item={key:"#maker[0]",rect:[0,100,545,300],styles:{},text:"",semantics:{}} as unknown as ShellElement
   expect(()=>compareExamplesFlow([item],[{...item,rect:[0,100,545,320]}])).toThrow('"actual":[0,100,545,300],"baseline":[0,100,545,320],"heightDelta":-20')
  })
 })
@@ -504,7 +504,7 @@ describe("closed layout differences and historical invariants",()=>{
   const before=[box('.hraness-marketing-hero[0]',0,100),box('#install[0]',100,50)]
   expect(compareExamplesFlow([box('.hraness-marketing-hero[0]',0,120),box('#install[0]',120,50)],before)).toBe(20)
   expect(()=>compareExamplesFlow([box('.hraness-marketing-hero[0]',0,120),box('#install[0]',121,50)],before)).toThrow()
-  expect(()=>compareExamplesFlow([box('.hraness-marketing-hero[0]',0,100),box('#install[0]',100,60)],before)).toThrow()
+  expect(()=>compareExamplesFlow([box('.hraness-marketing-hero[0]',0,100),box('#maker[0]',100,60)],before)).toThrow()
   expect(()=>compareExamplesFlow([box('.hraness-marketing-hero[0]',0,Infinity),box('#install[0]',100,50)],before)).toThrow()
  })
  test("old footer counts remain exact and the new profile requires four",()=>{
