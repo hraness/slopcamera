@@ -1468,7 +1468,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "13af4c8fe08566ee6fc56a4f8c57a82428f8068c62228e2b0d3a41832f4bde82",
+    "identityLinesSha256": "0565b31500eab1ddf8b00c1f262936a3f824d1a8ab1cfcce559a2710653267cc",
     "occurrenceCount": 5,
     "path": "apps/web/scripts/site-copy-content.test.ts",
     "categories": [
@@ -1476,8 +1476,8 @@
     ]
   },
   {
-    "identityLineCount": 7,
-    "identityLinesSha256": "c5e242eb2a42964cfe21e7879073cdfc17e6ec4a519a6bc87f5fc924ecb865ad",
+    "identityLineCount": 6,
+    "identityLinesSha256": "1a6554e25aa1dfeddb776e3fa197568d903644c6fdf76ee3918b3e8506af4aed",
     "occurrenceCount": 9,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
@@ -1496,8 +1496,8 @@
   },
   {
     "path": "apps/web/scripts/site-refinement-fixtures.ts",
-    "identityLineCount": 4,
-    "identityLinesSha256": "3effc6143dcaf977ab41aa55550d4c2367e5dc54d0d569e3add0581ce65791ca",
+    "identityLineCount": 3,
+    "identityLinesSha256": "8f9345fc45e67969d9d1e1720910fe38acecc3df7eeb4a765f0715cfa78b3a74",
     "occurrenceCount": 4,
     "categories": [
       "native-film-studio"
@@ -1505,7 +1505,7 @@
   },
   {
     "identityLineCount": 13,
-    "identityLinesSha256": "b75f31240f5723d1e2a5c5c59ee0bb137d6213d14df71c437314287d9ad13852",
+    "identityLinesSha256": "bf3860ea365d4363ee2168f5b314f447f1a651c110717afc6a91ff3ebc7c51ae",
     "occurrenceCount": 13,
     "path": "apps/web/site.test.ts",
     "categories": [
@@ -1514,7 +1514,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "46805dc84f85fc1dd3d88e3cc0295db54c11c4160fbf23ddaf4a64a9948c800f",
+    "identityLinesSha256": "16b3ae73bd3867a30cc849bc7ae8c0a72be62128fbca9d5995ed0c91f5570c58",
     "occurrenceCount": 6,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1703,7 +1703,7 @@
   },
   {
     "identityLineCount": 13,
-    "identityLinesSha256": "f77974c6cc38aee0f3d45335bea4986e792fc319b0b4c60a135992618f040591",
+    "identityLinesSha256": "0cfffa42788ef41dacf612d539638ae44a4832ca1a9aae08bea0bf0c0ad18065",
     "occurrenceCount": 16,
     "path": "apps/web/src/index.html",
     "categories": [
@@ -2892,9 +2892,9 @@
     ]
   },
   {
-    "identityLineCount": 6,
-    "identityLinesSha256": "1aa3259816cfd1373eb81ad9f1718625497f8754459ede5c9464eaa8cc590b5c",
-    "occurrenceCount": 8,
+    "identityLineCount": 7,
+    "identityLinesSha256": "b5ddd28255b0e45d09e8b846a7771efff7748fdafbaab3f733386eca30d63a72",
+    "occurrenceCount": 9,
     "path": "README.md",
     "categories": [
       "native-film-studio"

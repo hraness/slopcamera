@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "premiere-assembly",
+  "canvas": { "width": 560, "height": 640 },
+  "shapes": [
+    { "id": "author", "type": "rect", "x": 70, "y": 70, "width": 420, "height": 120, "label": "01  AUTHOR MEDIA", "labelFontSize": 32 },
+    { "id": "mount", "type": "rect", "x": 70, "y": 260, "width": 420, "height": 120, "label": "02  MOUNT IN SCENE", "labelFontSize": 32 },
+    { "id": "direct", "type": "rect", "x": 70, "y": 450, "width": 420, "height": 120, "label": "03  DIRECT CAMERA", "labelFontSize": 32 }
+  ],
+  "edges": [
+    { "id": "author-mount", "from": "author", "to": "mount" },
+    { "id": "mount-direct", "from": "mount", "to": "direct" }
+  ]
+}

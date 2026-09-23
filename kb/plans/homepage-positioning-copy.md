@@ -177,3 +177,44 @@ edge-to-edge. Pure CSS; markup, island literals, and the
 `object-fit: contain`/height-cap invariants in
 `assertExampleGeometry` are untouched. Verified with pinned-Chromium
 screenshots at 1280 and 390.
+
+### Fourth pass — accent surfaces and visual rhythm
+
+Owner authorized bigger changes after the media-fit pass. Kept the
+paper/editorial system and pushed the preset's designed accent variant:
+
+- `#closing` and `.hraness-marketing-hero` moved `data-tone="paper"` to
+  `data-tone="accent"` — the preset's reviewed full-bleed accent band
+  (100vmax bleed, inverted ink/muted/lines, foil-inverted primary
+  action, forced-colors handled upstream).
+- The legacy `a { color: inherit }` reset lives in the later
+  `components.slopcamera-legacy` layer and silently hides the accent
+  inversion; scoped the existing primary-action color restore to
+  non-accent contexts and added an explicit accent-context color rule.
+- Example captions inside the accent hero remap `--ink`/`--muted` to
+  accent-ink values so caption, details, and links stay readable.
+- Workflow step numerals moved to the display serif (1.75rem, muted);
+  technique links became bordered pills; interface code blocks gained a
+  hairline border.
+- Islands: six hero-region islands collapsed into one
+  `.hraness-marketing-hero` island in both profiles (baseline literal
+  from a rebuilt `c56e007` dist; current literals extracted via pinned
+  Chromium `outerHTML`); `#closing` current updated. Refinement island
+  key list and its count assertion updated (11 → 8 keys).
+- Verified light + dark + mobile in pinned Chromium; identity inventory
+  rows refreshed; 212 contract tests + standalone + theme check pass.
+  `site.test.ts` in-band build timed out under machine load ~44 twice —
+  same environmental flake as the media pass; CI is the clean gate.
+
+### Fifth pass — unfeature the weakest example
+
+Owner feedback: the full-span `crescent-pavilion` still was the biggest
+card yet the weakest — a static poster whose caption did not convey the
+parametric story. Set `featured: false` on its registry entry (the
+example, source links, and guide anchor stay in the reviewed registry
+and docs), removed it from the homepage order and `examplesHomeIds`,
+and re-synced the `#examples` island current literal. The gallery now
+shows four cards in a clean 2×2 — three videos plus the
+source-to-delivery diagram, which reads as information rather than a
+single opaque render. `verify-example-sources` still verifies all 44
+registry entries; 207 contract tests pass.

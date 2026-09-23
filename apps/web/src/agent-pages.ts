@@ -4,7 +4,7 @@ import { archiveInstall, publishedRelease, sourceInstall } from "./published-rel
 
 export const homeMarkdown = `# Give your coding agent a visual studio
 
-Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources. Every source stays editable, so your agent revises one field instead of re-rolling the whole take.
+Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources. Every source stays editable, so your agent revises one field instead of re-rolling the whole take.
 
 Free and open source under the MIT license. Verified release. Requires Bun 1.3.14 or newer. Native engines install separately.
 
@@ -152,7 +152,7 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 
 export const llmsTxt = `# Slopcamera
 
-> Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
+> Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
 
 Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six portable operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
