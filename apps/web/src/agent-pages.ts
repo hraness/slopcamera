@@ -2,9 +2,9 @@ import { homepageExampleMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 
-export const homeMarkdown = `# Direct scenes and films with your coding agent
+export const homeMarkdown = `# Give your coding agent a visual studio
 
-Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.
+Slopcamera is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources. Every source stays editable, so your agent revises one field instead of re-rolling the whole take.
 
 Free and open source under the MIT license. Verified release. Requires Bun 1.3.14 or newer. Native engines install separately.
 

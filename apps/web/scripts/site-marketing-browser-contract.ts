@@ -526,7 +526,7 @@ export async function observeMarketingDesign(page: Page, scenario: ShellCase, pa
     }
     assert.equal(heading.styles.visibility, "visible"); assert.equal(heading.styles.opacity, "1")
   }
-  assert.equal(h1.text, "Direct scenes and films with your coding agent")
+  assert.equal(h1.text, "Give your coding agent a visual studio")
   assert.equal(await page.evaluate(() => [...document.fonts].some(face => face.family.replaceAll('"', '') === "Instrument Serif" && face.weight === "400" && face.status === "loaded")), true)
   const phone = scenario.width <= 760
   near(hero.styles["padding-top"]!, phone ? 44 : 56, "Hero top rhythm")
