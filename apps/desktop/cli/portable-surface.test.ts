@@ -8,6 +8,18 @@ import {
 } from "./portable-surface";
 
 describe("unified portable Slopcamera CLI surface", () => {
+  test("delegates style discovery and documents its independent art-direction boundary", async () => {
+    const delegated: string[][] = [];
+    for (const argv of [["style", "list", "--json"], ["style", "show", "pixel-art", "--json"]]) {
+      expect(await runPortableSurface(argv, { runHeadless: async args => { delegated.push([...args]); } })).toBe(0);
+    }
+    expect(delegated).toEqual([["style", "list", "--json"], ["style", "show", "pixel-art", "--json"]]);
+    expect(commandHelp([])).toContain("style list|show");
+    expect(commandHelp(["style"])).toContain("independently of the seven HTML library profiles");
+    expect(completions(["style", ""])).toEqual(["list", "show"]);
+    expect(await runPortableSurface(["style", "--help"])).toBeUndefined();
+  });
+
   test("documents drawing-sheet commands and their separate artifact contract", () => {
     expect(commandHelp([])).toContain("diagram sheets init|check|render");
     const help = commandHelp(["diagram"]);

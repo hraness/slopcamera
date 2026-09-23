@@ -42,15 +42,41 @@ const importSpecifiers = [
   `${packageName}/local/html-overlay`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
-// Archive: at most 530 files, 4.8 MB packed and 14 MB of file content.
+// Initial 3.4 source-portfolio measurement: 535 files, 4,862,866 packed bytes,
+// 14,000,164 content bytes, including 227,137 bytes of new editable examples.
+// Final rebuilt candidates must still pass these bounded admission limits.
+// Archive: at most 550 files, 5.2 MB packed and 15 MB of file content.
 // Independent readers add only bounded USTAR headers, padding and termination.
-const maximumPackedFiles = 530;
-const maximumPackedBytes = 4_800_000;
-const maximumUnpackedBytes = 14_000_000;
+const maximumPackedFiles = 550;
+const maximumPackedBytes = 5_200_000;
+const maximumUnpackedBytes = 15_000_000;
 const packedHtmlExamplePaths = [
   "examples/html/music-video.html",
   "examples/html/music-video.json",
 ] as const;
+const packedStylePortfolioPaths = [
+  "examples/style-portfolio/README.md",
+  "examples/style-portfolio/ANIMATION-STUDIES.md",
+  "examples/style-portfolio/FILM-PLATE.md",
+  "examples/style-portfolio/animation-studies.html",
+  "examples/style-portfolio/film-plate.html",
+  "examples/style-portfolio/render.ts",
+  "examples/style-portfolio/render-film-plate.ts",
+  "examples/style-portfolio/finish-film.ts",
+  "examples/style-portfolio/build-gallery.ts",
+  "examples/style-portfolio/verify-animation-source.mjs",
+  "examples/style-portfolio/assets/instrument-serif-latin-400.woff2",
+  "examples/style-portfolio/assets/instrument-serif-OFL.txt",
+  "examples/style-portfolio/market-street/README.md",
+  "examples/style-portfolio/market-street/mesh.py",
+  "examples/style-portfolio/market-street/scene.py",
+  "examples/style-portfolio/market-street/source.json",
+  "examples/style-portfolio/market-street/street_data.py",
+] as const;
+const publishedExamplePaths = new Set<string>([
+  ...packedHtmlExamplePaths,
+  ...packedStylePortfolioPaths,
+]);
 const requiredPackedPaths = [
   "PRIVACY.md",
   "LICENSE",
@@ -76,12 +102,16 @@ const requiredPackedPaths = [
   "schema/drawing.schema.json",
   "src/drawing.ts",
   "src/drawing-pdf.ts",
+  "src/visual-style.ts",
+  "apps/desktop/core/visual-style-look.ts",
   "skills/slopcamera/references/patent-drawings.md",
+  "skills/slopcamera/references/visual-style-direction.md",
   "src/studio/index.ts",
   "apps/desktop/studio/drivers/blender_driver.py",
   "apps/desktop/studio/drivers/cadquery_driver.py",
   "apps/desktop/studio/education/driver.py",
   ...packedHtmlExamplePaths,
+  ...packedStylePortfolioPaths,
   "examples/studio/blender/product.py",
   "examples/studio/education/scene.py",
   "examples/studio/native-workflow.ts",
@@ -115,7 +145,6 @@ const forbiddenPackedPaths = [
   { label: "native runtime build tree", pattern: /^apps\/desktop\/runtime\//u },
   { label: "native shell source", pattern: /^apps\/desktop\/src\//u },
   { label: "property-test support", pattern: /^apps\/desktop\/testing\//u },
-  { label: "development example", pattern: /^examples\/(?!studio\/|html\/music-video\.(?:html|json)$)/u },
   { label: "native qualification source", pattern: /(?:^|\/)(?:test_|qualify_)[^/]*\.py$/u },
   { label: "native live qualification", pattern: /(?:^|\/)qualify-[^/]*\.ts$/u },
   { label: "native application manifest", pattern: /^apps\/desktop\/app\.zon$/u },
@@ -222,6 +251,10 @@ async function scanPackedPackage(directory: string): Promise<PackedPackageStats>
     }
     if (!info.isFile()) return;
     const packedPath = relative(directory, path).split(sep).join("/");
+    if (packedPath.startsWith("examples/") && !packedPath.startsWith("examples/studio/")
+      && !publishedExamplePaths.has(packedPath)) {
+      problems.push(`${packedPath} contains an unpublished development example`);
+    }
     paths.add(packedPath);
     fileSizes.set(packedPath, info.size);
     unpackedBytes += info.size;
@@ -868,7 +901,11 @@ try {
   await verifyNpmPackResult(archive, archiveBytes, packResult, packedStats);
   await verifySideEffectFreeImports(
     consumer,
-    importSpecifiers,
+    [
+      ...importSpecifiers,
+      join(installedPackage, "examples/style-portfolio/render.ts"),
+      join(installedPackage, "examples/style-portfolio/finish-film.ts"),
+    ],
     "bun",
     packageEnvironment,
   );
@@ -904,6 +941,109 @@ if (Buffer.from(pngs[0]).equals(Buffer.from(pngs[1]))) throw new Error("Packed S
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "--help",
   ], consumer);
+  const publicStyleFixture = `
+const styleApi = await import("@hraness/slopcamera");
+const styleLocal = await import("@hraness/slopcamera/local/code");
+const styleHtml = await import("@hraness/slopcamera/local/html-overlay");
+const styleAssert: typeof import("node:assert").strict = (await import("node:assert")).strict;
+const expectedStyleIds = [
+  "silent-actuality", "noir-35mm", "documentary-16mm", "super8-color",
+  "theatrical-cel", "watercolor-storybook", "ink-sketch", "rubber-hose",
+  "midcentury-limited", "cut-paper", "stopmotion-clay", "pixel-art",
+  "rotoscope", "engraving", "math-explainer", "isometric-design", "clean-motion",
+];
+styleAssert.deepEqual(styleApi.VISUAL_STYLE_IDS, expectedStyleIds);
+styleAssert.deepEqual(styleApi.VISUAL_STYLE_PROFILES.map(profile => profile.id), expectedStyleIds);
+for (const profile of styleApi.VISUAL_STYLE_PROFILES) {
+  styleAssert.deepEqual(styleApi.VisualStyleProfileSchema.parse(profile), profile);
+  styleAssert.equal(styleApi.getVisualStyleProfile(profile.id), profile);
+  styleAssert.ok(Math.min(profile.delivery.width, profile.delivery.height) >= 1080);
+  styleAssert.ok(styleApi.createVisualStyleDirection(profile.id).includes(profile.acceptance[0]!));
+}
+const heldExposure = styleApi.sampleVisualStyleExposure(83_334, "theatrical-cel");
+styleAssert.deepEqual(heldExposure, { frame: 2, exposureIndex: 1, exposureTimeUs: 83_334, cameraTimeUs: 83_334 });
+const nextExposure = styleApi.sampleVisualStyleExposure(125_000, "theatrical-cel");
+styleAssert.equal(nextExposure.exposureTimeUs, heldExposure.exposureTimeUs);
+styleAssert.equal(nextExposure.cameraTimeUs, 125_000);
+styleAssert.deepEqual(styleApi.sampleVisualStyleExposure(83_334, "theatrical-cel"), heldExposure);
+styleAssert.equal(styleApi.visualStyleFrameVariation(0, 0, "grain"), 0.7710088782478124);
+styleApi.visualStyleFrameVariation(4, 144, "gate/x");
+styleAssert.equal(styleApi.visualStyleFrameVariation(0, 0, "grain"), 0.7710088782478124);
+styleAssert.throws(() => styleApi.getVisualStyleProfile("invented-style"));
+const pixelStyle = styleApi.getVisualStyleProfile("pixel-art");
+styleAssert.equal(pixelStyle.delivery.sampling, "nearest");
+styleAssert.deepEqual(pixelStyle.delivery.logicalGrid, { width: 320, height: 180 });
+styleAssert.equal(pixelStyle.delivery.width / 320, pixelStyle.delivery.height / 180);
+styleAssert.ok(Number.isInteger(pixelStyle.delivery.width / 320));
+const filmLook = styleLocal.createVisualStyleVideoLook("silent-actuality", { height: 1440, seed: 1906 });
+styleAssert.deepEqual(filmLook.effects.map(effect => effect.kind), ["color-grade", "diffusion", "film-grain", "vignette"]);
+const filmGrain = filmLook.effects.find(effect => effect.kind === "film-grain");
+styleAssert.equal(filmGrain?.seed, 1906);
+styleAssert.equal(filmGrain?.chroma, 0);
+styleAssert.equal(filmGrain?.cadence, "frame-varying");
+styleAssert.deepEqual(styleLocal.createVisualStyleVideoLook("pixel-art").effects.map(effect => effect.kind), ["color-grade"]);
+styleAssert.throws(() => styleLocal.createVisualStyleVideoLook("silent-actuality", { height: 4321 }));
+const installedStudyProfile = styleApi.getVisualStyleProfile("theatrical-cel");
+const installedStudyScene = styleHtml.HtmlSceneInputSchema.parse({
+  kind: "slopcamera.html-scene", schemaVersion: 1, name: "Installed theatrical cel study",
+  document: { path: "examples/style-portfolio/animation-studies.html" },
+  canvas: { width: 1920, height: 1080, deviceScaleFactor: 1 },
+  timing: { durationUs: 6_000_000, fps: 24 }, seed: 20260923,
+  libraries: [], resources: [], background: installedStudyProfile.palette.background,
+  parameters: { style: installedStudyProfile.id, direction: installedStudyProfile, timeOffsetSeconds: 0 },
+});
+console.log(JSON.stringify({ styles: styleApi.VISUAL_STYLE_PROFILES, scene: installedStudyScene }));
+`;
+  const installedStyleProof = record(JSON.parse(await runOutput([
+    process.execPath, "-e", publicStyleFixture,
+  ], consumer, packageEnvironment)) as unknown, "packed visual style SDK proof");
+  const styleCli = join(consumer, "node_modules", ".bin", "slopcamera");
+  const installedStyleCatalog = record(JSON.parse(await runOutput([
+    styleCli, "style", "list", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed visual style catalog");
+  if (installedStyleCatalog.schemaVersion !== 1 || !Array.isArray(installedStyleCatalog.styles)
+    || installedStyleCatalog.styles.length !== 17
+    || JSON.stringify(installedStyleCatalog.styles) !== JSON.stringify(installedStyleProof.styles)) {
+    throw new Error("Packed CLI and SDK disagree on the seventeen visual style profiles.");
+  }
+  const installedStyleProfiles = installedStyleCatalog.styles.map(value => record(value, "packed visual style"));
+  for (const id of ["theatrical-cel", "pixel-art"]) {
+    const shown = record(JSON.parse(await runOutput([
+      styleCli, "style", "show", id, "--json",
+    ], consumer, packageEnvironment)) as unknown, "packed visual style detail");
+    if (shown.schemaVersion !== 1
+      || JSON.stringify(shown.style) !== JSON.stringify(installedStyleProfiles.find(profile => profile.id === id))) {
+      throw new Error(`Packed CLI lost the full ${id} art direction.`);
+    }
+  }
+  await runFailure([styleCli, "style", "show", "invented-style", "--json"], consumer, "Unknown visual style", packageEnvironment);
+  for (const examplePath of packedStylePortfolioPaths) {
+    await mkdir(dirname(join(consumer, examplePath)), { recursive: true });
+    await writeFile(join(consumer, examplePath), await readFile(join(installedPackage, examplePath)), { flag: "wx" });
+  }
+  await run([
+    process.execPath, join(installedPackage, "examples/style-portfolio/verify-animation-source.mjs"),
+  ], consumer, packageEnvironment);
+  await writeFile(join(consumer, "installed-style.scene.json"), JSON.stringify(installedStyleProof.scene), { flag: "wx" });
+  const installedStylePlan = record(JSON.parse(await runOutput([
+    styleCli, "html", "render", "--input", "installed-style.scene.json", "--dry-run", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed visual style study plan");
+  if (installedStylePlan.kind !== "slopcamera.html-scene-plan" || installedStylePlan.schemaVersion !== 1
+    || installedStylePlan.executed !== false || installedStylePlan.audio !== "none"
+    || installedStylePlan.width !== 1920 || installedStylePlan.height !== 1080
+    || installedStylePlan.frameCount !== 144 || installedStylePlan.fps !== 24
+    || installedStylePlan.durationUs !== 6_000_000) {
+    throw new Error("Packed visual style source lost its inert 1080p, six-second study plan.");
+  }
+  const installedStreetBundle = record(JSON.parse(await runOutput([
+    styleCli, "studio", "bundle", "examples/style-portfolio/market-street/source.json", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed historical street source bundle");
+  const streetBundle = record(installedStreetBundle.bundle, "packed historical street bundle");
+  if (installedStreetBundle.executed !== false || streetBundle.engine !== "blender"
+    || typeof installedStreetBundle.bundleSha256 !== "string"
+    || !/^[a-f0-9]{64}$/u.test(installedStreetBundle.bundleSha256)) {
+    throw new Error("Packed historical street source did not produce an inert retained Blender bundle.");
+  }
   const drawingSourcePath = join(consumer, "installed-drawing.drawing.json");
   const drawingCli = join(consumer, "node_modules", ".bin", "slopcamera");
   for (const command of ["init", "check", "render"]) {
@@ -1345,7 +1485,7 @@ void [
 `;
   await writeFile(
     join(consumer, "index.ts"),
-    `${imports}\nvoid [${uses}];\n${publicTypeFixture}\n${publicHtmlFixture}`,
+    `${imports}\nvoid [${uses}];\n${publicTypeFixture}\n${publicHtmlFixture}\n${publicStyleFixture}`,
   );
   await writeFile(
     join(consumer, "tsconfig.json"),

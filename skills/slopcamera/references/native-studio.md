@@ -1,5 +1,9 @@
 # Direct a native film studio
 
+For historical footage, physical materials, or a distinctive animation family,
+establish [visual style direction](visual-style-direction.md) before choosing
+lighting, camera, frame cadence, and finishing.
+
 These commands require current source; check [installation](install.md) and `slopcamera help studio`.
 
 Use `slopcamera studio` when the deliverable needs native Blender, CadQuery or Manim authoring. Keep the native source, caches and exact settings alongside review frames and final clips. This complements the existing Three/Spark scene and ordinary video-project workflows.

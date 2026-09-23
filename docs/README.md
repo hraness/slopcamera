@@ -16,6 +16,7 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 - [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF.
 
 - [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
+- [Direct a film or animation style](how-to/direct-visual-styles.md): use reusable art direction and render the original style studies; requires current source.
 - [Edit and deliver video](how-to/edit-video.md): import footage, align related tracks, place overlays, and check a delivery.
 - [Make a music video from an HTML scene](how-to/music-video.md): render authored visuals with a local track and retain separate sources in an editable project.
 - [Convert raster images to SVG](how-to/vectorize-images.md): trace artwork locally, compare a duotone treatment, and inspect fidelity.

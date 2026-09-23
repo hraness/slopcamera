@@ -38,6 +38,7 @@ import { installSkill, type SkillScope, type SkillTarget } from "./skill-install
 import { pathExists } from "./fs.js"
 import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./drawing.js"
 import { SLOPCAMERA_VERSION } from "./version.js"
+import { createVisualStyleDirection, getVisualStyleProfile, VISUAL_STYLE_PROFILES } from "./visual-style.js"
 import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
 import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
 
@@ -62,6 +63,8 @@ Usage:
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
+  slopcamera style list [--json]
+  slopcamera style show <id> [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
@@ -370,6 +373,31 @@ export async function main(
   args: readonly string[],
   dependencies: SlopcameraCliDependencies = {},
 ): Promise<void> {
+  if (args[0] === "style") {
+    const [action, ...words] = args.slice(1)
+    const json = words.at(-1) === "--json"
+    const positionals = json ? words.slice(0, -1) : words
+    const log = dependencies.log ?? console.log
+    if (action === "list" && positionals.length === 0) {
+      log(json
+        ? JSON.stringify({ schemaVersion: 1, styles: VISUAL_STYLE_PROFILES })
+        : ["Visual style foundations (authoring guidance; no effects are applied):",
+          ...VISUAL_STYLE_PROFILES.map(style => `${style.id}  ${style.name}\n  ${style.summary}`),
+          "Use slopcamera style show <id> for palette, cadence, materials, delivery, and review criteria."].join("\n"))
+      return
+    }
+    if (action === "show" && positionals.length === 1 && !positionals[0]!.startsWith("-")) {
+      let style
+      try {
+        style = getVisualStyleProfile(positionals[0])
+      } catch {
+        throw new Error(`Unknown visual style: ${JSON.stringify(positionals[0]!.slice(0, 128))}. Use slopcamera style list.`)
+      }
+      log(json ? JSON.stringify({ schemaVersion: 1, style }) : createVisualStyleDirection(style.id))
+      return
+    }
+    throw new Error("Use slopcamera style list [--json] or slopcamera style show <id> [--json].")
+  }
   if (args[0] === "diagram" && args[1] === "sheets") {
     await runDrawingSheets(args.slice(2), dependencies)
     return

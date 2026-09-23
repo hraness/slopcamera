@@ -6,6 +6,11 @@ credential. It has no Slopcamera account, credential store, or hosted project.
 
 ## Start with the intended role
 
+For a creative film or animation brief, use
+[visual style direction](visual-style-direction.md) to translate the intended
+look into concrete source, camera, movement, and finishing decisions. Keep a
+literal prompt literal when that is what the user requested.
+
 Clarify what the generated media needs to do in the final project:
 
 - the subject or message;

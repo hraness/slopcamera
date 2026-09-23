@@ -5,9 +5,9 @@ import { gunzipSync } from "node:zlib";
 
 const tarBlockBytes = 512;
 const packagePrefix = "package/";
-const maximumEntries = 530;
-const maximumArchiveBytes = 4_800_000;
-const maximumContentBytes = 14_000_000;
+const maximumEntries = 550;
+const maximumArchiveBytes = 5_200_000;
+const maximumContentBytes = 15_000_000;
 // Content and USTAR framing have separate budgets: each bounded entry needs a
 // 512-byte header and at most 511 padding bytes, followed by two zero blocks.
 // Keep this conservative framing allowance aligned with the checkout-free reader.

@@ -1,5 +1,10 @@
 # Render a music video from an authored scene
 
+Choose the intended film or animation language with
+[visual style direction](visual-style-direction.md) before authoring the scene.
+The example dimensions below are an iteration setting; select native delivery
+dimensions explicitly for the finished movie.
+
 Use this workflow for a complete HTML or Three.js music video with a local track,
 including dancing characters, changing landscapes, and musical light accents.
 The export retains the source and creates an ordinary editable project with
