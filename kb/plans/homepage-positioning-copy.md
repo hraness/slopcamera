@@ -3,7 +3,7 @@ title: Sharpen the homepage positioning copy
 description: Rewrite the hero, trust, FAQ, and closing copy so the homepage states what Slopcamera is, why it beats prompting a bare coding agent, and stays factual inside the reviewed-island contract.
 type: plan
 area: site-content
-status: in-progress
+status: completed
 repository_scopes:
   - apps/web/src/index.html
   - apps/web/src/agent-pages.ts
@@ -91,9 +91,11 @@ changes are constrained by the reviewed browser-contract lattice:
 
 ## Result
 
-Shipped and verified live at slopcamera.com in PR #209 (squash `e6cef0f`).
-Production serves the new h1, FAQ entry, and closing; all CI lanes pass
-including `Required`, plus both Vercel deployments.
+Both passes shipped and verified live at slopcamera.com: #209 (squash
+`e6cef0f`) and #211 (squash `9c6057f`). Production serves the new h1,
+agent-delegating install note, plain-language workflow and interface
+copy, the new FAQ entries, and closing; all CI lanes pass including
+`Required`, plus both Vercel deployments.
 
 ## Durable memory
 
