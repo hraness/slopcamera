@@ -728,6 +728,8 @@ describe("workflow-examples-v1 independent native contract", () => {
   (r:any)=>{r.observations.find((o:any)=>o.name.includes('parametric-design')).videos=1},
   (r:any)=>{r.observations.find((o:any)=>o.name.includes('/edit-video-')).figures=6},
   (r:any)=>{r.observations.find((o:any)=>o.name.includes('/edit-video-')).videos=6},
+  (r:any)=>{r.observations.find((o:any)=>o.name.includes('/edit-video-')).figures=8},
+  (r:any)=>{r.observations.find((o:any)=>o.name.includes('/edit-video-')).videos=8},
   (r:any)=>{r.observations.find((o:any)=>o.name==='player-no-js').media[0].time=0},
   (r:any)=>{r.observations.find((o:any)=>o.name==='player-docs-manual').media[0].controls=false},
   (r:any)=>{r.observations.find((o:any)=>o.name==='player-visible-auto').media[0].paused=true},

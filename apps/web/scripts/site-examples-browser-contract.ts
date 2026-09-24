@@ -15,7 +15,7 @@ import { observeExamplesActions, projectExamplesHeroActions, type ExamplesAction
 import { observeExamplesInstall, compareExamplesInstall, parseExamplesInstallPair, admitExamplesInstallDom, type ExamplesInstall } from "./site-examples-install"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
   examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures, examplesBaselineInstallCommand } from "./site-examples-profile"
-import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, releaseCopyBaselineCommand, type SiteAcceptanceScope } from "./site-release-copy-profile"
+import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, releaseCopyBaselineCommand, releaseCopyEditVideoIds, type SiteAcceptanceScope } from "./site-release-copy-profile"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
@@ -140,7 +140,10 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
         if (name.includes("first-diagram")) assert.ok(Number(observation.figures) >= 2)
         if (name.includes("first-animation")) assert.equal(observation.videos, 2)
         if (name.includes("parametric-design")) { assert.equal(observation.figures, 5); assert.equal(observation.videos, 0) }
-        if (name.includes("/edit-video-")) { assert.equal(observation.figures, 7); assert.equal(observation.videos, 7) }
+        if (name.includes("/edit-video-")) {
+          const expected = examplesEditVideoIds(request.scope).length
+          assert.equal(observation.figures, expected); assert.equal(observation.videos, expected)
+        }
       } else parsePlayerObservation(observation, request, name)
 
     }
@@ -452,6 +455,16 @@ export const examplesDirectedRatios = [
   { id: "edit-directed-square", width: 960, height: 960 },
   { id: "edit-directed-feed-portrait", width: 864, height: 1080 },
 ] as const
+const historicalEditVideoIds = Object.freeze(["color-warm", "color-cool", "color-mono", ...examplesDirectedRatios.map(item => item.id)])
+export function examplesEditVideoIds(scope: SiteAcceptanceScope = examplesScope): readonly string[] {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  return scope === releaseCopyScope ? releaseCopyEditVideoIds : historicalEditVideoIds
+}
+export function assertExamplesEditVideoInventory(figures: number, videos: number, ids: readonly (string | null)[], scope: SiteAcceptanceScope = examplesScope): void {
+  const expected = examplesEditVideoIds(scope)
+  assert.equal(figures, expected.length); assert.equal(videos, expected.length)
+  assert.deepEqual(ids, expected)
+}
 export interface ExampleRatioGeometry {
   readonly id: string; readonly widthAttribute: number; readonly heightAttribute: number; readonly source: string
   readonly x: number; readonly width: number; readonly height: number; readonly objectFit: string
@@ -691,9 +704,8 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
         ["crescent-pavilion", "crescent-pavilion-wide", "spiral-stair", "ribbed-tower", "modular-bookshelf"])
     }
     if (scenario.route === "/docs/how-to/edit-video") {
-      assert.equal(state.figures, 7); assert.equal(state.videos.length, 7)
-      assert.deepEqual(await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id"))),
-        ["color-warm", "color-cool", "color-mono", ...examplesDirectedRatios.map(item => item.id)])
+      assertExamplesEditVideoInventory(state.figures, state.videos.length,
+        await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id"))), request.scope)
       const geometry = await page.locator('figure[data-example-id^="edit-directed-"] video').evaluateAll(elements => elements.map(element => {
         const video = element as HTMLVideoElement, box = video.getBoundingClientRect()
         return { id: video.closest("[data-example-id]")!.getAttribute("data-example-id")!, widthAttribute: video.width, heightAttribute: video.height,

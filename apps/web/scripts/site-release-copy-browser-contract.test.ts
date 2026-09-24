@@ -8,11 +8,11 @@ import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse
 import { compareReleaseCopyFlow, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
 import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree,
-  releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall } from "./site-release-copy-profile"
+  releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall, releaseCopyEditVideoIds } from "./site-release-copy-profile"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
   examplesBaselineInstallCommand, examplesIslands, examplesHeroTextures, examplesDeadlineMs } from "./site-examples-profile"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
-  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, type ExamplesRequest } from "./site-examples-browser-contract"
+  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, examplesEditVideoIds, assertExamplesEditVideoInventory, type ExamplesRequest } from "./site-examples-browser-contract"
 import { compareExamplesInstall, admitExamplesInstallDom, examplesInstallNote, parseExamplesInstallPair,
   projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
@@ -103,7 +103,7 @@ function terminal(req = request()) {
   if (index < siteShellCases.length + siteCopyCases.length) return {name,passed:true,command:refinementInstallCommand,current:ports(),baseline:ports(releaseCopyBaselineCommand),install:{...installReceipt(),states:copySteps}}
   if (!name.startsWith("player-")) {
    const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(item => item.name === name)!
-   return {name,passed:true,figures:name.includes("parametric-design")?5:name.includes("/edit-video-")?7:2,videos:name.includes("first-animation")?2:name.includes("/edit-video-")?7:0,shellPaired:true,
+   return {name,passed:true,figures:name.includes("parametric-design")?5:name.includes("/edit-video-")?8:2,videos:name.includes("first-animation")?2:name.includes("/edit-video-")?8:0,shellPaired:true,
     navigation:{mode:scenario.width<=768?"disclosure":"sidebar",javascript:!("javascript" in scenario&&scenario.javascript===false),currentHref:scenario.route,
      defaultClosed:true,keyboardToggle:scenario.width<=768?"enter-open-space-close":"not-applicable",closedLinksHidden:true,articleBeforeFold:true}}
   }
@@ -159,6 +159,33 @@ function installDomFixture(current: boolean, state: "idle" | "copied" | "failed"
  return { root, button, status, fixture, admit }
 }
 describe("release-copy-v1 has an independent closed identity", () => {
+ test("binds the a742 edit-video inventory while preserving historical seven-item acceptance", async () => {
+  const historical = ["color-warm", "color-cool", "color-mono", "edit-directed-landscape", "edit-directed-portrait", "edit-directed-square", "edit-directed-feed-portrait"]
+  const released = ["color-warm", "color-cool", "color-mono", "premiere-wall", "edit-directed-landscape", "edit-directed-portrait", "edit-directed-square", "edit-directed-feed-portrait"]
+  const authored = await readFile(new URL("../src/docs/how-to/edit-video.md", import.meta.url), "utf8")
+  expect([...authored.matchAll(/^::example\[([^\]]+)\]$/gmu)].map(match => match[1])).toEqual(released)
+  expect<readonly string[]>(releaseCopyEditVideoIds).toEqual(released)
+  expect(examplesEditVideoIds()).toEqual(historical)
+  expect(examplesEditVideoIds(releaseCopyScope)).toEqual(released)
+  expect(Object.isFrozen(examplesEditVideoIds())).toBe(true)
+  expect(Object.isFrozen(examplesEditVideoIds(releaseCopyScope))).toBe(true)
+  expect(() => assertExamplesEditVideoInventory(7, 7, historical)).not.toThrow()
+  expect(() => assertExamplesEditVideoInventory(8, 8, released, releaseCopyScope)).not.toThrow()
+  expect(() => assertExamplesEditVideoInventory(8, 8, released)).toThrow()
+  expect(() => assertExamplesEditVideoInventory(7, 7, historical, releaseCopyScope)).toThrow()
+  expect(() => examplesEditVideoIds("other" as any)).toThrow()
+  for (const ids of [released.slice(1), [...released, "extra"], [...released].reverse(),
+   released.map((id, index) => index === 3 ? "color-mono" : id), released.map((id, index) => index === 3 ? null : id)])
+   expect(() => assertExamplesEditVideoInventory(8, 8, ids, releaseCopyScope)).toThrow()
+  for (const figures of [7, 9]) expect(() => assertExamplesEditVideoInventory(figures, 8, released, releaseCopyScope)).toThrow()
+  for (const videos of [7, 9]) expect(() => assertExamplesEditVideoInventory(8, videos, released, releaseCopyScope)).toThrow()
+  const req = request(), receipt = terminal(req)
+  const editCases = examplesCaseNames.filter(name => name.includes("/edit-video-"))
+  expect(editCases).toHaveLength(8)
+  for (const name of editCases) for (const field of ["figures", "videos"]) for (const count of [7, 9]) {
+   expect(() => parseExamplesPhase(mutate(receipt, value => { value.observations.find((item: any) => item.name === name)[field] = count }), 2, req)).toThrow()
+  }
+ })
  test("binds scope, baseline profile/revision/tree through requests, phases and failures", () => {
   const req = request(), receipt = terminal(req), failure = examplesCaseFailure(req, examplesCaseNames[0]!, "pair", [], Error("failed"))
   expect(parseExamplesRequest(req, releaseCopyScope)).toEqual(req)

@@ -3,6 +3,11 @@ export const releaseCopyScope = "release-copy-v1" as const
 export const releaseCopyBaselineProfile = "before-release-copy-a742b29-v1" as const
 export const releaseCopyBaselineRevision = "a742b29bb9414382843614a82cdb8c8e7c218aff" as const
 export const releaseCopyBaselineTree = "11e1eac14c63e947cd52c2f121a60fa458dcc1e5" as const
+// Exact authored order in a742: PR #220 added the wall before directed variants.
+export const releaseCopyEditVideoIds = Object.freeze([
+  "color-warm", "color-cool", "color-mono", "premiere-wall",
+  "edit-directed-landscape", "edit-directed-portrait", "edit-directed-square", "edit-directed-feed-portrait",
+] as const)
 export const releaseCopyBaselineCommand = "bun add --global https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz\nslopcamera skill install --target agents" as const
 export const releaseCopyBaselineNote = "Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs Bun 1.3.14 or newer on macOS, Linux, or Windows. Verified release v3.3.6." as const
 // Copied from the independently authored a742 source fixture (byte-identical to e08), never candidate DOM.
