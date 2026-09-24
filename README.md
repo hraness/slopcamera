@@ -310,7 +310,7 @@ declarative graphs, approvals, and resuming work.
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
 - **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and audit
-  scenes, and run six bounded portable operation codes in v3.3.1. It does not
+  scenes, and run six bounded portable operation codes. It does not
   expose every local CLI operation and never mutates project state.
 
 ## Design and trust
