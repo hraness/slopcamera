@@ -40,7 +40,7 @@ evidence; the render phase creates the ordinary project-render receipt.
 
 The render phase requires the supplied revision to equal `HEAD` and the renderer
 to match that commit. It uses the static-overlay timing correction introduced in
-`bd011ec10854d34aacd9a318cacaf5ffb4d52b9d`. Inspect selected frames before final
+`81217777f193718e20351a886516ecae445590a9`. Inspect selected frames before final
 rendering and all final frames before publishing. Each output directory records
 the CLI requests, results, project identities, source hashes and engine revision.
 Existing successful requests can be reused; failed requests require inspection.

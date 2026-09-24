@@ -154,7 +154,7 @@ export const llmsTxt = `# Slopcamera
 
 > Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.
 
-Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six portable operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
+Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
 ## When to use Slopcamera
 

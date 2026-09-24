@@ -10,5 +10,5 @@ with `study=ribbed-tower`. Inspect the full silhouette and rib spacing; retain
 the same camera and lighting when comparing a parameter change.
 
 Both files match the original MIT-licensed Slopcamera study at
-[`6d53343b13fbc507bc3b25eb7453008e38ff93e9`](https://github.com/hraness/slopcamera/tree/6d53343b13fbc507bc3b25eb7453008e38ff93e9/examples/design).
+[`63a0e3eed460fa80f1ae76983e9152c75a124392`](https://github.com/hraness/slopcamera/tree/63a0e3eed460fa80f1ae76983e9152c75a124392/examples/design).
 Its dimensional constraints do not establish structural strength.

@@ -10,7 +10,7 @@ Base URL: `https://api.slopcamera.com`
 | --- | --- |
 | `GET /v1/health` | `200` → `{"ok":true,"storage":true,"billing":true,"models":7}` |
 | `GET /v1/tools` | `200` → 17 tools with tiers and input schemas |
-| `GET /v1/openapi.json` | `200` → OpenAPI 3.1.0, all 7 paths |
+| `GET /v1/openapi.json` | `200` → OpenAPI 3.1.0, all 8 paths (re-verified 2026-09-24) |
 | `POST /v1/mcp` `initialize` | `200` → protocol `2025-11-25`, serverInfo `hraness-slopcamera-api` |
 | `POST /v1/mcp` `tools/list` | `200` → same registry as REST |
 | `POST /v1/tools/check_diagram/call` | `200` → findings JSON for an inline source file |
