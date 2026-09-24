@@ -1,12 +1,11 @@
 import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
-import { compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
+import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { spawn } from "node:child_process"
 import assert from "node:assert/strict"
-import { Readable } from "node:stream"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -393,24 +392,32 @@ test("published release validates exact fields and safe stable versions before r
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
 })
 
-test("compiler fixture result pipe isolates ordinary and ANSI logs", async () => {
-  const child = spawn(process.execPath, ["-e", 'const {writeSync}=require("node:fs"); console.log("ordinary compiler log"); writeSync(1,"\\x1b[32mcolored compiler log\\x1b[0m\\n"); writeSync(3,Buffer.from([0,0,0,11,123,34,111,107,34,58,116,114,117,101,125]));'], {
-    stdio: ["ignore", "pipe", "pipe", "pipe"], timeout: 5000,
-  })
-  let stdout = Buffer.alloc(0), frame = Buffer.alloc(0)
-  // stdin is ignored, so the typed child exposes nullable streams; both piped
-  // readers are asserted rather than guarded so a missing pipe fails the test.
-  const stdoutPipe = child.stdout, resultPipe = child.stdio[3]
-  assert(stdoutPipe instanceof Readable)
-  assert(resultPipe instanceof Readable)
-  stdoutPipe.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
-  resultPipe.on("data", (bytes: Buffer) => { frame = Buffer.concat([frame, bytes]); if (frame.length > 4096) child.kill() })
-  await new Promise<void>((resolve, reject) => { child.on("error", reject); child.on("close", () => resolve()) })
-  expect(child.exitCode).toBe(0)
-  expect(stdout.toString()).toContain("ordinary compiler log")
-  expect(stdout.toString()).toContain("\x1b[32mcolored compiler log")
-  expect(decodeCompilerFrame(frame)).toEqual({ ok: true })
-  expect(() => decodeCompilerFrame(stdout)).toThrow()
+test("compiler fixture result file isolates ordinary and ANSI logs", async () => {
+  const resultDirectory = await mkdtemp(join(tmpdir(), "slopcamera-web-result-"))
+  try {
+    const resultPath = assertCompilerResultPath(join(resultDirectory, "result.frame"))
+    const frame = encodeCompilerFrame({ ok: true })
+    // The child logs plain and ANSI text on stdout and delivers the frame only through the
+    // exclusive result file, exactly as the compiler child does.
+    const child = spawn(process.execPath, ["-e", `const {writeSync,writeFileSync}=require("node:fs"); console.log("ordinary compiler log"); writeSync(1,"\\x1b[32mcolored compiler log\\x1b[0m\\n"); writeFileSync(${JSON.stringify(resultPath)},Buffer.from(${JSON.stringify([...frame])}),{flag:"wx"});`], {
+      stdio: ["ignore", "pipe", "pipe"], timeout: 5000,
+    })
+    let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0)
+    child.stdout.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
+    child.stderr.on("data", (bytes: Buffer) => { stderr = Buffer.concat([stderr, bytes]); if (stderr.length > 4096) child.kill() })
+    await new Promise<void>((resolve, reject) => { child.on("error", reject); child.on("close", () => resolve()) })
+    assert.equal(child.exitCode, 0, stderr.toString())
+    expect(stdout.toString()).toContain("ordinary compiler log")
+    expect(stdout.toString()).toContain("\x1b[32mcolored compiler log")
+    expect(await readdir(resultDirectory)).toEqual(["result.frame"])
+    expect(decodeCompilerFrame(await readFile(resultPath))).toEqual({ ok: true })
+    expect(() => decodeCompilerFrame(stdout)).toThrow()
+    // Exclusive creation refuses a second result; the first frame stays byte-exact.
+    await expect(writeFile(resultPath, frame, { flag: "wx" })).rejects.toThrow()
+    expect(frame.equals(await readFile(resultPath))).toBe(true)
+  } finally {
+    await rm(resultDirectory, { force: true, recursive: true })
+  }
 })
 
 test("compiler fixture frame rejects missing, truncated, duplicate and oversized results", () => {
@@ -430,6 +437,12 @@ test("compiler fixture transport preserves finite options and rejects unowned co
   expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: "/outside/output" })).toThrow()
   expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: join(tmpdir(), "slopcamera-web-own", "..", "outside") })).toThrow()
   expect(() => encodeCompilerOptions({ environment: { VERCEL_ENV: "x".repeat(1025) } })).toThrow()
+  const resultDirectory = join(tmpdir(), "slopcamera-web-result-fixture")
+  expect(assertCompilerResultPath(join(resultDirectory, "result.frame"))).toBe(join(resultDirectory, "result.frame"))
+  for (const invalid of ["result.frame", join(tmpdir(), "result.frame"), join(tmpdir(), "slopcamera-web-result-"), join(tmpdir(), "slopcamera-web-other", "result.frame"),
+    join(resultDirectory, "other.frame"), join(resultDirectory, "nested", "result.frame"), `${resultDirectory}/../slopcamera-web-result-x/result.frame`, "/outside/slopcamera-web-result-x/result.frame"]) {
+    expect(() => assertCompilerResultPath(invalid)).toThrow()
+  }
   const controller = new AbortController()
   controller.abort(new Error("test admission ended"))
   await expect(compileWebsiteInChild({ environment: {} }, controller.signal)).rejects.toThrow("test admission ended")

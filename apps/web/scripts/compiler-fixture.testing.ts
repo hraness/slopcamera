@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { writeSync } from "node:fs"
-import { Readable } from "node:stream"
-import { join, isAbsolute } from "node:path"
+import { writeFileSync } from "node:fs"
+import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises"
+import { basename, dirname, isAbsolute, join } from "node:path"
 import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import type { buildWebsite } from "./build"
@@ -12,8 +12,10 @@ type Result = Awaited<ReturnType<typeof buildWebsite>>
 const inputLimit = 16 * 1024
 const outputLimit = 2 * 1024 * 1024
 const errorLimit = 128 * 1024
+const resultDirectoryPrefix = join(tmpdir(), "slopcamera-web-result-")
+const resultFileName = "result.frame"
 
-/** A single exact length frame travels on fd3; human output never enters it. */
+/** A single exact length frame is the complete result file; human output never enters it. */
 export function encodeCompilerFrame(value: unknown): Buffer {
   const json = JSON.stringify(value)
   assert(typeof json === "string")
@@ -31,14 +33,28 @@ export function decodeCompilerFrame(frame: Buffer): unknown {
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(frame.subarray(4)))
 }
 
-function writeCompilerFrame(value: unknown): void {
-  const frame = encodeCompilerFrame(value)
-  let offset = 0
-  while (offset < frame.length) {
-    const written = writeSync(3, frame, offset, frame.length - offset)
-    assert(written > 0)
-    offset += written
-  }
+/** The result file sits directly inside one fresh parent-owned temporary directory. The frame
+ * does not travel on a fourth stdio pipe: under Bun 1.3.14 on macOS the parent's read end of an
+ * extra pipe closed beneath a long-running detached compiler child (child EPIPE, empty result in
+ * the 2026-09-24 complete check) and the child's close event could stay withheld. */
+export function assertCompilerResultPath(path: string): string {
+  assert(typeof path === "string" && path.length > 0 && path.length <= 4096 && isAbsolute(path))
+  assert(!path.split(/[\\/]/u).includes(".."))
+  assert.equal(basename(path), resultFileName)
+  const directory = dirname(path)
+  assert(directory.startsWith(resultDirectoryPrefix) && directory.length > resultDirectoryPrefix.length)
+  assert.equal(dirname(directory), dirname(resultDirectoryPrefix))
+  return path
+}
+
+async function readCompilerResultFile(path: string): Promise<Buffer> {
+  assertCompilerResultPath(path)
+  assert.deepEqual(await readdir(dirname(path)), [resultFileName], "Compiler result directory must hold exactly the result file")
+  const stats = await stat(path)
+  assert(stats.isFile() && stats.size >= 4 && stats.size <= outputLimit + 4, "Compiler result file is outside the frame bounds")
+  const frame = await readFile(path)
+  assert.equal(frame.length, stats.size)
+  return frame
 }
 
 /** The test fixture accepts data only; the child imports the real fixed builder. */
@@ -86,14 +102,21 @@ export function decodeCompilerResult(value: unknown): Result {
 export async function compileWebsiteInChild(options: Options, signal: AbortSignal): Promise<Result> {
   signal.throwIfAborted()
   const input = encodeCompilerOptions(options)
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "--compile"], {
-    cwd: process.cwd(), env: process.env, detached: true, stdio: ["pipe", "pipe", "pipe", "pipe"],
+  const resultDirectory = await mkdtemp(resultDirectoryPrefix)
+  try {
+    return await compileWithResultFile(input, assertCompilerResultPath(join(resultDirectory, resultFileName)), signal)
+  } finally {
+    await rm(resultDirectory, { force: true, recursive: true })
+  }
+}
+
+async function compileWithResultFile(input: string, resultPath: string, signal: AbortSignal): Promise<Result> {
+  signal.throwIfAborted()
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "--compile", resultPath], {
+    cwd: process.cwd(), env: process.env, detached: true, stdio: ["pipe", "pipe", "pipe"],
   })
   const pid = child.pid
   if (pid === undefined || pid <= 1) throw new Error("Compiler fixture child did not start")
-  const resultPipe = child.stdio[3]
-  assert(resultPipe instanceof Readable)
-  let resultBytes = Buffer.alloc(0)
   let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0), reason: string | undefined, closed = false, forced = false
   let wake = () => {}
   const stopped = new Promise<void>(resolve => { wake = resolve })
@@ -105,8 +128,7 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
   child.once("error", error => stop(String(error)))
   child.stdout.on("data", (bytes: Buffer) => { if (stdout.length + bytes.length > outputLimit) stop("Compiler fixture stdout exceeded2MiB"); else stdout = Buffer.concat([stdout, bytes]) })
   child.stderr.on("data", (bytes: Buffer) => { if (stderr.length + bytes.length > errorLimit) stop("Compiler fixture stderr exceeded128KiB"); else stderr = Buffer.concat([stderr, bytes]) })
-  resultPipe.on("data", (bytes: Buffer) => { if (resultBytes.length + bytes.length > outputLimit + 4) stop("Compiler fixture result exceeded2MiB frame"); else resultBytes = Buffer.concat([resultBytes, bytes]) })
-  for (const stream of [child.stdin, child.stdout, child.stderr, resultPipe]) stream.on("error", error => stop(String(error)))
+  for (const stream of [child.stdin, child.stdout, child.stderr]) stream.on("error", error => stop(String(error)))
   const timer = setTimeout(() => stop("Compiler fixture exceeded60000ms"), 60_000)
   const abort = () => stop("Compiler fixture admission has ended")
   signal.addEventListener("abort", abort, { once: true })
@@ -126,7 +148,7 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
       await Promise.race([close, Bun.sleep(1000)])
       if (!closed) throw new Error("Compiler fixture pipes did not close")
     } finally {
-      if (!closed) { child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy(); resultPipe.destroy() }
+      if (!closed) { child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy() }
       signal.removeEventListener("abort", abort)
       signals.forEach((name, index) => process.off(name, handlers[index]!))
     }
@@ -134,8 +156,9 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
   assert(!forced && closed && !alive(), "Compiler fixture cleanup was not graceful")
   if (reason !== undefined) throw new Error(reason)
   let response: unknown
-  try { response = decodeCompilerFrame(resultBytes) } catch (error) {
-    console.error(JSON.stringify({ kind: "slopcamera-compiler-transport-failure-v1", stdout: stdout.toString("utf8"), stderr: stderr.toString("utf8"), resultBytes: resultBytes.length }))
+  try { response = decodeCompilerFrame(await readCompilerResultFile(resultPath)) } catch (error) {
+    const resultBytes = await stat(resultPath).then(stats => stats.size, () => null)
+    console.error(JSON.stringify({ kind: "slopcamera-compiler-transport-failure-v1", stdout: stdout.toString("utf8"), stderr: stderr.toString("utf8"), resultPath, resultBytes }))
     throw error
   }
   assert(response !== null && typeof response === "object" && !Array.isArray(response))
@@ -154,7 +177,10 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
 }
 
 if (import.meta.main) {
-  assert.deepEqual(process.argv.slice(2), ["--compile"])
+  const [flag, resultPath, ...rest] = process.argv.slice(2)
+  assert.equal(flag, "--compile")
+  assert(resultPath !== undefined && rest.length === 0)
+  assertCompilerResultPath(resultPath)
   let input = Buffer.alloc(0)
   for await (const chunk of Bun.stdin.stream()) {
     assert(input.length + chunk.length <= inputLimit)
@@ -162,15 +188,18 @@ if (import.meta.main) {
   }
   const options = JSON.parse(input.toString("utf8")) as Options
   assert.equal(encodeCompilerOptions(options), input.toString("utf8"))
+  let frame: Buffer
   try {
     const { buildWebsite: compile } = await import("./build")
     const result = await compile(options)
     decodeCompilerResult(result)
-    writeCompilerFrame({ ok: true, bun: Bun.version, result })
+    frame = encodeCompilerFrame({ ok: true, bun: Bun.version, result })
   } catch (error) {
     const message = error instanceof Error ? error.stack ?? error.message : String(error)
     if (Buffer.byteLength(message) > errorLimit) throw new Error("Compiler error exceeded128KiB")
-    writeCompilerFrame({ ok: false, bun: Bun.version, error: message })
+    frame = encodeCompilerFrame({ ok: false, bun: Bun.version, error: message })
     process.exitCode = 1
   }
+  // Exclusive creation writes the one result exactly once; a stale or second file fails.
+  writeFileSync(resultPath, frame, { flag: "wx" })
 }
