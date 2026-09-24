@@ -15,9 +15,9 @@ export const siteSha256 = (value: string | Uint8Array): string => createHash("sh
 const foundationRoot = "graphs/site-foundation/"
 const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
-  { name: "@hraness/design-kit", version: "0.13.0" },
+  { name: "@hraness/design-kit", version: "0.16.3" },
   { name: "@hraness/site-footer", version: "0.17.0" },
-  { name: "@hraness/ui", version: "0.5.16" },
+  { name: "@hraness/ui", version: "0.5.18" },
 ] as const
 
 function record(value: unknown): Record<string, unknown> {
@@ -143,13 +143,13 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   const cssOutput = output.map(record).find(item => item.fileName === css[0]!.path)!
   const cssSource = typeof cssOutput.source === "string" ? cssOutput.source : new TextDecoder("utf-8", { fatal: true }).decode(cssOutput.source as Uint8Array)
   const urls = inspectCss(cssSource, css[0]!.path)
-  // The canonical 0.8 preset names each texture in both the editorial field
-  // and material wall, while a foil-mark mask is named once. Physical
-  // artifacts remain one per admitted byte hash.
+  // The portfolio preset names each texture exactly three times across its
+  // field, wall and pattern declarations; a foil-mark mask is named once.
+  // Physical artifacts remain one per admitted byte hash.
   assert.deepEqual(urls.map(url => {
     assert.match(url, /^(?:\.\/)?[A-Za-z0-9_-]+\.(?:woff2|svg)$/u, "Site foundation must use canonical local emitted font and texture URLs")
     return `assets/${url.replace(/^\.\//u, "")}`
-  }).sort(), [...fonts, ...textures, ...textures, ...masks].map(item => item.path).sort(),
+  }).sort(), [...fonts, ...textures, ...textures, ...textures, ...masks].map(item => item.path).sort(),
     "Site stylesheet must link every captured font, texture and mask with exact canonical multiplicity")
   const foundation = { artifacts, cssPath: `${foundationRoot}${css[0]!.path}`, privateScriptPath: `${foundationRoot}${chunk.fileName}` }
   capturedFoundation(foundation)

@@ -1,5 +1,38 @@
 # Contents
 
+- The portfolio redesign has its own `portfolio-surfaces-v3` acceptance identity,
+  documented in `scripts/PORTFOLIO_DESIGN_ACCEPTANCE.md`. `verify:portfolio` retains the
+  complete 133-case workflow matrix, the 76-case ordinary deadline and original
+  lifecycle/CSP/focus controls while positively checking Catppuccin, contour
+  material, shared inert hero artwork and a separately reviewed exact render
+  reference. Historical profiles below retain their declared inputs and meaning.
+  The refreshed preset references each exact canonical texture three times;
+  publication still emits one file per identity-checked asset hash.
+  The earlier v1 profile remains byte-preserved in `scripts/site-portfolio-profile-v1.ts`;
+  v2 is preserved in `scripts/site-portfolio-profile-v2.ts`.
+  Portfolio phases declare their reviewed observation inventory explicitly
+  (`portfolioObservationInventory`: no release-copy install receipts, one current install
+  command on both copy sides). Re-baselining the profile against a predecessor that already
+  advertises 3.4.0 must revisit that inventory together with `comparePortfolioCopy`.
+  This profile's expanded authored homepage ceiling is 40,100 bytes: the measured
+  39,495-byte predecessor plus 70 bytes of palette/pattern attributes and spacing
+  and 444 bytes of shared inert hero markup totals 40,009. Count every added byte;
+  retain all exact-limit negatives. The complete built HTML measures 65,272
+  bytes (predecessor 64,732 plus palette attributes 61, compiled header classes
+  26 and hero markup 453) against a 65,600-byte ceiling. The theme bundle uses
+  two build-time values from the immutable shared palette, avoiding its unused
+  table. The predecessor 28,561 plus shared hero controller 2,906 gives 31,467
+  bytes against a 31,800-byte ceiling; count every emitted byte.
+  Count both complete emitted CSS artifacts against 451,100 bytes. The exact
+  predecessor's 347,562 bytes plus the shared foundation/recipe rollout's 103,104
+  bytes gives 450,666, leaving 434 bytes of headroom. Preserve all UTF-8 and
+  exact-boundary checks, including either artifact independently reaching the
+  ceiling; do not discount shared declarations or relax native comparisons.
+  v3 uses the independent cec02b4 predecessor with the current spatial/gallery
+  content and corrected hosted Credits, platform and release facts. Follow `scripts/PORTFOLIO_CURRENT_MAIN_REVIEW.md` for the additional
+  current-route qualification before delivery; none of its pending checks is
+  implied by the unchanged 133-case gate.
+
 - `src/` contains the static `slopcamera.com` homepage and documentation, inert `/preview` composition, visual system, appearance control, crawler files, favicons, social preview, and machine-readable page bodies.
 - `src/negotiate.ts`, `src/negotiate-request.ts`, and `middleware.ts` select HTML or markdown from `Accept` for document routes.
 - `scripts/build.ts` renders fingerprinted local assets into `dist/` from an explicit allowlist and bundles the pinned PostHog browser client only for a configured Production build.

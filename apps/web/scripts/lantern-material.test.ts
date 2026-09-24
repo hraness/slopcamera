@@ -4,16 +4,23 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createStylexTransformCollector } from "@hraness/ui/stylex-build"
-import { snapshotLanternMaterial } from "./lantern-material"
+import { snapshotLanternMaterial, currentLanternMaterialRevision, historicalLanternMaterialRevision, type LanternMaterialRevision } from "./lantern-material"
 
 const app = fileURLToPath(new URL("../", import.meta.url))
 const vendor = join(app, "vendor/lantern-material")
 const read = (path: string) => readFile(join(app, path), "utf8")
 
 describe("Lantern material admission and scope", () => {
+  test("keeps current admission exact and historical selection explicit and finite", async () => {
+    expect((await snapshotLanternMaterial(vendor, currentLanternMaterialRevision)).sourceCommit).toBe(currentLanternMaterialRevision)
+    await expect(snapshotLanternMaterial(vendor, historicalLanternMaterialRevision)).rejects.toThrow()
+    for (const value of ["", "a".repeat(40), "v0.16.2", `${currentLanternMaterialRevision} `])
+      await expect(snapshotLanternMaterial(vendor, value as LanternMaterialRevision)).rejects.toThrow("Unsupported Lantern material revision")
+  })
+
   test("admits only the complete released finite inventory and rejects changed ownership or bytes", async () => {
     const admitted = await snapshotLanternMaterial(vendor)
-    expect(admitted.sourceCommit).toBe("0e089bc18f9a0409f0e74b1fb7192f468956e386")
+    expect(admitted.sourceCommit).toBe("d38d13c07d7956d02ddfbca8d32aa2066d88fbd3")
     expect([...admitted.files.keys()].sort()).toEqual(["LICENSE", "check.d.mts", "check.mjs", "lantern-material.css"])
     const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-lantern-")))
     try {
@@ -61,14 +68,17 @@ describe("Lantern material admission and scope", () => {
     expect(css).toContain('background-color: Highlight;\n    color: HighlightText;')
   })
 
-  test("compiled header uses shared paint tokens with exact previous no-material fallbacks", async () => {
+  test("compiled header uses shared soft paint and depth with a visible forced-color edge", async () => {
     const source = await read("src/site-shell.stylex.ts")
     const compiled = await createStylexTransformCollector(app).transform(source, join(app, "src/site-shell.stylex.ts"))
     const slots = [...compiled.code.matchAll(/\bheader: \{\s*className: "([^"]+)"\s*\}\.className/gu)]
     expect(slots).toHaveLength(1)
     const classes = new Set(slots[0]![1]!.split(" "))
     const rules = compiled.rules.filter(([name]) => classes.has(name)).map(([name, rule]) => rule.ltr.replaceAll(`.${name}`, ".header"))
-    expect(rules).toContain('.header{border-bottom-color:var(--hraness-material-seam,var(--line))}')
+    expect(rules).toContain('.header{border-bottom-color:var(--hraness-material-outline,transparent)}')
+    expect(rules).toContain('@media (forced-colors: active){.header.header{border-bottom-color:CanvasText}}')
+    expect(rules).toContain('.header{box-shadow:var(--hraness-material-rest,0 4px 20px color-mix(in srgb,var(--ink) 5%,transparent))}')
+    expect(rules).toContain('@media (forced-colors: active){.header.header{box-shadow:none}}')
     expect(rules).toContain('.header{background-color:var(--hraness-material-chrome-paint,color-mix(in srgb,var(--paper) 84%,transparent))}')
     expect(rules.some(rule => rule.includes('backdrop-filter:var(--hraness-material-chrome-blur,blur(14px) saturate(1.4))'))).toBe(true)
     expect(rules).toContain('.header{position:sticky}')

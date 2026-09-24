@@ -24,7 +24,7 @@ function foundationOutput() {
     },
     { type: "asset", fileName: "assets/style-fixture.css", source: fontSources.map((_, index) =>
       `@font-face{font-family:fixture${index};src:url(./font-${index}.woff2)}`).join("")
-      + imageSources.map((_, index) => `.texture${index}{--field:url(./texture-${index}.svg);--wall:url(./texture-${index}.svg)}`).join("") },
+      + imageSources.map((_, index) => `.texture${index}{--field:url(./texture-${index}.svg);--wall:url(./texture-${index}.svg);--pattern:url(./texture-${index}.svg)}`).join("") },
     ...fontSources.map((source, index) => ({ type: "asset", fileName: `assets/font-${index}.woff2`, source })),
     ...imageSources.map((source, index) => ({ type: "asset", fileName: `assets/texture-${index}.svg`, source })),
   ] }
@@ -37,9 +37,9 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.13.0" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.16.3" },
     { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.17.0" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.18" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),
@@ -198,6 +198,8 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     const unlinked = foundationOutput()
     unlinked.output.push({ type: "asset", fileName: "assets/mark-fixture.svg", source: maskSource })
     expect(() => snapshotWithInspection(unlinked, fontHashes, entrypoint, inspect, imageHashes, [maskHash])).toThrow("multiplicity")
+    masked.output[1]!.source = `${String(masked.output[1]!.source)}.duplicate-mask{--m:url(./mark-fixture.svg)}`
+    expect(() => snapshotWithInspection(masked, fontHashes, entrypoint, inspect, imageHashes, [maskHash])).toThrow("multiplicity")
   })
 
   test.each(["../font-0.woff2", "/font-0.woff2", "%66ont-0.woff2", "font[0].woff2", "font-0.woff2?x", "font-0.woff2#x",
@@ -207,7 +209,7 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     expect(() => snapshotSiteFoundation(output)).toThrow()
   })
 
-  test("binds each font once and each shared texture twice and propagates parser errors", () => {
+  test("binds each font once and each shared texture three times and propagates parser errors", () => {
     const output = foundationOutput()
     output.output[1]!.source = String(output.output[1]!.source).replace("./font-0.woff2", "./font-1.woff2")
     expect(() => snapshotSiteFoundation(output)).toThrow("link every captured font")
@@ -224,10 +226,21 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     expect(snapshotSiteFoundation(renamed).artifacts).toHaveLength(18)
   })
 
+  test("rejects the old double texture references and additional pattern references", () => {
+    for (const count of [1, 2, 4]) {
+      const output = foundationOutput()
+      output.output[1]!.source = fontSources.map((_, index) =>
+        `@font-face{font-family:fixture${index};src:url(./font-${index}.woff2)}`).join("")
+        + imageSources.flatMap((_, index) => Array.from({ length: count }, (_, occurrence) =>
+          `.texture${index}-${occurrence}{--field:url(./texture-${index}.svg)}`)).join("")
+      expect(() => snapshotSiteFoundation(output)).toThrow("multiplicity")
+    }
+  })
+
   test("resource ordering preserves the finite font/texture multiplicity; missing or added references fail", () => {
     let seed = 0x16c0de
     const admitted = [...fontSources.map((_, index) => `./font-${index}.woff2`),
-      ...imageSources.flatMap((_, index) => [`./texture-${index}.svg`, `./texture-${index}.svg`])]
+      ...imageSources.flatMap((_, index) => [`./texture-${index}.svg`, `./texture-${index}.svg`, `./texture-${index}.svg`])]
     for (let sample = 0; sample < 64; sample++) {
       const urls = [...admitted]
       for (let at = urls.length - 1; at > 0; at--) {

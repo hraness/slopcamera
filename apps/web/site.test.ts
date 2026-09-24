@@ -1,6 +1,11 @@
+import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
+import { observeCompilation } from "./scripts/compilation-observer.testing"
+import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
+import { spawn } from "node:child_process"
+import assert from "node:assert/strict"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -85,7 +90,14 @@ function ownedCompilation<T>(
     return body({
       build: async options => {
         controller.signal.throwIfAborted()
-        const result = await compile(options)
+        // Real builds run in the production CLI's fresh-process lifetime. The
+        // injected controlled compilers below remain in-process ownership tests.
+        if (compile === buildWebsite && options?.outputDirectory !== undefined && !directories.has(options.outputDirectory)) {
+          throw new Error("Compiler output directory is not owned by this fixture")
+        }
+        const result = compile === buildWebsite
+          ? await compileWebsiteInChild(options ?? {}, controller.signal)
+          : await observeCompilation(repositoryDirectory, () => compile(options))
         controller.signal.throwIfAborted()
         return result
       },
@@ -157,16 +169,21 @@ function assertAuthoredShellBudget(template: string): number {
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
   if (/\{\{(?:SITE|INSTALL)_[^{}]*_CLASS\}\}/u.test(authored)) throw new Error("Unexpected site class slot")
+  // Portfolio surface markup adds 514 bytes to the 39,495-byte predecessor:
+  // 70 bytes of palette/pattern attributes and spacing, plus 444 bytes of
+  // shared inert hero markup. Count all of it; keep the full HTML ceiling too.
   const bytes = Buffer.byteLength(authored, "utf8")
-  if (bytes >= 39_500) throw new Error(`Authored site shell exceeds its 39,500-byte budget: ${bytes}`)
+  if (bytes >= 40_100) throw new Error(`Authored site shell exceeds its 40,100-byte budget: ${bytes}`)
   return bytes
 }
 
 function assertCombinedSiteCssBudget(styles: string, foundation: string): number {
   // Count both captured artifacts in full, including all three package recipes,
-  // the required 0.8 foundation, canonical snapshots, and retained product CSS.
+  // the required shared foundation, canonical snapshots, and retained product CSS.
+  // Exact predecessor 347,562 -> portfolio 450,666: foundation +100,572 and
+  // finalized recipes +2,532. The 451,100 ceiling retains 434 bytes of headroom.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 348_000) throw new Error(`Combined site CSS exceeds its 348,000-byte budget: ${bytes}`)
+  if (bytes >= 451_100) throw new Error(`Combined site CSS exceeds its 451,100-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -241,57 +258,61 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
 }
 
 function assertBuiltHtmlBudget(html: string): number {
-  // Real example markup grows the complete sealed page. The reviewed 65,000-byte
-  // ceiling accommodates six bounded examples; no content or seal is discounted.
+  // Exact predecessor 64,732 -> portfolio 65,272: palette attributes +61,
+  // compiled header classes +26 and inert hero markup +453. Count every byte.
+  // The 65,600 ceiling leaves 328 bytes; content and seal remain included.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 65_000) throw new Error(`Built site HTML exceeds its 65,000-byte budget: ${bytes}`)
+  if (bytes >= 65_600) throw new Error(`Built site HTML exceeds its 65,600-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(64_999))).toBe(64_999)
-  expect(() => assertBuiltHtmlBudget("x".repeat(65_000)))
-    .toThrow("Built site HTML exceeds its 65,000-byte budget: 65000")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(64_999)}é`))
-    .toThrow("Built site HTML exceeds its 65,000-byte budget: 65001")
+  expect(assertBuiltHtmlBudget("x".repeat(65_599))).toBe(65_599)
+  expect(() => assertBuiltHtmlBudget("x".repeat(65_600)))
+    .toThrow("Built site HTML exceeds its 65,600-byte budget: 65600")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(65_599)}é`))
+    .toThrow("Built site HTML exceeds its 65,600-byte budget: 65601")
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(180_799), "x".repeat(167_200))).toBe(347_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_800), "x".repeat(167_200)))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_799), `${"x".repeat(167_200)}é`))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(348_000), ""))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(348_000)))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
+  expect(assertCombinedSiteCssBudget("x".repeat(282_299), "x".repeat(168_800))).toBe(451_099)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(282_300), "x".repeat(168_800)))
+    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(282_299), `${"x".repeat(168_800)}é`))
+    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451101")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(451_100), ""))
+    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(451_100)))
+    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
 })
 
 function assertThemeBundleBudget(script: string): number {
+  // Build-time palette constants avoid 6,263 bytes of unused palette-table data.
+  // Exact predecessor 28,561 + shared hero controller 2,906 = 31,467 bytes;
+  // the 31,800 ceiling leaves 333 bytes and includes all runtime code.
   const bytes = Buffer.byteLength(script, "utf8")
-  if (bytes >= 29_500) throw new Error(`Theme bundle exceeds its 29,500-byte budget: ${bytes}`)
+  if (bytes >= 31_800) throw new Error(`Theme bundle exceeds its 31,800-byte budget: ${bytes}`)
   return bytes
 }
 
 test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceiling", () => {
-  expect(assertThemeBundleBudget("x".repeat(29_499))).toBe(29_499)
-  expect(() => assertThemeBundleBudget("x".repeat(29_500)))
-    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29500")
-  expect(() => assertThemeBundleBudget(`${"x".repeat(29_499)}é`))
-    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29501")
+  expect(assertThemeBundleBudget("x".repeat(31_799))).toBe(31_799)
+  expect(() => assertThemeBundleBudget("x".repeat(31_800)))
+    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31800")
+  expect(() => assertThemeBundleBudget(`${"x".repeat(31_799)}é`))
+    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31801")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
   const template = await readSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
-  expect(bytes).toBeLessThan(39_500)
-  expect(assertAuthoredShellBudget(grow("x".repeat(39_499 - bytes)))).toBe(39_499)
-  expect(() => assertAuthoredShellBudget(grow("x".repeat(39_500 - bytes))))
-    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39500")
-  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(39_499 - bytes)}é`)))
-    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39501")
+  expect(bytes).toBeLessThan(40_100)
+  expect(assertAuthoredShellBudget(grow("x".repeat(40_099 - bytes)))).toBe(40_099)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(40_100 - bytes))))
+    .toThrow("Authored site shell exceeds its 40,100-byte budget: 40100")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(40_099 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 40,100-byte budget: 40101")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
@@ -369,6 +390,64 @@ test("published release validates exact fields and safe stable versions before r
     "https://github.com.evil.test/hraness/slopcamera/releases/tag/v3.2.0",
     "https://github.com/another/slopcamera/releases/tag/v3.2.0", 42, null,
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
+})
+
+test("compiler fixture result file isolates ordinary and ANSI logs", async () => {
+  const resultDirectory = await mkdtemp(join(tmpdir(), "slopcamera-web-result-"))
+  try {
+    const resultPath = assertCompilerResultPath(join(resultDirectory, "result.frame"))
+    const frame = encodeCompilerFrame({ ok: true })
+    // The child logs plain and ANSI text on stdout and delivers the frame only through the
+    // exclusive result file, exactly as the compiler child does.
+    const child = spawn(process.execPath, ["-e", `const {writeSync,writeFileSync}=require("node:fs"); console.log("ordinary compiler log"); writeSync(1,"\\x1b[32mcolored compiler log\\x1b[0m\\n"); writeFileSync(${JSON.stringify(resultPath)},Buffer.from(${JSON.stringify([...frame])}),{flag:"wx"});`], {
+      stdio: ["ignore", "pipe", "pipe"], timeout: 5000,
+    })
+    let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0)
+    child.stdout.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
+    child.stderr.on("data", (bytes: Buffer) => { stderr = Buffer.concat([stderr, bytes]); if (stderr.length > 4096) child.kill() })
+    await new Promise<void>((resolve, reject) => { child.on("error", reject); child.on("close", () => resolve()) })
+    assert.equal(child.exitCode, 0, stderr.toString())
+    expect(stdout.toString()).toContain("ordinary compiler log")
+    expect(stdout.toString()).toContain("\x1b[32mcolored compiler log")
+    expect(await readdir(resultDirectory)).toEqual(["result.frame"])
+    expect(decodeCompilerFrame(await readFile(resultPath))).toEqual({ ok: true })
+    expect(() => decodeCompilerFrame(stdout)).toThrow()
+    // Exclusive creation refuses a second result; the first frame stays byte-exact.
+    await expect(writeFile(resultPath, frame, { flag: "wx" })).rejects.toThrow()
+    expect(frame.equals(await readFile(resultPath))).toBe(true)
+  } finally {
+    await rm(resultDirectory, { force: true, recursive: true })
+  }
+})
+
+test("compiler fixture frame rejects missing, truncated, duplicate and oversized results", () => {
+  const exact = encodeCompilerFrame({ ok: true })
+  expect(exact).toEqual(Buffer.from([0, 0, 0, 11, 123, 34, 111, 107, 34, 58, 116, 114, 117, 101, 125]))
+  for (const invalid of [Buffer.alloc(0), exact.subarray(0, 3), exact.subarray(0, -1), Buffer.concat([exact, exact]), Buffer.from([0, 32, 0, 1]), Buffer.from([0, 0, 0, 1, 255])]) {
+    expect(() => decodeCompilerFrame(invalid)).toThrow()
+  }
+  expect(() => encodeCompilerFrame("x".repeat(2 * 1024 * 1024))).toThrow()
+})
+
+test("compiler fixture transport preserves finite options and rejects unowned configuration", async () => {
+  const options = { environment: { VERCEL_ENV: "production", NEXT_PUBLIC_POSTHOG_KEY: "phc_test-token_value", NEXT_PUBLIC_POSTHOG_HOST: "https://us.i.posthog.com" } }
+  expect(encodeCompilerOptions(options)).toBe(JSON.stringify(options))
+  expect(encodeCompilerOptions({ environment: {} })).toBe('{"environment":{}}')
+  expect(() => encodeCompilerOptions({ environment: { PRIVATE_TOKEN: "value" } })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: "/outside/output" })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: join(tmpdir(), "slopcamera-web-own", "..", "outside") })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: { VERCEL_ENV: "x".repeat(1025) } })).toThrow()
+  const resultDirectory = join(tmpdir(), "slopcamera-web-result-fixture")
+  expect(assertCompilerResultPath(join(resultDirectory, "result.frame"))).toBe(join(resultDirectory, "result.frame"))
+  for (const invalid of ["result.frame", join(tmpdir(), "result.frame"), join(tmpdir(), "slopcamera-web-result-"), join(tmpdir(), "slopcamera-web-other", "result.frame"),
+    join(resultDirectory, "other.frame"), join(resultDirectory, "nested", "result.frame"), `${resultDirectory}/../slopcamera-web-result-x/result.frame`, "/outside/slopcamera-web-result-x/result.frame"]) {
+    expect(() => assertCompilerResultPath(invalid)).toThrow()
+  }
+  const controller = new AbortController()
+  controller.abort(new Error("test admission ended"))
+  await expect(compileWebsiteInChild({ environment: {} }, controller.signal)).rejects.toThrow("test admission ended")
+  expect(() => decodeCompilerResult({})).toThrow()
+  expect(() => decodeCompilerResult({ analyticsPath: null, arbitrary: true })).toThrow()
 })
 
 describe("compilation fixture ownership (controlled promises, no compiler)", () => {
@@ -799,7 +878,7 @@ describe("static Slopcamera site", () => {
       const url = new URL(match[1]!, "https://slopcamera.com" + builtAssets.siteFoundationPath)
       expect(url.origin).toBe("https://slopcamera.com")
       return url.pathname.slice(1)
-    }).sort()).toEqual([...fonts, ...textures, ...textures, ...masks].sort())
+    }).sort()).toEqual([...fonts, ...textures, ...textures, ...textures, ...masks].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
     expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
     expect(foundation).toContain("components.slopcamera-legacy")
@@ -1122,8 +1201,8 @@ describe("static Slopcamera site", () => {
     expect(notFound).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
     expect(notFound).toContain('<main class="route-state {{SITE_RECOVERY_CLASS}}" id="main" tabindex="-1">')
     expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
-    expect(notFound).toContain('<meta name="theme-color" content="#f8f7f4" media="(prefers-color-scheme: light)">')
-    expect(notFound).toContain('<meta name="theme-color" content="#12100f" media="(prefers-color-scheme: dark)">')
+    expect(notFound).toContain('<meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">')
+    expect(notFound).toContain('<meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)">')
     expect(notFound).toContain('href="/llms.txt"')
     expect(notFound).toContain('href="/sitemap.md"')
     expect(notFound).toContain('href="/sitemap.xml"')
@@ -1337,9 +1416,9 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.16.3",
       "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
-      "@hraness/ui": "github:hraness/ui#v0.5.16",
+      "@hraness/ui": "github:hraness/ui#v0.5.18",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1363,22 +1442,22 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.13.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.16.3"')
     expect(localLockfile).toContain(
       '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
     )
-    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
+    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.18"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(39_500)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(40_100)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(65_000)
+    expect(emittedBytes).toBeLessThan(65_600)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1645,6 +1724,9 @@ describe("static Slopcamera site", () => {
       expect(document).toContain('class="hraness-foil-mark__paint"')
     }
     expect(themeAsset).toContain("data-foil")
+    expect(themeAsset).toContain(paletteColors.catppuccin.light.background)
+    expect(themeAsset).toContain(paletteColors.catppuccin.dark.background)
+    expect(themeAsset).not.toContain("__SLOPCAMERA_")
     // The reviewed 0.8 refinement graph plus the documentation recipes is
     // under 298,500 bytes before compression; the shared-footer v0.12.x
     // optional-support styles and the host scroll-padding rule that keeps
@@ -1654,8 +1736,8 @@ describe("static Slopcamera site", () => {
     // contract measures 346,025. Keep a strict ceiling over the full sealed
     // union and captured foundation; no import, recipe, snapshot, or repeated
     // layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(348_000)
-    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(29_500)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(451_100)
+    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(31_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })

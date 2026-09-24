@@ -100,8 +100,18 @@ export function parseExamplesRequest(value: unknown, scope: SiteAcceptanceScope 
   assert.ok(ids.has("editorial"), "Manual lesson requires its admitted editorial clip")
   return item as unknown as ExamplesRequest
 }
-export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request: ExamplesRequest): Record<string, unknown> {
+/** Which shell and copy evidence a scope's driver emits. The examples and release-copy drivers
+ * add install receipts and pair copy ports against their own baseline command; a scope whose
+ * reviewed inventory predates those receipts declares that explicitly instead of inheriting it. */
+export interface ExamplesObservationInventory { readonly install: boolean; readonly baselineCommand: string }
+export function examplesObservationInventory(scope: ExamplesRequest["scope"]): ExamplesObservationInventory {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  return { install: true, baselineCommand: scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand }
+}
+export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request: ExamplesRequest,
+  inventory: ExamplesObservationInventory = examplesObservationInventory(request.scope)): Record<string, unknown> {
   parseExamplesRequest(request, request.scope)
+  assert.ok(typeof inventory.install === "boolean" && typeof inventory.baselineCommand === "string" && inventory.baselineCommand.length > 0)
   const item = shellRecord(value), common = ["schemaVersion", "token", "scope", "baselineProfile", "sequence", "kind", ...(request.scope === releaseCopyScope ? ["baselineRevision", "baselineTree"] : [])]
   keys(item, sequence === 1 ? common : sequence === 0 ? [...common, "node", "playwright"] : [...common, "node", "playwright", "browser", "cases", "closed", "negativeControls", "observations"])
   assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, request.scope)
@@ -116,20 +126,22 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
       const observation = shellRecord(value), name = examplesCaseNames[index]!
       assert.equal(observation.name, name); assert.equal(observation.passed, true)
       if (index < siteShellCases.length) {
-        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", "install"])
-        if (siteShellCases[index]!.route === "/") {
+        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", ...(inventory.install ? ["install"] : [])])
+        if (inventory.install && siteShellCases[index]!.route === "/") {
           const install = shellRecord(observation.install); keys(install, ["current", "baseline"])
           parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
-        } else assert.equal(observation.install, null)
+        } else if (inventory.install) assert.equal(observation.install, null)
         assert.deepEqual(observation.currentObstructions, []); assert.deepEqual(observation.baselineObstructions, [])
       } else if (index < siteShellCases.length + siteCopyCases.length) {
-        keys(observation, ["name", "passed", "command", "current", "baseline", "install"])
-        const install = shellRecord(observation.install); keys(install, ["current", "baseline", "states"])
-        parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
-        assert.deepEqual(install.states, copySteps)
+        keys(observation, ["name", "passed", "command", "current", "baseline", ...(inventory.install ? ["install"] : [])])
+        if (inventory.install) {
+          const install = shellRecord(observation.install); keys(install, ["current", "baseline", "states"])
+          parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
+          assert.deepEqual(install.states, copySteps)
+        }
         assert.equal(observation.command, refinementInstallCommand)
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
-        assertCopyPorts(observation.baseline as CopyEvidence["ports"], request.scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand)
+        assertCopyPorts(observation.baseline as CopyEvidence["ports"], inventory.baselineCommand)
       } else if (!name.startsWith("player-")) {
         keys(observation, ["name", "passed", "figures", "videos", "shellPaired", "navigation"]); assert.equal(observation.shellPaired, true)
         const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(candidate => candidate.name === name)!
@@ -506,7 +518,7 @@ export function assertExamplesRatioGeometry(observed: readonly ExampleRatioGeome
     assert.ok(item.height > 0 && item.height <= Math.min(viewport.height * .72, 672) + .5)
   }
 }
-async function assertExampleGeometry(page: Page, width: number): Promise<void> {
+export async function assertExampleGeometry(page: Page, width: number): Promise<void> {
   const media = await page.locator(".slopcamera-example__media").evaluateAll(elements => elements.map(element => {
     const box = element.getBoundingClientRect(), style = getComputedStyle(element)
     return { x: box.x, width: box.width, height: box.height, fit: style.objectFit, controls: element instanceof HTMLVideoElement ? element.controls : null,
@@ -528,7 +540,7 @@ interface PageCaseOptions {
   readonly width: number; readonly height: number; readonly theme: "light" | "dark"; readonly forced?: "none" | "active"
   readonly javascript?: boolean; readonly reducedMotion?: boolean; readonly saveData?: boolean; readonly failMedia?: string
 }
-async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
+export async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
   action: (page: Page, received: Set<string>, requestCounts: Map<string, number>, mediaLedger?: ReleaseCopyMediaLedger) => Promise<T>, releasePlayer = false): Promise<T> {
   if (releasePlayer) assert.equal(request.scope, releaseCopyScope)
   const mediaLedger = releasePlayer && !options.failMedia
@@ -653,7 +665,7 @@ async function settleExamples(page: Page, javascript = true): Promise<void> {
   })
   await page.screenshot({ animations: "allow" })
 }
-async function assertNativeTarget(page: Page, selector: string, javascript = true): Promise<void> {
+export async function assertNativeTarget(page: Page, selector: string, javascript = true): Promise<void> {
   const target = page.locator(selector)
   assert.equal(await target.count(), 1)
   // Only native Tab moves focus. Evaluation observes focus and paint.
