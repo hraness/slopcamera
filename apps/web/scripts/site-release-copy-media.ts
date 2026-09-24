@@ -14,15 +14,15 @@ interface RequestMetadata {
 interface ResponseMetadata {
   readonly status: number; readonly contentType: string; readonly contentRange: string | null; readonly contentLength: string | null
 }
-interface RangeReceipt {
+interface TransferRequestReceipt {
   readonly requestId: number; readonly requestOrder: number; readonly responseOrder: number; readonly terminalOrder: number
-  readonly completedOrder: number | null; readonly range: string; readonly status: number
-  readonly start: number; readonly end: number; readonly contentRange: string; readonly contentLength: number
+  readonly completedOrder: number | null; readonly range: string | null; readonly status: number; readonly contentType: string
+  readonly start: number; readonly end: number; readonly contentRange: string | null; readonly contentLength: number
   readonly terminal: "aborted" | "finished"; readonly failure: string | null
 }
-export interface ReleaseCopyRangeRecovery {
+export interface ReleaseCopyMediaCancellation {
   readonly id: string; readonly path: string; readonly sha256: string; readonly bytes: number
-  readonly initial: RangeReceipt; readonly tail: RangeReceipt; readonly resume: RangeReceipt
+  readonly requests: readonly TransferRequestReceipt[]
   readonly playback: ReleaseCopyPlaybackProof & { readonly order: number }
 }
 const requestLimit = 64, eventLimit = 512
@@ -46,7 +46,7 @@ function bindings(media: readonly ReleaseCopyMediaBinding[]) {
 }
 function byteRange(range: string | null, bytes: number): { start: number; end: number } {
   if (range === null) return { start: 0, end: bytes - 1 }
-  assert.ok(range.length <= 64)
+  assert.ok(typeof range === "string" && range.length <= 64)
   const match = /^bytes=(\d*)-(\d*)$/u.exec(range); assert.ok(match && (match[1] || match[2]))
   const first = match[1] ? Number(match[1]) : undefined, last = match[2] ? Number(match[2]) : undefined
   if (first !== undefined) { integer(first, 0, bytes - 1); assert.equal(match[1], String(first)) }
@@ -56,42 +56,50 @@ function byteRange(range: string | null, bytes: number): { start: number; end: n
   return { start: first, end: Math.min(last ?? bytes - 1, bytes - 1) }
 }
 
-/** Strict wire receipt validation is independent of the live event ledger. */
-export function assertReleaseCopyRangeRecoveries(value: unknown, media: readonly ReleaseCopyMediaBinding[], origin: string,
-  samples: readonly ReleaseCopyPlaybackProof[]): asserts value is readonly ReleaseCopyRangeRecovery[] {
-  const assets = bindings(media), recovered = new Set<string>(), requestIds = new Map<number, number>(), orders = new Set<number>()
-  assert.ok(Array.isArray(value) && value.length <= Math.floor(requestLimit / 3))
+/** Validate the described transfer history. Completeness against actual browser
+ * traffic belongs to the live ledger, not to self-reported wire fields. */
+export function assertReleaseCopyMediaCancellations(value: unknown, media: readonly ReleaseCopyMediaBinding[], origin: string,
+  samples: readonly ReleaseCopyPlaybackProof[]): asserts value is readonly ReleaseCopyMediaCancellation[] {
+  const assets = bindings(media), reported = new Set<string>(), requestIds = new Map<number, number>(), orders = new Set<number>()
+  assert.ok(Array.isArray(value) && value.length <= Math.min(requestLimit, assets.size))
   const order = (value: unknown) => { integer(value, 1, eventLimit); assert.ok(!orders.has(value)); orders.add(value); return value }
+  let previousGroupRequestId = 0
   for (const candidate of value) {
-    const item = record(candidate); keys(item, ["id", "path", "sha256", "bytes", "initial", "tail", "resume", "playback"])
+    const item = record(candidate); keys(item, ["id", "path", "sha256", "bytes", "requests", "playback"])
     assert.equal(typeof item.path, "string")
-    const asset = assets.get(item.path as string); assert.ok(asset && asset.id === item.id && !recovered.has(asset.id)); recovered.add(asset.id)
+    const asset = assets.get(item.path as string); assert.ok(asset && asset.id === item.id && !reported.has(asset.id)); reported.add(asset.id)
     assert.equal(item.sha256, asset.sha256); assert.equal(item.bytes, asset.bytes)
-    const ranges = [item.initial, item.tail, item.resume].map((value, index) => {
-      const range = record(value)
-      keys(range, ["requestId", "requestOrder", "responseOrder", "terminalOrder", "completedOrder", "range", "status", "start", "end", "contentRange", "contentLength", "terminal", "failure"])
-      integer(range.requestId, 1, requestLimit); assert.ok(!requestIds.has(range.requestId))
-      integer(range.start, 0, asset.bytes - 1); assert.equal(range.end, asset.bytes - 1)
-      assert.equal(range.range, `bytes=${range.start}-`); assert.equal(range.status, 206)
-      assert.equal(range.contentRange, `bytes ${range.start}-${asset.bytes - 1}/${asset.bytes}`)
-      assert.equal(range.contentLength, asset.bytes - range.start)
-      const requestOrder = order(range.requestOrder), responseOrder = order(range.responseOrder), terminalOrder = order(range.terminalOrder)
-      requestIds.set(range.requestId, requestOrder)
+    assert.ok(Array.isArray(item.requests) && item.requests.length > 0 && item.requests.length <= requestLimit)
+    let previousRequestId = 0, latestTransferOrder = 0, cancellations = 0
+    for (const [index, value] of item.requests.entries()) {
+      const transfer = record(value)
+      keys(transfer, ["requestId", "requestOrder", "responseOrder", "terminalOrder", "completedOrder", "range", "status", "contentType", "start", "end", "contentRange", "contentLength", "terminal", "failure"])
+      integer(transfer.requestId, 1, requestLimit); assert.ok(!requestIds.has(transfer.requestId))
+      assert.ok(transfer.requestId > previousRequestId); previousRequestId = transfer.requestId
+      if (index === 0) { assert.ok(transfer.requestId > previousGroupRequestId); previousGroupRequestId = transfer.requestId }
+      assert.ok(transfer.range === null || typeof transfer.range === "string")
+      const range = byteRange(transfer.range, asset.bytes)
+      assert.equal(transfer.start, range.start); assert.equal(transfer.end, range.end)
+      assert.equal(transfer.status, transfer.range === null ? 200 : 206); assert.equal(transfer.contentType, "video/mp4")
+      assert.equal(transfer.contentRange, transfer.range === null ? null : `bytes ${range.start}-${range.end}/${asset.bytes}`)
+      assert.equal(transfer.contentLength, range.end - range.start + 1)
+      const requestOrder = order(transfer.requestOrder), responseOrder = order(transfer.responseOrder), terminalOrder = order(transfer.terminalOrder)
+      requestIds.set(transfer.requestId, requestOrder)
       assert.ok(requestOrder < responseOrder && responseOrder < terminalOrder)
-      if (index === 0) {
-        assert.equal(range.start, 0); assert.equal(range.terminal, "aborted"); assert.equal(range.failure, "net::ERR_ABORTED"); assert.equal(range.completedOrder, null)
+      latestTransferOrder = Math.max(latestTransferOrder, terminalOrder)
+      if (transfer.terminal === "aborted") {
+        assert.equal(transfer.failure, "net::ERR_ABORTED"); assert.equal(transfer.completedOrder, null); cancellations++
       } else {
-        assert.equal(range.terminal, "finished"); assert.equal(range.failure, null); assert.ok(order(range.completedOrder) > terminalOrder)
+        assert.equal(transfer.terminal, "finished"); assert.equal(transfer.failure, null)
+        const completedOrder = order(transfer.completedOrder); assert.ok(completedOrder > terminalOrder)
+        latestTransferOrder = Math.max(latestTransferOrder, completedOrder)
       }
-      return range
-    })
-    const [initial, tail, resume] = ranges as [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]
-    assert.ok(Number(initial.terminalOrder) < Number(tail.requestOrder) && Number(tail.completedOrder) < Number(resume.requestOrder))
-    assert.ok(Number(resume.start) > 0 && Number(resume.start) < Number(tail.start) && Number(tail.start) < asset.bytes)
+    }
+    assert.ok(cancellations > 0, "Cancellation inventory requires an aborted Request")
     const playback = record(item.playback); keys(playback, ["id", "currentSrc", "ownedConnected", "time", "readyState", "error", "order"])
     assert.equal(playback.id, asset.id); assert.equal(playback.currentSrc, `${origin}${asset.path}`); assert.equal(playback.ownedConnected, true)
     assert.ok(typeof playback.time === "number" && Number.isFinite(playback.time) && playback.time > .04)
-    integer(playback.readyState, 2, 4); assert.equal(playback.error, null); assert.ok(order(playback.order) > Number(resume.completedOrder))
+    integer(playback.readyState, 2, 4); assert.equal(playback.error, null); assert.ok(order(playback.order) > latestTransferOrder)
     const matching = samples.filter(sample => sample.id === asset.id); assert.equal(matching.length, 1)
     const { order: _, ...proof } = playback; assert.deepEqual(proof, matching[0])
   }
@@ -108,7 +116,8 @@ interface Entry {
   provisional?: boolean
 }
 
-/** Only a measured, fully recovered three-request MP4 sequence is admissible. */
+/** A cancellation stays provisional until the original later owned sample
+ * proves decoded readiness and accumulated playback for that immutable asset. */
 export function createReleaseCopyMediaLedger(media: readonly ReleaseCopyMediaBinding[], origin: string) {
   const assets = bindings(media), entries = new Map<object, Entry>(), playback = new Map<string, ReleaseCopyPlaybackProof & { order: number }>()
   const admittedMedia = [...assets.values()]
@@ -125,8 +134,6 @@ export function createReleaseCopyMediaLedger(media: readonly ReleaseCopyMediaBin
     healthy(); assert.ok(value.response, "Request terminal without response")
     if (kind === "finished") return false
     assert.equal(reason, "net::ERR_ABORTED")
-    assert.equal(value.range, "bytes=0-"); assert.equal(value.response.status, 206)
-    assert.equal(value.response.start, 0); assert.equal(value.response.end, value.asset.bytes - 1)
     value.provisional = true
     return true
   })
@@ -173,28 +180,34 @@ export function createReleaseCopyMediaLedger(media: readonly ReleaseCopyMediaBin
         playback.set(sample.id, { ...sample, order: next() })
       })
     },
-    seal(): readonly ReleaseCopyRangeRecovery[] {
+    seal(): readonly ReleaseCopyMediaCancellation[] {
       return guarded(() => {
         healthy()
-        const recoveries: ReleaseCopyRangeRecovery[] = []
+        const groups = new Map<string, Entry[]>(), cancelled = new Set<number>(), consumed = new Set<number>()
         for (const value of entries.values()) {
           assert.ok(value.response && value.terminal, "Unsettled media Request")
-          if (value.terminal.kind === "finished") { assert.ok(value.completedOrder, "Unsettled response.finished"); continue }
-          assert.equal(value.provisional, true)
-          const group = [...entries.values()].filter(item => item.asset.id === value.asset.id)
-          assert.equal(group.length, 3, "Recovery requires exactly three Requests without extras or retries"); assert.equal(group[0], value)
-          const encode = (item: Entry): RangeReceipt => {
-            assert.ok(item.response && item.terminal)
-            return { requestId: item.requestId, requestOrder: item.requestOrder, responseOrder: item.response.order, terminalOrder: item.terminal.order,
-              completedOrder: item.completedOrder ?? null, range: item.range!, status: item.response.status, start: item.response.start, end: item.response.end,
-              contentRange: item.response.contentRange!, contentLength: item.response.length, terminal: item.terminal.kind, failure: item.terminal.failure }
-          }
-          const proof = playback.get(value.asset.id); assert.ok(proof, "Missing original playback recovery proof")
-          recoveries.push({ ...value.asset, initial: encode(group[0]!), tail: encode(group[1]!), resume: encode(group[2]!), playback: proof })
+          if (value.terminal.kind === "finished") assert.ok(value.completedOrder, "Unsettled response.finished")
+          else { assert.equal(value.provisional, true); cancelled.add(value.requestId) }
+          const group = groups.get(value.asset.id) ?? []; group.push(value); groups.set(value.asset.id, group)
         }
+        const cancellations: ReleaseCopyMediaCancellation[] = []
+        for (const group of groups.values()) {
+          if (!group.some(item => cancelled.has(item.requestId))) continue
+          const encode = (item: Entry): TransferRequestReceipt => {
+            assert.ok(item.response && item.terminal)
+            if (cancelled.has(item.requestId)) { assert.ok(!consumed.has(item.requestId)); consumed.add(item.requestId) }
+            return { requestId: item.requestId, requestOrder: item.requestOrder, responseOrder: item.response.order, terminalOrder: item.terminal.order,
+              completedOrder: item.completedOrder ?? null, range: item.range, status: item.response.status, contentType: item.response.contentType,
+              start: item.response.start, end: item.response.end, contentRange: item.response.contentRange, contentLength: item.response.length,
+              terminal: item.terminal.kind, failure: item.terminal.failure }
+          }
+          const asset = group[0]!.asset, proof = playback.get(asset.id); assert.ok(proof, "Missing original playback cancellation proof")
+          cancellations.push({ ...asset, requests: group.map(encode), playback: proof })
+        }
+        assert.deepEqual([...consumed].sort((a, b) => a - b), [...cancelled].sort((a, b) => a - b))
         const samples = [...playback.values()].map(({ order: _, ...sample }) => sample)
-        assertReleaseCopyRangeRecoveries(recoveries, admittedMedia, origin, samples)
-        phase = "sealed"; return recoveries
+        assertReleaseCopyMediaCancellations(cancellations, admittedMedia, origin, samples)
+        phase = "sealed"; return cancellations
       })
     },
     beginClose(): void { phase = "closing" },

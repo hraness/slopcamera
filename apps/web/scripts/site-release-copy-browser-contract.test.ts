@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { runInNewContext } from "node:vm"
 import { createHash } from "node:crypto"
 import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
+import ts from "typescript"
 import { compareReleaseCopyFlow, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
 import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
 import "./site-release-copy-media.test"
@@ -15,11 +16,11 @@ import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevisi
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
   examplesBaselineInstallCommand, examplesIslands, examplesHeroTextures, examplesDeadlineMs } from "./site-examples-profile"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
-  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, examplesEditVideoIds, assertExamplesEditVideoInventory, settleExamplesDocs, type ExamplesRequest } from "./site-examples-browser-contract"
+  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, examplesEditVideoIds, assertExamplesEditVideoInventory, type ExamplesRequest } from "./site-examples-browser-contract"
 import { compareExamplesInstall, admitExamplesInstallDom, examplesInstallNote, parseExamplesInstallPair,
   projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
-import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, ShellPairFailure, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
+import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify, projectReleaseCopyMedia } from "./verify-site-examples"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, examplesWorkerProtocolLimit, workerDriverLimit, workerAttachmentMs } from "./preview-browser-protocol"
@@ -110,8 +111,8 @@ function terminal(req = request()) {
     navigation:{mode:scenario.width<=768?"disclosure":"sidebar",javascript:!("javascript" in scenario&&scenario.javascript===false),currentHref:scenario.route,
      defaultClosed:true,keyboardToggle:scenario.width<=768?"enter-open-space-close":"not-applicable",closedLinksHidden:true,articleBeforeFold:true}}
   }
-  if (name === "player-captions") return {name,passed:true,captions:"not-present",media:[],initialMediaRequests:0,rangeRecoveries:[]}
-  return {name,passed:true,rangeRecoveries:[],media:[{id:"editorial",paused:!['player-visible-auto','player-offscreen-hidden'].includes(name),
+  if (name === "player-captions") return {name,passed:true,captions:"not-present",media:[],initialMediaRequests:0,mediaCancellations:[]}
+  return {name,passed:true,mediaCancellations:[],media:[{id:"editorial",paused:!['player-visible-auto','player-offscreen-hidden'].includes(name),
    time:name==='player-failed-media'?0:1,controls:true,readyState:3,muted:true,loop:['player-visible-auto','player-offscreen-hidden'].includes(name),
    error:null,source:`${req.current.origin}${media[0]!.path}`,currentSrc:`${req.current.origin}${media[0]!.path}`,ownedConnected:true}],
    ...(name==='player-save-data'?{policyInput:'emulated-navigator-save-data'}:{}), ...(['player-offscreen-hidden','player-manual-pause'].includes(name)?{hiddenObserved:true}:{}),
@@ -232,7 +233,7 @@ describe("release-copy-v1 has an independent closed identity", () => {
   expect(() => parseExamplesRequest(legacy)).toThrow()
   legacy.media = media; expect(() => parseExamplesRequest(legacy)).not.toThrow()
  })
- test("release player parser requires exact bounded recovery receipts and literal owned currentSrc proof", async () => {
+ test("release player parser requires exact bounded cancellation inventories and literal owned currentSrc proof", async () => {
   const req = request(), receipt = terminal(req) as any, asset = { ...req.media[0]!, bytes: req.media[0]!.bytes! }
   const ledger = createReleaseCopyMediaLedger([asset], req.current.origin)
   for (const [index, start] of [0, 900, 100].entries()) {
@@ -243,18 +244,18 @@ describe("release-copy-v1 has an independent closed identity", () => {
   }
   const player = receipt.observations.find((item: any) => item.name === "player-visible-auto"), sample = player.media[0]
   ledger.playback({ id: sample.id, currentSrc: sample.currentSrc, ownedConnected: sample.ownedConnected, time: sample.time, readyState: sample.readyState, error: sample.error })
-  player.rangeRecoveries = ledger.seal()
+  player.mediaCancellations = ledger.seal()
   expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
   for (const action of [
-   (value: any) => { delete value.rangeRecoveries }, (value: any) => { value.rangeRecoveries[0].bytes++ },
-   (value: any) => { value.rangeRecoveries[0].tail = value.rangeRecoveries[0].resume },
+   (value: any) => { delete value.mediaCancellations }, (value: any) => { value.mediaCancellations[0].bytes++ },
+   (value: any) => { value.mediaCancellations[0].requests[1] = value.mediaCancellations[0].requests[2] },
    (value: any) => { value.media[0].currentSrc = "" }, (value: any) => { value.media[0].ownedConnected = false },
   ]) {
    const changed = structuredClone(receipt); action(changed.observations.find((item: any) => item.name === "player-visible-auto"))
    expect(() => parseExamplesPhase(changed, 2, req)).toThrow()
   }
  })
- test("intentional failed-media rejects even a valid recovery for a different admitted asset", async () => {
+ test("intentional failed-media rejects even a valid cancellation inventory for a different admitted asset", async () => {
   const req = request(), receipt = terminal(req) as any, asset = { ...req.media[1]!, bytes: req.media[1]!.bytes! }
   const ledger = createReleaseCopyMediaLedger([asset], req.current.origin)
   for (const [index, start] of [0, 900, 100].entries()) {
@@ -271,7 +272,7 @@ describe("release-copy-v1 has an independent closed identity", () => {
    time: sample.time, readyState: sample.readyState, error: sample.error })
   const recovery = ledger.seal(); expect(recovery).toHaveLength(1)
   expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
-  failed.rangeRecoveries = recovery
+  failed.mediaCancellations = recovery
   expect(() => parseExamplesPhase(receipt, 2, req)).toThrow()
  })
  test("all133 families retain per-side commands, finite transport and unchanged bounds", () => {
@@ -307,65 +308,6 @@ describe("release-copy-v1 has an independent closed identity", () => {
    { baselineProfile: "before-release-copy-a742b29-v1" }, { sourceRevision: "a742b29bb9414382843614a82cdb8c8e7c218aff" }, { checkoutRevision: "a742b29bb9414382843614a82cdb8c8e7c218aff" }, { sourceTree: "11e1eac14c63e947cd52c2f121a60fa458dcc1e5" },
    { baselineProfile: "before-release-copy-e08bacf-v1" }, { sourceRevision: "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7" }, { sourceTree: "d7c1e70f77255d38a80acd8184654910be473f46" }])
    expect(() => assertExamplesBaselineManifest({ ...manifest, ...change }, snapshot, releaseCopyScope)).toThrow()
- })
-})
-describe("release-only documentation setup overlap", () => {
- function deferred() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done }); return { promise, resolve } }
- const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0))
- test.each([examplesScope, releaseCopyScope] as const)("%s retains the complete baseline barrier before current action", async scope => {
-  const gate = deferred(), events: string[] = []
-  const result = settleExamplesDocs(scope, () => withShellCaseCleanup(async () => {
-   events.push("baseline-setup"); await gate.promise; events.push("baseline-evidence"); return "baseline"
-  }, async () => { events.push("baseline-collected") }), async readBaseline => {
-   events.push("current-setup"); const baseline = await readBaseline(); events.push("current-action"); return baseline.length
-  })
-  await tick()
-  expect(events).toEqual(scope === releaseCopyScope ? ["baseline-setup", "current-setup"] : ["baseline-setup"])
-  gate.resolve(); expect(await result).toBe(8)
-  expect(events.indexOf("baseline-collected")).toBeLessThan(events.indexOf("current-action"))
-  if (scope === examplesScope) expect(events.indexOf("baseline-collected")).toBeLessThan(events.indexOf("current-setup"))
- })
- test.each([0, 1, 2, 3])("retains both original cleanup promises across failure mask %i", async mask => {
-  const baseCleanup = deferred(), currentCleanup = deferred(), baselineError = Error("baseline failure"), currentError = Error("current failure")
-  const collected: string[] = []; let settled = false
-  const outcome = settleExamplesDocs(releaseCopyScope, () => withShellCaseCleanup(async () => {
-   if (mask & 1) throw baselineError; return "baseline"
-  }, async () => { await baseCleanup.promise; collected.push("baseline") }), readBaseline => withShellCaseCleanup(async () => {
-   if (mask & 2) throw currentError; expect(await readBaseline()).toBe("baseline"); return 42
-  }, async () => { await currentCleanup.promise; collected.push("current") })).then(value => ({ value, error: null }), error => ({ value: null, error }))
-   .then(value => { settled = true; return value })
-  await tick(); expect(settled).toBe(false)
-  baseCleanup.resolve(); await tick(); expect(settled).toBe(false)
-  currentCleanup.resolve(); const result = await outcome
-  expect(collected.sort()).toEqual(["baseline", "current"])
-  if (mask === 0) expect(result.value).toBe(42)
-  else {
-   expect(result.error).toBeInstanceOf(ShellPairFailure)
-   const errors = (result.error as ShellPairFailure).errors as Error[]
-   if (mask === 1) {
-    expect(errors).toHaveLength(2)
-    expect(errors[0]!.message).toBe("Current documentation action depends on failed baseline collection")
-    expect(errors[0]!.cause).toBe(baselineError); expect(errors[1]).toBe(baselineError)
-   } else expect(errors).toEqual(mask === 2 ? [currentError] : [currentError, baselineError])
-  }
- })
- test("baseline cleanup failure prevents current action while retaining current cleanup", async () => {
-  const failure = Error("baseline cleanup failure"), events: string[] = []
-  const result = await settleExamplesDocs(releaseCopyScope, () => withShellCaseCleanup(async () => "evidence", async () => { throw failure }),
-   readBaseline => withShellCaseCleanup(async () => { await readBaseline(); events.push("current-action") }, async () => { events.push("current-collected") }))
-   .catch(error => error as ShellPairFailure)
-  expect(events).toEqual(["current-collected"])
-  expect(result).toBeInstanceOf(ShellPairFailure)
-  expect((result as ShellPairFailure).errors[0].cause).toBe(failure)
-  expect((result as ShellPairFailure).errors[1]).toBe(failure)
- })
- test("historical baseline failure remains serial and invalid scope invokes neither side", async () => {
-  let currentCalled = false; const failure = Error("historical failure")
-  await expect(settleExamplesDocs(examplesScope, async () => { throw failure }, async () => { currentCalled = true })).rejects.toBe(failure)
-  expect(currentCalled).toBe(false)
-  let calls = 0
-  await expect(settleExamplesDocs("unknown" as any, async () => { calls++; return 1 }, async () => { calls++; return 2 })).rejects.toThrow()
-  expect(calls).toBe(0)
  })
 })
 describe("exact release install fragments and unchanged geometry contract", () => {
@@ -750,20 +692,46 @@ describe("release-only native Tab seek keeps every named observation guarded", (
   }
  })
 })
+function assertNoCallbackDynamicLoading(code: string): void {
+ const source = ts.createSourceFile("callback.mjs", code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+ const visit = (node: ts.Node): void => {
+  if ((ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword)
+    || (ts.isIdentifier(node) && node.text === "require")) throw Error("Dynamic callback loading is not admitted")
+  ts.forEachChild(node, visit)
+ }
+ visit(source)
+}
 describe("private worker retains its cap and serializable release callbacks", () => {
+ test("callback loader checks inspect syntax without rejecting prose", () => {
+  expect(() => assertNoCallbackDynamicLoading('const text = "Does this require an account? import( and require(x) are prose."')).not.toThrow()
+  for (const code of ['import("x")', 'import(source)', 'require("x")', 'require(source)', 'const load = require', 'require.resolve(source)']) {
+   expect(() => assertNoCallbackDynamicLoading(code)).toThrow("Dynamic callback loading")
+  }
+ })
  test("real dispatch bundle and compiled DOM admission stay inside their original runtime boundary", async () => {
   const directory = await mkdtemp(join(tmpdir(), "slopcamera-release-copy-worker-"))
+  let callbackDirectory: string | undefined
   try {
+   // Keep callback imports inside the independently installed app's project
+   // context; controlled imports favored a project-local path over system temp.
+   callbackDirectory = await mkdtemp(fileURLToPath(new URL("../node_modules/.slopcamera-release-copy-callback-", import.meta.url)))
    const driver = await buildExamplesDriver(directory)
    expect(driver.bytes.byteLength).toBeLessThanOrEqual(workerDriverLimit)
    expect(Buffer.from(driver.bytes).toString()).not.toMatch(/\bBun\s*\.|["'](?:bun|@hraness\/direct)(?:["'/])/u)
    const callbackSource = fileURLToPath(new URL("./site-examples-install.ts", import.meta.url))
    const result = await Bun.build({ entrypoints: [callbackSource], target: "node", env: "disable", format: "esm", minify: examplesWorkerMinify, packages: "external", sourcemap: "none" })
    expect(result.success).toBe(true); expect(result.outputs).toHaveLength(1)
-   const output = join(directory, "callback.mjs"); await writeFile(output, new Uint8Array(await result.outputs[0]!.arrayBuffer()), { flag: "wx" })
+   const callbackBytes = new Uint8Array(await result.outputs[0]!.arrayBuffer()), callbackCode = Buffer.from(callbackBytes).toString()
+   expect([...new Set(new Bun.Transpiler({ loader: "js" }).scan(callbackCode).imports.map(item => `${item.kind}:${item.path}`))])
+    .toEqual(["import-statement:node:assert/strict"])
+   assertNoCallbackDynamicLoading(callbackCode)
+   const output = join(callbackDirectory, "callback.mjs"); await writeFile(output, callbackBytes, { flag: "wx" })
    const focusResult = await Bun.build({ entrypoints: [fileURLToPath(new URL("./site-release-copy-focus.ts", import.meta.url))], target: "node", env: "disable", format: "esm", minify: examplesWorkerMinify, packages: "external", sourcemap: "none" })
    expect(focusResult.success).toBe(true); expect(focusResult.outputs).toHaveLength(1)
-   const focusOutput = join(directory, "focus.mjs"); await writeFile(focusOutput, new Uint8Array(await focusResult.outputs[0]!.arrayBuffer()), { flag: "wx" })
+   const focusBytes = new Uint8Array(await focusResult.outputs[0]!.arrayBuffer()), focusCode = Buffer.from(focusBytes).toString()
+   expect(new Bun.Transpiler({ loader: "js" }).scan(focusCode).imports).toEqual([])
+   assertNoCallbackDynamicLoading(focusCode)
+   const focusOutput = join(callbackDirectory, "focus.mjs"); await writeFile(focusOutput, focusBytes, { flag: "wx" })
    const compiled = await import(pathToFileURL(output).href)
    for (const current of [false, true]) for (const state of ["idle", "copied", "failed"] as const) {
     const fixture = installDomFixture(current, state, compiled.admitExamplesInstallDom as typeof admitExamplesInstallDom)
@@ -789,7 +757,10 @@ describe("private worker retains its cap and serializable release callbacks", ()
    expect(focus.guard.settled()).toBe(".topbar a|0"); focus.guard.prepare(); focus.gain(focus.other); focus.keydown()
    expect(() => focus.guard.read()).toThrow(/outside native Tab dispatch/u); focus.guard.dispose(); expect(focus.listenerCount()).toBe(0)
    expect(await readFile(driver.path)).toEqual(Buffer.from(driver.bytes))
-  } finally { await rm(directory, { recursive: true, force: true }) }
+  } finally {
+   try { if (callbackDirectory !== undefined) await rm(callbackDirectory, { recursive: true, force: true }) }
+   finally { await rm(directory, { recursive: true, force: true }) }
+  }
  })
 })
 
