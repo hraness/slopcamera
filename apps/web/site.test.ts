@@ -157,8 +157,11 @@ function assertAuthoredShellBudget(template: string): number {
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
   if (/\{\{(?:SITE|INSTALL)_[^{}]*_CLASS\}\}/u.test(authored)) throw new Error("Unexpected site class slot")
+  // Portfolio surface markup adds 514 bytes to the 39,495-byte predecessor:
+  // 70 bytes of palette/pattern attributes and spacing, plus 444 bytes of
+  // shared inert hero markup. Count all of it; keep the full HTML ceiling too.
   const bytes = Buffer.byteLength(authored, "utf8")
-  if (bytes >= 39_500) throw new Error(`Authored site shell exceeds its 39,500-byte budget: ${bytes}`)
+  if (bytes >= 40_100) throw new Error(`Authored site shell exceeds its 40,100-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -286,12 +289,12 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   const template = await readSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
-  expect(bytes).toBeLessThan(39_500)
-  expect(assertAuthoredShellBudget(grow("x".repeat(39_499 - bytes)))).toBe(39_499)
-  expect(() => assertAuthoredShellBudget(grow("x".repeat(39_500 - bytes))))
-    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39500")
-  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(39_499 - bytes)}é`)))
-    .toThrow("Authored site shell exceeds its 39,500-byte budget: 39501")
+  expect(bytes).toBeLessThan(40_100)
+  expect(assertAuthoredShellBudget(grow("x".repeat(40_099 - bytes)))).toBe(40_099)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(40_100 - bytes))))
+    .toThrow("Authored site shell exceeds its 40,100-byte budget: 40100")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(40_099 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 40,100-byte budget: 40101")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
@@ -1374,7 +1377,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(39_500)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(40_100)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)

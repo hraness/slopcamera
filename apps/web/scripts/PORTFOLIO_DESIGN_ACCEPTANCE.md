@@ -5,6 +5,14 @@ system default, quiet documentation, contour marketing field, shared interactive
 hero light and sculpted surfaces. It does not relabel historical migration,
 Lantern, refinement, support or workflow-example evidence.
 
+The complete expanded authored homepage has a 40,100-byte ceiling. The current
+predecessor measures 39,495 bytes; palette/pattern attributes and spacing add 70
+bytes, and the shared inert hero adds 444 bytes, giving 40,009 bytes. All of those
+bytes remain counted. Exact-ceiling, UTF-8 overflow and unknown-slot rejection
+tests remain required, as does the separate 65,000-byte complete built-HTML
+ceiling. This change does not revise the combined CSS budget or any native
+comparison tolerance.
+
 Run it with an explicit independent, clean predecessor checkout and a reviewed
 schema-seven manifest:
 

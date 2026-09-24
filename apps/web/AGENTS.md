@@ -10,6 +10,10 @@
   publication still emits one file per identity-checked asset hash.
   The earlier v1 profile remains byte-preserved in `scripts/site-portfolio-profile-v1.ts`;
   v2 is preserved in `scripts/site-portfolio-profile-v2.ts`.
+  This profile's expanded authored homepage ceiling is 40,100 bytes: the measured
+  39,495-byte predecessor plus 70 bytes of palette/pattern attributes and spacing
+  and 444 bytes of shared inert hero markup totals 40,009. Count every added byte;
+  retain the 65,000-byte complete built-HTML ceiling and all exact-limit negatives.
   v3 uses the independent cec02b4 predecessor with the current spatial/gallery
   content and corrected hosted Credits, platform and release facts. Follow `scripts/PORTFOLIO_CURRENT_MAIN_REVIEW.md` for the additional
   current-route qualification before delivery; none of its pending checks is
