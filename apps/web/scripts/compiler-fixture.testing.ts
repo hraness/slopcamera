@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
+import { writeSync } from "node:fs"
+import { Readable } from "node:stream"
 import { join, isAbsolute } from "node:path"
 import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
@@ -10,6 +12,34 @@ type Result = Awaited<ReturnType<typeof buildWebsite>>
 const inputLimit = 16 * 1024
 const outputLimit = 2 * 1024 * 1024
 const errorLimit = 128 * 1024
+
+/** A single exact length frame travels on fd3; human output never enters it. */
+export function encodeCompilerFrame(value: unknown): Buffer {
+  const json = JSON.stringify(value)
+  assert(typeof json === "string")
+  const payload = Buffer.from(json, "utf8")
+  assert(payload.length > 0 && payload.length <= outputLimit)
+  const header = Buffer.alloc(4)
+  header.writeUInt32BE(payload.length)
+  return Buffer.concat([header, payload])
+}
+
+export function decodeCompilerFrame(frame: Buffer): unknown {
+  assert(frame.length >= 4 && frame.length <= outputLimit + 4)
+  const length = frame.readUInt32BE(0)
+  assert(length > 0 && length <= outputLimit && frame.length === length + 4)
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(frame.subarray(4)))
+}
+
+function writeCompilerFrame(value: unknown): void {
+  const frame = encodeCompilerFrame(value)
+  let offset = 0
+  while (offset < frame.length) {
+    const written = writeSync(3, frame, offset, frame.length - offset)
+    assert(written > 0)
+    offset += written
+  }
+}
 
 /** The test fixture accepts data only; the child imports the real fixed builder. */
 export function encodeCompilerOptions(options: Options): string {
@@ -57,10 +87,13 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
   signal.throwIfAborted()
   const input = encodeCompilerOptions(options)
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "--compile"], {
-    cwd: process.cwd(), env: process.env, detached: true, stdio: ["pipe", "pipe", "pipe"],
+    cwd: process.cwd(), env: process.env, detached: true, stdio: ["pipe", "pipe", "pipe", "pipe"],
   })
   const pid = child.pid
   if (pid === undefined || pid <= 1) throw new Error("Compiler fixture child did not start")
+  const resultPipe = child.stdio[3]
+  assert(resultPipe instanceof Readable)
+  let resultBytes = Buffer.alloc(0)
   let stdout = Buffer.alloc(0), stderr = Buffer.alloc(0), reason: string | undefined, closed = false, forced = false
   let wake = () => {}
   const stopped = new Promise<void>(resolve => { wake = resolve })
@@ -72,7 +105,8 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
   child.once("error", error => stop(String(error)))
   child.stdout.on("data", (bytes: Buffer) => { if (stdout.length + bytes.length > outputLimit) stop("Compiler fixture stdout exceeded2MiB"); else stdout = Buffer.concat([stdout, bytes]) })
   child.stderr.on("data", (bytes: Buffer) => { if (stderr.length + bytes.length > errorLimit) stop("Compiler fixture stderr exceeded128KiB"); else stderr = Buffer.concat([stderr, bytes]) })
-  for (const stream of [child.stdin, child.stdout, child.stderr]) stream.on("error", error => stop(String(error)))
+  resultPipe.on("data", (bytes: Buffer) => { if (resultBytes.length + bytes.length > outputLimit + 4) stop("Compiler fixture result exceeded2MiB frame"); else resultBytes = Buffer.concat([resultBytes, bytes]) })
+  for (const stream of [child.stdin, child.stdout, child.stderr, resultPipe]) stream.on("error", error => stop(String(error)))
   const timer = setTimeout(() => stop("Compiler fixture exceeded60000ms"), 60_000)
   const abort = () => stop("Compiler fixture admission has ended")
   signal.addEventListener("abort", abort, { once: true })
@@ -92,14 +126,18 @@ export async function compileWebsiteInChild(options: Options, signal: AbortSigna
       await Promise.race([close, Bun.sleep(1000)])
       if (!closed) throw new Error("Compiler fixture pipes did not close")
     } finally {
-      if (!closed) { child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy() }
+      if (!closed) { child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy(); resultPipe.destroy() }
       signal.removeEventListener("abort", abort)
       signals.forEach((name, index) => process.off(name, handlers[index]!))
     }
   }
   assert(!forced && closed && !alive(), "Compiler fixture cleanup was not graceful")
   if (reason !== undefined) throw new Error(reason)
-  const response: unknown = JSON.parse(stdout.toString("utf8"))
+  let response: unknown
+  try { response = decodeCompilerFrame(resultBytes) } catch (error) {
+    console.error(JSON.stringify({ kind: "slopcamera-compiler-transport-failure-v1", stdout: stdout.toString("utf8"), stderr: stderr.toString("utf8"), resultBytes: resultBytes.length }))
+    throw error
+  }
   assert(response !== null && typeof response === "object" && !Array.isArray(response))
   const record = response as Record<string, unknown>
   assert.equal(record.bun, Bun.version)
@@ -128,13 +166,11 @@ if (import.meta.main) {
     const { buildWebsite: compile } = await import("./build")
     const result = await compile(options)
     decodeCompilerResult(result)
-    const output = JSON.stringify({ ok: true, bun: Bun.version, result })
-    assert(Buffer.byteLength(output) <= outputLimit)
-    console.log(output)
+    writeCompilerFrame({ ok: true, bun: Bun.version, result })
   } catch (error) {
     const message = error instanceof Error ? error.stack ?? error.message : String(error)
     if (Buffer.byteLength(message) > errorLimit) throw new Error("Compiler error exceeded128KiB")
-    console.log(JSON.stringify({ ok: false, bun: Bun.version, error: message }))
+    writeCompilerFrame({ ok: false, bun: Bun.version, error: message })
     process.exitCode = 1
   }
 }

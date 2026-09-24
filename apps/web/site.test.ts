@@ -1,9 +1,12 @@
 import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
-import { compileWebsiteInChild, decodeCompilerResult, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
+import { compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
+import { spawn } from "node:child_process"
+import assert from "node:assert/strict"
+import { Readable } from "node:stream"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -388,6 +391,32 @@ test("published release validates exact fields and safe stable versions before r
     "https://github.com.evil.test/hraness/slopcamera/releases/tag/v3.2.0",
     "https://github.com/another/slopcamera/releases/tag/v3.2.0", 42, null,
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
+})
+
+test("compiler fixture result pipe isolates ordinary and ANSI logs", async () => {
+  const child = spawn(process.execPath, ["-e", 'const {writeSync}=require("node:fs"); console.log("ordinary compiler log"); writeSync(1,"\\x1b[32mcolored compiler log\\x1b[0m\\n"); writeSync(3,Buffer.from([0,0,0,11,123,34,111,107,34,58,116,114,117,101,125]));'], {
+    stdio: ["ignore", "pipe", "pipe", "pipe"], timeout: 5000,
+  })
+  let stdout = Buffer.alloc(0), frame = Buffer.alloc(0)
+  child.stdout.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
+  const resultPipe = child.stdio[3]
+  assert(resultPipe instanceof Readable)
+  resultPipe.on("data", (bytes: Buffer) => { frame = Buffer.concat([frame, bytes]); if (frame.length > 4096) child.kill() })
+  await new Promise<void>((resolve, reject) => { child.on("error", reject); child.on("close", () => resolve()) })
+  expect(child.exitCode).toBe(0)
+  expect(stdout.toString()).toContain("ordinary compiler log")
+  expect(stdout.toString()).toContain("\x1b[32mcolored compiler log")
+  expect(decodeCompilerFrame(frame)).toEqual({ ok: true })
+  expect(() => decodeCompilerFrame(stdout)).toThrow()
+})
+
+test("compiler fixture frame rejects missing, truncated, duplicate and oversized results", () => {
+  const exact = encodeCompilerFrame({ ok: true })
+  expect(exact).toEqual(Buffer.from([0, 0, 0, 11, 123, 34, 111, 107, 34, 58, 116, 114, 117, 101, 125]))
+  for (const invalid of [Buffer.alloc(0), exact.subarray(0, 3), exact.subarray(0, -1), Buffer.concat([exact, exact]), Buffer.from([0, 32, 0, 1]), Buffer.from([0, 0, 0, 1, 255])]) {
+    expect(() => decodeCompilerFrame(invalid)).toThrow()
+  }
+  expect(() => encodeCompilerFrame("x".repeat(2 * 1024 * 1024))).toThrow()
 })
 
 test("compiler fixture transport preserves finite options and rejects unowned configuration", async () => {
