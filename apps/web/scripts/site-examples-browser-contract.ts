@@ -127,11 +127,10 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
       assert.equal(observation.name, name); assert.equal(observation.passed, true)
       if (index < siteShellCases.length) {
         keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", ...(inventory.install ? ["install"] : [])])
-        if (!inventory.install) { /* keys() already refused an install receipt */ }
-        else if (siteShellCases[index]!.route === "/") {
+        if (inventory.install && siteShellCases[index]!.route === "/") {
           const install = shellRecord(observation.install); keys(install, ["current", "baseline"])
           parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
-        } else assert.equal(observation.install, null)
+        } else if (inventory.install) assert.equal(observation.install, null)
         assert.deepEqual(observation.currentObstructions, []); assert.deepEqual(observation.baselineObstructions, [])
       } else if (index < siteShellCases.length + siteCopyCases.length) {
         keys(observation, ["name", "passed", "command", "current", "baseline", ...(inventory.install ? ["install"] : [])])

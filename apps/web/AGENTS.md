@@ -10,6 +10,10 @@
   publication still emits one file per identity-checked asset hash.
   The earlier v1 profile remains byte-preserved in `scripts/site-portfolio-profile-v1.ts`;
   v2 is preserved in `scripts/site-portfolio-profile-v2.ts`.
+  Portfolio phases declare their reviewed observation inventory explicitly
+  (`portfolioObservationInventory`: no release-copy install receipts, one current install
+  command on both copy sides). Re-baselining the profile against a predecessor that already
+  advertises 3.4.0 must revisit that inventory together with `comparePortfolioCopy`.
   This profile's expanded authored homepage ceiling is 40,100 bytes: the measured
   39,495-byte predecessor plus 70 bytes of palette/pattern attributes and spacing
   and 444 bytes of shared inert hero markup totals 40,009. Count every added byte;
