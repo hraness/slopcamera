@@ -61,14 +61,17 @@ describe("Lantern material admission and scope", () => {
     expect(css).toContain('background-color: Highlight;\n    color: HighlightText;')
   })
 
-  test("compiled header uses shared paint tokens with exact previous no-material fallbacks", async () => {
+  test("compiled header uses shared soft paint and depth with a visible forced-color edge", async () => {
     const source = await read("src/site-shell.stylex.ts")
     const compiled = await createStylexTransformCollector(app).transform(source, join(app, "src/site-shell.stylex.ts"))
     const slots = [...compiled.code.matchAll(/\bheader: \{\s*className: "([^"]+)"\s*\}\.className/gu)]
     expect(slots).toHaveLength(1)
     const classes = new Set(slots[0]![1]!.split(" "))
     const rules = compiled.rules.filter(([name]) => classes.has(name)).map(([name, rule]) => rule.ltr.replaceAll(`.${name}`, ".header"))
-    expect(rules).toContain('.header{border-bottom-color:var(--hraness-material-seam,var(--line))}')
+    expect(rules).toContain('.header{border-bottom-color:var(--hraness-material-outline,transparent)}')
+    expect(rules).toContain('@media (forced-colors: active){.header.header{border-bottom-color:CanvasText}}')
+    expect(rules).toContain('.header{box-shadow:var(--hraness-material-rest,0 4px 20px color-mix(in srgb,var(--ink) 5%,transparent))}')
+    expect(rules).toContain('@media (forced-colors: active){.header.header{box-shadow:none}}')
     expect(rules).toContain('.header{background-color:var(--hraness-material-chrome-paint,color-mix(in srgb,var(--paper) 84%,transparent))}')
     expect(rules.some(rule => rule.includes('backdrop-filter:var(--hraness-material-chrome-blur,blur(14px) saturate(1.4))'))).toBe(true)
     expect(rules).toContain('.header{position:sticky}')

@@ -11,6 +11,7 @@ import { siteShellCases } from "./site-shell-browser-contract"
 import { siteCopyCases } from "./site-copy-browser-contract"
 import { refinementInstallCommand } from "./site-refinement-profile"
 import * as historicalPortfolio from "./site-portfolio-profile-v1"
+import { supportHref } from "./site-support-profile"
 
 const hash = "a".repeat(64)
 const media = [
@@ -219,7 +220,7 @@ test("render normalization rejects foreign CSS origins, unbound paths, queries a
 test("render normalization preserves ordinary external semantic destinations and literal copy", () => {
   const input = request()
   const value = { semantics: { href: "https://github.com/hraness/slopcamera?tab=readme#install", target: "_blank",
-    support: "https://account.hraness.com/support?product=slopcamera&source=web#support", mail: "mailto:team@example.com" },
+    support: supportHref, mail: "mailto:team@example.com" },
     dom: '<a href="https://github.com/hraness/slopcamera">Source</a>', text: "Keep local creative work portable.",
     links: ["/docs/how-to/edit-video", "#install"] }
   expect(normalizePortfolioRender(value, [input.current, input.baseline])).toEqual(value)
