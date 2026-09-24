@@ -11,6 +11,10 @@ import { compareReleaseCopyFlow, compareReleaseCopyEvidence } from "./site-relea
 import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
 import "./site-release-copy-media.test"
 import { createReleaseCopyMediaLedger } from "./site-release-copy-media"
+import { EventEmitter } from "node:events"
+import type { Browser } from "playwright-core"
+import { createNavigationDiagnostic, createNavigationHttpTail, encodeNavigationDiagnostic, navigationDiagnosticLimit,
+  observeNavigationPromise, parseNavigationDiagnostic } from "./site-release-copy-navigation-diagnostic"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree,
   releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall, releaseCopyEditVideoIds } from "./site-release-copy-profile"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
@@ -851,5 +855,178 @@ test("release hero paint pairs the native URL-free gradients in both flow and sh
  expect(() => compare(pair(background(origins.current), background(origins.baseline)))).not.toThrow()
  for (const ports of [{ ...origins, current: origins.baseline }, { ...origins, current: "https://127.0.0.1:1234" },
   { ...origins, current: "http://localhost:1234" }, { ...origins, baseline: "http://127.0.0.1:0" },
-  { ...origins, current: "http://127.0.0.1:65536" }]) expect(() => compare(pair(gradient, gradient), ports)).toThrow()
+ { ...origins, current: "http://127.0.0.1:65536" }]) expect(() => compare(pair(gradient, gradient), ports)).toThrow()
+})
+
+describe("release-copy passive navigation failure diagnostics", () => {
+ function deferred<T>() {
+  let resolve!: (value: T) => void, reject!: (error: unknown) => void
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+ }
+ function fixture() {
+  const calls: { name: string; args: unknown[] }[] = [], frame = {}
+  const navigation = deferred<null>(), finished = deferred<null>()
+  const closePromise = Promise.resolve(), routePromise = Promise.resolve(), continuePromise = Promise.resolve()
+  const cached = { startTime: 1, domainLookupStart: -1, domainLookupEnd: -1, connectStart: -1, secureConnectionStart: -1,
+   connectEnd: -1, requestStart: 2, responseStart: 3, responseEnd: -1 }
+  const page = Object.assign(new EventEmitter(), { mainFrame: () => frame,
+   goto: (...args: unknown[]) => { calls.push({ name: "goto", args }); return navigation.promise },
+   reload: (...args: unknown[]) => { calls.push({ name: "reload", args }); return navigation.promise } })
+  const pagePromise = Promise.resolve(page)
+  let routeArgs: unknown[] = []
+  const context = { close: (...args: unknown[]) => { calls.push({ name: "close", args }); return closePromise },
+   route: (...args: unknown[]) => { routeArgs = args; return routePromise }, newPage: () => pagePromise }
+  const contextPromise = Promise.resolve(context)
+  const originalNewContext = (...args: unknown[]) => { calls.push({ name: "context", args }); return contextPromise }
+  const browser = { newContext: originalNewContext } as unknown as Browser
+  const incoming = (path = "/fonts/font.woff2") => ({ url: () => request().current.origin + path,
+   method: () => "GET", resourceType: () => "font", frame: () => frame, isNavigationRequest: () => false,
+   timing: () => cached, failure: () => ({ errorText: "net::ERR_ABORTED" }) })
+  const recorder = createNavigationDiagnostic(browser, { current: request().current.origin, baseline: request().baseline.origin })
+  const decode = () => {
+   const text = recorder.encodeFailure(request())!
+   return JSON.parse(text) as { trace: { contexts: Record<string, unknown>[]; requests: Record<string, unknown>[]; events: Record<string, unknown>[]; observerError: string | null } }
+  }
+  return { browser, recorder, calls, cached, page, context, navigation, finished, contextPromise, pagePromise, closePromise,
+   routePromise, continuePromise, incoming, routeArgs: () => routeArgs, originalNewContext, decode }
+ }
+ test("observation keeps original fulfillment/rejection and Promise identity even when observers throw", async () => {
+  const failure = Error("original"), observerFailure = Error("observer"), observed: unknown[] = []
+  const success = Promise.resolve(42), rejected = Promise.reject(failure)
+  expect(observeNavigationPromise(success, () => { throw observerFailure }, () => {}, error => observed.push(error))).toBe(success)
+  expect(observeNavigationPromise(rejected, () => {}, () => { throw observerFailure }, error => observed.push(error))).toBe(rejected)
+  await expect(success).resolves.toBe(42); await expect(rejected).rejects.toBe(failure)
+  expect(observed).toEqual([observerFailure, observerFailure])
+ })
+ test("forwards exact browser arguments and promises, copies timing, and snapshots rejection before close", async () => {
+  const f = fixture(), options = { viewport: { width: 320, height: 720 } }
+  f.recorder.begin("/-320-light-dark")
+  expect<unknown>(f.browser.newContext(options)).toBe(f.contextPromise); await f.contextPromise
+  expect(f.context.newPage()).toBe(f.pagePromise); await f.pagePromise
+  const incoming = f.incoming(); f.page.emit("request", incoming)
+  const response = { request: () => incoming, headers: () => ({ "content-type": "font/woff2", "content-length": "73168" }),
+   status: () => 200, finished: () => f.finished.promise }
+  f.page.emit("response", response)
+  expect(response.finished()).toBe(f.finished.promise)
+  f.cached.responseStart = 4
+  const navigationOptions = { waitUntil: "load" }
+  expect(f.page.goto(request().current.origin, navigationOptions)).toBe(f.navigation.promise)
+  const error = Error("original timeout"); f.navigation.reject(error)
+  await expect(f.navigation.promise).rejects.toBe(error)
+  f.cached.responseStart = 5
+  const closeOptions = { reason: "original cleanup" }
+  expect(f.context.close(closeOptions)).toBe(f.closePromise); await f.closePromise
+  f.page.emit("requestfailed", incoming); f.finished.reject(error); await expect(f.finished.promise).rejects.toBe(error)
+  const value = f.decode(), row = value.trace.requests[0]!
+  expect(row.responseTiming).toEqual([1,-1,-1,-1,-1,-1,2,3,-1])
+  expect(value.trace.events.find(item => item.type === "goto-error")?.pending).toEqual([{ id: 1, timing: [1,-1,-1,-1,-1,-1,2,4,-1] }])
+  expect(value.trace.contexts[0]!.pending).toEqual([{ id: 1, timing: [1,-1,-1,-1,-1,-1,2,5,-1] }])
+  expect(f.calls).toEqual([{ name: "context", args: [options] }, { name: "goto", args: [request().current.origin, navigationOptions] }, { name: "close", args: [closeOptions] }])
+  expect(f.calls[0]!.args[0]).toBe(options); expect(f.calls[1]!.args[1]).toBe(navigationOptions)
+  expect(() => parseNavigationDiagnostic(Buffer.from(f.recorder.encodeFailure(request())!), request(), "/-320-light-dark")).not.toThrow()
+  f.recorder.restore(); expect<unknown>(f.browser.newContext).toBe(f.originalNewContext)
+ })
+ test("route handlers and continue calls keep original arguments, results and promises", async () => {
+  const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+  const incoming = f.incoming(), args: unknown[][] = [], handlerResult = {}
+  const handler = (...values: unknown[]) => { args.push(values); return handlerResult }, options = { times: 1 }
+  expect(f.context.route("**/*", handler, options)).toBe(f.routePromise)
+  const intercepted = { request: () => incoming, continue: (...values: unknown[]) => { args.push(values); return f.continuePromise } }
+  const selected = f.routeArgs()[1] as (...args: unknown[]) => unknown
+  expect(selected(intercepted, incoming)).toBe(handlerResult)
+  const continuation = { headers: { accept: "font/woff2" } }
+  expect(intercepted.continue(continuation)).toBe(f.continuePromise); await f.continuePromise
+  expect(args).toEqual([[intercepted, incoming], [continuation]])
+  expect(f.routeArgs()[2]).toBe(options)
+  expect(f.decode().trace.requests[0]!.times).toHaveProperty("continued")
+  const before = f.decode().trace.requests[0]!.times
+  expect(intercepted.continue(continuation)).toBe(f.continuePromise); await f.continuePromise
+  expect(f.decode().trace.requests[0]!.times).toEqual(before)
+  expect(f.decode().trace.observerError).not.toBeNull()
+ })
+ test("successful pair retirement drops prior requests; inactive contexts receive no wrappers", async () => {
+  const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+  f.page.emit("request", f.incoming()); expect(f.decode().trace.requests).toHaveLength(1)
+  f.recorder.retire(); expect(f.recorder.encodeFailure(request())).toBeUndefined()
+  f.recorder.begin("/-320-dark-light"); expect(f.decode().trace.requests).toEqual([])
+  f.recorder.retire(); f.recorder.restore()
+  const fresh = fixture(); expect<unknown>(fresh.browser.newContext()).toBe(fresh.contextPromise); await fresh.contextPromise
+  expect(fresh.context.newPage()).toBe(fresh.pagePromise); await fresh.pagePromise
+  expect(fresh.page.listenerCount("request")).toBe(0)
+ })
+ test("bounded identities never coalesce repeated paths and overflow remains explicit", async () => {
+  for (const count of [1, 7, 64, 512, 513]) {
+   const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+   for (let index = 0; index < count; index++) f.page.emit("request", f.incoming())
+   const value = f.decode(); expect(value.trace.requests).toHaveLength(Math.min(count, 512))
+   expect(value.trace.requests.map(item => item.id)).toEqual(Array.from({ length: Math.min(count, 512) }, (_, i) => i + 1))
+   expect(value.trace.observerError === null).toBe(count <= 512)
+  }
+  const trace: Parameters<typeof encodeNavigationDiagnostic>[1] = { scenario: "/-320-light-dark", epochMs: 1, monotonicMs: 0,
+   contexts: [], requests: [], events: Array.from({ length: 128 }, () => ({ text: "x".repeat(2048) })), observerError: null, snapshots: 0 }
+  const text = encodeNavigationDiagnostic(request(), trace), value = JSON.parse(text)
+  expect(Buffer.byteLength(text)).toBeLessThan(navigationDiagnosticLimit); expect(value.overflow).toBe(true)
+  expect(value.encodedBytes).toBeGreaterThan(navigationDiagnosticLimit); expect(value.sha256).toMatch(/^[a-f0-9]{64}$/u)
+  expect(() => parseNavigationDiagnostic(Buffer.from(text), request(), trace.scenario)).not.toThrow()
+ })
+ test("parser rejects cross-run, cross-case, malformed and oversized failure evidence", async () => {
+  const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+  f.page.emit("request", f.incoming())
+  const encoded = f.recorder.encodeFailure(request())!, original = JSON.parse(encoded)
+  for (const patch of [{ token: "other" }, { scenario: "other" }, { scope: examplesScope }, { accepted: true }, { extra: true },
+   { baselineRevision: "0".repeat(40) }, { overflow: "false" }, { trace: null }]) {
+   expect(() => parseNavigationDiagnostic(Buffer.from(JSON.stringify({ ...original, ...patch })), request(), "/-320-light-dark")).toThrow()
+  }
+  for (const patch of [{ id: 2 }, { context: 3 }, { side: "baseline" }, { side: null }, { method: null }, { type: null },
+   { contentType: null }, { path: "remote" }, { responseTiming: [1] }, { times: { unrecognized: 1 } }]) {
+   const value = structuredClone(original); Object.assign(value.trace.requests[0], patch)
+   expect(() => parseNavigationDiagnostic(Buffer.from(JSON.stringify(value)), request(), "/-320-light-dark")).toThrow()
+  }
+  expect(() => parseNavigationDiagnostic(Buffer.alloc(navigationDiagnosticLimit + 1), request(), "/-320-light-dark")).toThrow()
+ })
+ test("duplicate events are explicit observer failures and cannot overwrite original chronology", async () => {
+  for (const duplicate of ["request", "terminal", "response", "finished-call"] as const) {
+   const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+   const incoming = f.incoming(); f.page.emit("request", incoming)
+   const response = { request: () => incoming, headers: () => ({ "content-type": "font/woff2" }), status: () => 200,
+    finished: () => f.finished.promise }
+   f.page.emit("response", response); expect(response.finished()).toBe(f.finished.promise)
+   f.page.emit("requestfinished", incoming); f.finished.resolve(null); await f.finished.promise
+   const before = f.decode().trace.requests[0]
+   if (duplicate === "request") f.page.emit("request", incoming)
+   if (duplicate === "terminal") f.page.emit("requestfailed", incoming)
+   if (duplicate === "response") f.page.emit("response", response)
+   if (duplicate === "finished-call") { expect(response.finished()).toBe(f.finished.promise); await f.finished.promise }
+   expect(f.decode().trace.observerError).not.toBeNull()
+   // Existing timestamps remain intact; the original repeated call still runs.
+   const after = f.decode().trace.requests[0]!
+   for (const [key, value] of Object.entries(before!.times as Record<string, number>)) expect((after.times as Record<string, number>)[key]).toBe(value)
+  }
+ })
+ test("pending snapshots bind unique real request IDs to their original context", async () => {
+  const f = fixture(); f.recorder.begin("/-320-light-dark"); await f.browser.newContext(); await f.context.newPage()
+  f.page.emit("request", f.incoming()); await f.context.close()
+  const original = JSON.parse(f.recorder.encodeFailure(request())!)
+  expect(Number.isFinite(original.trace.monotonicMs)).toBe(true)
+  for (const mutate of [
+   (value: typeof original) => { value.trace.contexts[0].pending[0].id = 2 },
+   (value: typeof original) => { value.trace.contexts[0].pending.push(value.trace.contexts[0].pending[0]) },
+   (value: typeof original) => { value.trace.requests[0].context = 2 },
+   (value: typeof original) => { value.trace.snapshots = 0 },
+   (value: typeof original) => { delete value.trace.monotonicMs },
+  ]) {
+   const value = structuredClone(original); mutate(value)
+   expect(() => parseNavigationDiagnostic(Buffer.from(JSON.stringify(value)), request(), "/-320-light-dark")).toThrow()
+  }
+ })
+ test("parent HTTP tail keeps the last256 events with explicit truncation and no pair/delivery claim", () => {
+  const tail = createNavigationHttpTail()
+  for (let i = 0; i < 600; i++) tail.add(i % 2 ? "current" : "baseline", "fetch", "/fonts/font.woff2", null, 73168)
+  tail.add("current", "response", "/assets/ignored.mp4", 200, 42)
+  const snapshot = tail.snapshot()
+  expect(snapshot.seen).toBe(600); expect(snapshot.events).toHaveLength(256); expect(snapshot.dropped).toBe(344)
+  expect(snapshot.events[0]!.n).toBe(345); expect(snapshot.perPair).toBe(false); expect(snapshot.socketDeliveryProven).toBe(false)
+  expect(Buffer.byteLength(JSON.stringify(snapshot))).toBeLessThan(navigationDiagnosticLimit)
+ })
 })

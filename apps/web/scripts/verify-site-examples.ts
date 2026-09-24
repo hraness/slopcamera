@@ -27,6 +27,7 @@ import { parseExamplesCaseFailure, parseExamplesPhase, parseExamplesRequest, exa
   parseExampleByteRange, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, type SiteAcceptanceScope } from "./site-release-copy-profile"
 import { parsePublishedRelease, publishedRelease } from "../src/published-release"
+import { createNavigationHttpTail, navigationDiagnosticFile, navigationDiagnosticLimit, parseNavigationDiagnostic } from "./site-release-copy-navigation-diagnostic"
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
 async function inventory(directory: string, root = directory, depth = 0): Promise<string[]> {
@@ -185,6 +186,7 @@ export const releaseCopyVerifierInputs = Object.freeze([
   "scripts/site-release-copy-browser-contract.test.ts", "scripts/verify-site-release-copy.ts",
   "scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts",
   "scripts/site-release-copy-media.ts", "scripts/site-release-copy-media.test.ts",
+  "scripts/site-release-copy-navigation-diagnostic.ts",
 ])
 export function assertReleaseCopyInputs(current: Pick<ShellSnapshot, "inputs">, baseline: Pick<ShellSnapshot, "inputs">,
   currentPackage: unknown, baselinePackage: unknown, currentDatum: unknown, baselineDatum: unknown): void {
@@ -226,10 +228,11 @@ export function assertExamplesHeroTextures(snapshot: Pick<ShellSnapshot, "artifa
     assert.deepEqual(matches, [asset], "Hero texture bytes must match the reviewed immutable asset")
   }
 }
-function serve(snapshot: ShellSnapshot) {
+function serve(snapshot: ShellSnapshot, trace?: { tail: ReturnType<typeof createNavigationHttpTail>; side: "current" | "baseline" }) {
   const rejected: string[] = []
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
     const url = new URL(request.url), bytes = snapshot.files.get(url.pathname)
+    trace?.tail.add(trace.side, "fetch", url.pathname, null, bytes?.byteLength ?? null)
     if (request.method !== "GET" || url.search !== "" || bytes === undefined || url.hostname !== "127.0.0.1") {
       if (rejected.length < 64) rejected.push(`${request.method} ${url.pathname}`)
       return new Response("Not Found", { status: 404 })
@@ -240,11 +243,13 @@ function serve(snapshot: ShellSnapshot) {
       if (rejected.length < 64) rejected.push(`Range ${url.pathname}`)
       return new Response(null, { status: 416, headers: { "content-range": `bytes */${bytes.byteLength}` } })
     }
-    return new Response(Uint8Array.from(selected ? bytes.subarray(selected.start, selected.end + 1) : bytes), {
+    const response = new Response(Uint8Array.from(selected ? bytes.subarray(selected.start, selected.end + 1) : bytes), {
       status: selected ? 206 : url.pathname === "/404.html" ? 404 : 200,
       headers: { ...siteShellHeaders, "content-type": examplesContentType(url.pathname), "cache-control": "no-store",
         ...(url.pathname.endsWith(".mp4") ? { "accept-ranges": "bytes" } : {}),
         ...(selected ? { "content-range": `bytes ${selected.start}-${selected.end}/${bytes.byteLength}` } : {}) } })
+    trace?.tail.add(trace.side, "response", url.pathname, response.status, selected ? selected.end - selected.start + 1 : bytes.byteLength)
+    return response
   } })
   return { server, rejected, closed: false }
 }
@@ -336,6 +341,19 @@ async function readCaseFailure(profile: string, request: ExamplesRequest) {
   }
 }
 
+async function readNavigationDiagnostic(profile: string, request: ExamplesRequest, scenario?: string) {
+  try {
+    const bytes = await readPreviewFile(join(profile, navigationDiagnosticFile), navigationDiagnosticLimit)
+    assert.ok(request.scope === releaseCopyScope && scenario !== undefined, "Unexpected navigation failure sidecar")
+    const value = parseNavigationDiagnostic(bytes, request, scenario)
+    return { status: "retained", path: navigationDiagnosticFile, bytes: bytes.byteLength, sha256: digest(bytes), overflow: value.overflow,
+      observerError: value.overflow === false ? shellRecord(value.trace).observerError : null }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return { status: "absent" }
+    throw error
+  }
+}
+
 export async function verifySiteExamples(args: readonly string[], scope: SiteAcceptanceScope = examplesScope): Promise<void> {
   assert.ok(scope === examplesScope || scope === releaseCopyScope)
   const release = scope === releaseCopyScope, baselineProfile = release ? releaseCopyBaselineProfile : examplesBaselineProfile, limit = examplesDeadlineMs
@@ -346,6 +364,7 @@ export async function verifySiteExamples(args: readonly string[], scope: SiteAcc
   const deadlineController = new AbortController()
   const deadlineTimer = setTimeout(() => deadlineController.abort(new Error("Site native absolute deadline exceeded")), limit)
   const servers: ReturnType<typeof serve>[] = []
+  const httpTail = release ? createNavigationHttpTail() : undefined
   let profile: string | undefined, protocolDirectory: string | undefined
   let chrome: ManagedVerificationServer | undefined, worker: ManagedVerificationServer | undefined
   let chromeAbsent = false, workerAbsent = false, completed = false
@@ -398,8 +417,8 @@ export async function verifySiteExamples(args: readonly string[], scope: SiteAcc
       profile = await mkdtemp(join(await realpath(tmpdir()), "slopcamera-site-examples-"))
       signal.throwIfAborted()
       const driver = await step(() => buildExamplesDriver(profile!))
-      const currentServer = serve(current); servers.push(currentServer)
-      const baselineServer = serve(baseline); servers.push(baselineServer)
+      const currentServer = serve(current, httpTail ? { tail: httpTail, side: "current" } : undefined); servers.push(currentServer)
+      const baselineServer = serve(baseline, httpTail ? { tail: httpTail, side: "baseline" } : undefined); servers.push(baselineServer)
       signal.throwIfAborted()
       chrome = spawnVerificationServer({ cwd: actualApp, detachedProcessGroup: true, logLimit: 12_000, command: [browserPath,
         "--headless=new", "--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-default-apps",
@@ -465,6 +484,7 @@ export async function verifySiteExamples(args: readonly string[], scope: SiteAcc
         assertWorkerInputsUnchanged(inputs, after)
         await collectProtocol(protocolDirectory, observation)
         assert.equal(await readCaseFailure(profile!, workerRequest!), undefined, "Successful shell worker also published failure evidence")
+        if (release) assert.deepEqual(await readNavigationDiagnostic(profile!, workerRequest!), { status: "absent" })
         for (const input of executableInputs) assert.deepEqual(await executableIdentity(input.path), input.identity, "Admitted executable changed")
         for (const input of packageInputs) {
           const after = await readWorkerInput(input.path, input.maximum)
@@ -485,8 +505,16 @@ export async function verifySiteExamples(args: readonly string[], scope: SiteAcc
         // Missing partial evidence is possible before the first case. Malformed
         // evidence remains a collector failure, never a fallback success.
         if (workerRequest !== undefined && workerAbsent) await collect(async () => { caseFailure = await readCaseFailure(profile!, workerRequest!) })
+        let navigationDiagnostic: unknown = { status: "unavailable-before-worker-collection" }
+        if (release && workerRequest !== undefined && workerAbsent) await collect(async () => {
+          navigationDiagnostic = { status: "invalid" }
+          navigationDiagnostic = await readNavigationDiagnostic(profile!, workerRequest!,
+            typeof caseFailure?.scenario === "string" ? caseFailure.scenario : undefined)
+        })
         const receipt = `${JSON.stringify({ accepted: false, completed, cancelled: signal?.aborted === true, chromeAbsent, workerAbsent,
-          endpointEvidence, timeoutEvidence, caseFailure, workerOutput, chromeOutput, failures: failures.map(error => previewFailureSummary(error)) })}\n`
+          endpointEvidence, timeoutEvidence, caseFailure, workerOutput, chromeOutput,
+          ...(release ? { navigationDiagnostic, recentHttpTail: httpTail!.snapshot() } : {}),
+          failures: failures.map(error => previewFailureSummary(error)) })}\n`
         assert.ok(Buffer.byteLength(receipt) <= 1024 * 1024)
         await writeFile(join(profile!, "site-examples-failure.json"), receipt, { flag: "wx", mode: 0o600 })
         console.error(`slopcamera-site-examples: retained failure evidence at ${profile}`)

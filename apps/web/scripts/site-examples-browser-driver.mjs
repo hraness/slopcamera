@@ -22,6 +22,7 @@ import { collectExamplesFontDiagnostic, ExamplesDiagnosticSizeError, retainExamp
 
 import { releaseCopyScope, releaseCopyBaselineCommand } from "./site-release-copy-profile"
 import { releaseCopyDom, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
+import { createNavigationDiagnostic, navigationDiagnosticFile } from "./site-release-copy-navigation-diagnostic"
 
 // This entry is bundled by the Bun parent, then executed by genuine pinned
 // Node. The temporary bundle resolves dependencies only from the explicit app.
@@ -51,7 +52,7 @@ async function main() {
   assert.equal(pinnedBrowser.length, 1)
   const common = { schemaVersion: 1, token: request.token, scope: request.scope, baselineProfile: request.baselineProfile,
     ...(scope === releaseCopyScope ? { baselineRevision: request.baselineRevision, baselineTree: request.baselineTree } : {}) }, runtime = { node, playwright: "1.62.0" }
-  let browser, connection, activePair, signal, matrixCompleted = false
+  let browser, connection, activePair, signal, navigation, matrixCompleted = false
   const result = await withPreviewCancellation(process, async cancellation => {
     signal = cancellation.signal
     await publishProfiledWorkerPhase(directory, 0, { ...common, ...runtime, sequence: 0, kind: "started" }, scope)
@@ -61,6 +62,8 @@ async function main() {
     })
     await publishProfiledWorkerPhase(directory, 1, { ...common, sequence: 1, kind: "connected" }, scope)
     assert.equal(browser.version(), pinnedBrowser[0].browserVersion, "Connected browser version differs from pinned Chrome for Testing")
+    if (scope === releaseCopyScope) navigation = createNavigationDiagnostic(browser,
+      { current: request.current.origin, baseline: request.baseline.origin })
     const cases = [], observations = []
     const runCase = async (name, stage, operation) => {
       assert.equal(name, examplesCaseNames[cases.length], "Case order changed")
@@ -81,7 +84,9 @@ async function main() {
         throw error
       }
     }
-    for (const scenario of siteShellCases) await runCase(scenario.name, "pair", async () => {
+    for (const scenario of siteShellCases) {
+      navigation?.begin(scenario.name)
+      await runCase(scenario.name, "pair", async () => {
       const negative = scenario.width === 1440 && scenario.theme === "system" && scenario.system === "light"
       let currentDom, baselineDom, design, baselineDesign, currentPositions, baselinePositions
       // Keep first samples separate from later read-only font diagnostics.
@@ -129,6 +134,8 @@ async function main() {
         "Examples comparison diagnostic retention", 5_000))
       }
     })
+      navigation?.retire()
+    }
     for (const scenario of siteCopyCases) await runCase(scenario.name, "pair", async () => {
       const negative = scenario === siteCopyCases[0], currentInstall = [], baselineInstall = []
       const [current, baseline] = await settleShellPair(
@@ -160,6 +167,14 @@ async function main() {
       if (late !== undefined) await bounded(late.close(), "Late browser disconnect", 5_000)
     })
     if (activePair !== undefined) await collect(() => bounded(Promise.allSettled([activePair]), "Both underlying case settlements", 5_000))
+    // Retain the original failing pair after the existing browser/pair cleanup.
+    // A diagnostic failure joins, and never replaces, the original failure.
+    if (navigation !== undefined) await collect(async () => {
+      const text = navigation?.encodeFailure(common)
+      if (text !== undefined) await bounded(writeFile(join(dirname(requestPath), navigationDiagnosticFile), text,
+        { flag: "wx", mode: 0o600 }), "Navigation failure diagnostic retention", 5_000)
+    })
+    navigation?.restore()
     if (failures.length > 0) throw new AggregateError(failures, "Shell browser protocol collection failed")
   })
   parsePhase(result, 2, request)
