@@ -11,7 +11,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 | TypeScript SDK | `@hraness/slopcamera` portable imports plus the complete-local-host `./local/*` surfaces; see [SDK surfaces](/docs/reference/sdk) |
 | MCP server | `slopcamera mcp --root <workspace>` exposes a fixed toolset inside one selected root; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp) |
 
-Slopcamera v3.3.1 exposes six portable operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+Slopcamera exposes six portable operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Install the release
 
@@ -52,7 +52,7 @@ The immutable [v3.3.1 release](https://github.com/hraness/slopcamera/releases/ta
 
 The static and rigged/morph GLB profiles have separate admission limits within this release. Model, browser, native-engine and hardware availability still require inspection on the machine doing the work; presence in an archive is not a live qualification result.
 
-Later source corrects static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. These corrections are absent from v3.3.1. Examples that depend on them identify the required source revision beside their commands. The project-cinema commands also ship in v3.3.1, but later renderer corrections must be checked separately before reproducing a source example.
+Slopcamera v3.3.4 and later releases include three renderer corrections that v3.3.1 lacks: static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. The project-cinema commands also ship in v3.3.1; reproduce an example that depends on these corrections with v3.3.4 or later, or with a source build.
 
 ## Parametric architectural designs
 
@@ -102,6 +102,7 @@ Ordinary `project add` and SDK `media.ingest` imports require an existing projec
 There is no Slopcamera account or hosted project database. Editing and rendering stay local, and these are the surfaces that can cross the network boundary:
 
 - Gateway model discovery and paid generation, which read `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN` in the local process environment, never persist credentials, pin the Gateway origin, and send with `maxRetries: 0`.
+- Hraness Credits: `slopcamera credits` contacts `credits.hraness.com` to buy credits and read the balance, and hosted image generation sends one prompt and model ID to `api.slopcamera.com` with the stored device token.
 - Selected cloud analysis and optional private Blob reference hosting, each behind its own acknowledgement.
 - Poly Haven asset acquisition and first-use runtime or tool provisioning.
 

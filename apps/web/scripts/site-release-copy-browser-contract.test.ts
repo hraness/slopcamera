@@ -162,7 +162,7 @@ function installDomFixture(current: boolean, state: "idle" | "copied" | "failed"
  return { root, button, status, fixture, admit }
 }
 describe("release-copy-v1 has an independent closed identity", () => {
- test("binds the a742 edit-video inventory while preserving historical seven-item acceptance", async () => {
+ test("binds the 6eb edit-video inventory while preserving historical seven-item acceptance", async () => {
   const historical = ["color-warm", "color-cool", "color-mono", "edit-directed-landscape", "edit-directed-portrait", "edit-directed-square", "edit-directed-feed-portrait"]
   const released = ["color-warm", "color-cool", "color-mono", "premiere-wall", "edit-directed-landscape", "edit-directed-portrait", "edit-directed-square", "edit-directed-feed-portrait"]
   const authored = await readFile(new URL("../src/docs/how-to/edit-video.md", import.meta.url), "utf8")
@@ -196,6 +196,7 @@ describe("release-copy-v1 has an independent closed identity", () => {
   expect(parseExamplesPhase(receipt, 2, req)).toEqual(receipt)
   expect(parseExamplesCaseFailure(failure, req)).toEqual(failure)
   for (const [field, value] of [["scope", examplesScope], ["baselineProfile", examplesBaselineProfile], ["baselineRevision", examplesBaselineRevision], ["baselineTree", examplesBaselineTree], ["scope", "unknown"],
+   ["baselineProfile", "before-release-copy-a742b29-v1"], ["baselineRevision", "a742b29bb9414382843614a82cdb8c8e7c218aff"], ["baselineTree", "11e1eac14c63e947cd52c2f121a60fa458dcc1e5"],
    ["baselineProfile", "before-release-copy-e08bacf-v1"], ["baselineRevision", "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7"], ["baselineTree", "d7c1e70f77255d38a80acd8184654910be473f46"]]) {
    expect(() => parseExamplesRequest({ ...req, [field!]: value }, releaseCopyScope)).toThrow()
    expect(() => parseExamplesPhase({ ...receipt, [field!]: value }, 2, req)).toThrow()
@@ -303,6 +304,7 @@ describe("release-copy-v1 has an independent closed identity", () => {
   expect(() => assertExamplesBaselineManifest(historical, snapshot)).not.toThrow()
   expect(() => assertExamplesBaselineManifest(historical, snapshot, releaseCopyScope)).toThrow()
   for (const change of [{ schemaVersion: 6 }, { baselineProfile: examplesBaselineProfile }, { sourceRevision: examplesBaselineRevision }, { sourceTree: examplesBaselineTree }, { checkoutRevision: examplesBaselineRevision }, { extra: true },
+   { baselineProfile: "before-release-copy-a742b29-v1" }, { sourceRevision: "a742b29bb9414382843614a82cdb8c8e7c218aff" }, { checkoutRevision: "a742b29bb9414382843614a82cdb8c8e7c218aff" }, { sourceTree: "11e1eac14c63e947cd52c2f121a60fa458dcc1e5" },
    { baselineProfile: "before-release-copy-e08bacf-v1" }, { sourceRevision: "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7" }, { sourceTree: "d7c1e70f77255d38a80acd8184654910be473f46" }])
    expect(() => assertExamplesBaselineManifest({ ...manifest, ...change }, snapshot, releaseCopyScope)).toThrow()
  })

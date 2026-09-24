@@ -1,6 +1,6 @@
 Claude Code can create diagrams, images, animations, and video through Slopcamera once two pieces are installed: the `slopcamera` command, which does the local media work, and the Slopcamera Agent Skill, which teaches Claude Code which operation to reach for.
 
-You need Bun 1.3.14 or newer. Recording features need macOS; everything else runs on macOS, Linux, and Windows. No Slopcamera account exists, and nothing here asks for one.
+You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization, local audio and color effects (`media audio` and `media color`), and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. Slopcamera edits recordings you already have; it does not record. There is no Slopcamera account.
 
 ## Install the CLI
 
@@ -14,7 +14,7 @@ Confirm the install:
 {{DOCTOR_COMMAND}}
 ```
 
-The doctor reports which parts of the multimedia engine are available on this machine: diagram and video editing always are; native engines such as Blender install separately.
+The doctor reports which parts of Slopcamera work on this machine. Diagrams need nothing more, video editing needs FFmpeg and FFprobe, and native engines such as Blender install separately.
 
 ## Install the Agent Skill for Claude Code
 
@@ -42,4 +42,4 @@ Claude Code should run `slopcamera diagram init`, edit the JSON source, run `slo
 
 - **`slopcamera: command not found`**: the global Bun bin directory is not on your `PATH`, or the install ran in a different shell. Re-open the terminal and re-run `{{DOCTOR_COMMAND}}`.
 - **The skill is not loading**: skills install per target. The Claude Code form installs to the Claude skills directory; the generic `{{SKILL_INSTALL_COMMAND}}` targets agents that read the `agents` convention. Run the command printed above, not the generic one.
-- **Generation asks for a key**: model-backed operations use caller-owned Vercel AI Gateway access. Set `AI_GATEWAY_API_KEY`, or with a linked Vercel project use `vercel env run -- <command>` so the credential is injected for one command without being written to the project. This website never receives it.
+- **Generation asks for a key**: model-backed operations use caller-owned Vercel AI Gateway access. Set `AI_GATEWAY_API_KEY`, or with a linked Vercel project use `vercel env run -- <command>` so the credential is injected for one command without being written to the project. This website never receives it. For prompt-only images, `slopcamera credits topup` and `slopcamera credits wait` set up prepaid Hraness Credits instead; see [generate media](/docs/how-to/generate-media).

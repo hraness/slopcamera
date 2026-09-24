@@ -65,7 +65,7 @@ apply. A resolution recommendation does not establish visual quality.
 
 ### Patent-style drawing sheets
 
-Slopcamera v3.4.0 includes `diagram sheets init|check|render` for version-one
+Slopcamera v3.3.5 added `diagram sheets init|check|render` for version-one
 `.drawing.json` documents. It retains one authored diagram per sheet and produces outlined
 monochrome SVGs, a multipage PDF, and a receipt binding source and output hashes.
 It runs locally with bundled rendering dependencies and needs no browser,

@@ -15,7 +15,7 @@ export function examplesInstallNote(current: boolean, scope: SiteAcceptanceScope
   const command = current ? refinementInstallCommand : examplesBaselineInstallCommand
   const version = /^bun add --global https:\/\/github\.com\/hraness\/slopcamera\/releases\/download\/v(\d+\.\d+\.\d+)\/hraness-slopcamera-\1\.tgz\nslopcamera skill install --target agents$/u.exec(command)
   assert.ok(version, "One exact canonical archive and matching skill")
-  return `${current ? "Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs " : ""}Bun 1.3.14 or newer on macOS, Linux, or Windows. Verified release v${version[1]}.`
+  return `${current ? "Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs " : ""}Bun 1.3.14 or newer on macOS, Linux, or Windows. ${current ? "Release" : "Verified release"} v${version[1]}.`
 }
 /** Six fixed text owners, with each complete admitted fragment exactly once. */
 export function projectExamplesBaselineCopyElements(elements: readonly ShellElement[], scope: SiteAcceptanceScope = "workflow-examples-v1"): readonly ShellElement[] {

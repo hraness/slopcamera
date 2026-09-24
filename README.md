@@ -2,15 +2,16 @@
 
 [![Slopcamera: a visual studio for coding agents](https://slopcamera.com/og.png)](https://slopcamera.com)
 
-**Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine
-generated and recorded media, and export images, diagrams, animation, and video
-from retained sources.**
+**Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent
+renders images, diagrams, animation, and video from source files it can edit.**
 
-Describe a finished result to Codex, Claude, or another coding agent. Slopcamera gives
-it a Bun CLI, TypeScript SDK, and version-matched Agent Skill to inspect sources,
-direct cameras, edit a composition, and render the result. A separate MCP server
-exposes fixed tools for diagrams, images, and scene inspection and planning. There is no Slopcamera account or hosted
-project database.
+Describe the result you want to Codex, Claude Code, or another coding agent.
+Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
+to the CLI version, so it can inspect sources, set up cameras, edit a composition,
+and render. `slopcamera mcp` runs an MCP server with a smaller, fixed set of diagram,
+image, and scene tools. Projects stay in local files, and there is no Slopcamera
+account. Generation uses your own Vercel AI Gateway account or, for prompt-only
+images, prepaid Hraness Credits.
 
 [Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
 
@@ -38,8 +39,9 @@ the rendered output with source, runtime requirements and reproduction steps.
   timing, framing, captions, and effects as project decisions. Preview and final
   renders use the same timeline and composition.
 - **Choose where computation happens.** Local rendering and editing use your
-  machine. Optional model-backed work uses your Vercel AI Gateway access, with
-  explicit acknowledgement before named local media is uploaded. Native Python
+  machine. Optional model-backed work uses your Vercel AI Gateway access and
+  uploads named local media only after you acknowledge it. Prompt-only images can
+  instead run on the hosted API with prepaid Hraness Credits. Native Python
   authoring requires separate trust because it runs as your current user.
 
 ## Install Slopcamera

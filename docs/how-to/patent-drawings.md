@@ -5,10 +5,9 @@ PDF. This guide applies to block diagrams and flowcharts whose content you have
 already chosen. Slopcamera checks its drawing profile; the result still needs
 technical and filing review.
 
-Install [Slopcamera v3.4.0](../../README.md#install-slopcamera) or use a
-[source build](use-current-source.md) for the `diagram sheets` commands.
-Check `slopcamera help diagram` before continuing. Rendering runs locally
-without a browser, model, account, or network request.
+The `diagram sheets` commands ship in Slopcamera v3.3.5 and later releases and
+in [current source](use-current-source.md). Rendering runs locally without a
+browser, model, account, or network request.
 
 ## Create or open the drawing source
 
