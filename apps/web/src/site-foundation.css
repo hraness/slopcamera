@@ -12,6 +12,7 @@
 @import "../vendor/lantern-material/lantern-material.css";
 @import "./site-ua-compatibility.css" layer(base.slopcamera-ua);
 @import "../vendor/paper-theme/paper-theme.css" layer(components.slopcamera-legacy);
+@import "@hraness/design-kit/palette-bridge.css";
 @import "./styles.css" layer(components.slopcamera-legacy);
 @import "./site-foil.css" layer(components.slopcamera-legacy);
 @import "./example-player.css" layer(components.slopcamera-legacy);

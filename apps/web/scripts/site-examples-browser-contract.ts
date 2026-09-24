@@ -427,7 +427,7 @@ export function assertExamplesRatioGeometry(observed: readonly ExampleRatioGeome
     assert.ok(item.height > 0 && item.height <= Math.min(viewport.height * .72, 672) + .5)
   }
 }
-async function assertExampleGeometry(page: Page, width: number): Promise<void> {
+export async function assertExampleGeometry(page: Page, width: number): Promise<void> {
   const media = await page.locator(".slopcamera-example__media").evaluateAll(elements => elements.map(element => {
     const box = element.getBoundingClientRect(), style = getComputedStyle(element)
     return { x: box.x, width: box.width, height: box.height, fit: style.objectFit, controls: element instanceof HTMLVideoElement ? element.controls : null,
@@ -449,7 +449,7 @@ interface PageCaseOptions {
   readonly width: number; readonly height: number; readonly theme: "light" | "dark"; readonly forced?: "none" | "active"
   readonly javascript?: boolean; readonly reducedMotion?: boolean; readonly saveData?: boolean; readonly failMedia?: string
 }
-async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
+export async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
   action: (page: Page, received: Set<string>, requestCounts: Map<string, number>) => Promise<T>): Promise<T> {
   const context = await browser.newContext({ viewport: { width: options.width, height: options.height }, colorScheme: options.theme,
     forcedColors: options.forced ?? "none", javaScriptEnabled: options.javascript ?? true,
@@ -553,7 +553,7 @@ async function settleExamples(page: Page, javascript = true): Promise<void> {
   })
   await page.screenshot({ animations: "allow" })
 }
-async function assertNativeTarget(page: Page, selector: string, javascript = true): Promise<void> {
+export async function assertNativeTarget(page: Page, selector: string, javascript = true): Promise<void> {
   const target = page.locator(selector)
   assert.equal(await target.count(), 1)
   // Only native Tab moves focus. Evaluation observes focus and paint.

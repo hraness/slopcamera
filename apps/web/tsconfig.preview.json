@@ -92,6 +92,13 @@
     "scripts/site-examples-browser-contract.ts",
     "scripts/site-examples-browser-contract.test.ts",
     "scripts/site-examples-profile.ts",
-    "scripts/verify-site-examples.ts"
+    "scripts/verify-site-examples.ts",
+    "scripts/site-portfolio-profile.ts",
+    "scripts/site-portfolio-browser-contract.ts",
+    "scripts/site-portfolio-browser-contract.test.ts",
+    "scripts/verify-site-portfolio.ts",
+    "scripts/verify-site-portfolio.test.ts",
+    "scripts/site-portfolio-reference-codec.ts",
+    "scripts/site-portfolio-reference-codec.test.ts"
   ]
 }

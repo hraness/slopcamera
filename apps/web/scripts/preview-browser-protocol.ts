@@ -7,10 +7,11 @@ import { readPreviewFile } from "./preview-file"
 
 export const workerProtocolLimit = 32 * 1024
 export const examplesWorkerProtocolLimit = 128 * 1024
-export type WorkerProtocolProfile = "workflow-examples-v1"
+export const portfolioWorkerProtocolLimit = 128 * 1024
+export type WorkerProtocolProfile = "workflow-examples-v1" | "portfolio-surfaces-v1" | "portfolio-surfaces-v2"
 function profiledProtocolLimit(profile: WorkerProtocolProfile): number {
-  assert.equal(profile, "workflow-examples-v1", "Unknown worker protocol profile")
-  return examplesWorkerProtocolLimit
+  assert.ok(profile === "workflow-examples-v1" || profile === "portfolio-surfaces-v1" || profile === "portfolio-surfaces-v2", "Unknown worker protocol profile")
+  return profile === "workflow-examples-v1" ? examplesWorkerProtocolLimit : portfolioWorkerProtocolLimit
 }
 export const workerPhaseFiles = ["started.json", "connected.json", "result.json"] as const
 export const workerStartupMs = 10_000

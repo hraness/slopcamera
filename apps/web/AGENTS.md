@@ -1,5 +1,19 @@
 # Contents
 
+- The portfolio redesign has its own `portfolio-surfaces-v2` acceptance identity,
+  documented in `scripts/PORTFOLIO_DESIGN_ACCEPTANCE.md`. `verify:portfolio` retains the
+  complete 133-case workflow matrix, the 76-case ordinary deadline and original
+  lifecycle/CSP/focus controls while positively checking Catppuccin, contour
+  material, shared inert hero artwork and a separately reviewed exact render
+  reference. Historical profiles below retain their declared inputs and meaning.
+  The refreshed preset references each exact canonical texture three times;
+  publication still emits one file per identity-checked asset hash.
+  The earlier v1 profile remains byte-preserved in `scripts/site-portfolio-profile-v1.ts`;
+  v2 uses the independent a742b29 predecessor with the incoming spatial/gallery
+  content. Follow `scripts/PORTFOLIO_CURRENT_MAIN_REVIEW.md` for the additional
+  current-route qualification before delivery; none of its pending checks is
+  implied by the unchanged 133-case gate.
+
 - `src/` contains the static `slopcamera.com` homepage and documentation, inert `/preview` composition, visual system, appearance control, crawler files, favicons, social preview, and machine-readable page bodies.
 - `src/negotiate.ts`, `src/negotiate-request.ts`, and `middleware.ts` select HTML or markdown from `Accept` for document routes.
 - `scripts/build.ts` renders fingerprinted local assets into `dist/` from an explicit allowlist and bundles the pinned PostHog browser client only for a configured Production build.

@@ -5,8 +5,37 @@ import { previewNodeCandidates } from "./build-preview-browser-driver"
 import { assertOwnedPreviewEndpoint, createPreviewBrowserShutdown, previewBrowserCloseMs } from "./preview-browser-shutdown"
 import { expectedPreviewHeaders, previewCases, withPreviewCancellation, type PreviewSignalSource } from "./preview-browser-contract"
 import { assertNodeRuntime, assertWorkerInputsUnchanged, assertWorkerProtocolSnapshot, createWorkerInputReader, createWorkerObserver, decodeWorkerJson, encodeWorkerJson,
+  decodeProfiledWorkerJson, encodeProfiledWorkerJson, portfolioWorkerProtocolLimit, examplesWorkerProtocolLimit,
   parseWorkerPhase, parseWorkerRequest, workerCasesDeadline, workerPhaseFiles, workerProtocolLimit,
   type PreviewWorkerRequest, type PreviewWorkerResult, type WorkerInputSnapshot, type WorkerObservation } from "./preview-browser-protocol"
+
+test("portfolio protocol has a closed 128 KiB ceiling without expanding historical protocols", () => {
+  expect(portfolioWorkerProtocolLimit).toBe(128 * 1024)
+  expect(examplesWorkerProtocolLimit).toBe(128 * 1024)
+  expect(workerProtocolLimit).toBe(32 * 1024)
+  const available = portfolioWorkerProtocolLimit - Buffer.byteLength(JSON.stringify({ text: "" }) + "\n")
+  const value = { text: "é".repeat(Math.floor(available / 2)) + "a".repeat(available % 2) }
+  const bytes = encodeProfiledWorkerJson(value, "portfolio-surfaces-v1")
+  expect(bytes.byteLength).toBe(portfolioWorkerProtocolLimit)
+  expect(decodeProfiledWorkerJson(bytes, "portfolio-surfaces-v1")).toEqual(value)
+  expect(() => encodeWorkerJson(value)).toThrow("Excessive")
+  expect(() => decodeWorkerJson(bytes)).toThrow("Excessive")
+  expect(() => encodeProfiledWorkerJson({ text: value.text + "a" }, "portfolio-surfaces-v1")).toThrow("Excessive")
+  expect(() => decodeProfiledWorkerJson(Buffer.from(JSON.stringify({ text: value.text + "a" }) + "\n"), "portfolio-surfaces-v1")).toThrow("Excessive")
+  for (const invalid of [Buffer.from('{"a":1,"a":2}\n'), Buffer.from("{} \n"), Buffer.from([0xff]), Buffer.from("{}\n{}\n")])
+    expect(() => decodeProfiledWorkerJson(invalid, "portfolio-surfaces-v1")).toThrow()
+  const currentBytes = encodeProfiledWorkerJson(value, "portfolio-surfaces-v2")
+  expect(currentBytes).toEqual(bytes)
+  expect(decodeProfiledWorkerJson(currentBytes, "portfolio-surfaces-v2")).toEqual(value)
+  expect(() => encodeProfiledWorkerJson({ text: value.text + "a" }, "portfolio-surfaces-v2")).toThrow("Excessive")
+  expect(() => decodeProfiledWorkerJson(Buffer.from(JSON.stringify({ text: value.text + "a" }) + "\n"), "portfolio-surfaces-v2")).toThrow("Excessive")
+  for (const invalid of [Buffer.from('{"a":1,"a":2}\n'), Buffer.from("{} \n"), Buffer.from([0xff]), Buffer.from("{}\n{}\n")])
+    expect(() => decodeProfiledWorkerJson(invalid, "portfolio-surfaces-v2")).toThrow()
+  for (const profile of ["portfolio-surfaces-v3", "optional-support-v1", undefined]) {
+    expect(() => encodeProfiledWorkerJson({}, profile as never)).toThrow("Unknown worker protocol profile")
+    expect(() => decodeProfiledWorkerJson(Buffer.from("{}\n"), profile as never)).toThrow("Unknown worker protocol profile")
+  }
+})
 
 function request(): PreviewWorkerRequest {
   const stylesheets = ["/assets/foundation.css", "/assets/recipes.css"]
