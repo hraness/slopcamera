@@ -47,11 +47,10 @@ This release corrects wall-opening elevations, arched crowns, and Boolean surfac
 
 ## Discover the installed contract
 
-### Patent-style drawing sheets in current source
+### Patent-style drawing sheets
 
-Current source adds `diagram sheets init|check|render` for version-one
-`.drawing.json` documents. This capability is not part of the verified releases
-listed above. It retains one authored diagram per sheet and produces outlined
+Slopcamera v3.3.5 added `diagram sheets init|check|render` for version-one
+`.drawing.json` documents. It retains one authored diagram per sheet and produces outlined
 monochrome SVGs, a multipage PDF, and a receipt binding source and output hashes.
 It runs locally with bundled rendering dependencies and needs no browser,
 credentials, or network request. The CLI and root SDK expose this surface; it

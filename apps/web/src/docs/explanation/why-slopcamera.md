@@ -16,7 +16,7 @@ That gives the agent a verifiable trail instead of a log to trust. A failed or i
 
 There is no Slopcamera account, hosted project database, or browser generation service. Ordinary editing and rendering run on the machine in front of the agent, and the durable state is ordinary files under your control.
 
-Model-backed work is opt-in per invocation. Image, video, speech, and transcription generation use the caller's own Vercel AI Gateway access, read from the local process environment and never persisted as project data. Uploading named local media requires an explicit acknowledgement on that invocation, `--allow-cloud-upload` for image and video and `--allow-cloud-audio-upload` for transcription. Discovering a model, paying for a result, and rendering retained bytes are distinct operations with distinct receipts.
+Model-backed work is opt-in per invocation. Image, video, speech, and transcription generation use the caller's own Vercel AI Gateway access, read from the local process environment and never persisted as project data. Prompt-only images can instead run on the hosted API at `api.slopcamera.com`, paid with prepaid Hraness Credits. Uploading named local media requires an explicit acknowledgement on that invocation, `--allow-cloud-upload` for image and video and `--allow-cloud-audio-upload` for transcription. Discovering a model, paying for a result, and rendering retained bytes are distinct operations with distinct receipts.
 
 ## Fixed interfaces an agent can inspect
 

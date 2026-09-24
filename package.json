@@ -1,7 +1,7 @@
 {
   "name": "@hraness/slopcamera",
   "version": "3.4.0",
-  "description": "A local visual studio for coding agents: author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.",
+  "description": "A local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -65,7 +65,6 @@
     "video-generation",
     "video-editing",
     "image-generation",
-    "screen-recording",
     "motion-graphics",
     "captions",
     "speech-generation",

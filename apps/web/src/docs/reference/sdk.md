@@ -22,7 +22,7 @@ There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/
 
 ## The portable projection
 
-The v3.3.1 portable projection contains six operations: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. Portable spatial and studio schemas can parse, hash, and plan values without making their local executors available.
+The portable projection contains six operations: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. Portable spatial and studio schemas can parse, hash, and plan values without making their local executors available.
 
 Compilation binds one closed projection. A graph containing an unsupported operation fails before executor or resource admission. An operation input is typed data, never a caller-selected executable, shell command, dynamic loader, or registration hook.
 
@@ -142,4 +142,4 @@ The local scheduler binds exact artifacts, operation plans, and observed runtime
 
 Effect approval and native source authorization have different scopes. `runs approve` records an exact preparation or node plan, while native execution through `slopcamera.studio.run` additionally needs an invocation-scoped `--allow-trusted-code` envelope. [Running workflows](/docs/how-to/run-workflows) covers the plan, approval, and resume commands.
 
-The v3.3.1 MCP server exposes 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools. These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection contains six operation codes. Paths are root-relative and configuration is inert. Diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Generated `.tldr` output is editable interchange; diagram JSON remains the authored source. See [the MCP setup page](/docs/tutorials/mcp) for the released tool tables and setup.
+The MCP server exposes 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools. These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection contains six operation codes. Paths are root-relative and configuration is inert. Diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Generated `.tldr` output is editable interchange; diagram JSON remains the authored source. See [the MCP setup page](/docs/tutorials/mcp) for the released tool tables and setup.

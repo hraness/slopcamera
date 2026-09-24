@@ -5,11 +5,9 @@ PDF. This guide applies to block diagrams and flowcharts whose content you have
 already chosen. Slopcamera checks its drawing profile; the result still needs
 technical and filing review.
 
-The `diagram sheets` commands require [current source](use-current-source.md).
-They are not included in the verified releases listed in the
-[capability reference](../reference/capabilities.md). Build that source and bind
-the `slopcamera` command to the checkout before continuing. Rendering then runs
-locally without a browser, model, account, or network request.
+The `diagram sheets` commands ship in Slopcamera v3.3.5 and later releases and
+in [current source](use-current-source.md). Rendering runs locally without a
+browser, model, account, or network request.
 
 ## Create or open the drawing source
 

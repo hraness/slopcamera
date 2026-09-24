@@ -14,7 +14,7 @@ Make lessons that combine authored motion, readable mathematics, a presenter, an
 
 ## Generated images, clips, and voice
 
-Generate images, video takes, speech, and transcripts through your own [Vercel AI Gateway access](/docs/reference/gateway-generation). Galleries fan a subject into labelled candidates for explicit selection, the icon recipe produces canonical line-art SVGs, and [Direct short generated clips](/docs/how-to/direct-takes) adds budgets, reviewed takes, and endpoint continuity for multi-shot work.
+Generate images, video takes, speech, and transcripts through your own [Vercel AI Gateway access](/docs/reference/gateway-generation), or prompt-only images through [prepaid Hraness Credits](/docs/how-to/generate-media). Galleries fan a subject into labelled candidates for explicit selection, the icon recipe produces canonical line-art SVGs, and [Direct short generated clips](/docs/how-to/direct-takes) adds budgets, reviewed takes, and endpoint continuity for multi-shot work.
 
 ## Spatial scenes and product reveals
 

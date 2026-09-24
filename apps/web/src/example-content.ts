@@ -42,7 +42,7 @@ function markdownText(value: string): string {
 export function exampleMarkdown(example: WorkflowExample, includeDownloads = true): string {
   return [
     `![${markdownText(example.poster.alt)}](${exampleUrl(example.poster)})`,
-    `**${markdownText(example.title)}** — ${markdownText(example.description)}`,
+    `**${markdownText(example.title)}${/[.!?]$/u.test(example.title) ? "" : "."}** ${markdownText(example.description)}`,
     ...(example.video ? [`[Watch the ${Number(example.video.durationSeconds.toFixed(1))}-second ${example.video.hasAudio ? "video" : "silent video"}](${exampleUrl(example.video)}).`] : []),
     `[Follow the guide](${exampleGuideUrl(example)}) · [View source](${exampleSourceUrl(example)}).`,
     ...(includeDownloads ? [`Requires: ${markdownText(example.requirements)}`] : []),

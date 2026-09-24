@@ -1,6 +1,6 @@
-Slopcamera is a local visual studio for coding agents. It retains editable sources, renders local or generated media, and assembles everything into inspectable projects on your machine. These pages describe the current CLI, SDK, Agent Skill, and optional unbundled macOS menu-bar companion.
+Slopcamera is a local visual studio for coding agents. It keeps editable source files, renders local or generated media from them, and assembles the results into projects on your machine. These pages cover the CLI, SDK, Agent Skill, and the optional macOS menu-bar companion, which installs separately.
 
-Install the verified v{{PUBLISHED_VERSION}} release, or build from source for the complete capability set:
+Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop Slopcamera:
 
 ```sh
 {{ARCHIVE_INSTALL_COMMAND}}
@@ -33,7 +33,7 @@ Then give your coding agent the matching guidance:
 - [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.
 - [Convert raster images to SVG](/docs/how-to/vectorize-images): trace artwork locally, compare a duotone treatment, and inspect fidelity.
-- [Generate images, video, and narration](/docs/how-to/generate-media): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
+- [Generate images, video, and narration](/docs/how-to/generate-media): use your own Vercel AI Gateway account, or prepaid Hraness Credits for prompt-only images.
 - [Make an educational video](/docs/how-to/educational-video): keep mathematical visuals, narration, and timing evidence revisable.
 - [Make a music video](/docs/how-to/music-video): render authored HTML visuals with a local track.
 - [Render and edit spatial scenes](/docs/how-to/direct-scenes): patch named entities, use hardware rendering, or import a saved world.
@@ -43,7 +43,7 @@ Then give your coding agent the matching guidance:
 - [Direct short generated clips](/docs/how-to/direct-takes): budget, review takes, and preserve endpoint continuity.
 - [Run or recover a workflow](/docs/how-to/run-workflows): use a built-in recipe or trusted Bun module and inspect its durable run.
 
-## Look up a contract
+## Look things up
 
 - [Capabilities, versions, and platforms](/docs/reference/capabilities): release availability, supported profiles, and runtime requirements.
 - [SDK surfaces](/docs/reference/sdk): portable and local imports, operation projections, and execution contracts.
@@ -51,17 +51,17 @@ Then give your coding agent the matching guidance:
 - [The .diagram.json format](/docs/reference/diagram-format): the version-one diagram source, its five exports, and .tldr interchange.
 - [HTML render profiles](/docs/reference/html-profiles): the seven locked browser profiles, from Motion and p5.js to Three.js and vgpu.
 - [Spatial scenes, cameras, and saved worlds](/docs/reference/spatial-scenes): the .scene.json contract, hardware profiles, and bounded splats.
-- [Local raster-to-SVG vectorization](/docs/reference/vectorization): the checksum-pinned VTracer profile, fidelity gates, and provenance.
+- [Local raster-to-SVG vectorization](/docs/reference/vectorization): how a pinned VTracer build traces a raster into SVG and checks fidelity.
 - [Vercel AI Gateway media generation](/docs/reference/gateway-generation): credentials, live model discovery, upload acknowledgements, and receipts.
 - [Video editing, compositing, and delivery](/docs/reference/video-pipeline): the FFmpeg-backed project model, typed edits, and delivery variants.
-- [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the studio adapter's trust envelope and job lifecycle.
+- [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the source Slopcamera keeps, the runtime you choose, and the job lifecycle.
 - [The Slopcamera MCP toolset](/docs/reference/mcp-tools): the 17 fixed tools, their bounds, and what stays CLI-only.
 
 ## Understand the design
 
 - [Slopcamera use cases](/docs/explanation/use-cases): the jobs the studio covers, the surface each uses, and where it is not the right tool.
 - [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
-- [Source, representations, and projects](/docs/explanation/architecture): what stays editable, what a receipt proves, and how local and cloud work fit together.
+- [How Slopcamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
 - [Why Slopcamera](/docs/explanation/why-slopcamera): what a retained-source local studio gives an agent that a loose toolchain does not.
 - [Extend Slopcamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
 - [Choose an HTML authoring surface](/docs/explanation/html-authoring): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs.
