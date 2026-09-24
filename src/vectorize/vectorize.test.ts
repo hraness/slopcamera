@@ -200,6 +200,11 @@ test("the public conversion boundary enforces one wall-clock budget", async () =
     await expect(
       vectorizeImage(input, { limits: { maxDurationMs: durationMs } }),
     ).rejects.toMatchObject({ code: "timeout" })
+    // The rejection must land inside the caller's budget even though two
+    // termination layers (worker → VTracer, supervisor → worker) run first.
+    // The supervisor reserves that teardown explicitly (see
+    // WORKER_SHUTDOWN_RESERVE_MS in supervisor.ts); a failure here means the
+    // reserve no longer covers the measured teardown chain, not a slow runner.
     expect(performance.now() - started).toBeLessThan(durationMs)
     pids.push(
       Number.parseInt(await readFile(tracerPidPath, "utf8"), 10),

@@ -2,7 +2,10 @@ import { fileURLToPath } from "node:url"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
-import { runBoundedCommand } from "./command.js"
+import {
+  TERMINATION_GRACE_MS,
+  runBoundedCommand,
+} from "./command.js"
 import { resolveVectorizeLimits } from "./limits.js"
 import {
   MAX_VECTORIZE_REQUEST_BYTES,
@@ -33,8 +36,25 @@ const vectorizeErrorCodes = new Set<VectorizeErrorCode>([
   "trace_failed",
   "unsafe_svg",
 ])
-const WORKER_SHUTDOWN_RESERVE_MS = 250
-const WORKER_RESPONSE_RESERVE_MS = 100
+/**
+ * Wall-clock the supervisor keeps back from the worker's budget so the whole
+ * boundary (worker timeout, layered process-group termination, stream
+ * settling, temporary-root removal, response decoding) still rejects inside
+ * `limits.maxDurationMs`.
+ *
+ * When the worker overruns, two termination layers run back to back: the
+ * worker terminates its own VTracer group, and this supervisor terminates the
+ * worker group. Each layer waits `TERMINATION_GRACE_MS` before SIGKILL and then
+ * needs the scheduler to reap the process and settle its pipes. A loaded CI
+ * runner has been measured spending ~400 ms in that chain against the earlier
+ * 350 ms reserve (hraness/slopcamera#235), so the reserve now budgets each
+ * layer explicitly instead of guessing one round number.
+ */
+const PROCESS_TEARDOWN_ALLOWANCE_MS = 250
+const TERMINATION_LAYERS = 2
+const WORKER_SHUTDOWN_RESERVE_MS =
+  TERMINATION_LAYERS * (TERMINATION_GRACE_MS + PROCESS_TEARDOWN_ALLOWANCE_MS)
+const WORKER_RESPONSE_RESERVE_MS = 150
 
 export async function runVectorizeWorker(
   input: VectorizeInput,
