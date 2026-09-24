@@ -2,7 +2,22 @@ import { expect, test } from "bun:test"
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { observeCompilation } from "./compilation-observer.testing"
+import { observeCompilation, themeDiagnosticConfig } from "./compilation-observer.testing"
+
+test("fresh-process diagnostics admit only the unchanged finite theme build", () => {
+  const root = "/owned/slopcamera"
+  const config: Bun.BuildConfig = { define: {
+    __SLOPCAMERA_DARK_THEME_COLOR__: '"#1e1e2e"', __SLOPCAMERA_LIGHT_THEME_COLOR__: '"#eff1f5"',
+  }, entrypoints: [join(root, "apps/web/src/theme.ts")], env: "disable", format: "iife", minify: true, sourcemap: "none", target: "browser" }
+  const before = JSON.stringify(config)
+  expect(themeDiagnosticConfig(config, root)).toBe(before)
+  expect(JSON.stringify(config)).toBe(before)
+  expect(themeDiagnosticConfig({ ...config, plugins: [] }, root)).toBeNull()
+  expect(themeDiagnosticConfig({ ...config, env: "inline" }, root)).toBeNull()
+  expect(themeDiagnosticConfig({ ...config, entrypoints: ["/outside/theme.ts"] }, root)).toBeNull()
+  expect(themeDiagnosticConfig({ ...config, define: { ...config.define, SECRET: '"outside"' } }, root)).toBeNull()
+  expect(themeDiagnosticConfig({ ...config, define: { ...config.define, __SLOPCAMERA_DARK_THEME_COLOR__: "process.env.SECRET" } }, root)).toBeNull()
+})
 
 test("compiler observation preserves callback results, constraints, build options and restoration", async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-observer-")))
