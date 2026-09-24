@@ -335,6 +335,14 @@ source identity alone does not promise identical pixels on another machine.
 See [Architecture](docs/architecture.md), [`SECURITY.md`](SECURITY.md),
 [`PRIVACY.md`](PRIVACY.md), and [`NOTICE.md`](NOTICE.md) for the detailed boundaries.
 
+Your agent renders images, diagrams, scenes, animation, and video from source
+files you keep, and important operations record their inputs and outputs in
+receipts, so a rendered result arrives with the record of how it was made: the
+design every Hraness project shares. [The thread through
+hraness](https://hraness.com/writing/the-thread-through-hraness) follows that
+design across the projects, and the [ALGAL
+vision](https://algal.computer/docs/vision/) states the bet behind it.
+
 ## Documentation
 
 - **Learn:** [Your first diagram](docs/tutorials/first-diagram.md) · [Your first native film](docs/tutorials/first-native-film.md).
