@@ -5,7 +5,7 @@ export function installReleaseCopyFocusGuard() {
   const selectors = ['.topbar a', '[data-hraness-appearance-menu] button', '.hraness-site-footer__brand',
     '.hraness-site-footer__social-link', '.slopcamera-ask-ai a', '.route-state a']
   type Stop = { node: Element; key: string | null; controlledVideo: boolean }
-  let phase: "idle" | "prepared" | "dispatched" | "settling" | "closed" = "idle"
+  let phase: "idle" | "prepared" | "dispatched" | "video-exit" | "video-released" | "settling" | "closed" = "idle"
   let preparedControlledVideo = false
   let failure: string | undefined
   const gains: Stop[] = []
@@ -42,11 +42,29 @@ export function installReleaseCopyFocusGuard() {
   const capture = (operation: () => void) => {
     try { operation() } catch (error) { failure ??= `Release-copy focus guard: ${String(error).slice(0, 256)}` }
   }
+  const videoExit = () => {
+    healthy()
+    const source = snapshot(checkpoint.node), active = snapshot(document.activeElement)
+    if (checkpoint.key !== null || !checkpoint.controlledVideo || !preparedControlledVideo || !source.controlledVideo || !same(source, checkpoint))
+      fail("video exit source changed")
+    if (gains.length !== 1 || !(gains[0]!.node instanceof HTMLAnchorElement) || !same(gains[0]!, active))
+      fail("video exit anchor changed")
+    return active
+  }
   // Capture event.target before any nested redirect can replace activeElement.
   const focusin = (event: FocusEvent) => capture(() => {
     const gain = snapshot(event.target)
     if (gains.length >= 8) fail("focus gain queue overflow")
     gains.push(gain)
+    if (phase === "prepared" && checkpoint.key === null && checkpoint.controlledVideo && preparedControlledVideo) {
+      // A native video may consume keydown while its authored anchor exit
+      // still exposes focusin and keyup. The gain alone never admits an exit.
+      if (!event.isTrusted || !event.composed || event.relatedTarget !== checkpoint.node)
+        fail("unproved video exit gain")
+      videoExit()
+      phase = "video-exit"
+      return
+    }
     if (phase !== "dispatched") fail("focus gain outside native Tab dispatch")
   })
   // A prepare/read round trip leaves a real asynchronous gap before keydown.
@@ -58,13 +76,26 @@ export function installReleaseCopyFocusGuard() {
     quiet()
     phase = "dispatched"
   })
+  const keyup = (event: KeyboardEvent) => capture(() => {
+    if (phase === "dispatched") return // The ordinary path retains its keydown proof.
+    if (phase !== "video-exit" || !event.isTrusted || !event.composed || event.key !== "Tab" ||
+      event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.repeat || event.isComposing)
+      fail("unproved video exit keyup")
+    const active = videoExit()
+    if (!same(snapshot(event.target), active)) fail("video exit keyup owner changed")
+    phase = "video-released"
+  })
   const dispose = () => {
     window.removeEventListener("focusin", focusin, true)
     window.removeEventListener("keydown", keydown, true)
+    window.removeEventListener("keyup", keyup, true)
     phase = "closed"
   }
   window.addEventListener("focusin", focusin, { capture: true, passive: true })
-  try { window.addEventListener("keydown", keydown, { capture: true, passive: true }) } catch (error) { dispose(); throw error }
+  try {
+    window.addEventListener("keydown", keydown, { capture: true, passive: true })
+    window.addEventListener("keyup", keyup, { capture: true, passive: true })
+  } catch (error) { dispose(); throw error }
   return {
     prepare() {
       const active = quiet()
@@ -74,10 +105,18 @@ export function installReleaseCopyFocusGuard() {
     },
     read() {
       healthy()
+      if (phase === "video-released") {
+        const active = videoExit()
+        checkpoint = active
+        gains.length = 0
+        phase = active.key === null ? "idle" : "settling"
+        return active.key
+      }
+      if (phase === "video-exit") fail("video exit keyup missing")
       if (phase === "prepared") {
         // Chromium can consume Tab inside native video controls without a
         // document keydown. The host still awaited that real native Tab. Admit
-        // only the unchanged unnamed controlled video, never an unseen exit.
+        // only the unchanged unnamed controlled video, never an unproved exit.
         const active = quiet()
         if (checkpoint.key !== null || !checkpoint.controlledVideo || !preparedControlledVideo || !active.controlledVideo)
           fail("native Tab dispatch missing")
