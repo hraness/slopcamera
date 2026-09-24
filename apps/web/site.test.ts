@@ -1,6 +1,7 @@
 import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
+import { compileWebsiteInChild, decodeCompilerResult, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
@@ -87,7 +88,14 @@ function ownedCompilation<T>(
     return body({
       build: async options => {
         controller.signal.throwIfAborted()
-        const result = await observeCompilation(repositoryDirectory, () => compile(options))
+        // Real builds run in the production CLI's fresh-process lifetime. The
+        // injected controlled compilers below remain in-process ownership tests.
+        if (compile === buildWebsite && options?.outputDirectory !== undefined && !directories.has(options.outputDirectory)) {
+          throw new Error("Compiler output directory is not owned by this fixture")
+        }
+        const result = compile === buildWebsite
+          ? await compileWebsiteInChild(options ?? {}, controller.signal)
+          : await observeCompilation(repositoryDirectory, () => compile(options))
         controller.signal.throwIfAborted()
         return result
       },
@@ -380,6 +388,21 @@ test("published release validates exact fields and safe stable versions before r
     "https://github.com.evil.test/hraness/slopcamera/releases/tag/v3.2.0",
     "https://github.com/another/slopcamera/releases/tag/v3.2.0", 42, null,
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
+})
+
+test("compiler fixture transport preserves finite options and rejects unowned configuration", async () => {
+  const options = { environment: { VERCEL_ENV: "production", NEXT_PUBLIC_POSTHOG_KEY: "phc_test-token_value", NEXT_PUBLIC_POSTHOG_HOST: "https://us.i.posthog.com" } }
+  expect(encodeCompilerOptions(options)).toBe(JSON.stringify(options))
+  expect(encodeCompilerOptions({ environment: {} })).toBe('{"environment":{}}')
+  expect(() => encodeCompilerOptions({ environment: { PRIVATE_TOKEN: "value" } })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: "/outside/output" })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: {}, outputDirectory: join(tmpdir(), "slopcamera-web-own", "..", "outside") })).toThrow()
+  expect(() => encodeCompilerOptions({ environment: { VERCEL_ENV: "x".repeat(1025) } })).toThrow()
+  const controller = new AbortController()
+  controller.abort(new Error("test admission ended"))
+  await expect(compileWebsiteInChild({ environment: {} }, controller.signal)).rejects.toThrow("test admission ended")
+  expect(() => decodeCompilerResult({})).toThrow()
+  expect(() => decodeCompilerResult({ analyticsPath: null, arbitrary: true })).toThrow()
 })
 
 describe("compilation fixture ownership (controlled promises, no compiler)", () => {
