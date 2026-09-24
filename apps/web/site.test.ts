@@ -398,9 +398,12 @@ test("compiler fixture result pipe isolates ordinary and ANSI logs", async () =>
     stdio: ["ignore", "pipe", "pipe", "pipe"], timeout: 5000,
   })
   let stdout = Buffer.alloc(0), frame = Buffer.alloc(0)
-  child.stdout.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
-  const resultPipe = child.stdio[3]
+  // stdin is ignored, so the typed child exposes nullable streams; both piped
+  // readers are asserted rather than guarded so a missing pipe fails the test.
+  const stdoutPipe = child.stdout, resultPipe = child.stdio[3]
+  assert(stdoutPipe instanceof Readable)
   assert(resultPipe instanceof Readable)
+  stdoutPipe.on("data", (bytes: Buffer) => { stdout = Buffer.concat([stdout, bytes]); if (stdout.length > 4096) child.kill() })
   resultPipe.on("data", (bytes: Buffer) => { frame = Buffer.concat([frame, bytes]); if (frame.length > 4096) child.kill() })
   await new Promise<void>((resolve, reject) => { child.on("error", reject); child.on("close", () => resolve()) })
   expect(child.exitCode).toBe(0)
