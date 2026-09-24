@@ -12,19 +12,26 @@ import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type C
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { observeRefinementHero, compareRefinementHeroCopies, type RefinementHero } from "./site-refinement-browser-contract"
 import { observeExamplesActions, projectExamplesHeroActions, type ExamplesActions } from "./site-examples-cta"
+import { observeExamplesInstall, compareExamplesInstall, parseExamplesInstallPair, admitExamplesInstallDom, type ExamplesInstall } from "./site-examples-install"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
-  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures } from "./site-examples-profile"
+  examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures, examplesBaselineInstallCommand } from "./site-examples-profile"
+import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, releaseCopyBaselineCommand, releaseCopyEditVideoIds, type SiteAcceptanceScope } from "./site-release-copy-profile"
+import { assertReleaseCopyMediaCancellations, createReleaseCopyMediaLedger, type ReleaseCopyMediaBinding, type ReleaseCopyMediaLedger,
+  type ReleaseCopyPlaybackProof } from "./site-release-copy-media"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
   readonly id: string; readonly path: string; readonly sha256: string; readonly poster: string; readonly guide: string
   readonly width: number; readonly height: number; readonly durationSeconds: number; readonly hasAudio: boolean; readonly captions?: string
+  readonly bytes?: number
 }
-export interface ExamplesRequest {
-  readonly schemaVersion: 1; readonly token: string; readonly scope: typeof examplesScope; readonly baselineProfile: typeof examplesBaselineProfile
+interface ExamplesRequestCommon {
+  readonly schemaVersion: 1; readonly token: string
   readonly appDirectory: string; readonly chromeExecutable: string; readonly endpoint: string
   readonly current: ShellPayload; readonly baseline: ShellPayload; readonly media: readonly ExampleVideoInput[]
 }
+export type ExamplesRequest = ExamplesRequestCommon & ({ readonly scope: typeof examplesScope; readonly baselineProfile: typeof examplesBaselineProfile } |
+  { readonly scope: typeof releaseCopyScope; readonly baselineProfile: typeof releaseCopyBaselineProfile; readonly baselineRevision: typeof releaseCopyBaselineRevision; readonly baselineTree: typeof releaseCopyBaselineTree })
 const keys = (value: Record<string, unknown>, expected: readonly string[]) => assert.deepEqual(Object.keys(value).sort(), [...expected].sort())
 const docsRoutes = ["/docs", "/docs/tutorials/first-diagram", "/docs/tutorials/first-animation", "/docs/how-to/render-motion-graphics", "/docs/how-to/vectorize-images", "/docs/reference/capabilities", "/docs/how-to/parametric-design", "/docs/how-to/edit-video"] as const
 export const examplesDocsCases = Object.freeze(docsRoutes.flatMap(route => [390, 1440].flatMap(width => (["light", "dark"] as const).map(theme => ({
@@ -50,10 +57,12 @@ function payload(value: unknown): void {
   for (const path of item.stylesheets) { shellResource(path); assert.ok(path.endsWith(".css") && item.resources.includes(path)) }
   assert.equal(item.finalCss, item.stylesheets[1]); assert.match(String(item.finalCss), /^\/assets\/site-[a-f0-9]{64}\.css$/u)
 }
-export function parseExamplesRequest(value: unknown): ExamplesRequest {
+export function parseExamplesRequest(value: unknown, scope: SiteAcceptanceScope = examplesScope): ExamplesRequest {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
   const item = shellRecord(value)
-  keys(item, ["schemaVersion", "token", "scope", "baselineProfile", "appDirectory", "chromeExecutable", "endpoint", "current", "baseline", "media"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.scope, examplesScope); assert.equal(item.baselineProfile, examplesBaselineProfile)
+  keys(item, ["schemaVersion", "token", "scope", "baselineProfile", "appDirectory", "chromeExecutable", "endpoint", "current", "baseline", "media", ...(scope === releaseCopyScope ? ["baselineRevision", "baselineTree"] : [])])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.scope, scope); assert.equal(item.baselineProfile, scope === releaseCopyScope ? releaseCopyBaselineProfile : examplesBaselineProfile)
+  if (scope === releaseCopyScope) { assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
   assert.ok(typeof item.token === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u.test(item.token))
   for (const key of ["appDirectory", "chromeExecutable"]) assert.ok(typeof item[key] === "string" && item[key].length <= 4096 && isAbsolute(item[key]))
   assert.ok(typeof item.endpoint === "string" && /^ws:\/\/127\.0\.0\.1:\d{1,5}\/devtools\/browser\/[a-f0-9-]+$/u.test(item.endpoint))
@@ -61,16 +70,21 @@ export function parseExamplesRequest(value: unknown): ExamplesRequest {
   payload(item.current); payload(item.baseline)
   const current = item.current as ShellPayload, baseline = item.baseline as ShellPayload
   assert.notEqual(current.origin, baseline.origin)
-  for (const route of docsRoutes) assert.ok(current.resources.includes(route), `Missing mandatory docs page ${route}`)
+  for (const route of docsRoutes) {
+    assert.ok(current.resources.includes(route), `Missing mandatory docs page ${route}`)
+    if (scope === releaseCopyScope) assert.ok(baseline.resources.includes(route), `Missing release baseline docs page ${route}`)
+  }
   assert.ok(Array.isArray(item.media) && item.media.length >= 2 && item.media.length <= 64)
   const ids = new Set<string>()
   for (const value of item.media) {
     const video = shellRecord(value)
-    keys(video, ["id", "path", "sha256", "poster", "guide", "width", "height", "durationSeconds", "hasAudio", ...(Object.hasOwn(video, "captions") ? ["captions"] : [])])
+    keys(video, ["id", "path", "sha256", "poster", "guide", "width", "height", "durationSeconds", "hasAudio", ...(Object.hasOwn(video, "captions") ? ["captions"] : []), ...(scope === releaseCopyScope ? ["bytes"] : [])])
+    if (scope === releaseCopyScope) assert.ok(Number.isSafeInteger(video.bytes) && Number(video.bytes) > 0 && Number(video.bytes) <= 64 * 1024 * 1024)
     assert.ok(typeof video.id === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(video.id) && !ids.has(video.id)); ids.add(video.id)
     assert.ok(typeof video.sha256 === "string" && /^[a-f0-9]{64}$/u.test(video.sha256))
     for (const field of ["path", "poster", "guide", ...(video.captions ? ["captions"] : [])]) {
       shellResource(video[field]); assert.ok(current.resources.includes(video[field] as string))
+      if (scope === releaseCopyScope) assert.ok(baseline.resources.includes(video[field] as string), "Release baseline must bind the same media/guide closure")
     }
     assert.match(String(video.path), /^\/assets\/examples\/[a-z0-9-]+\.mp4$/u)
     assert.match(String(video.poster), /^\/assets\/examples\/[a-z0-9-]+\.(?:webp|png)$/u)
@@ -87,10 +101,12 @@ export function parseExamplesRequest(value: unknown): ExamplesRequest {
   return item as unknown as ExamplesRequest
 }
 export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request: ExamplesRequest): Record<string, unknown> {
-  const item = shellRecord(value), common = ["schemaVersion", "token", "scope", "baselineProfile", "sequence", "kind"]
+  parseExamplesRequest(request, request.scope)
+  const item = shellRecord(value), common = ["schemaVersion", "token", "scope", "baselineProfile", "sequence", "kind", ...(request.scope === releaseCopyScope ? ["baselineRevision", "baselineTree"] : [])]
   keys(item, sequence === 1 ? common : sequence === 0 ? [...common, "node", "playwright"] : [...common, "node", "playwright", "browser", "cases", "closed", "negativeControls", "observations"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, examplesScope)
-  assert.equal(item.baselineProfile, examplesBaselineProfile); assert.equal(item.sequence, sequence); assert.equal(item.kind, ["started", "connected", "result"][sequence])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, request.scope)
+  if (request.scope === releaseCopyScope) { assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
+  assert.equal(item.baselineProfile, request.baselineProfile); assert.equal(item.sequence, sequence); assert.equal(item.kind, ["started", "connected", "result"][sequence])
   if (sequence !== 1) { assertShellNode({ node: String(item.node) }); assert.equal(item.playwright, "1.62.0") }
   if (sequence === 2) {
     assert.match(String(item.browser), /^\d+\.\d+\.\d+\.\d+$/u); assert.equal(item.closed, true)
@@ -100,13 +116,20 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
       const observation = shellRecord(value), name = examplesCaseNames[index]!
       assert.equal(observation.name, name); assert.equal(observation.passed, true)
       if (index < siteShellCases.length) {
-        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions"])
+        keys(observation, ["name", "passed", "currentObstructions", "baselineObstructions", "install"])
+        if (siteShellCases[index]!.route === "/") {
+          const install = shellRecord(observation.install); keys(install, ["current", "baseline"])
+          parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
+        } else assert.equal(observation.install, null)
         assert.deepEqual(observation.currentObstructions, []); assert.deepEqual(observation.baselineObstructions, [])
       } else if (index < siteShellCases.length + siteCopyCases.length) {
-        keys(observation, ["name", "passed", "command", "current", "baseline"])
+        keys(observation, ["name", "passed", "command", "current", "baseline", "install"])
+        const install = shellRecord(observation.install); keys(install, ["current", "baseline", "states"])
+        parseExamplesInstallPair({ current: install.current, baseline: install.baseline }, request.scope)
+        assert.deepEqual(install.states, copySteps)
         assert.equal(observation.command, refinementInstallCommand)
         assertCopyPorts(observation.current as CopyEvidence["ports"], refinementInstallCommand)
-        assertCopyPorts(observation.baseline as CopyEvidence["ports"], refinementInstallCommand)
+        assertCopyPorts(observation.baseline as CopyEvidence["ports"], request.scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand)
       } else if (!name.startsWith("player-")) {
         keys(observation, ["name", "passed", "figures", "videos", "shellPaired", "navigation"]); assert.equal(observation.shellPaired, true)
         const scenario = [...examplesDocsCases, ...examplesDocsExtraCases].find(candidate => candidate.name === name)!
@@ -121,34 +144,55 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
         if (name.includes("first-diagram")) assert.ok(Number(observation.figures) >= 2)
         if (name.includes("first-animation")) assert.equal(observation.videos, 2)
         if (name.includes("parametric-design")) { assert.equal(observation.figures, 5); assert.equal(observation.videos, 0) }
-        if (name.includes("/edit-video-")) { assert.equal(observation.figures, 7); assert.equal(observation.videos, 7) }
+        if (name.includes("/edit-video-")) {
+          const expected = examplesEditVideoIds(request.scope).length
+          assert.equal(observation.figures, expected); assert.equal(observation.videos, expected)
+        }
       } else parsePlayerObservation(observation, request, name)
 
     }
   }
   return item
 }
+function releaseMediaBindings(request: ExamplesRequest): ReleaseCopyMediaBinding[] {
+  assert.equal(request.scope, releaseCopyScope)
+  return request.media.map(media => {
+    assert.ok(Number.isSafeInteger(media.bytes) && Number(media.bytes) > 0)
+    return { id: media.id, path: media.path, sha256: media.sha256, bytes: media.bytes! }
+  })
+}
 function parsePlayerObservation(item: Record<string, unknown>, request: ExamplesRequest, name: string): void {
+  const release = request.scope === releaseCopyScope, cancellationKeys = release ? ["mediaCancellations"] : []
   const captioned = request.media.some(video => video.captions)
   const quietInitial = ["player-no-js", "player-docs-manual", "player-reduced-motion", "player-save-data", "player-failed-media", "player-captions"].includes(name)
   if (name === "player-captions" && !captioned) {
-    keys(item, ["name", "passed", "captions", "media", "initialMediaRequests"]); assert.equal(item.initialMediaRequests, 0); assert.equal(item.captions, "not-present"); assert.deepEqual(item.media, []); return
+    keys(item, ["name", "passed", "captions", "media", "initialMediaRequests", ...cancellationKeys]); assert.equal(item.initialMediaRequests, 0); assert.equal(item.captions, "not-present"); assert.deepEqual(item.media, [])
+    if (release) assertReleaseCopyMediaCancellations(item.mediaCancellations, releaseMediaBindings(request), request.current.origin, [])
+    return
   }
   const additional = name === "player-save-data" ? ["policyInput"] : name === "player-offscreen-hidden" || name === "player-manual-pause" ? ["hiddenObserved"] : name === "player-captions" ? ["captionCues"] : name === "player-failed-media" ? ["failedRequests", "sourceError"] : []
-  keys(item, ["name", "passed", "media", ...additional, ...(quietInitial ? ["initialMediaRequests"] : [])])
+  keys(item, ["name", "passed", "media", ...additional, ...(quietInitial ? ["initialMediaRequests"] : []), ...cancellationKeys])
   if (quietInitial) assert.equal(item.initialMediaRequests, 0)
   assert.ok(Array.isArray(item.media) && item.media.length > 0 && item.media.length <= 32)
-  const seen = new Set<string>(); let playing = 0, advanced = 0
+  const seen = new Set<string>(), proofs: ReleaseCopyPlaybackProof[] = []; let playing = 0, advanced = 0
   for (const value of item.media) {
     const sample = shellRecord(value)
-    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "error", "source"])
+    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "loop", "error", "source", ...(release ? ["currentSrc", "ownedConnected"] : [])])
     assert.equal(typeof sample.id, "string"); const expected = request.media.find(media => media.id === sample.id); assert.ok(expected && !seen.has(expected.id)); seen.add(expected.id)
     assert.equal(sample.controls, true); assert.equal(typeof sample.paused, "boolean"); assert.equal(typeof sample.muted, "boolean")
+    // Automatic previews loop; manually controlled and quiet samples do not.
+    assert.equal(sample.loop, (name === "player-visible-auto" || name === "player-offscreen-hidden") && !sample.paused)
     assert.ok(typeof sample.time === "number" && sample.time >= 0 && sample.time <= expected.durationSeconds + .1)
     assert.ok(Number.isSafeInteger(sample.readyState) && Number(sample.readyState) >= 0 && Number(sample.readyState) <= 4)
     assert.equal(sample.source, `${request.current.origin}${expected.path}`)
     if (name !== "player-failed-media") assert.equal(sample.error, null)
     else assert.ok(sample.error === null || [1, 2, 3, 4].includes(Number(sample.error)))
+    if (release) {
+      assert.equal(typeof sample.currentSrc, "string"); assert.ok(String(sample.currentSrc).length <= 1024); assert.equal(sample.ownedConnected, true)
+      assert.ok(sample.currentSrc === "" || sample.currentSrc === sample.source)
+      proofs.push({ id: expected.id, currentSrc: sample.currentSrc as string, ownedConnected: true,
+        time: sample.time, readyState: Number(sample.readyState), error: sample.error as number | null })
+    }
     if (!sample.paused) playing++
     if (sample.time > .04) advanced++
   }
@@ -166,11 +210,17 @@ function parsePlayerObservation(item: Record<string, unknown>, request: Examples
     assert.equal(failure.count, 1); assert.equal(failure.owned, true)
     assert.ok(item.media.some(value => shellRecord(value).id === expected.id))
   }
+  if (release) {
+    if (name === "player-failed-media") assert.deepEqual(item.mediaCancellations, [], "Intentional media failure cannot claim cancellation settlement")
+    assertReleaseCopyMediaCancellations(item.mediaCancellations, releaseMediaBindings(request), request.current.origin, proofs)
+  }
 }
 export function parseExamplesCaseFailure(value: unknown, request: ExamplesRequest): Record<string, unknown> {
+  parseExamplesRequest(request, request.scope)
   const item = shellRecord(value)
-  keys(item, ["schemaVersion", "token", "scope", "accepted", "completed", "scenario", "stage", "comparedCases", "error"])
-  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, examplesScope)
+  keys(item, ["schemaVersion", "token", "scope", "accepted", "completed", "scenario", "stage", "comparedCases", "error", ...(request.scope === releaseCopyScope ? ["baselineProfile", "baselineRevision", "baselineTree"] : [])])
+  assert.equal(item.schemaVersion, 1); assert.equal(item.token, request.token); assert.equal(item.scope, request.scope)
+  if (request.scope === releaseCopyScope) { assert.equal(item.baselineProfile, releaseCopyBaselineProfile); assert.equal(item.baselineRevision, releaseCopyBaselineRevision); assert.equal(item.baselineTree, releaseCopyBaselineTree) }
   assert.equal(item.accepted, false); assert.equal(item.completed, false)
   assert.ok(["current", "baseline", "pair", "comparison", "docs", "player"].includes(String(item.stage)))
   assert.ok(Array.isArray(item.comparedCases) && item.comparedCases.length < examplesCaseNames.length)
@@ -179,7 +229,7 @@ export function parseExamplesCaseFailure(value: unknown, request: ExamplesReques
   return item
 }
 export function examplesCaseFailure(request: ExamplesRequest, scenario: string, stage: string, comparedCases: readonly string[], error: unknown) {
-  return parseExamplesCaseFailure({ schemaVersion: 1, token: request.token, scope: examplesScope, accepted: false, completed: false,
+  return parseExamplesCaseFailure({ schemaVersion: 1, token: request.token, scope: request.scope, ...(request.scope === releaseCopyScope ? { baselineProfile: request.baselineProfile, baselineRevision: request.baselineRevision, baselineTree: request.baselineTree } : {}), accepted: false, completed: false,
     scenario, stage, comparedCases: [...comparedCases], error: String(error).replace(/[\x00-\x1f]/gu, " ").slice(0, 2048) || "Unknown failure" }, request)
 }
 export function examplesContentType(path: string): string {
@@ -204,7 +254,10 @@ export function parseExampleByteRange(value: string, bytes: number, path: string
  * obstruction allowlist is imported; both sides must be entirely unobstructed. */
 export interface ExamplesDomProjection { readonly dom: string; readonly text: Readonly<Record<string, string>> }
 export async function examplesDom(page: Page, current: boolean, scenario: ShellCase): Promise<ExamplesDomProjection> {
-  return page.evaluate(({ current, home, islands, selectors }) => {
+  const install = examplesIslands.find(item => item.selector === "#install")!
+  const installDom = scenario.route === "/" ? await page.locator("#install").evaluate(admitExamplesInstallDom,
+    { fixture: current ? install.current : install.baseline, copying: false }) : null
+  return page.evaluate(({ current, home, islands, selectors, installDom }) => {
     const body = document.body.cloneNode(true) as HTMLElement
     for (const script of body.querySelectorAll("script")) script.remove()
     const textOwners = selectors.flatMap(selector => (body.matches(selector) ? [body] : [...body.querySelectorAll(selector)])
@@ -213,12 +266,13 @@ export async function examplesDom(page: Page, current: boolean, scenario: ShellC
       const selected = body.querySelectorAll(fixture.selector)
       if (selected.length !== 1) throw new Error(`Example fixture owner count: ${fixture.selector}`)
       const element = selected[0]!
-      if (element.outerHTML !== (current ? fixture.current : fixture.baseline)) throw new Error(`Unreviewed example island: ${fixture.selector}`)
+      if (fixture.selector === "#install" && element.outerHTML !== installDom?.raw) throw new Error("Install changed between admission and body projection")
+      if ((fixture.selector === "#install" ? installDom?.admitted : element.outerHTML) !== (current ? fixture.current : fixture.baseline)) throw new Error(`Unreviewed example island: ${fixture.selector}`)
       element.replaceWith(document.createComment(`reviewed-example-island-${index}`))
     }
     return { dom: body.outerHTML, text: Object.fromEntries(textOwners.map(({ key, node }) => [key,
       body.contains(node) ? node.textContent?.replace(/\s+/gu, " ").trim() ?? "" : ""])) }
-  }, { current, home: scenario.route === "/", islands: examplesIslands, selectors: ["body", "#main", ...workflowExamplesHomeSelectors] })
+  }, { current, home: scenario.route === "/", islands: examplesIslands, installDom, selectors: ["body", "#main", ...workflowExamplesHomeSelectors] })
 }
 const near = (actual: number, expected: number, label: string) => assert.ok(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= .5, label)
 export function compareExamplesHeroBackgroundImage(actual: string, baseline: string,
@@ -263,6 +317,7 @@ export interface ExamplesDesign {
   readonly flow: readonly ShellElement[]
   readonly hero: RefinementHero | undefined
   readonly actions: ExamplesActions | undefined
+  readonly install: ExamplesInstall | undefined
 }
 /** Ordinary flow coordinates are document-relative. A fixed ancestor instead
  * requires strict viewport coordinates from the independently observed scroll. */
@@ -292,6 +347,13 @@ export function compareExamplesEvidence(actual: ShellEvidence, baseline: ShellEv
   if (scenario.route === "/404.html") { compareShellEvidence(actual, baseline, scenario.name); return }
   const currentFlow = currentDesign.flow, baselineFlow = baselineDesign.flow
   const total = compareExamplesFlow(currentFlow, baselineFlow)
+  assert.ok(currentDesign.install && baselineDesign.install)
+  compareExamplesInstall(currentDesign.install, baselineDesign.install, `${scenario.name}: install`)
+  for (const [side, original] of [[currentDesign, actual], [baselineDesign, baseline]] as const) {
+    const section = side.flow.find(item => item.key === "#install[0]")!
+    assert.deepEqual(section, side.install!.elements[0], "Install flow is bound to the positively measured layout")
+    assert.deepEqual(original.elements.find(item => item.key === "#install[0]"), section, "Original shell install height is bound to the same proof")
+  }
   const hero = currentDesign.hero, oldHero = baselineDesign.hero
   assert.ok(hero && oldHero && currentDesign.actions && baselineDesign.actions)
   const retained = projectExamplesHeroActions(hero, oldHero, currentDesign.actions, baselineDesign.actions)
@@ -341,10 +403,10 @@ export async function settleExamplesDisabledStyles(sheet: CSSStyleSheet, href: s
   await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   assertDisabled()
 }
-export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean) {
-  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined }
+export async function observeExamplesDesign(page: Page, scenario: ShellCase, payload: ShellPayload, negative: boolean, current = true, scope: SiteAcceptanceScope = examplesScope) {
+  if (scenario.route !== "/") return { flow: [] as ShellElement[], hero: undefined, actions: undefined, install: undefined }
   const flow = await measure(page, examplesFlowSections), hero = await observeRefinementHero(page, scenario)
-  const actions = await observeExamplesActions(page, true)
+  const actions = await observeExamplesActions(page, true), install = await observeExamplesInstall(page, current, undefined, scope)
   const ids = await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id")))
   assert.deepEqual(ids, examplesHomeIds, "Reviewed homepage example inventory")
   await assertExampleGeometry(page, scenario.width)
@@ -388,21 +450,28 @@ export async function observeExamplesDesign(page: Page, scenario: ShellCase, pay
     }
     compareShellElements(await measure(page, selectors), before, "Restored example stylesheet")
   }
-  return { flow, hero, actions }
+  return { flow, hero, actions, install }
 }
-export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean) {
-  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, refinementInstallCommand)
+export function compareExamplesCopy(actual: CopyEvidence, baseline: CopyEvidence, scenario: ShellCase, negative: boolean, currentInstall: readonly ExamplesInstall[], baselineInstall: readonly ExamplesInstall[], scope: SiteAcceptanceScope = examplesScope) {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const baselineCommand = scope === releaseCopyScope ? releaseCopyBaselineCommand : examplesBaselineInstallCommand
+  assert.equal(actual.command, refinementInstallCommand); assert.equal(baseline.command, baselineCommand)
   assert.deepEqual(actual.negativeControls, negative ? copyNegativeControls : []); assert.deepEqual(baseline.negativeControls, [])
   for (const side of [actual, baseline]) {
-    assertCopyPorts(side.ports, refinementInstallCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
+    assertCopyPorts(side.ports, side === actual ? refinementInstallCommand : baselineCommand); assert.deepEqual(side.steps.map(step => step.name), copySteps)
     for (const step of side.steps) assert.deepEqual(step.elements.map(item => item.key), refinementCopyElementKeys)
   }
-  for (const [index, step] of actual.steps.entries()) {
-    const previous = baseline.steps[index]!.elements
-    const offset = step.elements[0]!.rect[1]! - previous[0]!.rect[1]!
-    compareShellElements(step.elements.map(item => ({ ...item, rect: [item.rect[0]!, item.rect[1]! - offset, item.rect[2]!, item.rect[3]!] as const })), previous, `${scenario.name} ${step.name}`)
-  }
-  return { name: scenario.name, passed: true, command: refinementInstallCommand, current: actual.ports, baseline: baseline.ports }
+  assert.equal(currentInstall.length, copySteps.length); assert.equal(baselineInstall.length, copySteps.length)
+  const observations = actual.steps.map((step, index) => {
+    assert.deepEqual(currentInstall[index]!.elements, step.elements)
+    assert.deepEqual(baselineInstall[index]!.elements, baseline.steps[index]!.elements)
+    return compareExamplesInstall(currentInstall[index]!, baselineInstall[index]!, `${scenario.name} ${step.name}`, scope)
+  })
+  // All ten states carry the same note/line/layout proof; raw controls and
+  // clipped status boxes were compared in their own state above.
+  for (const observation of observations) assert.deepEqual(observation, observations[0])
+  return { name: scenario.name, passed: true, command: refinementInstallCommand, current: actual.ports, baseline: baseline.ports,
+    install: { ...observations[0]!, states: copySteps } }
 }
 export const examplesDirectedRatios = [
   { id: "edit-directed-landscape", width: 1280, height: 720 },
@@ -410,6 +479,16 @@ export const examplesDirectedRatios = [
   { id: "edit-directed-square", width: 960, height: 960 },
   { id: "edit-directed-feed-portrait", width: 864, height: 1080 },
 ] as const
+const historicalEditVideoIds = Object.freeze(["color-warm", "color-cool", "color-mono", ...examplesDirectedRatios.map(item => item.id)])
+export function examplesEditVideoIds(scope: SiteAcceptanceScope = examplesScope): readonly string[] {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  return scope === releaseCopyScope ? releaseCopyEditVideoIds : historicalEditVideoIds
+}
+export function assertExamplesEditVideoInventory(figures: number, videos: number, ids: readonly (string | null)[], scope: SiteAcceptanceScope = examplesScope): void {
+  const expected = examplesEditVideoIds(scope)
+  assert.equal(figures, expected.length); assert.equal(videos, expected.length)
+  assert.deepEqual(ids, expected)
+}
 export interface ExampleRatioGeometry {
   readonly id: string; readonly widthAttribute: number; readonly heightAttribute: number; readonly source: string
   readonly x: number; readonly width: number; readonly height: number; readonly objectFit: string
@@ -450,7 +529,10 @@ interface PageCaseOptions {
   readonly javascript?: boolean; readonly reducedMotion?: boolean; readonly saveData?: boolean; readonly failMedia?: string
 }
 export async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
-  action: (page: Page, received: Set<string>, requestCounts: Map<string, number>) => Promise<T>): Promise<T> {
+  action: (page: Page, received: Set<string>, requestCounts: Map<string, number>, mediaLedger?: ReleaseCopyMediaLedger) => Promise<T>, releasePlayer = false): Promise<T> {
+  if (releasePlayer) assert.equal(request.scope, releaseCopyScope)
+  const mediaLedger = releasePlayer && !options.failMedia
+    ? createReleaseCopyMediaLedger(releaseMediaBindings(request), request.current.origin) : undefined
   const context = await browser.newContext({ viewport: { width: options.width, height: options.height }, colorScheme: options.theme,
     forcedColors: options.forced ?? "none", javaScriptEnabled: options.javascript ?? true,
     reducedMotion: "reduce", bypassCSP: false, serviceWorkers: "block" })
@@ -458,6 +540,9 @@ export async function withExamplesPage<T>(browser: Browser, request: ExamplesReq
   const errors: string[] = [], received = new Set<string>(), requestCounts = new Map<string, number>(), pending = new Map<Request, () => void>()
   const error = (value: string) => { if (errors.length < 64) errors.push(value.slice(0, 512)) }
   const operations = shellOperationTracker(error), lifecycle = shellContextLifecycle(error)
+  const mediaEvent = (operation: () => boolean): boolean => {
+    try { return operation() } catch (cause) { error(String(cause)); return false }
+  }
   browser.on("disconnected", lifecycle.browserDisconnected)
   return withShellCaseCleanup(async () => {
     if (options.saveData) await context.addInitScript(() => {
@@ -479,6 +564,8 @@ export async function withExamplesPage<T>(browser: Browser, request: ExamplesReq
     page.on("request", incoming => {
       const path = new URL(incoming.url()).pathname
       received.add(path); requestCounts.set(path, (requestCounts.get(path) ?? 0) + 1)
+      if (mediaLedger) mediaEvent(() => mediaLedger.request(incoming, { url: incoming.url(), method: incoming.method(),
+        range: incoming.headers()["range"] ?? null, resourceType: incoming.resourceType(), ownedFrame: incoming.frame() === page.mainFrame() }))
       void operations.track("Examples request", new Promise<void>(resolve => pending.set(incoming, resolve)))
     })
     const finish = (incoming: Request) => {
@@ -486,9 +573,13 @@ export async function withExamplesPage<T>(browser: Browser, request: ExamplesReq
       if (!done) error(`Unobserved request completion: ${incoming.url()}`)
       else { pending.delete(incoming); done() }
     }
-    page.on("requestfinished", finish)
+    page.on("requestfinished", incoming => {
+      if (mediaLedger?.handles(incoming)) mediaEvent(() => mediaLedger.finished(incoming))
+      finish(incoming)
+    })
     page.on("requestfailed", incoming => {
-      if (new URL(incoming.url()).pathname !== options.failMedia) error(`Resource failed: ${incoming.url()}`)
+      const provisional = mediaLedger?.handles(incoming) ? mediaEvent(() => mediaLedger.failed(incoming, incoming.failure()?.errorText ?? null)) : false
+      if (new URL(incoming.url()).pathname !== options.failMedia && !provisional) error(`Resource failed: ${incoming.url()}`)
       finish(incoming)
     })
     page.on("pageerror", failure => error(failure.message))
@@ -500,7 +591,11 @@ export async function withExamplesPage<T>(browser: Browser, request: ExamplesReq
       const path = new URL(response.url()).pathname
       assert.ok(response.status() === 200 || (path.endsWith(".mp4") && response.status() === 206), `Unexpected response status ${path}`)
       assert.equal(response.headers()["content-type"], examplesContentType(path))
-      assert.equal(await response.finished(), null)
+      if (mediaLedger && path.endsWith(".mp4")) await mediaLedger.response(response.request(), {
+        status: response.status(), contentType: response.headers()["content-type"]!, contentRange: response.headers()["content-range"] ?? null,
+        contentLength: response.headers()["content-length"] ?? null,
+      }, () => response.finished())
+      else assert.equal(await response.finished(), null)
     })()))
     const protocol = await context.newCDPSession(page)
     await protocol.send("Log.enable")
@@ -522,17 +617,22 @@ export async function withExamplesPage<T>(browser: Browser, request: ExamplesReq
     // then apply the actual case policy without abandoning a media request.
     if (options.reducedMotion === false) await page.emulateMedia({ reducedMotion: "no-preference" })
     await settleExamples(page, options.javascript)
-    const result = await action(page, received, requestCounts)
+    const result = await action(page, received, requestCounts, mediaLedger)
     await operations.settle("Examples case network settlement")
     assert.deepEqual(errors, []); assert.equal(pending.size, 0); assert.equal(page.isClosed(), false); assert.equal(browser.isConnected(), true)
+    const mediaCancellations = mediaLedger?.seal() ?? []
+    if (releasePlayer) { assert.ok(result !== null && typeof result === "object"); Object.assign(result, { mediaCancellations }) }
+    else assert.deepEqual(mediaCancellations, [])
     await protocol.detach(); operations.seal()
     return result
   }, async () => {
     lifecycle.beginContextClose()
+    mediaLedger?.beginClose()
     try {
       await bounded(context.close(), "Examples context collection", 5_000)
       await operations.settle("Examples late operation collection")
       assert.equal(pending.size, 0); assert.equal(operations.size, 0); assert.deepEqual(errors, [])
+      mediaLedger?.assertHealthy()
       assert.equal(browser.isConnected(), true)
     } finally { browser.off("disconnected", lifecycle.browserDisconnected) }
   })
@@ -649,9 +749,8 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
         ["crescent-pavilion", "crescent-pavilion-wide", "spiral-stair", "ribbed-tower", "modular-bookshelf"])
     }
     if (scenario.route === "/docs/how-to/edit-video") {
-      assert.equal(state.figures, 7); assert.equal(state.videos.length, 7)
-      assert.deepEqual(await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id"))),
-        ["color-warm", "color-cool", "color-mono", ...examplesDirectedRatios.map(item => item.id)])
+      assertExamplesEditVideoInventory(state.figures, state.videos.length,
+        await page.locator("figure[data-example-id]").evaluateAll(elements => elements.map(element => element.getAttribute("data-example-id"))), request.scope)
       const geometry = await page.locator('figure[data-example-id^="edit-directed-"] video').evaluateAll(elements => elements.map(element => {
         const video = element as HTMLVideoElement, box = video.getBoundingClientRect()
         return { id: video.closest("[data-example-id]")!.getAttribute("data-example-id")!, widthAttribute: video.width, heightAttribute: video.height,
@@ -672,9 +771,15 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
   })
 }
 const playerSelector = (id: string) => `figure[data-example-id="${id}"] video`
-async function videoState(page: Page, id: string) {
+async function videoState(page: Page, id: string, release = false) {
+  if (release) return page.locator(playerSelector(id)).evaluate((video: HTMLVideoElement, expectedId) => ({ paused: video.paused, time: video.currentTime,
+    controls: video.controls, readyState: video.readyState, muted: video.muted, loop: video.loop, error: video.error?.code ?? null,
+    source: video.currentSrc || video.querySelector("source")?.src || "", currentSrc: video.currentSrc,
+    ownedConnected: video instanceof HTMLVideoElement && video.isConnected && video.ownerDocument === document
+      && document.querySelector(`figure[data-example-id="${expectedId}"] video`) === video,
+  }), id)
   return page.locator(playerSelector(id)).evaluate((video: HTMLVideoElement) => ({ paused: video.paused, time: video.currentTime,
-    controls: video.controls, readyState: video.readyState, muted: video.muted, error: video.error?.code ?? null, source: video.currentSrc || video.querySelector("source")?.src || "" }))
+    controls: video.controls, readyState: video.readyState, muted: video.muted, loop: video.loop, error: video.error?.code ?? null, source: video.currentSrc || video.querySelector("source")?.src || "" }))
 }
 async function waitPlaying(page: Page, id: string, javascript = true): Promise<void> {
   if (!javascript) {
@@ -693,7 +798,11 @@ async function assertQuiet(page: Page, ids: readonly string[], javascript = true
   if (!javascript) {
     const deadline = performance.now() + 350
     do {
-      for (const id of ids) assert.equal((await videoState(page, id)).paused, true, "Unexpected native no-JavaScript playback")
+      for (const id of ids) {
+        const state = await videoState(page, id)
+        assert.equal(state.paused, true, "Unexpected native no-JavaScript playback")
+        assert.equal(state.loop, false, "Quiet native no-JavaScript video must not loop")
+      }
       await delay(20)
     } while (performance.now() < deadline)
     return
@@ -703,7 +812,7 @@ async function assertQuiet(page: Page, ids: readonly string[], javascript = true
     const start = performance.now()
     await new Promise<void>((resolve, reject) => {
       const frame = () => {
-        if (ids.some(id => { const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`); return video && !video.paused })) { reject(new Error("Unexpected playback during policy settlement")); return }
+        if (ids.some(id => { const video = document.querySelector<HTMLVideoElement>(`figure[data-example-id="${id}"] video`); return video && (!video.paused || video.loop) })) { reject(new Error("Unexpected playback or looping during policy settlement")); return }
         if (performance.now() - start >= 350) resolve(); else requestAnimationFrame(frame)
       }; requestAnimationFrame(frame)
     })
@@ -756,7 +865,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
   const route = docs ? target.guide : "/"
   return withExamplesPage(browser, request, route, { width: 1440, height: 1000, theme: "light", javascript: name !== "player-no-js",
     reducedMotion: docs || name === "player-reduced-motion", saveData: name === "player-save-data",
-    ...(name === "player-failed-media" ? { failMedia: target.path } : {}) }, async (page, received, requestCounts) => {
+    ...(name === "player-failed-media" ? { failMedia: target.path } : {}) }, async (page, received, requestCounts, mediaLedger) => {
     const failureObserver = name === "player-failed-media"
       ? await watchOwnedSourceFailure(page, target.id, `${request.current.origin}${target.path}`) : undefined
     try {
@@ -796,6 +905,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           })
         } else {
           await waitPlaying(page, target.id, javascript)
+          assert.equal((await videoState(page, target.id)).loop, false, "Native manual playback must not loop")
           if (name === "player-captions") {
             const track = page.locator(`${playerSelector(target.id)} track[kind="captions"]`)
             assert.equal(await track.getAttribute("src"), target.captions!)
@@ -809,6 +919,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         assert.equal(name === "player-save-data" ? await page.evaluate(() => (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) : await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches), true)
         const manual = ids[0]!
         await assertNativeTarget(page, playerSelector(manual)); await page.keyboard.press("Space"); await waitPlaying(page, manual)
+        assert.equal((await videoState(page, manual)).loop, false, "Policy-permitted manual playback must not loop")
         await assertQuiet(page, ids.filter(id => id !== manual))
         await page.keyboard.press("Space"); await assertQuiet(page, ids)
       } else {
@@ -817,6 +928,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         const automatic = previews[0]!
         await page.locator(playerSelector(automatic)).scrollIntoViewIfNeeded(); await waitPlaying(page, automatic)
         assert.equal((await videoState(page, automatic)).muted, true)
+        assert.equal((await videoState(page, automatic)).loop, true, "Automatic preview must loop")
         const playing = await page.locator("video").evaluateAll(elements => elements.filter(video => !(video as HTMLVideoElement).paused).length)
         assert.equal(playing, 1)
         if (name === "player-visible-auto") {
@@ -831,7 +943,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
               if (active.length !== 1) return false
               const video = active[0]!, rect = video.getBoundingClientRect()
               const area = Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0)) * Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0))
-              return video.muted && video.currentTime > .04 && area / (rect.width * rect.height) >= .5
+              return video.muted && video.loop && video.currentTime > .04 && area / (rect.width * rect.height) >= .5
             })
           }
         } else if (name === "player-manual-pause") {
@@ -852,13 +964,17 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           }
           assert.ok(playing, `Manual Space never started ${manual}`)
           await waitPlaying(page, manual)
+          assert.equal((await videoState(page, manual)).loop, false, "Manual takeover must clear automatic looping")
           await assertQuiet(page, previews.filter(id => id !== manual))
           await page.keyboard.press("Space"); await assertQuiet(page, ids)
           await page.locator(".topbar").scrollIntoViewIfNeeded(); await page.locator(playerSelector(manual)).scrollIntoViewIfNeeded()
           await chooseAppearance(page, "dark", "light"); await page.emulateMedia({ reducedMotion: "reduce" }); await page.emulateMedia({ reducedMotion: "no-preference" })
           await assertQuiet(page, ids)
           await throughRealHiddenState(page, async () => {
-            for (const id of ids) assert.equal((await videoState(page, id)).paused, true)
+            for (const id of ids) {
+              const state = await videoState(page, id)
+              assert.equal(state.paused, true); assert.equal(state.loop, false)
+            }
             hiddenObserved = true
           })
           await assertQuiet(page, ids)
@@ -870,14 +986,24 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
           await assertQuiet(page, [automatic])
           await page.locator(playerSelector(automatic)).scrollIntoViewIfNeeded(); await waitPlaying(page, automatic)
           await throughRealHiddenState(page, async () => {
-            assert.equal((await videoState(page, automatic)).paused, true)
+            const state = await videoState(page, automatic)
+            assert.equal(state.paused, true); assert.equal(state.loop, false)
             hiddenObserved = true
           })
           await waitPlaying(page, automatic)
         }
       }
       const observed = []
-      for (const id of ids) observed.push({ id, ...await videoState(page, id) })
+      for (const id of ids) {
+        const state = await videoState(page, id, request.scope === releaseCopyScope)
+        observed.push({ id, ...state })
+        if (mediaLedger) {
+          assert.ok("currentSrc" in state && "ownedConnected" in state)
+          assert.ok(typeof state.currentSrc === "string" && typeof state.ownedConnected === "boolean")
+          mediaLedger.playback({ id, currentSrc: state.currentSrc, ownedConnected: state.ownedConnected,
+            time: state.time, readyState: state.readyState, error: state.error })
+        }
+      }
       return { name, passed: true, media: observed, ...(name === "player-save-data" ? { policyInput: "emulated-navigator-save-data" } : {}),
         ...(initialMediaRequests === undefined ? {} : { initialMediaRequests }),
         ...(name === "player-offscreen-hidden" || name === "player-manual-pause" ? { hiddenObserved } : {}), ...(name === "player-captions" ? { captionCues } : {}),
@@ -887,5 +1013,5 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         try { await failureObserver.evaluate(observer => observer.dispose()) } finally { await failureObserver.dispose() }
       }
     }
-  })
+  }, request.scope === releaseCopyScope)
 }

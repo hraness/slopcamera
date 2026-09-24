@@ -1,8 +1,9 @@
 # Direct a film or animation style
 
 Choose a style profile to make the drawing, materials, camera, timing, and finish
-agree. This guide uses current-source Slopcamera and the editable portfolio
-examples. Follow [source setup](use-current-source.md) first.
+agree. Slopcamera v3.4.0 includes the style catalog and SDK helpers. The
+executable portfolio examples below run from a source checkout; follow
+[source setup](use-current-source.md) before rendering a study.
 
 ## Choose direction
 

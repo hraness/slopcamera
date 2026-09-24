@@ -25,6 +25,9 @@ import { examplesHeroTextures } from "./site-examples-profile"
 import { parseExamplesCaseFailure, parseExamplesPhase, parseExamplesRequest, examplesCaseNames, examplesDeadlineMs,
   examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesContentType,
   parseExampleByteRange, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
+import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, type SiteAcceptanceScope } from "./site-release-copy-profile"
+import { parsePublishedRelease, publishedRelease } from "../src/published-release"
+import { createNavigationHttpTail, navigationDiagnosticFile, navigationDiagnosticLimit, parseNavigationDiagnostic } from "./site-release-copy-navigation-diagnostic"
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
 async function inventory(directory: string, root = directory, depth = 0): Promise<string[]> {
@@ -151,12 +154,71 @@ export async function readExamplesSnapshot(directory: string, current = true,
   return { inputs: input.artifacts.sort((a,b) => a.path.localeCompare(b.path)), artifacts: output.artifacts,
     files, stylesheets: sheets[0]!, media, presetSourceCommit: preset.sourceCommit, materialSourceCommit: material.sourceCommit }
 }
-export function assertExamplesBaselineManifest(value: unknown, snapshot: ShellSnapshot): void {
+/** Schema seven extends, rather than relabels, the historical media closure. */
+export async function readReleaseCopySnapshot(directory: string): Promise<ExamplesSnapshot> {
+  const snapshot = await readExamplesSnapshot(directory, true)
+  const additional = await readInventory(directory, ["../../package.json", "../../bun.lock", "vendor/paper-theme/paper-theme.css"], 128 * 1024 * 1024)
+  const inputs = [...snapshot.inputs, ...additional.artifacts].sort((a, b) => a.path.localeCompare(b.path))
+  assert.ok(inputs.length <= 512, "Release-copy source inventory bound")
+  assert.equal(new Set(inputs.map(item => item.path)).size, inputs.length)
+  assert.ok(inputs.reduce((total, item) => total + item.bytes, 0) <= 128 * 1024 * 1024, "Release-copy complete input byte bound")
+  // Runtime-only release metadata comes from the already SHA/length-admitted
+  // served bytes. Historical media projections and schema-seven manifest
+  // inputs/artifacts remain unchanged.
+  const media = projectReleaseCopyMedia(snapshot.media, snapshot.files)
+  return { ...snapshot, inputs, media }
+}
+export function projectReleaseCopyMedia(media: readonly ExampleVideoInput[], files: ReadonlyMap<string, Uint8Array>): readonly ExampleVideoInput[] {
+  return media.map(video => {
+    const bytes = files.get(video.path); assert.ok(bytes && digest(bytes) === video.sha256)
+    return { ...video, bytes: bytes.byteLength }
+  })
+}
+// Closed verifier/config/test inventory reviewed for this acceptance identity.
+// Product inputs and build/runtime scripts are deliberately absent.
+export const releaseCopyVerifierInputs = Object.freeze([
+  "AGENTS.md", "tsconfig.preview.json", "site.test.ts",
+  "scripts/preview-browser-protocol.ts", "scripts/site-copy-content.test.ts",
+  "scripts/site-examples-browser-contract.test.ts", "scripts/site-examples-browser-contract.ts",
+  "scripts/site-examples-browser-driver.mjs", "scripts/site-examples-install.ts", "scripts/site-examples-profile.ts",
+  "scripts/site-refinement-browser-contract.test.ts", "scripts/site-refinement-fixtures.ts", "scripts/site-refinement-profile.ts",
+  "scripts/site-support-browser-contract.test.ts", "scripts/site-support-profile.ts", "scripts/verify-site-examples.ts",
+  "scripts/site-release-copy-profile.ts", "scripts/site-release-copy-browser-contract.ts",
+  "scripts/site-release-copy-browser-contract.test.ts", "scripts/verify-site-release-copy.ts",
+  "scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts",
+  "scripts/site-release-copy-media.ts", "scripts/site-release-copy-media.test.ts",
+  "scripts/site-release-copy-navigation-diagnostic.ts",
+])
+export function assertReleaseCopyInputs(current: Pick<ShellSnapshot, "inputs">, baseline: Pick<ShellSnapshot, "inputs">,
+  currentPackage: unknown, baselinePackage: unknown, currentDatum: unknown, baselineDatum: unknown): void {
+  const exceptions = new Set([...releaseCopyVerifierInputs, "package.json", "published-release.json"])
+  for (const side of [current, baseline]) {
+    assert.ok(side.inputs.length > 0 && side.inputs.length <= 512)
+    assert.equal(new Set(side.inputs.map(item => item.path)).size, side.inputs.length)
+  }
+  assert.deepEqual(current.inputs.filter(item => !exceptions.has(item.path)), baseline.inputs.filter(item => !exceptions.has(item.path)),
+    "Release-copy product source, media, build scripts, workspace dependencies and vendor inputs must pair")
+  for (const path of ["package.json", "published-release.json", "../../package.json", "../../bun.lock", "bun.lock", "vendor/paper-theme/paper-theme.css"])
+    for (const side of [current, baseline]) assert.equal(side.inputs.filter(item => item.path === path).length, 1, `Required release-copy input ${path}`)
+  const now = shellRecord(currentPackage), before = shellRecord(baselinePackage)
+  const currentScripts = shellRecord(now.scripts), oldScripts = shellRecord(before.scripts)
+  assert.equal(currentScripts["verify:release-copy"], "bun run ./scripts/verify-site-release-copy.ts")
+  assert.equal(Object.hasOwn(oldScripts, "verify:release-copy"), false)
+  assert.equal(currentScripts.test, `${String(oldScripts.test)} ./scripts/site-release-copy-browser-contract.test.ts`)
+  const retained = { ...currentScripts }; delete retained["verify:release-copy"]; retained.test = oldScripts.test
+  assert.deepEqual(retained, oldScripts, "Only the named verifier and its test entry may change package scripts")
+  assert.deepEqual({ ...now, scripts: oldScripts }, before, "Every package field and dependency remains exact")
+  assert.deepEqual(parsePublishedRelease(baselineDatum), { version: "3.3.6", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.3.6" })
+  assert.deepEqual(parsePublishedRelease(currentDatum), publishedRelease)
+}
+export function assertExamplesBaselineManifest(value: unknown, snapshot: ShellSnapshot, scope: SiteAcceptanceScope = examplesScope): void {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const release = scope === releaseCopyScope
   const manifest = shellRecord(value)
   assert.deepEqual(Object.keys(manifest).sort(), ["artifacts", "baselineProfile", "checkoutRevision", "inputs", "schemaVersion", "sourceRevision", "sourceTree"])
-  assert.equal(manifest.schemaVersion, 6); assert.equal(manifest.baselineProfile, examplesBaselineProfile)
-  assert.equal(manifest.checkoutRevision, examplesBaselineRevision); assert.equal(manifest.sourceRevision, examplesBaselineRevision)
-  assert.equal(manifest.sourceTree, examplesBaselineTree); assert.equal(snapshot.stylesheets.length, 2)
+  assert.equal(manifest.schemaVersion, release ? 7 : 6); assert.equal(manifest.baselineProfile, release ? releaseCopyBaselineProfile : examplesBaselineProfile)
+  assert.equal(manifest.checkoutRevision, release ? releaseCopyBaselineRevision : examplesBaselineRevision); assert.equal(manifest.sourceRevision, release ? releaseCopyBaselineRevision : examplesBaselineRevision)
+  assert.equal(manifest.sourceTree, release ? releaseCopyBaselineTree : examplesBaselineTree); assert.equal(snapshot.stylesheets.length, 2)
   assert.deepEqual(manifest.inputs, snapshot.inputs); assert.deepEqual(manifest.artifacts, snapshot.artifacts)
 }
 /** Bind the only origin-projected paint resources to exact immutable bytes on
@@ -167,10 +229,11 @@ export function assertExamplesHeroTextures(snapshot: Pick<ShellSnapshot, "artifa
     assert.deepEqual(matches, [asset], "Hero texture bytes must match the reviewed immutable asset")
   }
 }
-function serve(snapshot: ShellSnapshot) {
+function serve(snapshot: ShellSnapshot, trace?: { tail: ReturnType<typeof createNavigationHttpTail>; side: "current" | "baseline" }) {
   const rejected: string[] = []
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
     const url = new URL(request.url), bytes = snapshot.files.get(url.pathname)
+    trace?.tail.add(trace.side, "fetch", url.pathname, null, bytes?.byteLength ?? null)
     if (request.method !== "GET" || url.search !== "" || bytes === undefined || url.hostname !== "127.0.0.1") {
       if (rejected.length < 64) rejected.push(`${request.method} ${url.pathname}`)
       return new Response("Not Found", { status: 404 })
@@ -181,11 +244,13 @@ function serve(snapshot: ShellSnapshot) {
       if (rejected.length < 64) rejected.push(`Range ${url.pathname}`)
       return new Response(null, { status: 416, headers: { "content-range": `bytes */${bytes.byteLength}` } })
     }
-    return new Response(Uint8Array.from(selected ? bytes.subarray(selected.start, selected.end + 1) : bytes), {
+    const response = new Response(Uint8Array.from(selected ? bytes.subarray(selected.start, selected.end + 1) : bytes), {
       status: selected ? 206 : url.pathname === "/404.html" ? 404 : 200,
       headers: { ...siteShellHeaders, "content-type": examplesContentType(url.pathname), "cache-control": "no-store",
         ...(url.pathname.endsWith(".mp4") ? { "accept-ranges": "bytes" } : {}),
         ...(selected ? { "content-range": `bytes ${selected.start}-${selected.end}/${bytes.byteLength}` } : {}) } })
+    trace?.tail.add(trace.side, "response", url.pathname, response.status, selected ? selected.end - selected.start + 1 : bytes.byteLength)
+    return response
   } })
   return { server, rejected, closed: false }
 }
@@ -204,13 +269,16 @@ async function executableIdentity(path: string): Promise<readonly number[]> {
   assert.ok(stat.isFile() && stat.size > 0 && stat.size <= 1024 * 1024 * 1024)
   return [stat.dev, stat.ino, stat.size, stat.mode, stat.nlink, stat.mtimeMs, stat.ctimeMs]
 }
-async function buildDriver(profile: string): Promise<{ path: string; bytes: Uint8Array }> {
+/** Compact the private transport without syntax rewrites. Browser callbacks
+ * still serialize from their compiled function bodies; source remains readable. */
+export const examplesWorkerMinify = Object.freeze({ identifiers: true, whitespace: true, syntax: false, keepNames: false })
+export async function buildExamplesDriver(profile: string): Promise<{ path: string; bytes: Uint8Array }> {
   assert.equal(Bun.version, "1.3.14")
   const result = await Bun.build({ entrypoints: [join(appDirectory, "scripts/site-examples-browser-driver.mjs")], target: "node",
-    env: "disable", format: "esm", minify: false, sourcemap: "none", packages: "external" })
+    env: "disable", format: "esm", minify: examplesWorkerMinify, sourcemap: "none", packages: "external" })
   assert.ok(result.success && result.outputs.length === 1, "Could not compile the private Node shell worker")
   const bytes = new Uint8Array(await result.outputs[0]!.arrayBuffer())
-  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerDriverLimit)
+  assert.ok(bytes.byteLength > 0 && bytes.byteLength <= workerDriverLimit, `Examples worker ${bytes.byteLength} bytes exceeds ${workerDriverLimit}-byte transport bound`)
   assert.ok(!/\bBun\s*\.|["'](?:bun|@hraness\/direct)(?:["'/])/u.test(Buffer.from(bytes).toString()), "Node worker gained a Bun/Direct runtime edge")
   const path = join(profile, "site-examples-browser-driver.mjs")
   await writeFile(path, bytes, { flag: "wx", mode: 0o600 })
@@ -234,7 +302,7 @@ async function observe(directory: string, request: ExamplesRequest, signal: Abor
           "Worker phase read deadline", Math.max(1, deadline - performance.now()))
         signal.throwIfAborted()
         assert.ok(performance.now() < deadline, "Worker phase arrived after its deadline")
-        result = parseExamplesPhase(decodeProfiledWorkerJson(bytes, examplesScope), sequence, request)
+        result = parseExamplesPhase(decodeProfiledWorkerJson(bytes, request.scope), sequence, request)
         phases.push(Uint8Array.from(bytes))
         break
       } catch (error) {
@@ -248,7 +316,7 @@ async function observe(directory: string, request: ExamplesRequest, signal: Abor
       })
     }
   }
-  assert.equal(result!.node, shellRecord(decodeProfiledWorkerJson(phases[0]!, examplesScope)).node)
+  assert.equal(result!.node, shellRecord(decodeProfiledWorkerJson(phases[0]!, request.scope)).node)
   return { result: result!, phases }
 }
 async function collectProtocol(directory: string, observation: ShellObservation): Promise<void> {
@@ -266,7 +334,7 @@ async function collectProtocol(directory: string, observation: ShellObservation)
 }
 async function readCaseFailure(profile: string, request: ExamplesRequest) {
   try {
-    const value = decodeProfiledWorkerJson(await readPreviewFile(join(profile, "site-examples-case-failure.json"), examplesWorkerProtocolLimit), examplesScope)
+    const value = decodeProfiledWorkerJson(await readPreviewFile(join(profile, "site-examples-case-failure.json"), examplesWorkerProtocolLimit), request.scope)
     return parseExamplesCaseFailure(value, request)
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return undefined
@@ -274,14 +342,30 @@ async function readCaseFailure(profile: string, request: ExamplesRequest) {
   }
 }
 
-export async function verifySiteExamples(args: readonly string[]): Promise<void> {
-  const scope = examplesScope, baselineProfile = examplesBaselineProfile, limit = examplesDeadlineMs
+async function readNavigationDiagnostic(profile: string, request: ExamplesRequest, scenario?: string) {
+  try {
+    const bytes = await readPreviewFile(join(profile, navigationDiagnosticFile), navigationDiagnosticLimit)
+    assert.ok(request.scope === releaseCopyScope && scenario !== undefined, "Unexpected navigation failure sidecar")
+    const value = parseNavigationDiagnostic(bytes, request, scenario)
+    return { status: "retained", path: navigationDiagnosticFile, bytes: bytes.byteLength, sha256: digest(bytes), overflow: value.overflow,
+      observerError: value.overflow === false ? shellRecord(value.trace).observerError : null }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return { status: "absent" }
+    throw error
+  }
+}
+
+export async function verifySiteExamples(args: readonly string[], scope: SiteAcceptanceScope = examplesScope): Promise<void> {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  const release = scope === releaseCopyScope, baselineProfile = release ? releaseCopyBaselineProfile : examplesBaselineProfile, limit = examplesDeadlineMs
+  const snapshot = (directory: string, current: boolean) => release ? readReleaseCopySnapshot(directory) : readExamplesSnapshot(directory, current)
   const options = parseShellArguments(args), deadline = performance.now() + limit
   const actualApp = await realpath(appDirectory)
   assert.notEqual(options.baseline, actualApp, "Baseline must be separate from the changed app")
   const deadlineController = new AbortController()
   const deadlineTimer = setTimeout(() => deadlineController.abort(new Error("Site native absolute deadline exceeded")), limit)
   const servers: ReturnType<typeof serve>[] = []
+  const httpTail = release ? createNavigationHttpTail() : undefined
   let profile: string | undefined, protocolDirectory: string | undefined
   let chrome: ManagedVerificationServer | undefined, worker: ManagedVerificationServer | undefined
   let chromeAbsent = false, workerAbsent = false, completed = false
@@ -308,11 +392,16 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       }
       candidate = await step(async () => candidateIdentity(actualApp))
       baselineIdentity = await step(async () => candidateIdentity(options.baseline))
-      assert.equal(baselineIdentity.sha, examplesBaselineRevision); assert.equal(baselineIdentity.tree, examplesBaselineTree)
-      current = await step(() => readExamplesSnapshot(actualApp))
-      baseline = await step(() => readExamplesSnapshot(options.baseline, false))
+      assert.equal(baselineIdentity.sha, release ? releaseCopyBaselineRevision : examplesBaselineRevision); assert.equal(baselineIdentity.tree, release ? releaseCopyBaselineTree : examplesBaselineTree)
+      current = await step(() => snapshot(actualApp, true))
+      baseline = await step(() => snapshot(options.baseline, false))
+      if (release) {
+        const json = async (directory: string, path: string) => JSON.parse(Buffer.from(await readPreviewFile(join(directory, path), 64 * 1024)).toString()) as unknown
+        assertReleaseCopyInputs(current, baseline, await step(() => json(actualApp, "package.json")), await step(() => json(options.baseline, "package.json")),
+          await step(() => json(actualApp, "published-release.json")), await step(() => json(options.baseline, "published-release.json")))
+      }
       manifestBefore = Uint8Array.from(await step(() => readPreviewFile(options.manifest, 128 * 1024)))
-      assertExamplesBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
+      assertExamplesBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline, scope)
       assertExamplesHeroTextures(current); assertExamplesHeroTextures(baseline)
       const node = await step(() => executable("NODE_EXECUTABLE_PATH")), browserPath = await step(() => executable("SLOPCAMERA_CHROME_PATH"))
       assert.ok(process.env.PLAYWRIGHT_BROWSERS_PATH !== undefined && isAbsolute(process.env.PLAYWRIGHT_BROWSERS_PATH),
@@ -328,9 +417,9 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       executableInputs = await Promise.all([node, browserPath].map(async path => ({ path, identity: await executableIdentity(path) })))
       profile = await mkdtemp(join(await realpath(tmpdir()), "slopcamera-site-examples-"))
       signal.throwIfAborted()
-      const driver = await step(() => buildDriver(profile!))
-      const currentServer = serve(current); servers.push(currentServer)
-      const baselineServer = serve(baseline); servers.push(baselineServer)
+      const driver = await step(() => buildExamplesDriver(profile!))
+      const currentServer = serve(current, httpTail ? { tail: httpTail, side: "current" } : undefined); servers.push(currentServer)
+      const baselineServer = serve(baseline, httpTail ? { tail: httpTail, side: "baseline" } : undefined); servers.push(baselineServer)
       signal.throwIfAborted()
       chrome = spawnVerificationServer({ cwd: actualApp, detachedProcessGroup: true, logLimit: 12_000, command: [browserPath,
         "--headless=new", "--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-default-apps",
@@ -340,9 +429,10 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       protocolDirectory = join(profile, "worker-protocol")
       await mkdir(protocolDirectory, { mode: 0o700 })
       const request = parseExamplesRequest({ schemaVersion: 1, token: randomUUID(), scope, baselineProfile, appDirectory: actualApp, chromeExecutable: browserPath,
-        endpoint, current: browserPayload(current, currentServer.server.url.origin), baseline: browserPayload(baseline, baselineServer.server.url.origin), media: current.media })
+        endpoint, current: browserPayload(current, currentServer.server.url.origin), baseline: browserPayload(baseline, baselineServer.server.url.origin), media: current.media,
+        ...(release ? { baselineRevision: releaseCopyBaselineRevision, baselineTree: releaseCopyBaselineTree } : {}) }, scope)
       workerRequest = request
-      const requestPath = join(profile, "site-examples-browser-request.json"), bytes = encodeProfiledWorkerJson(request, examplesScope)
+      const requestPath = join(profile, "site-examples-browser-request.json"), bytes = encodeProfiledWorkerJson(request, scope)
       await writeFile(requestPath, bytes, { flag: "wx", mode: 0o600 })
       inputs = [await readWorkerInput(driver.path, workerDriverLimit), await readWorkerInput(requestPath, examplesWorkerProtocolLimit)]
       assert.ok(Buffer.from(inputs[0]!.bytes).equals(Buffer.from(driver.bytes)))
@@ -355,7 +445,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
       await writeFile(join(profile, "site-examples-request.snapshot.json"), inputs[1]!.bytes, { flag: "wx", mode: 0o600 })
       signal.throwIfAborted()
       worker = spawnVerificationServer({ cwd: actualApp, detachedProcessGroup: true, logLimit: 12_000,
-        omitEnvironment: ["NODE_OPTIONS", "NODE_PATH"], command: [node, driver.path, actualApp, requestPath] })
+        omitEnvironment: ["NODE_OPTIONS", "NODE_PATH"], command: [node, driver.path, actualApp, requestPath, ...(release ? [releaseCopyScope] : [])] })
       console.error(`slopcamera-site-examples: verifying ${examplesCaseNames.length} mandatory ${scope} current/baseline cases`)
       observation = await observe(protocolDirectory, request, signal, worker.exited, deadline)
       await step(() => bounded(worker!.exited, "Shell worker successful exit", 5_000))
@@ -367,7 +457,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
         pairedHeroTextures: examplesHeroTextures,
         materialSourceCommit: current.materialSourceCommit,
         presetSourceCommit: current.presetSourceCommit,
-        expectationsSha256: current.inputs.find(input => input.path === "scripts/site-examples-browser-contract.ts")!.sha256 }
+        expectationsSha256: current.inputs.find(input => input.path === (release ? "scripts/site-release-copy-browser-contract.ts" : "scripts/site-examples-browser-contract.ts"))!.sha256 }
     }, async () => {
       const failures: unknown[] = []
       const collect = async (operation: () => Promise<unknown>, role?: "worker" | "chrome") => {
@@ -395,6 +485,7 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
         assertWorkerInputsUnchanged(inputs, after)
         await collectProtocol(protocolDirectory, observation)
         assert.equal(await readCaseFailure(profile!, workerRequest!), undefined, "Successful shell worker also published failure evidence")
+        if (release) assert.deepEqual(await readNavigationDiagnostic(profile!, workerRequest!), { status: "absent" })
         for (const input of executableInputs) assert.deepEqual(await executableIdentity(input.path), input.identity, "Admitted executable changed")
         for (const input of packageInputs) {
           const after = await readWorkerInput(input.path, input.maximum)
@@ -402,8 +493,8 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
           assert.ok(Buffer.from(after.bytes).equals(Buffer.from(input.bytes)), "Installed package manifest bytes changed")
         }
         assert.ok(manifestBefore !== undefined && Buffer.from(await readPreviewFile(options.manifest, 128 * 1024)).equals(Buffer.from(manifestBefore)), "Baseline input manifest changed")
-        assertShellSnapshotUnchanged(current!, await readExamplesSnapshot(actualApp))
-        assertShellSnapshotUnchanged(baseline!, await readExamplesSnapshot(options.baseline, false))
+        assertShellSnapshotUnchanged(current!, await snapshot(actualApp, true))
+        assertShellSnapshotUnchanged(baseline!, await snapshot(options.baseline, false))
         assert.deepEqual(candidateIdentity(actualApp), candidate, "Candidate Git identity changed")
         assert.deepEqual(candidateIdentity(options.baseline), baselineIdentity, "Baseline Git identity changed")
         for (const server of servers) assert.deepEqual(server.rejected, [], "Unadmitted or late server request")
@@ -415,8 +506,16 @@ export async function verifySiteExamples(args: readonly string[]): Promise<void>
         // Missing partial evidence is possible before the first case. Malformed
         // evidence remains a collector failure, never a fallback success.
         if (workerRequest !== undefined && workerAbsent) await collect(async () => { caseFailure = await readCaseFailure(profile!, workerRequest!) })
+        let navigationDiagnostic: unknown = { status: "unavailable-before-worker-collection" }
+        if (release && workerRequest !== undefined && workerAbsent) await collect(async () => {
+          navigationDiagnostic = { status: "invalid" }
+          navigationDiagnostic = await readNavigationDiagnostic(profile!, workerRequest!,
+            typeof caseFailure?.scenario === "string" ? caseFailure.scenario : undefined)
+        })
         const receipt = `${JSON.stringify({ accepted: false, completed, cancelled: signal?.aborted === true, chromeAbsent, workerAbsent,
-          endpointEvidence, timeoutEvidence, caseFailure, workerOutput, chromeOutput, failures: failures.map(error => previewFailureSummary(error)) })}\n`
+          endpointEvidence, timeoutEvidence, caseFailure, workerOutput, chromeOutput,
+          ...(release ? { navigationDiagnostic, recentHttpTail: httpTail!.snapshot() } : {}),
+          failures: failures.map(error => previewFailureSummary(error)) })}\n`
         assert.ok(Buffer.byteLength(receipt) <= 1024 * 1024)
         await writeFile(join(profile!, "site-examples-failure.json"), receipt, { flag: "wx", mode: 0o600 })
         console.error(`slopcamera-site-examples: retained failure evidence at ${profile}`)

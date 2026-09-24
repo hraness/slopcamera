@@ -26,6 +26,11 @@ Keep the source candidate separate from a verified public release. `apps/web/pub
    Check every checksum against the downloaded bytes and bind the manifest to the verified source, tag and release attempt. Run `scripts/package-smoke.ts --archive <archive> --pack-json <npm-pack.json>` against the exact tagged source in an isolated consumer. A checksum or unsigned manifest alone is not provenance.
 6. After live asset and installation acceptance, update the public release datum and installation references in a normal checked change, then verify Production HTML, Markdown and download targets. The one-command CLI install and update is `bun add --global https://github.com/hraness/slopcamera/releases/download/v<version>/hraness-slopcamera-<version>.tgz`; omit `--global` for an SDK dependency. Package and command names stay `@hraness/slopcamera` and `slopcamera`. Resolve Latest discovery to an immutable version before verification; do not install a mutable latest URL or pipe a downloaded script into a shell.
 
+   If an update from a previous local archive reports Bun's `DependencyLoop`,
+   use its [named tarball syntax](https://bun.com/docs/pm/cli/add#tarball-dependencies):
+   prefix that same verified archive URL with `@hraness/slopcamera@` in the
+   `bun add --global` command. Check `slopcamera --version` after the update.
+
 The manifest has exactly schema `hraness-github-release-v1`, repository/name and numeric repository ID, package, stable version/tag, source SHA, release workflow/current authority SHA, numeric run ID/attempt, and archive name/bytes/SHA-256/SHA-512. Every file is bounded and regular; unexpected files, symlinks, traversal, unsafe packed configuration and inconsistent bytes reject. Native binaries are not added to this distribution without separately enumerated asset and installation proof. The capture shell and its release gates were removed in [PR #111](https://github.com/hraness/slopcamera/pull/111); the current companion's macOS source build was added in [PR #116](https://github.com/hraness/slopcamera/pull/116).
 
 ## Publish the canonical release to npm
