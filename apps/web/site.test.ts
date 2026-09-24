@@ -1,5 +1,6 @@
 import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
+import { observeCompilation } from "./scripts/compilation-observer.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
@@ -86,7 +87,7 @@ function ownedCompilation<T>(
     return body({
       build: async options => {
         controller.signal.throwIfAborted()
-        const result = await compile(options)
+        const result = await observeCompilation(repositoryDirectory, () => compile(options))
         controller.signal.throwIfAborted()
         return result
       },
