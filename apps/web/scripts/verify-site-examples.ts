@@ -160,7 +160,17 @@ export async function readReleaseCopySnapshot(directory: string): Promise<Exampl
   assert.ok(inputs.length <= 512, "Release-copy source inventory bound")
   assert.equal(new Set(inputs.map(item => item.path)).size, inputs.length)
   assert.ok(inputs.reduce((total, item) => total + item.bytes, 0) <= 128 * 1024 * 1024, "Release-copy complete input byte bound")
-  return { ...snapshot, inputs }
+  // Runtime-only release metadata comes from the already SHA/length-admitted
+  // served bytes. Historical media projections and schema-seven manifest
+  // inputs/artifacts remain unchanged.
+  const media = projectReleaseCopyMedia(snapshot.media, snapshot.files)
+  return { ...snapshot, inputs, media }
+}
+export function projectReleaseCopyMedia(media: readonly ExampleVideoInput[], files: ReadonlyMap<string, Uint8Array>): readonly ExampleVideoInput[] {
+  return media.map(video => {
+    const bytes = files.get(video.path); assert.ok(bytes && digest(bytes) === video.sha256)
+    return { ...video, bytes: bytes.byteLength }
+  })
 }
 // Closed verifier/config/test inventory reviewed for this acceptance identity.
 // Product inputs and build/runtime scripts are deliberately absent.
@@ -174,6 +184,7 @@ export const releaseCopyVerifierInputs = Object.freeze([
   "scripts/site-release-copy-profile.ts", "scripts/site-release-copy-browser-contract.ts",
   "scripts/site-release-copy-browser-contract.test.ts", "scripts/verify-site-release-copy.ts",
   "scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts",
+  "scripts/site-release-copy-media.ts", "scripts/site-release-copy-media.test.ts",
 ])
 export function assertReleaseCopyInputs(current: Pick<ShellSnapshot, "inputs">, baseline: Pick<ShellSnapshot, "inputs">,
   currentPackage: unknown, baselinePackage: unknown, currentDatum: unknown, baselineDatum: unknown): void {

@@ -16,11 +16,14 @@ import { observeExamplesInstall, compareExamplesInstall, parseExamplesInstallPai
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs,
   examplesIslands, examplesFlowSections, examplesHeightOwners, examplesHomeIds, examplesHeroTextures, examplesBaselineInstallCommand } from "./site-examples-profile"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree, releaseCopyBaselineCommand, releaseCopyEditVideoIds, type SiteAcceptanceScope } from "./site-release-copy-profile"
+import { assertReleaseCopyRangeRecoveries, createReleaseCopyMediaLedger, type ReleaseCopyMediaBinding, type ReleaseCopyMediaLedger,
+  type ReleaseCopyPlaybackProof } from "./site-release-copy-media"
 export { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesDeadlineMs }
 
 export interface ExampleVideoInput {
   readonly id: string; readonly path: string; readonly sha256: string; readonly poster: string; readonly guide: string
   readonly width: number; readonly height: number; readonly durationSeconds: number; readonly hasAudio: boolean; readonly captions?: string
+  readonly bytes?: number
 }
 interface ExamplesRequestCommon {
   readonly schemaVersion: 1; readonly token: string
@@ -75,7 +78,8 @@ export function parseExamplesRequest(value: unknown, scope: SiteAcceptanceScope 
   const ids = new Set<string>()
   for (const value of item.media) {
     const video = shellRecord(value)
-    keys(video, ["id", "path", "sha256", "poster", "guide", "width", "height", "durationSeconds", "hasAudio", ...(Object.hasOwn(video, "captions") ? ["captions"] : [])])
+    keys(video, ["id", "path", "sha256", "poster", "guide", "width", "height", "durationSeconds", "hasAudio", ...(Object.hasOwn(video, "captions") ? ["captions"] : []), ...(scope === releaseCopyScope ? ["bytes"] : [])])
+    if (scope === releaseCopyScope) assert.ok(Number.isSafeInteger(video.bytes) && Number(video.bytes) > 0 && Number(video.bytes) <= 64 * 1024 * 1024)
     assert.ok(typeof video.id === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(video.id) && !ids.has(video.id)); ids.add(video.id)
     assert.ok(typeof video.sha256 === "string" && /^[a-f0-9]{64}$/u.test(video.sha256))
     for (const field of ["path", "poster", "guide", ...(video.captions ? ["captions"] : [])]) {
@@ -150,20 +154,30 @@ export function parseExamplesPhase(value: unknown, sequence: 0 | 1 | 2, request:
   }
   return item
 }
+function releaseMediaBindings(request: ExamplesRequest): ReleaseCopyMediaBinding[] {
+  assert.equal(request.scope, releaseCopyScope)
+  return request.media.map(media => {
+    assert.ok(Number.isSafeInteger(media.bytes) && Number(media.bytes) > 0)
+    return { id: media.id, path: media.path, sha256: media.sha256, bytes: media.bytes! }
+  })
+}
 function parsePlayerObservation(item: Record<string, unknown>, request: ExamplesRequest, name: string): void {
+  const release = request.scope === releaseCopyScope, recoveryKeys = release ? ["rangeRecoveries"] : []
   const captioned = request.media.some(video => video.captions)
   const quietInitial = ["player-no-js", "player-docs-manual", "player-reduced-motion", "player-save-data", "player-failed-media", "player-captions"].includes(name)
   if (name === "player-captions" && !captioned) {
-    keys(item, ["name", "passed", "captions", "media", "initialMediaRequests"]); assert.equal(item.initialMediaRequests, 0); assert.equal(item.captions, "not-present"); assert.deepEqual(item.media, []); return
+    keys(item, ["name", "passed", "captions", "media", "initialMediaRequests", ...recoveryKeys]); assert.equal(item.initialMediaRequests, 0); assert.equal(item.captions, "not-present"); assert.deepEqual(item.media, [])
+    if (release) assertReleaseCopyRangeRecoveries(item.rangeRecoveries, releaseMediaBindings(request), request.current.origin, [])
+    return
   }
   const additional = name === "player-save-data" ? ["policyInput"] : name === "player-offscreen-hidden" || name === "player-manual-pause" ? ["hiddenObserved"] : name === "player-captions" ? ["captionCues"] : name === "player-failed-media" ? ["failedRequests", "sourceError"] : []
-  keys(item, ["name", "passed", "media", ...additional, ...(quietInitial ? ["initialMediaRequests"] : [])])
+  keys(item, ["name", "passed", "media", ...additional, ...(quietInitial ? ["initialMediaRequests"] : []), ...recoveryKeys])
   if (quietInitial) assert.equal(item.initialMediaRequests, 0)
   assert.ok(Array.isArray(item.media) && item.media.length > 0 && item.media.length <= 32)
-  const seen = new Set<string>(); let playing = 0, advanced = 0
+  const seen = new Set<string>(), proofs: ReleaseCopyPlaybackProof[] = []; let playing = 0, advanced = 0
   for (const value of item.media) {
     const sample = shellRecord(value)
-    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "loop", "error", "source"])
+    keys(sample, ["id", "paused", "time", "controls", "readyState", "muted", "loop", "error", "source", ...(release ? ["currentSrc", "ownedConnected"] : [])])
     assert.equal(typeof sample.id, "string"); const expected = request.media.find(media => media.id === sample.id); assert.ok(expected && !seen.has(expected.id)); seen.add(expected.id)
     assert.equal(sample.controls, true); assert.equal(typeof sample.paused, "boolean"); assert.equal(typeof sample.muted, "boolean")
     // Automatic previews loop; manually controlled and quiet samples do not.
@@ -173,6 +187,12 @@ function parsePlayerObservation(item: Record<string, unknown>, request: Examples
     assert.equal(sample.source, `${request.current.origin}${expected.path}`)
     if (name !== "player-failed-media") assert.equal(sample.error, null)
     else assert.ok(sample.error === null || [1, 2, 3, 4].includes(Number(sample.error)))
+    if (release) {
+      assert.equal(typeof sample.currentSrc, "string"); assert.ok(String(sample.currentSrc).length <= 1024); assert.equal(sample.ownedConnected, true)
+      assert.ok(sample.currentSrc === "" || sample.currentSrc === sample.source)
+      proofs.push({ id: expected.id, currentSrc: sample.currentSrc as string, ownedConnected: true,
+        time: sample.time, readyState: Number(sample.readyState), error: sample.error as number | null })
+    }
     if (!sample.paused) playing++
     if (sample.time > .04) advanced++
   }
@@ -189,6 +209,10 @@ function parsePlayerObservation(item: Record<string, unknown>, request: Examples
     assert.equal(failure.id, expected.id); assert.equal(failure.source, `${request.current.origin}${expected.path}`)
     assert.equal(failure.count, 1); assert.equal(failure.owned, true)
     assert.ok(item.media.some(value => shellRecord(value).id === expected.id))
+  }
+  if (release) {
+    if (name === "player-failed-media") assert.deepEqual(item.rangeRecoveries, [], "Intentional media failure cannot claim recovery")
+    assertReleaseCopyRangeRecoveries(item.rangeRecoveries, releaseMediaBindings(request), request.current.origin, proofs)
   }
 }
 export function parseExamplesCaseFailure(value: unknown, request: ExamplesRequest): Record<string, unknown> {
@@ -505,7 +529,10 @@ interface PageCaseOptions {
   readonly javascript?: boolean; readonly reducedMotion?: boolean; readonly saveData?: boolean; readonly failMedia?: string
 }
 async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, route: string, options: PageCaseOptions,
-  action: (page: Page, received: Set<string>, requestCounts: Map<string, number>) => Promise<T>): Promise<T> {
+  action: (page: Page, received: Set<string>, requestCounts: Map<string, number>, mediaLedger?: ReleaseCopyMediaLedger) => Promise<T>, releasePlayer = false): Promise<T> {
+  if (releasePlayer) assert.equal(request.scope, releaseCopyScope)
+  const mediaLedger = releasePlayer && !options.failMedia
+    ? createReleaseCopyMediaLedger(releaseMediaBindings(request), request.current.origin) : undefined
   const context = await browser.newContext({ viewport: { width: options.width, height: options.height }, colorScheme: options.theme,
     forcedColors: options.forced ?? "none", javaScriptEnabled: options.javascript ?? true,
     reducedMotion: "reduce", bypassCSP: false, serviceWorkers: "block" })
@@ -513,6 +540,9 @@ async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, r
   const errors: string[] = [], received = new Set<string>(), requestCounts = new Map<string, number>(), pending = new Map<Request, () => void>()
   const error = (value: string) => { if (errors.length < 64) errors.push(value.slice(0, 512)) }
   const operations = shellOperationTracker(error), lifecycle = shellContextLifecycle(error)
+  const mediaEvent = (operation: () => boolean): boolean => {
+    try { return operation() } catch (cause) { error(String(cause)); return false }
+  }
   browser.on("disconnected", lifecycle.browserDisconnected)
   return withShellCaseCleanup(async () => {
     if (options.saveData) await context.addInitScript(() => {
@@ -534,6 +564,8 @@ async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, r
     page.on("request", incoming => {
       const path = new URL(incoming.url()).pathname
       received.add(path); requestCounts.set(path, (requestCounts.get(path) ?? 0) + 1)
+      if (mediaLedger) mediaEvent(() => mediaLedger.request(incoming, { url: incoming.url(), method: incoming.method(),
+        range: incoming.headers()["range"] ?? null, resourceType: incoming.resourceType(), ownedFrame: incoming.frame() === page.mainFrame() }))
       void operations.track("Examples request", new Promise<void>(resolve => pending.set(incoming, resolve)))
     })
     const finish = (incoming: Request) => {
@@ -541,9 +573,13 @@ async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, r
       if (!done) error(`Unobserved request completion: ${incoming.url()}`)
       else { pending.delete(incoming); done() }
     }
-    page.on("requestfinished", finish)
+    page.on("requestfinished", incoming => {
+      if (mediaLedger?.handles(incoming)) mediaEvent(() => mediaLedger.finished(incoming))
+      finish(incoming)
+    })
     page.on("requestfailed", incoming => {
-      if (new URL(incoming.url()).pathname !== options.failMedia) error(`Resource failed: ${incoming.url()}`)
+      const provisional = mediaLedger?.handles(incoming) ? mediaEvent(() => mediaLedger.failed(incoming, incoming.failure()?.errorText ?? null)) : false
+      if (new URL(incoming.url()).pathname !== options.failMedia && !provisional) error(`Resource failed: ${incoming.url()}`)
       finish(incoming)
     })
     page.on("pageerror", failure => error(failure.message))
@@ -555,7 +591,11 @@ async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, r
       const path = new URL(response.url()).pathname
       assert.ok(response.status() === 200 || (path.endsWith(".mp4") && response.status() === 206), `Unexpected response status ${path}`)
       assert.equal(response.headers()["content-type"], examplesContentType(path))
-      assert.equal(await response.finished(), null)
+      if (mediaLedger && path.endsWith(".mp4")) await mediaLedger.response(response.request(), {
+        status: response.status(), contentType: response.headers()["content-type"]!, contentRange: response.headers()["content-range"] ?? null,
+        contentLength: response.headers()["content-length"] ?? null,
+      }, () => response.finished())
+      else assert.equal(await response.finished(), null)
     })()))
     const protocol = await context.newCDPSession(page)
     await protocol.send("Log.enable")
@@ -577,17 +617,22 @@ async function withExamplesPage<T>(browser: Browser, request: ExamplesRequest, r
     // then apply the actual case policy without abandoning a media request.
     if (options.reducedMotion === false) await page.emulateMedia({ reducedMotion: "no-preference" })
     await settleExamples(page, options.javascript)
-    const result = await action(page, received, requestCounts)
+    const result = await action(page, received, requestCounts, mediaLedger)
     await operations.settle("Examples case network settlement")
     assert.deepEqual(errors, []); assert.equal(pending.size, 0); assert.equal(page.isClosed(), false); assert.equal(browser.isConnected(), true)
+    const rangeRecoveries = mediaLedger?.seal() ?? []
+    if (releasePlayer) { assert.ok(result !== null && typeof result === "object"); Object.assign(result, { rangeRecoveries }) }
+    else assert.deepEqual(rangeRecoveries, [])
     await protocol.detach(); operations.seal()
     return result
   }, async () => {
     lifecycle.beginContextClose()
+    mediaLedger?.beginClose()
     try {
       await bounded(context.close(), "Examples context collection", 5_000)
       await operations.settle("Examples late operation collection")
       assert.equal(pending.size, 0); assert.equal(operations.size, 0); assert.deepEqual(errors, [])
+      mediaLedger?.assertHealthy()
       assert.equal(browser.isConnected(), true)
     } finally { browser.off("disconnected", lifecycle.browserDisconnected) }
   })
@@ -745,7 +790,13 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
   }))
 }
 const playerSelector = (id: string) => `figure[data-example-id="${id}"] video`
-async function videoState(page: Page, id: string) {
+async function videoState(page: Page, id: string, release = false) {
+  if (release) return page.locator(playerSelector(id)).evaluate((video: HTMLVideoElement, expectedId) => ({ paused: video.paused, time: video.currentTime,
+    controls: video.controls, readyState: video.readyState, muted: video.muted, loop: video.loop, error: video.error?.code ?? null,
+    source: video.currentSrc || video.querySelector("source")?.src || "", currentSrc: video.currentSrc,
+    ownedConnected: video instanceof HTMLVideoElement && video.isConnected && video.ownerDocument === document
+      && document.querySelector(`figure[data-example-id="${expectedId}"] video`) === video,
+  }), id)
   return page.locator(playerSelector(id)).evaluate((video: HTMLVideoElement) => ({ paused: video.paused, time: video.currentTime,
     controls: video.controls, readyState: video.readyState, muted: video.muted, loop: video.loop, error: video.error?.code ?? null, source: video.currentSrc || video.querySelector("source")?.src || "" }))
 }
@@ -833,7 +884,7 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
   const route = docs ? target.guide : "/"
   return withExamplesPage(browser, request, route, { width: 1440, height: 1000, theme: "light", javascript: name !== "player-no-js",
     reducedMotion: docs || name === "player-reduced-motion", saveData: name === "player-save-data",
-    ...(name === "player-failed-media" ? { failMedia: target.path } : {}) }, async (page, received, requestCounts) => {
+    ...(name === "player-failed-media" ? { failMedia: target.path } : {}) }, async (page, received, requestCounts, mediaLedger) => {
     const failureObserver = name === "player-failed-media"
       ? await watchOwnedSourceFailure(page, target.id, `${request.current.origin}${target.path}`) : undefined
     try {
@@ -962,7 +1013,16 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         }
       }
       const observed = []
-      for (const id of ids) observed.push({ id, ...await videoState(page, id) })
+      for (const id of ids) {
+        const state = await videoState(page, id, request.scope === releaseCopyScope)
+        observed.push({ id, ...state })
+        if (mediaLedger) {
+          assert.ok("currentSrc" in state && "ownedConnected" in state)
+          assert.ok(typeof state.currentSrc === "string" && typeof state.ownedConnected === "boolean")
+          mediaLedger.playback({ id, currentSrc: state.currentSrc, ownedConnected: state.ownedConnected,
+            time: state.time, readyState: state.readyState, error: state.error })
+        }
+      }
       return { name, passed: true, media: observed, ...(name === "player-save-data" ? { policyInput: "emulated-navigator-save-data" } : {}),
         ...(initialMediaRequests === undefined ? {} : { initialMediaRequests }),
         ...(name === "player-offscreen-hidden" || name === "player-manual-pause" ? { hiddenObserved } : {}), ...(name === "player-captions" ? { captionCues } : {}),
@@ -972,5 +1032,5 @@ export async function checkExamplesPlayer(browser: Browser, request: ExamplesReq
         try { await failureObserver.evaluate(observer => observer.dispose()) } finally { await failureObserver.dispose() }
       }
     }
-  })
+  }, request.scope === releaseCopyScope)
 }

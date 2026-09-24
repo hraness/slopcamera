@@ -4,9 +4,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { runInNewContext } from "node:vm"
+import { createHash } from "node:crypto"
 import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
 import { compareReleaseCopyFlow, compareReleaseCopyEvidence } from "./site-release-copy-browser-contract"
 import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
+import "./site-release-copy-media.test"
+import { createReleaseCopyMediaLedger } from "./site-release-copy-media"
 import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevision, releaseCopyBaselineTree,
   releaseCopyBaselineCommand, releaseCopyBaselineNote, releaseCopyBaselineInstall, releaseCopyEditVideoIds } from "./site-release-copy-profile"
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
@@ -18,7 +21,7 @@ import { compareExamplesInstall, admitExamplesInstallDom, examplesInstallNote, p
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
 import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, ShellPairFailure, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
-import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify } from "./verify-site-examples"
+import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify, projectReleaseCopyMedia } from "./verify-site-examples"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, examplesWorkerProtocolLimit, workerDriverLimit, workerAttachmentMs } from "./preview-browser-protocol"
 import { publishedRelease, archiveInstall } from "../src/published-release"
 import type { ShellSnapshot } from "./verify-site-shell"
@@ -33,7 +36,7 @@ const resources = [...new Set(["/", "/404.html", "/docs", "/docs/tutorials/first
   ...Array.from({length: 10}, (_, i) => `/fonts/font-${i}.woff2`)])].sort()
 const payload = (port: number) => ({ origin: `http://127.0.0.1:${port}`, resources, stylesheets: ["/graphs/site-foundation/style.css", `/assets/site-${hash}.css`], finalCss: `/assets/site-${hash}.css` })
 function request(): ExamplesRequest { return parseExamplesRequest({ schemaVersion: 1, token: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", scope: releaseCopyScope,
-  baselineProfile: releaseCopyBaselineProfile, baselineRevision: releaseCopyBaselineRevision, baselineTree: releaseCopyBaselineTree, appDirectory: "/tmp/app", chromeExecutable: "/tmp/chrome", endpoint: "ws://127.0.0.1:3211/devtools/browser/aaaaaaaa", current: payload(3212), baseline: payload(3213), media }, releaseCopyScope) }
+  baselineProfile: releaseCopyBaselineProfile, baselineRevision: releaseCopyBaselineRevision, baselineTree: releaseCopyBaselineTree, appDirectory: "/tmp/app", chromeExecutable: "/tmp/chrome", endpoint: "ws://127.0.0.1:3211/devtools/browser/aaaaaaaa", current: payload(3212), baseline: payload(3213), media: media.map(item => ({ ...item, bytes: 1000 })) }, releaseCopyScope) }
 const ports = (command = refinementInstallCommand): CopyEvidence["ports"] => ({ write: "success", fallback: "throw", writes: Array.from({length:5},()=>command),
   fallbacks: Array.from({length:3},()=>({value:command,readonly:true,start:0,end:command.length,focused:true,offscreen:true})),
   timers: [{delay:2500,started:1,fired:2501,cancelled:false},{delay:2500,started:1,fired:null,cancelled:true},{delay:2500,started:1,fired:null,cancelled:false}] })
@@ -107,10 +110,10 @@ function terminal(req = request()) {
     navigation:{mode:scenario.width<=768?"disclosure":"sidebar",javascript:!("javascript" in scenario&&scenario.javascript===false),currentHref:scenario.route,
      defaultClosed:true,keyboardToggle:scenario.width<=768?"enter-open-space-close":"not-applicable",closedLinksHidden:true,articleBeforeFold:true}}
   }
-  if (name === "player-captions") return {name,passed:true,captions:"not-present",media:[],initialMediaRequests:0}
-  return {name,passed:true,media:[{id:"editorial",paused:!['player-visible-auto','player-offscreen-hidden'].includes(name),
+  if (name === "player-captions") return {name,passed:true,captions:"not-present",media:[],initialMediaRequests:0,rangeRecoveries:[]}
+  return {name,passed:true,rangeRecoveries:[],media:[{id:"editorial",paused:!['player-visible-auto','player-offscreen-hidden'].includes(name),
    time:name==='player-failed-media'?0:1,controls:true,readyState:3,muted:true,loop:['player-visible-auto','player-offscreen-hidden'].includes(name),
-   error:null,source:`${req.current.origin}${media[0]!.path}`}],
+   error:null,source:`${req.current.origin}${media[0]!.path}`,currentSrc:`${req.current.origin}${media[0]!.path}`,ownedConnected:true}],
    ...(name==='player-save-data'?{policyInput:'emulated-navigator-save-data'}:{}), ...(['player-offscreen-hidden','player-manual-pause'].includes(name)?{hiddenObserved:true}:{}),
    ...(['player-no-js','player-docs-manual','player-reduced-motion','player-save-data','player-failed-media'].includes(name)?{initialMediaRequests:0}:{}),
    ...(name==='player-failed-media'?{failedRequests:1,sourceError:{id:'editorial',source:`${req.current.origin}${media[0]!.path}`,count:1,owned:true}}:{})}
@@ -202,12 +205,73 @@ describe("release-copy-v1 has an independent closed identity", () => {
    const forged = { ...req, baseline: { ...req.baseline, resources: req.baseline.resources.filter(value => value !== resource) } }
    expect(() => parseExamplesRequest(forged, releaseCopyScope)).toThrow()
   }
-  const historical = { ...req, scope: examplesScope, baselineProfile: examplesBaselineProfile } as Record<string, unknown>
+  const historical = { ...req, scope: examplesScope, baselineProfile: examplesBaselineProfile, media } as Record<string, unknown>
   delete historical.baselineRevision; delete historical.baselineTree
   expect(parseExamplesRequest(historical).scope).toBe(examplesScope)
   expect(() => parseExamplesRequest(historical, releaseCopyScope)).toThrow()
   expect(() => parseExamplesPhase(receipt, 2, parseExamplesRequest(historical))).toThrow()
   expect(() => parseExamplesCaseFailure(failure, parseExamplesRequest(historical))).toThrow()
+ })
+ test("release runtime sizes derive from admitted bytes without changing historical media or manifest fields", () => {
+  const bytes = new TextEncoder().encode("immutable asset"), sha256 = createHash("sha256").update(bytes).digest("hex")
+  const historical = [{ ...media[0]!, sha256 }], original = structuredClone(historical), files = new Map([[historical[0]!.path, bytes]])
+  const projected = projectReleaseCopyMedia(historical, files)
+  expect(projected).toEqual([{ ...historical[0]!, bytes: bytes.length }]); expect(historical).toEqual(original)
+  expect(files.get(historical[0]!.path)).toBe(bytes)
+  expect(() => projectReleaseCopyMedia(historical, new Map())).toThrow()
+  expect(() => projectReleaseCopyMedia(historical, new Map([[historical[0]!.path, new Uint8Array([1, 2, 3])]]))).toThrow()
+  const req = request()
+  for (const bytes of [undefined, 0, -1, 1.5, Number.MAX_SAFE_INTEGER]) {
+   const changed = structuredClone(req) as any; changed.media[0].bytes = bytes
+   if (bytes === undefined) delete changed.media[0].bytes
+   expect(() => parseExamplesRequest(changed, releaseCopyScope)).toThrow()
+  }
+  const legacy = { ...req, scope: examplesScope, baselineProfile: examplesBaselineProfile } as any
+  delete legacy.baselineRevision; delete legacy.baselineTree
+  expect(() => parseExamplesRequest(legacy)).toThrow()
+  legacy.media = media; expect(() => parseExamplesRequest(legacy)).not.toThrow()
+ })
+ test("release player parser requires exact bounded recovery receipts and literal owned currentSrc proof", async () => {
+  const req = request(), receipt = terminal(req) as any, asset = { ...req.media[0]!, bytes: req.media[0]!.bytes! }
+  const ledger = createReleaseCopyMediaLedger([asset], req.current.origin)
+  for (const [index, start] of [0, 900, 100].entries()) {
+   const key = {}; ledger.request(key, { url: `${req.current.origin}${asset.path}`, method: "GET", range: `bytes=${start}-`, resourceType: "media", ownedFrame: true })
+   const done = ledger.response(key, { status: 206, contentType: "video/mp4", contentRange: `bytes ${start}-999/1000`, contentLength: String(1000 - start) }, async () => null)
+   if (index === 0) ledger.failed(key, "net::ERR_ABORTED"); else ledger.finished(key)
+   await done
+  }
+  const player = receipt.observations.find((item: any) => item.name === "player-visible-auto"), sample = player.media[0]
+  ledger.playback({ id: sample.id, currentSrc: sample.currentSrc, ownedConnected: sample.ownedConnected, time: sample.time, readyState: sample.readyState, error: sample.error })
+  player.rangeRecoveries = ledger.seal()
+  expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
+  for (const action of [
+   (value: any) => { delete value.rangeRecoveries }, (value: any) => { value.rangeRecoveries[0].bytes++ },
+   (value: any) => { value.rangeRecoveries[0].tail = value.rangeRecoveries[0].resume },
+   (value: any) => { value.media[0].currentSrc = "" }, (value: any) => { value.media[0].ownedConnected = false },
+  ]) {
+   const changed = structuredClone(receipt); action(changed.observations.find((item: any) => item.name === "player-visible-auto"))
+   expect(() => parseExamplesPhase(changed, 2, req)).toThrow()
+  }
+ })
+ test("intentional failed-media rejects even a valid recovery for a different admitted asset", async () => {
+  const req = request(), receipt = terminal(req) as any, asset = { ...req.media[1]!, bytes: req.media[1]!.bytes! }
+  const ledger = createReleaseCopyMediaLedger([asset], req.current.origin)
+  for (const [index, start] of [0, 900, 100].entries()) {
+   const key = {}; ledger.request(key, { url: `${req.current.origin}${asset.path}`, method: "GET", range: `bytes=${start}-`, resourceType: "media", ownedFrame: true })
+   const done = ledger.response(key, { status: 206, contentType: "video/mp4", contentRange: `bytes ${start}-999/1000`, contentLength: String(1000 - start) }, async () => null)
+   if (index === 0) ledger.failed(key, "net::ERR_ABORTED"); else ledger.finished(key)
+   await done
+  }
+  const failed = receipt.observations.find((item: any) => item.name === "player-failed-media")
+  const sample = { id: asset.id, paused: true, time: 1, controls: true, readyState: 3, muted: true, loop: false,
+   error: null, source: `${req.current.origin}${asset.path}`, currentSrc: `${req.current.origin}${asset.path}`, ownedConnected: true }
+  failed.media.push(sample)
+  ledger.playback({ id: sample.id, currentSrc: sample.currentSrc, ownedConnected: sample.ownedConnected,
+   time: sample.time, readyState: sample.readyState, error: sample.error })
+  const recovery = ledger.seal(); expect(recovery).toHaveLength(1)
+  expect(() => parseExamplesPhase(receipt, 2, req)).not.toThrow()
+  failed.rangeRecoveries = recovery
+  expect(() => parseExamplesPhase(receipt, 2, req)).toThrow()
  })
  test("all133 families retain per-side commands, finite transport and unchanged bounds", () => {
   const req = request(), receipt = terminal(req), encoded = encodeProfiledWorkerJson(receipt, releaseCopyScope)
@@ -393,7 +457,7 @@ describe("product input and dependency closure stays exact", () => {
   const f = inputFixture(), check = () => assertReleaseCopyInputs(f.current, f.baseline, f.currentPackage, f.oldPackage, publishedRelease, f.datum)
   expect(check).not.toThrow()
   f.current.inputs.push({ path: "scripts/site-release-copy-profile.ts", bytes: 30, sha256: "b".repeat(64) }); expect(check).not.toThrow()
-  for (const path of ["scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts"]) {
+  for (const path of ["scripts/site-shell-browser-contract.ts", "scripts/site-release-copy-focus.ts", "scripts/site-release-copy-media.ts", "scripts/site-release-copy-media.test.ts"]) {
    f.current.inputs.push({ path, bytes: 30, sha256: "b".repeat(64) }); expect(check).not.toThrow()
   }
   for (const path of ["src/index.html", "scripts/build-site.ts", "media/examples.json", "../../examples/showcase/example.ts", "vendor/paper-theme/paper-theme.css", "../../package.json", "../../bun.lock", "bun.lock"]) {
