@@ -37,9 +37,9 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.16.0" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.16.3" },
     { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.17.0" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.17" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.18" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),

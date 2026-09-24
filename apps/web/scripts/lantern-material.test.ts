@@ -13,7 +13,7 @@ const read = (path: string) => readFile(join(app, path), "utf8")
 describe("Lantern material admission and scope", () => {
   test("admits only the complete released finite inventory and rejects changed ownership or bytes", async () => {
     const admitted = await snapshotLanternMaterial(vendor)
-    expect(admitted.sourceCommit).toBe("b0326108cf58268827ee69007414188ee27e2963")
+    expect(admitted.sourceCommit).toBe("d38d13c07d7956d02ddfbca8d32aa2066d88fbd3")
     expect([...admitted.files.keys()].sort()).toEqual(["LICENSE", "check.d.mts", "check.mjs", "lantern-material.css"])
     const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-lantern-")))
     try {
