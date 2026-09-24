@@ -113,6 +113,21 @@ slopcamera scene render artifacts/showcase/spatial/premiere/premiere.scene.json 
 
 The script binds the two published films by exact sha256, derives the bounded screen and print media, authors the scene with an audited rail rig, and emits the render request. The published MP4 is a silent delivery encode of the retained lossless MOV.
 
+## Light an emissive corridor
+
+::example[compute-temple]
+
+A dolly glides down a dark compute aisle: rows of racks carry emissive status strips, ceiling panels wash the hall in cold light, and a bright portal holds the end of the frame. Tone mapping, bloom, and a vignette finish the shot as declared post-process steps — no imported geometry, just typed entities, lights, and a rig.
+
+Author and render it from a source checkout:
+
+```sh
+bun examples/showcase/spatial/author-temple.ts
+slopcamera scene render artifacts/showcase/spatial/temple/temple.scene.json --request artifacts/showcase/spatial/temple/temple.cinematic.request.json --json
+```
+
+The script emits one entity per rack and status strip, compiles a smootherstep rail rig aimed at the portal, and plans the four-step post stack as a hash-bound effects document. Grain is deliberately absent: per-frame noise defeats the lossless encoder's byte budget, so the grade leans on bloom and tone mapping instead.
+
 ## Render on the GPU
 
 ```sh
