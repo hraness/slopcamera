@@ -10,8 +10,16 @@ predecessor measures 39,495 bytes; palette/pattern attributes and spacing add 70
 bytes, and the shared inert hero adds 444 bytes, giving 40,009 bytes. All of those
 bytes remain counted. Exact-ceiling, UTF-8 overflow and unknown-slot rejection
 tests remain required, as does the separate 65,000-byte complete built-HTML
-ceiling. This change does not revise the combined CSS budget or any native
-comparison tolerance.
+ceiling.
+
+The two complete emitted stylesheets have a 451,100-byte combined ceiling. The
+exact predecessor build is 347,562 bytes; the immutable shared palette, material,
+typography and hero rollout adds 100,572 bytes to its foundation and 2,532 bytes
+to its finalized recipe union. The current total is 450,666 bytes, leaving 434
+bytes of headroom. Every byte remains counted, including repeated declarations
+across distinct cascade layers. Exact-boundary, either-artifact and UTF-8
+overflow rejection remain required. This budget change does not alter any
+native comparison tolerance, the 133 cases, or the historical profiles.
 
 Run it with an explicit independent, clean predecessor checkout and a reviewed
 schema-seven manifest:
