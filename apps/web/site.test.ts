@@ -54,7 +54,7 @@ import { replaceSiteSlot } from "./src/site-template"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
 const brandDescription = "Slopcamera is a local visual studio for coding agents."
-const searchDescription = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
+const searchDescription = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
 // Each build compiles the independent ordinary-site and preview graphs. These
@@ -320,7 +320,9 @@ test("ships agent instructions for video editing and Gateway media generation", 
   expect(skill).toContain("# Create visual media with Slopcamera")
   expect(skill).toContain("[Video projects](references/video-projects.md)")
   expect(skill).toContain("[Gateway media](references/gateway-media.md)")
-  expect(skill).toContain("Record, clean up, caption, frame or deliver video")
+  // Slopcamera edits existing recordings; the Skill must not offer to record.
+  expect(skill).not.toMatch(/^\| Record\b/mu)
+  expect(skill).toContain("existing recordings and footage | [Video projects](references/video-projects.md)")
 
   for (const capability of [
     "talking-head-cleanup",
@@ -1054,7 +1056,11 @@ describe("static Slopcamera site", () => {
       expect(html).toContain(exampleUrl(example.poster))
       expect(html).toContain(`/docs/${example.guideSlug}`)
     }
-    expect(html).toContain("Real outputs, editable sources, and a guide for each workflow.")
+    // Every rendered example links to its guide and its source files.
+    const figures = html.match(/<figure class="slopcamera-example"/gu) ?? []
+    expect(figures.length).toBeGreaterThan(0)
+    expect(html.match(/>Follow the guide<\/a>/gu)).toHaveLength(figures.length)
+    expect(html.match(/>View source<\/a>/gu)).toHaveLength(figures.length)
     expect(html).not.toMatch(/<table\b|class="table-wrap"/)
     expect(html).not.toMatch(/AI_GATEWAY_API_KEY|VERCEL_OIDC_TOKEN|SLOPCAMERA_CACHE_DIR/)
   })
@@ -1081,7 +1087,7 @@ describe("static Slopcamera site", () => {
     for (const claim of ["Source", "Project", "Operations", "Outputs"]) {
       expect(html).toContain(claim)
     }
-    expect(html).toContain("Retain the sources behind the result.")
+    expect(searchableHtml).toContain("Native engine jobs run only with <code>--allow-trusted-code</code>")
     expect(searchableHtml).toContain("your Vercel AI Gateway credential")
     expect(searchableHtml).toContain("There is no Slopcamera account or hosted project database")
     expect(searchableHtml).toContain("Media uploads require acknowledgement")
@@ -1091,7 +1097,7 @@ describe("static Slopcamera site", () => {
 
   test("uses the camera identity without rewriting historical mythology", async () => {
     const html = await readSource("index.html")
-    expect(html.replace(/\s+/gu, " ")).toContain(brandDescription)
+    expect(html.replace(/\s+/gu, " ")).toContain(searchDescription)
     expect(html).toContain("camera-frame and lens motif")
     expect(html).not.toMatch(/Atum|solar barque|Benben|hieroglyph|pharaoh|ankh/u)
   })

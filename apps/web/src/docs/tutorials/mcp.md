@@ -40,11 +40,11 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 | `search_slopcamera` | Search the fixed Slopcamera operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
 
-`execute_slopcamera` in v3.3.1 admits six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+`execute_slopcamera` admits six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
 
 ## Inspect and plan scenes
 
-The v3.3.1 server exposes 17 named tools: the four above plus these 13 scene tools. A source build is optional for this toolset.
+The server exposes 17 named tools: the four above plus these 13 scene tools. The released CLI includes all of them.
 
 | Scene tools | Effect |
 | --- | --- |

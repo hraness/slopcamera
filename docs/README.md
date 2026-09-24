@@ -2,7 +2,7 @@
 
 Slopcamera retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 
-Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any later correction that requires [current source](how-to/use-current-source.md). Example helpers that import repository TypeScript also need a checkout; that requirement does not mean their CLI commands are unreleased. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [current Slopcamera release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any correction that needs [current source](how-to/use-current-source.md). Some examples import TypeScript from the repository and need a checkout to run. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
@@ -13,7 +13,7 @@ Install the [verified Slopcamera v3.3.2 release](../README.md#install-slopcamera
 ## Complete a task
 
 - [Run current-source commands](how-to/use-current-source.md): build an exact checkout of Slopcamera.
-- [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF; requires current source.
+- [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF.
 
 - [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Direct a film or animation style](how-to/direct-visual-styles.md): use reusable art direction and render the original style studies; requires current source.
