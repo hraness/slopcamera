@@ -6,7 +6,7 @@ import { compareShellElements, measure, resolvedShellTheme, shellRecord, settle,
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure,
   examplesCaseNames, examplesNegativeControls, examplesContentType, parseExampleByteRange,
   examplesScope, examplesBaselineProfile, withExamplesPage, assertExampleGeometry, assertNativeTarget,
-  checkDocsNavigation, checkExamplesDocs, assertExamplesRatioGeometry, examplesDirectedRatios, settleExamplesDisabledStyles, examplesPlayerCases, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
+  checkDocsNavigation, checkExamplesDocs, assertExamplesRatioGeometry, examplesDirectedRatios, settleExamplesDisabledStyles, examplesPlayerCases, type ExamplesObservationInventory, type ExamplesRequest, type ExampleVideoInput } from "./site-examples-browser-contract"
 import { examplesFlowSections, examplesHomeIds } from "./site-examples-profile"
 import { observeExamplesActions } from "./site-examples-cta"
 import { withLanternTransparency } from "./site-lantern-browser-contract"
@@ -34,12 +34,16 @@ export function parsePortfolioRequest(value: unknown): PortfolioRequest {
   parseExamplesRequest({ ...item, scope: examplesScope, baselineProfile: examplesBaselineProfile })
   return item as unknown as PortfolioRequest
 }
+/** The reviewed portfolio-surfaces-v3 inventory predates the release-copy install receipts: its
+ * 133 observations keep the shell and copy shapes captured against the cec02b4 predecessor, and
+ * both copy sides carry the one current install command that comparePortfolioCopy requires. */
+export const portfolioObservationInventory: ExamplesObservationInventory = Object.freeze({ install: false, baselineCommand: refinementInstallCommand })
 export function parsePortfolioPhase(value: unknown, sequence: 0 | 1 | 2, request: PortfolioRequest): Record<string, unknown> {
   const item = shellRecord(value)
   assert.equal(item.scope, portfolioScope); assert.equal(item.baselineProfile, portfolioBaselineProfile)
   if (sequence === 2) assert.deepEqual(item.negativeControls, portfolioNegativeControls)
   parseExamplesPhase({ ...item, scope: examplesScope, baselineProfile: examplesBaselineProfile,
-    ...(sequence === 2 ? { negativeControls: examplesNegativeControls } : {}) }, sequence, portfolioProbeRequest(request))
+    ...(sequence === 2 ? { negativeControls: examplesNegativeControls } : {}) }, sequence, portfolioProbeRequest(request), portfolioObservationInventory)
   return item
 }
 export function parsePortfolioCaseFailure(value: unknown, request: PortfolioRequest): Record<string, unknown> {

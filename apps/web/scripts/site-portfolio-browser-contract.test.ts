@@ -3,10 +3,10 @@ import { packPortfolioRender } from "./site-portfolio-reference-codec"
 import { parsePortfolioRequest, portfolioProbeRequest, parsePortfolioPhase, parsePortfolioCaseFailure, portfolioCaseFailure,
   parsePortfolioRenderReference, assertPortfolioReference, portfolioReferenceDigest, portfolioHeadingSize, normalizePortfolioRender,
   portfolioScope, portfolioBaselineProfile, portfolioBaselineRevision, portfolioBaselineTree, portfolioBaselineMaterialRevision, portfolioPalette,
-  portfolioDeadlineMs, portfolioOrdinaryDeadlineMs, portfolioCaseNames, portfolioNegativeControls,
+  portfolioDeadlineMs, portfolioOrdinaryDeadlineMs, portfolioCaseNames, portfolioNegativeControls, portfolioObservationInventory,
   type PortfolioRequest, type PortfolioRenderReference } from "./site-portfolio-browser-contract"
 import { examplesScope, examplesBaselineProfile, examplesCaseNames, examplesNegativeControls, examplesDocsCases,
-  examplesDocsExtraCases, parseExamplesRequest, parseExamplesPhase } from "./site-examples-browser-contract"
+  examplesDocsExtraCases, parseExamplesRequest, parseExamplesPhase, examplesObservationInventory } from "./site-examples-browser-contract"
 import { siteShellCases } from "./site-shell-browser-contract"
 import { siteCopyCases } from "./site-copy-browser-contract"
 import { refinementInstallCommand } from "./site-refinement-profile"
@@ -56,6 +56,7 @@ function terminal(input = request()) {
     if (name === "player-captions") return { name, passed: true, captions: "not-present", media: [], initialMediaRequests: 0 }
     return { name, passed: true, media: [{ id: "editorial", paused: !["player-visible-auto", "player-offscreen-hidden"].includes(name),
       time: name === "player-failed-media" ? 0 : 1, controls: true, readyState: 3, muted: true, error: null,
+      loop: name === "player-visible-auto" || name === "player-offscreen-hidden",
       source: `${input.current.origin}${media[0]!.path}` }],
       ...(name === "player-save-data" ? { policyInput: "emulated-navigator-save-data" } : {}),
       ...(["player-offscreen-hidden", "player-manual-pause"].includes(name) ? { hiddenObserved: true } : {}),
@@ -124,6 +125,14 @@ test("portfolio phases require new identity, complete observations and the found
   const input = request(), result = terminal(input), before = structuredClone(result)
   expect(parsePortfolioPhase(result, 2, input)).toEqual(result); expect(result).toEqual(before)
   expect(() => parseExamplesPhase(result, 2, portfolioProbeRequest(input))).toThrow()
+  // The reviewed v3 inventory carries no release-copy install receipts and pairs one current
+  // command; the examples scope's own inventory must still reject the same observations.
+  expect(portfolioObservationInventory).toEqual({ install: false, baselineCommand: refinementInstallCommand })
+  expect(examplesObservationInventory(examplesScope)).toMatchObject({ install: true }); expect(examplesObservationInventory(examplesScope).baselineCommand).not.toBe(refinementInstallCommand)
+  const projected = { ...result, scope: examplesScope, baselineProfile: examplesBaselineProfile, negativeControls: examplesNegativeControls }
+  expect(parseExamplesPhase(projected, 2, portfolioProbeRequest(input), portfolioObservationInventory)).toEqual(projected)
+  expect(() => parseExamplesPhase(projected, 2, portfolioProbeRequest(input))).toThrow()
+  expect(() => parseExamplesPhase(projected, 2, portfolioProbeRequest(input), { ...portfolioObservationInventory, install: true })).toThrow()
   for (const sequence of [0, 1] as const) {
     const value = { schemaVersion: 1, token: input.token, scope: portfolioScope, baselineProfile: portfolioBaselineProfile,
       sequence, kind: sequence === 0 ? "started" : "connected", ...(sequence === 0 ? { node: "24.18.1", playwright: "1.62.0" } : {}) }
