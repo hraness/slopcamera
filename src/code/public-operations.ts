@@ -304,6 +304,15 @@ export interface PortableSlopcameraOperationResultMap {
   readonly "slopcamera.image.vectorize": SlopcameraImageVectorizeOutput
 }
 
+/**
+ * The typed portable projection: four of the six `slopcameraOperationCodes`.
+ * `slopcamera.image.icon` and `slopcamera.image.gallery` stay outside it on
+ * purpose. Each runs several paid Gateway calls and can publish more than one
+ * artifact, which the single-output, single-dispatch contract model here
+ * cannot express; they remain reachable through `executeSlopcameraOperation`,
+ * `execute_slopcamera`, and the CLI. Public copy cites this count, and
+ * `scripts/check-copy.ts` fails when the copy and this list disagree.
+ */
 export const PORTABLE_SLOPCAMERA_OPERATION_KINDS = Object.freeze([
   "slopcamera.diagram.check",
   "slopcamera.diagram.render",

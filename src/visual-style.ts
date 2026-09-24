@@ -1,6 +1,9 @@
 import { z } from "zod"
 
-/** Art direction is independent of the renderer, its library locks, and model choice. */
+/**
+ * Art direction is independent of the renderer, its library locks, and model choice.
+ * Public copy cites this count; `scripts/check-copy.ts` fails on drift.
+ */
 export const VISUAL_STYLE_IDS = Object.freeze([
   "silent-actuality", "noir-35mm", "documentary-16mm", "super8-color",
   "theatrical-cel", "watercolor-storybook", "ink-sketch", "rubber-hose",

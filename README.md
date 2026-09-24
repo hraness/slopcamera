@@ -155,7 +155,7 @@ rigged/morph profile in v3.3.1 admits bounded skins and morph targets. Saved spl
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
 
-Slopcamera v3.3.1 includes the cinematic planning loop: a `slopcamera.spatial-direction`
+Slopcamera v3.3.1 introduced the cinematic planning loop: a `slopcamera.spatial-direction`
 document describes beats, actions, camera coverage, and look intents, compiles
 into proposed performance/camera/cinema/material-lighting/shot documents, and
 fans out into bounded galleries per axis. Declared effects bind into renders,
@@ -310,7 +310,7 @@ declarative graphs, approvals, and resuming work.
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
 - **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and audit
-  scenes, and run six bounded portable operation codes. It does not
+  scenes, and run six bounded operation codes. It does not
   expose every local CLI operation and never mutates project state.
 
 ## Design and trust

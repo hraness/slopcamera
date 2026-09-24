@@ -1658,7 +1658,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "a9eea92609ea3533d8433e0b31ee724aa1b19dcf509cb2e0394f9d8b63f967bf",
+    "identityLinesSha256": "aafb13994c93a45766a85411a960faa977431c20734b5b8e74f4dc12aa2a67b5",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/sdk.md",
     "categories": [
@@ -1884,7 +1884,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "fc95d59849c999cab9af493de93ba96be69c98a6204dbcebd90dd45094bbdf47",
+    "identityLinesSha256": "b58a5cb82eca0c8897b6bdd82fd1968e28e899993a0010658b600d7d7e0a591e",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [
