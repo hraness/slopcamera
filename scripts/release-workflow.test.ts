@@ -130,7 +130,10 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("bun run test:package")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- dist bun.lock")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
-  expect(workflow).toContain("needs: [plan, boundary, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain("copy:\n    name: Slopcamera public copy")
+  expect(workflow).toContain("bun run check:copy --require-history")
+  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain('[[ "$COPY" == success ]]')
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
   expect(workflow).not.toContain(["projects", "slopcamera"].join("/"))
@@ -153,8 +156,10 @@ function requireCompleteSourceCoverage(workflow: string): void {
   }
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
+  // Reviewed 2026-09-24: the unconditional `copy` job (public copy against
+  // source, full history, required) was added; every prior job is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "94466b67389290b76774aa2b7f7cf15013aedfbfb9a8eaeaefb8ea6769de0bb1") {
+  if (priorDigest !== "48be8e8f4620b3a8974c6e4385d1580625077535544a6aeb1f64e92ab02d6ec9") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
@@ -164,7 +169,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   const root = JSON.parse(await readFile(join(import.meta.dir, "../package.json"), "utf8"))
   const site = JSON.parse(await readFile(join(import.meta.dir, "../apps/web/package.json"), "utf8"))
   expect(root.scripts.check.split(" && ")).toEqual([
-    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:sdk",
+    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:copy", "bun run check:sdk",
     "bun run check:desktop", "bun run check:api", "bun run check:web", "bun run check:standalone", "bun run test:package",
   ])
   expect(root.scripts["check:sdk"].split(" && ")).toEqual([
