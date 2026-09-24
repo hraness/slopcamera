@@ -43,3 +43,27 @@ test("compiler observation preserves callback results, constraints, build option
     expect(record.omitted).toBe(0)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+
+test("plugin-free observation preserves the exact build promise and finite phase diagnostics", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-observer-phase-")))
+  try {
+    const output = { success: true, logs: [], outputs: [] } as unknown as Bun.BuildOutput
+    const promise = Promise.resolve(output)
+    const config: Bun.BuildConfig = { entrypoints: [join(root, "apps/web/src/theme.ts")], target: "browser", minify: true }
+    const original = ((value: Bun.BuildConfig) => { expect(value).toBe(config); return promise }) as typeof Bun.build
+    const runtime = { build: original }, logs: string[] = [], failure = new Error("downstream source failure")
+    await expect(observeCompilation(root, async () => {
+      const observed = runtime.build(config)
+      expect(observed).toBe(promise)
+      expect(await observed).toBe(output)
+      throw failure
+    }, runtime, line => logs.push(line))).rejects.toBe(failure)
+    expect(runtime.build).toBe(original)
+    const record = JSON.parse(logs[0]!)
+    expect(record.builds).toEqual([{ sequence: 1, entrypoints: ["apps/web/src/theme.ts"], target: "browser", plugins: [], success: true, logCount: 0, logs: [] }])
+    expect(record.inputs.map((row: { name: string }) => row.name)).toEqual(["@hugeicons/core-free-icons", "@stylexjs/stylex"])
+    expect(record.rows).toEqual([])
+    expect(record.omittedBuilds).toBe(0)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
