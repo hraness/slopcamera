@@ -146,7 +146,7 @@ test("copy compares both exact current commands, all states, paint, timer ports 
   expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, supportBaselineInstallCommand), scenario, true)).not.toThrow()
   expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, "bun add --global other"), scenario, true)).toThrow()
   expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: collapse(supportBaselineInstallCommand) }).text).toBe(collapse(refinementInstallCommand))
-  expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.2.6 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.2.6", role: null } })).toEqual({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.3.6 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.3.6", role: null } })
+  expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.2.6 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.2.6", role: null } })).toEqual({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.4.0 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.4.0", role: null } })
   const changed = copy(); (changed.steps[0]!.elements[0]!.styles as Record<string, string>).color = "red"
   expect(() => compareSupportCopy({ ...changed, negativeControls: copyNegativeControls }, baseline, scenario, true)).toThrow()
 })
