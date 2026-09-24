@@ -12,11 +12,11 @@ import { releaseCopyScope, releaseCopyBaselineProfile, releaseCopyBaselineRevisi
 import { examplesScope, examplesBaselineProfile, examplesBaselineRevision, examplesBaselineTree, examplesFlowSections,
   examplesBaselineInstallCommand, examplesIslands, examplesHeroTextures, examplesDeadlineMs } from "./site-examples-profile"
 import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, examplesCaseFailure, examplesCaseNames,
-  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, examplesEditVideoIds, assertExamplesEditVideoInventory, type ExamplesRequest } from "./site-examples-browser-contract"
+  examplesNegativeControls, examplesDocsCases, examplesDocsExtraCases, compareExamplesCopy, examplesEditVideoIds, assertExamplesEditVideoInventory, settleExamplesDocs, type ExamplesRequest } from "./site-examples-browser-contract"
 import { compareExamplesInstall, admitExamplesInstallDom, examplesInstallNote, parseExamplesInstallPair,
   projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
-import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
+import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseCleanup, ShellPairFailure, type ShellEvidence, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify } from "./verify-site-examples"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, examplesWorkerProtocolLimit, workerDriverLimit, workerAttachmentMs } from "./preview-browser-protocol"
@@ -241,6 +241,65 @@ describe("release-copy-v1 has an independent closed identity", () => {
   for (const change of [{ schemaVersion: 6 }, { baselineProfile: examplesBaselineProfile }, { sourceRevision: examplesBaselineRevision }, { sourceTree: examplesBaselineTree }, { checkoutRevision: examplesBaselineRevision }, { extra: true },
    { baselineProfile: "before-release-copy-e08bacf-v1" }, { sourceRevision: "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7" }, { sourceTree: "d7c1e70f77255d38a80acd8184654910be473f46" }])
    expect(() => assertExamplesBaselineManifest({ ...manifest, ...change }, snapshot, releaseCopyScope)).toThrow()
+ })
+})
+describe("release-only documentation setup overlap", () => {
+ function deferred() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done }); return { promise, resolve } }
+ const tick = () => new Promise<void>(resolve => setTimeout(resolve, 0))
+ test.each([examplesScope, releaseCopyScope] as const)("%s retains the complete baseline barrier before current action", async scope => {
+  const gate = deferred(), events: string[] = []
+  const result = settleExamplesDocs(scope, () => withShellCaseCleanup(async () => {
+   events.push("baseline-setup"); await gate.promise; events.push("baseline-evidence"); return "baseline"
+  }, async () => { events.push("baseline-collected") }), async readBaseline => {
+   events.push("current-setup"); const baseline = await readBaseline(); events.push("current-action"); return baseline.length
+  })
+  await tick()
+  expect(events).toEqual(scope === releaseCopyScope ? ["baseline-setup", "current-setup"] : ["baseline-setup"])
+  gate.resolve(); expect(await result).toBe(8)
+  expect(events.indexOf("baseline-collected")).toBeLessThan(events.indexOf("current-action"))
+  if (scope === examplesScope) expect(events.indexOf("baseline-collected")).toBeLessThan(events.indexOf("current-setup"))
+ })
+ test.each([0, 1, 2, 3])("retains both original cleanup promises across failure mask %i", async mask => {
+  const baseCleanup = deferred(), currentCleanup = deferred(), baselineError = Error("baseline failure"), currentError = Error("current failure")
+  const collected: string[] = []; let settled = false
+  const outcome = settleExamplesDocs(releaseCopyScope, () => withShellCaseCleanup(async () => {
+   if (mask & 1) throw baselineError; return "baseline"
+  }, async () => { await baseCleanup.promise; collected.push("baseline") }), readBaseline => withShellCaseCleanup(async () => {
+   if (mask & 2) throw currentError; expect(await readBaseline()).toBe("baseline"); return 42
+  }, async () => { await currentCleanup.promise; collected.push("current") })).then(value => ({ value, error: null }), error => ({ value: null, error }))
+   .then(value => { settled = true; return value })
+  await tick(); expect(settled).toBe(false)
+  baseCleanup.resolve(); await tick(); expect(settled).toBe(false)
+  currentCleanup.resolve(); const result = await outcome
+  expect(collected.sort()).toEqual(["baseline", "current"])
+  if (mask === 0) expect(result.value).toBe(42)
+  else {
+   expect(result.error).toBeInstanceOf(ShellPairFailure)
+   const errors = (result.error as ShellPairFailure).errors as Error[]
+   if (mask === 1) {
+    expect(errors).toHaveLength(2)
+    expect(errors[0]!.message).toBe("Current documentation action depends on failed baseline collection")
+    expect(errors[0]!.cause).toBe(baselineError); expect(errors[1]).toBe(baselineError)
+   } else expect(errors).toEqual(mask === 2 ? [currentError] : [currentError, baselineError])
+  }
+ })
+ test("baseline cleanup failure prevents current action while retaining current cleanup", async () => {
+  const failure = Error("baseline cleanup failure"), events: string[] = []
+  const result = await settleExamplesDocs(releaseCopyScope, () => withShellCaseCleanup(async () => "evidence", async () => { throw failure }),
+   readBaseline => withShellCaseCleanup(async () => { await readBaseline(); events.push("current-action") }, async () => { events.push("current-collected") }))
+   .catch(error => error as ShellPairFailure)
+  expect(events).toEqual(["current-collected"])
+  expect(result).toBeInstanceOf(ShellPairFailure)
+  expect((result as ShellPairFailure).errors[0].cause).toBe(failure)
+  expect((result as ShellPairFailure).errors[1]).toBe(failure)
+ })
+ test("historical baseline failure remains serial and invalid scope invokes neither side", async () => {
+  let currentCalled = false; const failure = Error("historical failure")
+  await expect(settleExamplesDocs(examplesScope, async () => { throw failure }, async () => { currentCalled = true })).rejects.toBe(failure)
+  expect(currentCalled).toBe(false)
+  let calls = 0
+  await expect(settleExamplesDocs("unknown" as any, async () => { calls++; return 1 }, async () => { calls++; return 2 })).rejects.toThrow()
+  expect(calls).toBe(0)
  })
 })
 describe("exact release install fragments and unchanged geometry contract", () => {

@@ -5,7 +5,7 @@ import type { Browser, Page, Request } from "playwright-core"
 import { bounded } from "./preview-browser-contract"
 import { assertShellNode, compareShellElements, compareShellEvidence, measure, settle, chooseAppearance,
   shellRecord, shellResource, shellContentType, siteShellCases, siteShellHeaders, shellContextLifecycle,
-  shellOperationTracker, denyShellWebSocket, withShellCaseCleanup, workflowExamplesHomeSelectors,
+  shellOperationTracker, denyShellWebSocket, withShellCaseCleanup, settleShellPair, workflowExamplesHomeSelectors,
   settleShellRestoredStyles, shellPaintProperties,
   type ShellPayload, type ShellCase, type ShellElement, type ShellEvidence, type ShellCurrentDesignPosition, type ShellCurrentDesignPositions } from "./site-shell-browser-contract"
 import { siteCopyCases, assertCopyPorts, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
@@ -680,15 +680,34 @@ export async function checkDocsNavigation(page: Page, scenario: { readonly route
   return { mode: scenario.width <= 768 ? "disclosure" : "sidebar", javascript: scenario.javascript !== false, currentHref: scenario.route,
     defaultClosed: true, keyboardToggle: scenario.width <= 768 ? "enter-open-space-close" : "not-applicable", closedLinksHidden: true, articleBeforeFold }
 }
+/** Release-only setup overlap. The current action waits for complete baseline
+ * evidence and cleanup; both original promises remain owned through failure. */
+export async function settleExamplesDocs<Baseline, Current>(scope: SiteAcceptanceScope,
+  baseline: () => Promise<Baseline>, current: (readBaseline: () => Promise<Baseline>) => Promise<Current>): Promise<Current> {
+  assert.ok(scope === examplesScope || scope === releaseCopyScope)
+  if (scope === examplesScope) {
+    const evidence = await baseline()
+    return current(async () => evidence)
+  }
+  const baselineTask = Promise.resolve().then(baseline)
+  const readBaseline = async () => {
+    try { return await baselineTask } catch (cause) {
+      throw new Error("Current documentation action depends on failed baseline collection", { cause })
+    }
+  }
+  let result!: Current
+  await settleShellPair(async () => { result = await current(readBaseline) }, async () => { await baselineTask })
+  return result
+}
 export async function checkExamplesDocs(browser: Browser, request: ExamplesRequest,
   scenario: (typeof examplesDocsCases)[number] | (typeof examplesDocsExtraCases)[number]) {
   const shellSelectors = [".skip-link", ".topbar", ".wordmark", ".topbar-actions", '.topbar nav[aria-label="Primary"]',
     '.topbar nav[aria-label="Primary"] a', '[data-hraness-appearance-menu] button']
   const shellMarkup = (page: Page) => page.locator(".skip-link, .topbar, #hraness-site-footer").evaluateAll(elements => elements.map(element => element.outerHTML))
-  const baseline = await withExamplesPage(browser, { ...request, current: request.baseline }, "/docs", { ...scenario }, async page => ({
+  return settleExamplesDocs(request.scope, () => withExamplesPage(browser, { ...request, current: request.baseline }, "/docs", { ...scenario }, async page => ({
     markup: await shellMarkup(page), elements: await measure(page, shellSelectors),
-  }))
-  return withExamplesPage(browser, request, scenario.route, { ...scenario }, async (page, received) => {
+  })), readBaseline => withExamplesPage(browser, request, scenario.route, { ...scenario }, async (page, received) => {
+    const baseline = await readBaseline()
     assert.deepEqual(await shellMarkup(page), baseline.markup, "Documentation retains the exact baseline header and footer")
     compareShellElements(await measure(page, shellSelectors), baseline.elements, `${scenario.name}: retained documentation shell`)
     const navigation = await checkDocsNavigation(page, scenario)
@@ -723,7 +742,7 @@ export async function checkExamplesDocs(browser: Browser, request: ExamplesReque
     await assertNativeTarget(page, '[data-slot="hraness-support-link"]', "javascript" in scenario ? scenario.javascript : true)
     return { name: scenario.name, passed: true, figures: state.figures, videos: state.videos.length, shellPaired: true,
       navigation }
-  })
+  }))
 }
 const playerSelector = (id: string) => `figure[data-example-id="${id}"] video`
 async function videoState(page: Page, id: string) {
