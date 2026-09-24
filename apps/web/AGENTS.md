@@ -1,6 +1,6 @@
 # Contents
 
-- The portfolio redesign has its own `portfolio-surfaces-v2` acceptance identity,
+- The portfolio redesign has its own `portfolio-surfaces-v3` acceptance identity,
   documented in `scripts/PORTFOLIO_DESIGN_ACCEPTANCE.md`. `verify:portfolio` retains the
   complete 133-case workflow matrix, the 76-case ordinary deadline and original
   lifecycle/CSP/focus controls while positively checking Catppuccin, contour
@@ -9,8 +9,9 @@
   The refreshed preset references each exact canonical texture three times;
   publication still emits one file per identity-checked asset hash.
   The earlier v1 profile remains byte-preserved in `scripts/site-portfolio-profile-v1.ts`;
-  v2 uses the independent a742b29 predecessor with the incoming spatial/gallery
-  content. Follow `scripts/PORTFOLIO_CURRENT_MAIN_REVIEW.md` for the additional
+  v2 is preserved in `scripts/site-portfolio-profile-v2.ts`.
+  v3 uses the independent cec02b4 predecessor with the current spatial/gallery
+  content and corrected hosted Credits, platform and release facts. Follow `scripts/PORTFOLIO_CURRENT_MAIN_REVIEW.md` for the additional
   current-route qualification before delivery; none of its pending checks is
   implied by the unchanged 133-case gate.
 

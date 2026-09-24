@@ -1,8 +1,8 @@
 /** Portfolio acceptance is a new design identity; historical proofs keep their names. */
-export const portfolioScope = "portfolio-surfaces-v3"
-export const portfolioBaselineProfile = "before-portfolio-surfaces-cec02b4-v3"
-export const portfolioBaselineRevision = "cec02b4ea84b7e30f35a1e66224cbe1bb1066446"
-export const portfolioBaselineTree = "938b7d4a09924a199f0a45234de7f74effbdafda"
+export const portfolioScope = "portfolio-surfaces-v2"
+export const portfolioBaselineProfile = "before-portfolio-surfaces-a742b29-v2"
+export const portfolioBaselineRevision = "a742b29bb9414382843614a82cdb8c8e7c218aff"
+export const portfolioBaselineTree = "11e1eac14c63e947cd52c2f121a60fa458dcc1e5"
 export const portfolioDeadlineMs = 1_200_000
 export const portfolioOrdinaryDeadlineMs = 720_000
 export const portfolioPalette = {

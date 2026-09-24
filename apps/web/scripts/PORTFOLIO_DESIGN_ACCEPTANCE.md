@@ -1,6 +1,6 @@
 # Portfolio surface acceptance
 
-`verify:portfolio` selects `portfolio-surfaces-v2`. It certifies the Catppuccin
+`verify:portfolio` selects `portfolio-surfaces-v3`. It certifies the Catppuccin
 system default, quiet documentation, contour marketing field, shared interactive
 hero light and sculpted surfaces. It does not relabel historical migration,
 Lantern, refinement, support or workflow-example evidence.
@@ -12,18 +12,21 @@ schema-seven manifest:
 bun run verify:portfolio --baseline-directory /absolute/predecessor/apps/web --baseline-manifest /absolute/reviewed-baseline.json
 ```
 
-The predecessor revision is `a742b29bb9414382843614a82cdb8c8e7c218aff`, tree
-`11e1eac14c63e947cd52c2f121a60fa458dcc1e5`. Both source and built artifacts are
+The predecessor revision is `cec02b4ea84b7e30f35a1e66224cbe1bb1066446`, tree
+`938b7d4a09924a199f0a45234de7f74effbdafda`. Both source and built artifacts are
 hash-bound. The candidate must be clean, use one immutable design-kit revision
 for its preset and material, and retain the pinned Node 24 / Playwright 1.62.0
 Chromium lifecycle. Use the repository's existing exclusive browser admission.
 
-This predecessor includes the new premiere/compute scenes and revised homepage
-gallery. Their content stays exactly paired instead of being exempted from the
+This predecessor includes the premiere/compute scenes, revised homepage gallery,
+and corrected hosted Credits, platform and release facts. Their content stays exactly paired instead of being exempted from the
 semantic comparison. The earlier v1/72a0f21 profile is retained byte-for-byte in
 `site-portfolio-profile-v1.ts`; its original source is also retained at
 `52060fa37088a181b535851f6ceafa389db36935`. No native acceptance was claimed for
-that prepared profile. Never relabel earlier manifests or receipts as v2.
+that prepared profile. The prepared v2/a742b29 profile is retained byte-for-byte in
+`site-portfolio-profile-v2.ts`; its source is retained at
+`9e91a08`. Neither prepared profile received native acceptance.
+Never relabel earlier manifests or receipts as v3.
 The supplemental spatial-guide review is specified in
 `PORTFOLIO_CURRENT_MAIN_REVIEW.md` and remains required before delivery.
 

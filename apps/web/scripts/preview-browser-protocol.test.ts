@@ -31,7 +31,14 @@ test("portfolio protocol has a closed 128 KiB ceiling without expanding historic
   expect(() => decodeProfiledWorkerJson(Buffer.from(JSON.stringify({ text: value.text + "a" }) + "\n"), "portfolio-surfaces-v2")).toThrow("Excessive")
   for (const invalid of [Buffer.from('{"a":1,"a":2}\n'), Buffer.from("{} \n"), Buffer.from([0xff]), Buffer.from("{}\n{}\n")])
     expect(() => decodeProfiledWorkerJson(invalid, "portfolio-surfaces-v2")).toThrow()
-  for (const profile of ["portfolio-surfaces-v3", "optional-support-v1", undefined]) {
+  const currentV3Bytes = encodeProfiledWorkerJson(value, "portfolio-surfaces-v3")
+  expect(currentV3Bytes).toEqual(bytes)
+  expect(decodeProfiledWorkerJson(currentV3Bytes, "portfolio-surfaces-v3")).toEqual(value)
+  expect(() => encodeProfiledWorkerJson({ text: value.text + "a" }, "portfolio-surfaces-v3")).toThrow("Excessive")
+  expect(() => decodeProfiledWorkerJson(Buffer.from(JSON.stringify({ text: value.text + "a" }) + "\n"), "portfolio-surfaces-v3")).toThrow("Excessive")
+  for (const invalid of [Buffer.from('{"a":1,"a":2}\n'), Buffer.from("{} \n"), Buffer.from([0xff]), Buffer.from("{}\n{}\n")])
+    expect(() => decodeProfiledWorkerJson(invalid, "portfolio-surfaces-v3")).toThrow()
+  for (const profile of ["portfolio-surfaces-v4", "optional-support-v1", undefined]) {
     expect(() => encodeProfiledWorkerJson({}, profile as never)).toThrow("Unknown worker protocol profile")
     expect(() => decodeProfiledWorkerJson(Buffer.from("{}\n"), profile as never)).toThrow("Unknown worker protocol profile")
   }

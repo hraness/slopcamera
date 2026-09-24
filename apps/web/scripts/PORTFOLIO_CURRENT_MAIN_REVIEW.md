@@ -1,13 +1,13 @@
 # Current-main spatial guide qualification
 
 This is a pending native qualification plan, not an acceptance receipt. It is
-additional to all 133 `portfolio-surfaces-v2` cases, their existing bounds and
+additional to all 133 `portfolio-surfaces-v3` cases, their existing bounds and
 the independent capture/review/rerun process. Do not change historical profiles,
 skip semantic comparison, or infer success from source inspection.
 
 The independent predecessor is commit
-`a742b29bb9414382843614a82cdb8c8e7c218aff`, tree
-`11e1eac14c63e947cd52c2f121a60fa458dcc1e5`. Before admission, independently review
+`cec02b4ea84b7e30f35a1e66224cbe1bb1066446`, tree
+`938b7d4a09924a199f0a45234de7f74effbdafda`. Before admission, independently review
 its clean source, frozen dependency graph and actual generated artifact manifest.
 Preserve the old 72a0f21 manifest and profile separately. Both sides now contain
 the exact same authored gallery content; only the reviewed design changes differ.

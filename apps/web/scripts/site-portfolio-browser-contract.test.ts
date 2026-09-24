@@ -11,6 +11,7 @@ import { siteShellCases } from "./site-shell-browser-contract"
 import { siteCopyCases } from "./site-copy-browser-contract"
 import { refinementInstallCommand } from "./site-refinement-profile"
 import * as historicalPortfolio from "./site-portfolio-profile-v1"
+import * as previousPortfolio from "./site-portfolio-profile-v2"
 import { supportHref } from "./site-support-profile"
 
 const hash = "a".repeat(64)
@@ -72,10 +73,10 @@ function reference(): PortfolioRenderReference {
 }
 
 test("portfolio has an independent immutable profile and retains the complete existing case inventory", () => {
-  expect(portfolioScope).toBe("portfolio-surfaces-v2")
-  expect(portfolioBaselineProfile).toBe("before-portfolio-surfaces-a742b29-v2")
-  expect(portfolioBaselineRevision).toBe("a742b29bb9414382843614a82cdb8c8e7c218aff")
-  expect(portfolioBaselineTree).toBe("11e1eac14c63e947cd52c2f121a60fa458dcc1e5")
+  expect(portfolioScope).toBe("portfolio-surfaces-v3")
+  expect(portfolioBaselineProfile).toBe("before-portfolio-surfaces-cec02b4-v3")
+  expect(portfolioBaselineRevision).toBe("cec02b4ea84b7e30f35a1e66224cbe1bb1066446")
+  expect(portfolioBaselineTree).toBe("938b7d4a09924a199f0a45234de7f74effbdafda")
   expect(portfolioDeadlineMs).toBe(1_200_000); expect(portfolioOrdinaryDeadlineMs).toBe(720_000)
   expect(siteShellCases).toHaveLength(76)
   expect(portfolioCaseNames).toEqual(examplesCaseNames)
@@ -93,6 +94,17 @@ test("the earlier portfolio identity is retained and cannot qualify the current 
   expect(() => parsePortfolioRequest({ ...request(), baselineProfile: historicalPortfolio.portfolioBaselineProfile })).toThrow()
   expect(() => parsePortfolioRenderReference({ ...reference(), baselineRevision: historicalPortfolio.portfolioBaselineRevision })).toThrow()
   expect(() => parsePortfolioRenderReference({ ...reference(), scope: historicalPortfolio.portfolioScope })).toThrow()
+})
+
+test("the spatial-gallery v2 identity stays immutable and cannot qualify corrected current copy", () => {
+  expect(previousPortfolio.portfolioScope).toBe("portfolio-surfaces-v2")
+  expect(previousPortfolio.portfolioBaselineProfile).toBe("before-portfolio-surfaces-a742b29-v2")
+  expect(previousPortfolio.portfolioBaselineRevision).toBe("a742b29bb9414382843614a82cdb8c8e7c218aff")
+  expect(previousPortfolio.portfolioBaselineTree).toBe("11e1eac14c63e947cd52c2f121a60fa458dcc1e5")
+  expect(() => parsePortfolioRequest({ ...request(), scope: previousPortfolio.portfolioScope })).toThrow()
+  expect(() => parsePortfolioRequest({ ...request(), baselineProfile: previousPortfolio.portfolioBaselineProfile })).toThrow()
+  expect(() => parsePortfolioRenderReference({ ...reference(), baselineRevision: previousPortfolio.portfolioBaselineRevision })).toThrow()
+  expect(() => parsePortfolioRenderReference({ ...reference(), scope: previousPortfolio.portfolioScope })).toThrow()
 })
 
 test("portfolio request preserves closed transport validation and cannot impersonate historical examples", () => {
