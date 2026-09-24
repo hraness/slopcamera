@@ -21,7 +21,7 @@ import { assertShellSnapshotUnchanged, parseShellArguments, type ShellSnapshot }
 import { examplesHeroTextures } from "./site-examples-profile"
 import { readExamplesSnapshot, assertExamplesHeroTextures, type ExamplesSnapshot } from "./verify-site-examples"
 import { parsePortfolioCaseFailure, parsePortfolioPhase, parsePortfolioRequest, portfolioCaseNames, portfolioDeadlineMs,
-  portfolioScope, portfolioBaselineProfile, portfolioBaselineRevision, portfolioBaselineTree, portfolioContentType,
+  portfolioScope, portfolioBaselineProfile, portfolioBaselineRevision, portfolioBaselineTree, portfolioBaselineMaterialRevision, portfolioContentType,
   parsePortfolioByteRange, parsePortfolioRenderReference, type PortfolioRequest, type PortfolioRenderReference } from "./site-portfolio-browser-contract"
 const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const digest = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex")
@@ -213,7 +213,7 @@ export async function verifySitePortfolio(args: readonly string[]): Promise<void
       current = await step(() => readExamplesSnapshot(actualApp, true))
       portfolioExpectationInput(current, "scripts/site-portfolio-browser-contract.ts")
       portfolioExpectationInput(current, "scripts/site-portfolio-profile.ts")
-      baseline = await step(() => readExamplesSnapshot(options.baseline, true))
+      baseline = await step(() => readExamplesSnapshot(options.baseline, true, portfolioBaselineMaterialRevision))
       manifestBefore = Uint8Array.from(await step(() => readPreviewFile(options.manifest, 128 * 1024)))
       assertPortfolioBaselineManifest(JSON.parse(Buffer.from(manifestBefore).toString()), baseline)
       assertExamplesHeroTextures(current); assertExamplesHeroTextures(baseline)
@@ -325,7 +325,7 @@ export async function verifySitePortfolio(args: readonly string[]): Promise<void
         }
         assert.ok(manifestBefore !== undefined && Buffer.from(await readPreviewFile(options.manifest, 128 * 1024)).equals(Buffer.from(manifestBefore)), "Baseline input manifest changed")
         assertShellSnapshotUnchanged(current!, await readExamplesSnapshot(actualApp, true))
-        assertShellSnapshotUnchanged(baseline!, await readExamplesSnapshot(options.baseline, true))
+        assertShellSnapshotUnchanged(baseline!, await readExamplesSnapshot(options.baseline, true, portfolioBaselineMaterialRevision))
         assert.deepEqual(candidateIdentity(actualApp), candidate, "Candidate Git identity changed")
         assert.deepEqual(candidateIdentity(options.baseline), baselineIdentity, "Baseline Git identity changed")
         for (const server of servers) assert.deepEqual(server.rejected, [], "Unadmitted or late server request")

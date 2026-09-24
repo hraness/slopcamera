@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { packPortfolioRender } from "./site-portfolio-reference-codec"
 import { parsePortfolioRequest, portfolioProbeRequest, parsePortfolioPhase, parsePortfolioCaseFailure, portfolioCaseFailure,
   parsePortfolioRenderReference, assertPortfolioReference, portfolioReferenceDigest, portfolioHeadingSize, normalizePortfolioRender,
-  portfolioScope, portfolioBaselineProfile, portfolioBaselineRevision, portfolioBaselineTree, portfolioPalette,
+  portfolioScope, portfolioBaselineProfile, portfolioBaselineRevision, portfolioBaselineTree, portfolioBaselineMaterialRevision, portfolioPalette,
   portfolioDeadlineMs, portfolioOrdinaryDeadlineMs, portfolioCaseNames, portfolioNegativeControls,
   type PortfolioRequest, type PortfolioRenderReference } from "./site-portfolio-browser-contract"
 import { examplesScope, examplesBaselineProfile, examplesCaseNames, examplesNegativeControls, examplesDocsCases,
@@ -77,6 +77,7 @@ test("portfolio has an independent immutable profile and retains the complete ex
   expect(portfolioBaselineProfile).toBe("before-portfolio-surfaces-cec02b4-v3")
   expect(portfolioBaselineRevision).toBe("cec02b4ea84b7e30f35a1e66224cbe1bb1066446")
   expect(portfolioBaselineTree).toBe("938b7d4a09924a199f0a45234de7f74effbdafda")
+  expect(portfolioBaselineMaterialRevision).toBe("0e089bc18f9a0409f0e74b1fb7192f468956e386")
   expect(portfolioDeadlineMs).toBe(1_200_000); expect(portfolioOrdinaryDeadlineMs).toBe(720_000)
   expect(siteShellCases).toHaveLength(76)
   expect(portfolioCaseNames).toEqual(examplesCaseNames)

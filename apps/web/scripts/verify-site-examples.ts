@@ -19,7 +19,7 @@ import { capturePreviewOutputTimeout, createPreviewEndpointWaiter, previewFailur
 import { shellRecord, siteShellHeaders, type ShellPayload } from "./site-shell-browser-contract"
 import { assertShellHeaders, assertShellSnapshotUnchanged, parseShellArguments, type ShellSnapshot, type ShellArtifact } from "./verify-site-shell"
 import { snapshotMarketingPreset } from "./marketing-preset"
-import { snapshotLanternMaterial } from "./lantern-material"
+import { snapshotLanternMaterial, currentLanternMaterialRevision, type LanternMaterialRevision } from "./lantern-material"
 import { parseWorkflowExamples, workflowExampleAssets } from "../src/example-registry"
 import { examplesHeroTextures } from "./site-examples-profile"
 import { parseExamplesCaseFailure, parseExamplesPhase, parseExamplesRequest, examplesCaseNames, examplesDeadlineMs,
@@ -70,7 +70,8 @@ async function readInventory(directory: string, paths: readonly string[], maximu
 }
 /** Read only a physical, bounded exact source/build closure. The caller owns
  * clean Git provenance and the independent baseline build/manifest. */
-export async function readExamplesSnapshot(directory: string, current = true): Promise<ExamplesSnapshot> {
+export async function readExamplesSnapshot(directory: string, current = true,
+  materialRevision: LanternMaterialRevision = currentLanternMaterialRevision): Promise<ExamplesSnapshot> {
   assert.ok(isAbsolute(directory)); assert.equal(await realpath(directory), directory)
   const config: string[] = []
   for await (const entry of await opendir(directory)) {
@@ -86,7 +87,7 @@ export async function readExamplesSnapshot(directory: string, current = true): P
   const input = await readInventory(directory, paths.sort(), 128 * 1024 * 1024)
   assertShellHeaders(JSON.parse(Buffer.from(await readPreviewFile(join(directory, "vercel.json"), 64 * 1024)).toString()))
   const preset = await snapshotMarketingPreset(join(directory, "vendor/marketing-preset"))
-  const material = await snapshotLanternMaterial(join(directory, "vendor/lantern-material"))
+  const material = await snapshotLanternMaterial(join(directory, "vendor/lantern-material"), materialRevision)
   for (const [name, snapshot] of [["marketing-preset", preset], ["lantern-material", material]] as const) {
     const provenance = await readPreviewFile(join(directory, `vendor/${name}/provenance.json`), 32 * 1024)
     for (const [path, bytes] of [...snapshot.files, ["provenance.json", provenance] as const])

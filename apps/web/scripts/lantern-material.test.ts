@@ -4,13 +4,20 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createStylexTransformCollector } from "@hraness/ui/stylex-build"
-import { snapshotLanternMaterial } from "./lantern-material"
+import { snapshotLanternMaterial, currentLanternMaterialRevision, historicalLanternMaterialRevision, type LanternMaterialRevision } from "./lantern-material"
 
 const app = fileURLToPath(new URL("../", import.meta.url))
 const vendor = join(app, "vendor/lantern-material")
 const read = (path: string) => readFile(join(app, path), "utf8")
 
 describe("Lantern material admission and scope", () => {
+  test("keeps current admission exact and historical selection explicit and finite", async () => {
+    expect((await snapshotLanternMaterial(vendor, currentLanternMaterialRevision)).sourceCommit).toBe(currentLanternMaterialRevision)
+    await expect(snapshotLanternMaterial(vendor, historicalLanternMaterialRevision)).rejects.toThrow()
+    for (const value of ["", "a".repeat(40), "v0.16.2", `${currentLanternMaterialRevision} `])
+      await expect(snapshotLanternMaterial(vendor, value as LanternMaterialRevision)).rejects.toThrow("Unsupported Lantern material revision")
+  })
+
   test("admits only the complete released finite inventory and rejects changed ownership or bytes", async () => {
     const admitted = await snapshotLanternMaterial(vendor)
     expect(admitted.sourceCommit).toBe("d38d13c07d7956d02ddfbca8d32aa2066d88fbd3")

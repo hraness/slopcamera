@@ -39,7 +39,12 @@ bun run verify:portfolio --baseline-directory /absolute/predecessor/apps/web --b
 
 The predecessor revision is `cec02b4ea84b7e30f35a1e66224cbe1bb1066446`, tree
 `938b7d4a09924a199f0a45234de7f74effbdafda`. Both source and built artifacts are
-hash-bound. The candidate must be clean, use one immutable design-kit revision
+hash-bound. Its material snapshot remains exactly
+`0e089bc18f9a0409f0e74b1fb7192f468956e386`; the portfolio verifier explicitly
+selects that retained revision only after checking the baseline's Git identity,
+then repeats the same selection during final byte revalidation. Ordinary builds
+and candidate snapshots continue to require the current material revision.
+The candidate must be clean, use one immutable design-kit revision
 for its preset and material, and retain the pinned Node 24 / Playwright 1.62.0
 Chromium lifecycle. Use the repository's existing exclusive browser admission.
 

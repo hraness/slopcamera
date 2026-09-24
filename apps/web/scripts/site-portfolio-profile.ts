@@ -3,6 +3,7 @@ export const portfolioScope = "portfolio-surfaces-v3"
 export const portfolioBaselineProfile = "before-portfolio-surfaces-cec02b4-v3"
 export const portfolioBaselineRevision = "cec02b4ea84b7e30f35a1e66224cbe1bb1066446"
 export const portfolioBaselineTree = "938b7d4a09924a199f0a45234de7f74effbdafda"
+export const portfolioBaselineMaterialRevision = "0e089bc18f9a0409f0e74b1fb7192f468956e386"
 export const portfolioDeadlineMs = 1_200_000
 export const portfolioOrdinaryDeadlineMs = 720_000
 export const portfolioPalette = {
