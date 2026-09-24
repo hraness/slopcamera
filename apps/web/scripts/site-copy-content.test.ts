@@ -115,7 +115,7 @@ describe("visual studio public copy (pure, process-free)", () => {
     expect(readme).toContain("Seven editable")
     expect(llmsTxt).toContain("GPU support required by its selected profile")
     expect(llmsTxt).toContain("`scene camera-track` export")
-    expect(llmsTxt).toContain("fixed set of 17 tools and six portable operation codes")
+    expect(llmsTxt).toContain("fixed set of 17 tools and six operation codes")
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {

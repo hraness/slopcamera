@@ -5,6 +5,7 @@ import {
   type HtmlOverlayLibrarySelection,
 } from "./libraries";
 
+/** Public copy cites this count; `scripts/check-copy.ts` fails on drift. */
 export const HTML_OVERLAY_SCAFFOLD_KINDS = Object.freeze([
   "plain",
   "motion",

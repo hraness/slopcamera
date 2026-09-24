@@ -77,7 +77,7 @@ These times address the original project clock. Trimming keeps 5.5 seconds; the 
 
 Follow the [retained recipe and prerequisites](../../examples/showcase/edit/README.md) to assemble the actual successful native job, review selected frames, and render all four projects. It needs Bun, FFmpeg/FFprobe, and `rsvg-convert`; the checked SVG lettering is already converted to paths, so rendering it needs no font installation. The [font provenance](../../examples/showcase/edit/ratio-frames/provenance.json) records the original OFL-licensed Nebula Sans source and asset hashes.
 
-These outputs depend on the [static-overlay timing correction](https://github.com/hraness/slopcamera/commit/bd011ec10854d34aacd9a318cacaf5ffb4d52b9d), which keeps the SVG visible through the final frame. Slopcamera v3.3.4 and later releases include it, as does a [current source installation](use-current-source.md); v3.3.1 does not.
+These outputs depend on the [static-overlay timing correction](https://github.com/hraness/slopcamera/commit/81217777f193718e20351a886516ecae445590a9), which keeps the SVG visible through the final frame. Slopcamera v3.3.4 and later releases include it, as does a [current source installation](use-current-source.md); v3.3.1 does not.
 
 ### Landscape delivery
 
