@@ -9,8 +9,17 @@ The complete expanded authored homepage has a 40,100-byte ceiling. The current
 predecessor measures 39,495 bytes; palette/pattern attributes and spacing add 70
 bytes, and the shared inert hero adds 444 bytes, giving 40,009 bytes. All of those
 bytes remain counted. Exact-ceiling, UTF-8 overflow and unknown-slot rejection
-tests remain required, as does the separate 65,000-byte complete built-HTML
-ceiling.
+tests remain required. The separate complete built HTML measures 65,272 bytes
+against a 65,600-byte ceiling: predecessor 64,732 plus palette attributes 61,
+compiled header classes 26 and shared inert hero markup 453. The complete
+sealed document stays counted, with 328 bytes of headroom.
+
+The complete theme bundle has a 31,800-byte ceiling. Its two theme colors are
+resolved from the immutable shared palette by the static builder, so the browser
+does not receive the unused 6,263-byte palette table. The predecessor measures
+28,561 bytes; the shared hero controller adds 2,906, giving 31,467 with 333 bytes
+of headroom. Exact-boundary and UTF-8 overflow tests remain required. Build-time
+constants change neither the colors nor the browser behavior.
 
 The two complete emitted stylesheets have a 451,100-byte combined ceiling. The
 exact predecessor build is 347,562 bytes; the immutable shared palette, material,

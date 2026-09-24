@@ -13,7 +13,12 @@
   This profile's expanded authored homepage ceiling is 40,100 bytes: the measured
   39,495-byte predecessor plus 70 bytes of palette/pattern attributes and spacing
   and 444 bytes of shared inert hero markup totals 40,009. Count every added byte;
-  retain the 65,000-byte complete built-HTML ceiling and all exact-limit negatives.
+  retain all exact-limit negatives. The complete built HTML measures 65,272
+  bytes (predecessor 64,732 plus palette attributes 61, compiled header classes
+  26 and hero markup 453) against a 65,600-byte ceiling. The theme bundle uses
+  two build-time values from the immutable shared palette, avoiding its unused
+  table. The predecessor 28,561 plus shared hero controller 2,906 gives 31,467
+  bytes against a 31,800-byte ceiling; count every emitted byte.
   Count both complete emitted CSS artifacts against 451,100 bytes. The exact
   predecessor's 347,562 bytes plus the shared foundation/recipe rollout's 103,104
   bytes gives 450,666, leaving 434 bytes of headroom. Preserve all UTF-8 and

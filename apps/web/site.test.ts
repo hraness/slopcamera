@@ -1,3 +1,4 @@
+import { paletteColors } from "@hraness/design-kit"
 import { supportHref } from "./scripts/site-support-profile"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
@@ -246,19 +247,20 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
 }
 
 function assertBuiltHtmlBudget(html: string): number {
-  // Real example markup grows the complete sealed page. The reviewed 65,000-byte
-  // ceiling accommodates six bounded examples; no content or seal is discounted.
+  // Exact predecessor 64,732 -> portfolio 65,272: palette attributes +61,
+  // compiled header classes +26 and inert hero markup +453. Count every byte.
+  // The 65,600 ceiling leaves 328 bytes; content and seal remain included.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 65_000) throw new Error(`Built site HTML exceeds its 65,000-byte budget: ${bytes}`)
+  if (bytes >= 65_600) throw new Error(`Built site HTML exceeds its 65,600-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(64_999))).toBe(64_999)
-  expect(() => assertBuiltHtmlBudget("x".repeat(65_000)))
-    .toThrow("Built site HTML exceeds its 65,000-byte budget: 65000")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(64_999)}é`))
-    .toThrow("Built site HTML exceeds its 65,000-byte budget: 65001")
+  expect(assertBuiltHtmlBudget("x".repeat(65_599))).toBe(65_599)
+  expect(() => assertBuiltHtmlBudget("x".repeat(65_600)))
+    .toThrow("Built site HTML exceeds its 65,600-byte budget: 65600")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(65_599)}é`))
+    .toThrow("Built site HTML exceeds its 65,600-byte budget: 65601")
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
@@ -274,17 +276,20 @@ test("combined site CSS budget counts both complete UTF-8 artifacts and rejects 
 })
 
 function assertThemeBundleBudget(script: string): number {
+  // Build-time palette constants avoid 6,263 bytes of unused palette-table data.
+  // Exact predecessor 28,561 + shared hero controller 2,906 = 31,467 bytes;
+  // the 31,800 ceiling leaves 333 bytes and includes all runtime code.
   const bytes = Buffer.byteLength(script, "utf8")
-  if (bytes >= 29_500) throw new Error(`Theme bundle exceeds its 29,500-byte budget: ${bytes}`)
+  if (bytes >= 31_800) throw new Error(`Theme bundle exceeds its 31,800-byte budget: ${bytes}`)
   return bytes
 }
 
 test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceiling", () => {
-  expect(assertThemeBundleBudget("x".repeat(29_499))).toBe(29_499)
-  expect(() => assertThemeBundleBudget("x".repeat(29_500)))
-    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29500")
-  expect(() => assertThemeBundleBudget(`${"x".repeat(29_499)}é`))
-    .toThrow("Theme bundle exceeds its 29,500-byte budget: 29501")
+  expect(assertThemeBundleBudget("x".repeat(31_799))).toBe(31_799)
+  expect(() => assertThemeBundleBudget("x".repeat(31_800)))
+    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31800")
+  expect(() => assertThemeBundleBudget(`${"x".repeat(31_799)}é`))
+    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31801")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
@@ -1383,7 +1388,7 @@ describe("static Slopcamera site", () => {
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(65_000)
+    expect(emittedBytes).toBeLessThan(65_600)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1650,6 +1655,9 @@ describe("static Slopcamera site", () => {
       expect(document).toContain('class="hraness-foil-mark__paint"')
     }
     expect(themeAsset).toContain("data-foil")
+    expect(themeAsset).toContain(paletteColors.catppuccin.light.background)
+    expect(themeAsset).toContain(paletteColors.catppuccin.dark.background)
+    expect(themeAsset).not.toContain("__SLOPCAMERA_")
     // The reviewed 0.8 refinement graph plus the documentation recipes is
     // under 298,500 bytes before compression; the shared-footer v0.12.x
     // optional-support styles and the host scroll-padding rule that keeps
@@ -1660,7 +1668,7 @@ describe("static Slopcamera site", () => {
     // union and captured foundation; no import, recipe, snapshot, or repeated
     // layered rule is discounted.
     expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(451_100)
-    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(29_500)
+    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(31_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })

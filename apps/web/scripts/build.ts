@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { paletteColors } from "@hraness/design-kit"
 
 import { renderSlopcameraSocialImage } from "./generate-og"
 import { buildPreview } from "./build-preview"
@@ -183,6 +184,10 @@ async function bundleAnalytics(config: Readonly<{ host: string; key: string }>):
 
 async function bundleTheme(): Promise<Uint8Array> {
   const result = await Bun.build({
+    define: {
+      __SLOPCAMERA_DARK_THEME_COLOR__: JSON.stringify(paletteColors.catppuccin.dark.background),
+      __SLOPCAMERA_LIGHT_THEME_COLOR__: JSON.stringify(paletteColors.catppuccin.light.background),
+    },
     entrypoints: [join(sourceDirectory, "theme.ts")],
     env: "disable",
     format: "iife",
