@@ -25,7 +25,7 @@ There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slop
 
 ## Portable and local operations
 
-The v3.3.1 portable projection contains six operations: diagram check/render and image generate/vectorize/icon/gallery. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
+The v3.4.0 portable projection contains six operations: diagram check/render and image generate/vectorize/icon/gallery. Portable spatial and studio schemas can parse, hash and plan values without making their local executors available. A graph containing an unsupported operation fails before executor or resource admission.
 
 The local builder adds `analysis`, `edits`, `gateway`, `iteration`, `studio`, `scene`, `spatialProject`, `media`, `project`, `render` and `recording` operations. Inspect the current registry and built-in schemas through the host:
 
@@ -175,6 +175,6 @@ Effect approval and native source authorization have different scopes. `runs app
 
 ## MCP and canvas interchange
 
-The v3.3.1 MCP server exposes 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools. These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection contains six operation codes. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Scene tools cap returned entities, samples, and diff entries. No tool mutates project state. The CLI supports larger checked diagrams and trusted workspace configuration.
+The v3.4.0 MCP server exposes 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools. These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The portable operation projection contains six operation codes. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Scene tools cap returned entities, samples, and diff entries. No tool mutates project state. The CLI supports larger checked diagrams and trusted workspace configuration.
 
 Generated `.tldr` is editable interchange for browser-based canvas tooling. Slopcamera does not install or launch a diagram editor or application bundle, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.

@@ -23,9 +23,9 @@ Use the Slopcamera release installation or a source build for the commands below
 
 ## Verified release contents
 
-The immutable [v3.3.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.3.1), published on September 19, 2026, contains the following command families. Its canonical archive is built from `88aa724005ed924b6763f9a0fe39505d632c6191`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.4.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.4.0), published on September 23, 2026, contains the following command families. Its canonical archive is built from `e08bacf68c140062d9e2aebf314a4bd5d4d17cb7`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.3.1 |
+| Capability | Slopcamera v3.4.0 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -33,12 +33,13 @@ The immutable [v3.3.1 release](https://github.com/hraness/slopcamera/releases/ta
 | Static `capabilities --json` manifest; image icon and candidate-gallery recipes | Included |
 | Scene builders/admission, audits, rendered galleries, vision critique, character/performance and cinematic camera APIs | Included |
 | Scene effects, particles, simulation bakes, semantic direction, temporal/behavior audits, project cinema plans | Included |
+| Seventeen read-only visual style profiles (`style list` and `style show`), deterministic exposure and variation helpers, film-finishing controls | Included; authoring guidance, no effects applied |
 | Built-in workflows | Eight, including `cinematic-world`; inspect `workflows list` |
 | New screen, camera, microphone, or system-audio capture | Absent |
 
 The static and rigged/morph GLB profiles have separate admission limits within this release. Model, browser, native-engine and hardware availability still require inspection on the machine doing the work; presence in an archive is not a live qualification result.
 
-Later source corrects static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. These corrections are absent from v3.3.1. Examples that depend on them identify the required source revision beside their commands. The project-cinema commands also ship in v3.3.1, but later renderer corrections must be checked separately before reproducing a source example.
+This release includes the three renderer corrections introduced in v3.3.4 that v3.3.1 lacks: static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. Examples that depend on them identify the required revision beside their commands. The project-cinema commands ship in v3.3.1 and later.
 
 ## Parametric architectural designs
 
@@ -99,7 +100,7 @@ editing, outputs, and the required visual review.
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-Slopcamera v3.3.1 exposes six portable operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+Slopcamera v3.4.0 exposes six portable operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Local execution profiles
 
