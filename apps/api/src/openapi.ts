@@ -87,6 +87,10 @@ export function openApiDocument(baseUrl: string): Record<string, unknown> {
                 "Insufficient credits; body carries a topup.url the caller's human can pay.",
             },
             "404": { description: "Unknown tool." },
+            "409": {
+              description:
+                "The idempotencyKey belongs to a call that already finished; send a new key.",
+            },
             "429": { description: "Rate limited." },
           },
         },

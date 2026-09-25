@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { ApiConfig } from "./config.js"
+import { CreditsClient } from "./credits.js"
 import { createApiHandler } from "./handler.js"
 
 const DIAGRAM = await readFile(
@@ -254,6 +255,69 @@ describe("api handler", () => {
     }
     expect(holdBody.idempotencyKey).toBe("slopcamera-api:test-idem-1")
     expect(holdBody.subjectToken).toBe("cr_dev_test")
+  })
+
+  test("refuses a reused idempotency key before running the paid tool", async () => {
+    const calls: string[] = []
+    const fetchImpl = (async (input: unknown) => {
+      const url = String(input)
+      calls.push(new URL(url).pathname)
+      if (url.endsWith("/v1/holds")) {
+        return Response.json({ error: "conflict", state: "settled" }, { status: 409 })
+      }
+      return Response.json({}, { status: 200 })
+    }) as typeof fetch
+    const handler = createApiHandler({
+      config: testConfig({
+        credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
+        modelCostsMicroUsd: { "openai/gpt-image-1": 40_000 },
+      }),
+      env: {},
+      fetchImpl,
+    })
+    const response = await handler(
+      post(
+        "/v1/tools/execute_slopcamera/call",
+        {
+          arguments: {
+            operation: "slopcamera.image.generate",
+            input: { model: "openai/gpt-image-1", prompt: "x", outputPath: "o.png" },
+          },
+          idempotencyKey: "already-settled",
+        },
+        { authorization: "Bearer cr_dev_test" },
+      ),
+    )
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { error?: string }).error).toBe("idempotency_key_reused")
+    expect(calls).toEqual(["/v1/holds"])
+  })
+
+  test("treats a settle that did not settle as a billing failure", async () => {
+    const credits = new CreditsClient({
+      baseUrl: "https://credits.invalid",
+      productKey: "cr_prod_x",
+      fetchImpl: (async () =>
+        Response.json(
+          { holdId: "hold_1", state: "expired", chargedMicroUsd: 0 },
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    })
+    await expect(
+      credits.settle("hold_1", [
+        { provider: "vercel-ai-gateway", operation: "image_generate", microUsd: 40_000, basis: "contractual" },
+      ]),
+    ).rejects.toMatchObject({ code: "billing_unavailable", status: 503 })
+    const settledClient = new CreditsClient({
+      baseUrl: "https://credits.invalid",
+      productKey: "cr_prod_x",
+      fetchImpl: (async () =>
+        Response.json(
+          { holdId: "hold_1", state: "settled", chargedMicroUsd: 90_000 },
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    })
+    await settledClient.settle("hold_1", [])
   })
 
   test("uploads and artifacts require configured storage", async () => {
