@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Weights Descend</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .shade { position: absolute; left: 0; right: 0; bottom: 0; height: 16%; background: linear-gradient(to top, rgb(20 24 21 / 78%), rgb(20 24 21 / 0%)); }
+      .caption { position: absolute; left: 5.5%; bottom: 6.5%; font: 600 1.05vw/1.4 Georgia, serif; letter-spacing: .32em; text-transform: uppercase; color: #d8d2af; opacity: .8; }
+    </style>
+    <script type="importmap">{"imports":{"three":"/.slopcamera-overlay/libraries/12e6dd7a5cceb3efd76f8c65acbf5aa55c74820115d9ebae874b28456b9ddb5c.mjs"}}</script>
+  </head>
+  <body>
+    <canvas aria-label="A mountain of numeral tiles settling into a valley while a marble rolls to the lowest point"></canvas>
+    <div class="shade"></div>
+    <div class="caption">Myth II &nbsp;·&nbsp; The settling of the world &nbsp;·&nbsp; The Weights Descend</div>
+    <script type="module">
+      import * as THREE from "three";
+
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const styleFrame = (timeMs) => {
+        const frame = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return { frame, t: EXPOSURE[frame] / 1e6 };
+      };
+      const pal = P.palette;
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+      const rnd = (key) => SlopcameraOverlay.randomFor("weights:" + key);
+
+      const canvas = document.querySelector("canvas");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
+      renderer.setPixelRatio(devicePixelRatio);
+      renderer.setSize(SlopcameraOverlay.width, SlopcameraOverlay.height, false);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.95;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(pal.background);
+      scene.fog = new THREE.Fog(pal.background, 15, 34);
+      const camera = new THREE.PerspectiveCamera(34, SlopcameraOverlay.width / SlopcameraOverlay.height, 0.1, 60);
+      scene.add(new THREE.HemisphereLight(0xe9e2c4, 0x2b2f2a, 1.35));
+      const sun = new THREE.DirectionalLight(0xffe2b8, 2.6);
+      sun.position.set(-6, 9, 4);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 });
+      sun.shadow.bias = -0.0008;
+      scene.add(sun);
+
+      // A numeral atlas painted once: the tops of the tiles read as weights.
+      const atlas = document.createElement("canvas");
+      atlas.width = 1280; atlas.height = 128;
+      const g = atlas.getContext("2d");
+      g.fillStyle = pal.paper; g.fillRect(0, 0, 1280, 128);
+      g.fillStyle = pal.ink; g.font = "600 92px Georgia, serif"; g.textAlign = "center"; g.textBaseline = "middle";
+      for (let d = 0; d < 10; d++) g.fillText(String(d), d * 128 + 64, 70);
+      g.strokeStyle = "rgba(32,40,36,.35)"; g.lineWidth = 6;
+      for (let d = 0; d < 10; d++) g.strokeRect(d * 128 + 3, 3, 122, 122);
+      const map = new THREE.CanvasTexture(atlas);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.anisotropy = 8;
+
+      const N = 36, SIZE = 0.3, HALF = (N - 1) * SIZE / 2;
+      const count = N * N;
+      const geometry = new THREE.BoxGeometry(SIZE * 0.92, 1, SIZE * 0.92);
+      geometry.translate(0, 0.5, 0);
+      const digit = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
+      geometry.setAttribute("aDigit", digit);
+      const top = new THREE.MeshStandardMaterial({ map, roughness: 0.85 });
+      top.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>", "#include <common>\nattribute float aDigit;")
+          .replace("#include <uv_vertex>", "#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2((uv.x + aDigit) / 10.0, uv.y);\n#endif");
+      };
+      const side = new THREE.MeshStandardMaterial({ color: pal.primary, roughness: 0.9 });
+      // BoxGeometry groups: +x, -x, +y (top), -y, +z, -z.
+      const tiles = new THREE.InstancedMesh(geometry, [side, side, top, side, side, side], count);
+      tiles.castShadow = true; tiles.receiveShadow = true;
+      scene.add(tiles);
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: pal.ink, roughness: 1 }));
+      ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
+      scene.add(ground);
+
+      const peaks = Array.from({ length: 7 }, (_, i) => ({
+        x: (rnd("px" + i) - 0.5) * 8, z: (rnd("pz" + i) - 0.5) * 8,
+        h: 1.4 + rnd("ph" + i) * 2.6, r: 0.9 + rnd("pr" + i) * 1.4,
+      }));
+      const mountain = (x, z) => 0.15 + 0.7 * peaks.reduce((s, p) => s + p.h * Math.exp(-((x - p.x) ** 2 + (z - p.z) ** 2) / (p.r * p.r)), 0);
+      const valley = (x, z) => 0.12 + 0.045 * (x * x + z * z) + 0.12 * Math.sin(x * 1.1) * Math.cos(z * 0.9);
+      const delays = Array.from({ length: count }, (_, i) => rnd("delay" + i) * 0.9);
+      // Each tile settles on its own schedule: the far ridges first, like snow off a slope.
+      const settleAt = (x, z, i, t) => {
+        const distance = Math.hypot(x, z) / (HALF * 1.42);
+        const start = 0.8 + (1 - distance) * 2.2 + delays[i];
+        return smooth(start, start + 2.4, t);
+      };
+      const height = (x, z, s) => mountain(x, z) * (1 - s) + valley(x, z) * s;
+
+      const marble = new THREE.Mesh(new THREE.SphereGeometry(0.2, 40, 24),
+        new THREE.MeshStandardMaterial({ color: pal.accent, roughness: 0.25, metalness: 0.1, emissive: pal.accent, emissiveIntensity: 0.25 }));
+      marble.castShadow = true;
+      scene.add(marble);
+      const surfaceAt = (x, z, t) => {
+        const s = smooth(0.8, 6.2, t);
+        return height(x, z, s);
+      };
+      // Stateless descent: integrate the marble from its origin to the requested time.
+      const marbleAt = (t) => {
+        let x = peaks[0].x + 0.25, z = peaks[0].z + 0.25;
+        const steps = Math.floor(t * 60);
+        const e = 0.02;
+        for (let k = 0; k < steps; k++) {
+          const tk = k / 60;
+          const gx = (surfaceAt(x + e, z, tk) - surfaceAt(x - e, z, tk)) / (2 * e);
+          const gz = (surfaceAt(x, z + e, tk) - surfaceAt(x, z - e, tk)) / (2 * e);
+          const rate = 0.012 * smooth(0.6, 1.4, tk);
+          x -= clamp(gx * rate, -0.06, 0.06); z -= clamp(gz * rate, -0.06, 0.06);
+        }
+        return { x, z, y: surfaceAt(x, z, t) };
+      };
+
+      const dummy = new THREE.Object3D();
+      SlopcameraOverlay.onFrame(({ timeMs }) => {
+        const { t } = styleFrame(timeMs);
+        let i = 0;
+        for (let a = 0; a < N; a++) for (let b = 0; b < N; b++, i++) {
+          const x = a * SIZE - HALF, z = b * SIZE - HALF;
+          const s = settleAt(x, z, i, t);
+          const h = Math.max(0.05, height(x, z, s));
+          dummy.position.set(x, 0, z);
+          dummy.scale.set(1, h, 1);
+          dummy.rotation.set(0, 0, 0);
+          dummy.updateMatrix();
+          tiles.setMatrixAt(i, dummy.matrix);
+          digit.array[i] = Math.floor(Math.abs(h * 7.3 + x * 3.1 - z * 1.7) * 3) % 10;
+        }
+        tiles.instanceMatrix.needsUpdate = true;
+        digit.needsUpdate = true;
+        const m = marbleAt(t);
+        marble.position.set(m.x, m.y + 0.2, m.z);
+        marble.rotation.set(m.z * 3, 0, -m.x * 3);
+        const drift = t / 8;
+        camera.position.set(-10.5 + 4.0 * drift + 0.05 * Math.sin(t * 0.9), 8.2 - 1.4 * drift + 0.03 * Math.sin(t * 1.3), 12.0 - 1.0 * drift);
+        camera.lookAt(0.3 * drift, 0.5, -0.2);
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>

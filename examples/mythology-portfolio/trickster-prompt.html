@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Trickster Prompt</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      *, *::before, *::after { box-sizing: border-box; }
+      .ground { position: absolute; inset: 0; background: var(--background); }
+      .scene { position: absolute; inset: 0; display: block; width: 100%; height: 100%; contain: strict; }
+      .words { position: absolute; transform: translate(-50%, -50%); font: italic 400 2.05vw/1.15 Georgia, serif; color: var(--ink); text-align: center; white-space: nowrap; }
+      .words b { font: 700 1em/1 "Courier New", monospace; font-style: normal; color: var(--accent); }
+      .title { position: absolute; left: 5.5%; top: 8%; font: italic 400 3.4vw/1 Georgia, serif; color: var(--ink); }
+      .caption { position: absolute; left: 5.6%; top: 15.5%; font: 600 1.05vw/1.4 Georgia, serif; letter-spacing: .32em; text-transform: uppercase; color: var(--ink); opacity: .75; }
+    </style>
+    <script type="importmap">{"imports":{"two.js":"/.slopcamera-overlay/libraries/0e98a999fcb47006add9425200b18fab26eb09a154665b2893371d74e0a862d4.mjs"}}</script>
+  </head>
+  <body>
+    <div class="ground"></div>
+    <canvas class="scene" aria-label="A fox made of braces hops across three speech bubbles past three guards who forget their orders"></canvas>
+    <div class="title">The Trickster Prompt</div>
+    <div class="caption">Myth VI &nbsp;·&nbsp; Trickster &nbsp;·&nbsp; The Fox of Brackets</div>
+    <div class="words" data-i="0">what a wise<br>guard you are</div>
+    <div class="words" data-i="1">surely you<br>would agree</div>
+    <div class="words" data-i="2">and so, <b>{ open</b><br><b>the gate }</b></div>
+    <script type="module">
+      import Two from "two.js";
+
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const BOIL = Object.fromEntries(Object.entries(P.boil).map(([key, value]) => [key, value.split(",").map(Number)]));
+      const styleFrame = (timeMs) => {
+        const frame = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return { frame, t: EXPOSURE[frame] / 1e6, boil: (channel) => BOIL[channel][frame] };
+      };
+      const pal = P.palette;
+      for (const [key, value] of Object.entries(pal)) document.documentElement.style.setProperty("--" + key, value);
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+      const jitter = (seedValue, i) => { const s = Math.sin(i * 12.9898 + seedValue * 78.233) * 43758.5453; return s - Math.floor(s) - 0.5; };
+      const W = SlopcameraOverlay.width, H = SlopcameraOverlay.height, U = W / 1920;
+
+      const canvas = document.querySelector(".scene");
+      const two = new Two({ alpha: true, antialias: true, autostart: false, domElement: canvas, height: H, width: W,
+        overdraw: false, premultipliedAlpha: true, preserveDrawingBuffer: true, ratio: devicePixelRatio, type: Two.Types.webgl });
+      two.renderer.ctx.clearColor(0, 0, 0, 0);
+
+      // A boiled outline: base points, a retained Two.Path, and per-exposure keyed jitter.
+      const boiled = (points, { fill, stroke, width, closed = true }) => {
+        const path = new Two.Path(points.map(([x, y]) => new Two.Anchor(x, y)), closed, false);
+        path.fill = fill ?? "transparent"; path.stroke = stroke ?? pal.ink; path.linewidth = (width ?? 5) * U;
+        path.cap = "round"; path.join = "round";
+        if (!stroke && stroke !== undefined) path.noStroke();
+        two.add(path);
+        return { path, points, update(seedValue, amount, dx = 0, dy = 0, rot = 0, scale = 1) {
+          const c = Math.cos(rot), s = Math.sin(rot);
+          path.vertices.forEach((v, i) => {
+            const [bx, by] = points[i];
+            const x = bx * scale, y = by * scale;
+            v.x = dx + x * c - y * s + jitter(seedValue, i * 2) * amount * U;
+            v.y = dy + x * s + y * c + jitter(seedValue, i * 2 + 1) * amount * U;
+          });
+        } };
+      };
+      const roundRect = (w, h, r, tail) => {
+        const pts = [];
+        const corner = (cx, cy, a0) => { for (let k = 0; k <= 5; k++) { const a = a0 + k / 5 * Math.PI / 2; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } };
+        corner(w / 2 - r, h / 2 - r, 0);
+        pts.push([tail * 0.2 + 30, h / 2], [tail, h / 2 + 70], [tail * 0.2 - 10, h / 2]);
+        corner(-w / 2 + r, h / 2 - r, Math.PI / 2);
+        corner(-w / 2 + r, -h / 2 + r, Math.PI);
+        corner(w / 2 - r, -h / 2 + r, Math.PI * 1.5);
+        return pts;
+      };
+      const bubbles = [
+        { x: 0.22, y: 0.52, w: 420, h: 150, tail: -60 },
+        { x: 0.50, y: 0.36, w: 400, h: 150, tail: 40 },
+        { x: 0.78, y: 0.50, w: 420, h: 150, tail: -20 },
+      ].map((b) => ({ ...b, shape: boiled(roundRect(b.w, b.h, 46, b.tail), { fill: pal.paper, stroke: pal.ink, width: 6 }) }));
+      const floorY = H * 0.86;
+      const floor = boiled([[0, 0], [W, 0]], { stroke: pal.ink, width: 5, closed: false });
+      // Guards: squared shields with eyes that close once the fox has passed.
+      const guards = bubbles.map((b) => ({
+        body: boiled([[-38, 0], [38, 0], [38, -110], [0, -140], [-38, -110]], { fill: pal.primary, stroke: pal.ink, width: 5 }),
+        eyeL: boiled([[-16, -92], [-8, -92]], { stroke: pal.paper, width: 9, closed: false }),
+        eyeR: boiled([[8, -92], [16, -92]], { stroke: pal.paper, width: 9, closed: false }),
+        x: b.x * W + b.tail * U * 1.1,
+      }));
+      // The fox: a flat silhouette with braces for markings, one accent colour.
+      const foxBody = boiled([[-80, 0], [-60, -40], [0, -55], [55, -48], [78, -80], [70, -120], [92, -100], [104, -122], [110, -86], [128, -66], [96, -46], [80, -8], [66, 0], [52, -18], [-40, -18], [-58, 0]],
+        { fill: pal.accent, stroke: pal.ink, width: 5 });
+      const foxTail = boiled([[-78, -24], [-120, -30], [-160, -70], [-150, -100], [-128, -76], [-100, -58], [-70, -40]], { fill: pal.secondary, stroke: pal.ink, width: 5 });
+      const foxEye = boiled([[96, -92], [102, -92]], { stroke: pal.ink, width: 10, closed: false });
+      const braces = boiled([[-14, -44], [-24, -40], [-22, -30], [-30, -26], [-22, -22], [-24, -12], [-14, -8]], { stroke: pal.paper, width: 5, closed: false });
+      const braces2 = boiled([[14, -44], [24, -40], [22, -30], [30, -26], [22, -22], [24, -12], [14, -8]], { stroke: pal.paper, width: 5, closed: false });
+      const words = [...document.querySelectorAll(".words")];
+
+      const stops = bubbles.map((b) => ({ x: b.x * W, y: (b.y * H - b.h / 2 * U) }));
+      const hops = [
+        { from: { x: 0.04 * W, y: floorY }, to: stops[0], start: 0.2, end: 1.1, height: 170 },
+        { from: stops[0], to: stops[1], start: 1.9, end: 2.8, height: 150 },
+        { from: stops[1], to: stops[2], start: 3.5, end: 4.4, height: 150 },
+        { from: stops[2], to: { x: 0.9 * W, y: floorY }, start: 5.0, end: 5.8, height: 110 },
+      ];
+      const foxAt = (t) => {
+        let pos = hops[0].from, air = 0, facing = 1;
+        for (const hop of hops) {
+          if (t < hop.start) break;
+          const u = clamp((t - hop.start) / (hop.end - hop.start));
+          const e = u < 1 ? u : 1;
+          pos = { x: hop.from.x + (hop.to.x - hop.from.x) * e, y: hop.from.y + (hop.to.y - hop.from.y) * e - Math.sin(Math.PI * e) * hop.height * U };
+          air = u > 0 && u < 1 ? Math.sin(Math.PI * u) : 0;
+          facing = hop.to.x >= hop.from.x ? 1 : -1;
+        }
+        return { ...pos, air, facing };
+      };
+
+      SlopcameraOverlay.onFrame(({ timeMs }) => {
+        const { t, boil } = styleFrame(timeMs);
+        const bf = boil("fox"), bb = boil("bubble"), bt = boil("tail");
+        const empty = smooth(6.0, 6.8, t);
+        floor.update(bb + 3, 3, 0, floorY);
+        bubbles.forEach((b, i) => {
+          const appear = smooth(0.1 + i * 0.35, 0.6 + i * 0.35, t) * (1 - empty);
+          b.shape.update(bb + i, 4, b.x * W, b.y * H, 0, 0.9 * U + 0.1 * U * appear);
+          b.shape.path.opacity = appear;
+          const el = words[i];
+          el.style.left = `${b.x * 100}%`; el.style.top = `${b.y * 100}%`; el.style.opacity = String(appear);
+          const g = guards[i];
+          const passed = t > hops[i + 1].start + 0.4;
+          g.body.update(bb + 10 + i, 3, g.x, floorY);
+          g.body.path.opacity = 1 - empty;
+          const closedEyes = passed ? 1 : 0;
+          g.eyeL.update(bb + 20 + i, 1.5, g.x, floorY + closedEyes * 6);
+          g.eyeR.update(bb + 30 + i, 1.5, g.x, floorY + closedEyes * 6);
+          g.eyeL.path.linewidth = g.eyeR.path.linewidth = (passed ? 4 : 11) * U;
+          g.eyeL.path.opacity = g.eyeR.path.opacity = 1 - empty;
+        });
+        const fox = foxAt(t);
+        const bow = smooth(6.3, 6.8, t) * (1 - smooth(6.85, 7.0, t) * 0.4);
+        const stretch = fox.air * 0.18;
+        const rot = -0.25 * fox.air * fox.facing + bow * 0.45;
+        const scale = U * 1.05;
+        for (const part of [foxBody, foxTail, foxEye, braces, braces2]) {
+          part.path.scale = new Two.Vector(fox.facing * (1 + stretch), 1 - stretch * 0.5);
+        }
+        foxBody.update(bf, 4, 0, 0, 0, 1);
+        foxTail.update(bt, 5, 0, 0, Math.sin(t * 5) * 0.04, 1);
+        foxEye.update(bf + 1, 1, 0, 0, 0, 1);
+        braces.update(bf + 2, 1.5, 0, 0, 0, 1);
+        braces2.update(bf + 3, 1.5, 0, 0, 0, 1);
+        for (const part of [foxBody, foxTail, foxEye, braces, braces2]) {
+          part.path.translation.set(fox.x, fox.y);
+          part.path.rotation = rot;
+          part.path.scale = new Two.Vector(fox.facing * (1 + stretch) * scale, (1 - stretch * 0.5) * scale);
+        }
+        two.render();
+      });
+    </script>
+  </body>
+</html>
