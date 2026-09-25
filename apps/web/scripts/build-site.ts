@@ -17,7 +17,9 @@ import { projectSiteArtifacts, siteSha256, snapshotSiteFoundation, type SiteArti
 import { snapshotMarketingPreset } from "./marketing-preset"
 import { snapshotLanternMaterial } from "./lantern-material"
 import { docsDocumentForPage, docPages } from "../src/docs-registry"
-import type { SiteAssets } from "../src/site-content"
+import { blogDocumentForPost, blogIndexDocument, blogPostForDocument, blogPosts } from "../src/blog-registry"
+import { blogIndexSlots, blogPostSlots } from "../src/blog-content"
+import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
   { name: "@hraness/design-kit", version: "0.13.0" },
@@ -35,10 +37,15 @@ const documents = [
   { outputPath: "404.html", template: "404.html" },
   { outputPath: "index.html", template: "index.html" },
   ...docPages.map(page => ({ outputPath: docsDocumentForPage(page), template: "doc.html" })),
+  // The blog index and every post (quarantined ones included, as noindex
+  // pages) share src/blog.html; their article strings come from blog-content.
+  { outputPath: blogIndexDocument, template: "blog.html" },
+  ...blogPosts.map(post => ({ outputPath: blogDocumentForPost(post), template: "blog.html" })),
 ] as const
 const sourceFiles = [
   "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
+  "src/blog.html", "src/blog-admissions.ts", "src/blog-registry.ts", "src/blog-content.ts", "src/site-blog.stylex.ts",
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/site-foil.css", "src/styles.css",
@@ -116,7 +123,13 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     .filter((entry): entry is string => typeof entry === "string" && entry.endsWith(".md"))
     .map(entry => entry.split(sep).join("/"))
     .sort()
-  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)), wordmarkMaskPath,
+  const blogSourceDirectory = join(app, "src/blog")
+  const blogSources = (await readdir(blogSourceDirectory))
+    .filter(entry => entry.endsWith(".md"))
+    .sort()
+  assert.deepEqual(blogSources, blogPosts.map(post => `${post.slug}.md`).sort(), "Blog sources must match the blog registry exactly")
+  const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)),
+    ...blogSources.map(path => join(blogSourceDirectory, path)), wordmarkMaskPath,
     ...[...presetPaths, "provenance.json"].map(path => join(presetRoot, path)), ...materialPaths.map(path => join(materialRoot, path)), ...packageInputs.map(item => item.path), fontCss,
     ...(root === app ? [] : [join(root, "package.json"), join(root, "bun.lock")])]
   const inputs = await Promise.all(sourcePaths.map(async path => ({
@@ -128,6 +141,15 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     // also the repository root (the Vercel deployment layout).
     const body = /(?:^|\/)src\/docs\/(.+)\.md$/u.exec(input.path)
     if (body !== null) docBodies[`docs/${body[1]}.html`] = new TextDecoder("utf-8", { fatal: true }).decode(input.bytes)
+  }
+  const blogPages: Record<string, BlogPageContent> = { [blogIndexDocument]: blogIndexSlots() }
+  for (const input of inputs) {
+    const body = /(?:^|\/)src\/blog\/([a-z0-9-]+)\.md$/u.exec(input.path)
+    if (body === null) continue
+    const document = `blog/${body[1]}.html`
+    const post = blogPostForDocument(document)
+    assert.ok(post !== undefined, `Blog source has no registered post: ${input.path}`)
+    blogPages[document] = blogPostSlots(post, new TextDecoder("utf-8", { fatal: true }).decode(input.bytes))
   }
   const snapshot = inputs.map(({ path, bytes }) => ({ path, bytes: bytes.byteLength, sha256: siteSha256(bytes) }))
   const fingerprint = siteSha256(canonicalJson({
@@ -161,7 +183,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     for (const item of renderer.outputs) assert.deepEqual(await artifactForFile(rendererRoot, item.path), item)
     const module: unknown = await import(pathToFileURL(join(rendererRoot, entries[0]!.path)).href)
     assert.ok(module !== null && typeof module === "object" && "renderSiteDocument" in module && typeof module.renderSiteDocument === "function")
-    const sealedAssets: SiteAssets = { ...assets, docBodies }
+    const sealedAssets: SiteAssets = { ...assets, docBodies, blogPages }
     for (const document of documents) {
       const template = inputs.find(item => item.path === below(root, join(app, "src", document.template)))!
       const html: unknown = module.renderSiteDocument(new TextDecoder("utf-8", { fatal: true }).decode(template.bytes), document.outputPath, sealedAssets,

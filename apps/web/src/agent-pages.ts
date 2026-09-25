@@ -1,6 +1,12 @@
 import { homepageExampleMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
+import { blogIndex, blogMarkdownPath, indexableBlogPosts } from "./blog-registry"
+
+// Only indexable posts are listed; quarantined posts stay out of agent indexes.
+const blogPostLinks = indexableBlogPosts
+  .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
+  .join("\n")
 
 export const homeMarkdown = `# Give your coding agent a visual studio
 
@@ -200,6 +206,12 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
 - [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup
 
+## Blog
+
+- [Blog index](https://slopcamera.com/blog/index.md): ${blogIndex.description}
+${blogPostLinks}
+- [Atom feed](https://slopcamera.com/blog/feed.xml): New posts
+
 ## Reference and explanation
 
 - [Capabilities](https://slopcamera.com/docs/reference/capabilities.md): Release availability, supported profiles, runtime requirements, and limits
@@ -229,9 +241,14 @@ export const sitemapMarkdown = `# Sitemap
 
 - [Slopcamera home](https://slopcamera.com/index.md): Product, installation, examples, and workflows
 - [Documentation](https://slopcamera.com/docs/index.md): Tutorials, how-to guides, reference, and explanation
+- [Blog](https://slopcamera.com/blog/index.md): ${blogIndex.description}
 - [Machine-readable site guide](https://slopcamera.com/llms.txt): When to use Slopcamera
 
 ${docsSectionOrder.map(section => `## ${docsSectionLabels[section]}\n\n${docPages.filter(page => page.section === section).map(page => `- [${page.title}](https://slopcamera.com${docsMarkdownUrl(page)}): ${page.description}`).join("\n")}`).join("\n\n")}
+
+## Blog
+
+${blogPostLinks}
 `
 
 export const robotsTxt = `User-agent: OAI-SearchBot

@@ -28,6 +28,7 @@
   },
   "include": [
     "site.test.ts",
+    "src/blog.test.ts",
     "scripts/build-site.ts",
     "scripts/site-contract.ts",
     "scripts/site-contract.test.ts",

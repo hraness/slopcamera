@@ -35,6 +35,7 @@ import {
   docsPageForRequestPath,
   docPages,
 } from "./src/docs-registry"
+import { blogDocumentForPost, blogIndexDocument, blogMarkdownPath, blogPostPath, blogPosts, indexableBlogPosts } from "./src/blog-registry"
 import {
   isDocsPath,
   isHomePath,
@@ -759,11 +760,12 @@ describe("static Slopcamera site", () => {
   test("publishes the sealed ordinary and documentation documents with one complete union and bound local fonts", async () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
-    expect(artifacts).toHaveLength(19 + 2 + docPages.length)
+    const blogDocuments = [blogIndexDocument, ...blogPosts.map(blogDocumentForPost)]
+    expect(artifacts).toHaveLength(19 + 2 + docPages.length + blogDocuments.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(19 + 2 + docPages.length)
+    expect(new Set(paths).size).toBe(19 + 2 + docPages.length + blogDocuments.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
-      "404.html", ...docPages.map(docsDocumentForPage), "index.html",
+      "404.html", ...docPages.map(docsDocumentForPage), ...blogDocuments, "index.html",
     ].sort())
     expect(paths.filter(path => path.endsWith(".css")).sort()).toEqual([
       builtAssets.stylesPath.slice(1), builtAssets.siteFoundationPath.slice(1),
@@ -1338,8 +1340,10 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+      "@hraness/design-kit-articles": "github:hraness/design-kit#v0.17.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1368,6 +1372,8 @@ describe("static Slopcamera site", () => {
       '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
+    expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.17.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
@@ -1602,6 +1608,7 @@ describe("static Slopcamera site", () => {
       "404.html",
       "apple-touch-icon.png",
       "assets",
+      "blog",
       "docs",
       "graphs",
       "icon.png",
@@ -1670,6 +1677,9 @@ describe("static Slopcamera site", () => {
       "https://slopcamera.com/",
       "https://slopcamera.com/index.md",
       ...docPages.flatMap(page => [docsCanonicalUrl(page), `https://slopcamera.com${docsMarkdownUrl(page)}`]),
+      "https://slopcamera.com/blog",
+      "https://slopcamera.com/blog/index.md",
+      ...indexableBlogPosts.flatMap(post => [`https://slopcamera.com${blogPostPath(post)}`, `https://slopcamera.com${blogMarkdownPath(post)}`]),
     ])
     expect(await readBuilt("index.md")).toBe(homeMarkdown)
     expect(await readBuilt("llms.txt")).toBe(llmsTxt)
@@ -1705,9 +1715,12 @@ describe("static Slopcamera site", () => {
     expect((await readdir(join(appDirectory, "dist/assets/examples"))).sort())
       .toEqual(workflowExampleAssets(workflowExamples).map(asset => asset.file).sort())
     expect(sitemap).toBe(renderSitemapXml())
-    for (const optional of ["<lastmod>", "<changefreq>", "<priority>"]) {
+    for (const optional of ["<changefreq>", "<priority>"]) {
       expect(sitemap).not.toContain(optional)
     }
+    // Only blog entries carry lastmod, from their admitted publication dates.
+    expect(sitemap.match(/<lastmod>/gu)).toHaveLength(2 + 2 * indexableBlogPosts.length)
+    expect(sitemap.slice(0, sitemap.indexOf("<loc>https://slopcamera.com/blog</loc>"))).not.toContain("<lastmod>")
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
     expect(llmsTxt).toContain("> Slopcamera (formerly Atet) is a local visual studio for coding agents.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
@@ -1950,6 +1963,8 @@ describe("static Slopcamera site", () => {
       readBuilt("index.html"),
       readBuilt("404.html"),
       ...docPages.map(page => readBuilt(docsDocumentForPage(page))),
+      readBuilt(blogIndexDocument),
+      ...blogPosts.map(post => readBuilt(blogDocumentForPost(post))),
     ])
     for (const document of documents) {
       const lockups = [...document.matchAll(/<a aria-label="Hraness home" class="hraness-site-footer__brand [^"]*" href="https:\/\/hraness\.com\/" lang="en" dir="ltr">[\s\S]*?<span class="hraness-site-footer__brand-name [^"]*">by Hraness<\/span><\/a>/gu)]
