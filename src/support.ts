@@ -7,7 +7,7 @@ import {
 export const supportProfile = {
   id: "slopcamera",
   name: "Slopcamera",
-  valueProposition: "Support ongoing development of local visual tools for agents.",
+  valueProposition: "Support ongoing development of local media tools for agents.",
   updates: false,
 } as const
 

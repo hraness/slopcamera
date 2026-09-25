@@ -268,7 +268,7 @@ describe("exact held examples stylesheet negative control",()=>{
 
 function ctaFixture(current: boolean, available = 500, direction = "ltr", height = 42) {
  const copySelector=".slopcamera-product-hero > .hraness-marketing-hero__copy", top=current?120:100, left=40
- const texts=["Install Slopcamera",current?"Explore the examples":"See example requests"]
+ const texts=["Install Slopcamera",current?"See what agents made":"See example requests"]
  const widths=[172,current?197.678:201.834],gap=10.4, natural=widths[0]!+gap+widths[1]!,wrapped=natural>available
  const width=Math.min(available,natural),rowHeight=wrapped?2*height+gap:height,rowX=direction==="rtl"?left+available-width:left,rowY=top+180
  const zero=Object.fromEntries(["top","right","bottom","left"].flatMap(edge=>[[`margin-${edge}`,"0px"],[`padding-${edge}`,"0px"],[`border-${edge}-width`,"0px"]]))

@@ -9,9 +9,9 @@ import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit."
+const definition = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 
-describe("visual studio public copy (pure, process-free)", () => {
+describe("media studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
     const [readme, guide, html] = await Promise.all([
       read("README.md"), read("docs/how-to/use-current-source.md"), read("apps/web/src/index.html"),

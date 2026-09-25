@@ -9,7 +9,7 @@ export const supportFooterDigests = {
   baseline: "0dd4fdbd38b4d49f0597653350beebb0a9ab85389ec6f78fcc9fa65685880b92",
   // The v0.14.0 canonical footer (Ra mark plus "by Hraness" lockup, icon-only
   // support target) as serialized beside the new in-flow content footer.
-  current: "96248be1be9c578aa56252cfec665a79421486c2c1b56d470e612fc3e4435bdf",
+  current: "8f31cda655ff9366efc76ab57600b927828164e071aa76009c11ba731166e0ed",
 } as const
 export const supportHref = "https://account.hraness.com/support?product=slopcamera&source=web#support"
 /** The immutable support baseline (425066a) advertises v3.2.6; the current page

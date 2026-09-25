@@ -1,7 +1,7 @@
 {
   "name": "@hraness/slopcamera",
   "version": "3.4.0",
-  "description": "A local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.",
+  "description": "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [

@@ -15,7 +15,7 @@ export const blogIndexDocument = "blog/index.html"
 export const blogIndex = Object.freeze({
   title: "Blog",
   heading: "Slopcamera blog",
-  description: "Posts about Slopcamera, the local visual studio for coding agents: what it is for, how it works, and how it connects to other Hraness tools.",
+  description: "Posts about Slopcamera, the media studio for agents: what it is for, how it works, and how it connects to other Hraness tools.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"
@@ -39,7 +39,7 @@ const sources: readonly BlogPostSource[] = [
   {
     slug: "introducing-slopcamera",
     title: "Introducing Slopcamera",
-    description: "Slopcamera is a command-line studio that a coding agent drives to make images, diagrams and video from source files you can edit and render again.",
+    description: "Slopcamera is a media studio for agents that a coding agent drives to make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
     eyebrow: "Introducing",
     published: "2026-09-24",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],

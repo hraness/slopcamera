@@ -6,7 +6,7 @@ import type { RefinementHero } from "./site-refinement-browser-contract"
 const copySelector = ".slopcamera-product-hero > .hraness-marketing-hero__copy"
 const actionsSelector = `${copySelector} > .hraness-marketing-hero__actions`
 const buttonsSelector = `${actionsSelector} > a`
-const labels = (current: boolean) => ["Install Slopcamera", current ? "Explore the examples" : "See example requests"]
+const labels = (current: boolean) => ["Install Slopcamera", current ? "See what agents made" : "See example requests"]
 export interface ExamplesActions {
   readonly buttons: readonly ShellElement[]
   readonly textRects: readonly (readonly number[])[]

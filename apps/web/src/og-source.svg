@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <title>Slopcamera, a visual studio for coding agents</title>
+  <title>Slopcamera: Visual work your agent can keep revising.</title>
   <desc>Direct scenes and films with your coding agent.</desc>
   <rect width="1200" height="630" fill="#09090d"/>
   <path d="M0 64H1200M0 566H1200" stroke="#f4f1e8" stroke-opacity=".13"/>
@@ -10,6 +10,6 @@
   <text x="72" y="116" fill="#e8aa48" font-family="Nebula Sans" font-size="19" font-weight="700" letter-spacing="3">SLOPCAMERA</text>
   <image href="og-serif-hero.png" x="0" y="0" width="1200" height="630"/>
   <text x="72" y="525" fill="#9d9b97" font-family="Nebula Sans" font-size="21" font-weight="400">Scenes · films · motion graphics · diagrams</text>
-  <text x="72" y="590" fill="#f4f1e8" font-family="Nebula Sans" font-size="16" font-weight="700" letter-spacing="2.4">LOCAL VISUAL STUDIO</text>
+  <text x="72" y="590" fill="#f4f1e8" font-family="Nebula Sans" font-size="16" font-weight="700" letter-spacing="2.4">MEDIA STUDIO FOR AGENTS</text>
   <text x="1128" y="590" fill="#9d9b97" font-family="Nebula Sans" font-size="16" font-weight="400" text-anchor="end">slopcamera.com</text>
 </svg>

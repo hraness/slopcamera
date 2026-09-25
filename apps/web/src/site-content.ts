@@ -144,7 +144,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
     ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
       id: "slopcamera", name: "Slopcamera", updates: false,
-      valueProposition: "Support ongoing development of local visual tools for agents.",
+      valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
