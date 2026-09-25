@@ -34,6 +34,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
 | Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
+| Product mark, marketing illustration or topic icon | [Brand illustrations](references/brand-illustrations.md) |
 | Compose an editorial or social banner from generated layers, local type and diagrams | [Social collage banners](references/social-collage-banners.md) |
 | Review alternative textures, skyboxes, backdrops, design candidates or whole-scene variants | [Image galleries](references/image-galleries.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
