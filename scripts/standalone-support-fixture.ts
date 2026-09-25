@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto";
 import { docPages } from "../apps/web/src/docs-registry";
+import { blogIndexDocument, blogPosts } from "../apps/web/src/blog-registry";
 import { supportHref } from "../apps/web/scripts/site-support-profile";
 
 const fixturePath = "apps/web/scripts/site-support-profile.ts";
-const ordinaryHtmlPaths = new Set(["apps/web/dist/index.html", "apps/web/dist/404.html", ...docPages.map(page => `apps/web/dist/docs/${page.slug}.html`)]);
+const ordinaryHtmlPaths = new Set([
+  "apps/web/dist/index.html",
+  "apps/web/dist/404.html",
+  ...docPages.map(page => `apps/web/dist/docs/${page.slug}.html`),
+  `apps/web/dist/${blogIndexDocument}`,
+  ...blogPosts.map(post => `apps/web/dist/blog/${post.slug}.html`),
+]);
 const expectedLine = `export const supportHref = ${JSON.stringify(supportHref)}`;
 
 /** Admit only the independent browser oracle's single static public link.

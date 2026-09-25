@@ -14,6 +14,8 @@ import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/examp
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
 import { docsCanonicalUrl, docsMarkdownUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
+import { blogFeedPath, blogIndexMarkdownPath, blogMarkdownPath, blogPosts, indexableBlogPosts } from "../src/blog-registry"
+import { blogAtomFeed, blogIndexMarkdown, blogPostMarkdown, blogSitemapPaths } from "../src/blog-content"
 import {
   homeMarkdown,
   llmsTxt,
@@ -83,6 +85,21 @@ async function docsMirrors(): Promise<Readonly<Record<string, string>>> {
   return files
 }
 
+/** Markdown mirrors for the blog index and every post, plus the Atom feed of
+ * indexable posts. Quarantined posts keep a mirror (served noindex) but never
+ * enter the index, feed or sitemap. */
+async function blogTextFiles(): Promise<Readonly<Record<string, string>>> {
+  const bodies: Record<string, string> = {}
+  const files: Record<string, string> = { [blogIndexMarkdownPath.slice(1)]: blogIndexMarkdown() }
+  for (const post of blogPosts) {
+    const body = await readFile(join(sourceDirectory, "blog", `${post.slug}.md`), "utf8")
+    bodies[post.slug] = body
+    files[blogMarkdownPath(post).slice(1)] = blogPostMarkdown(post, body)
+  }
+  files[blogFeedPath.slice(1)] = blogAtomFeed(bodies)
+  return files
+}
+
 function assetPath(name: string, bytes: Uint8Array): string {
   const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12)
   const extensionIndex = name.lastIndexOf(".")
@@ -91,11 +108,11 @@ function assetPath(name: string, bytes: Uint8Array): string {
   return `/assets/${stem}-${digest}${extension}`
 }
 
-function renderSitemapUrl(path: string, examples: readonly WorkflowExample[] = []): string {
+function renderSitemapUrl(path: string, examples: readonly WorkflowExample[] = [], lastModified?: string): string {
   const escapeXml = (value: string) => value.replace(/[&<>"']/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[character]!)
   return `  <url>
     <loc>${siteOrigin}${path}</loc>
-${examples.map(example => `    <image:image><image:loc>${siteOrigin}${exampleUrl(example.poster)}</image:loc><image:caption>${escapeXml(example.poster.alt)}</image:caption></image:image>`).join("\n")}
+${lastModified === undefined ? "" : `    <lastmod>${lastModified}</lastmod>\n`}${examples.map(example => `    <image:image><image:loc>${siteOrigin}${exampleUrl(example.poster)}</image:loc><image:caption>${escapeXml(example.poster.alt)}</image:caption></image:image>`).join("\n")}
   </url>`
 }
 
@@ -110,6 +127,13 @@ export function renderSitemapXml(): string {
         renderSitemapUrl(canonical, workflowExamples.filter(example => example.guideSlug === page.slug)),
         renderSitemapUrl(mirror),
       ]
+    }),
+    // Only indexable posts enter the sitemap, each with its lastmod.
+    ...blogSitemapPaths().flatMap(entry => {
+      const lastModified = typeof entry.lastModified === "string" ? entry.lastModified : entry.lastModified?.toISOString()
+      const post = indexableBlogPosts.find(item => `/blog/${item.slug}` === entry.path)
+      const mirror = post === undefined ? blogIndexMarkdownPath : blogMarkdownPath(post)
+      return [renderSitemapUrl(entry.path, [], lastModified), renderSitemapUrl(mirror, [], lastModified)]
     }),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -252,7 +276,8 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   }
 
   const docsTextFiles = await docsMirrors()
-  await Promise.all(Object.entries({ ...generatedTextFiles, ...docsTextFiles }).map(async ([file, contents]) => {
+  const blogFiles = await blogTextFiles()
+  await Promise.all(Object.entries({ ...generatedTextFiles, ...docsTextFiles, ...blogFiles }).map(async ([file, contents]) => {
     const target = join(outputDirectory, file)
     await mkdir(dirname(target), { recursive: true })
     await writeFile(target, contents)

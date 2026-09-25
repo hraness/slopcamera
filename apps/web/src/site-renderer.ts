@@ -1,7 +1,9 @@
 import { siteShellClassNames } from "./site-shell.stylex"
 import { siteInstallClassNames } from "./site-install.stylex"
 import { siteDocsClassNames } from "./site-docs.stylex"
+import { siteBlogClassNames } from "./site-blog.stylex"
 import { docsPageForDocument } from "./docs"
+import { isBlogDocument } from "./blog-registry"
 import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"
 import { assertCompiledSiteClass, replaceSiteSlot } from "./site-template"
 
@@ -42,6 +44,11 @@ const recoverySlots = [
 const docsSlots = [
   ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],
 ] as const
+// Blog pages reuse the ordinary shell. Their article and index markup carries
+// BLOG_*_CLASS tokens for its chrome and DOCS_*_CLASS tokens for post prose.
+const blogSlots = [
+  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 4],
+] as const
 // Documentation markup emits DOCS_*_CLASS tokens at variable counts, so the
 // sealed graph fills them from this closed inventory instead of slot counts.
 const docsClassSlots = {
@@ -80,13 +87,29 @@ const docsClassSlots = {
   "{{DOCS_ANCHOR_CLASS}}": siteDocsClassNames.anchor,
 } as const
 
+const blogClassSlots = {
+  "{{BLOG_PAGE_CLASS}}": siteBlogClassNames.page,
+  "{{BLOG_BLOCK_CLASS}}": siteBlogClassNames.block,
+  "{{BLOG_HEADER_CLASS}}": siteBlogClassNames.header,
+  "{{BLOG_DEK_CLASS}}": siteBlogClassNames.dek,
+  "{{BLOG_META_CLASS}}": siteBlogClassNames.meta,
+  "{{BLOG_BYLINE_CLASS}}": siteBlogClassNames.byline,
+  "{{BLOG_PROVENANCE_CLASS}}": siteBlogClassNames.provenance,
+  "{{BLOG_SOURCE_CHECKED_CLASS}}": siteBlogClassNames.sourceChecked,
+  "{{BLOG_ENTRY_CLASS}}": siteBlogClassNames.entry,
+  "{{BLOG_ENTRY_TITLE_CLASS}}": siteBlogClassNames.entryTitle,
+  "{{BLOG_ENTRY_LINK_CLASS}}": siteBlogClassNames.entryLink,
+} as const
+
 /** Produce the complete authored document once, before the public compiler
  * seals it. No class, stylesheet, script or content is rewritten afterward. */
 export function renderSiteDocument(template: string, document: SiteDocument, assets: SiteAssets, stylesheetLinks: string): string {
   const isDocs = docsPageForDocument(document) !== undefined
+  const isBlog = isBlogDocument(document)
   const documentSlots = document === "index.html" ? homeSlots
     : document === "404.html" ? recoverySlots
     : isDocs ? docsSlots
+    : isBlog ? blogSlots
     : null
   if (documentSlots === null) throw new Error("Unexpected site document")
   let rendered = template
@@ -99,12 +122,19 @@ export function renderSiteDocument(template: string, document: SiteDocument, ass
     assertCompiledSiteClass(className, placeholder)
     rendered = replaceSiteSlot(rendered, placeholder, className, count)
   }
-  if (isDocs) {
+  if (isDocs || isBlog) {
     for (const [placeholder, className] of Object.entries(docsClassSlots)) {
       assertCompiledSiteClass(className, placeholder)
       rendered = rendered.replaceAll(placeholder, className)
     }
     if (/\{\{DOCS_[A-Z_]+\}\}/u.test(rendered)) throw new Error("Documentation page kept an unresolved class token")
+  }
+  if (isBlog) {
+    for (const [placeholder, className] of Object.entries(blogClassSlots)) {
+      assertCompiledSiteClass(className, placeholder)
+      rendered = rendered.replaceAll(placeholder, className)
+    }
+    if (/\{\{BLOG_[A-Z0-9_]+_CLASS\}\}/u.test(rendered)) throw new Error("Blog page kept an unresolved class token")
   }
   rendered = replaceSiteSlot(rendered, "{{SITE_STYLES}}", stylesheetLinks, 1)
   if (/\{\{[^{}]*\}\}/u.test(rendered)) throw new Error("Site document contains an unresolved placeholder")
