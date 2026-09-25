@@ -96,4 +96,4 @@ bun run check:api
 - `execute_slopcamera` admits only `slopcamera.image.generate`; no caller-selected operations, source code, or subprocess execution reaches the runtime.
 - Every call runs in a fresh temporary directory that is deleted afterward. Nothing crosses requests except TTL'd R2 objects.
 - Request bodies are capped at 16 MiB; file names, counts, and bytes are bounded before any provider I/O.
-- Paid-call retries are safe: the hold is idempotent on the caller's `idempotencyKey`, and a failed tool run releases the hold before responding.
+- Paid-call retries are safe: the hold is idempotent on the caller's `idempotencyKey` while that call is in progress, and a failed tool run releases the hold before responding. Once a call finishes, its key is spent; reusing it returns `409 idempotency_key_reused` without running the tool, so send a new key for each new call.

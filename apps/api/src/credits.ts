@@ -142,6 +142,15 @@ export class CreditsClient {
         "The credential was rejected by the billing service.",
       )
     }
+    if (status === 409) {
+      // Credits refuses a key whose hold already closed (or that belongs to a
+      // different request), so a replayed key never runs a second paid call.
+      throw new ApiError(
+        409,
+        "idempotency_key_reused",
+        "This idempotency key was already used. Send a new key for a new call.",
+      )
+    }
     throw new ApiError(
       503,
       "billing_unavailable",
@@ -158,12 +167,14 @@ export class CreditsClient {
       basis: "reported" | "contractual" | "estimated" | "unknown"
     }>,
   ): Promise<void> {
-    const { status } = await this.request(
+    const { status, json } = await this.request(
       "POST",
       `/v1/holds/${encodeURIComponent(holdId)}/settle`,
       { costs: [...costs] },
     )
-    if (status !== 200) {
+    // A hold that expired or was released answers 200 with its recorded
+    // state and no charge; only an actual settlement pays for the call.
+    if (status !== 200 || !isRecord(json) || json.state !== "settled") {
       throw new ApiError(
         503,
         "billing_unavailable",
