@@ -3,7 +3,7 @@ import { HTML_OVERLAY_SCAFFOLD_KINDS } from "../html-overlay";
 const HTML_OVERLAY_SCAFFOLD_KIND_HELP =
   HTML_OVERLAY_SCAFFOLD_KINDS.join("|");
 
-const GLOBAL_HELP = `slopcamera — creative scenes and non-destructive media editing for coding agents
+const GLOBAL_HELP = `slopcamera: a media studio for coding agents
 
 Usage: slopcamera <command> [options]
 

@@ -220,7 +220,7 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   // v0.14 renders the support target as the muted question-mark icon only; the
   // accessible name stays on the link and its title carries the proposition.
   assert.equal(await link.textContent(), ""); assert.equal(await link.getAttribute("target"), null)
-  assert.equal(await link.getAttribute("title"), "Support ongoing development of local visual tools for agents. Review optional paid membership.")
+  assert.equal(await link.getAttribute("title"), "Support ongoing development of local media tools for agents. Review optional paid membership.")
   assert.equal(await link.locator('[data-slot="hraness-support-icon"]').count(), 1)
   assert.equal(await page.locator("footer form,footer input,footer iframe").count(), 0)
   await link.scrollIntoViewIfNeeded(); await settle(page, scenario.direction)

@@ -23,7 +23,7 @@ export function standaloneSupportFixtureScanText(path: string, text: string): st
     const anchors = [...text.matchAll(/<a\b[^>]*data-slot="hraness-support-link"[^>]*>[\s\S]*?<\/a>/gu)];
     const footers = [...text.matchAll(/<footer\b[^>]*id="hraness-site-footer"[^>]*>[\s\S]*?<\/footer>/gu)];
     if (anchors.length !== 1 || footers.length !== 1 || !footers[0]![0].includes(anchors[0]![0])) return text;
-    if (createHash("sha256").update(anchors[0]![0]).digest("hex") !== "832b816552fab51dfb8d14a2d58a71c2aea2092535502acd14fc777b5b476202") return text;
+    if (createHash("sha256").update(anchors[0]![0]).digest("hex") !== "c4e92f5420418a6b3b3586b863ecb3714bc31f60950276868a972b32fadd82c6") return text;
     if (text.toLowerCase().split(host).length !== 2) return text;
     return text.replace(anchors[0]![0], "");
   }

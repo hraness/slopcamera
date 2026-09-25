@@ -1,9 +1,10 @@
 # Slopcamera
 
-[![Slopcamera: a visual studio for coding agents](https://slopcamera.com/og.png)](https://slopcamera.com)
+[![Slopcamera: Visual work your agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
 
-**Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent
-renders images, diagrams, animation, and video from source files it can edit.**
+**Slopcamera is a media studio for coding agents. Codex, Claude Code, and other
+agents make images, diagrams, animation, 3D scenes, and edited video from source
+files they can keep revising.**
 
 Describe the result you want to Codex, Claude Code, or another coding agent.
 Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
@@ -136,7 +137,8 @@ architecture from dimensions, [build a parametric design](https://slopcamera.com
 
 ## What Slopcamera does
 
-Slopcamera is a local visual studio for coding agents.
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes,
+and video from source files it can keep revising.
 
 ### Author scenes and direct cameras
 

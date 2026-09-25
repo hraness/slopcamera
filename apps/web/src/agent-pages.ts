@@ -8,9 +8,9 @@ const blogPostLinks = indexableBlogPosts
   .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
   .join("\n")
 
-export const homeMarkdown = `# Give your coding agent a visual studio
+export const homeMarkdown = `# Visual work your agent can keep revising.
 
-Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio for coding agents, it writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -131,11 +131,9 @@ Editing and rendering stay local. Gateway generation and selected cloud analysis
 
 No. This website has no upload or generation features. Media work runs in the Slopcamera CLI and SDK; MCP exposes only its documented subset.
 
-## Built by Hraness
+### Is Slopcamera the same as Atet?
 
-Hraness is an advanced software research organization dedicated to advancing the frontier of machine intelligence.
-
-[hraness.com](https://hraness.com) · [@hraness](https://x.com/hraness) · [GitHub](https://github.com/hraness/slopcamera)
+Yes. Atet was renamed Slopcamera in September 2026, and atet.sh now redirects here. Old Atet releases still install Atet, not Slopcamera.
 
 ## Sitemap
 
@@ -158,7 +156,9 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 
 export const llmsTxt = `# Slopcamera
 
-> Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.
+> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
+
+Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. Slopcamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. Slopcamera is free and open source.
 
 Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 

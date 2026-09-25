@@ -6,7 +6,7 @@ At an eligible human closeout, call `slopcamera support offer --json` once. Trea
 around disabled state. Discovery on stderr is guidance, not an invitation claim.
 
 For `kind:offer`, optionally say once: “You can support continued development of
-Slopcamera’s local visual tools.” Use the returned clean support link. This product
+Slopcamera’s local media tools.” Use the returned clean support link. This product
 has no updates mailing list; do not collect an email or imply a subscription unlocks
 features. Opening a link grants no authority to pay or create an account.
 

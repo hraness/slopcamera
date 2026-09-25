@@ -27,7 +27,7 @@ assertArticleAdmissions(blogAdmissions)
 export const blogSite: SearchSite = {
   name: "Slopcamera",
   title: "Slopcamera",
-  description: "A local visual studio for coding agents.",
+  description: "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   origin: "https://slopcamera.com",
   language: "en",
 }
@@ -37,7 +37,7 @@ const hraness: ArticleParty = { kind: "Organization", name: "Hraness" }
 const socialImage = {
   path: "/og.png",
   contentType: "image/png",
-  alt: "Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif",
+  alt: "Slopcamera, a media studio for agents, beside a camera-frame and lens motif",
   width: 1200,
   height: 630,
 } as const

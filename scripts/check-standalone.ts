@@ -324,7 +324,7 @@ const problems = [
   ...inventoryUpdate.problems,
 ];
 const rootPackage = await readJson(join(ROOT, "package.json"));
-const expectedDescription = "A local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.";
+const expectedDescription = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.";
 const expectedKeywords = [
   "ai-media-generation",
   "ai-video-generation",
