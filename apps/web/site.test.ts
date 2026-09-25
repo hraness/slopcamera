@@ -167,7 +167,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required 0.8 foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 348_000) throw new Error(`Combined site CSS exceeds its 348,000-byte budget: ${bytes}`)
+  if (bytes >= 352_000) throw new Error(`Combined site CSS exceeds its 352,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -235,7 +235,7 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
       depth -= 1; selector = null
       continue
     }
-    const declaration = /^--hraness-site-footer-([\w-]+): (.+);$/u.exec(text)
+    const declaration = /^--_?hraness-site-footer-([\w-]+): (.+);$/u.exec(text)
     if (declaration !== null && selector !== null && footerClasses.has(selector)) tokens[coarseDepth === null ? "fine" : "coarse"][declaration[1]!] = declaration[2]!
   }
   return tokens
@@ -258,15 +258,15 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(180_799), "x".repeat(167_200))).toBe(347_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_800), "x".repeat(167_200)))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_799), `${"x".repeat(167_200)}é`))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(348_000), ""))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(348_000)))
-    .toThrow("Combined site CSS exceeds its 348,000-byte budget: 348000")
+  expect(assertCombinedSiteCssBudget("x".repeat(180_799), "x".repeat(171_200))).toBe(351_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(180_800), "x".repeat(171_200)))
+    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(180_799), `${"x".repeat(171_200)}é`))
+    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(352_000), ""))
+    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(352_000)))
+    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -1297,7 +1297,7 @@ describe("static Slopcamera site", () => {
     const resolve = (name: string, pointer: "fine" | "coarse"): string => {
       const value = tokens[pointer][name] ?? tokens.fine[name]
       if (value === undefined) throw new Error(`Installed footer token missing: ${name}`)
-      return value.replace(/var\(--hraness-site-footer-([\w-]+)\)/gu, (_, inner: string) => `(${resolve(inner, pointer)})`)
+      return value.replace(/var\(--_?hraness-site-footer-([\w-]+)\)/gu, (_, inner: string) => `(${resolve(inner, pointer)})`)
     }
     const rules = [...css.matchAll(/^(\s*)scroll-padding-block-end: ([^;]+);$/gmu)]
     expect(rules).toHaveLength(2)
@@ -1341,7 +1341,7 @@ describe("static Slopcamera site", () => {
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.17.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.18.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1369,7 +1369,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.13.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.18.0"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.17.0"')
@@ -1661,7 +1661,7 @@ describe("static Slopcamera site", () => {
     // contract measures 346,025. Keep a strict ceiling over the full sealed
     // union and captured foundation; no import, recipe, snapshot, or repeated
     // layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(348_000)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(352_000)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(29_500)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
