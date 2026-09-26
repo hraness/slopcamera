@@ -1,5 +1,6 @@
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
+import { changelogSection } from "./github-release";
 
 const EXPECTED_ACTOR_ID = 894119;
 const EXPECTED_PACKAGE = "@hraness/slopcamera";
@@ -498,6 +499,8 @@ async function main(): Promise<void> {
   if (packageJson.name !== EXPECTED_PACKAGE || packageJson.version !== release.version) {
     throw new Error(`Requested version must exactly match ${EXPECTED_PACKAGE} in package.json.`);
   }
+  // The release page copies this section; refuse to tag without it.
+  changelogSection(readFileSync(resolve(root, "CHANGELOG.md"), "utf8"), release.version);
 
   admitOwner(await jsonCommand(["gh", "api", "user"], root, "Verify GitHub authentication"));
   admitRepository(

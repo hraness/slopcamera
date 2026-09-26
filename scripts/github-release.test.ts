@@ -3,10 +3,12 @@ import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { admitAttempt, admitExpectedHandoff, admitNpmHandoffRun, admitPublishedRelease, admitRelease, admitRemoteAssetBytes, authorizeRelease, authorityPaths, admitVerifiedProvenance, checksums, compareVersions, findReleaseForTag, hash, parseManifest, releaseBody, verifyHandoff } from "./github-release";
+import { admitAttempt, admitExpectedHandoff, admitNpmHandoffRun, admitPublishedRelease, admitRelease, admitRemoteAssetBytes, authorizeRelease, authorityPaths, admitVerifiedProvenance, admitReleaseBody, changelogSection, checksums, compareVersions, findReleaseForTag, hash, identityRecord, parseManifest, parseReleaseBody, releaseBody, releaseNotes, verifyHandoff } from "./github-release";
 import { admitPublishedGitHubRelease } from "./push-release-tag";
 
 const archive = Buffer.from("exact canonical bytes");
+const changelog = "# Changelog\n\nIntro.\n\n## Unreleased\n\nNext work.\n\n- Pending change.\n\n## 3.2.3 - 2026-09-01\n\nRenders finish on time.\n\n- `slopcamera render` stops at its deadline.\n- Stills keep their frame.\n\n## 3.2.2\n\nOlder.\n\n- Old change.\n";
+const section = changelogSection(changelog, "3.2.3");
 function manifest() {
   return parseManifest({ schema: "hraness-github-release-v1", repository: "hraness/slopcamera", repositoryId: 1310516748,
     package: "@hraness/slopcamera", version: "3.2.3", tag: "v3.2.3", sourceSha: "a".repeat(40),
@@ -45,14 +47,14 @@ test("npm publication admits only the published immutable release with exact com
   const inputs = files();
   inputs.set("provenance.jsonl", Buffer.from("{}\n"));
   const release = { id: 7, tag_name: m.tag, name: `Slopcamera ${m.tag}`, target_commitish: m.sourceSha, draft: false, prerelease: false, immutable: true,
-    author: { id: 41898282, login: "github-actions[bot]", type: "Bot" }, body: releaseBody(m),
+    author: { id: 41898282, login: "github-actions[bot]", type: "Bot" }, body: releaseBody(m, section),
     assets: [...inputs].map(([name, bytes], index) => ({ id: index + 1, name, state: "uploaded", size: bytes.length, digest: `sha256:${hash(bytes)}` })) };
-  expect(admitPublishedRelease(release, m, inputs)).toBe(7);
+  expect(admitPublishedRelease(release, m, inputs, section)).toBe(7);
   for (const invalid of [{ ...release, draft: true }, { ...release, target_commitish: "b".repeat(40) }, { ...release, immutable: false },
     { ...release, author: { ...release.author, type: "User" } }, { ...release, assets: release.assets.slice(0, 4) },
     { ...release, assets: release.assets.map((asset, index) => index === 1 ? { ...asset, id: 1 } : asset) },
     { ...release, assets: release.assets.map((asset, index) => index === 1 ? { ...asset, digest: `sha256:${"0".repeat(64)}` } : asset) }]) {
-    expect(() => admitPublishedRelease(invalid, m, inputs)).toThrow();
+    expect(() => admitPublishedRelease(invalid, m, inputs, section)).toThrow();
   }
 });
 test("canonical manifest rejects identity, bounds, override and path drift", () => {
@@ -146,17 +148,17 @@ test("draft reconciliation admits only matching state and never substitutes hist
   const m = manifest();
   const inputs = files(); inputs.set("provenance.jsonl", Buffer.from("signed bundle"));
   const draft = { id: 5, tag_name: m.tag, name: `Slopcamera ${m.tag}`, target_commitish: m.sourceSha, draft: true,
-    prerelease: false, immutable: false, body: releaseBody(m), author: { id: 41898282, login: "github-actions[bot]", type: "Bot" },
+    prerelease: false, immutable: false, body: releaseBody(m, section), author: { id: 41898282, login: "github-actions[bot]", type: "Bot" },
     assets: [...inputs].map(([name, bytes], index) => ({ id: index + 1, name, state: "uploaded", size: bytes.length, digest: `sha256:${hash(bytes)}` })) };
-  expect(admitRelease({ ...draft, assets: draft.assets.slice(0, 1) }, m, inputs, true).present.size).toBe(1);
-  expect(() => admitRelease({ ...draft, assets: [] }, m, inputs, false)).toThrow("missing");
-  expect(() => admitRelease({ ...draft, author: { id: 123, login: "other" } }, m, inputs, true)).toThrow();
-  expect(() => admitRelease({ ...draft, body: releaseBody({ ...m, runAttempt: 2 }) }, m, inputs, true)).toThrow();
-  expect(() => admitRelease({ ...draft, draft: false }, m, inputs, false)).toThrow();
-  expect(admitRelease({ ...draft, draft: false, immutable: true }, m, inputs, false).draft).toBe(false);
-  expect(() => admitRelease({ ...draft, assets: [{ ...draft.assets[0]!, digest: `sha256:${"0".repeat(64)}` }] }, m, inputs, true)).toThrow("differs");
-  expect(() => admitRelease({ ...draft, assets: [{ ...draft.assets[0]!, id: 0 }] }, m, inputs, true)).toThrow("positive");
-  expect(() => admitRelease({ ...draft, assets: [draft.assets[0], { ...draft.assets[1]!, id: draft.assets[0]!.id }] }, m, inputs, true)).toThrow("duplicated");
+  expect(admitRelease({ ...draft, assets: draft.assets.slice(0, 1) }, m, inputs, true, section).present.size).toBe(1);
+  expect(() => admitRelease({ ...draft, assets: [] }, m, inputs, false, section)).toThrow("missing");
+  expect(() => admitRelease({ ...draft, author: { id: 123, login: "other" } }, m, inputs, true, section)).toThrow();
+  expect(() => admitRelease({ ...draft, body: releaseBody({ ...m, runAttempt: 2 }, section) }, m, inputs, true, section)).toThrow();
+  expect(() => admitRelease({ ...draft, draft: false }, m, inputs, false, section)).toThrow();
+  expect(admitRelease({ ...draft, draft: false, immutable: true }, m, inputs, false, section).draft).toBe(false);
+  expect(() => admitRelease({ ...draft, assets: [{ ...draft.assets[0]!, digest: `sha256:${"0".repeat(64)}` }] }, m, inputs, true, section)).toThrow("differs");
+  expect(() => admitRelease({ ...draft, assets: [{ ...draft.assets[0]!, id: 0 }] }, m, inputs, true, section)).toThrow("positive");
+  expect(() => admitRelease({ ...draft, assets: [draft.assets[0], { ...draft.assets[1]!, id: draft.assets[0]!.id }] }, m, inputs, true, section)).toThrow("duplicated");
   const downloaded = new Map(draft.assets.map(asset => [asset.id, inputs.get(asset.name)!]));
   expect(() => admitRemoteAssetBytes(draft, inputs, downloaded)).not.toThrow();
   expect(() => admitRemoteAssetBytes(draft, inputs, new Map(downloaded).set(1, Buffer.from("changed after digest response")))).toThrow("bytes differ");
@@ -273,4 +275,64 @@ test("canonical workflow preserves all source gates before scoped signing and im
   expect(npm.indexOf('github-release.ts" npm-admit')).toBeLessThan(npm.indexOf('npm publish "$TARBALL"'));
   expect(npm).toContain("cd \"$clean_npm_directory\"");
   expect(source.slice(source.indexOf("\n  admit_npm:\n"))).toContain("npm-publish-authority");
+});
+
+test("changelog section is required, non-empty and released before a page is rendered", () => {
+  expect(section).toEqual({ summary: "Renders finish on time.", changes: "- `slopcamera render` stops at its deadline.\n- Stills keep their frame." });
+  expect(changelogSection("## v3.2.3\n\nSummary.\n\n- Change.\n", "3.2.3").summary).toBe("Summary.");
+  expect(() => changelogSection(changelog, "3.2.4")).toThrow("no section");
+  expect(() => changelogSection("## 3.2.3\n\n## 3.2.2\n\nOld.\n\n- x\n", "3.2.3")).toThrow("empty");
+  expect(() => changelogSection("## 3.2.3\n\nUnreleased work.\n\n- x\n", "3.2.3")).toThrow("Unreleased");
+  expect(() => changelogSection("## Unreleased\n\nWork.\n\n- x\n", "3.2.3")).toThrow("no section");
+  expect(() => changelogSection("## 3.2.3\n\nOnly a summary.\n", "3.2.3")).toThrow("bullets");
+  expect(() => changelogSection("## 3.2.3\n\n- Only bullets.\n", "3.2.3")).toThrow("bullets");
+  expect(() => changelogSection("## 3.2.3\n\nA.\n\n- x\n\n## v3.2.3\n\nB.\n\n- y\n", "3.2.3")).toThrow("more than one");
+  expect(() => changelogSection("## 3.2.3\n\nA <!-- x -->.\n\n- x\n", "3.2.3")).toThrow("HTML comments");
+  expect(() => changelogSection("## 3.2.3\n\nA.\n\n### Changes\n\n- x\n", "3.2.3")).toThrow("headings");
+  expect(() => changelogSection("## 3.2.3\r\n\r\nA.\r\n\r\n- x\r\n", "3.2.3")).toThrow("LF");
+  expect(() => changelogSection(changelog, "3.2")).toThrow("stable version");
+});
+test("release body renders the standard page shape with the identity record as its final bytes", () => {
+  const m = manifest();
+  const body = releaseBody(m, section);
+  const headings = body.split("\n").filter(line => line.startsWith("## "));
+  expect(headings).toEqual(["## Changes", "## Install", "## Verify"]);
+  expect(body.startsWith("Renders finish on time.\n\n## Changes\n\n- `slopcamera render` stops at its deadline.\n- Stills keep their frame.\n\n## Install\n")).toBe(true);
+  expect(body).toContain(`bun add --global https://github.com/hraness/slopcamera/releases/download/v3.2.3/hraness-slopcamera-3.2.3.tgz`);
+  expect(body).toContain("bun add --global @hraness/slopcamera@3.2.3");
+  expect(body).toContain("`SHA256SUMS`");
+  expect(body).toContain(`https://github.com/hraness/slopcamera/commit/${m.sourceSha}`);
+  expect(body).toContain("https://github.com/hraness/slopcamera/blob/v3.2.3/docs/publishing.md");
+  expect(body).not.toMatch(/latest|What's Changed|Full Changelog|Generated with|Automated release|Canonical GitHub release for/iu);
+  expect(body.endsWith(`\n\n${identityRecord(m)}`)).toBe(true);
+  expect(body.endsWith("-->")).toBe(true);
+  expect(body.slice(0, body.indexOf("<!--"))).toBe(`${releaseNotes(m, section)}\n`);
+  expect(body.match(/<!--/gu)).toHaveLength(1);
+});
+test("release identity still parses from the last marker and keeps its existing format", () => {
+  const m = manifest();
+  const { notes, identity } = parseReleaseBody(releaseBody(m, section));
+  expect(notes).toBe(`${releaseNotes(m, section)}\n`);
+  expect(identity).toEqual({ repository: "hraness/slopcamera", tag: "v3.2.3", "source-sha": m.sourceSha, workflow: ".github/workflows/release.yml",
+    "workflow-sha": m.workflowSha, "run-id": "123", "run-attempt": "1", "archive-sha256": m.archive.sha256 });
+  expect(identityRecord(m)).toBe(`<!-- hraness-github-release-v1\nrepository=hraness/slopcamera\ntag=v3.2.3\nsource-sha=${m.sourceSha}\nworkflow=.github/workflows/release.yml\nworkflow-sha=${m.workflowSha}\nrun-id=123\nrun-attempt=1\narchive-sha256=${m.archive.sha256}\n-->`);
+  const decoy = `${identityRecord({ ...m, runAttempt: 9 })}\n\n${releaseBody(m, section)}`;
+  expect(parseReleaseBody(decoy).identity["run-attempt"]).toBe("1");
+  expect(() => parseReleaseBody(`${releaseBody(m, section)}\n`)).toThrow("end with");
+  expect(() => parseReleaseBody(`${releaseBody(m, section)} trailing -->`)).toThrow("final bytes");
+  expect(() => parseReleaseBody(releaseNotes(m, section))).toThrow();
+  expect(() => parseReleaseBody(releaseBody(m, section).replace("run-id=123\n", ""))).toThrow("unexpected fields");
+  expect(() => parseReleaseBody(releaseBody(m, section).replace("run-id=123\n", "run-id=123\nextra=1\n"))).toThrow("unexpected fields");
+  expect(() => parseReleaseBody(42)).toThrow();
+});
+test("tampered notes or identity are detected against the rendered changelog section", () => {
+  const m = manifest();
+  const body = releaseBody(m, section);
+  expect(() => admitReleaseBody(body, m, section)).not.toThrow();
+  expect(() => admitReleaseBody(body.replace("Stills keep their frame.", "Stills keep their frame!"), m, section)).toThrow("Release notes differ");
+  expect(() => admitReleaseBody(`Hand edit.\n\n${body}`, m, section)).toThrow("Release notes differ");
+  expect(() => admitReleaseBody(body.replace(m.archive.sha256, "0".repeat(64)), m, section)).toThrow();
+  expect(() => admitReleaseBody(body.replace("run-attempt=1", "run-attempt=2"), m, section)).toThrow("identity record differs");
+  expect(() => admitReleaseBody(body, m, changelogSection(changelog.replace("Stills keep their frame.", "Other."), "3.2.3"))).toThrow("Release notes differ");
+  expect(() => admitReleaseBody(releaseBody(m, section).slice(body.indexOf("<!--")), m, section)).toThrow("Release notes differ");
 });
