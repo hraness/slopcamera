@@ -268,6 +268,26 @@ export function serviceRunning(runLaunchctl: LaunchctlRunner): boolean {
   return output !== null && output.split("\n").some((line) => line.trim() === "state = running");
 }
 
+export type ProcessProbe = () => boolean;
+/** Whether any copy of the companion runs for this user, including one started by hand. */
+function companionProcessRunning(): boolean {
+  const uid = process.getuid?.();
+  if (uid === undefined) return false;
+  try {
+    return Bun.spawnSync(["/usr/bin/pgrep", "-x", "-U", String(uid), "slopcamera-menubar"], { stdin: "ignore", stdout: "ignore", stderr: "ignore", timeout: 5_000 }).exitCode === 0;
+  } catch { return false; }
+}
+
+/** The menu bar is showing when launchd runs the login item or another copy holds it. */
+async function menubarShowing(runLaunchctl: LaunchctlRunner, probe: ProcessProbe, waitMs: number): Promise<boolean> {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    if (serviceRunning(runLaunchctl) || probe()) return true;
+    if (Date.now() >= deadline) return false;
+    await Bun.sleep(200);
+  }
+}
+
 export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: boolean, mode: "foreground" | "background" = "foreground", runBinary: BinaryRunner = spawnBinary): Promise<void> {
   const binary = resolveMenubarBinary(repositoryRoot, io.env);
   if (binary === null) throw new CliError("unavailable", NOT_BUILT);
@@ -275,7 +295,7 @@ export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: b
   if (asJson) writeJson(io, { running: outcome !== "exited", foreground: mode === "foreground", alreadyRunning: outcome === "already-running" });
   else writeLine(io, launchMessage(outcome, io.env));
 }
-export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean, runLaunchctl: LaunchctlRunner = launchctl): Promise<void> {
+export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean, runLaunchctl: LaunchctlRunner = launchctl, probe: ProcessProbe = companionProcessRunning): Promise<void> {
   assertMac(io.platform);
   const stable = installedBinaryPath(io.env);
   let state: LaunchAgentState;
@@ -287,7 +307,8 @@ export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "
   } else {
     state = action === "uninstall" ? uninstallLaunchAgent(stable, io.env, io.platform, runLaunchctl) : launchAgentState(stable, io.env);
   }
-  const running = state === "installed" && serviceRunning(runLaunchctl);
+  // A fresh login item may take a moment to start, so install waits briefly.
+  const running = state === "installed" && await menubarShowing(runLaunchctl, probe, action === "install" ? 1_000 : 0);
   if (asJson) writeJson(io, { launchAgent: state, running });
   else writeLine(io, stateMessage(action, state, running, io.env));
 }

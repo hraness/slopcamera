@@ -132,7 +132,7 @@ describe("Slopcamera menu-bar launcher", () => {
     expect(launchAgentState(stable, env)).toBe("installed");
     const output: string[] = [];
     const io: CliIo = { cwd: () => home, env, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: () => null };
-    await manageMenubar(io, home, "status", true, () => null);
+    await manageMenubar(io, home, "status", true, () => null, () => false);
     expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: false });
     expect(uninstallLaunchAgent(stable, env, "darwin", () => null)).toBe("absent");
     expect(existsSync(plist)).toBe(false);
@@ -171,13 +171,17 @@ describe("Slopcamera menu-bar copy", () => {
     const output: string[] = [];
     const errors: string[] = [];
     const io: CliIo = { cwd: () => home, env: { ...env, ...UTF8 }, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: text => { errors.push(text); } };
-    await manageMenubar(io, home, "install", false, () => null);
+    await manageMenubar(io, home, "install", false, () => null, () => true);
     expect(errors.join("")).toBe(loginItemNotice(UTF8));
     expect(errors.join("")).toContain("That's Slopcamera's menu bar.");
     expect(output.join("")).toBe("✓ Slopcamera opens in your menu bar now and at every login. Look for 📷.\n  Remove it any time: slopcamera menubar uninstall\n");
     output.length = 0;
-    await manageMenubar(io, home, "status", false, () => "gui/501/com.hraness.slopcamera.menubar = {\n\tstate = running\n}\n");
+    await manageMenubar(io, home, "status", false, () => "gui/501/com.hraness.slopcamera.menubar = {\n\tstate = running\n}\n", () => false);
     expect(output.join("")).toBe("✓ Slopcamera opens at login and is in your menu bar now.\n");
+    // A copy started by hand holds the menu bar while the login item exited.
+    output.length = 0;
+    await manageMenubar(io, home, "status", true, () => null, () => true);
+    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: true });
   });
 
   test("status explains a login item that isn't running", () => {
