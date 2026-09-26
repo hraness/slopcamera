@@ -103,7 +103,7 @@ describe("blog pages", () => {
       const tokens = [...page.main.matchAll(/class="([^"]*)"/gu)].map(match => match[1]!)
       for (const token of tokens) expect(token).toMatch(/^\{\{(?:DOCS|BLOG)_[A-Z0-9_]+_CLASS\}\}$/u)
     }
-    expect(() => blogMarkupWithClassTokens('<div class="plain-publication__related"></div>', "article"))
+    expect(() => blogMarkupWithClassTokens('<div class="plain-publication__masthead"></div>', "article"))
       .toThrow("unmapped class")
     expect(() => blogMarkupWithClassTokens('<section class="plain-publication__list"><h1 id="blog-title">T</h1></section>', "index"))
       .toThrow("unmapped class")
