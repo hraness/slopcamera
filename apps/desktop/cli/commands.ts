@@ -739,6 +739,13 @@ function humanTime(microseconds: number): string {
 
 function requireCapability(capabilities: readonly Capability[], name: Capability["name"]): string {
   const capability = capabilityByName(capabilities, name);
+  if ((!capability.available || capability.command === undefined) && name === "face-analyzer") {
+    throw new CliError(
+      "unavailable",
+      "Face analysis needs a small helper that isn't built on this Mac yet. In a Slopcamera checkout, run bun run build:desktop:analysis:macos; it uses Apple's command line tools and asks before installing them.",
+      { capability: name, ...(capability.reason === undefined ? {} : { reason: capability.reason }) },
+    );
+  }
   if (!capability.available || capability.command === undefined) {
     throw new CliError(
       "unavailable",

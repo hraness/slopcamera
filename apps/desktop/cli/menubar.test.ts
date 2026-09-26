@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import type { CliIo } from "./io";
-import { installedBinaryPath, installLaunchAgent, interpretLaunchctlResult, launchAgentPath, launchAgentPlist, launchAgentState, manageMenubar, outputsRoot, resolveMenubarBinary, uninstallLaunchAgent } from "./menubar";
+import { ALREADY_RUNNING_EXIT, installedBinaryPath, installLaunchAgent, interpretLaunchctlResult, launchAgentPath, launchAgentPlist, launchAgentState, launchMenubar, launchMessage, launchOutcome, loginItemNotice, manageMenubar, outputsRoot, resolveMenubarBinary, serviceRunning, stateMessage, uninstallLaunchAgent } from "./menubar";
+import { commandHelp } from "./help";
 
 const fixtures: string[] = [];
 function fixture() {
@@ -131,11 +132,75 @@ describe("Slopcamera menu-bar launcher", () => {
     expect(launchAgentState(stable, env)).toBe("installed");
     const output: string[] = [];
     const io: CliIo = { cwd: () => home, env, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: () => null };
-    await manageMenubar(io, home, "status", true);
-    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed" });
+    await manageMenubar(io, home, "status", true, () => null, () => false);
+    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: false });
     expect(uninstallLaunchAgent(stable, env, "darwin", () => null)).toBe("absent");
     expect(existsSync(plist)).toBe(false);
     expect(existsSync(stable)).toBe(false);
     expect(launchAgentState(stable, env)).toBe("absent");
+  });
+});
+
+const UTF8 = { LANG: "en_US.UTF-8" };
+
+describe("Slopcamera menu-bar copy", () => {
+  test("another running copy is success, not a startup failure", () => {
+    expect(launchOutcome(ALREADY_RUNNING_EXIT, true)).toBe("already-running");
+    expect(launchOutcome(ALREADY_RUNNING_EXIT, false)).toBe("already-running");
+    expect(launchOutcome(null, false)).toBe("running");
+    expect(launchOutcome(0, true)).toBe("exited");
+    expect(() => launchOutcome(1, true)).toThrow("slopcamera menubar --foreground");
+    expect(() => launchOutcome(0, false)).toThrow();
+    expect(launchMessage("already-running", UTF8)).toBe("✓ Slopcamera is already in your menu bar. Look for 📷.");
+    expect(launchMessage("running", { TERM: "dumb", LANG: "en_US.UTF-8" })).toBe("OK Slopcamera is in your menu bar. Look for 📷.");
+  });
+
+  test("launch reports an already-running menu bar in text and JSON", async () => {
+    const { home, env } = fixture();
+    for (const json of [false, true]) {
+      const output: string[] = [];
+      const io: CliIo = { cwd: () => home, env: { ...env, ...UTF8 }, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: () => null };
+      await launchMenubar(io, home, json, "background", async () => ALREADY_RUNNING_EXIT);
+      if (json) expect(JSON.parse(output.join(""))).toEqual({ running: true, foreground: false, alreadyRunning: true });
+      else expect(output.join("")).toBe("✓ Slopcamera is already in your menu bar. Look for 📷.\n");
+    }
+  });
+
+  test("install shows the login-item notice first and status checks liveness", async () => {
+    const { home, env } = fixture();
+    const output: string[] = [];
+    const errors: string[] = [];
+    const io: CliIo = { cwd: () => home, env: { ...env, ...UTF8 }, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: text => { errors.push(text); } };
+    await manageMenubar(io, home, "install", false, () => null, () => true);
+    expect(errors.join("")).toBe(loginItemNotice(UTF8));
+    expect(errors.join("")).toContain("That's Slopcamera's menu bar.");
+    expect(output.join("")).toBe("✓ Slopcamera opens in your menu bar now and at every login. Look for 📷.\n  Remove it any time: slopcamera menubar uninstall\n");
+    output.length = 0;
+    await manageMenubar(io, home, "status", false, () => "gui/501/com.hraness.slopcamera.menubar = {\n\tstate = running\n}\n", () => false);
+    expect(output.join("")).toBe("✓ Slopcamera opens at login and is in your menu bar now.\n");
+    // A copy started by hand holds the menu bar while the login item exited.
+    output.length = 0;
+    await manageMenubar(io, home, "status", true, () => null, () => true);
+    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: true });
+  });
+
+  test("status explains a login item that isn't running", () => {
+    expect(serviceRunning(() => null)).toBe(false);
+    expect(serviceRunning(() => "x = {\n\tstate = not running\n}\n")).toBe(false);
+    expect(stateMessage("status", "installed", false, UTF8)).toBe(
+      "⚠ Slopcamera is set to open at login but isn't running. It may be turned off in System Settings › General › Login Items & Extensions.\n→ slopcamera menubar install",
+    );
+    expect(stateMessage("status", "absent", false, UTF8)).toBe("Slopcamera doesn't open at login.\n→ slopcamera menubar install");
+    expect(stateMessage("uninstall", "absent", false, UTF8)).toBe("✓ Slopcamera no longer opens in your menu bar at login.");
+  });
+
+  test("help menubar has its own page and matches the usage error", () => {
+    const page = commandHelp(["menubar"]);
+    expect(page).not.toBe(commandHelp([]));
+    expect(page.startsWith("Usage:\n  slopcamera menubar [--foreground|--background] [--json]\n")).toBe(true);
+    expect(page).toContain("already in your menu bar");
+    expect(commandHelp([])).toContain("menubar [--foreground|--background]");
+    expect(commandHelp([])).not.toContain("Agents: after useful work");
+    expect(commandHelp([])).not.toContain("host-owned typed");
   });
 });

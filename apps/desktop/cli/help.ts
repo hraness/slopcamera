@@ -8,8 +8,8 @@ const GLOBAL_HELP = `slopcamera: a media studio for coding agents
 Usage: slopcamera <command> [options]
 
 Commands:
-  capabilities                   Discover the exact static capability modules and qualification status
-  operations list|show           Discover host-owned typed operations and policies
+  capabilities                   List what this build can do and how well each part is tested
+  operations list|show           List the operations agents can run and their limits
   diagram init|check|render      Create, validate, or render portable diagram sources
   diagram sheets init|check|render
                                  Create and render black-and-white drawing sheets
@@ -35,8 +35,9 @@ Commands:
   credits status|topup|wait|forget
                                  Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
-  menubar [--background]         Run the prebuilt menu-bar companion
-  menubar install|uninstall|status  Manage its per-user LaunchAgent
+  menubar [--foreground|--background]
+                                 Show your outputs in the menu bar
+  menubar install|uninstall|status  Open it at login, stop that, or check it
   support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
                                  Optional support; no feature requires payment
   outputs                        Print the agent outputs directory
@@ -55,13 +56,36 @@ Commands:
   render plan|run <recording>    Resolve or execute a render plan
   assets emoji search|resolve    Find checked local emoji overlays
 
-Agents: after useful work, read slopcamera support protocol --json for the optional
-closeout protocol. Discovery uses stderr; it does not claim an invitation.
-HRANESS_SUPPORT_AUDIENCE=off suppresses offers and incidental discovery.
+Examples:
+  slopcamera doctor                          Check what this Mac can render
+  slopcamera html scaffold plain --output intro.html
+                                             Start an HTML scene
+  slopcamera render run REC --output out.mp4  Render a recording
 
-Run slopcamera help <command> for command-specific help.`;
+Run slopcamera help <command> for command-specific help.
+Optional support: slopcamera support · Turn off: HRANESS_SUPPORT_AUDIENCE=off`;
 
 const HELP: Readonly<Record<string, string>> = {
+  menubar: `Usage:
+  slopcamera menubar [--foreground|--background] [--json]
+  slopcamera menubar install|uninstall|status [--json]
+
+Shows 📷 in the menu bar with your recent outputs. It only lists and opens
+files in the outputs folder (slopcamera outputs).
+
+  menubar               Open it now; it closes when this command ends
+  menubar --background  Open it now and return
+  menubar install       Open it now and every time you log in
+  menubar uninstall     Stop opening it at login and remove the installed copy
+  menubar status        Check whether it opens at login and is running
+
+If it's already in your menu bar, starting it again says so and succeeds.
+macOS shows a notice that slopcamera-menubar can open at login. Turn it off any
+time in System Settings › General › Login Items & Extensions.
+
+The menu bar isn't in released packages yet. In a Slopcamera checkout, build it
+with cargo build --release --manifest-path desktop/Cargo.toml and slopcamera
+finds it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
   capabilities: `Usage: slopcamera capabilities [--json]
 
 Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
