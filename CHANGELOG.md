@@ -2,9 +2,9 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
-## Unreleased
+## 3.5.0 - 2026-09-26
 
-Browser overlay scenes with post-processing, bloom, depth of field or emissive standard materials render as written, and local vectorization keeps its deadline on loaded machines.
+Browser overlay scenes with post-processing, bloom, depth of field or emissive standard materials render as written, and local vectorization keeps its deadline on loaded machines. The menu bar, the face analyzer build and root help now explain themselves in plain words: an already-running menu bar counts as success, and macOS notices are explained before they appear.
 
 - Scene renders with post-process steps complete instead of failing at the final composite with a WebGL framebuffer feedback error.
 - Bloom, flare and depth-of-field effects render in the browser overlay; their shaders previously failed to link.
