@@ -38,7 +38,7 @@ function completeFixture() {
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
     { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.13.0" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.18.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.19.2" },
     { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
   ]
   const complete = {
