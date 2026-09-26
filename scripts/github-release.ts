@@ -307,7 +307,7 @@ export function parseReleaseBody(body: unknown): { notes: string; identity: Reco
   const index = body.lastIndexOf(identityMarker);
   if (index === -1) throw new Error("Release body has no identity record.");
   const comment = body.slice(index);
-  if (comment.indexOf("-->") !== comment.length - 3) throw new Error("Release identity record must be the final bytes of the body.");
+  if (comment.slice(0, -3).includes("-->")) throw new Error("Release identity record must be the final bytes of the body.");
   const lines = comment.slice(identityMarker.length, -3).split("\n");
   if (lines.pop() !== "" || lines.length !== identityKeys.length) throw new Error("Release identity record has unexpected fields.");
   const identity = {} as Record<(typeof identityKeys)[number], string>;
