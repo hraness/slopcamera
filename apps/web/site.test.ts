@@ -30,6 +30,7 @@ import {
 } from "./src/negotiate"
 import {
   docsCanonicalUrl,
+  docsOrigin,
   docsDocumentForPage,
   docsMarkdownUrl,
   docsPageForRequestPath,
@@ -52,6 +53,7 @@ import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/examp
 import { homepageExamples } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
+import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
 const brandDescription = "Slopcamera is a media studio for coding agents."
@@ -167,7 +169,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required 0.8 foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 352_000) throw new Error(`Combined site CSS exceeds its 352,000-byte budget: ${bytes}`)
+  if (bytes >= 356_000) throw new Error(`Combined site CSS exceeds its 356,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -257,16 +259,38 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
     .toThrow("Built site HTML exceeds its 65,000-byte budget: 65001")
 })
 
+test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its routes are real pages", async () => {
+  const { createHash } = await import("node:crypto")
+  const [vendored, installed, provenance] = await Promise.all([
+    readFile(join(appDirectory, "vendor/status-page/status-page.css")),
+    readFile(fileURLToPath(import.meta.resolve("@hraness/design-kit-status/status-page.css"))),
+    readFile(join(appDirectory, "vendor/status-page/provenance.json"), "utf8").then(text => JSON.parse(text) as {
+      source: { commit: string; release: string }
+      files: Record<string, { sha256: string }>
+    }),
+  ])
+  expect(vendored.equals(installed)).toBe(true)
+  expect(provenance.source).toMatchObject({ commit: "4a5e0b697ed9e4169c4759feccbe4a1305b4d236", release: "v0.21.0" })
+  expect(createHash("sha256").update(vendored).digest("hex")).toBe(provenance.files["status-page.css"]!.sha256)
+  expect(vendored.toString("utf8")).not.toContain("url(")
+  const routes = statusPageRoutes()
+  const known = new Set(["/", ...docPages.map(page => docsCanonicalUrl(page).slice(docsOrigin.length)), "/blog",
+    ...indexableBlogPosts.map(post => blogPostPath(post))])
+  expect(routes.map(route => route.href).sort()).toEqual([...known].sort())
+  for (const route of routes) expect(route.label.length).toBeGreaterThan(0)
+  for (const route of routes) expect(route.label.length).toBeLessThanOrEqual(48)
+})
+
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(180_799), "x".repeat(171_200))).toBe(351_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_800), "x".repeat(171_200)))
-    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(180_799), `${"x".repeat(171_200)}é`))
-    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(352_000), ""))
-    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(352_000)))
-    .toThrow("Combined site CSS exceeds its 352,000-byte budget: 352000")
+  expect(assertCombinedSiteCssBudget("x".repeat(184_799), "x".repeat(171_200))).toBe(355_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(184_800), "x".repeat(171_200)))
+    .toThrow("Combined site CSS exceeds its 356,000-byte budget: 356000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(184_799), `${"x".repeat(171_200)}é`))
+    .toThrow("Combined site CSS exceeds its 356,000-byte budget: 356001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(356_000), ""))
+    .toThrow("Combined site CSS exceeds its 356,000-byte budget: 356000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(356_000)))
+    .toThrow("Combined site CSS exceeds its 356,000-byte budget: 356000")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -1122,14 +1146,11 @@ describe("static Slopcamera site", () => {
     expect(fragmentLinks.every(fragment => ids.has(fragment))).toBe(true)
     expect(notFound.match(/<h1\b/gu)).toHaveLength(1)
     expect(notFound).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
-    expect(notFound).toContain('<main class="route-state {{SITE_RECOVERY_CLASS}}" id="main" tabindex="-1">')
+    expect(notFound).toContain('<main id="main" tabindex="-1">\n      {{STATUS_PAGE}}\n    </main>')
+    expect(notFound).toContain('<script defer src="{{STATUS_PAGE_ASSET}}"></script>')
     expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
     expect(notFound).toContain('<meta name="theme-color" content="#f8f7f4" media="(prefers-color-scheme: light)">')
     expect(notFound).toContain('<meta name="theme-color" content="#12100f" media="(prefers-color-scheme: dark)">')
-    expect(notFound).toContain('href="/llms.txt"')
-    expect(notFound).toContain('href="/sitemap.md"')
-    expect(notFound).toContain('href="/sitemap.xml"')
-    expect(notFound).toContain("machine-readable site guide")
     expect(css).toContain(":where(a, button, [tabindex]):focus-visible")
     const headerInk = '.topbar nav[aria-label="Primary"] > .site-action {\n  --gold-ink: var(--ink);\n}\n@media (forced-colors: active) {\n  .topbar nav[aria-label="Primary"] > .site-action {\n    --gold-ink: var(--primary-foreground);\n  }\n}'
     expect(css.split(headerInk)).toHaveLength(2)
@@ -1628,9 +1649,22 @@ describe("static Slopcamera site", () => {
     expect(assetFiles.sort()).toEqual([
       "examples",
       builtAssets.previewStylesPath.split("/").at(-1)!,
+      builtAssets.statusPagePath.split("/").at(-1)!,
       builtAssets.stylesPath.split("/").at(-1)!,
       builtAssets.themePath.split("/").at(-1)!,
     ].sort())
+    // The 404 is the shared design-kit status page: the homepage hero's
+    // install action, three next links, one agent line, known pages for
+    // "Did you mean", and its own enhancement script. Only the 404 loads it.
+    expect(notFound).toContain(`<script defer src="${builtAssets.statusPagePath}"></script>`)
+    expect(html).not.toContain(builtAssets.statusPagePath)
+    expect(notFound).toContain('<main id="main" tabindex="-1">\n      <div class="hraness-status-page" data-hraness-status-routes="')
+    expect(notFound).toContain('<h1 class="hraness-status-page__title">We can’t find that page</h1>')
+    expect(notFound).toContain('data-emphasis="primary" data-foil="" href="/#install">Install Slopcamera</a>')
+    expect(notFound.match(/class="hraness-status-page__next-link"/gu)).toHaveLength(3)
+    expect(notFound).toContain('<p class="hraness-status-page__agent">')
+    expect(notFound).toContain("[&quot;/docs/tutorials/first-diagram&quot;,&quot;Create and revise your first diagram&quot;]")
+    expect(notFound).not.toMatch(/sitemap\.(?:md|xml)/u)
 
     const [stylesAsset, foundationAsset, themeAsset] = await Promise.all([
       readFile(join(appDirectory, "dist", builtAssets.stylesPath.slice(1)), "utf8"),
@@ -1658,10 +1692,12 @@ describe("static Slopcamera site", () => {
     // keyboard focus above the fixed footer bar measured 310,206 together, and
     // the shared-footer v0.13.x organization-attribution styles measure
     // 313,229. The design-kit v0.13.0 union with the shared foil wordmark
-    // contract measures 346,025. Keep a strict ceiling over the full sealed
-    // union and captured foundation; no import, recipe, snapshot, or repeated
-    // layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(352_000)
+    // contract measures 346,025. The design-kit v0.21.0 status-page snapshot
+    // for the shared 404, less the removed 404 shell recipes, measures 354,712.
+    // Keep a strict ceiling over the full sealed union and captured
+    // foundation; no import, recipe, snapshot, or repeated layered rule is
+    // discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(356_000)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(29_500)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)

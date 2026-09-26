@@ -32,14 +32,10 @@ const homeSlots = [
   ["{{INSTALL_STATUS_CLASS}}", siteInstallClassNames.status, 1],
   ["{{INSTALL_FALLBACK_CLASS}}", siteInstallClassNames.fallback, 1],
 ] as const
+// The 404 body is the shared design-kit status page (plain classes from its
+// stylesheet in the captured foundation); only the retained header needs slots.
 const recoverySlots = [
   ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],
-  ["{{SITE_RECOVERY_CLASS}}", siteShellClassNames.recovery, 1],
-  ["{{SITE_RECOVERY_LABEL_CLASS}}", siteShellClassNames.recoveryLabel, 1],
-  ["{{SITE_RECOVERY_HEADING_CLASS}}", siteShellClassNames.recoveryHeading, 1],
-  ["{{SITE_RECOVERY_PARAGRAPH_CLASS}}", siteShellClassNames.recoveryParagraph, 2],
-  ["{{SITE_RECOVERY_LINK_CLASS}}", siteShellClassNames.recoveryLink, 4],
-  ["{{SITE_RECOVERY_ACTION_CLASS}}", siteShellClassNames.recoveryAction, 1],
 ] as const
 const docsSlots = [
   ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],

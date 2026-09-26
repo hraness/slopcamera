@@ -222,6 +222,25 @@ async function bundleTheme(): Promise<Uint8Array> {
   return new Uint8Array(await output.arrayBuffer())
 }
 
+/** The 404 page's shared status-page enhancement, a separate bundle so the
+ * theme bundle every page loads stays unchanged. */
+async function bundleStatusPage(): Promise<Uint8Array> {
+  const result = await Bun.build({
+    entrypoints: [join(sourceDirectory, "status-page.ts")],
+    env: "disable",
+    format: "iife",
+    minify: true,
+    sourcemap: "none",
+    target: "browser",
+  })
+  const output = result.outputs[0]
+  if (!result.success || result.outputs.length !== 1 || output === undefined) {
+    const details = result.logs.map(log => log.message).join("\n")
+    throw new Error(`Could not bundle the status page client${details === "" ? "" : `: ${details}`}`)
+  }
+  return new Uint8Array(await output.arrayBuffer())
+}
+
 export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly<{
   analyticsPath: string | null
   previewArtifacts: readonly PreviewArtifact[]
@@ -233,20 +252,22 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   siteAttributions: readonly SiteArtifact[]
   siteEvidenceDirectory: string
   siteFoundationPath: string
+  statusPagePath: string
   themePath: string
 }>> {
   const environment = options.environment ?? process.env
   const outputDirectory = options.outputDirectory ?? defaultOutputDirectory
   const analyticsConfig = productionAnalyticsConfig(environment)
-  const [theme, socialImage] = await Promise.all([
-    bundleTheme(), renderSlopcameraSocialImage(),
+  const [theme, statusPage, socialImage] = await Promise.all([
+    bundleTheme(), bundleStatusPage(), renderSlopcameraSocialImage(),
   ])
   const themePath = assetPath("theme.js", theme)
+  const statusPagePath = assetPath("status-page.js", statusPage)
   const analytics = analyticsConfig === null ? null : await bundleAnalytics(analyticsConfig)
   const analyticsPath = analytics === null ? null : assetPath("analytics.js", analytics)
   // Finalize both independent closed graphs before replacing a public build.
   // All content and stylesheet substitutions happen inside the sealed producers.
-  const site = await buildSite(appDirectory, { themePath, analyticsPath })
+  const site = await buildSite(appDirectory, { themePath, analyticsPath, statusPagePath })
   const preview = await buildPreview(appDirectory)
   const icons = await readPublicIcons(appDirectory)
   const marketingIcons = await readMarketingIcons()
@@ -263,6 +284,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })
     }),
     writeFile(join(outputDirectory, themePath.slice(1)), theme),
+    writeFile(join(outputDirectory, statusPagePath.slice(1)), statusPage),
     writeFile(join(outputDirectory, "og.png"), socialImage),
     ...(analyticsPath === null || analytics === null
       ? []
@@ -284,7 +306,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   }))
 
   return {
-    analyticsPath, stylesPath: site.stylesPath, themePath,
+    analyticsPath, statusPagePath, stylesPath: site.stylesPath, themePath,
     siteArtifacts: site.files.map(item => item.artifact),
     siteAttributions: site.attributions.map(item => item.artifact),
     siteEvidenceDirectory: site.evidenceDirectory,
@@ -300,7 +322,7 @@ if (import.meta.main) {
   const result = await buildWebsite()
   const generatedFiles = copiedFiles.length
     + Object.keys(generatedTextFiles).length
-    + 2 + result.siteArtifacts.length + result.siteAttributions.length + result.previewArtifacts.length
+    + 3 + result.siteArtifacts.length + result.siteAttributions.length + result.previewArtifacts.length
     + (result.analyticsPath === null ? 0 : 1)
   console.log(`Built ${generatedFiles} static files in ${defaultOutputDirectory}`)
   console.log(`Site compiler evidence retained in ${result.siteEvidenceDirectory}`)

@@ -2,7 +2,6 @@ import * as stylex from "@stylexjs/stylex"
 
 const tablet = "@media (max-width: 48rem)"
 const phone = "@media (max-width: 34rem)"
-const coarsePointer = "@media (pointer: coarse)"
 const forcedColors = "@media (forced-colors: active)"
 
 // These recipes own only the ordinary document shell. Homepage marketing,
@@ -98,7 +97,7 @@ const shell = stylex.create({
   },
   homeNavigationLink: {
     // Only the homepage has an install action. Its other links leave the
-    // phone row, while the 404's Home and GitHub recovery links stay visible.
+    // phone row, while the 404's Home and GitHub links stay visible.
     display: { default: null, [phone]: "none" },
   },
   primaryAction: {
@@ -155,39 +154,6 @@ const shell = stylex.create({
     fontSize: "0.9rem",
     marginLeft: { default: 0, [tablet]: "auto" },
   },
-  recovery: {
-    display: "grid",
-    width: "min(100%, 52rem)",
-    minHeight: "calc(100svh - 7rem)",
-    paddingTop: "clamp(4rem, 12vw, 9rem)",
-    paddingRight: "var(--gutter)",
-    paddingBottom: "clamp(4rem, 12vw, 9rem)",
-    paddingLeft: "var(--gutter)",
-    alignContent: "center",
-    justifyItems: "start",
-    gap: "1rem",
-  },
-  recoveryHeading: {
-    maxWidth: "14ch",
-    fontSize: "clamp(2.5rem, 5vw, 4.25rem)",
-    letterSpacing: "-0.022em",
-    lineHeight: 1.05,
-  },
-  recoveryParagraph: {
-    maxWidth: "40rem",
-    color: "var(--muted)",
-    fontSize: "1.125rem",
-  },
-  recoveryLabel: {
-    color: "var(--gold)",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-  },
-  recoveryLink: { color: "var(--gold)" },
-  recoveryAction: {
-    marginTop: "0.5rem",
-    minHeight: { default: "var(--hraness-marketing-action-height)", [coarsePointer]: "3rem" },
-  },
 })
 
 export const siteShellClassNames = {
@@ -200,10 +166,4 @@ export const siteShellClassNames = {
   navigationLink: stylex.props(shell.navigationLink).className,
   homeNavigationLink: stylex.props(shell.navigationLink, shell.homeNavigationLink).className,
   navigationAction: stylex.props(shell.primaryAction, shell.navigationAction).className,
-  recovery: stylex.props(shell.recovery).className,
-  recoveryHeading: stylex.props(shell.recoveryHeading).className,
-  recoveryParagraph: stylex.props(shell.recoveryParagraph).className,
-  recoveryLabel: stylex.props(shell.recoveryParagraph, shell.recoveryLabel).className,
-  recoveryLink: stylex.props(shell.recoveryLink).className,
-  recoveryAction: stylex.props(shell.primaryAction, shell.recoveryAction).className,
 } as const
