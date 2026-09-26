@@ -16,8 +16,10 @@ import {
 } from "./generate.js"
 import {
   generateSlopcameraIcon,
+  slopcameraIconContexts,
   slopcameraIconMaximumRounds,
   slopcameraIconSubjectMaximumBytes,
+  type SlopcameraIconContext,
   type SlopcameraIconReceipt,
 } from "./icon.js"
 import {
@@ -255,6 +257,15 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
             pattern: "^#[a-fA-F0-9]{3}(?:[a-fA-F0-9]{3})?$",
           },
           purpose: { type: "string", enum: ["mark", "illustration"] },
+          context: {
+            type: "string",
+            enum: [...slopcameraIconContexts],
+          },
+          candidatePool: {
+            type: "integer",
+            minimum: 1,
+            maximum: slopcameraIconMaximumRounds,
+          },
           rounds: {
             type: "integer",
             minimum: 1,
@@ -411,6 +422,8 @@ export interface IconSlopcameraOperationInput {
   readonly critiqueModel?: string
   readonly ink?: string
   readonly purpose?: "illustration" | "mark"
+  readonly context?: SlopcameraIconContext
+  readonly candidatePool?: number
   readonly rounds?: number
   readonly keepRaster?: boolean
 }
@@ -606,6 +619,9 @@ function parseIcon(value: unknown): IconSlopcameraOperationInput {
     "model",
     "critiqueModel",
     "ink",
+    "purpose",
+    "context",
+    "candidatePool",
     "rounds",
     "keepRaster",
   ])
@@ -641,6 +657,33 @@ function parseIcon(value: unknown): IconSlopcameraOperationInput {
   ) {
     operationFailure("ink must be a #rgb or #rrggbb color.")
   }
+  if (
+    input.purpose !== undefined &&
+    input.purpose !== "illustration" &&
+    input.purpose !== "mark"
+  ) {
+    operationFailure("purpose must be illustration or mark.")
+  }
+  if (
+    input.context !== undefined &&
+    (typeof input.context !== "string" ||
+      !slopcameraIconContexts.includes(input.context as SlopcameraIconContext))
+  ) {
+    operationFailure(
+      `context must be one of: ${slopcameraIconContexts.join(", ")}.`,
+    )
+  }
+  const candidatePool = input.candidatePool
+  if (
+    candidatePool !== undefined &&
+    (!Number.isInteger(candidatePool) ||
+      (candidatePool as number) < 1 ||
+      (candidatePool as number) > slopcameraIconMaximumRounds)
+  ) {
+    operationFailure(
+      `candidatePool must be an integer from 1 through ${slopcameraIconMaximumRounds}.`,
+    )
+  }
   const rounds = input.rounds
   if (
     rounds !== undefined &&
@@ -668,6 +711,15 @@ function parseIcon(value: unknown): IconSlopcameraOperationInput {
       ? {}
       : { critiqueModel: input.critiqueModel as string }),
     ...(input.ink === undefined ? {} : { ink: input.ink as string }),
+    ...(input.purpose === undefined
+      ? {}
+      : { purpose: input.purpose as "illustration" | "mark" }),
+    ...(input.context === undefined
+      ? {}
+      : { context: input.context as SlopcameraIconContext }),
+    ...(candidatePool === undefined
+      ? {}
+      : { candidatePool: candidatePool as number }),
     ...(rounds === undefined ? {} : { rounds: rounds as number }),
     ...(input.keepRaster === undefined
       ? {}

@@ -4,6 +4,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import sharp from "sharp"
 import {
+  collectSlopcameraIconCandidates,
+  estimateIconStrokePixels,
   extractIconLineArt,
   generateSlopcameraIcon,
   iconPromptFor,
@@ -56,6 +58,16 @@ describe("icon prompt", () => {
     expect(mark).toContain("bold masses")
     expect(mark).toContain("16 pixels")
     expect(mark).toContain("no thin outlines")
+    const card = iconPromptFor("a bookshelf", { context: "card" })
+    expect(card).toContain("Placement:")
+    expect(card).toContain("88 pixels")
+    const generic = iconPromptFor("a bookshelf")
+    expect(generic).not.toContain("Placement:")
+    const markContext = iconPromptFor("a sponge", {
+      context: "card",
+      purpose: "mark",
+    })
+    expect(markContext).not.toContain("Placement:")
   })
 })
 
@@ -74,6 +86,29 @@ describe("icon visual gates", () => {
     expect(iconVisualGateProblems("illustration", { coverageRatio: 0.7, height: 100, width: 100 }, 60)).toEqual([
       "the illustration is too visually dense",
       "the illustration has too much vector detail",
+    ])
+  })
+
+  test("tightens illustration bands for the card context", () => {
+    expect(
+      iconVisualGateProblems(
+        "illustration",
+        { coverageRatio: 0.12, height: 88, width: 88, strokePx: 12 },
+        40,
+        "card",
+      ),
+    ).toEqual([])
+    expect(
+      iconVisualGateProblems(
+        "illustration",
+        { coverageRatio: 0.5, height: 88, width: 88, strokePx: 4 },
+        90,
+        "card",
+      ),
+    ).toEqual([
+      "the illustration is too visually dense for the card context",
+      "the illustration has too much vector detail for the card context",
+      "the illustration strokes are too thin for the card context",
     ])
   })
 })
@@ -469,5 +504,84 @@ describe("icon generation pipeline", () => {
     } finally {
       await rm(root, { recursive: true, force: true })
     }
+  })
+
+  test("collects a bounded pool of passing candidates for set selection", async () => {
+    const raster = await lineArtPng()
+    const vectorize = vectorizeStub()
+    const critique = critiqueStub(88, true)
+    const collected = await collectSlopcameraIconCandidates(
+      {
+        candidatePool: 2,
+        critiqueModel: "google/gemini-3-flash",
+        rounds: 3,
+        subject: "a bookshelf",
+      },
+      {
+        critique: critique.critique,
+        generate: async () => ({
+          image: { base64: raster, mediaType: "image/png" },
+          model: "recraft/recraft-v4.1-utility",
+          provider: "vercel-ai-gateway",
+          requestId: "req_pool",
+          warnings: [],
+        }),
+        rasterize: async () => Uint8Array.from([1]),
+        vectorize: vectorize.vectorize,
+      },
+    )
+    expect(collected.eligible).toHaveLength(2)
+    expect(collected.attempts).toHaveLength(2)
+    expect(collected.attempts[0]!.metrics?.coverageRatio).toBeGreaterThan(0)
+    expect(collected.attempts[0]!.metrics?.strokePx).toBeGreaterThan(0)
+  })
+
+  test("rejects a candidate pool larger than the paid attempt budget", async () => {
+    let calls = 0
+    await expect(
+      collectSlopcameraIconCandidates(
+        { candidatePool: 3, rounds: 2, subject: "a cube" },
+        {
+          generate: async () => {
+            calls += 1
+            throw new Error("unreachable")
+          },
+        },
+      ),
+    ).rejects.toThrow("[INVALID_ARGUMENT]")
+    expect(calls).toBe(0)
+  })
+})
+
+describe("icon measured metrics", () => {
+  test("estimates normalized stroke width from the extracted alpha mask", () => {
+    const width = 64
+    const height = 64
+    const thick = solidRgba(width, height, [0, 0, 0, 0])
+    const thin = solidRgba(width, height, [0, 0, 0, 0])
+    for (let x = 8; x <= 56; x += 1) {
+      for (let y = 20; y <= 28; y += 1) {
+        setPixel(thick, width, x, y, [0, 0, 0, 255])
+      }
+      for (let y = 24; y <= 25; y += 1) {
+        setPixel(thin, width, x, y, [0, 0, 0, 255])
+      }
+    }
+    const base = {
+      background: "#000000",
+      coverageRatio: 0.1,
+      height,
+      measuredInk: "#000000",
+      removedComponents: 0,
+      sourceHeight: height,
+      sourceWidth: width,
+      width,
+    }
+    const thickStroke = estimateIconStrokePixels({ ...base, pixels: thick })
+    const thinStroke = estimateIconStrokePixels({ ...base, pixels: thin })
+    expect(thickStroke).toBeGreaterThan(thinStroke)
+    // The 9px bar erodes ~4px per side at the 512px normalization edge (8x).
+    expect(thickStroke).toBeCloseTo(64, -1)
+    expect(thinStroke).toBeLessThan(24)
   })
 })
