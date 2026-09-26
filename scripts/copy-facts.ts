@@ -281,7 +281,7 @@ export const COPY_RULES: readonly CopyRule[] = [
       String.raw`(?:\bthe v|\| Slopcamera v|immutable \[v|\bSlopcamera v)(\d+\.\d+\.\d+)(?= portable projection\b| MCP server\b| \||(?: release\])|(?: (?:exposes|contains|includes|ships|serves)\b))`,
     ),
     expected: (facts) => facts.version,
-    describe: "current release version (`package.json`); historical mentions use a different phrasing such as \"introduced in\"",
+    describe: "advertised release version (`apps/web/published-release.json`); historical mentions use a different phrasing such as \"introduced in\"",
   },
   {
     kind: "text",
