@@ -11,6 +11,9 @@ Browser overlay scenes with post-processing, bloom, depth of field or emissive s
 - Standard materials show their declared emissive color and intensity instead of rendering dark.
 - `slopcamera image vectorize` reserves enough of its time budget to stop a runaway worker, so it returns within the caller's deadline on a busy machine.
 - The Slopcamera skill has a brand illustrations reference for the shared line icon language.
+- `slopcamera menubar` says the menu bar is already running instead of reporting a failed start, `menubar install` explains the macOS login-item notice first, and `menubar status` reports whether the menu bar is actually running. `slopcamera help menubar` has its own page.
+- Building the face analyzer checks for Apple's command line tools first and asks before macOS offers to install them; scripts and agents get the install command instead of a dialog.
+- Root help uses plain descriptions, shows three examples and ends with one optional-support line.
 
 ## 3.4.0 - 2026-09-23
 

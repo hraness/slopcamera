@@ -101,20 +101,33 @@ impl Host for SlopcameraHost {
 }
 
 /// One status item per user; a second instance exits quietly.
-fn acquire_instance_lock() -> Option<File> {
-    let dir = product_root()?.join("cli");
-    std::fs::create_dir_all(&dir).ok()?;
+/// Exit code when another copy already holds the menu bar. The CLI reports it
+/// as success ("already in your menu bar"), not a startup failure.
+const ALREADY_RUNNING_EXIT: i32 = 3;
+
+enum InstanceError {
+    Held,
+    Unavailable,
+}
+
+fn acquire_instance_lock() -> Result<File, InstanceError> {
+    let dir = product_root()
+        .ok_or(InstanceError::Unavailable)?
+        .join("cli");
+    std::fs::create_dir_all(&dir).map_err(|_| InstanceError::Unavailable)?;
     let file = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(false)
         .open(dir.join("slopcamera-menubar.lock"))
-        .ok()?;
+        .map_err(|_| InstanceError::Unavailable)?;
     let result = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
     if result == 0 {
-        Some(file)
+        Ok(file)
+    } else if std::io::Error::last_os_error().raw_os_error() == Some(libc::EWOULDBLOCK) {
+        Err(InstanceError::Held)
     } else {
-        None
+        Err(InstanceError::Unavailable)
     }
 }
 
@@ -131,8 +144,13 @@ fn main() {
         return;
     }
     let _instance = match acquire_instance_lock() {
-        Some(lock) => lock,
-        None => return,
+        Ok(lock) => lock,
+        // Another copy (usually the login item) already holds the menu bar.
+        Err(InstanceError::Held) => std::process::exit(ALREADY_RUNNING_EXIT),
+        Err(InstanceError::Unavailable) => {
+            eprintln!("slopcamera-menubar: cannot open the instance lock under the Slopcamera state directory");
+            std::process::exit(2);
+        }
     };
     let outputs = OutputsSection::new(root.join("outputs"));
     let _ = std::fs::create_dir_all(outputs.dir());

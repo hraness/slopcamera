@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { chmod, copyFile, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { preflightDeveloperTools, readAnswer, runQuietly } from "./developer-tools";
 
 const analysisDirectory = import.meta.dir;
 const outputDirectory = join(analysisDirectory, "dist");
@@ -264,6 +265,16 @@ function parseArguments(arguments_: readonly string[]): { readonly check: boolea
 
 async function main(): Promise<void> {
   const arguments_ = parseArguments(process.argv.slice(2));
+  if (process.platform === "darwin") {
+    const outcome = await preflightDeveloperTools({
+      env: process.env,
+      interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
+      run: runQuietly,
+      ask: readAnswer,
+      write: text => { process.stderr.write(text); },
+    });
+    if (outcome !== "ready") process.exit(1);
+  }
   const result = arguments_.check ? await checkFaceAnalyzer() : await buildFaceAnalyzer();
   if (arguments_.json) {
     process.stdout.write(`${JSON.stringify(result)}\n`);
