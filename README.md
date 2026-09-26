@@ -47,14 +47,14 @@ the rendered output with source, runtime requirements and reproduction steps.
 
 ## Install Slopcamera
 
-Slopcamera v3.4.0 includes 17 reusable film and animation direction profiles, deterministic exposure helpers, and a sample renderer that defaults to native 4K. Use the [style direction guide](docs/how-to/direct-visual-styles.md) to author cel animation, pixel art, mathematical explanations, and historical film treatments from retained sources.
+Slopcamera v3.5.0 includes 17 reusable film and animation direction profiles, deterministic exposure helpers, and a sample renderer that defaults to native 4K. Use the [style direction guide](docs/how-to/direct-visual-styles.md) to author cel animation, pixel art, mathematical explanations, and historical film treatments from retained sources. On macOS, `slopcamera menubar` puts Slopcamera in the menu bar and explains each macOS notice before it appears.
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.4.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.4.0)
+[Slopcamera v3.5.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.5.0)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.5.0/hraness-slopcamera-3.5.0.tgz
 slopcamera skill install --target agents
 ```
 
