@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { readFile, writeFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import {
   artifactSummary,
   checkDiagramFile,
@@ -681,6 +681,7 @@ export async function main(
         async (lease) =>
           await (dependencies.iconSet ?? generateSlopcameraIconSet)({
             keepRaster: parsed.flags.has("keep-raster"),
+            manifestDir: dirname(resolve(manifestPath)),
             model,
             outputDir,
             spec,

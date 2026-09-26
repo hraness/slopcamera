@@ -1,10 +1,14 @@
 import { createHash } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { z } from "zod"
 import { SlopcameraCloudError } from "./cloud-errors.js"
 import {
   collectSlopcameraIconCandidates,
+  extractIconLineArt,
   loadIconLanguageRuntime,
+  measureIconCandidateMetrics,
+  renderIconPreview,
   slopcameraIconContexts,
   slopcameraIconCritiqueDefaultModel,
   slopcameraIconCritiqueTimeoutMs,
@@ -26,7 +30,12 @@ import {
   slopcameraGatewayApiBaseUrl,
 } from "./generate.js"
 import { normalizedHexColor } from "./vectorize/metrics.js"
-import { vectorizeHardLimits } from "./vectorize/limits.js"
+import {
+  resolveVectorizeLimits,
+  VectorizeDeadline,
+  vectorizeHardLimits,
+} from "./vectorize/limits.js"
+import { loadRaster } from "./vectorize/pixels.js"
 
 /**
  * Set-level icon generation. `slopcamera image icon` evaluates one icon at a
@@ -73,11 +82,24 @@ export interface SlopcameraIconSetMemberInput {
   readonly subject: string
 }
 
+/**
+ * A reference member is an already-admitted family icon (slug + local SVG
+ * path resolved against the manifest). References are never regenerated or
+ * written: they join the measured median, the family band, and the
+ * contact-sheet critique so a new or partially refreshed set converges
+ * toward the family it will ship beside.
+ */
+export interface SlopcameraIconSetReferenceInput {
+  readonly slug: string
+  readonly svg: string
+}
+
 export interface SlopcameraIconSetSpec {
   readonly context?: SlopcameraIconContext
   readonly ink?: string
   readonly members: readonly SlopcameraIconSetMemberInput[]
   readonly name?: string
+  readonly references?: readonly SlopcameraIconSetReferenceInput[]
 }
 
 export interface IconSetMemberVerdict {
@@ -137,6 +159,8 @@ export interface GenerateSlopcameraIconSetInput {
   readonly inheritedFileDescriptors?: readonly number[]
   readonly ink?: string
   readonly keepRaster?: boolean
+  /** Directory the spec's reference SVG paths resolve against. */
+  readonly manifestDir?: string
   readonly model?: string
   readonly outputDir: string
   readonly purpose?: SlopcameraIconPurpose
@@ -168,6 +192,16 @@ interface MemberLane {
   attempts: IconAttemptReceipt[]
   eligible: IconCandidateRecord[]
   regenerated: number
+}
+
+/**
+ * An admitted reference icon: fixed metrics and artwork that anchor the
+ * family target and appear in the contact sheet without being regenerated.
+ */
+interface SetAnchor {
+  readonly metrics: IconMeasuredMetrics
+  readonly slug: string
+  readonly svg: string
 }
 
 function invalidArgument(message: string): never {
@@ -275,6 +309,39 @@ export function parseSlopcameraIconSetSpec(
     }
     seen.add(member.slug)
   }
+  const references = value.references
+  const parsedReferences: SlopcameraIconSetReferenceInput[] = []
+  if (references !== undefined) {
+    if (!Array.isArray(references) || references.length > 8) {
+      invalidArgument("Icon set references must be an array of at most 8 entries.")
+    }
+    for (const [index, reference] of (references as unknown[]).entries()) {
+      if (!isRecord(reference)) {
+        invalidArgument(`Icon set reference ${index} must be an object.`)
+      }
+      const slug = reference.slug
+      if (typeof slug !== "string" || !slopcameraIconSetSlugPattern.test(slug)) {
+        invalidArgument(
+          `Icon set reference ${index} slug must be lowercase kebab-case, at most 63 characters.`,
+        )
+      }
+      if (seen.has(slug)) {
+        invalidArgument(`Icon set slug "${slug}" is duplicated.`)
+      }
+      seen.add(slug)
+      const svg = reference.svg
+      if (
+        typeof svg !== "string" ||
+        svg.length < 1 ||
+        svg.length > 4_096 ||
+        svg.includes("\0") ||
+        !svg.toLowerCase().endsWith(".svg")
+      ) {
+        invalidArgument(`Icon set reference "${slug}" needs a bounded .svg path.`)
+      }
+      parsedReferences.push({ slug, svg })
+    }
+  }
   return {
     ...(context === undefined
       ? {}
@@ -282,6 +349,9 @@ export function parseSlopcameraIconSetSpec(
     ...(ink === undefined ? {} : { ink }),
     members: parsed,
     ...(name === undefined ? {} : { name: (name as string).trim() }),
+    ...(parsedReferences.length === 0
+      ? {}
+      : { references: parsedReferences }),
   }
 }
 
@@ -555,6 +625,7 @@ function pickMemberCandidate(
  */
 function jointSelect(
   lanes: readonly MemberLane[],
+  anchors: readonly SetAnchor[],
 ): Readonly<{ picks: Map<string, IconCandidateRecord>; target: { coverageRatio: number; strokePx: number } }> {
   const picks = new Map(
     lanes.map(lane => [lane.input.slug, pickMemberCandidate(lane.eligible, null)]),
@@ -562,19 +633,22 @@ function jointSelect(
   for (let pass = 0; pass < 4; pass += 1) {
     let changed = false
     for (const lane of lanes) {
-      const siblings = lanes
-        .filter(candidate => candidate !== lane)
-        .map(candidate => picks.get(candidate.input.slug)!)
+      const siblings = [
+        ...lanes
+          .filter(candidate => candidate !== lane)
+          .map(candidate => picks.get(candidate.input.slug)!.metrics),
+        ...anchors.map(anchor => anchor.metrics),
+      ]
       const own = picks.get(lane.input.slug)!
       const target =
         siblings.length === 0
           ? { coverageRatio: own.metrics.coverageRatio, strokePx: own.metrics.strokePx }
           : {
               coverageRatio: medianMetric(
-                siblings.map(record => record.metrics.coverageRatio),
+                siblings.map(metrics => metrics.coverageRatio),
               ),
               strokePx: medianMetric(
-                siblings.map(record => record.metrics.strokePx),
+                siblings.map(metrics => metrics.strokePx),
               ),
             }
       const pick = pickMemberCandidate(lane.eligible, target)
@@ -585,13 +659,15 @@ function jointSelect(
     }
     if (!changed) break
   }
+  const familyMetrics = [
+    ...[...picks.values()].map(record => record.metrics),
+    ...anchors.map(anchor => anchor.metrics),
+  ]
   const target = {
     coverageRatio: medianMetric(
-      [...picks.values()].map(record => record.metrics.coverageRatio),
+      familyMetrics.map(metrics => metrics.coverageRatio),
     ),
-    strokePx: medianMetric(
-      [...picks.values()].map(record => record.metrics.strokePx),
-    ),
+    strokePx: medianMetric(familyMetrics.map(metrics => metrics.strokePx)),
   }
   return { picks, target }
 }
@@ -721,6 +797,43 @@ export async function generateSlopcameraIconSet(
     regenerated: 0,
   }))
 
+  const anchors: SetAnchor[] = []
+  const limits = resolveVectorizeLimits({})
+  for (const reference of input.spec.references ?? []) {
+    const referencePath = resolve(input.manifestDir ?? ".", reference.svg)
+    let svg: string
+    try {
+      svg = await readFile(referencePath, "utf8")
+    } catch {
+      throw new SlopcameraCloudError(
+        "INVALID_ARGUMENT",
+        `Icon set reference "${reference.slug}" could not be read: ${reference.svg}.`,
+      )
+    }
+    if (Buffer.byteLength(svg, "utf8") > 256 * 1024) {
+      invalidArgument(`Icon set reference "${reference.slug}" exceeds 256 KiB.`)
+    }
+    const png =
+      dependencies.rasterize === undefined
+        ? await renderIconPreview(svg, "illustration")
+        : await dependencies.rasterize(svg)
+    const raster = await loadRaster(
+      png,
+      limits,
+      new VectorizeDeadline(limits.maxDurationMs),
+    )
+    const extraction = extractIconLineArt(raster.pixels, raster.width, raster.height, {
+      hardEdges: true,
+      ink,
+    })
+    const pathCount = (svg.match(/<path/gu) ?? []).length
+    anchors.push({
+      metrics: measureIconCandidateMetrics(extraction, svg, pathCount),
+      slug: reference.slug,
+      svg,
+    })
+  }
+
   const collectForLane = async (
     lane: MemberLane,
     initialFeedback?: string,
@@ -772,7 +885,7 @@ export async function generateSlopcameraIconSet(
   let setRoundsUsed = 0
   for (let setRound = 1; setRound <= setRounds; setRound += 1) {
     setRoundsUsed = setRound
-    const { picks, target } = jointSelect(lanes)
+    const { picks, target } = jointSelect(lanes, anchors)
     const outliers = outOfFamilyMembers(lanes, picks, target)
     const fixes = new Map<string, string>()
     if (outliers.length > 0) {
@@ -784,12 +897,13 @@ export async function generateSlopcameraIconSet(
         )
       }
     } else if (critiqueEnabled) {
-      const sheet = await composeSheet(
-        lanes.map(lane => ({
+      const sheet = await composeSheet([
+        ...lanes.map(lane => ({
           slug: lane.input.slug,
           svg: picks.get(lane.input.slug)!.candidate.svg,
         })),
-      )
+        ...anchors.map(anchor => ({ slug: anchor.slug, svg: anchor.svg })),
+      ])
       const verdict = await setCritique({
         ink,
         members: lanes.map(lane => lane.input.slug),
@@ -844,7 +958,7 @@ export async function generateSlopcameraIconSet(
     }
   }
 
-  const { picks, target } = jointSelect(lanes)
+  const { picks, target } = jointSelect(lanes, anchors)
   const finalOutliers = outOfFamilyMembers(lanes, picks, target)
   const unresolvedCritique = setCritiques.length > 0 &&
     !setCritiques[setCritiques.length - 1]!.pass

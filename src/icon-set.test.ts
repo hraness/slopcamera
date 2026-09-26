@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import sharp from "sharp"
 import {
   parseSlopcameraIconSetSpec,
   generateSlopcameraIconSet,
@@ -97,7 +98,7 @@ interface ScriptedCollect {
 
 /** Queue candidate batches per subject; later calls pop the next batch. */
 function scriptedCollect(
-  batches: Readonly<Record<string, readonly IconCandidateRecord[][]>>,
+  batches: Readonly<Record<string, IconCandidateRecord[][]>>,
 ): ScriptedCollect {
   const calls: { initialFeedback?: string; subject: string }[] = []
   return {
@@ -165,8 +166,43 @@ describe("icon set manifest", () => {
         members: [{ context: "poster", slug: "a", subject: "x" }],
       }),
     ).toThrow()
+    expect(() =>
+      parseSlopcameraIconSetSpec({
+        members: [{ slug: "a", subject: "x" }],
+        references: [{ slug: "a", svg: "ref.svg" }],
+      }),
+    ).toThrow("duplicated")
+    const withRefs = parseSlopcameraIconSetSpec({
+      members: [{ slug: "a", subject: "x" }],
+      references: [{ slug: "cli", svg: "../shared/cli.svg" }],
+    })
+    expect(withRefs.references).toEqual([
+      { slug: "cli", svg: "../shared/cli.svg" },
+    ])
   })
 })
+
+async function anchorPng(): Promise<Buffer> {
+  const width = 64
+  const height = 64
+  const pixels = new Uint8Array(width * height * 4).fill(252)
+  for (let index = 3; index < pixels.length; index += 4) pixels[index] = 255
+  // A 3px ring: moderate coverage, moderate stroke.
+  for (let y = 16; y < 48; y += 1) {
+    for (let x = 16; x < 48; x += 1) {
+      const ring =
+        y < 19 || y > 44 || x < 19 || x > 44
+      if (!ring) continue
+      const offset = (y * width + x) * 4
+      pixels[offset] = 36
+      pixels[offset + 1] = 116
+      pixels[offset + 2] = 212
+    }
+  }
+  return sharp(pixels, { raw: { channels: 4, height, width } })
+    .png()
+    .toBuffer()
+}
 
 describe("icon set generation", () => {
   test("selects the candidate closest to the family, not the highest score", async () => {
@@ -334,6 +370,50 @@ describe("icon set generation", () => {
         ),
       ).rejects.toThrow("did not converge")
       expect(await Bun.file(join(root, "alpha.svg")).exists()).toBe(false)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("reference anchors pull member picks toward the admitted family", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-set-"))
+    try {
+      const referenceSvg = join(root, "anchor.svg")
+      await writeFile(
+        referenceSvg,
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64"/></svg>',
+      )
+      const anchor = await anchorPng()
+      const collect = scriptedCollect({
+        alpha: [
+          [
+            record({ coverageRatio: 0.12, strokePx: 8 }, { round: 1, score: 95 }),
+            record({ coverageRatio: 0.35, strokePx: 34 }, { round: 2, score: 50 }),
+          ],
+        ],
+      })
+      const receipt = await generateSlopcameraIconSet(
+        {
+          manifestDir: root,
+          outputDir: root,
+          rounds: 1,
+          setRounds: 1,
+          spec: {
+            members: [{ slug: "alpha", subject: "alpha" }],
+            references: [{ slug: "anchor", svg: "anchor.svg" }],
+          },
+        },
+        {
+          collectCandidates: collect.collect,
+          composeSheet: async () => Uint8Array.from([1]),
+          rasterize: async () => Uint8Array.from(anchor),
+          setCritique: async () => passingSetCritique,
+        },
+      )
+      const alpha = receipt.members.find(member => member.slug === "alpha")!
+      // The heavier anchor makes the sparse, thin candidate the family misfit.
+      expect(alpha.metrics.coverageRatio).toBeCloseTo(0.35)
+      expect(alpha.candidates.find(candidate => candidate.selected)?.round).toBe(2)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

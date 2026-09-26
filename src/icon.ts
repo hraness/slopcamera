@@ -993,7 +993,7 @@ export async function critiqueIconRaster(
 
 const markPreviewSmallSizes = [16, 32] as const
 
-async function renderIconPreview(
+export async function renderIconPreview(
   svg: string,
   purpose: SlopcameraIconPurpose,
 ): Promise<Uint8Array> {
