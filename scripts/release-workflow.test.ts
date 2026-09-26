@@ -1141,7 +1141,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")
-  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath })")
+  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath, statusPagePath })")
   for (const source of ["src/site-content.ts", "src/site-renderer.ts", "src/published-release.ts"]) {
     expect(siteProducer).toContain(`"${source}"`)
   }

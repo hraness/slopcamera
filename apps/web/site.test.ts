@@ -28,6 +28,7 @@ import {
   preferredRepresentation,
   preferredRepresentationFrom,
 } from "./src/negotiate"
+import { renderStatusPage } from "./src/status-page-content"
 import {
   docsCanonicalUrl,
   docsOrigin,
@@ -1144,7 +1145,7 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">')
     expect(html).not.toMatch(/<section(?![^>]*aria-labelledby)/)
     expect(fragmentLinks.every(fragment => ids.has(fragment))).toBe(true)
-    expect(notFound.match(/<h1\b/gu)).toHaveLength(1)
+    expect(renderStatusPage().match(/<h1\b/gu)).toHaveLength(1)
     expect(notFound).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
     expect(notFound).toContain('<main id="main" tabindex="-1">\n      {{STATUS_PAGE}}\n    </main>')
     expect(notFound).toContain('<script defer src="{{STATUS_PAGE_ASSET}}"></script>')
@@ -1362,6 +1363,7 @@ describe("static Slopcamera site", () => {
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.17.0",
+      "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.19.2",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0",
