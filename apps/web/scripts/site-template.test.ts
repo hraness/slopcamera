@@ -8,7 +8,7 @@ import { assertCompiledSiteClass, replaceSiteSlot } from "../src/site-template"
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
 function assertPrimaryActionColors(compiled: StylexTransformResult): void {
-  for (const slot of ["navigationAction", "recoveryAction"]) {
+  for (const slot of ["navigationAction"]) {
     // Bind the rules to each emitted action, not unrelated package or shell CSS.
     const matches = [...compiled.code.matchAll(new RegExp(`\\b${slot}: \\{\\s*className: "([^"]+)"\\s*\\}\\.className`, "gu"))]
     expect(matches).toHaveLength(1)
@@ -45,7 +45,7 @@ function assertPrimaryActionColors(compiled: StylexTransformResult): void {
 }
 
 describe("ordinary shell authored contract (pure, process-free)", () => {
-  test("compiled home and recovery actions preserve native forced border adjustment and ordinary/hover colors", async () => {
+  test("compiled home action preserves native forced border adjustment and ordinary/hover colors", async () => {
     const path = fileURLToPath(new URL("../src/site-shell.stylex.ts", import.meta.url))
     const root = fileURLToPath(new URL("../", import.meta.url))
     const source = await read("src/site-shell.stylex.ts")
@@ -114,8 +114,9 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(home.match(/\{\{SITE_NAVIGATION_ACTION_CLASS\}\}/gu)).toHaveLength(1)
     expect(missing.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
     expect(missing).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
-    expect(missing.match(/\{\{SITE_RECOVERY_LINK_CLASS\}\}/gu)).toHaveLength(4)
-    expect(missing.match(/\{\{SITE_RECOVERY_PARAGRAPH_CLASS\}\}/gu)).toHaveLength(2)
+    // The 404 body is the shared design-kit status page, filled as one slot.
+    expect(missing.match(/\{\{STATUS_PAGE\}\}/gu)).toHaveLength(1)
+    expect(missing).not.toMatch(/\{\{SITE_RECOVERY_[A-Z_]+\}\}/u)
     expect(doc.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
     expect(doc).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
     for (const slot of ["LAYOUT", "ARTICLE", "FOOTER"]) {
@@ -145,10 +146,8 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     expect(recipes).toContain('const phone = "@media (max-width: 34rem)"')
     expect(recipes).toContain('display: { default: null, [phone]: "none" }')
     expect(recipes).toContain('stylex.props(shell.primaryAction, shell.navigationAction)')
-    expect(recipes).toContain('stylex.props(shell.primaryAction, shell.recoveryAction)')
-    expect(recipes).toContain('const coarsePointer = "@media (pointer: coarse)"')
+    expect(recipes).not.toMatch(/recovery[A-Z]?\w*:/u)
     expect(recipes).toContain('[forcedColors]: {\n        default: "CanvasText",')
-    expect(recipes).toContain('minHeight: { default: "var(--hraness-marketing-action-height)", [coarsePointer]: "3rem" }')
     expect(renderer).toContain('document === "index.html" ? homeSlots')
     expect(renderer).toContain('document === "404.html" ? recoverySlots')
     expect(renderer).toContain('isDocs ? docsSlots')

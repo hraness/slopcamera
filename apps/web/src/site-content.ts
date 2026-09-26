@@ -128,6 +128,10 @@ export type SiteAssets = Readonly<{
   analyticsPath: string | null
   docBodies?: Readonly<Record<string, string>>
   blogPages?: Readonly<Record<string, BlogPageContent>>
+  /** The 404 page's enhancement script, loaded only there. */
+  statusPagePath?: string
+  /** The shared design-kit status page markup, rendered by the build entrypoint. */
+  statusPage?: string
 }>
 
 function renderDocsFooter(slug: string): string {
@@ -137,7 +141,8 @@ function renderDocsFooter(slug: string): string {
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {
   if (!/^\/assets\/theme-[a-f0-9]{12}\.js$/u.test(assets.themePath)
-    || (assets.analyticsPath !== null && !/^\/assets\/analytics-[a-f0-9]{12}\.js$/u.test(assets.analyticsPath))) {
+    || (assets.analyticsPath !== null && !/^\/assets\/analytics-[a-f0-9]{12}\.js$/u.test(assets.analyticsPath))
+    || (assets.statusPagePath !== undefined && !/^\/assets\/status-page-[a-f0-9]{12}\.js$/u.test(assets.statusPagePath))) {
     throw new Error("Site content requires exact local fingerprinted script paths")
   }
   const common: ReadonlyArray<readonly [string, string, number]> = [
@@ -148,7 +153,13 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
-  if (document === "404.html") return common
+  if (document === "404.html") {
+    if (assets.statusPage === undefined || assets.statusPagePath === undefined
+      || !assets.statusPage.startsWith('<div class="hraness-status-page"')) {
+      throw new Error("The 404 page requires the shared status page markup and script")
+    }
+    return [...common, ["{{STATUS_PAGE}}", assets.statusPage, 1], ["{{STATUS_PAGE_ASSET}}", assets.statusPagePath, 1]]
+  }
   if (isBlogDocument(document)) {
     const page = assets.blogPages?.[document]
     if (page === undefined) throw new Error(`Blog page content missing for ${document}`)

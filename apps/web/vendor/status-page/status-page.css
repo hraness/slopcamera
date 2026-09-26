@@ -1,0 +1,276 @@
+/**
+ * Status pages
+ *
+ * One composition for the 404 page and recoverable error pages, shared by the
+ * React `StatusPage` and the static `renderStatusPageHtml` markup. The glyph is
+ * real text; `attachStatusPage` draws it as a dot field on a canvas and marks
+ * the root `data-hraness-status-field="live"` only after the canvas paints.
+ * Sites retheme through --hraness-status-ink, -muted, -accent, -line, -radius,
+ * and -glyph-font; everything else follows the palette tokens.
+ */
+@layer components.hraness-design-kit.legacy {
+  .hraness-status-page {
+    --_hraness-status-ink: var(--hraness-status-ink, var(--foreground, CanvasText));
+    --_hraness-status-muted: var(--hraness-status-muted, var(--muted, GrayText));
+    --_hraness-status-accent: var(--hraness-status-accent, var(--hraness-site-accent, var(--primary, var(--accent, LinkText))));
+    --_hraness-status-line: var(--hraness-status-line, color-mix(in srgb, var(--_hraness-status-ink) 14%, transparent));
+    --_hraness-status-radius: var(--hraness-status-radius, var(--hraness-marketing-radius, 0.75rem));
+
+    display: grid;
+    min-block-size: min(84svh, 52rem);
+    box-sizing: border-box;
+    place-items: center;
+    padding-block: clamp(2.5rem, 7vw, 5rem);
+    padding-inline: max(1rem, var(--layout-edge-inset, 1rem));
+    overflow-x: clip;
+    color: var(--_hraness-status-ink);
+    font-family: var(--font-text, inherit);
+    outline: none;
+  }
+
+  .hraness-status-page__inner {
+    display: flex;
+    inline-size: min(100%, 42rem);
+    min-inline-size: 0;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .hraness-status-page__code {
+    position: relative;
+    display: grid;
+    inline-size: 100%;
+    place-items: center;
+    margin-block-end: clamp(0.75rem, 2.5vw, 1.5rem);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .hraness-status-page__glyph {
+    padding-block: 0.06em;
+    color: color-mix(in srgb, var(--_hraness-status-ink) 82%, transparent);
+    font-family: var(--hraness-status-glyph-font, var(--hraness-type-heading-font, var(--font-heading, inherit)));
+    font-size: clamp(7rem, 30vw, 13.5rem);
+    font-variant-numeric: lining-nums;
+    font-weight: var(--hraness-type-heading-weight, 600);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  /* The canvas reads its accent from `color`. */
+  .hraness-status-page__field {
+    position: absolute;
+    inset: -2.5rem -1.5rem;
+    display: block;
+    inline-size: calc(100% + 3rem);
+    block-size: calc(100% + 5rem);
+    color: var(--_hraness-status-accent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms ease-out;
+  }
+
+  .hraness-status-page[data-hraness-status-field="live"] .hraness-status-page__glyph {
+    visibility: hidden;
+  }
+
+  .hraness-status-page[data-hraness-status-field="live"] .hraness-status-page__field {
+    opacity: 1;
+  }
+
+  .hraness-status-page__title {
+    max-inline-size: 22ch;
+    margin: 0;
+    color: var(--_hraness-status-ink);
+    font-family: var(--hraness-type-heading-font, var(--font-heading, inherit));
+    font-size: clamp(1.75rem, 4.2vw, 2.4rem);
+    font-weight: var(--hraness-type-heading-weight, 600);
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .hraness-status-page__summary {
+    max-inline-size: 34rem;
+    margin: 0.65rem 0 0;
+    color: var(--_hraness-status-muted);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .hraness-status-page__hint {
+    margin: 0.85rem 0 0;
+    color: var(--_hraness-status-ink);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .hraness-status-page__hint-link {
+    color: var(--_hraness-status-accent);
+    font-weight: 600;
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  .hraness-status-page__hint[hidden],
+  .hraness-status-page__back[hidden] {
+    display: none;
+  }
+
+  .hraness-status-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1.25rem;
+    margin-block-start: 1.6rem;
+  }
+
+  /* Zero specificity, so the shared foil treatment wins wherever it loads. */
+  :where(.hraness-status-page__action) {
+    display: inline-flex;
+    min-block-size: 2.75rem;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.3rem;
+    border: 1px solid var(--_hraness-status-line);
+    border-radius: var(--_hraness-status-radius);
+    background: transparent;
+    color: var(--_hraness-status-ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.975rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+  }
+
+  :where(.hraness-status-page__action[data-emphasis="primary"]) {
+    border: 2px solid var(--_hraness-status-accent);
+    background: var(--surface, var(--background, Canvas));
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--_hraness-status-ink) 12%, transparent);
+  }
+
+  .hraness-status-page__back {
+    color: var(--_hraness-status-muted);
+    font-size: 0.95rem;
+    text-decoration-line: underline;
+    text-decoration-color: var(--_hraness-status-line);
+    text-underline-offset: 0.25em;
+  }
+
+  .hraness-status-page__back:hover {
+    color: var(--_hraness-status-ink);
+  }
+
+  .hraness-status-page__next {
+    inline-size: 100%;
+    margin-block-start: clamp(2.75rem, 7vw, 4rem);
+  }
+
+  .hraness-status-page__next-heading {
+    margin: 0 0 0.85rem;
+    color: var(--_hraness-status-muted);
+    font-family: var(--font-text, inherit);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+
+  .hraness-status-page__next-list {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hraness-status-page__next-link {
+    display: flex;
+    block-size: 100%;
+    box-sizing: border-box;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--_hraness-status-line);
+    border-radius: var(--_hraness-status-radius);
+    background: color-mix(in srgb, var(--surface, var(--background, Canvas)) 70%, transparent);
+    color: var(--_hraness-status-ink);
+    text-align: start;
+    text-decoration: none;
+    transition: border-color 160ms ease-out, transform 160ms ease-out;
+  }
+
+  .hraness-status-page__next-link:hover {
+    border-color: color-mix(in srgb, var(--_hraness-status-accent) 55%, var(--_hraness-status-line));
+    transform: translateY(-1px);
+  }
+
+  .hraness-status-page__next-label {
+    font-size: 0.975rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .hraness-status-page__next-description {
+    color: var(--_hraness-status-muted);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .hraness-status-page__agent {
+    margin: 2rem 0 0;
+    color: var(--_hraness-status-muted);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .hraness-status-page__agent a {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+
+  .hraness-status-page a:focus-visible,
+  .hraness-status-page button:focus-visible {
+    outline: 2px solid var(--_hraness-status-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hraness-status-page__field,
+    .hraness-status-page__next-link {
+      transition: none;
+    }
+
+    .hraness-status-page__next-link:hover {
+      transform: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .hraness-status-page__field {
+      display: none;
+    }
+
+    .hraness-status-page[data-hraness-status-field="live"] .hraness-status-page__glyph {
+      visibility: visible;
+    }
+
+    .hraness-status-page__glyph {
+      color: CanvasText;
+    }
+
+    :where(.hraness-status-page__action),
+    .hraness-status-page__next-link {
+      border-color: ButtonText;
+    }
+  }
+}
