@@ -208,33 +208,88 @@ export function uninstallLaunchAgent(_binary: string, environment: Environment =
   if (infoAt(stable) !== null) rmSync(stable);
   return "absent";
 }
-async function runBinary(binary: string, foreground: boolean): Promise<number> {
+/** `slopcamera-menubar` exits with this code when another copy already holds the menu bar. */
+export const ALREADY_RUNNING_EXIT = 3;
+const NOT_BUILT = "The Slopcamera menu bar isn't in this release yet. Build it with cargo build --release --manifest-path desktop/Cargo.toml in a Slopcamera checkout; slopcamera finds it there, or set SLOPCAMERA_MENUBAR to the built file.";
+const LOGIN_ITEMS = "System Settings › General › Login Items & Extensions";
+
+export type Launched = "running" | "already-running" | "exited";
+export type BinaryRunner = (binary: string, foreground: boolean) => Promise<number | null>;
+
+/** Resolves the exit code, or null when a background copy is still running after startup. */
+async function spawnBinary(binary: string, foreground: boolean): Promise<number | null> {
   let child: Bun.Subprocess;
-  try { child = Bun.spawn([binary], foreground ? { stdin: "inherit", stdout: "inherit", stderr: "inherit" } : { stdin: "ignore", stdout: "ignore", stderr: "ignore" }); } catch { throw new CliError("unavailable", "The Slopcamera menu bar could not start."); }
-  if (!foreground) { child.unref(); const settled = await Promise.race([child.exited.then((code) => code as number | null), Bun.sleep(SETTLE_MS).then(() => null)]); if (settled !== null) throw new CliError("unavailable", "The Slopcamera menu bar exited during startup."); return 0; }
+  try { child = Bun.spawn([binary], foreground ? { stdin: "inherit", stdout: "inherit", stderr: "inherit" } : { stdin: "ignore", stdout: "ignore", stderr: "ignore" }); } catch { throw new CliError("unavailable", "The Slopcamera menu bar couldn't start."); }
+  if (!foreground) { child.unref(); return await Promise.race([child.exited.then((code) => code as number | null), Bun.sleep(SETTLE_MS).then(() => null)]); }
   return await child.exited;
 }
-export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: boolean, mode: "foreground" | "background" = "foreground"): Promise<void> {
-  const binary = resolveMenubarBinary(repositoryRoot, io.env);
-  if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_MENUBAR.");
-  const code = await runBinary(binary, mode === "foreground");
-  if (code !== 0) throw new CliError("unavailable", "The Slopcamera menu bar exited during startup.");
-  if (asJson) writeJson(io, { running: mode === "background", foreground: mode === "foreground" });
-  else writeLine(io, mode === "foreground" ? "Slopcamera menu bar exited." : "Slopcamera menu bar is running.");
+
+/** Interprets the companion's exit: another running copy is success, not a failure. */
+export function launchOutcome(code: number | null, foreground: boolean): Launched {
+  if (code === ALREADY_RUNNING_EXIT) return "already-running";
+  if (code === null && !foreground) return "running";
+  if (code === 0 && foreground) return "exited";
+  throw new CliError("unavailable", "The Slopcamera menu bar stopped while starting. Run it in the foreground to see why: slopcamera menubar --foreground");
 }
-export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean): Promise<void> {
+
+interface Marks { readonly ok: string; readonly warn: string; readonly note: string; readonly next: string }
+/** ✓ ⚠ 🔐 → with ASCII fallbacks for dumb terminals and non-UTF-8 locales. */
+export function marks(env: Readonly<Record<string, string | undefined>>): Marks {
+  const utf8 = [env.LC_ALL, env.LC_CTYPE, env.LANG].some((value) => value !== undefined && /utf-?8/i.test(value));
+  const ascii = env.TERM === "dumb" || !utf8 || env.HRANESS_ASCII === "1";
+  return ascii ? { ok: "OK", warn: "WARN", note: "NOTE", next: "->" } : { ok: "✓", warn: "⚠", note: "🔐", next: "→" };
+}
+
+/** The LOGIN_ITEM notice (notifies, so there is no confirm line). The requester is the bare companion until Slopcamera ships as an app. */
+export function loginItemNotice(env: Readonly<Record<string, string | undefined>>): string {
+  return `${marks(env).note} macOS will show a notice that slopcamera-menubar can open at login. That's Slopcamera's menu bar.\n   It lists your outputs and opens when you log in. Nothing else runs in the background. Turn it off any time in ${LOGIN_ITEMS}.\n`;
+}
+
+export function launchMessage(outcome: Launched, env: Readonly<Record<string, string | undefined>>): string {
+  const mark = marks(env);
+  if (outcome === "already-running") return `${mark.ok} Slopcamera is already in your menu bar. Look for 📷.`;
+  if (outcome === "running") return `${mark.ok} Slopcamera is in your menu bar. Look for 📷.`;
+  return "The Slopcamera menu bar closed.";
+}
+
+export function stateMessage(action: "install" | "uninstall" | "status", state: LaunchAgentState, running: boolean, env: Readonly<Record<string, string | undefined>>): string {
+  const mark = marks(env);
+  if (state === "conflict") return `${mark.warn} Another menu-bar setup that this command didn't create is in the way. It was left untouched.\n  Remove ~/Library/LaunchAgents/${LABEL}.plist yourself if you don't need it.`;
+  if (state === "absent") return action === "uninstall" ? `${mark.ok} Slopcamera no longer opens in your menu bar at login.` : `Slopcamera doesn't open at login.\n${mark.next} slopcamera menubar install`;
+  if (action === "install") return `${mark.ok} Slopcamera opens in your menu bar now and at every login. Look for 📷.\n  Remove it any time: slopcamera menubar uninstall`;
+  return running
+    ? `${mark.ok} Slopcamera opens at login and is in your menu bar now.`
+    : `${mark.warn} Slopcamera is set to open at login but isn't running. It may be turned off in ${LOGIN_ITEMS}.\n${mark.next} slopcamera menubar install`;
+}
+
+/** Whether launchd reports the loaded companion as running. Reads state only. */
+export function serviceRunning(runLaunchctl: LaunchctlRunner): boolean {
+  const output = runLaunchctl(["print", `gui/{uid}/${LABEL}`], true);
+  return output !== null && output.split("\n").some((line) => line.trim() === "state = running");
+}
+
+export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: boolean, mode: "foreground" | "background" = "foreground", runBinary: BinaryRunner = spawnBinary): Promise<void> {
+  const binary = resolveMenubarBinary(repositoryRoot, io.env);
+  if (binary === null) throw new CliError("unavailable", NOT_BUILT);
+  const outcome = launchOutcome(await runBinary(binary, mode === "foreground"), mode === "foreground");
+  if (asJson) writeJson(io, { running: outcome !== "exited", foreground: mode === "foreground", alreadyRunning: outcome === "already-running" });
+  else writeLine(io, launchMessage(outcome, io.env));
+}
+export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean, runLaunchctl: LaunchctlRunner = launchctl): Promise<void> {
   assertMac(io.platform);
   const stable = installedBinaryPath(io.env);
   let state: LaunchAgentState;
   if (action === "install") {
     const binary = resolveMenubarBinary(repositoryRoot, io.env);
-    if (binary === null) throw new CliError("unavailable", "The Slopcamera menu bar is not installed. Build it separately or set SLOPCAMERA_MENUBAR.");
-    state = installLaunchAgent(binary, io.env, io.platform);
+    if (binary === null) throw new CliError("unavailable", NOT_BUILT);
+    if (!asJson) io.stderr(loginItemNotice(io.env));
+    state = installLaunchAgent(binary, io.env, io.platform, runLaunchctl);
   } else {
-    state = action === "uninstall" ? uninstallLaunchAgent(stable, io.env, io.platform) : launchAgentState(stable, io.env);
+    state = action === "uninstall" ? uninstallLaunchAgent(stable, io.env, io.platform, runLaunchctl) : launchAgentState(stable, io.env);
   }
-  if (asJson) writeJson(io, { launchAgent: state });
-  else writeLine(io, `Slopcamera menu-bar LaunchAgent: ${state}.`);
+  const running = state === "installed" && serviceRunning(runLaunchctl);
+  if (asJson) writeJson(io, { launchAgent: state, running });
+  else writeLine(io, stateMessage(action, state, running, io.env));
 }
 export async function reportOutputsRoot(io: CliIo, stateRoot: string, asJson: boolean): Promise<void> {
   const directory = outputsRoot(stateRoot);
