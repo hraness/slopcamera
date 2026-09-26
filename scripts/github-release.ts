@@ -165,7 +165,7 @@ async function boundedResponse(response: Response): Promise<Buffer> {
 }
 async function content(path: string, ref: string): Promise<Buffer> {
   const result = record(await request(`/repos/${repository}/contents/${path}?ref=${ref}`), "Authority source");
-  if (result.type !== "file" || result.encoding !== "base64" || typeof result.content !== "string" || result.content.length > 300_000) throw new Error("Authority helper is not a bounded file.");
+  if (result.type !== "file" || result.encoding !== "base64" || typeof result.content !== "string" || result.content.length > 300_000) throw new Error(`${path} is not a bounded file.`);
   return Buffer.from(result.content, "base64");
 }
 export async function authorizeRelease(environment = process.env): Promise<string> {
@@ -255,15 +255,86 @@ function verifyAttestations(directory: string, handoff: Handoff): void {
     admitVerifiedProvenance(JSON.parse(result.stdout) as unknown, m, subjects);
   }
 }
-export function releaseBody(manifest: ReleaseManifest): string {
-  return `<!-- hraness-github-release-v1\nrepository=${repository}\ntag=${manifest.tag}\nsource-sha=${manifest.sourceSha}\nworkflow=${workflow}\nworkflow-sha=${manifest.workflowSha}\nrun-id=${manifest.runId}\nrun-attempt=${manifest.runAttempt}\narchive-sha256=${manifest.archive.sha256}\n-->\n\nInstall the immutable package with Bun:\n\n\`\`\`sh\nbun add --global https://github.com/${repository}/releases/download/${manifest.tag}/${manifest.archive.name}\n\`\`\`\n\nGitHub Releases are canonical. npm is an optional downstream mirror. See the tagged publishing guide for archive and provenance verification.\n`;
+const identityMarker = "<!-- hraness-github-release-v1\n";
+const identityKeys = ["repository", "tag", "source-sha", "workflow", "workflow-sha", "run-id", "run-attempt", "archive-sha256"] as const;
+const maximumChangelogBytes = 200_000;
+const maximumSectionBytes = 20_000;
+export interface ChangelogSection { summary: string; changes: string }
+/** Reads one version's summary paragraph and change bullets from CHANGELOG.md. */
+export function changelogSection(changelog: string, version: string): ChangelogSection {
+  stableVersion(version);
+  if (typeof changelog !== "string" || Buffer.byteLength(changelog, "utf8") > maximumChangelogBytes || changelog.includes("\r")) throw new Error("CHANGELOG.md must be bounded LF text.");
+  const lines = changelog.split("\n");
+  const heading = /^## v?((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))(?: - [0-9]{4}-[0-9]{2}-[0-9]{2})?$/u;
+  let start = -1;
+  for (const [index, line] of lines.entries()) {
+    if (heading.exec(line)?.[1] !== version) continue;
+    if (start !== -1) throw new Error(`CHANGELOG.md has more than one section for ${version}.`);
+    start = index;
+  }
+  if (start === -1) throw new Error(`CHANGELOG.md has no section for ${version}.`);
+  let end = lines.findIndex((line, index) => index > start && /^#{1,2} /u.test(line));
+  if (end === -1) end = lines.length;
+  const body = lines.slice(start + 1, end).join("\n").trim();
+  if (body === "") throw new Error(`CHANGELOG.md section ${version} is empty.`);
+  if (/unreleased/iu.test(body)) throw new Error(`CHANGELOG.md section ${version} still says Unreleased.`);
+  if (Buffer.byteLength(body, "utf8") > maximumSectionBytes) throw new Error(`CHANGELOG.md section ${version} exceeds its bound.`);
+  if (body.includes("<!--") || body.includes("-->") || /^#/mu.test(body)) throw new Error(`CHANGELOG.md section ${version} may not contain headings or HTML comments.`);
+  const bullets = body.search(/^- /mu);
+  const summary = bullets === -1 ? body : body.slice(0, bullets).trim();
+  const changes = bullets === -1 ? "" : body.slice(bullets).trim();
+  if (summary === "" || changes === "") throw new Error(`CHANGELOG.md section ${version} needs a summary paragraph followed by change bullets.`);
+  return { summary, changes };
 }
-export function admitRelease(value: unknown, manifest: ReleaseManifest, files: ReadonlyMap<string, Buffer>, allowMissing: boolean): { id: number; draft: boolean; present: Set<string> } {
+export function releaseTitle(manifest: ReleaseManifest): string {
+  return `Slopcamera ${manifest.tag}`;
+}
+/** The visible page: changelog summary and changes, then install and verify generated from the manifest. */
+export function releaseNotes(manifest: ReleaseManifest, section: ChangelogSection): string {
+  const m = manifest;
+  const fence = "```";
+  return `${section.summary}\n\n## Changes\n\n${section.changes}\n\n## Install\n\nInstall this version from its GitHub Release asset with Bun:\n\n${fence}sh\nbun add --global https://github.com/${repository}/releases/download/${m.tag}/${m.archive.name}\n${fence}\n\nThe same bytes are mirrored on npm:\n\n${fence}sh\nbun add --global ${packageName}@${m.version}\n${fence}\n\n## Verify\n\nThe \`SHA256SUMS\` asset lists the SHA-256 of the archive, \`npm-pack.json\` and \`release-manifest.json\`. \`provenance.jsonl\` holds their signed build provenance.\n\n- Source commit: [\`${m.sourceSha}\`](https://github.com/${repository}/commit/${m.sourceSha})\n- Archive SHA-256: \`${m.archive.sha256}\`\n- How to check the files and their provenance: [publishing guide at ${m.tag}](https://github.com/${repository}/blob/${m.tag}/docs/publishing.md#publish-a-canonical-github-release)\n`;
+}
+export function identityRecord(manifest: ReleaseManifest): string {
+  return `${identityMarker}repository=${repository}\ntag=${manifest.tag}\nsource-sha=${manifest.sourceSha}\nworkflow=${workflow}\nworkflow-sha=${manifest.workflowSha}\nrun-id=${manifest.runId}\nrun-attempt=${manifest.runAttempt}\narchive-sha256=${manifest.archive.sha256}\n-->`;
+}
+export function releaseBody(manifest: ReleaseManifest, section: ChangelogSection): string {
+  return `${releaseNotes(manifest, section)}\n${identityRecord(manifest)}`;
+}
+/** Splits a body at the last identity marker; the identity comment must be the final bytes. */
+export function parseReleaseBody(body: unknown): { notes: string; identity: Record<(typeof identityKeys)[number], string> } {
+  if (typeof body !== "string" || body.length > maximumSectionBytes * 2 || !body.endsWith("-->")) throw new Error("Release body must end with its identity record.");
+  const index = body.lastIndexOf(identityMarker);
+  if (index === -1) throw new Error("Release body has no identity record.");
+  const comment = body.slice(index);
+  if (comment.indexOf("-->") !== comment.length - 3) throw new Error("Release identity record must be the final bytes of the body.");
+  const lines = comment.slice(identityMarker.length, -3).split("\n");
+  if (lines.pop() !== "" || lines.length !== identityKeys.length) throw new Error("Release identity record has unexpected fields.");
+  const identity = {} as Record<(typeof identityKeys)[number], string>;
+  for (const [position, line] of lines.entries()) {
+    const separator = line.indexOf("=");
+    const key = line.slice(0, separator);
+    if (separator <= 0 || key !== identityKeys[position]) throw new Error("Release identity record has unexpected fields.");
+    identity[identityKeys[position]!] = line.slice(separator + 1);
+  }
+  return { notes: body.slice(0, index), identity };
+}
+export function admitReleaseBody(body: unknown, manifest: ReleaseManifest, section: ChangelogSection): void {
+  const { notes, identity } = parseReleaseBody(body);
+  if (JSON.stringify(identity) !== JSON.stringify(parseReleaseBody(identityRecord(manifest)).identity)) throw new Error("Release identity record differs from the exact manifest.");
+  if (notes !== `${releaseNotes(manifest, section)}\n`) throw new Error("Release notes differ from the rendered changelog section and generated install and verify sections.");
+}
+async function taggedChangelog(manifest: ReleaseManifest): Promise<ChangelogSection> {
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(await content("CHANGELOG.md", manifest.sourceSha));
+  return changelogSection(text, manifest.version);
+}
+export function admitRelease(value: unknown, manifest: ReleaseManifest, files: ReadonlyMap<string, Buffer>, allowMissing: boolean, section: ChangelogSection): { id: number; draft: boolean; present: Set<string> } {
   const release = record(value, "GitHub release");
   const author = record(release.author, "Release author");
-  if (release.tag_name !== manifest.tag || release.name !== `Slopcamera ${manifest.tag}` || release.target_commitish !== manifest.sourceSha
+  if (release.tag_name !== manifest.tag || release.name !== releaseTitle(manifest) || release.target_commitish !== manifest.sourceSha
     || release.prerelease !== false || typeof release.draft !== "boolean" || author.id !== authorId || author.login !== "github-actions[bot]" || author.type !== "Bot"
-    || release.body !== releaseBody(manifest) || (!release.draft && release.immutable !== true)) throw new Error("Existing release is not the exact Actions-authored immutable artifact.");
+    || (!release.draft && release.immutable !== true)) throw new Error("Existing release is not the exact Actions-authored immutable artifact.");
+  admitReleaseBody(release.body, manifest, section);
   if (!Array.isArray(release.assets) || release.assets.length > files.size) throw new Error("Release asset inventory is invalid.");
   const present = new Set<string>();
   const ids = new Set<number>();
@@ -353,15 +424,17 @@ async function publish(directory: string): Promise<void> {
   admitExpectedHandoff(handoff, process.env);
   verifyAttestations(directory, handoff);
   const m = handoff.manifest;
+  // The notes come only from the tagged CHANGELOG.md; a missing, empty or Unreleased section stops before any write.
+  const section = await taggedChangelog(m);
   await requireMonotonic(m.version);
   let existing: unknown = await findReleaseForTag(m.tag);
   if (existing === null) {
     await authorizeRelease();
     // A failed response may represent a successful write. A rerun reads it first.
     existing = await request(`/repos/${repository}/releases`, "POST", { tag_name: m.tag, target_commitish: m.sourceSha,
-      name: `Slopcamera ${m.tag}`, body: releaseBody(m), draft: true, prerelease: false, make_latest: "false" });
+      name: releaseTitle(m), body: releaseBody(m, section), draft: true, prerelease: false, make_latest: "false" });
   }
-  let state = admitRelease(existing, m, handoff.files, true);
+  let state = admitRelease(existing, m, handoff.files, true, section);
   verifyRemoteBytes(existing, handoff.files);
   if (state.draft) {
     for (const [name, bytes] of handoff.files) {
@@ -375,15 +448,15 @@ async function publish(directory: string): Promise<void> {
       await boundedResponse(response);
     }
     existing = await request(`/repos/${repository}/releases/${state.id}`);
-    state = admitRelease(existing, m, handoff.files, false);
+    state = admitRelease(existing, m, handoff.files, false, section);
     verifyRemoteBytes(existing, handoff.files);
     await authorizeRelease();
     await requireMonotonic(m.version);
     existing = await request(`/repos/${repository}/releases/${state.id}`, "PATCH", { draft: false, make_latest: "true" });
   }
-  admitRelease(existing, m, handoff.files, false);
+  admitRelease(existing, m, handoff.files, false, section);
   const readback = await request(`/repos/${repository}/releases/${state.id}`);
-  const final = admitRelease(readback, m, handoff.files, false);
+  const final = admitRelease(readback, m, handoff.files, false, section);
   verifyRemoteBytes(readback, handoff.files);
   const latest = record(await request(`/repos/${repository}/releases/latest`), "Latest release");
   if (final.draft || final.id !== state.id || latest.id !== final.id || latest.tag_name !== m.tag) throw new Error("Published release is not immutable Latest.");
@@ -397,8 +470,8 @@ export function admitNpmHandoffRun(manifest: ReleaseManifest, environment: NodeJ
     || environment.GITHUB_REF !== `refs/tags/${manifest.tag}` || manifest.runId !== Number(environment.GITHUB_RUN_ID)
     || manifest.runAttempt > attempt) throw new Error("npm handoff is not from this exact run and source.");
 }
-export function admitPublishedRelease(value: unknown, manifest: ReleaseManifest, files: ReadonlyMap<string, Buffer>): number {
-  const state = admitRelease(value, manifest, files, false);
+export function admitPublishedRelease(value: unknown, manifest: ReleaseManifest, files: ReadonlyMap<string, Buffer>, section: ChangelogSection): number {
+  const state = admitRelease(value, manifest, files, false, section);
   if (state.draft) throw new Error("npm may publish only an already published immutable release.");
   return state.id;
 }
@@ -409,8 +482,9 @@ async function npmAdmit(directory: string): Promise<void> {
   admitExpectedHandoffDigests(handoff, process.env);
   verifyAttestations(directory, handoff);
   const m = handoff.manifest;
+  const section = await taggedChangelog(m);
   const release = await request(`/repos/${repository}/releases/tags/${m.tag}`);
-  const id = admitPublishedRelease(release, m, handoff.files);
+  const id = admitPublishedRelease(release, m, handoff.files, section);
   verifyRemoteBytes(release, handoff.files);
   const latest = record(await request(`/repos/${repository}/releases/latest`), "Latest release");
   if (latest.id !== id || latest.tag_name !== m.tag) throw new Error("Canonical release is not immutable Latest before npm publication.");
