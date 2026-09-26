@@ -31,6 +31,7 @@ import {
 import { slopcameraOperationCodes } from "../src/operations";
 import { VISUAL_STYLE_IDS } from "../src/visual-style";
 import {
+  advertisedVersion,
   collectCommitLinks,
   collectCopyClaims,
   type CopyClaim,
@@ -91,12 +92,8 @@ async function loadFacts(): Promise<CopyFacts> {
   const published = JSON.parse(
     await readFile(join(ROOT, "apps/web/published-release.json"), "utf8"),
   ) as { version: string };
-  if (published.version !== packageJson.version) {
-    throw new Error(
-      `apps/web/published-release.json says ${published.version}; package.json says ${packageJson.version}.`,
-    );
-  }
-  const releaseCommit = git("rev-list", "-n1", `v${packageJson.version}`);
+  const version = advertisedVersion(packageJson.version, published.version);
+  const releaseCommit = git("rev-list", "-n1", `v${version}`);
   return {
     animationStudyCount: await animationStudyCount(),
     generalToolNames: GENERAL_TOOL_NAMES,
@@ -120,7 +117,7 @@ async function loadFacts(): Promise<CopyFacts> {
       skins: THREE_RIGGED_GLB_LIMITS.skins,
     },
     styleProfileCount: VISUAL_STYLE_IDS.length,
-    version: packageJson.version,
+    version,
     workflowCount: BUILT_IN_WORKFLOWS.length,
   };
 }

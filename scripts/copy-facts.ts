@@ -33,8 +33,35 @@ export function numberValue(token: string): number | undefined {
   return undefined;
 }
 
+/**
+ * The release public copy may advertise. `apps/web/published-release.json`
+ * names the verified release; `package.json` may run ahead of it while a
+ * release candidate waits for its tag and workflow, but never behind it.
+ */
+export function advertisedVersion(packageVersion: string, publishedVersion: string): string {
+  const parse = (version: string, source: string): readonly number[] => {
+    const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(version);
+    if (match === null) throw new Error(`${source} version ${version} is not MAJOR.MINOR.PATCH.`);
+    return match.slice(1).map((part) => Number.parseInt(part, 10));
+  };
+  const candidate = parse(packageVersion, "package.json");
+  const published = parse(publishedVersion, "apps/web/published-release.json");
+  const order = candidate
+    .map((part, index) => part - published[index]!)
+    .find((difference) => difference !== 0) ?? 0;
+  if (order < 0) {
+    throw new Error(
+      `apps/web/published-release.json says ${publishedVersion}; package.json says ${packageVersion}, which is older.`,
+    );
+  }
+  return publishedVersion;
+}
+
 export interface CopyFacts {
-  /** `package.json` version; the website's published release must match it. */
+  /**
+   * The verified release that public copy advertises, from
+   * `apps/web/published-release.json`. `package.json` may be a newer candidate.
+   */
   readonly version: string;
   /** Commit the current release tag resolves to, when history is available. */
   readonly releaseCommit?: string;
