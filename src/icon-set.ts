@@ -549,7 +549,7 @@ async function composeIconSetSheet(
   return Uint8Array.from(
     await sharp({
       create: {
-        background: { b: panelBlue, channels: 3, g: panelGreen, r: panelRed },
+        background: { b: panelBlue, g: panelGreen, r: panelRed },
         channels: 3,
         height,
         width,
@@ -601,6 +601,13 @@ function pickMemberCandidate(
   eligible: readonly IconCandidateRecord[],
   target: Readonly<{ coverageRatio: number; strokePx: number }> | null,
 ): IconCandidateRecord {
+  // A failed individual critique halves a candidate's quality rank: it stays
+  // usable (set mode collects with requireCritiquePass off) but loses ties to
+  // a critique-passing sibling candidate.
+  const quality = (record: IconCandidateRecord): number =>
+    record.critique === null || record.critique === undefined
+      ? -1
+      : record.critique.score * (record.critique.pass ? 1 : 0.5)
   const ranked = [...eligible].sort((left, right) => {
     if (target !== null) {
       const distance =
@@ -608,10 +615,7 @@ function pickMemberCandidate(
         familyDistance(right.metrics, target)
       if (distance !== 0) return distance
     }
-    return (
-      (right.critique?.score ?? -1) - (left.critique?.score ?? -1) ||
-      right.round - left.round
-    )
+    return quality(right) - quality(left) || right.round - left.round
   })
   return ranked[0]!
 }
@@ -845,6 +849,7 @@ export async function generateSlopcameraIconSet(
         ...(input.critiqueModel === undefined
           ? {}
           : { critiqueModel: input.critiqueModel }),
+        requireCritiquePass: false,
         ...(initialFeedback === undefined ? {} : { initialFeedback }),
         ...(input.inheritedFileDescriptors === undefined
           ? {}
@@ -876,7 +881,7 @@ export async function generateSlopcameraIconSet(
     if (lane.eligible.length === 0) {
       throw new SlopcameraCloudError(
         "GENERATION_INVALID_RESPONSE",
-        `Icon set member "${lane.input.slug}" produced no critique-passing candidates.`,
+        `Icon set member "${lane.input.slug}" produced no gate-passing candidates.`,
       )
     }
   }

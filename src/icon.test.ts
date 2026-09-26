@@ -101,7 +101,7 @@ describe("icon visual gates", () => {
     expect(
       iconVisualGateProblems(
         "illustration",
-        { coverageRatio: 0.5, height: 88, width: 88, strokePx: 4 },
+        { coverageRatio: 0.7, height: 88, width: 88, strokePx: 4 },
         90,
         "card",
       ),

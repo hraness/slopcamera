@@ -86,8 +86,8 @@ export const slopcameraIconContextProfiles: Readonly<
 > = Object.freeze({
   card: {
     aspectMaximum: 1.6,
-    coverageMaximum: 0.3,
-    coverageMinimum: 0.1,
+    coverageMaximum: 0.55,
+    coverageMinimum: 0.08,
     pathCountMaximum: 64,
     prompt:
       "The illustration sits in a compact feature card rendered about 88 pixels tall beside sibling cards. " +
@@ -96,7 +96,7 @@ export const slopcameraIconContextProfiles: Readonly<
   },
   hero: {
     aspectMaximum: 1.8,
-    coverageMaximum: 0.42,
+    coverageMaximum: 0.65,
     coverageMinimum: 0.05,
     pathCountMaximum: 96,
     prompt:
@@ -106,7 +106,7 @@ export const slopcameraIconContextProfiles: Readonly<
   },
   inline: {
     aspectMaximum: 1.5,
-    coverageMaximum: 0.34,
+    coverageMaximum: 0.55,
     coverageMinimum: 0.14,
     pathCountMaximum: 32,
     prompt:
@@ -229,6 +229,13 @@ export interface CollectSlopcameraIconCandidatesInput {
   readonly ink?: string
   readonly model?: string
   readonly purpose?: SlopcameraIconPurpose
+  /**
+   * When false, a failed design critique keeps the candidate eligible but
+   * ranked below critique-passing candidates — set generation uses this so
+   * the family contact-sheet critique stays the authority over individual
+   * verdicts. Defaults to true, preserving single-icon fail-closed behavior.
+   */
+  readonly requireCritiquePass?: boolean
   readonly rounds?: number
   readonly signal?: AbortSignal
   readonly subject: string
@@ -1305,14 +1312,15 @@ export async function collectSlopcameraIconCandidates(
       vectorize: candidate.vectorize,
       warnings: candidate.warnings,
     })
-    if (review === null || review.pass) {
-      eligible.push(record)
-      if (eligible.length >= pool) break
-      continue
+    if (review !== null && !review.pass) {
+      feedback = [...review.problems, review.promptFix]
+        .filter(part => part.length > 0)
+        .join("; ")
     }
-    feedback = [...review.problems, review.promptFix]
-      .filter(part => part.length > 0)
-      .join("; ")
+    if (review === null || review.pass || input.requireCritiquePass === false) {
+      eligible.push(record)
+      if (eligible.length >= pool && (review === null || review.pass)) break
+    }
   }
 
   if (candidates.length === 0) {
