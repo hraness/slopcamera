@@ -1307,7 +1307,7 @@ describe("static Slopcamera site", () => {
     // width, so focused and scrolled-to content is never obscured by the bar.
     const [css, footerCss, html] = await Promise.all([
       readSource("styles.css"),
-      readFile(join(appDirectory, "node_modules/@hraness/site-footer/dist/stylex.css"), "utf8"),
+      readFile(fileURLToPath(import.meta.resolve("@hraness/site-footer/stylex.css")), "utf8"),
       readBuilt("index.html"),
     ])
     const footerClasses = new Set(/<footer [^>]*\bclass="([^"]*)"[^>]*\bid="hraness-site-footer"/u.exec(html)?.[1]?.split(/\s+/u) ?? [])
