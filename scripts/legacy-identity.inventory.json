@@ -449,7 +449,7 @@
   },
   {
     "identityLineCount": 23,
-    "identityLinesSha256": "79b84cd2034a09e6a9e59c5818508404203371a0b1c8e362573c3f59a2d943d7",
+    "identityLinesSha256": "1e454f0129acb251a9f00f6254d7ca363d4bb134d893b9129eee38488544db3f",
     "occurrenceCount": 32,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -472,6 +472,15 @@
     "path": "apps/desktop/cli/media-effects-service.test.ts",
     "categories": [
       "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
+    "occurrenceCount": 2,
+    "path": "apps/desktop/cli/menubar-status.ts",
+    "categories": [
+      "native-film-studio"
     ]
   },
   {
@@ -1287,8 +1296,8 @@
   },
   {
     "identityLineCount": 86,
-    "identityLinesSha256": "01c48d103290cd8a5925be2f6c3c8786eeb9da542c32b2ed6149131a5e625ed8",
-    "occurrenceCount": 451,
+    "identityLinesSha256": "b65d45d8280e6d158d7cfa8068f5950cb1b30a072a6dede0a2f9e64b6c0d7d90",
+    "occurrenceCount": 453,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
