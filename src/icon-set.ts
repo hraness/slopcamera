@@ -146,6 +146,8 @@ export interface SlopcameraIconSetReceipt {
   readonly receiptVersion: 1
   readonly setRoundsUsed: number
   readonly setCritiques: readonly IconSetCritique[]
+  /** How many contact-sheet critiques were lost to transport errors. */
+  readonly setCritiqueErrors?: number
   readonly target: {
     readonly coverageRatio: number
     readonly strokePx: number
@@ -872,9 +874,11 @@ export async function generateSlopcameraIconSet(
     try {
       await collectForLane(lane)
     } catch (error) {
+      const detail =
+        error instanceof Error ? ` Last error: ${error.message}` : ""
       throw new SlopcameraCloudError(
         "GENERATION_FAILED",
-        `Icon set member "${lane.input.slug}" produced no gated candidates.`,
+        `Icon set member "${lane.input.slug}" produced no gated candidates.${detail}`,
         { cause: error },
       )
     }
@@ -887,6 +891,7 @@ export async function generateSlopcameraIconSet(
   }
 
   const setCritiques: IconSetCritique[] = []
+  let setCritiqueErrors = 0
   let setRoundsUsed = 0
   for (let setRound = 1; setRound <= setRounds; setRound += 1) {
     setRoundsUsed = setRound
@@ -909,13 +914,22 @@ export async function generateSlopcameraIconSet(
         })),
         ...anchors.map(anchor => ({ slug: anchor.slug, svg: anchor.svg })),
       ])
-      const verdict = await setCritique({
-        ink,
-        members: lanes.map(lane => lane.input.slug),
-        model: critiqueModel,
-        png: sheet,
-        ...(input.signal === undefined ? {} : { signal: input.signal }),
-      })
+      let verdict: IconSetCritique | null
+      try {
+        verdict = await setCritique({
+          ink,
+          members: lanes.map(lane => lane.input.slug),
+          model: critiqueModel,
+          png: sheet,
+          ...(input.signal === undefined ? {} : { signal: input.signal }),
+        })
+      } catch {
+        // A critique transport failure burns the round but is not fatal: the
+        // measured band still constrains picks, and the next set round retries
+        // the sheet. The receipt records how many verdicts were lost.
+        setCritiqueErrors += 1
+        continue
+      }
       setCritiques.push(verdict)
       if (verdict.pass && verdict.members.every(member => member.pass)) {
         break
@@ -971,20 +985,72 @@ export async function generateSlopcameraIconSet(
           .members.filter(member => !member.pass)
           .map(member => member.slug)
       : []
+  const outputDir = resolve(input.outputDir)
+  const buildReceipt = (): SlopcameraIconSetReceipt => {
+    const memberReceipts: SlopcameraIconSetMemberReceipt[] = lanes.map(lane => {
+      const pick = picks.get(lane.input.slug)!
+      return {
+        attempts: lane.attempts,
+        candidates: lane.eligible.map(record => ({
+          metrics: record.metrics,
+          round: record.round,
+          ...(record.critique === null
+            ? {}
+            : { pass: record.critique.pass, score: record.critique.score }),
+          selected: record === pick,
+        })),
+        ...(lane.context === undefined ? {} : { context: lane.context }),
+        metrics: pick.metrics,
+        outputPath: `${outputDir}/${lane.input.slug}.svg`,
+        purpose: lane.purpose,
+        regenerated: lane.regenerated,
+        slug: lane.input.slug,
+        subject: lane.input.subject,
+        svgSha256: createHash("sha256").update(pick.candidate.svg).digest("hex"),
+      }
+    })
+    const receipt: SlopcameraIconSetReceipt = {
+      ...(input.spec.context === undefined && input.context === undefined
+        ? {}
+        : { context: input.spec.context ?? input.context }),
+      ink,
+      members: memberReceipts,
+      model,
+      ...(input.spec.name === undefined ? {} : { name: input.spec.name }),
+      outputDir,
+      receiptVersion: 1,
+      setCritiques,
+      ...(setCritiqueErrors === 0 ? {} : { setCritiqueErrors }),
+      setRoundsUsed,
+      target,
+    }
+    return receipt
+  }
   if (finalOutliers.length > 0 || unresolvedCritique.length > 0) {
     const unresolved = [...new Set([...finalOutliers, ...unresolvedCritique])]
+    // Failed runs still publish their diagnostic receipt: the per-member
+    // candidate metrics and set critiques are exactly what a maintainer needs
+    // to see why the family could not converge, and they record the paid
+    // attempts that produced them.
+    await writeAtomically(
+      `${outputDir}/${input.spec.name ?? "icon-set"}.failed.receipt.json`,
+      JSON.stringify(
+        { ...buildReceipt(), unresolvedMembers: unresolved },
+        null,
+        2,
+      ),
+    )
     throw new SlopcameraCloudError(
       "GENERATION_INVALID_RESPONSE",
       `The icon set did not converge inside ${setRounds} set rounds; ` +
-        `unresolved members: ${unresolved.join(", ")}.`,
+        `unresolved members: ${unresolved.join(", ")}. ` +
+        `Diagnostic receipt: ${outputDir}/${input.spec.name ?? "icon-set"}.failed.receipt.json`,
     )
   }
 
-  const outputDir = resolve(input.outputDir)
-  const memberReceipts: SlopcameraIconSetMemberReceipt[] = []
   for (const lane of lanes) {
     const pick = picks.get(lane.input.slug)!
-    const outputPath = await writeAtomically(
+    await writeAtomically(
       `${outputDir}/${lane.input.slug}.svg`,
       pick.candidate.svg,
     )
@@ -994,38 +1060,8 @@ export async function generateSlopcameraIconSet(
         pick.candidate.png,
       )
     }
-    memberReceipts.push({
-      attempts: lane.attempts,
-      candidates: lane.eligible.map(record => ({
-        metrics: record.metrics,
-        round: record.round,
-        ...(record.critique === null ? {} : { score: record.critique.score }),
-        selected: record === pick,
-      })),
-      ...(lane.context === undefined ? {} : { context: lane.context }),
-      metrics: pick.metrics,
-      outputPath,
-      purpose: lane.purpose,
-      regenerated: lane.regenerated,
-      slug: lane.input.slug,
-      subject: lane.input.subject,
-      svgSha256: createHash("sha256").update(pick.candidate.svg).digest("hex"),
-    })
   }
-  const receipt: SlopcameraIconSetReceipt = {
-    ...(input.spec.context === undefined && input.context === undefined
-      ? {}
-      : { context: input.spec.context ?? input.context }),
-    ink,
-    members: memberReceipts,
-    model,
-    ...(input.spec.name === undefined ? {} : { name: input.spec.name }),
-    outputDir,
-    receiptVersion: 1,
-    setCritiques,
-    setRoundsUsed,
-    target,
-  }
+  const receipt = buildReceipt()
   await writeAtomically(
     `${outputDir}/${input.spec.name ?? "icon-set"}.receipt.json`,
     JSON.stringify(receipt, null, 2),
