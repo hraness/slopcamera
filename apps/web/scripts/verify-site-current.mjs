@@ -4,7 +4,7 @@
 // JavaScript, and under forced colors. Run with Node 24 after `bun run build`.
 import assert from "node:assert/strict"
 import { existsSync } from "node:fs"
-import { readFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { createRequire } from "node:module"
 import { dirname, extname, join, normalize, resolve } from "node:path"
@@ -105,6 +105,10 @@ async function review(browser, origin, path, options) {
     check(state.appearanceLast, "appearance menu is not the last header action")
     check(state.skipLink !== null, "missing skip link")
     if (options.forcedColors) check(state.backdropHidden, "hero backdrop visible under forced colors")
+    if (options.artifacts && widths.includes(options.width)) {
+      const route = path === "/" ? "home" : path.replace(/[^a-z0-9-]+/giu, "_")
+      await page.screenshot({ path: join(options.artifacts, `${options.width}-${options.scheme}-${route}.png`), fullPage: true })
+    }
     return { label, problems }
   } finally {
     await context.close()
@@ -113,19 +117,23 @@ async function review(browser, origin, path, options) {
 
 export async function main() {
   assert.ok(existsSync(join(dist, "index.html")), "Build the site before running verify:current")
+  const artifacts = process.env.SLOPCAMERA_SITE_ARTIFACTS
+  if (artifacts) await mkdir(artifacts, { recursive: true })
   const { server, origin } = await serve()
-  const browser = await chromium.launch({ executablePath: findChrome(), headless: true })
+  let browser
   const results = []
   try {
+    browser = await chromium.launch({ executablePath: findChrome(), headless: true })
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
-      results.push(await review(browser, origin, path, { width, scheme }))
+      results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }
     for (const path of ["/", "/docs"]) results.push(await review(browser, origin, path, { width: 390, javaScript: false }))
     for (const path of ["/", "/blog"]) results.push(await review(browser, origin, path, { width: 1440, forcedColors: true }))
   } finally {
-    await browser.close()
-    server.close()
+    try { await browser?.close() }
+    finally { await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) }
   }
+  if (artifacts) await writeFile(join(artifacts, "browser-evidence.json"), JSON.stringify({ cleanup: "browser and server closed", results }, null, 2) + "\n")
   const failed = results.filter(result => result.problems.length > 0)
   for (const result of failed) console.error(`FAIL ${result.label}\n  ${result.problems.join("\n  ")}`)
   console.log(`verify:current ${results.length - failed.length}/${results.length} cases passed`)

@@ -234,6 +234,8 @@ jobs:
           package-manager-cache: false
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: Verify the site with pinned Node and Chromium
+        env:
+          SLOPCAMERA_SITE_ARTIFACTS: ${{ github.workspace }}/site-browser-artifacts
         run: |
           set -euo pipefail
           NODE_EXECUTABLE_PATH="$(command -v node)"
@@ -247,6 +249,14 @@ jobs:
           bun run check:web
       - name: Check generated site standalone boundary
         run: bun run check:standalone
+      - name: Upload site browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: slopcamera-site-browser-${{ github.sha }}
+          path: site-browser-artifacts/
+          if-no-files-found: error
+          retention-days: 7
 
   package:
     name: Slopcamera packed consumer
