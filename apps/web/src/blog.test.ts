@@ -37,7 +37,8 @@ describe("blog admissions", () => {
   test("records a disclosed AI review, never a human one", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
-      expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn: "2026-09-26" })
+      const reviewedOn = record.href === "/blog/introducing-slopcamera" ? "2026-09-27" : "2026-09-26"
+      expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
       expect(record.humanReview).toBeNull()
       expect(record.review.reviewer).not.toMatch(/human/iu)
       const total = Object.values(record.scores).reduce((sum, score) => sum + score, 0)
