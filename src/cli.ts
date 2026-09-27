@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { readFile, writeFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import {
   artifactSummary,
   checkDiagramFile,
@@ -17,8 +17,16 @@ import {
 } from "./generate.js"
 import {
   generateSlopcameraIcon,
+  slopcameraIconContexts,
   slopcameraIconMaximumRounds,
+  type SlopcameraIconContext,
+  type SlopcameraIconPurpose,
 } from "./icon.js"
+import {
+  generateSlopcameraIconSet,
+  parseSlopcameraIconSetSpec,
+  slopcameraIconSetMaximumSetRounds,
+} from "./icon-set.js"
 import {
   generateSlopcameraImageGallery,
   parseSlopcameraGalleryVary,
@@ -59,7 +67,11 @@ Usage:
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
   slopcamera image icon <subject> --output <file.svg> [--purpose <mark|illustration>]
     [--model <provider/model>] [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>]
+    [--context <${slopcameraIconContexts.join("|")}>] [--candidates <1-${slopcameraIconMaximumRounds}>]
     [--critique-model <provider/model>] [--keep-raster] [--json]
+  slopcamera image icon --set <file.json> --output-dir <directory>
+    [--context <${slopcameraIconContexts.join("|")}>] [--candidates <1-${slopcameraIconMaximumRounds}>]
+    [--set-rounds <1-${slopcameraIconSetMaximumSetRounds}>] [--keep-raster] [--json]
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
@@ -102,6 +114,13 @@ normalized to canonical ink-on-transparent pixels, traced by the local
 vectorizer, and (when --rounds exceeds 1) critiqued by a vision model whose
 feedback revises the prompt for the next attempt. Only Slopcamera's own
 generated output is uploaded for critique — never user media.
+
+Icon --set reads a bounded JSON manifest ({name?, ink?, context?, members:
+[{slug, subject, purpose?, context?}]}) and generates the whole family at
+once: each member keeps a small candidate pool, joint selection minimizes the
+measured coverage and stroke-weight spread across the set, and a
+contact-sheet critique reviews the family as a unit before SVGs publish.
+Manifests and receipts stay local.
 
 Gallery generates several bounded candidates in parallel and composes them
 into one labelled contact sheet plus a receipt. Use it to review texture,
@@ -250,6 +269,7 @@ export interface SlopcameraCliDependencies {
   readonly generate?: typeof generateSlopcameraImageFile
   readonly hostResourceCoordinator?: HostResourceCoordinator
   readonly icon?: typeof generateSlopcameraIcon
+  readonly iconSet?: typeof generateSlopcameraIconSet
   readonly log?: (value: string) => void
   readonly vectorize?: typeof vectorizeImage
 }
@@ -565,20 +585,25 @@ export async function main(
   if (command === "icon") {
     const parsed = parseArguments(
       rest,
-      new Set(["model", "output", "ink", "purpose", "rounds", "critique-model"]),
+      new Set([
+        "model",
+        "output",
+        "output-dir",
+        "ink",
+        "purpose",
+        "rounds",
+        "critique-model",
+        "context",
+        "candidates",
+        "set",
+        "set-rounds",
+      ]),
     )
     const unknownFlags = [...parsed.flags].filter(
       (flag) => flag !== "json" && flag !== "keep-raster",
     )
     if (unknownFlags.length > 0) {
       throw new Error(`Unknown icon option: --${unknownFlags[0]}`)
-    }
-    if (parsed.positionals.length !== 1) {
-      throw new Error("slopcamera image icon accepts exactly one subject")
-    }
-    const output = requiredOption(parsed, "output")
-    if (!output.toLowerCase().endsWith(".svg")) {
-      throw new Error("--output must end in .svg")
     }
     const model = parsed.options.model ?? slopcameraImageModels[1]
     if (
@@ -607,9 +632,96 @@ export async function main(
     if (purpose !== undefined && purpose !== "mark" && purpose !== "illustration") {
       throw new Error("--purpose must be mark or illustration")
     }
+    const context = parsed.options.context
+    if (
+      context !== undefined &&
+      !slopcameraIconContexts.includes(context as never)
+    ) {
+      throw new Error(
+        `--context must be one of: ${slopcameraIconContexts.join(", ")}`,
+      )
+    }
     const rounds = parsePositiveInteger(parsed.options.rounds, "rounds")
     if (rounds !== undefined && rounds > slopcameraIconMaximumRounds) {
       throw new Error(`--rounds must be at most ${slopcameraIconMaximumRounds}`)
+    }
+    const candidates = parsePositiveInteger(parsed.options.candidates, "candidates")
+    if (candidates !== undefined && candidates > slopcameraIconMaximumRounds) {
+      throw new Error(`--candidates must be at most ${slopcameraIconMaximumRounds}`)
+    }
+    const setRounds = parsePositiveInteger(parsed.options["set-rounds"], "set-rounds")
+    if (setRounds !== undefined && setRounds > slopcameraIconSetMaximumSetRounds) {
+      throw new Error(`--set-rounds must be at most ${slopcameraIconSetMaximumSetRounds}`)
+    }
+
+    if (parsed.options.set !== undefined) {
+      if (parsed.positionals.length !== 0) {
+        throw new Error("slopcamera image icon --set takes no subject positional")
+      }
+      if (parsed.options.output !== undefined) {
+        throw new Error("--output cannot be combined with --set; use --output-dir")
+      }
+      const outputDir = requiredOption(parsed, "output-dir")
+      const manifestPath = parsed.options.set
+      let manifestText: string
+      try {
+        manifestText = await readFile(manifestPath, "utf8")
+      } catch {
+        throw new Error(`--set manifest could not be read: ${manifestPath}`)
+      }
+      if (Buffer.byteLength(manifestText, "utf8") > 256 * 1024) {
+        throw new Error("--set manifest exceeds the 256 KiB bound")
+      }
+      let manifestJson: unknown
+      try {
+        manifestJson = JSON.parse(manifestText)
+      } catch {
+        throw new Error("--set manifest must be valid JSON")
+      }
+      const spec = parseSlopcameraIconSetSpec(manifestJson)
+      const result = await withSlopcameraOperationHostAdmission(
+        "slopcamera.image.icon",
+        async (lease) =>
+          await (dependencies.iconSet ?? generateSlopcameraIconSet)({
+            keepRaster: parsed.flags.has("keep-raster"),
+            manifestDir: dirname(resolve(manifestPath)),
+            model,
+            outputDir,
+            spec,
+            inheritedFileDescriptors: [lease.inheritedFileDescriptor],
+            ...(critiqueModel === undefined ? {} : { critiqueModel }),
+            ...(ink === undefined ? {} : { ink }),
+            ...(context === undefined
+              ? {}
+              : { context: context as SlopcameraIconContext }),
+            ...(purpose === undefined
+              ? {}
+              : { purpose: purpose as SlopcameraIconPurpose }),
+            ...(rounds === undefined ? {} : { rounds }),
+            ...(candidates === undefined ? {} : { candidatesPerMember: candidates }),
+            ...(setRounds === undefined ? {} : { setRounds }),
+          }),
+        hostAdmissionOptions(dependencies),
+      )
+      if (parsed.flags.has("json")) {
+        ;(dependencies.log ?? console.log)(JSON.stringify(result, null, 2))
+      } else {
+        ;(dependencies.log ?? console.log)(
+          `Icon set ${result.name ?? "icon-set"}: ${result.members.length} members to ${result.outputDir} ` +
+            `(target coverage ${result.target.coverageRatio.toFixed(3)}, ` +
+            `stroke ${result.target.strokePx.toFixed(1)}px, ${result.setRoundsUsed} set rounds)`,
+        )
+      }
+      reportUsefulResult(dependencies.onUsefulResult)
+      return
+    }
+
+    if (parsed.positionals.length !== 1) {
+      throw new Error("slopcamera image icon accepts exactly one subject")
+    }
+    const output = requiredOption(parsed, "output")
+    if (!output.toLowerCase().endsWith(".svg")) {
+      throw new Error("--output must end in .svg")
     }
     const result = await withSlopcameraOperationHostAdmission(
       "slopcamera.image.icon",
@@ -623,6 +735,10 @@ export async function main(
         ...(ink === undefined ? {} : { ink }),
         ...(purpose === undefined ? {} : { purpose }),
         ...(rounds === undefined ? {} : { rounds }),
+        ...(context === undefined
+          ? {}
+          : { context: context as SlopcameraIconContext }),
+        ...(candidates === undefined ? {} : { candidatePool: candidates }),
       }),
       hostAdmissionOptions(dependencies),
     )

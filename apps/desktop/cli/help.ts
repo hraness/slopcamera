@@ -304,7 +304,11 @@ compliance. Drawing sheets are exposed through this CLI and the root SDK, not co
         [--cell <n>] [--tile|--no-tile] [--json]
   slopcamera image icon <subject> --output <file.svg>
         [--purpose <mark|illustration>] [--model <model>] [--ink <#rgb>]
+        [--context <card|hero|inline>] [--candidates <1-4>]
         [--rounds <1-4>] [--critique-model <model>] [--keep-raster] [--json]
+  slopcamera image icon --set <file.json> --output-dir <directory>
+        [--context <card|hero|inline>] [--candidates <1-4>]
+        [--set-rounds <1-4>] [--keep-raster] [--json]
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
@@ -312,7 +316,10 @@ caller's environment credential. The --prompt spelling without --output is an al
 content-addressed \`ai image generate\` lane and returns project-composable content hash references.
 Icon combines a style-locked Gateway raster, local ink extraction and VTracer tracing into a
 canonical isometric line-art SVG; --rounds above 1 adds a vision-model critique that revises the
-prompt between attempts. Gallery fans one subject out to bounded parallel candidates — driven by
+prompt between attempts. --context tunes the prompt and gates to where the art lands, and --set
+generates a manifest-declared family at once: pooled candidates, joint selection toward the
+family's measured coverage and stroke median, and a contact-sheet critique of the whole set before
+anything publishes. Gallery fans one subject out to bounded parallel candidates — driven by
 variation axes or an explicit candidate list — keeps every candidate with its provenance, and
 composes a labelled contact sheet plus receipt for agent review. Texture cells repeat the
 candidate 2×2 so seams are inspectable (--tile/--no-tile overrides). It never replaces existing
