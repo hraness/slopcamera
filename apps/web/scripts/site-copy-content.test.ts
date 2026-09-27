@@ -80,7 +80,7 @@ describe("media studio public copy (pure, process-free)", () => {
     const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
-    expect(html).toContain("docs/tutorials/first-diagram.md")
+    expect(html).toContain('href="/docs/tutorials/first-diagram"')
     for (const source of [readme, diagramSession, homeMarkdown]) {
       const positions = commands.map(command => source.indexOf(command))
       expect(positions.every(position => position >= 0)).toBe(true)
@@ -126,7 +126,10 @@ describe("media studio public copy (pure, process-free)", () => {
     const routes = JSON.parse(config).redirects.filter((route: { has?: unknown }) => route.has === undefined)
     expect(routes).toEqual([])
     const links = [...html.matchAll(/href="(https:\/\/github.com\/hraness\/slopcamera\/blob\/main\/docs\/[^"#]+)(?:#[^"]*)?"/gu)]
-    expect(links.length).toBeGreaterThanOrEqual(5)
+    expect(links.length).toBeGreaterThanOrEqual(1)
+    const firstPartyLinks = [...html.matchAll(/href="(\/docs\/[^"#]+)"/gu)]
+    expect(firstPartyLinks.length).toBeGreaterThanOrEqual(10)
+    for (const [, route] of firstPartyLinks) expect(await Bun.file(new URL(`../src${route}.md`, import.meta.url)).exists()).toBe(true)
     const allowed = new Set(["README.md", "tutorials/first-diagram.md", "tutorials/first-native-film.md", "spatial-scenes.md", "studio.md", "directing-video.md", "how-to/edit-video.md", "how-to/generate-media.md", "how-to/educational-video.md", "how-to/run-workflows.md", "reference/capabilities.md", "architecture.md", "how-to/use-current-source.md"])
     for (const [, link] of links) expect(allowed.has(link!.split("/docs/")[1]!)).toBe(true)
     expect(html).not.toMatch(/<iframe\b/u)

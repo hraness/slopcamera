@@ -4,7 +4,7 @@ import { checkLanternMaterialSnapshot } from "../vendor/lantern-material/check.m
 import { readPreviewFile } from "./preview-file"
 import { siteSha256 } from "./site-contract"
 
-export const currentLanternMaterialRevision = "d38d13c07d7956d02ddfbca8d32aa2066d88fbd3"
+export const currentLanternMaterialRevision = "3df4c411c7f5e5cbc02448463571696f0d47cee5"
 export const historicalLanternMaterialRevision = "0e089bc18f9a0409f0e74b1fb7192f468956e386"
 export type LanternMaterialRevision = typeof currentLanternMaterialRevision | typeof historicalLanternMaterialRevision
 

@@ -191,52 +191,6 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   return bytes
 }
 
-/** Evaluate one CSS length expression (calc, min, max, clamp, env fallback,
- * px, rem at 16px, vw) at a viewport width. Only the closed grammar the shared
- * footer and the host scroll padding use is accepted; nothing is evaluated as
- * source text. */
-function evaluateCssLength(expression: string, viewportWidth: number): number {
-  const tokens = expression.match(/[a-z][a-z-]*\(|[a-z][a-z-]*|\(|\)|,|[+*/-]|\d*\.?\d+(?:px|rem|vw)?/gu) ?? []
-  let index = 0
-  const peek = () => tokens[index]
-  const take = (expected?: string): string => {
-    const token = tokens[index++]
-    if (token === undefined || (expected !== undefined && token !== expected)) throw new Error(`Unexpected CSS token ${String(token)} in ${expression}`)
-    return token
-  }
-  const sum = (): number => {
-    let value = product()
-    while (peek() === "+" || peek() === "-") value = take() === "+" ? value + product() : value - product()
-    return value
-  }
-  const product = (): number => {
-    let value = primary()
-    while (peek() === "*" || peek() === "/") value = take() === "*" ? value * primary() : value / primary()
-    return value
-  }
-  const list = (): number[] => {
-    const values = [sum()]
-    while (peek() === ",") { take(","); values.push(sum()) }
-    take(")")
-    return values
-  }
-  const primary = (): number => {
-    const token = take()
-    if (token === "(" || token === "calc(") { const value = sum(); take(")"); return value }
-    if (token === "max(") return Math.max(...list())
-    if (token === "min(") return Math.min(...list())
-    if (token === "clamp(") { const [low, preferred, high] = list() as [number, number, number]; return Math.min(Math.max(preferred, low), high) }
-    if (token === "env(") { take("safe-area-inset-bottom"); take(","); const [fallback] = list(); return fallback! }
-    const length = /^(\d*\.?\d+)(px|rem|vw)?$/u.exec(token)
-    if (length === null) throw new Error(`Unexpected CSS token ${token} in ${expression}`)
-    const value = Number(length[1])
-    return length[2] === "rem" ? value * 16 : length[2] === "vw" ? value * viewportWidth / 100 : value
-  }
-  const value = sum()
-  if (index !== tokens.length) throw new Error(`Trailing CSS tokens in ${expression}`)
-  return value
-}
-
 /** The installed footer's custom-property tokens for the classes the rendered
  * footer element actually carries, split by pointer context. */
 function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<string>): Record<"fine" | "coarse", Record<string, string>> {
@@ -865,9 +819,9 @@ describe("static Slopcamera site", () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
     const blogDocuments = [blogIndexDocument, ...blogPosts.map(blogDocumentForPost)]
-    expect(artifacts).toHaveLength(19 + 2 + docPages.length + blogDocuments.length)
+    expect(artifacts).toHaveLength(17 + 2 + docPages.length + blogDocuments.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(19 + 2 + docPages.length + blogDocuments.length)
+    expect(new Set(paths).size).toBe(17 + 2 + docPages.length + blogDocuments.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
       "404.html", ...docPages.map(docsDocumentForPage), ...blogDocuments, "index.html",
     ].sort())
@@ -886,10 +840,10 @@ describe("static Slopcamera site", () => {
     const fonts = paths.filter(path => path.endsWith(".woff2"))
     expect(fonts).toHaveLength(14)
     const images = paths.filter(path => path.endsWith(".svg"))
-    expect(images).toHaveLength(3)
+    expect(images).toHaveLength(1)
     for (const name of ["grain.svg", "cells.svg"]) {
       const expected = await readFile(join(appDirectory, "vendor/marketing-preset/marketing-assets", name))
-      expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(true)
+      expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(false)
     }
     // The third SVG is the foil wordmark mask: the canonical product mark bytes.
     const markBytes = await readFile(join(appDirectory, "src/marks/slopcamera.svg"))
@@ -897,7 +851,7 @@ describe("static Slopcamera site", () => {
     const masks = images.filter(path => artifacts.find(item => item.path === path)!.sha256 === markSha256)
     const textures = images.filter(path => !masks.includes(path))
     expect(masks).toHaveLength(1)
-    expect(textures).toHaveLength(2)
+    expect(textures).toHaveLength(0)
     const foundation = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     const union = await readBuilt(builtAssets.stylesPath.slice(1))
     expect(foundation.match(/@font-face\b/gu)).toHaveLength(14)
@@ -1094,13 +1048,13 @@ describe("static Slopcamera site", () => {
     expect(client).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })
 
-  test("uses one install, examples, workflow, interfaces, and design information architecture", async () => {
+  test("presents examples and workflow before installation and trust details", async () => {
     const html = await readSource("index.html")
     const sections = [
-      'id="install"',
       'id="examples"',
       'id="workflow"',
       'id="interfaces"',
+      'id="install"',
       'id="design"',
       'id="questions"',
       'id="closing"',
@@ -1120,7 +1074,6 @@ describe("static Slopcamera site", () => {
     expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install"')
     expect(html).not.toContain('class="docs-index"')
     for (const role of [
-      "pillars",
       "install",
       "primitives",
       "section",
@@ -1190,7 +1143,7 @@ describe("static Slopcamera site", () => {
     const html = await readSource("index.html")
     const searchableHtml = html.replace(/\s+/gu, " ")
 
-    for (const claim of ["Source", "Project", "Operations", "Outputs"]) {
+    for (const claim of ["Source media stays unchanged", "Project state stays on your machine", "Operations leave a record", "inputs and outputs"]) {
       expect(html).toContain(claim)
     }
     expect(searchableHtml).toContain("Native engine jobs run only with <code>--allow-trusted-code</code>")
@@ -1308,7 +1261,7 @@ describe("static Slopcamera site", () => {
     expect(await readSource("preview.html")).not.toContain("data-hraness-marketing-preset")
     expect(html).not.toContain("Ben Guo")
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
-    expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall" data-align="start"')
+    expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero" data-align="start"')
     expect(css).toContain("grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr)")
     for (const declaration of ["white-space: pre", "overflow-wrap: normal", "word-break: normal", "overflow: auto"]) {
       expect(css).toContain(declaration)
@@ -1378,12 +1331,7 @@ describe("static Slopcamera site", () => {
     expect(icon).toContain('stop-color="#f6b94a"')
   })
 
-  test("keeps the scrollport's optimal viewing region above the shared fixed footer bar", async () => {
-    // The shared footer bar is position: fixed with its own in-flow footprint,
-    // but Chromium's sequential focus only scrolls a target that leaves the
-    // layout viewport. The host's scroll-padding-block-end must equal the
-    // installed footer's exact bar height for both pointer contexts at every
-    // width, so focused and scrolled-to content is never obscured by the bar.
+  test("keeps the shared footer in document flow without fixed-bar scroll compensation", async () => {
     const [css, footerCss, html] = await Promise.all([
       readSource("styles.css"),
       readFile(fileURLToPath(import.meta.resolve("@hraness/site-footer/stylex.css")), "utf8"),
@@ -1392,33 +1340,22 @@ describe("static Slopcamera site", () => {
     const footerClasses = new Set(/<footer [^>]*\bclass="([^"]*)"[^>]*\bid="hraness-site-footer"/u.exec(html)?.[1]?.split(/\s+/u) ?? [])
     expect(footerClasses.size).toBeGreaterThan(10)
     const tokens = installedFooterTokens(footerCss, footerClasses)
-    for (const name of ["bar-block-size", "content-block-size", "control-block-size", "padding-block", "social-target"]) expect(tokens.fine[name]).toBeDefined()
-    for (const name of ["control-block-size", "social-target"]) expect(tokens.coarse[name]).toBeDefined()
-    expect(tokens.fine["content-block-size"]).toBe("var(--hraness-site-footer-control-block-size)")
-    const resolve = (name: string, pointer: "fine" | "coarse"): string => {
-      const value = tokens[pointer][name] ?? tokens.fine[name]
-      if (value === undefined) throw new Error(`Installed footer token missing: ${name}`)
-      return value.replace(/var\(--_?hraness-site-footer-([\w-]+)\)/gu, (_, inner: string) => `(${resolve(inner, pointer)})`)
+    for (const name of ["control-block-size", "social-target"]) {
+      expect(tokens.fine[name]).toBeDefined()
+      expect(tokens.coarse[name]).toBeDefined()
     }
-    const rules = [...css.matchAll(/^(\s*)scroll-padding-block-end: ([^;]+);$/gmu)]
-    expect(rules).toHaveLength(2)
-    expect(rules[0]![1]).toBe("  ")
-    expect(rules[1]![1]).toBe("    ")
-    expect(css.slice(0, rules[1]!.index)).toContain("@media (pointer: coarse) {\n  html {")
-    const widths = [320, 390, 544, 545, 720, 768, 769, 1440]
-    for (const [pointer, rule] of [["fine", rules[0]![2]!], ["coarse", rules[1]![2]!]] as const) {
-      const bar = resolve("bar-block-size", pointer)
-      for (const width of widths) expect(evaluateCssLength(rule, width)).toBeCloseTo(evaluateCssLength(bar, width), 9)
+    // Check both the footprint and the visible bar; an in-flow root alone
+    // would not catch the former fixed inner bar. Consent UI is separate.
+    const innerClasses = new Set(/<div class="(hraness-site-footer__inner[^"]*)"/u.exec(html)?.[1]?.split(/\s+/u) ?? [])
+    expect(innerClasses.size).toBeGreaterThan(10)
+    const positionRules = [...footerCss.matchAll(/\.([\w-]+)\s*\{\s*position:\s*([^;]+);\s*\}/gu)]
+    for (const classes of [footerClasses, innerClasses]) {
+      const positions = positionRules.filter(match => classes.has(match[1]!)).map(match => match[2])
+      // An omitted declaration uses CSS's initial static positioning.
+      expect(positions.every(position => position === "static" || position === "relative")).toBe(true)
     }
-    // Measured native bar heights: 37px at 320, 40.52px at the 720px reflow
-    // viewport, 41px at 768 and above, 53px and 57px for coarse pointers.
-    expect(evaluateCssLength(rules[0]![2]!, 320)).toBeCloseTo(37, 9)
-    expect(evaluateCssLength(rules[0]![2]!, 720)).toBeCloseTo(40.52, 9)
-    expect(evaluateCssLength(rules[0]![2]!, 768)).toBeCloseTo(41, 9)
-    expect(evaluateCssLength(rules[1]![2]!, 390)).toBeCloseTo(53, 9)
-    expect(evaluateCssLength(rules[1]![2]!, 769)).toBeCloseTo(57, 9)
-    expect(evaluateCssLength("calc(max(1rem, 20px) + clamp(1px, 2vw, 3px) * 2 - env(safe-area-inset-bottom, 4px) / 2)", 100)).toBeCloseTo(22, 9)
-    for (const invalid of ["calc(1rem +)", "url(x)", "1em", "calc(1px) 2px", "env(safe-area-inset-top, 0px)"]) expect(() => evaluateCssLength(invalid, 100)).toThrow()
+    expect(css).not.toContain("scroll-padding-block-end")
+    expect(css).toContain("body > main { flex: 1; min-inline-size: 0; }")
   })
 
   test("keeps the static shell fingerprinted and analytics explicit", async () => {
@@ -1440,10 +1377,10 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.22.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.23.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.19.3",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.20.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1469,9 +1406,9 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.22.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.23.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.19.3"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.0"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')

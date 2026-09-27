@@ -144,7 +144,8 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     }
     expect(recipes).toContain('const tablet = "@media (max-width: 48rem)"')
     expect(recipes).toContain('const phone = "@media (max-width: 34rem)"')
-    expect(recipes).toContain('display: { default: null, [phone]: "none" }')
+    expect(recipes).toContain('overflowX: "auto"')
+    expect(recipes).not.toContain('display: { default: null, [phone]: "none" }')
     expect(recipes).toContain('stylex.props(shell.primaryAction, shell.navigationAction)')
     expect(recipes).not.toMatch(/recovery[A-Z]?\w*:/u)
     expect(recipes).toContain('[forcedColors]: {\n        default: "CanvasText",')

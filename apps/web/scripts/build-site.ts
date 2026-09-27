@@ -23,8 +23,8 @@ import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.22.0" },
-  { name: "@hraness/site-footer", version: "0.19.3" },
+  { name: "@hraness/design-kit", version: "0.23.0" },
+  { name: "@hraness/site-footer", version: "0.20.0" },
   { name: "@hraness/ui", version: "0.5.16" },
 ] as const
 const fontFiles = [
@@ -112,7 +112,8 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     return { path: below(root, join(presetRoot, path)), sha256: siteSha256(bytes), bytes: bytes.byteLength }
   })
   fonts.push(...presetAssets.filter(item => item.path.endsWith(".woff2")))
-  const images = presetAssets.filter(item => item.path.endsWith(".svg"))
+  // Quiet emits no decorative textures; snapshot bytes remain captured source inputs.
+  const images: typeof presetAssets = []
   // The shared metallic wordmark paints the canonical product mark; its bytes
   // are admitted once as the foil mask image.
   const wordmarkMaskPath = join(app, "src/marks/slopcamera.svg")

@@ -37,8 +37,8 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.22.0" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.19.3" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.23.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.20.0" },
     { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
   ]
   const complete = {
@@ -351,3 +351,19 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     }
   })
 })
+
+
+test("Quiet admits no decorative textures and rejects reintroduced texture bytes", () => {
+  const quiet = foundationOutput();
+  quiet.output = quiet.output.filter(item => !item.fileName?.endsWith(".svg"));
+  const css = quiet.output.find(item => item.fileName?.endsWith(".css"))!;
+  css.source = String(css.source).replace(/\.texture\d+\{[^}]+\}/gu, "");
+  const inspect = (source: string) => [...source.matchAll(/url\(([^)]+)\)/gu)].map(match => match[1]!);
+  expect(snapshotWithInspection(quiet, fontHashes, entrypoint, inspect, []).artifacts).toHaveLength(16);
+  expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, inspect, [])).toThrow();
+  const unapproved = structuredClone(quiet);
+  unapproved.output.push({ type: "asset", fileName: "assets/unapproved.svg", source: imageSources[0]! });
+  expect(() => snapshotWithInspection(unapproved, fontHashes, entrypoint, inspect, [])).toThrow();
+  css.source += ".unexpected{background:url(./texture-0.svg)}";
+  expect(() => snapshotWithInspection(quiet, fontHashes, entrypoint, inspect, [])).toThrow("multiplicity");
+});

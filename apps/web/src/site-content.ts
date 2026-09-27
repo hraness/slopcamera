@@ -1,4 +1,3 @@
-import { HeroBackdrop } from "@hraness/design-kit/react"
 import { renderHranessSiteFooter } from "@hraness/site-footer"
 import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
@@ -198,7 +197,6 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ]
   }
   return [...common,
-    ["{{HERO_BACKDROP}}", renderToStaticMarkup(createElement(HeroBackdrop, { seed: "slopcamera-creative-tools" })), 1],
     ["{{ASK_AI_ABOUT_THIS}}", renderAskAiAboutThis("https://slopcamera.com/"), 1],
     ["{{RELEASE_VERSION}}", publishedRelease.version, 1],
     ["{{RELEASE_URL}}", publishedRelease.releaseUrl, 1],
