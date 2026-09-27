@@ -1366,7 +1366,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.19.2",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1396,7 +1396,7 @@ describe("static Slopcamera site", () => {
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.8.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
