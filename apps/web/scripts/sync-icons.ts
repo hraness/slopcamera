@@ -24,7 +24,7 @@ interface SetSpec {
 }
 
 const spec = JSON.parse(readFileSync(`${setsDir}${SET}.json`, "utf8")) as SetSpec;
-const files = new Map<string, [string, string]>(); // "<out>/<name>" -> package path
+const files = new Map<string, string>(); // "<out>/<name>" -> package path
 for (const member of spec.members) {
   files.set(`${ICONS_OUT}/${member.slug}.svg`, `${SET}/${member.slug}.svg`);
 }
