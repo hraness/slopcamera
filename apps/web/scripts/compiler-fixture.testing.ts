@@ -79,7 +79,7 @@ export function decodeCompilerResult(value: unknown): Result {
   assert(value !== null && typeof value === "object" && !Array.isArray(value))
   const result = value as Record<string, unknown>
   const arrays = ["previewArtifacts", "siteArtifacts", "siteAttributions"]
-  const paths = ["previewEvidenceDirectory", "previewFoundationPath", "previewStylesPath", "stylesPath", "siteEvidenceDirectory", "siteFoundationPath", "themePath"]
+  const paths = ["previewEvidenceDirectory", "previewFoundationPath", "previewStylesPath", "stylesPath", "siteEvidenceDirectory", "siteFoundationPath", "statusPagePath", "themePath"]
   assert.deepEqual(Object.keys(result).sort(), ["analyticsPath", ...arrays, ...paths].sort())
   assert(result.analyticsPath === null || typeof result.analyticsPath === "string" && /^\/assets\/analytics-[a-f0-9]{12}\.js$/u.test(result.analyticsPath))
   for (const key of paths) assert(typeof result[key] === "string" && result[key].length > 0 && result[key].length <= 4096)

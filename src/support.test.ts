@@ -112,7 +112,7 @@ test("imported CLI work stays inert and observers follow output without affectin
   } finally { log.mockRestore(); await f.close() }
 })
 
-test.skipIf(process.platform === "win32")("an unknown PTY caller receives agent discovery rather than a human invitation", async () => {
+test.skipIf(process.platform === "win32")("a PTY caller is a person and sees the human invitation", async () => {
   const f = await fixture()
   try {
     const argv = [process.execPath, resolve(import.meta.dir, "cli.ts"), "diagram", "init", "pty.diagram.json"]
@@ -131,9 +131,11 @@ test.skipIf(process.platform === "win32")("an unknown PTY caller receives agent 
       ])
       expect(code).toBe(0)
       expect(stderr).toBe("")
-      const discovery = stdout.split(/\r?\n/u).find(line => line.startsWith('{"schemaVersion":"hraness-support-discovery-v1"'))
-      expect(discovery).toBeDefined()
-      expect(JSON.parse(discovery!)).toHaveProperty("protocol", ["slopcamera", "support", "protocol", "--json"])
+      // The child's PTY session reaches script's stdout: a human invitation
+      // (with its opt-out line), never the agent discovery JSON.
+      expect(stdout).toContain("Optional: Support ongoing development of local media tools for agents.")
+      expect(stdout).toContain("Hide these: slopcamera support dismiss")
+      expect(stdout).not.toContain("hraness-support-discovery-v1")
       expect(stdout).not.toContain("hraness-support-offer-v1")
     } finally { clearTimeout(timer) }
   } finally { await f.close() }

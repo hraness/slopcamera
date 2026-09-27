@@ -1,9 +1,10 @@
 # Slopcamera
 
-[![Slopcamera: a visual studio for coding agents](https://slopcamera.com/og.png)](https://slopcamera.com)
+[![Slopcamera: Visual work your agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
 
-**Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent
-renders images, diagrams, animation, and video from source files it can edit.**
+**Slopcamera is a media studio for coding agents. Codex, Claude Code, and other
+agents make images, diagrams, animation, 3D scenes, and edited video from source
+files they can keep revising.**
 
 Describe the result you want to Codex, Claude Code, or another coding agent.
 Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
@@ -46,14 +47,14 @@ the rendered output with source, runtime requirements and reproduction steps.
 
 ## Install Slopcamera
 
-Slopcamera v3.4.0 includes 17 reusable film and animation direction profiles, deterministic exposure helpers, and a sample renderer that defaults to native 4K. Use the [style direction guide](docs/how-to/direct-visual-styles.md) to author cel animation, pixel art, mathematical explanations, and historical film treatments from retained sources.
+Slopcamera v3.6.0 includes 17 reusable film and animation direction profiles, deterministic exposure helpers, and a sample renderer that defaults to native 4K. Use the [style direction guide](docs/how-to/direct-visual-styles.md) to author cel animation, pixel art, mathematical explanations, and historical film treatments from retained sources. On macOS, `slopcamera menubar` puts Slopcamera in the menu bar and explains each macOS notice before it appears.
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.4.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.4.0)
+[Slopcamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
 from its canonical archive:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz
 slopcamera skill install --target agents
 ```
 
@@ -89,8 +90,9 @@ Native engines install separately. The [source-install guide](docs/how-to/use-cu
 explains workspace placement and durable-run identity; the
 [capability reference](docs/reference/capabilities.md) names runtime requirements.
 
-Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion can show
-the files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
+Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
+what Slopcamera is rendering, how the last job ended, your last known credits
+balance and the newest files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
 companion directly and does not install or launch an application bundle. The
 companion is a thin product binary over the shared
 [desktop-foundation](https://github.com/hraness/desktop-foundation) crate, pinned
@@ -136,7 +138,8 @@ architecture from dimensions, [build a parametric design](https://slopcamera.com
 
 ## What Slopcamera does
 
-Slopcamera is a local visual studio for coding agents.
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes,
+and video from source files it can keep revising.
 
 ### Author scenes and direct cameras
 
@@ -155,7 +158,7 @@ rigged/morph profile in v3.3.1 admits bounded skins and morph targets. Saved spl
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
 
-Slopcamera v3.3.1 includes the cinematic planning loop: a `slopcamera.spatial-direction`
+Slopcamera v3.3.1 introduced the cinematic planning loop: a `slopcamera.spatial-direction`
 document describes beats, actions, camera coverage, and look intents, compiles
 into proposed performance/camera/cinema/material-lighting/shot documents, and
 fans out into bounded galleries per axis. Declared effects bind into renders,
@@ -310,7 +313,7 @@ declarative graphs, approvals, and resuming work.
   workflows run with the current user's access. Hashes and receipts identify
   observed inputs and outputs; they do not make arbitrary code hermetic.
 - **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and audit
-  scenes, and run six bounded portable operation codes in v3.3.1. It does not
+  scenes, and run six bounded operation codes. It does not
   expose every local CLI operation and never mutates project state.
 
 ## Design and trust

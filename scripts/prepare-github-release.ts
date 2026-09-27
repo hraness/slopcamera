@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { checksums, hash, packageName, parseManifest, repository, repositoryId, verifyHandoff, workflow } from "./github-release";
+import { changelogSection, checksums, hash, packageName, parseManifest, repository, repositoryId, verifyHandoff, workflow } from "./github-release";
 import { verifyArchive } from "./npm-package-identity";
 import { verifyNpmPublishManifest } from "./npm-publish-policy";
 
@@ -10,6 +10,8 @@ const directory = resolve(directoryArgument);
 const manifest: unknown = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 verifyNpmPublishManifest(manifest);
 if (manifest === null || typeof manifest !== "object" || !("version" in manifest) || typeof manifest.version !== "string") throw new Error("Missing package version.");
+// Fail before packing a release whose notes are missing, empty or still Unreleased.
+changelogSection(await readFile(new URL("../CHANGELOG.md", import.meta.url), "utf8"), manifest.version);
 const archiveName = `hraness-slopcamera-${manifest.version}.tgz`;
 await verifyArchive(join(directory, archiveName), join(directory, "npm-pack.json"), "Canonical GitHub release", packageName, manifest.version, archiveName);
 const archive = await readFile(join(directory, archiveName));

@@ -1,10 +1,16 @@
 import { homepageExampleMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
+import { blogIndex, blogMarkdownPath, indexableBlogPosts } from "./blog-registry"
 
-export const homeMarkdown = `# Give your coding agent a visual studio
+// Only indexable posts are listed; quarantined posts stay out of agent indexes.
+const blogPostLinks = indexableBlogPosts
+  .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
+  .join("\n")
 
-Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+export const homeMarkdown = `# Visual work your agent can keep revising.
+
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio for coding agents, it writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -125,11 +131,9 @@ Editing and rendering stay local. Gateway generation and selected cloud analysis
 
 No. This website has no upload or generation features. Media work runs in the Slopcamera CLI and SDK; MCP exposes only its documented subset.
 
-## Built by Hraness
+### Is Slopcamera the same as Atet?
 
-Hraness is an advanced software research organization dedicated to advancing the frontier of machine intelligence.
-
-[hraness.com](https://hraness.com) · [@hraness](https://x.com/hraness) · [GitHub](https://github.com/hraness/slopcamera)
+Yes. Atet was renamed Slopcamera in September 2026, and atet.sh now redirects here. Old Atet releases still install Atet, not Slopcamera.
 
 ## Sitemap
 
@@ -152,9 +156,11 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 
 export const llmsTxt = `# Slopcamera
 
-> Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit.
+> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
 
-Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six portable operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
+Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. Slopcamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. Slopcamera is free and open source.
+
+Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
 ## When to use Slopcamera
 
@@ -200,6 +206,12 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
 - [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup
 
+## Blog
+
+- [Blog index](https://slopcamera.com/blog/index.md): ${blogIndex.description}
+${blogPostLinks}
+- [Atom feed](https://slopcamera.com/blog/feed.xml): New posts
+
 ## Reference and explanation
 
 - [Capabilities](https://slopcamera.com/docs/reference/capabilities.md): Release availability, supported profiles, runtime requirements, and limits
@@ -229,9 +241,14 @@ export const sitemapMarkdown = `# Sitemap
 
 - [Slopcamera home](https://slopcamera.com/index.md): Product, installation, examples, and workflows
 - [Documentation](https://slopcamera.com/docs/index.md): Tutorials, how-to guides, reference, and explanation
+- [Blog](https://slopcamera.com/blog/index.md): ${blogIndex.description}
 - [Machine-readable site guide](https://slopcamera.com/llms.txt): When to use Slopcamera
 
 ${docsSectionOrder.map(section => `## ${docsSectionLabels[section]}\n\n${docPages.filter(page => page.section === section).map(page => `- [${page.title}](https://slopcamera.com${docsMarkdownUrl(page)}): ${page.description}`).join("\n")}`).join("\n\n")}
+
+## Blog
+
+${blogPostLinks}
 `
 
 export const robotsTxt = `User-agent: OAI-SearchBot

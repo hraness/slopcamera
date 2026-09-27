@@ -4,12 +4,20 @@ import { ApiError, isRecord } from "./errors.js"
  * Narrow client for the Hraness Credits product-backend routes.
  *
  * The API holds a ceiling before any provider call, settles with the
- * reported upstream cost after success, and releases on failure. Margin
+ * provider cost after success, and releases on failure, reporting the
+ * provider cost when the failure came after the provider call. Margin
  * lives inside Credits' pricing revision; this client never sees it.
  *
  * Device tokens (`cr_dev_…`) are used once per hold and never stored or
  * logged.
  */
+
+export interface CreditsCost {
+  readonly provider: string
+  readonly operation: string
+  readonly microUsd: number
+  readonly basis: "reported" | "contractual" | "estimated" | "unknown"
+}
 
 export interface CreditsHold {
   readonly holdId: string
@@ -142,6 +150,15 @@ export class CreditsClient {
         "The credential was rejected by the billing service.",
       )
     }
+    if (status === 409) {
+      // Credits refuses a key whose hold already closed (or that belongs to a
+      // different request), so a replayed key never runs a second paid call.
+      throw new ApiError(
+        409,
+        "idempotency_key_reused",
+        "This idempotency key was already used. Send a new key for a new call.",
+      )
+    }
     throw new ApiError(
       503,
       "billing_unavailable",
@@ -151,19 +168,16 @@ export class CreditsClient {
 
   async settle(
     holdId: string,
-    costs: ReadonlyArray<{
-      provider: string
-      operation: string
-      microUsd: number
-      basis: "reported" | "contractual" | "estimated" | "unknown"
-    }>,
+    costs: ReadonlyArray<CreditsCost>,
   ): Promise<void> {
-    const { status } = await this.request(
+    const { status, json } = await this.request(
       "POST",
       `/v1/holds/${encodeURIComponent(holdId)}/settle`,
       { costs: [...costs] },
     )
-    if (status !== 200) {
+    // A hold that expired or was released answers 200 with its recorded
+    // state and no charge; only an actual settlement pays for the call.
+    if (status !== 200 || !isRecord(json) || json.state !== "settled") {
       throw new ApiError(
         503,
         "billing_unavailable",
@@ -172,11 +186,18 @@ export class CreditsClient {
     }
   }
 
-  async release(holdId: string): Promise<void> {
+  /**
+   * Release a hold without a charge. `costs` records what the provider
+   * billed when the work failed after the provider call.
+   */
+  async release(
+    holdId: string,
+    costs: ReadonlyArray<CreditsCost> = [],
+  ): Promise<void> {
     const { status } = await this.request(
       "POST",
       `/v1/holds/${encodeURIComponent(holdId)}/release`,
-      {},
+      costs.length === 0 ? {} : { costs: [...costs] },
     )
     if (status !== 200) {
       throw new ApiError(

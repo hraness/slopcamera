@@ -38,6 +38,10 @@ import {
   type HostResourceLease,
 } from "./host-resources.js"
 
+/**
+ * The fixed semantic operation registry. Public copy cites its size and names;
+ * `scripts/check-copy.ts` fails when README, docs, or skills disagree with it.
+ */
 export const slopcameraOperationCodes = [
   "slopcamera.diagram.check",
   "slopcamera.diagram.render",

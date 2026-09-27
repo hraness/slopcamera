@@ -20,5 +20,5 @@ slopcamera scene design set examples/showcase/parametric/crescent-pavilion/desig
 
 Compile that new source with the original base scene into a fresh output
 directory. The source derives from the MIT-licensed Slopcamera pavilion at
-[`6d53343b13fbc507bc3b25eb7453008e38ff93e9`](https://github.com/hraness/slopcamera/tree/6d53343b13fbc507bc3b25eb7453008e38ff93e9/examples/design).
+[`63a0e3eed460fa80f1ae76983e9152c75a124392`](https://github.com/hraness/slopcamera/tree/63a0e3eed460fa80f1ae76983e9152c75a124392/examples/design).
 This visual comparison does not certify structural performance.

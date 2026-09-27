@@ -37,9 +37,9 @@ function completeFixture() {
   const finalCss = artifact(`assets/site-${digest}.css`, ".fixture{display:grid}")
   // Deliberately make canonical identity order differ from package name order.
   const packages = [
-    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.16.3" },
-    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.17.0" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.18" },
+    { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.22.0" },
+    { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.19.2" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),
@@ -294,7 +294,7 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
 
   test("bounds the complete graph inventory and aggregate byte count", () => {
     const { complete, expected } = completeFixture()
-    for (let index = 0; index < 47; index += 1) complete.artifacts.push(artifact(`graphs/site-renderer/chunks/chunk-${index}.js`))
+    for (let index = 0; index < 63; index += 1) complete.artifacts.push(artifact(`graphs/site-renderer/chunks/chunk-${index}.js`))
     expect(() => projectSiteArtifacts(complete, expected)).toThrow()
     const next = completeFixture()
     for (let index = 0; index < 4; index += 1) {

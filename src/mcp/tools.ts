@@ -158,6 +158,10 @@ function deepFreeze<T>(value: T): T {
   return Object.freeze(value)
 }
 
+/**
+ * The complete MCP tool registry. Public copy cites its size, its scene-tool
+ * count, and its names; `scripts/check-copy.ts` fails when they disagree.
+ */
 export const slopcameraMcpTools: readonly McpToolDefinition[] = deepFreeze([
   {
     name: "check_diagram",

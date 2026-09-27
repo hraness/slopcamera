@@ -33,13 +33,16 @@ import {
   preferredRepresentation,
   preferredRepresentationFrom,
 } from "./src/negotiate"
+import { renderStatusPage } from "./src/status-page-content"
 import {
   docsCanonicalUrl,
+  docsOrigin,
   docsDocumentForPage,
   docsMarkdownUrl,
   docsPageForRequestPath,
   docPages,
 } from "./src/docs-registry"
+import { blogDocumentForPost, blogIndexDocument, blogMarkdownPath, blogPostPath, blogPosts, indexableBlogPosts } from "./src/blog-registry"
 import {
   isDocsPath,
   isHomePath,
@@ -56,10 +59,11 @@ import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/examp
 import { homepageExamples } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
+import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
-const brandDescription = "Slopcamera is a local visual studio for coding agents."
-const searchDescription = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Your agent renders images, diagrams, animation, and video from source files it can edit."
+const brandDescription = "Slopcamera is a media studio for coding agents."
+const searchDescription = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
 // Each build compiles the independent ordinary-site and preview graphs. These
@@ -183,7 +187,7 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Exact predecessor 347,562 -> portfolio 450,666: foundation +100,572 and
   // finalized recipes +2,532. The 451,100 ceiling retains 434 bytes of headroom.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 451_100) throw new Error(`Combined site CSS exceeds its 451,100-byte budget: ${bytes}`)
+  if (bytes >= 500_000) throw new Error(`Combined site CSS exceeds its 500,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -251,7 +255,7 @@ function installedFooterTokens(stylesheet: string, footerClasses: ReadonlySet<st
       depth -= 1; selector = null
       continue
     }
-    const declaration = /^--hraness-site-footer-([\w-]+): (.+);$/u.exec(text)
+    const declaration = /^--_?hraness-site-footer-([\w-]+): (.+);$/u.exec(text)
     if (declaration !== null && selector !== null && footerClasses.has(selector)) tokens[coarseDepth === null ? "fine" : "coarse"][declaration[1]!] = declaration[2]!
   }
   return tokens
@@ -274,16 +278,38 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
     .toThrow("Built site HTML exceeds its 65,600-byte budget: 65601")
 })
 
+test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its routes are real pages", async () => {
+  const { createHash } = await import("node:crypto")
+  const [vendored, installed, provenance] = await Promise.all([
+    readFile(join(appDirectory, "vendor/status-page/status-page.css")),
+    readFile(fileURLToPath(import.meta.resolve("@hraness/design-kit-status/status-page.css"))),
+    readFile(join(appDirectory, "vendor/status-page/provenance.json"), "utf8").then(text => JSON.parse(text) as {
+      source: { commit: string; release: string }
+      files: Record<string, { sha256: string }>
+    }),
+  ])
+  expect(vendored.equals(installed)).toBe(true)
+  expect(provenance.source).toMatchObject({ commit: "4a5e0b697ed9e4169c4759feccbe4a1305b4d236", release: "v0.21.0" })
+  expect(createHash("sha256").update(vendored).digest("hex")).toBe(provenance.files["status-page.css"]!.sha256)
+  expect(vendored.toString("utf8")).not.toContain("url(")
+  const routes = statusPageRoutes()
+  const known = new Set(["/", ...docPages.map(page => docsCanonicalUrl(page).slice(docsOrigin.length)), "/blog",
+    ...indexableBlogPosts.map(post => blogPostPath(post))])
+  expect(routes.map(route => route.href).sort()).toEqual([...known].sort())
+  for (const route of routes) expect(route.label.length).toBeGreaterThan(0)
+  for (const route of routes) expect(route.label.length).toBeLessThanOrEqual(48)
+})
+
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(282_299), "x".repeat(168_800))).toBe(451_099)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(282_300), "x".repeat(168_800)))
-    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(282_299), `${"x".repeat(168_800)}é`))
-    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451101")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(451_100), ""))
-    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(451_100)))
-    .toThrow("Combined site CSS exceeds its 451,100-byte budget: 451100")
+  expect(assertCombinedSiteCssBudget("x".repeat(299_999), "x".repeat(200_000))).toBe(499_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(300_000), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 500,000-byte budget: 500000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(299_999), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 500,000-byte budget: 500001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(500_000), ""))
+    .toThrow("Combined site CSS exceeds its 500,000-byte budget: 500000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(500_000)))
+    .toThrow("Combined site CSS exceeds its 500,000-byte budget: 500000")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -544,9 +570,9 @@ describe("static Slopcamera site", () => {
   }, compilationTimeoutMs)
 
   test("release installation advertises the exact canonical archive beside the source path", async () => {
-    expect(publishedRelease).toEqual({ version: "3.4.0", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.4.0" })
+    expect(publishedRelease).toEqual({ version: "3.6.0", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.6.0" })
     expect(Object.isFrozen(publishedRelease)).toBe(true)
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
     for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
@@ -651,7 +677,7 @@ describe("static Slopcamera site", () => {
       "Agent Skill",
       "MCP server",
       "Vercel AI Gateway",
-      "local visual studio for coding agents",
+      "media studio for coding agents",
       "import existing footage or recording bundles",
       "image, video, speech, and transcription models",
       "clean and captioned versions",
@@ -681,7 +707,7 @@ describe("static Slopcamera site", () => {
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
     const html = await readSource("index.html")
 
-    expect(html).toContain("<title>Slopcamera: a visual studio for coding agents</title>")
+    expect(html).toContain("<title>Slopcamera: Visual work your agent can keep revising.</title>")
     expect(html).toContain(`<meta name="description" content="${searchDescription}">`)
     expect(html).toContain(`<meta property="og:description" content="${searchDescription}">`)
     expect(html).toContain(`<meta name="twitter:description" content="${searchDescription}">`)
@@ -696,7 +722,7 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<meta property="og:image:height" content="630">')
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">')
     expect(html).toContain('<meta name="twitter:image" content="https://slopcamera.com/og.png">')
-    expect(html).toContain('<meta name="twitter:image:alt" content="Slopcamera, a visual studio for coding agents, beside a camera-frame and lens motif">')
+    expect(html).toContain('<meta name="twitter:image:alt" content="Slopcamera, a media studio for agents, beside a camera-frame and lens motif">')
     expect(html).toContain('<link rel="icon" href="/icon.png" type="image/png">')
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">')
     expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>')
@@ -720,7 +746,7 @@ describe("static Slopcamera site", () => {
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
       expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">Slopcamera<\/h1>/u)
       expect(html).toMatch(/<main aria-labelledby="preview-title" class="preview-shell [^"]+">/u)
-      expect(html).toContain("Make and edit visual media with your coding agent.")
+      expect(html).toContain("Visual work your agent can keep revising.")
       expect(html).toContain('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">')
       expect(html).toContain('<link rel="canonical" href="https://slopcamera.com/">')
       expect(html).not.toMatch(/<script\b|<style\b|\sstyle\s*=|<a\b|<button\b|<form\b|<input\b|<select\b|<textarea\b|contenteditable/iu)
@@ -838,11 +864,12 @@ describe("static Slopcamera site", () => {
   test("publishes the sealed ordinary and documentation documents with one complete union and bound local fonts", async () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
-    expect(artifacts).toHaveLength(19 + 2 + docPages.length)
+    const blogDocuments = [blogIndexDocument, ...blogPosts.map(blogDocumentForPost)]
+    expect(artifacts).toHaveLength(19 + 2 + docPages.length + blogDocuments.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(19 + 2 + docPages.length)
+    expect(new Set(paths).size).toBe(19 + 2 + docPages.length + blogDocuments.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
-      "404.html", ...docPages.map(docsDocumentForPage), "index.html",
+      "404.html", ...docPages.map(docsDocumentForPage), ...blogDocuments, "index.html",
     ].sort())
     expect(paths.filter(path => path.endsWith(".css")).sort()).toEqual([
       builtAssets.stylesPath.slice(1), builtAssets.siteFoundationPath.slice(1),
@@ -1197,16 +1224,13 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">')
     expect(html).not.toMatch(/<section(?![^>]*aria-labelledby)/)
     expect(fragmentLinks.every(fragment => ids.has(fragment))).toBe(true)
-    expect(notFound.match(/<h1\b/gu)).toHaveLength(1)
+    expect(renderStatusPage().match(/<h1\b/gu)).toHaveLength(1)
     expect(notFound).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
-    expect(notFound).toContain('<main class="route-state {{SITE_RECOVERY_CLASS}}" id="main" tabindex="-1">')
+    expect(notFound).toContain('<main id="main" tabindex="-1">\n      {{STATUS_PAGE}}\n    </main>')
+    expect(notFound).toContain('<script defer src="{{STATUS_PAGE_ASSET}}"></script>')
     expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
     expect(notFound).toContain('<meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">')
     expect(notFound).toContain('<meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)">')
-    expect(notFound).toContain('href="/llms.txt"')
-    expect(notFound).toContain('href="/sitemap.md"')
-    expect(notFound).toContain('href="/sitemap.xml"')
-    expect(notFound).toContain("machine-readable site guide")
     expect(css).toContain(":where(a, button, [tabindex]):focus-visible")
     const headerInk = '.topbar nav[aria-label="Primary"] > .site-action {\n  --gold-ink: var(--ink);\n}\n@media (forced-colors: active) {\n  .topbar nav[aria-label="Primary"] > .site-action {\n    --gold-ink: var(--primary-foreground);\n  }\n}'
     expect(css.split(headerInk)).toHaveLength(2)
@@ -1273,7 +1297,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".transcript")
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
-    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Give your coding agent a visual studio</h1>')
+    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Visual work your agent can keep revising.</h1>')
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
@@ -1324,7 +1348,7 @@ describe("static Slopcamera site", () => {
 
     expect(generatedSocial).toEqual(social)
     expect(new Bun.CryptoHasher("sha256").update(social).digest("hex")).toBe(
-      "562c4e9b1d0a41c513cf228bf987f4ad04f03b23ab6b83c43c616c0c50690239",
+      "1d065a4ce62b383a7d540dff2ab7beb996a4b43a199f8b4752533d8eb419019f",
     )
     expect(Array.from(social.slice(1, 4))).toEqual([80, 78, 71])
     expect(socialView.getUint32(16)).toBe(1200)
@@ -1362,7 +1386,7 @@ describe("static Slopcamera site", () => {
     // width, so focused and scrolled-to content is never obscured by the bar.
     const [css, footerCss, html] = await Promise.all([
       readSource("styles.css"),
-      readFile(join(appDirectory, "node_modules/@hraness/site-footer/dist/stylex.css"), "utf8"),
+      readFile(fileURLToPath(import.meta.resolve("@hraness/site-footer/stylex.css")), "utf8"),
       readBuilt("index.html"),
     ])
     const footerClasses = new Set(/<footer [^>]*\bclass="([^"]*)"[^>]*\bid="hraness-site-footer"/u.exec(html)?.[1]?.split(/\s+/u) ?? [])
@@ -1374,7 +1398,7 @@ describe("static Slopcamera site", () => {
     const resolve = (name: string, pointer: "fine" | "coarse"): string => {
       const value = tokens[pointer][name] ?? tokens.fine[name]
       if (value === undefined) throw new Error(`Installed footer token missing: ${name}`)
-      return value.replace(/var\(--hraness-site-footer-([\w-]+)\)/gu, (_, inner: string) => `(${resolve(inner, pointer)})`)
+      return value.replace(/var\(--_?hraness-site-footer-([\w-]+)\)/gu, (_, inner: string) => `(${resolve(inner, pointer)})`)
     }
     const rules = [...css.matchAll(/^(\s*)scroll-padding-block-end: ([^;]+);$/gmu)]
     expect(rules).toHaveLength(2)
@@ -1416,9 +1440,12 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.16.3",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
-      "@hraness/ui": "github:hraness/ui#v0.5.18",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.22.0",
+      "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
+      "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.19.2",
+      "@hraness/ui": "github:hraness/ui#v0.5.16",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1442,11 +1469,13 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.16.3"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.22.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.19.2"',
     )
-    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.18"')
+    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
+    expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
@@ -1681,6 +1710,7 @@ describe("static Slopcamera site", () => {
       "404.html",
       "apple-touch-icon.png",
       "assets",
+      "blog",
       "docs",
       "graphs",
       "icon.png",
@@ -1700,9 +1730,22 @@ describe("static Slopcamera site", () => {
     expect(assetFiles.sort()).toEqual([
       "examples",
       builtAssets.previewStylesPath.split("/").at(-1)!,
+      builtAssets.statusPagePath.split("/").at(-1)!,
       builtAssets.stylesPath.split("/").at(-1)!,
       builtAssets.themePath.split("/").at(-1)!,
     ].sort())
+    // The 404 is the shared design-kit status page: the homepage hero's
+    // install action, three next links, one agent line, known pages for
+    // "Did you mean", and its own enhancement script. Only the 404 loads it.
+    expect(notFound).toContain(`<script defer src="${builtAssets.statusPagePath}"></script>`)
+    expect(html).not.toContain(builtAssets.statusPagePath)
+    expect(notFound).toContain('<main id="main" tabindex="-1">\n      <div class="hraness-status-page" data-hraness-status-routes="')
+    expect(notFound).toContain('<h1 class="hraness-status-page__title">We can’t find that page</h1>')
+    expect(notFound).toContain('data-emphasis="primary" data-foil="" href="/#install">Install Slopcamera</a>')
+    expect(notFound.match(/class="hraness-status-page__next-link"/gu)).toHaveLength(3)
+    expect(notFound).toContain('<p class="hraness-status-page__agent">')
+    expect(notFound).toContain("[&quot;/docs/tutorials/first-diagram&quot;,&quot;Create and revise your first diagram&quot;]")
+    expect(notFound).not.toMatch(/sitemap\.(?:md|xml)/u)
 
     const [stylesAsset, foundationAsset, themeAsset] = await Promise.all([
       readFile(join(appDirectory, "dist", builtAssets.stylesPath.slice(1)), "utf8"),
@@ -1733,10 +1776,14 @@ describe("static Slopcamera site", () => {
     // keyboard focus above the fixed footer bar measured 310,206 together, and
     // the shared-footer v0.13.x organization-attribution styles measure
     // 313,229. The design-kit v0.13.0 union with the shared foil wordmark
-    // contract measures 346,025. Keep a strict ceiling over the full sealed
-    // union and captured foundation; no import, recipe, snapshot, or repeated
-    // layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(451_100)
+    // contract measured 346,025, and the design-kit v0.21.0 status-page
+    // snapshot for the shared 404 measured 354,712. The design-kit v0.22.0
+    // union with the icon library and status snapshot measured 434,750; the
+    // Catppuccin palette, contour material and shared hero rollout bring it to
+    // 484,800. Keep
+    // a strict ceiling over the full sealed union and captured foundation;
+    // no import, recipe, snapshot, or repeated layered rule is discounted.
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(500_000)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(31_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
@@ -1752,6 +1799,9 @@ describe("static Slopcamera site", () => {
       "https://slopcamera.com/",
       "https://slopcamera.com/index.md",
       ...docPages.flatMap(page => [docsCanonicalUrl(page), `https://slopcamera.com${docsMarkdownUrl(page)}`]),
+      "https://slopcamera.com/blog",
+      "https://slopcamera.com/blog/index.md",
+      ...indexableBlogPosts.flatMap(post => [`https://slopcamera.com${blogPostPath(post)}`, `https://slopcamera.com${blogMarkdownPath(post)}`]),
     ])
     expect(await readBuilt("index.md")).toBe(homeMarkdown)
     expect(await readBuilt("llms.txt")).toBe(llmsTxt)
@@ -1787,11 +1837,14 @@ describe("static Slopcamera site", () => {
     expect((await readdir(join(appDirectory, "dist/assets/examples"))).sort())
       .toEqual(workflowExampleAssets(workflowExamples).map(asset => asset.file).sort())
     expect(sitemap).toBe(renderSitemapXml())
-    for (const optional of ["<lastmod>", "<changefreq>", "<priority>"]) {
+    for (const optional of ["<changefreq>", "<priority>"]) {
       expect(sitemap).not.toContain(optional)
     }
+    // Only blog entries carry lastmod, from their admitted publication dates.
+    expect(sitemap.match(/<lastmod>/gu)).toHaveLength(2 + 2 * indexableBlogPosts.length)
+    expect(sitemap.slice(0, sitemap.indexOf("<loc>https://slopcamera.com/blog</loc>"))).not.toContain("<lastmod>")
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
-    expect(llmsTxt).toContain("> Slopcamera (formerly Atet) is a local visual studio for coding agents.")
+    expect(llmsTxt).toContain("> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
     expect(llmsTxt).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)
@@ -2032,6 +2085,8 @@ describe("static Slopcamera site", () => {
       readBuilt("index.html"),
       readBuilt("404.html"),
       ...docPages.map(page => readBuilt(docsDocumentForPage(page))),
+      readBuilt(blogIndexDocument),
+      ...blogPosts.map(post => readBuilt(blogDocumentForPost(post))),
     ])
     for (const document of documents) {
       const lockups = [...document.matchAll(/<a aria-label="Hraness home" class="hraness-site-footer__brand [^"]*" href="https:\/\/hraness\.com\/" lang="en" dir="ltr">[\s\S]*?<span class="hraness-site-footer__brand-name [^"]*">by Hraness<\/span><\/a>/gu)]
@@ -2046,9 +2101,10 @@ describe("static Slopcamera site", () => {
     }
     const source = await readSource("index.html")
     expect(source).not.toMatch(/Ben Guo|Puerto Rico|Venmo|hraness-marketing-maker|id="maker"|href="#maker"/u)
-    expect(source).toContain("<summary>Who made Slopcamera?</summary>")
-    expect(source).toContain('<a href="https://hraness.com">Hraness</a>, an advanced software research organization.')
-    expect(homeMarkdown).toContain("## Built by Hraness\n\nHraness is an advanced software research organization dedicated to advancing the frontier of machine intelligence.\n")
+    expect(source).toContain("<summary>Is Slopcamera the same as Atet?</summary>")
+    expect(source).toContain("Atet was renamed Slopcamera in September 2026")
+    expect(homeMarkdown).not.toContain("## Built by Hraness")
+    expect(homeMarkdown).toContain("### Is Slopcamera the same as Atet?")
     for (const markdown of [homeMarkdown, llmsTxt, sitemapMarkdown, notFoundMarkdown]) {
       expect(markdown).not.toMatch(/Ben Guo|Puerto Rico|Venmo/u)
     }

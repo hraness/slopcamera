@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import type { SlopcameraGenerateDependencies } from "../../../src/generate.js"
 import type { ApiConfig } from "./config.js"
 import { CreditsClient, CreditsShortfall } from "./credits.js"
 import {
@@ -17,10 +18,15 @@ import { ArtifactStore, artifactView } from "./store.js"
 import {
   CREDITS_OPERATION,
   callHostedTool,
+  holdCeilingMicroUsd,
   hostedTool,
   hostedTools,
   paidOperationModel,
 } from "./tools.js"
+import {
+  imageCallCosts,
+  type SlopcameraProviderCost,
+} from "../../../src/generation-pricing.js"
 import { harvestOutputs, materializeWorkspace } from "./workspace.js"
 
 export interface ApiEnvironment {
@@ -28,6 +34,8 @@ export interface ApiEnvironment {
   readonly env: Record<string, string | undefined>
   readonly limiter?: RateLimiter
   readonly fetchImpl?: typeof fetch
+  /** Gateway transport override for tests; production uses the AI SDK. */
+  readonly gateway?: Pick<SlopcameraGenerateDependencies, "fetch" | "loadRuntime">
 }
 
 const BODY_MAX_BYTES = 16 * 1024 * 1024
@@ -171,8 +179,11 @@ export function createApiHandler(environment: ApiEnvironment) {
 
     const token = call.token
     let holdId: string | undefined
-    let settleCostMicroUsd = 0
     let paidModel: string | undefined
+    let paidPrompt = ""
+    // Provider cost lines the generation reports once its call reaches the
+    // provider, including a call that fails afterwards.
+    const providerCosts: SlopcameraProviderCost[] = []
 
     if (tool.tier === "paid") {
       if (token === undefined || !token.startsWith("cr_dev_")) {
@@ -181,22 +192,26 @@ export function createApiHandler(environment: ApiEnvironment) {
       if (credits === undefined) {
         throw new ApiError(503, "billing_unavailable", "Billing is not configured.")
       }
-      const { model, providerCostMicroUsd } = paidOperationModel(
+      const { model, prompt, worstCaseCostMicroUsd } = paidOperationModel(
         args,
-        config.modelCostsMicroUsd,
+        config.paidModels,
       )
       paidModel = model
-      settleCostMicroUsd = providerCostMicroUsd
-      // The hold ceiling must cover the priced amount (cost uplifted by the
-      // service's private terms, then rounded), not just the raw cost. A
-      // 2x-plus-$0.10 bound clears any take rate at or below 200% while the
-      // caller still sees a bounded worst case.
-      const ceilingMicroUsd = providerCostMicroUsd * 2 + 100_000
+      paidPrompt = prompt
+      // A paid call always produces a file; without storage the provider
+      // would be paid for an image the caller can never receive.
+      if (artifacts === undefined) {
+        throw new ApiError(
+          503,
+          "storage_unavailable",
+          "Artifact storage is not configured.",
+        )
+      }
       const idempotencyKey = `slopcamera-api:${call.idempotencyKey ?? randomUUID()}`
       const hold = await credits.hold({
         subjectToken: token,
         operation: CREDITS_OPERATION,
-        ceilingMicroUsd,
+        ceilingMicroUsd: holdCeilingMicroUsd(worstCaseCostMicroUsd),
         idempotencyKey,
         context: { tool: tool.name, model },
       })
@@ -214,23 +229,28 @@ export function createApiHandler(environment: ApiEnvironment) {
       )
     }
 
-    const workspace = await materializeWorkspace(
-      call.files,
-      {
-        maximumInlineBytes: config.maximumInlineBytes,
-        maximumUploadBytes: config.maximumUploadBytes,
-      },
-      r2,
-    )
+    let workspace: Awaited<ReturnType<typeof materializeWorkspace>> | undefined
     try {
+      // Inside the try so a rejected file map releases the hold at once
+      // instead of leaving the caller's credit locked until it expires.
+      workspace = await materializeWorkspace(
+        call.files,
+        {
+          maximumInlineBytes: config.maximumInlineBytes,
+          maximumUploadBytes: config.maximumUploadBytes,
+        },
+        r2,
+      )
       const result = await callHostedTool(
         tool,
         args,
         workspace.directory,
         call.toolEnv ?? environment.env,
+        (costs) => providerCosts.push(...costs),
+        environment.gateway,
       )
       if (result.isError === true && holdId !== undefined) {
-        await credits?.release(holdId)
+        await credits?.release(holdId, providerCosts)
         holdId = undefined
       }
 
@@ -262,14 +282,14 @@ export function createApiHandler(environment: ApiEnvironment) {
       }
 
       if (holdId !== undefined) {
-        await credits?.settle(holdId, [
-          {
-            provider: "vercel-ai-gateway",
-            operation: CREDITS_OPERATION,
-            microUsd: settleCostMicroUsd,
-            basis: "contractual",
-          },
-        ])
+        // A successful generation always reported its call; the worst case
+        // stands in only if that invariant ever breaks.
+        await credits?.settle(
+          holdId,
+          providerCosts.length > 0
+            ? providerCosts
+            : imageCallCosts(paidModel ?? "", paidPrompt, undefined),
+        )
         holdId = undefined
       }
 
@@ -284,14 +304,14 @@ export function createApiHandler(environment: ApiEnvironment) {
     } catch (error) {
       if (holdId !== undefined) {
         try {
-          await credits?.release(holdId)
+          await credits?.release(holdId, providerCosts)
         } catch {
           // Release failures must not mask the original error.
         }
       }
       throw error
     } finally {
-      await workspace.cleanup()
+      await workspace?.cleanup()
     }
   }
 
@@ -445,12 +465,12 @@ export function createApiHandler(environment: ApiEnvironment) {
           ok: true,
           storage: r2 !== undefined,
           billing: credits !== undefined,
-          models: Object.keys(config.modelCostsMicroUsd).length,
+          models: config.paidModels.length,
         })
       }
       if (method === "GET" && path === "/v1/models") {
         return jsonResponse({
-          models: Object.keys(config.modelCostsMicroUsd).sort(),
+          models: [...config.paidModels],
         })
       }
       if (method === "GET" && path === "/v1/tools") {

@@ -3,7 +3,12 @@ import {
   SlopcameraMcpToolRuntime,
 } from "../../../src/mcp/tools.js"
 import { createProcessLocalHostResourceCoordinator } from "../../../src/host-resources.js"
+import {
+  worstCaseImageCostMicroUsd,
+  type SlopcameraProviderCost,
+} from "../../../src/generation-pricing.js"
 import type { McpToolDefinition, McpToolResult } from "../../../src/mcp/types.js"
+import type { SlopcameraGenerateDependencies } from "../../../src/generate.js"
 import { invalidRequest, isRecord } from "./errors.js"
 
 /**
@@ -15,7 +20,7 @@ import { invalidRequest, isRecord } from "./errors.js"
  *  - "free"   anonymous, rate-limited, read-only or compute-light.
  *  - "render" anonymous but CPU-bound; tighter rate limit.
  *  - "paid"   requires a Credits device token; the handler holds, runs, then
- *             settles with the reported upstream cost.
+ *             settles (or releases) with the provider cost the call reported.
  */
 
 export type ToolTier = "free" | "render" | "paid"
@@ -118,26 +123,40 @@ function paidArguments(
 }
 
 /**
- * The model id a paid call requests and its contractual provider cost in
- * micro-USD, used for admission and ceiling pricing before any provider work
- * begins. Throws unless the model is allowlisted.
+ * The model id and prompt a paid call requests, and the most its provider
+ * call can cost, used for admission and the hold ceiling before any
+ * provider work begins. Throws unless the model is admitted and priced.
  */
 export function paidOperationModel(
   args: unknown,
-  modelCostsMicroUsd: Readonly<Record<string, number>>,
-): { model: string; providerCostMicroUsd: number } {
+  paidModels: readonly string[],
+): { model: string; prompt: string; worstCaseCostMicroUsd: number } {
   const { input } = paidArguments(args)
   const model = input.model
   if (typeof model !== "string") {
     throw invalidRequest("input.model must be a provider/model id string.")
   }
-  const providerCost = modelCostsMicroUsd[model]
-  if (providerCost === undefined) {
+  const prompt = typeof input.prompt === "string" ? input.prompt : ""
+  const worstCase = paidModels.includes(model)
+    ? worstCaseImageCostMicroUsd(model, prompt)
+    : undefined
+  if (worstCase === undefined) {
     throw invalidRequest(
       `Model ${JSON.stringify(model)} is not admitted by this service.`,
     )
   }
-  return { model, providerCostMicroUsd: providerCost }
+  return { model, prompt, worstCaseCostMicroUsd: worstCase }
+}
+
+/**
+ * Credits takes a take rate of at most 2 (200%) and uplifts an estimated
+ * cost by 5/4 before pricing. A ceiling of 3 × 5/4 × the worst-case cost,
+ * plus $0.10 for a fixed offset and rounding step, therefore covers the
+ * charge for any valid pricing revision; the charge itself is the priced
+ * reported cost, never this bound.
+ */
+export function holdCeilingMicroUsd(worstCaseCostMicroUsd: number): number {
+  return Math.ceil((worstCaseCostMicroUsd * 5) / 4) * 3 + 100_000
 }
 
 /**
@@ -157,6 +176,8 @@ export async function callHostedTool(
   args: unknown,
   workspaceDirectory: string,
   environment: Record<string, string | undefined>,
+  onProviderCost?: (costs: readonly SlopcameraProviderCost[]) => void,
+  gateway: Pick<SlopcameraGenerateDependencies, "fetch" | "loadRuntime"> = {},
 ): Promise<McpToolResult> {
   let effectiveArgs = args
   if (tool.tier === "paid") {
@@ -175,7 +196,11 @@ export async function callHostedTool(
 
   const runtime = await SlopcameraMcpToolRuntime.create(
     workspaceDirectory,
-    { environment },
+    {
+      ...gateway,
+      environment,
+      ...(onProviderCost === undefined ? {} : { onProviderCost }),
+    },
     hostedHostResourceCoordinator,
   )
   return await runtime.call(tool.name, effectiveArgs)

@@ -383,11 +383,13 @@ async function hashRegularFile(
     deadline.assert("VTracer hash")
     handle = await open(resolvedPath, boundedReadFlags())
     const metadata = await handle.stat()
-    if (!metadata.isFile() || metadata.size < 1 || metadata.size > maximumBytes) {
+    if (
+      !metadata?.isFile() || metadata.size < 1 || metadata.size > maximumBytes
+    ) {
       throw new VectorizeError(
         failureCode,
         "VTracer must be a non-empty regular file within its size limit.",
-        { bytes: metadata.size, maximumBytes },
+        { bytes: metadata?.size ?? 0, maximumBytes },
       )
     }
     const hash = createHash("sha256")
@@ -470,11 +472,13 @@ function assertBoundedRegularTool(
   metadata: Awaited<ReturnType<FileHandle["stat"]>>,
   path: string,
 ): void {
-  if (!metadata.isFile() || metadata.size < 1 || metadata.size > MAX_TOOL_BYTES) {
+  if (
+    !metadata?.isFile() || metadata.size < 1 || metadata.size > MAX_TOOL_BYTES
+  ) {
     throw new VectorizeError(
       "tool_version",
       `VTracer must be a non-empty regular file: ${path}`,
-      { bytes: metadata.size, maximumBytes: MAX_TOOL_BYTES },
+      { bytes: metadata?.size ?? 0, maximumBytes: MAX_TOOL_BYTES },
     )
   }
 }

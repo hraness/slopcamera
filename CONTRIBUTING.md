@@ -7,7 +7,10 @@ for documentation and product copy. Keep guided learning, task instructions,
 reference and explanation focused on their reader needs, and update affected
 surfaces when capability, release, interface or trust facts change. Start from
 the [documentation index](docs/README.md); CLI help and checked schemas remain
-the authority for exact grammar.
+the authority for exact grammar. `bun run check:copy` verifies that counts,
+names, release facts and commit links in the README, docs, website docs and
+skill agree with source; run it after changing any of them, and change the two
+documentation trees together.
 
 Install the pinned toolchain without dependency lifecycle scripts:
 

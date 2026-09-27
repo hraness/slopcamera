@@ -1,0 +1,12 @@
+[mark.camera Sc] Slopcamera · Ready
+Slopcamera
+○ Ready · Nothing rendered yet
+─────────
+No outputs yet · Agents save finished files here (label)
+Open outputs folder (primary)  ⌘O
+─────────
+– Open at login · Changed outside Slopcamera, so it's left alone (disabled)
+─────────
+♡ Updates & support ↗
+  ⌥ Copy diagnostics
+Quit Slopcamera

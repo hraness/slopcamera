@@ -20,7 +20,7 @@ Imports select their capability boundary, and each entrypoint is a fixed contrac
 | `@hraness/slopcamera/host-resources` | Host resource admission contracts. |
 | `@hraness/slopcamera/local/code`, `.../local/code/advanced`, `.../local/code/workflows`, `.../local/html-overlay` | The complete local host: declarative authoring over the full closed registry, checked built-in workflows, planning and host integration, and HTML overlay contracts. |
 
-The portable projection has six operations: diagram check/render and image generate/vectorize/icon/gallery. The complete host adds media, analysis, editing, native jobs, scenes, and project operations. Inspect the exact installed inventory with `slopcamera operations list --json`; the static discovery command is `slopcamera capabilities --json`. A graph that names an unsupported operation fails before execution or resource admission. Inputs are typed data; they cannot register new operations. The [SDK reference](/docs/reference/sdk) records each import's scope and effects.
+The portable projection has four operations: diagram check/render and image generate/vectorize. The remaining operation codes, image icon and image gallery, run only through `execute_slopcamera`, `executeSlopcameraOperation`, and the CLI. The complete host adds media, analysis, editing, native jobs, scenes, and project operations. Inspect the exact installed inventory with `slopcamera operations list --json`; the static discovery command is `slopcamera capabilities --json`. A graph that names an unsupported operation fails before execution or resource admission. Inputs are typed data; they cannot register new operations. The [SDK reference](/docs/reference/sdk) records each import's scope and effects.
 
 ## Author a workflow
 
@@ -35,7 +35,7 @@ The trust model is explicit. A custom workflow module is an explicitly imported 
 
 ## Expose a fixed toolset through MCP
 
-`slopcamera mcp --root /absolute/workspace` serves 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 read-mostly scene tools. The portable projection contains six operation codes. Those scene tools inspect, plan, and audit source, direction, effects, behavior, and temporal evidence without mutating project state. Paths remain root-relative and operation registration stays closed. A client needing project editing, native jobs, or promotion uses the CLI or SDK. The [MCP tutorial](/docs/tutorials/mcp) owns the complete versioned tool list and setup.
+`slopcamera mcp --root /absolute/workspace` serves 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 read-mostly scene tools. The operation registry behind `execute_slopcamera` has six operation codes; the typed portable projection covers four of them. Those scene tools inspect, plan, and audit source, direction, effects, behavior, and temporal evidence without mutating project state. Paths remain root-relative and operation registration stays closed. A client needing project editing, native jobs, or promotion uses the CLI or SDK. The [MCP tutorial](/docs/tutorials/mcp) owns the complete versioned tool list and setup.
 
 ## Add a native engine separately
 

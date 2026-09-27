@@ -28,6 +28,7 @@
   },
   "include": [
     "site.test.ts",
+    "src/blog.test.ts",
     "scripts/build-site.ts",
     "scripts/site-contract.ts",
     "scripts/site-contract.test.ts",
@@ -96,13 +97,6 @@
     "scripts/site-release-copy-profile.ts",
     "scripts/site-release-copy-browser-contract.ts",
     "scripts/site-release-copy-browser-contract.test.ts",
-    "scripts/verify-site-release-copy.ts",
-    "scripts/site-portfolio-profile.ts",
-    "scripts/site-portfolio-browser-contract.ts",
-    "scripts/site-portfolio-browser-contract.test.ts",
-    "scripts/verify-site-portfolio.ts",
-    "scripts/verify-site-portfolio.test.ts",
-    "scripts/site-portfolio-reference-codec.ts",
-    "scripts/site-portfolio-reference-codec.test.ts"
+    "scripts/verify-site-release-copy.ts"
   ]
 }

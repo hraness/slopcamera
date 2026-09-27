@@ -7,11 +7,12 @@
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)">
     <script src="{{THEME_ASSET}}"></script>
+    <script defer src="{{STATUS_PAGE_ASSET}}"></script>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     {{SITE_STYLES}}
-    <title>Not found · Slopcamera</title>
+    <title>Page not found · Slopcamera</title>
   </head>
   <body>
     <a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">Skip to content</a>
@@ -25,17 +26,8 @@
         {{APPEARANCE_MENU}}
       </div>
     </header>
-    <main class="route-state {{SITE_RECOVERY_CLASS}}" id="main" tabindex="-1">
-      <p class="route-state__label {{SITE_RECOVERY_LABEL_CLASS}}">404 · Route not found</p>
-      <h1 class="{{SITE_RECOVERY_HEADING_CLASS}}">This passage ends here.</h1>
-      <p class="{{SITE_RECOVERY_PARAGRAPH_CLASS}}">The address may have changed. Slopcamera and its current installation guide remain at the canonical home.</p>
-      <p class="{{SITE_RECOVERY_PARAGRAPH_CLASS}}">
-        Recover from the <a class="{{SITE_RECOVERY_LINK_CLASS}}" href="/">home page</a>, the
-        <a class="{{SITE_RECOVERY_LINK_CLASS}}" href="/llms.txt">machine-readable site guide</a>, the
-        <a class="{{SITE_RECOVERY_LINK_CLASS}}" href="/sitemap.md">markdown sitemap</a>, or the
-        <a class="{{SITE_RECOVERY_LINK_CLASS}}" href="/sitemap.xml">XML sitemap</a>.
-      </p>
-      <a class="site-action {{SITE_RECOVERY_ACTION_CLASS}}" data-emphasis="primary" href="/">Return to slopcamera.com</a>
+    <main id="main" tabindex="-1">
+      {{STATUS_PAGE}}
     </main>
     {{HRANESS_SITE_FOOTER}}
   </body>

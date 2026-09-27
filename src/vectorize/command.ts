@@ -16,7 +16,12 @@ const MAX_COMMAND_OUTPUT_BYTES = 64 * 1_024
 const PRIMARY_OUTPUT_READ_BYTES = 64 * 1_024
 const PRIMARY_OUTPUT_POLL_MS = 2
 const PRIMARY_OUTPUT_EXIT_EMPTY_POLLS = 2
-const TERMINATION_GRACE_MS = 50
+/**
+ * Grace between SIGTERM and SIGKILL when a bounded command overruns. Callers
+ * that layer their own wall-clock budget above a bounded command must reserve
+ * at least this much, plus scheduling latency, so cleanup finishes inside it.
+ */
+export const TERMINATION_GRACE_MS = 50
 const HARD_KILL_WAIT_MS = 500
 const MAX_INHERITED_FILE_DESCRIPTORS = 16
 

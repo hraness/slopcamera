@@ -32,7 +32,7 @@ async function freshThemeProbe(root: string, input: string) {
   const baseline = await readFile(baselinePath)
   if (baseline.length > 64 * 1024 || names[0] !== `theme-${digest(baseline).slice(0, 12)}.js`) throw new Error("Unqualified initial theme artifact")
   const child = spawn(process.execPath, [helper, "--theme-probe", root], {
-    cwd: root, env: { PATH: process.env.PATH ?? "", NO_COLOR: "1" }, detached: true, stdio: ["pipe", "pipe", "pipe"],
+    cwd: root, env: { PATH: process.env.PATH ?? "", NO_COLOR: "1" } as unknown as NodeJS.ProcessEnv, detached: true, stdio: ["pipe", "pipe", "pipe"],
   })
   const pid = child.pid
   if (pid === undefined || pid <= 1) throw new Error("Diagnostic child did not start")

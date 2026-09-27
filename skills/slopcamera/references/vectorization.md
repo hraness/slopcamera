@@ -9,7 +9,9 @@ slopcamera image vectorize path/to/input.png --output path/to/input.svg --json
 
 - Do not provide a credential for vectorization. The conversion keeps image bytes local; the initial tool provisioning can download a verified VTracer release.
 - Do not redraw, relabel, crop, recolor, or simplify the subject beyond the
-  trace mechanics the command measures.
+  trace mechanics the command measures. Brand illustrations are the exception:
+  they are normalized to the shared line language in
+  [brand illustrations](brand-illustrations.md), not preserved at fidelity.
 - Use `--duotone '#primary,#secondary'` only when the user explicitly asks for
   that two-color adaptation.
 - Preserve the emitted receipt in task output or an adjacent provenance record

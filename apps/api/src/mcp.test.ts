@@ -14,7 +14,7 @@ const config: ApiConfig = {
   r2Proxy: undefined,
   r2: undefined,
   credits: undefined,
-  modelCostsMicroUsd: {},
+  paidModels: [],
   artifactTtlDays: 7,
   freeCallsPerHour: 120,
   renderCallsPerHour: 30,

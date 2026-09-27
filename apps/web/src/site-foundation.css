@@ -8,6 +8,11 @@
 @import "@hraness/design-kit/compiler-foundation.css" layer(base.hraness-foundation);
 @import "@hraness/site-footer/compiler-foundation.css";
 @import "@hraness/design-kit/product-marketing.css";
+/* The shared 404 page: a byte-exact design-kit v0.21.0 snapshot (the site's
+   compiler pin stays at v0.13.0, whose manifest cannot bind a newer package
+   stylesheet). It declares its own components.hraness-design-kit.legacy layer
+   and loads no resources. */
+@import "../vendor/status-page/status-page.css";
 @import "../vendor/marketing-preset/product-marketing-preset.css";
 @import "../vendor/lantern-material/lantern-material.css";
 @import "./site-ua-compatibility.css" layer(base.slopcamera-ua);
