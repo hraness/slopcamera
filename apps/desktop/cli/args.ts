@@ -3659,8 +3659,10 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "menubar": {
       const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--foreground": "flag", "--background": "flag" });
       const positionals = parsed.positionals;
-      if (positionals.length > 1 || (positionals[0] !== undefined && !["install", "uninstall", "status"].includes(positionals[0]))) throw new CliError("usage", "Use slopcamera menubar [--foreground|--background] or slopcamera menubar install|uninstall|status. See slopcamera help menubar.");
+      if (positionals.length > 1 || (positionals[0] !== undefined && !["install", "uninstall", "status", "start"].includes(positionals[0]))) throw new CliError("usage", "Use slopcamera menubar [--foreground|--background] or slopcamera menubar install|uninstall|status|start. See slopcamera help menubar.");
       if (positionals[0] !== undefined && (optionFlag(parsed, "--foreground") || optionFlag(parsed, "--background"))) throw new CliError("usage", "Choose a menu-bar action or a run mode, not both.");
+      // `start` opens it now and returns, like --background; the login item's hints use it.
+      if (positionals[0] === "start") return { kind: "menubar", action: "run", mode: "background", json: optionFlag(parsed, "--json") };
       return { kind: "menubar", action: (positionals[0] as "install" | "uninstall" | "status" | undefined) ?? "run", mode: optionFlag(parsed, "--background") ? "background" : "foreground", json: optionFlag(parsed, "--json") };
     }
     case "outputs": {

@@ -1,0 +1,16 @@
+[mark.camera Sc] Slopcamera · Rendering a recording
+Slopcamera
+↻ Rendering a recording · Started 1 min ago
+✓ $4.20 in credits · Checked 2 hours ago
+─────────
+take 1 · 4 KB · today  MP4
+  ⌥ Show in Finder
+take 0 · 4 KB · today  MP4
+  ⌥ Show in Finder
+Open outputs folder (primary)  ⌘O
+─────────
+✓ Open at login
+─────────
+♡ Updates & support ↗
+  ⌥ Copy diagnostics
+Quit Slopcamera

@@ -7,6 +7,7 @@ import { writeJson, writeLine } from "./io";
 import { ensurePrivateDirectory } from "./paths";
 
 const SETTLE_MS = 400;
+/** The label earlier releases used; the menu bar now manages its own login item. */
 const LABEL = "com.hraness.slopcamera.menubar";
 
 function xml(value: string): string { return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;"); }
@@ -109,109 +110,86 @@ function readAgent(path: string, environment: Environment): string | null {
   return readRegular(path, 16 * 1024).toString("utf8");
 }
 
-/** Configuration state only; it does not claim the launchd service is running. */
-export type LaunchAgentState = "absent" | "installed" | "conflict";
-export type LaunchctlRunner = (args: readonly string[], allowMissing?: boolean) => string | null;
-function launchctl(args: readonly string[], allowMissing = false): string | null {
-  const uid = process.getuid?.();
-  if (uid === undefined) throw new CliError("unavailable", "The current user has no launchd GUI domain.");
-  const result = Bun.spawnSync(["/bin/launchctl", ...args.map((arg) => arg.replaceAll("{uid}", String(uid)))], { stdin: "ignore", stdout: "pipe", stderr: "pipe", timeout: 10_000, maxBuffer: 64 * 1024 });
-  return interpretLaunchctlResult(result, uid, allowMissing);
-}
-export function interpretLaunchctlResult(result: { success: boolean; exitCode: number; stdout: Uint8Array; stderr: Uint8Array }, uid: number, allowMissing: boolean): string | null {
-  if (result.stdout.byteLength + result.stderr.byteLength > 64 * 1024) throw new CliError("unavailable", "launchctl exceeded the bounded response size.");
-  if (result.success && result.exitCode === 0) return Buffer.from(result.stdout).toString();
-  if (allowMissing && result.exitCode === 113 && result.stdout.length === 0 && Buffer.from(result.stderr).toString() === `Bad request.\nCould not find service "${LABEL}" in domain for user gui: ${uid}\n`) return null;
-  throw new CliError("unavailable", "launchctl could not reconcile the Slopcamera menu-bar LaunchAgent. Run menubar install again to retry.");
-}
-
-function loadedOwned(path: string, binary: string, current: string | null, run: LaunchctlRunner): boolean {
-  const output = run(["print", `gui/{uid}/${LABEL}`], true);
-  if (output === null) return false;
-  const uid = process.getuid?.();
-  if (current === null || Buffer.byteLength(output) > 64 * 1024 || !output.startsWith(`gui/${uid}/${LABEL} = {\n`)) {
-    throw new CliError("conflict", "The loaded menu-bar service has an unverified identity.");
-  }
-  const lines = output.split("\n").map(line => line.trim());
-  const field = (key: string): string | null => {
-    const values = lines.filter(line => line.startsWith(`${key} = `));
-    return values.length === 1 ? values[0]!.slice(key.length + 3) : null;
-  };
-  const argumentsStart = lines.indexOf("arguments = {");
-  const argumentsEnd = lines.indexOf("}", argumentsStart + 1);
-  if (field("path") !== path || field("program") !== binary || argumentsStart < 0 || argumentsEnd !== argumentsStart + 2 || lines[argumentsStart + 1] !== binary) {
-    throw new CliError("conflict", "The loaded menu-bar service does not match this install; it was left untouched.");
-  }
-  return true;
-}
-export function launchAgentState(binary: string, environment: Environment = process.env): LaunchAgentState {
-  const content = readAgent(launchAgentPath(environment), environment);
-  if (content === null) return "absent";
-  checkParents(binary, environment);
-  assertOwnedFile(binary);
-  return content === launchAgentPlist(binary) && exists(binary) ? "installed" : "conflict";
-}
-function assertMac(platform: NodeJS.Platform): void {
-  if (platform !== "darwin") throw new CliError("unsupported-plan", "Slopcamera menu-bar LaunchAgents are supported only on macOS.");
-}
-export function installLaunchAgent(binary: string, environment: Environment = process.env, platform: NodeJS.Platform = process.platform, runLaunchctl: LaunchctlRunner = launchctl): LaunchAgentState {
-  assertMac(platform);
-  if (!isAbsolute(binary)) throw new CliError("unsafe-path", "LaunchAgent binary must be an absolute path.");
+/**
+ * Copies the built menu bar into its installed location, replacing an
+ * earlier copy. Existing shared directory permissions are preserved;
+ * symbolic links and files other users can write are refused.
+ */
+export function installBinary(binary: string, environment: Environment = process.env): string {
+  if (!isAbsolute(binary)) throw new CliError("unsafe-path", "The menu-bar build must be an absolute path.");
   const stable = installedBinaryPath(environment);
-  const path = launchAgentPath(environment);
-  const current = readAgent(path, environment);
-  const expected = launchAgentPlist(stable);
   checkParents(stable, environment);
   assertOwnedFile(stable);
-  if (current !== null && current !== expected || current === null && infoAt(stable) !== null) {
-    throw new CliError("conflict", "The existing Slopcamera menu-bar install is not owned by this command.");
-  }
   const bytes = readRegular(binary, MAX_BINARY_BYTES, true);
-  loadedOwned(path, stable, current, runLaunchctl);
-  checkParents(path, environment, true);
   checkParents(stable, environment, true);
-  // Unique private staging directories prevent predictable temporary-file clobbering.
-  const binaryStage = mkdtempSync(join(dirname(stable), ".install-"));
-  let agentStage: string | undefined;
+  const stage = mkdtempSync(join(dirname(stable), ".install-"));
   try {
-    agentStage = mkdtempSync(join(dirname(path), ".slopcamera-install-"));
-    const stagedBinary = join(binaryStage, "binary");
-    const stagedAgent = join(agentStage, "agent.plist");
-    writeFileSync(stagedBinary, bytes, { mode: 0o700, flag: "wx" });
-    writeFileSync(stagedAgent, expected, { mode: 0o600, flag: "wx" });
-    if (readAgent(path, environment) !== current) throw new CliError("conflict", "The menu-bar install changed concurrently.");
+    const staged = join(stage, "binary");
+    writeFileSync(staged, bytes, { mode: 0o700, flag: "wx" });
     assertOwnedFile(stable);
-    // Retry bootstrap even when the plist matches: a previous bootstrap may have failed.
-    if (loadedOwned(path, stable, current, runLaunchctl)) runLaunchctl(["bootout", `gui/{uid}/${LABEL}`], true);
-    renameSync(stagedBinary, stable);
-    renameSync(stagedAgent, path);
-    runLaunchctl(["bootstrap", "gui/{uid}", path]);
-    return "installed";
+    renameSync(staged, stable);
+    return stable;
   } finally {
-    rmSync(binaryStage, { recursive: true });
-    if (agentStage !== undefined) rmSync(agentStage, { recursive: true });
+    rmSync(stage, { recursive: true });
   }
 }
-export function uninstallLaunchAgent(_binary: string, environment: Environment = process.env, platform: NodeJS.Platform = process.platform, runLaunchctl: LaunchctlRunner = launchctl): LaunchAgentState {
-  assertMac(platform);
-  const stable = installedBinaryPath(environment);
+
+/**
+ * Removes the login item earlier releases wrote under the old label, but
+ * only when it is exactly the file they wrote. It never calls launchctl: a
+ * copy that is already running keeps running until you quit it or log out.
+ */
+export function removeLegacyAgent(environment: Environment = process.env): "absent" | "removed" | "foreign" {
   const path = launchAgentPath(environment);
   const current = readAgent(path, environment);
   if (current === null) return "absent";
-  if (current !== launchAgentPlist(stable)) throw new CliError("conflict", "The existing Slopcamera menu-bar LaunchAgent is not owned by this command.");
-  checkParents(stable, environment);
-  assertOwnedFile(stable);
-  if (loadedOwned(path, stable, current, runLaunchctl)) runLaunchctl(["bootout", `gui/{uid}/${LABEL}`], true);
-  if (readAgent(path, environment) !== current) throw new CliError("conflict", "The menu-bar install changed concurrently.");
-  assertOwnedFile(stable);
+  if (current !== launchAgentPlist(installedBinaryPath(environment))) return "foreign";
   rmSync(path);
-  if (infoAt(stable) !== null) rmSync(stable);
-  return "absent";
+  return "removed";
 }
+
+function assertMac(platform: NodeJS.Platform): void {
+  if (platform !== "darwin") throw new CliError("unsupported-plan", "The Slopcamera menu bar runs only on macOS.");
+}
+
+export interface HelperResult { readonly code: number; readonly stdout: string; readonly stderr: string }
+/** Runs the installed menu bar's own install, uninstall or status command. */
+export type HelperRunner = (binary: string, args: readonly string[], env: Environment) => Promise<HelperResult>;
+
+async function runHelper(binary: string, args: readonly string[], env: Environment): Promise<HelperResult> {
+  const child = Bun.spawn([binary, ...args], { stdin: "ignore", stdout: "pipe", stderr: "pipe", env: { ...env } as Record<string, string> });
+  const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+  return { code, stdout: stdout.slice(0, 64 * 1024), stderr: stderr.slice(0, 64 * 1024) };
+}
+
+const AGENT_MARKERS = ["AI_AGENT", "CLAUDECODE", "CODEX_SANDBOX", "CODEX_SANDBOX_NETWORK_DISABLED", "CURSOR_AGENT", "GEMINI_CLI"];
+
+/**
+ * The helper decides between human and agent output from its environment.
+ * Its output is captured here, so a person's terminal is passed on as
+ * `HRANESS_AUDIENCE=human`; agents and explicit settings pass through.
+ */
+export function helperEnvironment(env: Environment): Environment {
+  const agent = AGENT_MARKERS.some((name) => (env[name] ?? "") !== "");
+  return env.HRANESS_AUDIENCE !== undefined || agent ? env : { ...env, HRANESS_AUDIENCE: "human" };
+}
+
+function helperFailure(result: HelperResult): CliError {
+  // The helper prints the login-item notice on stderr before the error;
+  // the failure is the last ✗ line plus the → hint that follows it.
+  const lines = result.stderr.split("\n");
+  let start = -1;
+  for (const [index, line] of lines.entries()) {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("✗") || trimmed.startsWith("FAIL")) start = index;
+  }
+  const text = (start === -1 ? result.stderr : lines.slice(start).join("\n")).trim().replace(/^(✗|FAIL)\s+/u, "");
+  return new CliError(result.code === 2 ? "usage" : "unavailable", text === "" ? "The Slopcamera menu bar couldn't change its login item." : text);
+}
+
 /** `slopcamera-menubar` exits with this code when another copy already holds the menu bar. */
 export const ALREADY_RUNNING_EXIT = 3;
 const NOT_BUILT = "The Slopcamera menu bar isn't in this release yet. Build it with cargo build --release --manifest-path desktop/Cargo.toml in a Slopcamera checkout; slopcamera finds it there, or set SLOPCAMERA_MENUBAR to the built file.";
-const LOGIN_ITEMS = "System Settings › General › Login Items & Extensions";
 
 export type Launched = "running" | "already-running" | "exited";
 export type BinaryRunner = (binary: string, foreground: boolean) => Promise<number | null>;
@@ -240,52 +218,11 @@ export function marks(env: Readonly<Record<string, string | undefined>>): Marks 
   return ascii ? { ok: "OK", warn: "WARN", note: "NOTE", next: "->" } : { ok: "✓", warn: "⚠", note: "🔐", next: "→" };
 }
 
-/** The LOGIN_ITEM notice (notifies, so there is no confirm line). The requester is the bare companion until Slopcamera ships as an app. */
-export function loginItemNotice(env: Readonly<Record<string, string | undefined>>): string {
-  return `${marks(env).note} macOS will show a notice that slopcamera-menubar can open at login. That's Slopcamera's menu bar.\n   It lists your outputs and opens when you log in. Nothing else runs in the background. Turn it off any time in ${LOGIN_ITEMS}.\n`;
-}
-
 export function launchMessage(outcome: Launched, env: Readonly<Record<string, string | undefined>>): string {
   const mark = marks(env);
   if (outcome === "already-running") return `${mark.ok} Slopcamera is already in your menu bar. Look for 📷.`;
   if (outcome === "running") return `${mark.ok} Slopcamera is in your menu bar. Look for 📷.`;
   return "The Slopcamera menu bar closed.";
-}
-
-export function stateMessage(action: "install" | "uninstall" | "status", state: LaunchAgentState, running: boolean, env: Readonly<Record<string, string | undefined>>): string {
-  const mark = marks(env);
-  if (state === "conflict") return `${mark.warn} Another menu-bar setup that this command didn't create is in the way. It was left untouched.\n  Remove ~/Library/LaunchAgents/${LABEL}.plist yourself if you don't need it.`;
-  if (state === "absent") return action === "uninstall" ? `${mark.ok} Slopcamera no longer opens in your menu bar at login.` : `Slopcamera doesn't open at login.\n${mark.next} slopcamera menubar install`;
-  if (action === "install") return `${mark.ok} Slopcamera opens in your menu bar now and at every login. Look for 📷.\n  Remove it any time: slopcamera menubar uninstall`;
-  return running
-    ? `${mark.ok} Slopcamera opens at login and is in your menu bar now.`
-    : `${mark.warn} Slopcamera is set to open at login but isn't running. It may be turned off in ${LOGIN_ITEMS}.\n${mark.next} slopcamera menubar install`;
-}
-
-/** Whether launchd reports the loaded companion as running. Reads state only. */
-export function serviceRunning(runLaunchctl: LaunchctlRunner): boolean {
-  const output = runLaunchctl(["print", `gui/{uid}/${LABEL}`], true);
-  return output !== null && output.split("\n").some((line) => line.trim() === "state = running");
-}
-
-export type ProcessProbe = () => boolean;
-/** Whether any copy of the companion runs for this user, including one started by hand. */
-function companionProcessRunning(): boolean {
-  const uid = process.getuid?.();
-  if (uid === undefined) return false;
-  try {
-    return Bun.spawnSync(["/usr/bin/pgrep", "-x", "-U", String(uid), "slopcamera-menubar"], { stdin: "ignore", stdout: "ignore", stderr: "ignore", timeout: 5_000 }).exitCode === 0;
-  } catch { return false; }
-}
-
-/** The menu bar is showing when launchd runs the login item or another copy holds it. */
-async function menubarShowing(runLaunchctl: LaunchctlRunner, probe: ProcessProbe, waitMs: number): Promise<boolean> {
-  const deadline = Date.now() + waitMs;
-  for (;;) {
-    if (serviceRunning(runLaunchctl) || probe()) return true;
-    if (Date.now() >= deadline) return false;
-    await Bun.sleep(200);
-  }
 }
 
 export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: boolean, mode: "foreground" | "background" = "foreground", runBinary: BinaryRunner = spawnBinary): Promise<void> {
@@ -295,23 +232,38 @@ export async function launchMenubar(io: CliIo, repositoryRoot: string, asJson: b
   if (asJson) writeJson(io, { running: outcome !== "exited", foreground: mode === "foreground", alreadyRunning: outcome === "already-running" });
   else writeLine(io, launchMessage(outcome, io.env));
 }
-export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean, runLaunchctl: LaunchctlRunner = launchctl, probe: ProcessProbe = companionProcessRunning): Promise<void> {
+export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "install" | "uninstall" | "status", asJson: boolean, run: HelperRunner = runHelper): Promise<void> {
   assertMac(io.platform);
   const stable = installedBinaryPath(io.env);
-  let state: LaunchAgentState;
+  const args = asJson ? [action, "--json"] : [action];
+  const env = helperEnvironment(io.env);
+  const forward = (result: HelperResult): void => {
+    if (result.stdout !== "") io.stdout(result.stdout);
+    if (result.code !== 0) throw helperFailure(result);
+    if (result.stderr !== "") io.stderr(result.stderr);
+  };
   if (action === "install") {
     const binary = resolveMenubarBinary(repositoryRoot, io.env);
     if (binary === null) throw new CliError("unavailable", NOT_BUILT);
-    if (!asJson) io.stderr(loginItemNotice(io.env));
-    state = installLaunchAgent(binary, io.env, io.platform, runLaunchctl);
-  } else {
-    state = action === "uninstall" ? uninstallLaunchAgent(stable, io.env, io.platform, runLaunchctl) : launchAgentState(stable, io.env);
+    const installed = binary === stable ? stable : installBinary(binary, io.env);
+    forward(await run(installed, args, env));
+    // The old login item goes only after the new one is in place, so a
+    // failed install never leaves nothing to start at login.
+    removeLegacyAgent(io.env);
+    return;
   }
-  // A fresh login item may take a moment to start, so install waits briefly.
-  const running = state === "installed" && await menubarShowing(runLaunchctl, probe, action === "install" ? 1_000 : 0);
-  if (asJson) writeJson(io, { launchAgent: state, running });
-  else writeLine(io, stateMessage(action, state, running, io.env));
+  if (action === "uninstall") removeLegacyAgent(io.env);
+  if (!exists(stable)) {
+    if (asJson) writeJson(io, { login: "off", running: false, installed: false });
+    else if (action === "uninstall") writeLine(io, `${marks(io.env).ok} Slopcamera won't open at login.`);
+    else writeLine(io, `Slopcamera's menu bar isn't installed.\n${marks(io.env).next} slopcamera menubar install`);
+    return;
+  }
+  const result = await run(stable, args, env);
+  forward(result);
+  if (action === "uninstall") rmSync(stable);
 }
+
 export async function reportOutputsRoot(io: CliIo, stateRoot: string, asJson: boolean): Promise<void> {
   const directory = outputsRoot(stateRoot);
   await ensurePrivateDirectory(directory);

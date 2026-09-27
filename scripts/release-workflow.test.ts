@@ -158,8 +158,10 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // deadline and failure boundary. A future update needs a coverage review.
   // Reviewed 2026-09-24: the unconditional `copy` job (public copy against
   // source, full history, required) was added; every prior job is unchanged.
+  // Reviewed 2026-09-27: the `menubar` job gained a cargo test step and a
+  // fixture lint step after its release build; every prior job is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "48be8e8f4620b3a8974c6e4385d1580625077535544a6aeb1f64e92ab02d6ec9") {
+  if (priorDigest !== "b323e4453ab06904d133e62f8839c849f5c138d0f437c617448fbe440ab2b1f0") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }

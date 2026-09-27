@@ -1,10 +1,11 @@
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import type { CliIo } from "./io";
-import { ALREADY_RUNNING_EXIT, installedBinaryPath, installLaunchAgent, interpretLaunchctlResult, launchAgentPath, launchAgentPlist, launchAgentState, launchMenubar, launchMessage, launchOutcome, loginItemNotice, manageMenubar, outputsRoot, resolveMenubarBinary, serviceRunning, stateMessage, uninstallLaunchAgent } from "./menubar";
+import { ALREADY_RUNNING_EXIT, helperEnvironment, installBinary, installedBinaryPath, launchAgentPath, launchAgentPlist, launchMenubar, launchMessage, launchOutcome, manageMenubar, outputsRoot, removeLegacyAgent, resolveMenubarBinary, type HelperResult } from "./menubar";
 import { commandHelp } from "./help";
+import { parseCliArgs } from "./args";
 
 const fixtures: string[] = [];
 function fixture() {
@@ -12,21 +13,28 @@ function fixture() {
   fixtures.push(home);
   const binary = join(home, "new-build");
   writeFileSync(binary, "prebuilt-v1", { mode: 0o700 });
-  const env = { HOME: home, SLOPCAMERA_MENUBAR: binary };
-  return { home, binary, env, stable: installedBinaryPath(env), plist: launchAgentPath(env) };
+  const env = { HOME: home, SLOPCAMERA_MENUBAR: binary, LANG: "en_US.UTF-8" };
+  return { home, binary, env, stable: installedBinaryPath(env), legacy: launchAgentPath(env) };
 }
 afterEach(() => { for (const path of fixtures.splice(0)) rmSync(path, { recursive: true, force: true }); });
 
+function recorder(result: HelperResult) {
+  const calls: { binary: string; args: readonly string[]; audience: string | undefined }[] = [];
+  const run = async (binary: string, args: readonly string[], env: Readonly<Record<string, string | undefined>>) => {
+    calls.push({ binary, args, audience: env.HRANESS_AUDIENCE });
+    return result;
+  };
+  return { calls, run };
+}
+
+function io(home: string, env: Readonly<Record<string, string | undefined>>) {
+  const output: string[] = [];
+  const errors: string[] = [];
+  const value: CliIo = { cwd: () => home, env, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: text => { errors.push(text); } };
+  return { io: value, output, errors };
+}
+
 describe("Slopcamera menu-bar launcher", () => {
-  test("accepts Bun sync success without a signalCode field and refuses uncertain results", () => {
-    const success = { success: true, exitCode: 0, stdout: Buffer.from("owned job"), stderr: Buffer.alloc(0) };
-    expect(interpretLaunchctlResult(success, 501, false)).toBe("owned job");
-    expect(() => interpretLaunchctlResult({ ...success, success: false }, 501, false)).toThrow();
-    expect(() => interpretLaunchctlResult({ ...success, stdout: Buffer.alloc(65_537) }, 501, false)).toThrow();
-    const missing = { success: false, exitCode: 113, stdout: Buffer.alloc(0), stderr: Buffer.from('Bad request.\nCould not find service "com.hraness.slopcamera.menubar" in domain for user gui: 501\n') };
-    expect(interpretLaunchctlResult(missing, 501, true)).toBe(null);
-    expect(() => interpretLaunchctlResult(missing, 502, true)).toThrow();
-  });
   test("keeps outputs beside the product state root", () => {
     expect(outputsRoot("/tmp/Slopcamera/cli")).toBe("/tmp/Slopcamera/outputs");
     expect(outputsRoot("/tmp/Slopcamera")).toBe("/tmp/Slopcamera/outputs");
@@ -46,98 +54,111 @@ describe("Slopcamera menu-bar launcher", () => {
     expect(resolveMenubarBinary(home, { ...env, SLOPCAMERA_MENUBAR: link })).not.toBe(link);
   });
 
-  test("preserves shared directory modes and stages away from predictable temporary names", () => {
-    const { binary, env, stable, plist } = fixture();
-    mkdirSync(dirname(plist), { recursive: true, mode: 0o755 });
-    chmodSync(dirname(plist), 0o755);
-    mkdirSync(dirname(stable), { recursive: true, mode: 0o700 });
-    const sentinel = `${stable}.tmp-${process.pid}`;
-    writeFileSync(sentinel, "preserve", { mode: 0o600 });
-    const calls: string[][] = [];
-    expect(installLaunchAgent(binary, env, "darwin", args => { calls.push([...args]); return null; })).toBe("installed");
-    expect(calls.map(args => args[0])).toEqual(["print", "print", "bootstrap"]);
+  test("installs the build as an owner-only copy and replaces an earlier one", () => {
+    const { binary, env, stable } = fixture();
+    expect(installBinary(binary, env)).toBe(stable);
     expect(readFileSync(stable, "utf8")).toBe("prebuilt-v1");
-    expect(readFileSync(sentinel, "utf8")).toBe("preserve");
-    expect(lstatSync(dirname(plist)).mode & 0o777).toBe(0o755);
-    expect(lstatSync(stable).mode & 0o777).toBe(0o700);
-    expect(readFileSync(plist, "utf8")).toBe(launchAgentPlist(stable));
+    expect(statSync(stable).mode & 0o777).toBe(0o700);
+    writeFileSync(binary, "prebuilt-v2", { mode: 0o700 });
+    installBinary(binary, env);
+    expect(readFileSync(stable, "utf8")).toBe("prebuilt-v2");
+    chmodSync(stable, 0o722);
+    expect(() => installBinary(binary, env)).toThrow();
   });
 
-  test("retries a failed bootstrap and stops the owned service before an upgrade", () => {
-    const { binary, env, stable, plist } = fixture();
-    expect(() => installLaunchAgent(binary, env, "darwin", args => { if (args[0] === "bootstrap") throw new Error("bootstrap failed"); return null; })).toThrow("bootstrap failed");
-    writeFileSync(binary, "prebuilt-v2");
-    const calls: string[] = [];
-    installLaunchAgent(binary, env, "darwin", (args, allowMissing) => {
-      if (args[0] === "print") return `gui/${process.getuid?.()}/com.hraness.slopcamera.menubar = {\n\tpath = ${plist}\n\tprogram = ${stable}\n\targuments = {\n\t\t${stable}\n\t}\n}\n`;
-      calls.push(args[0]!);
-      if (args[0] === "bootout") {
-        expect(allowMissing).toBe(true);
-        expect(readFileSync(stable, "utf8")).toBe("prebuilt-v1");
-      } else expect(readFileSync(stable, "utf8")).toBe("prebuilt-v2");
-      return null;
-    });
-    expect(calls).toEqual(["bootout", "bootstrap"]);
-    expect(resolveMenubarBinary(env.HOME, { ...env, SLOPCAMERA_MENUBAR: `${binary}-missing` })).toBe(null);
+  test("refuses symbolic-link install parents", () => {
+    const { home, binary, env } = fixture();
+    mkdirSync(join(home, "elsewhere"));
+    symlinkSync(join(home, "elsewhere"), join(home, "Library"));
+    expect(() => installBinary(binary, env)).toThrow();
   });
 
-  test("preserves loaded foreign services even beside a matching owned plist", () => {
-    const { binary, env, stable, plist } = fixture();
-    installLaunchAgent(binary, env, "darwin", () => null);
-    const calls: string[] = [];
-    const foreign = (args: readonly string[]) => {
-      calls.push(args[0]!);
-      return `gui/${process.getuid?.()}/com.hraness.slopcamera.menubar = {\n\tpath = ${plist}\n\tprogram = /foreign\n\targuments = {\n\t\t/foreign\n\t}\n}\n`;
-    };
-    expect(() => installLaunchAgent(binary, env, "darwin", foreign)).toThrow();
-    expect(() => uninstallLaunchAgent(stable, env, "darwin", foreign)).toThrow();
-    expect(calls).toEqual(["print", "print"]);
-    expect(readFileSync(stable, "utf8")).toBe("prebuilt-v1");
-    expect(readFileSync(plist, "utf8")).toBe(launchAgentPlist(stable));
+  test("removes only the exact login item earlier releases wrote", () => {
+    const { env, stable, legacy } = fixture();
+    expect(removeLegacyAgent(env)).toBe("absent");
+    mkdirSync(dirname(legacy), { recursive: true, mode: 0o700 });
+    writeFileSync(legacy, "<plist>hand written</plist>\n", { mode: 0o600 });
+    expect(removeLegacyAgent(env)).toBe("foreign");
+    expect(existsSync(legacy)).toBe(true);
+    writeFileSync(legacy, launchAgentPlist(stable), { mode: 0o600 });
+    expect(removeLegacyAgent(env)).toBe("removed");
+    expect(existsSync(legacy)).toBe(false);
   });
 
-  test("refuses foreign plist and unsafe file types without launchctl or writes", () => {
-    for (const kind of ["foreign", "symlink", "directory"] as const) {
-      const { binary, env, plist, stable } = fixture();
-      mkdirSync(dirname(plist), { recursive: true, mode: 0o700 });
-      if (kind === "foreign") writeFileSync(plist, "foreign", { mode: 0o600 });
-      else if (kind === "symlink") symlinkSync(binary, plist);
-      else mkdirSync(plist);
-      const run = () => { throw new Error("must not call launchctl"); };
-      expect(() => installLaunchAgent(binary, env, "darwin", run)).toThrow();
-      expect(() => uninstallLaunchAgent(stable, env, "darwin", run)).toThrow();
-      expect(existsSync(stable)).toBe(false);
-      if (kind === "foreign") expect(readFileSync(plist, "utf8")).toBe("foreign");
-      expect(readFileSync(binary, "utf8")).toBe("prebuilt-v1");
-    }
+  test("install copies the build, retires the old login item and hands over to the menu bar", async () => {
+    const { home, env, stable, legacy } = fixture();
+    mkdirSync(dirname(legacy), { recursive: true, mode: 0o700 });
+    writeFileSync(legacy, launchAgentPlist(stable), { mode: 0o600 });
+    const { calls, run } = recorder({ code: 0, stdout: "✓ Slopcamera will open at login\n", stderr: "🔐 notice\n" });
+    const terminal = io(home, env);
+    await manageMenubar(terminal.io, home, "install", false, run);
+    expect(calls).toEqual([{ binary: stable, args: ["install"], audience: "human" }]);
+    expect(terminal.output.join("")).toBe("✓ Slopcamera will open at login\n");
+    expect(terminal.errors.join("")).toBe("🔐 notice\n");
+    expect(existsSync(legacy)).toBe(false);
+    expect(existsSync(stable)).toBe(true);
   });
 
-  test("refuses symbolic-link install parents and unowned orphan binaries", () => {
+  test("a refused change surfaces the menu bar's own sentence once", async () => {
+    const { home, env } = fixture();
+    const { run } = recorder({ code: 1, stdout: "", stderr: "✗ Slopcamera's login item was changed outside slopcamera, so it was left alone.\n→ slopcamera menubar install\n" });
+    const terminal = io(home, env);
+    await expect(manageMenubar(terminal.io, home, "install", false, run)).rejects.toThrow(
+      "Slopcamera's login item was changed outside slopcamera, so it was left alone.\n→ slopcamera menubar install",
+    );
+    expect(terminal.errors).toEqual([]);
+  });
+
+  test("a failed install throws only the failure, not the login-item notice", async () => {
+    const { home, env, stable, legacy } = fixture();
+    mkdirSync(dirname(legacy), { recursive: true, mode: 0o700 });
+    writeFileSync(legacy, launchAgentPlist(stable), { mode: 0o600 });
+    const notice = "🔐 macOS will show a notice that slopcamera-menubar can open at login. That's Slopcamera's menu bar.\n   Its menu bar icon opens when you log in. Nothing else runs in the background.\n";
+    const { run } = recorder({ code: 1, stdout: "", stderr: `${notice}✗ The menu bar couldn't write its login item.\n→ slopcamera menubar install\n` });
+    const terminal = io(home, env);
+    await expect(manageMenubar(terminal.io, home, "install", false, run)).rejects.toThrow(
+      "The menu bar couldn't write its login item.\n→ slopcamera menubar install",
+    );
+    // The install failed, so the earlier login item stays in place.
+    expect(existsSync(legacy)).toBe(true);
+    expect(existsSync(stable)).toBe(true);
+  });
+
+  test("status and uninstall work without the original build", async () => {
     const { home, binary, env, stable } = fixture();
-    const elsewhere = join(home, "elsewhere");
-    mkdirSync(elsewhere);
-    symlinkSync(elsewhere, join(home, "Library"));
-    expect(() => installLaunchAgent(binary, env, "darwin", () => null)).toThrow();
-    rmSync(join(home, "Library"));
-    mkdirSync(dirname(stable), { recursive: true, mode: 0o700 });
-    writeFileSync(stable, "unmanaged", { mode: 0o700 });
-    expect(() => installLaunchAgent(binary, env, "darwin", () => null)).toThrow();
-    expect(readFileSync(stable, "utf8")).toBe("unmanaged");
+    installBinary(binary, env);
+    rmSync(binary);
+    const { calls, run } = recorder({ code: 0, stdout: "{\"login\":\"on\"}\n", stderr: "" });
+    const agent = io(home, { ...env, CLAUDECODE: "1" });
+    await manageMenubar(agent.io, home, "status", true, run);
+    expect(calls[0]).toEqual({ binary: stable, args: ["status", "--json"], audience: undefined });
+    expect(agent.output.join("")).toBe("{\"login\":\"on\"}\n");
+    await manageMenubar(agent.io, home, "uninstall", false, run);
+    expect(calls[1]?.args).toEqual(["uninstall"]);
+    expect(existsSync(stable)).toBe(false);
   });
 
-  test("status and uninstall survive removal of the original build", async () => {
-    const { home, binary, env, stable, plist } = fixture();
-    installLaunchAgent(binary, env, "darwin", () => null);
-    rmSync(binary);
-    expect(launchAgentState(stable, env)).toBe("installed");
-    const output: string[] = [];
-    const io: CliIo = { cwd: () => home, env, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: () => null };
-    await manageMenubar(io, home, "status", true, () => null, () => false);
-    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: false });
-    expect(uninstallLaunchAgent(stable, env, "darwin", () => null)).toBe("absent");
-    expect(existsSync(plist)).toBe(false);
-    expect(existsSync(stable)).toBe(false);
-    expect(launchAgentState(stable, env)).toBe("absent");
+  test("status says plainly when the menu bar isn't installed", async () => {
+    const { home, env } = fixture();
+    const { calls, run } = recorder({ code: 0, stdout: "", stderr: "" });
+    const terminal = io(home, env);
+    await manageMenubar(terminal.io, home, "status", false, run);
+    expect(calls).toEqual([]);
+    expect(terminal.output.join("")).toBe("Slopcamera's menu bar isn't installed.\n→ slopcamera menubar install\n");
+    const json = io(home, env);
+    await manageMenubar(json.io, home, "status", true, run);
+    expect(JSON.parse(json.output.join(""))).toEqual({ login: "off", running: false, installed: false });
+  });
+
+  test("the helper sees a person as human and an agent as an agent", () => {
+    expect(helperEnvironment({ HOME: "/x" }).HRANESS_AUDIENCE).toBe("human");
+    expect(helperEnvironment({ HOME: "/x", CLAUDECODE: "1" }).HRANESS_AUDIENCE).toBeUndefined();
+    expect(helperEnvironment({ HOME: "/x", HRANESS_AUDIENCE: "quiet" }).HRANESS_AUDIENCE).toBe("quiet");
+  });
+
+  test("start opens it now and returns", () => {
+    expect(parseCliArgs(["menubar", "start"])).toEqual({ kind: "menubar", action: "run", mode: "background", json: false });
+    expect(() => parseCliArgs(["menubar", "stop"])).toThrow("install|uninstall|status|start");
   });
 });
 
@@ -166,40 +187,14 @@ describe("Slopcamera menu-bar copy", () => {
     }
   });
 
-  test("install shows the login-item notice first and status checks liveness", async () => {
-    const { home, env } = fixture();
-    const output: string[] = [];
-    const errors: string[] = [];
-    const io: CliIo = { cwd: () => home, env: { ...env, ...UTF8 }, now: () => new Date(), platform: "darwin", stdout: text => { output.push(text); }, stderr: text => { errors.push(text); } };
-    await manageMenubar(io, home, "install", false, () => null, () => true);
-    expect(errors.join("")).toBe(loginItemNotice(UTF8));
-    expect(errors.join("")).toContain("That's Slopcamera's menu bar.");
-    expect(output.join("")).toBe("✓ Slopcamera opens in your menu bar now and at every login. Look for 📷.\n  Remove it any time: slopcamera menubar uninstall\n");
-    output.length = 0;
-    await manageMenubar(io, home, "status", false, () => "gui/501/com.hraness.slopcamera.menubar = {\n\tstate = running\n}\n", () => false);
-    expect(output.join("")).toBe("✓ Slopcamera opens at login and is in your menu bar now.\n");
-    // A copy started by hand holds the menu bar while the login item exited.
-    output.length = 0;
-    await manageMenubar(io, home, "status", true, () => null, () => true);
-    expect(JSON.parse(output.join(""))).toEqual({ launchAgent: "installed", running: true });
-  });
-
-  test("status explains a login item that isn't running", () => {
-    expect(serviceRunning(() => null)).toBe(false);
-    expect(serviceRunning(() => "x = {\n\tstate = not running\n}\n")).toBe(false);
-    expect(stateMessage("status", "installed", false, UTF8)).toBe(
-      "⚠ Slopcamera is set to open at login but isn't running. It may be turned off in System Settings › General › Login Items & Extensions.\n→ slopcamera menubar install",
-    );
-    expect(stateMessage("status", "absent", false, UTF8)).toBe("Slopcamera doesn't open at login.\n→ slopcamera menubar install");
-    expect(stateMessage("uninstall", "absent", false, UTF8)).toBe("✓ Slopcamera no longer opens in your menu bar at login.");
-  });
-
   test("help menubar has its own page and matches the usage error", () => {
     const page = commandHelp(["menubar"]);
     expect(page).not.toBe(commandHelp([]));
     expect(page.startsWith("Usage:\n  slopcamera menubar [--foreground|--background] [--json]\n")).toBe(true);
     expect(page).toContain("already in your menu bar");
-    expect(commandHelp([])).toContain("menubar [--foreground|--background]");
+    expect(page).toContain("isn't listed in");
+    // Hidden until released packages include the menu bar.
+    expect(commandHelp([])).not.toContain("menubar");
     expect(commandHelp([])).not.toContain("Agents: after useful work");
     expect(commandHelp([])).not.toContain("host-owned typed");
   });

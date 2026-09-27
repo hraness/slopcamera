@@ -1,3 +1,4 @@
+import { activityLabel, recordActivity, recordCredits } from "./menubar-status";
 import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
 import { SlopcameraCloudError } from "../../../src/cloud-errors";
 import {
@@ -5548,6 +5549,7 @@ async function handleCreditsStatus(
   } catch (error) {
     throw creditsErrorToCli(error);
   }
+  recordCredits(context.stateRoot, { usd: balance.balance.usd, low: balance.lowBalance, checkedAt: context.clock() });
   const view = {
     configured: true,
     tokenSource: loaded.source,
@@ -8419,6 +8421,7 @@ async function resolveMutationTarget(
 export async function runCli(argv: readonly string[], dependencies: CliDependencies = {}): Promise<number> {
   const io = dependencies.io ?? processIo;
   let jsonRequested = argv.includes("--json") || argv.includes("--jsonl");
+  let activity: { readonly stateRoot: string; readonly label: string; readonly startedAt: number } | undefined;
   try {
     const command = parseCliArgs(argv);
     jsonRequested = "json" in command ? command.json : command.kind === "events" && command.format !== "human";
@@ -8513,6 +8516,11 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
         ? {}
         : { renderGalleryScene: dependencies.renderGalleryScene }),
     };
+    const label = activityLabel(command);
+    if (label !== undefined) {
+      activity = { stateRoot, label, startedAt: context.clock() };
+      recordActivity(stateRoot, { state: "running", label, startedAt: activity.startedAt });
+    }
     const mutationTarget = await resolveMutationTarget(paths, stateRoot, command);
     await withCommandHostResources(context, command, async admittedContext => {
       if (mutationTarget === undefined) {
@@ -8535,9 +8543,15 @@ export async function runCli(argv: readonly string[], dependencies: CliDependenc
       || command.kind === "project-render" && command.action === "run" && !command.dryRun) {
       reportUsefulResult(dependencies.onUsefulResult);
     }
+    if (activity !== undefined) {
+      recordActivity(activity.stateRoot, { state: "done", label: activity.label, startedAt: activity.startedAt, finishedAt: io.now().getTime() });
+    }
     return 0;
   } catch (error) {
     const failure = asCliError(error);
+    if (activity !== undefined) {
+      recordActivity(activity.stateRoot, { state: "failed", label: activity.label, startedAt: activity.startedAt, finishedAt: io.now().getTime(), error: failure.code });
+    }
     const payload = {
       error: {
         code: failure.code,

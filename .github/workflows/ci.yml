@@ -207,6 +207,13 @@ jobs:
           workspaces: desktop
       - name: Build the menu-bar companion
         run: cargo build --release --locked --manifest-path desktop/Cargo.toml
+      - name: Test the menu-bar companion and its menu fixtures
+        run: cargo test --locked --manifest-path desktop/Cargo.toml
+      - name: Lint menu fixtures
+        run: >-
+          npx --yes
+          --package=https://github.com/hraness/desktop-foundation/releases/download/v0.8.0/hraness-desktop-foundation-0.8.0.tgz
+          companion lint-menu --strict desktop/menubar/fixtures/*.json
 
   site:
     name: Slopcamera site

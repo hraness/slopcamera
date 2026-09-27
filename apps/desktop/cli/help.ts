@@ -1,9 +1,11 @@
+import { slopcameraSupportAdvancedHelp, slopcameraSupportHelpLine } from "../../../src/support";
+
 import { HTML_OVERLAY_SCAFFOLD_KINDS } from "../html-overlay";
 
 const HTML_OVERLAY_SCAFFOLD_KIND_HELP =
   HTML_OVERLAY_SCAFFOLD_KINDS.join("|");
 
-const GLOBAL_HELP = `slopcamera: a media studio for coding agents
+const globalHelp = () => `slopcamera: a media studio for coding agents
 
 Usage: slopcamera <command> [options]
 
@@ -35,11 +37,6 @@ Commands:
   credits status|topup|wait|forget
                                  Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
-  menubar [--foreground|--background]
-                                 Show your outputs in the menu bar
-  menubar install|uninstall|status  Open it at login, stop that, or check it
-  support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
-                                 Optional support; no feature requires payment
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
@@ -63,19 +60,21 @@ Examples:
   slopcamera render run REC --output out.mp4  Render a recording
 
 Run slopcamera help <command> for command-specific help.
-Optional support: slopcamera support · Turn off: HRANESS_SUPPORT_AUDIENCE=off`;
+${slopcameraSupportHelpLine()}`;
 
 const HELP: Readonly<Record<string, string>> = {
+  advanced: `${slopcameraSupportAdvancedHelp()}`,
   menubar: `Usage:
   slopcamera menubar [--foreground|--background] [--json]
-  slopcamera menubar install|uninstall|status [--json]
+  slopcamera menubar install|uninstall|status|start [--json]
 
-Shows 📷 in the menu bar with your recent outputs. It only lists and opens
-files in the outputs folder (slopcamera outputs).
+Shows what Slopcamera is doing in the menu bar: a render in progress, how the
+last job ended and your last known credits balance, plus your newest outputs.
+It only reads that status and the outputs folder (slopcamera outputs).
 
   menubar               Open it now; it closes when this command ends
-  menubar --background  Open it now and return
-  menubar install       Open it now and every time you log in
+  menubar start         Open it now and return (same as --background)
+  menubar install       Open it every time you log in
   menubar uninstall     Stop opening it at login and remove the installed copy
   menubar status        Check whether it opens at login and is running
 
@@ -83,9 +82,10 @@ If it's already in your menu bar, starting it again says so and succeeds.
 macOS shows a notice that slopcamera-menubar can open at login. Turn it off any
 time in System Settings › General › Login Items & Extensions.
 
-The menu bar isn't in released packages yet. In a Slopcamera checkout, build it
-with cargo build --release --manifest-path desktop/Cargo.toml and slopcamera
-finds it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
+The menu bar isn't in released packages yet, so it isn't listed in
+slopcamera help. In a Slopcamera checkout, build it with
+cargo build --release --manifest-path desktop/Cargo.toml and slopcamera finds
+it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
   capabilities: `Usage: slopcamera capabilities [--json]
 
 Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
@@ -701,8 +701,8 @@ Long inactivity is analyzed and removed by default; use --keep-inactivity to opt
 };
 
 export function commandHelp(topic: readonly string[]): string {
-  if (topic.length === 0) return GLOBAL_HELP;
-  return HELP[topic[0]!] ?? GLOBAL_HELP;
+  if (topic.length === 0) return globalHelp();
+  return HELP[topic[0]!] ?? globalHelp();
 }
 
 export function completions(words: readonly string[]): readonly string[] {
