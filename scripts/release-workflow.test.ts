@@ -185,6 +185,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   expect(root.scripts["check:web"]).toBe("bun apps/web/scripts/verify-example-sources.ts && bun run --cwd apps/web check")
   expect(site.scripts.check.split(" && ")).toEqual([
     "bun run check:theme", "bun run typecheck:preview", "bun run test", "bun run build", "bun run verify:preview",
+    "bun run verify:current",
   ])
   expect(() => requireCompleteSourceCoverage(workflow)).not.toThrow()
 
