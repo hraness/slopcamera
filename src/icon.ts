@@ -136,6 +136,10 @@ Style contract:
 
 Judge the attached rendered illustration against the contract and whether it clearly depicts the requested subject. Return pass only when it is ready for a marketing header or feature section. Score is an integer from 0 to 100. When it fails, make promptFix a concrete image-prompt correction that addresses the listed problems.`
 
+const INLINE_CRITIQUE_CLAUSE = `
+
+Context note: this illustration renders inline beside text at about 32 to 48 pixels. Judge silhouette legibility at that size above isometric depth — a flat bold pictogram satisfies the contract when it reads clearly and still carries one ink color on the flat near-white background.`
+
 export interface IconCritique {
   readonly pass: boolean
   readonly problems: readonly string[]
@@ -369,10 +373,15 @@ export function iconPromptFor(
       ]
     : [
         `A single minimal product-brand illustration of ${subject}.`,
-        "Style rules: simple orthographic isometric projection; uniform medium-weight structural lines and at most three large filled planes; " +
-          `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
-          "no hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, border, or extra objects; " +
-          "every important feature remains visible at 64 pixels; centered with a modest clear margin; clean geometric edges.",
+        options.context === "inline"
+          ? "Style rules: a bold flat pictogram or slightly dimensional shape; uniform bold structural lines with at most two large filled masses; " +
+            `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
+            "no hairlines, hatching, texture, repeated detail, shading, gradients, shadows, text, border, or extra objects; " +
+            "the silhouette must remain recognizable at 32 pixels; centered with a modest clear margin; clean geometric edges."
+          : "Style rules: simple orthographic isometric projection; uniform medium-weight structural lines and at most three large filled planes; " +
+            `one single ink color ${ink} on a flat near-white background ${slopcameraIconPanel}; ` +
+            "no hairlines, hatching, texture, tiny repeated detail, shading, gradients, shadows, text, border, or extra objects; " +
+            "every important feature remains visible at 64 pixels; centered with a modest clear margin; clean geometric edges.",
         ...(options.context === undefined
           ? []
           : [`Placement: ${slopcameraIconContextProfiles[options.context].prompt}`]),
@@ -907,6 +916,7 @@ function resolvedModelId(value: unknown): string | null {
 
 export async function critiqueIconRaster(
   input: Readonly<{
+    context?: SlopcameraIconContext
     ink: string
     model: string
     png: Uint8Array
@@ -956,6 +966,9 @@ export async function critiqueIconRaster(
             {
               text:
                 `Subject: ${input.subject}\nPurpose: ${input.purpose}\nInk: ${input.ink}\n` +
+                (input.context === undefined
+                  ? ""
+                  : `Context: ${input.context}\n`) +
                 `Judge this rendered ${input.purpose} against the style contract.`,
               type: "text",
             },
@@ -979,7 +992,9 @@ export async function critiqueIconRaster(
       },
       system: input.purpose === "mark"
         ? MARK_CRITIQUE_SYSTEM
-        : ILLUSTRATION_CRITIQUE_SYSTEM,
+        : input.context === "inline"
+          ? ILLUSTRATION_CRITIQUE_SYSTEM + INLINE_CRITIQUE_CLAUSE
+          : ILLUSTRATION_CRITIQUE_SYSTEM,
       temperature: 0,
     })
     return parseIconCritique(
@@ -1275,6 +1290,7 @@ export async function collectSlopcameraIconCandidates(
           ? await renderIconPreview(candidate.svg, purpose)
           : await dependencies.rasterize(candidate.svg)
         review = await critique({
+          ...(context === undefined ? {} : { context }),
           ink,
           model: critiqueModel,
           png: preview,

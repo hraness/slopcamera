@@ -13,6 +13,7 @@ import type {
   CollectSlopcameraIconCandidatesResult,
   IconCandidateRecord,
   IconMeasuredMetrics,
+  SlopcameraIconContext,
 } from "./icon.ts"
 
 function fakeExtraction(): IconCandidateRecord["extraction"] {
@@ -280,6 +281,39 @@ describe("icon set generation", () => {
       expect(alpha.metrics.coverageRatio).toBeCloseTo(0.2)
       expect(alpha.regenerated).toBe(1)
       expect(critiques).toBe(1)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("passes the set context through to the contact-sheet critique", async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopcamera-set-"))
+    try {
+      const collect = scriptedCollect({
+        alpha: [[record({ coverageRatio: 0.2, strokePx: 10 })]],
+        beta: [[record({ coverageRatio: 0.2, strokePx: 10 })]],
+      })
+      const seen: Array<SlopcameraIconContext | undefined> = []
+      const receipt = await generateSlopcameraIconSet(
+        {
+          outputDir: root,
+          setRounds: 2,
+          spec: { ...spec([
+            { slug: "alpha", subject: "alpha" },
+            { slug: "beta", subject: "beta" },
+          ]), context: "inline" },
+        },
+        {
+          collectCandidates: collect.collect,
+          composeSheet: async () => Uint8Array.from([1]),
+          setCritique: async input => {
+            seen.push(input.context)
+            return passingSetCritique
+          },
+        },
+      )
+      expect(receipt.context).toBe("inline")
+      expect(seen).toEqual(["inline"])
     } finally {
       await rm(root, { recursive: true, force: true })
     }

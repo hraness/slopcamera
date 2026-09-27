@@ -75,6 +75,10 @@ Judge the family as a whole, not each icon in isolation: matching stroke weight,
 
 Return pass only when the full sheet reads as one family and every member still depicts its subject. For each member that breaks the family, give concrete problems and a promptFix describing how its image prompt should change.`
 
+const INLINE_SET_CRITIQUE_CLAUSE = `
+
+Context note: this is an inline family — every member renders beside text at about 32 to 48 pixels. Judge each cell as a small chip: bold flat or slightly dimensional pictograms satisfy the contract when their silhouettes stay recognizable at that size. Do not demand isometric depth or the detail level of a larger card illustration; consistency of ink, stroke weight, and mass balance across the sheet is what makes them one family.`
+
 export interface SlopcameraIconSetMemberInput {
   readonly context?: SlopcameraIconContext
   readonly purpose?: SlopcameraIconPurpose
@@ -179,6 +183,7 @@ export interface SlopcameraIconSetDependencies
     members: ReadonlyArray<{ slug: string; svg: string }>,
   ) => Promise<Uint8Array>
   readonly setCritique?: (input: Readonly<{
+    context?: SlopcameraIconContext
     ink: string
     members: readonly string[]
     model: string
@@ -417,6 +422,7 @@ function parseIconSetCritique(
  */
 export async function critiqueSlopcameraIconSet(
   input: Readonly<{
+    context?: SlopcameraIconContext
     ink: string
     members: readonly string[]
     model: string
@@ -465,6 +471,9 @@ export async function critiqueSlopcameraIconSet(
             {
               text:
                 `Ink: ${input.ink}\n` +
+                (input.context === undefined
+                  ? ""
+                  : `Context: ${input.context}\n`) +
                 `Members in row-major order: ${input.members.join(", ")}\n` +
                 "Judge this contact sheet against the family contract.",
               type: "text",
@@ -487,7 +496,10 @@ export async function critiqueSlopcameraIconSet(
           zeroDataRetention: true,
         },
       },
-      system: SET_CRITIQUE_SYSTEM,
+      system:
+        input.context === "inline"
+          ? SET_CRITIQUE_SYSTEM + INLINE_SET_CRITIQUE_CLAUSE
+          : SET_CRITIQUE_SYSTEM,
       temperature: 0,
     })
     return parseIconSetCritique(
@@ -786,6 +798,7 @@ export async function generateSlopcameraIconSet(
   const setCritique =
     dependencies.setCritique ??
     ((critiqueInput: {
+      context?: SlopcameraIconContext
       ink: string
       members: readonly string[]
       model: string
@@ -917,6 +930,9 @@ export async function generateSlopcameraIconSet(
       let verdict: IconSetCritique | null
       try {
         verdict = await setCritique({
+          ...(input.spec.context === undefined
+            ? {}
+            : { context: input.spec.context }),
           ink,
           members: lanes.map(lane => lane.input.slug),
           model: critiqueModel,

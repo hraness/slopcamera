@@ -61,6 +61,11 @@ describe("icon prompt", () => {
     const card = iconPromptFor("a bookshelf", { context: "card" })
     expect(card).toContain("Placement:")
     expect(card).toContain("88 pixels")
+    const inline = iconPromptFor("a bookshelf", { context: "inline" })
+    expect(inline).toContain("bold flat pictogram")
+    expect(inline).toContain("32 pixels")
+    expect(inline).not.toContain("orthographic isometric")
+    expect(inline).toContain("Placement:")
     const generic = iconPromptFor("a bookshelf")
     expect(generic).not.toContain("Placement:")
     const markContext = iconPromptFor("a sponge", {
