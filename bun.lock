@@ -7,7 +7,7 @@
       "dependencies": {
         "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
         "@hraness/algal": "github:hraness/algal#c46264a",
-        "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
+        "@hraness/support-foundation": "github:hraness/support-foundation#8bb514d24b79dc3f305390700ae312cab88e7ad2",
         "@noble/hashes": "2.2.0",
         "@paper-design/shaders": "0.0.77",
         "@resvg/resvg-js": "2.6.2",
@@ -202,7 +202,7 @@
 
     "@hraness/slopcamera-web": ["@hraness/slopcamera-web@workspace:apps/web"],
 
-    "@hraness/support-foundation": ["@hraness/support-foundation@github:hraness/support-foundation#b32c1c8", {}, "hraness-support-foundation-b32c1c8", "sha512-dkMiXCI9bIzcX63byMK/IQHYzZg+i4XlDiuwnpJXrSF4nc9boCk2zDkZPh6cSpueio4h3K+SprnVOWjYzXC77w=="],
+    "@hraness/support-foundation": ["@hraness/support-foundation@github:hraness/support-foundation#8bb514d", {}, "hraness-support-foundation-8bb514d", "sha512-BJ7n51F1y2TwmUETzmD8jgt4trqsqhgmxmWEWAo3cHuE3f0H1Xy74Bp33lPWyj0LnD91kTBBmhY5PGpKNmQoPg=="],
 
     "@hraness/ui": ["@hraness/ui@github:hraness/ui#fa6df70", { "dependencies": { "@hugeicons/core-free-icons": "4.2.3", "@hugeicons/react": "^1.1.9", "@stylexjs/stylex": "0.19.0", "clsx": "^2.1.1", "parse5": "8.0.1", "react-aria": "3.50.0", "react-aria-components": "1.19.0" }, "peerDependencies": { "@babel/core": "7.29.7", "@stylexjs/babel-plugin": "0.19.0", "@types/babel__core": "7.20.5", "@types/bun": "1.3.14", "@types/node": "^20.19.0 || >=22.12.0", "lightningcss": "1.33.0", "next": "16.2.12 || 16.3.3", "react": ">=18 <20", "react-dom": ">=18 <20", "typescript": "6.0.3", "vite": "7.3.6 || 8.2.1" }, "optionalPeers": ["@babel/core", "@stylexjs/babel-plugin", "@types/babel__core", "@types/bun", "@types/node", "lightningcss", "next", "typescript", "vite"] }, "hraness-ui-fa6df70", "sha512-EW2h6MeyImS8ESP2eIaT/29WdnpY3I60XRTqObi/0bbSDW2TLbBCl3GmpdbpA72ob7InsJ54bwNZeFisQmjKqg=="],
 
