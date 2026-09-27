@@ -15,7 +15,7 @@ export const blogIndexDocument = "blog/index.html"
 export const blogIndex = Object.freeze({
   title: "Blog",
   heading: "Slopcamera blog",
-  description: "Posts about Slopcamera, the media studio for agents: what it is for, how it works, and how it connects to other Hraness tools.",
+  description: "Posts from Hraness about Slopcamera, the media studio for agents: who it is for and how its parts work.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"
@@ -39,14 +39,14 @@ const sources: readonly BlogPostSource[] = [
   {
     slug: "introducing-slopcamera",
     title: "Introducing Slopcamera",
-    description: "Slopcamera is a media studio for agents that a coding agent drives to make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+    description: "Slopcamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
     eyebrow: "Introducing",
     published: "2026-09-24",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],
   },
   {
     slug: "how-slopcamera-uses-algal",
-    title: "How Slopcamera uses ALGAL to bake repeatable character behavior",
+    title: "How Slopcamera bakes character behavior with ALGAL",
     description: "Slopcamera runs a character's behavior as a small ALGAL program with no tools, models or side effects, so the same scene and seed always bake the same motion.",
     eyebrow: "Integration",
     published: "2026-09-24",
