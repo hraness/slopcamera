@@ -2,6 +2,15 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.6.0 - 2026-09-27
+
+The menu bar now shows what Slopcamera is doing instead of only listing outputs: the render or generation in progress, how the last job ended, and your last known credits balance. Its login item moves to the shared desktop-foundation helper, and the agent support verbs move out of root help onto their own page.
+
+- The menu opens with a status row for the current render or generation and a warning row when the last job failed, a credits row that flags a low balance, the three newest outputs, "Open outputs folder", Open at login, "Updates & support…" and Quit. Diagnostics sit behind the Option alternate and the tray icon shows an attention tone only when something needs you.
+- `slopcamera menubar install|uninstall|status|start` manage the menu bar's login item through the shared LaunchAgent helper. Install retires the old `com.hraness.slopcamera.menubar` plist only when it is exactly the file earlier releases wrote, explains the macOS login-item notice before it appears, and refuses a copy another user or program could change.
+- `slopcamera menubar` stays off root help while released packages don't include the companion; `slopcamera help menubar` and `docs/menubar-release.md` still document building and installing it from source.
+- Root help drops the agent `slopcamera support` verb list for a single optional-support line; the same verbs are documented under `slopcamera help advanced` and keep working.
+
 ## 3.5.0 - 2026-09-26
 
 Browser overlay scenes with post-processing, bloom, depth of field or emissive standard materials render as written, and local vectorization keeps its deadline on loaded machines. The menu bar, the face analyzer build and root help now explain themselves in plain words: an already-running menu bar counts as success, and macOS notices are explained before they appear.
