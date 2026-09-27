@@ -1331,7 +1331,7 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.22.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@resvg/resvg-js": "2.6.2",
@@ -1357,7 +1357,7 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.13.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.22.0"')
     expect(localLockfile).toContain(
       '"@hraness/site-footer": "github:hraness/site-footer#v0.17.0"',
     )
@@ -1644,7 +1644,7 @@ describe("static Slopcamera site", () => {
     // optional-support styles and the host scroll-padding rule that keeps
     // keyboard focus above the fixed footer bar measured 310,206 together, and
     // the shared-footer v0.13.x organization-attribution styles measure
-    // 313,229. The design-kit v0.13.0 union with the shared foil wordmark
+    // 313,229. The design-kit v0.22.0 union with the shared foil wordmark
     // contract measures 346,025. Keep a strict ceiling over the full sealed
     // union and captured foundation; no import, recipe, snapshot, or repeated
     // layered rule is discounted.
