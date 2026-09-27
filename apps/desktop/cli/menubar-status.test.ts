@@ -1,4 +1,4 @@
-import { lstatSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -27,14 +27,32 @@ describe("menu bar status file", () => {
   test("keeps activity and credits side by side in one owner-only file", () => {
     const dir = root();
     recordActivity(dir, { state: "running", label: "Rendering a recording", startedAt: 1 });
-    recordCredits(dir, { usd: "$4.20", low: false, checkedAt: 2 });
+    recordCredits(dir, { usd: "4.20", low: false, checkedAt: 2 });
     recordActivity(dir, { state: "failed", label: "Rendering a recording", startedAt: 1, finishedAt: 3, error: "subprocess" });
     expect(readMenubarStatus(dir)).toEqual({
       schemaVersion: 1,
       activity: { state: "failed", label: "Rendering a recording", startedAt: 1, finishedAt: 3, error: "subprocess" },
-      credits: { usd: "$4.20", low: false, checkedAt: 2 },
+      credits: { usd: "4.20", low: false, checkedAt: 2 },
     });
     expect(lstatSync(join(dir, MENUBAR_STATUS_FILE)).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dir)).toEqual([MENUBAR_STATUS_FILE]);
+  });
+
+  test("a held lock skips the write instead of racing it", () => {
+    const dir = root();
+    writeFileSync(join(dir, `.${MENUBAR_STATUS_FILE}.lock`), "1\n", { mode: 0o600 });
+    recordCredits(dir, { usd: "4.20", low: false, checkedAt: 2 });
+    expect(readMenubarStatus(dir)).toEqual({ schemaVersion: 1 });
+  });
+
+  test("a stale lock from a crashed writer is reclaimed", () => {
+    const dir = root();
+    const lock = join(dir, `.${MENUBAR_STATUS_FILE}.lock`);
+    writeFileSync(lock, "999999\n", { mode: 0o600 });
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lock, old, old);
+    recordCredits(dir, { usd: "4.20", low: false, checkedAt: 2 });
+    expect(readMenubarStatus(dir).credits?.usd).toBe("4.20");
     expect(readdirSync(dir)).toEqual([MENUBAR_STATUS_FILE]);
   });
 

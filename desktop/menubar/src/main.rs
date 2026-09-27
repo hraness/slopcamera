@@ -43,8 +43,7 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok()
 }
 
-/// `~/Library/Application Support/Slopcamera` on macOS, mirroring
-/// `defaultCliStateRoot` in `apps/desktop/cli/paths.ts`; XDG state elsewhere.
+/// `~/Library/Application Support/Slopcamera` on macOS; XDG state elsewhere.
 fn product_root(home: &std::path::Path) -> PathBuf {
     if cfg!(target_os = "macos") {
         home.join("Library/Application Support/Slopcamera")
@@ -55,6 +54,18 @@ fn product_root(home: &std::path::Path) -> PathBuf {
         state.join("slopcamera")
     } else {
         home.join(".local/state/slopcamera")
+    }
+}
+
+/// The folder the CLI's `menubar-status.json` lives in, mirroring
+/// `defaultCliStateRoot` in `apps/desktop/cli/paths.ts`: a `cli`
+/// subdirectory of the product root on macOS and Windows, the product
+/// root itself under XDG state elsewhere.
+fn cli_state_root(product_root: &std::path::Path) -> PathBuf {
+    if cfg!(any(target_os = "macos", target_os = "windows")) {
+        product_root.join("cli")
+    } else {
+        product_root.to_path_buf()
     }
 }
 
@@ -223,7 +234,7 @@ fn main() {
     let host = Arc::new(SlopcameraHost {
         outputs,
         browser: BrowserOpener::new(),
-        cli_root: Some(root.join("cli")),
+        cli_root: Some(cli_state_root(&root)),
         home: Some(home),
         executable: std::env::current_exe().ok(),
         action_error: Mutex::new(None),
@@ -324,7 +335,7 @@ mod tests {
             "rendering",
             status(
                 Some(activity("running", 90, None)),
-                Some(credits("$4.20", false)),
+                Some(credits("4.20", false)),
             ),
             2,
             menu::Login::On,
@@ -338,7 +349,7 @@ mod tests {
             "ready",
             status(
                 Some(activity("done", 600, None)),
-                Some(credits("$4.20", false)),
+                Some(credits("4.20", false)),
             ),
             5,
             menu::Login::On,
@@ -363,7 +374,7 @@ mod tests {
             "low-credits",
             status(
                 Some(activity("done", 600, None)),
-                Some(credits("$0.40", true)),
+                Some(credits("0.40", true)),
             ),
             1,
             menu::Login::On,
@@ -393,7 +404,7 @@ mod tests {
             "action-error",
             status(
                 Some(activity("done", 600, None)),
-                Some(credits("$4.20", false)),
+                Some(credits("4.20", false)),
             ),
             5,
             menu::Login::On,
@@ -411,7 +422,7 @@ mod tests {
         let (outputs, dir) = outputs(9);
         let status = status(
             Some(activity("failed", 60, Some("subprocess"))),
-            Some(credits("$0.10", true)),
+            Some(credits("0.10", true)),
         );
         let model = menu::build(menu::View {
             status: status.as_ref(),
@@ -464,7 +475,7 @@ mod tests {
     fn diagnostics_carry_state_but_no_paths() {
         let status = status(
             Some(activity("failed", 60, Some("subprocess"))),
-            Some(credits("$0.10", true)),
+            Some(credits("0.10", true)),
         );
         let text = menu::diagnostics(status.as_ref(), "0.2.0", now());
         assert!(text.contains("subprocess"));

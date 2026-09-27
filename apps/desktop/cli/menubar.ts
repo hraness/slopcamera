@@ -175,7 +175,15 @@ export function helperEnvironment(env: Environment): Environment {
 }
 
 function helperFailure(result: HelperResult): CliError {
-  const text = result.stderr.trim().replace(/^(✗|FAIL)\s+/u, "");
+  // The helper prints the login-item notice on stderr before the error;
+  // the failure is the last ✗ line plus the → hint that follows it.
+  const lines = result.stderr.split("\n");
+  let start = -1;
+  for (const [index, line] of lines.entries()) {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("✗") || trimmed.startsWith("FAIL")) start = index;
+  }
+  const text = (start === -1 ? result.stderr : lines.slice(start).join("\n")).trim().replace(/^(✗|FAIL)\s+/u, "");
   return new CliError(result.code === 2 ? "usage" : "unavailable", text === "" ? "The Slopcamera menu bar couldn't change its login item." : text);
 }
 
@@ -238,8 +246,10 @@ export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "
     const binary = resolveMenubarBinary(repositoryRoot, io.env);
     if (binary === null) throw new CliError("unavailable", NOT_BUILT);
     const installed = binary === stable ? stable : installBinary(binary, io.env);
-    removeLegacyAgent(io.env);
     forward(await run(installed, args, env));
+    // The old login item goes only after the new one is in place, so a
+    // failed install never leaves nothing to start at login.
+    removeLegacyAgent(io.env);
     return;
   }
   if (action === "uninstall") removeLegacyAgent(io.env);

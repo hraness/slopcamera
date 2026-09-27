@@ -9,7 +9,7 @@ use desktop_foundation::{
     StatusMark, Symbol,
 };
 
-use crate::status::{ago, at_ms, explain, Status, STALE_RUNNING};
+use crate::status::{ago, at_ms, dollars, explain, Status, STALE_RUNNING};
 
 pub const NAME: &str = "Slopcamera";
 pub const APP_ID: &str = "slopcamera";
@@ -116,13 +116,16 @@ pub fn build(view: View) -> MenuModel {
             nodes.push(MenuNode::status(
                 Symbol::StatusAttention,
                 "Credits are low",
-                Some(format!("{} left · checked {checked}", credits.usd)),
+                Some(format!(
+                    "{} left · checked {checked}",
+                    dollars(&credits.usd)
+                )),
             ));
             tone = MarkTone::Attention;
         } else {
             nodes.push(MenuNode::status(
                 Symbol::StatusOk,
-                format!("{} in credits", credits.usd),
+                format!("{} in credits", dollars(&credits.usd)),
                 Some(format!("Checked {checked}")),
             ));
         }
@@ -192,7 +195,7 @@ pub fn diagnostics(status: Option<&Status>, version: &str, now: SystemTime) -> S
     if let Some(credits) = status.and_then(|status| status.credits.as_ref()) {
         lines.push(format!(
             "Credits: {}{} (checked {})",
-            credits.usd,
+            dollars(&credits.usd),
             if credits.low { ", low" } else { "" },
             ago(at_ms(credits.checked_at), now)
         ));

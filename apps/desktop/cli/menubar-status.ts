@@ -85,22 +85,65 @@ export function readMenubarStatus(stateRoot: string): MenubarStatus {
   }
 }
 
+const LOCK_FILE = `.${MENUBAR_STATUS_FILE}.lock`;
+/** A held lock blocks a write for this long before it is skipped. */
+const LOCK_BUDGET_MS = 250;
+/** A lock older than this is a crashed writer's and is reclaimed. */
+const LOCK_STALE_MS = 10_000;
+
+function sleepSync(ms: number): void {
+  Bun.sleepSync(ms);
+}
+
+/**
+ * Runs `update` holding a small exclusive lock file, so a render finishing
+ * while `credits status` runs cannot overwrite the other slot. Returns
+ * undefined when the lock never comes free; the write is then skipped
+ * rather than lost-halfway.
+ */
+function withStatusLock<T>(stateRoot: string, update: () => T): T | undefined {
+  const lock = join(stateRoot, LOCK_FILE);
+  const deadline = Date.now() + LOCK_BUDGET_MS;
+  for (;;) {
+    let fd: number;
+    try {
+      fd = openSync(lock, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") return undefined;
+      try {
+        if (Date.now() - lstatSync(lock).mtimeMs > LOCK_STALE_MS) rmSync(lock, { force: true });
+      } catch { /* races with the lock holder */ }
+      if (Date.now() >= deadline) return undefined;
+      sleepSync(5);
+      continue;
+    }
+    closeSync(fd);
+    try {
+      return update();
+    } finally {
+      try { rmSync(lock, { force: true }); } catch { /* best effort */ }
+    }
+  }
+}
+
 /** Replaces the status file atomically with an owner-only file. Never throws. */
 export function writeMenubarStatus(stateRoot: string, update: (current: MenubarStatus) => MenubarStatus): void {
-  const path = join(stateRoot, MENUBAR_STATUS_FILE);
-  const staged = join(stateRoot, `.${MENUBAR_STATUS_FILE}.${randomUUID()}.tmp`);
-  try {
-    const root = lstatSync(stateRoot);
-    if (!root.isDirectory()) return;
-    const text = `${JSON.stringify(update(readMenubarStatus(stateRoot)))}\n`;
-    if (Buffer.byteLength(text) > MAX_STATUS_BYTES) return;
-    const fd = openSync(staged, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-    try { writeSync(fd, text); } finally { closeSync(fd); }
-    chmodSync(staged, 0o600);
-    renameSync(staged, path);
-  } catch {
-    try { rmSync(staged, { force: true }); } catch { /* best effort */ }
-  }
+  withStatusLock(stateRoot, () => {
+    const path = join(stateRoot, MENUBAR_STATUS_FILE);
+    const staged = join(stateRoot, `.${MENUBAR_STATUS_FILE}.${randomUUID()}.tmp`);
+    try {
+      const root = lstatSync(stateRoot);
+      if (!root.isDirectory()) return;
+      const text = `${JSON.stringify(update(readMenubarStatus(stateRoot)))}\n`;
+      if (Buffer.byteLength(text) > MAX_STATUS_BYTES) return;
+      const fd = openSync(staged, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      try { writeSync(fd, text); } finally { closeSync(fd); }
+      chmodSync(staged, 0o600);
+      renameSync(staged, path);
+    } catch {
+      try { rmSync(staged, { force: true }); } catch { /* best effort */ }
+    }
+  });
 }
 
 export function recordActivity(stateRoot: string, activity: MenubarActivity): void {

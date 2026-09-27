@@ -109,6 +109,21 @@ describe("Slopcamera menu-bar launcher", () => {
     expect(terminal.errors).toEqual([]);
   });
 
+  test("a failed install throws only the failure, not the login-item notice", async () => {
+    const { home, env, stable, legacy } = fixture();
+    mkdirSync(dirname(legacy), { recursive: true, mode: 0o700 });
+    writeFileSync(legacy, launchAgentPlist(stable), { mode: 0o600 });
+    const notice = "🔐 macOS will show a notice that slopcamera-menubar can open at login. That's Slopcamera's menu bar.\n   Its menu bar icon opens when you log in. Nothing else runs in the background.\n";
+    const { run } = recorder({ code: 1, stdout: "", stderr: `${notice}✗ The menu bar couldn't write its login item.\n→ slopcamera menubar install\n` });
+    const terminal = io(home, env);
+    await expect(manageMenubar(terminal.io, home, "install", false, run)).rejects.toThrow(
+      "The menu bar couldn't write its login item.\n→ slopcamera menubar install",
+    );
+    // The install failed, so the earlier login item stays in place.
+    expect(existsSync(legacy)).toBe(true);
+    expect(existsSync(stable)).toBe(true);
+  });
+
   test("status and uninstall work without the original build", async () => {
     const { home, binary, env, stable } = fixture();
     installBinary(binary, env);

@@ -104,6 +104,21 @@ pub fn ago(then: SystemTime, now: SystemTime) -> String {
     }
 }
 
+/// The credits API sends a bare amount ("25.00"); the menu always shows
+/// dollars ("$25.00"). A value that already carries the sign keeps it, and
+/// anything that doesn't look like an amount is shown as it arrived.
+pub fn dollars(usd: &str) -> String {
+    let bare = usd.trim_start_matches('$');
+    if bare.is_empty()
+        || !bare
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+    {
+        return usd.to_owned();
+    }
+    format!("${bare}")
+}
+
 /// A plain sentence for a fixed CLI error code.
 pub fn explain(code: &str) -> &'static str {
     match code {
@@ -136,7 +151,7 @@ mod tests {
         let root = dir("read");
         std::fs::write(
             root.join(STATUS_FILE),
-            r#"{"schemaVersion":1,"activity":{"state":"failed","label":"Rendering a recording","startedAt":1000,"finishedAt":2000,"error":"subprocess"},"credits":{"usd":"$4.20","low":false,"checkedAt":3000}}"#,
+            r#"{"schemaVersion":1,"activity":{"state":"failed","label":"Rendering a recording","startedAt":1000,"finishedAt":2000,"error":"subprocess"},"credits":{"usd":"4.20","low":false,"checkedAt":3000}}"#,
         )
         .unwrap();
         let status = Status::read(&root).unwrap();
@@ -144,7 +159,7 @@ mod tests {
             status.activity.unwrap().error.as_deref(),
             Some("subprocess")
         );
-        assert_eq!(status.credits.unwrap().usd, "$4.20");
+        assert_eq!(status.credits.unwrap().usd, "4.20");
         std::fs::remove_dir_all(&root).unwrap();
     }
 
