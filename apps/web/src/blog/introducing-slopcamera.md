@@ -35,7 +35,7 @@ slopcamera ai image generate --model openai/gpt-image-2 \
   --prompt-file figure.txt --size 1536x864 --count 1 --json
 ```
 
-If you would rather not set up a key, you can buy prepaid credits through a hosted checkout, and prompt-only image generation then runs on a hosted service billed against those credits. That route accepts only a prompt and a model. Reference images, video, speech, and transcription go through your own key, and Slopcamera asks you to confirm before it uploads named local media. The [media generation guide](/docs/how-to/generate-media) covers both routes.
+If you would rather not set up a key, you can buy prepaid credits through a hosted checkout, and prompt-only image generation then runs on a hosted service billed against those credits. That route accepts only a prompt and a model. Reference images, video, speech, and transcription go through your own key, and Slopcamera uploads named local media only when you pass its explicit upload flag. The [media generation guide](/docs/how-to/generate-media) covers both routes.
 
 ## Build 3D scenes, drive native tools, and edit video
 
