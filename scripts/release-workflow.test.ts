@@ -160,8 +160,10 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // source, full history, required) was added; every prior job is unchanged.
   // Reviewed 2026-09-27: the `menubar` job gained a cargo test step and a
   // fixture lint step after its release build; every prior job is unchanged.
+  // Reviewed 2026-09-27: site screenshot output and artifact upload added;
+  // every existing job, command, condition, deadline and boundary is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "b323e4453ab06904d133e62f8839c849f5c138d0f437c617448fbe440ab2b1f0") {
+  if (priorDigest !== "5b89df9880c0932cc75c93384fc8b8ca5adf33196ca563758ecaebbdd150a24a") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
