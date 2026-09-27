@@ -90,8 +90,9 @@ Native engines install separately. The [source-install guide](docs/how-to/use-cu
 explains workspace placement and durable-run identity; the
 [capability reference](docs/reference/capabilities.md) names runtime requirements.
 
-Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion can show
-the files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
+Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
+what Slopcamera is rendering, how the last job ended, your last known credits
+balance and the newest files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
 companion directly and does not install or launch an application bundle. The
 companion is a thin product binary over the shared
 [desktop-foundation](https://github.com/hraness/desktop-foundation) crate, pinned

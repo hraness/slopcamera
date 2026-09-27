@@ -1,97 +1,181 @@
-//! `slopcamera-menubar` — the Slopcamera menu-bar companion.
+//! `slopcamera-menubar`: the Slopcamera menu bar.
 //!
-//! Slopcamera's interface is a directory: agents drop finished outputs into
-//! the per-user outputs root and the status item renders them newest-first,
-//! with image thumbnails, so a user can open a result straight from the menu
-//! bar. The binary holds no authority of its own — it only reads that
-//! directory.
+//! It shows what Slopcamera is doing (a render in progress, the last job's
+//! result) and your last known credits balance, and lists the newest
+//! outputs so you can open a result straight from the menu bar. It holds no
+//! authority: it reads the CLI's status file and the outputs folder.
 //!
-//! Runs unbundled: `slopcamera menubar` spawns this executable directly.
+//! `slopcamera-menubar install | uninstall | status | start` manage the
+//! login item through desktop-foundation's shared helper;
+//! `slopcamera menubar …` runs the same commands.
 
-use std::fs::{File, OpenOptions};
-use std::os::unix::io::AsRawFd;
+mod lifecycle;
+mod menu;
+#[cfg(test)]
+mod menu_fixture;
+mod status;
+
+use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
 
-use desktop_foundation::outputs::OutputsSection;
 use desktop_foundation::browser::{BrowserOpener, BrowserStatus};
-use desktop_foundation::{
-    AccessibilityMetadata, DispatchOutcome, Host, MenuItem, MenuModel, MenuNode, Options,
-    RenderError, RgbaIcon,
+use desktop_foundation::outputs::OutputsSection;
+use desktop_foundation::service::{self, InstanceLock, LoginState};
+use desktop_foundation::{DispatchOutcome, Host, MenuModel, Options, RenderError};
+
+use lifecycle::Product;
+use status::Status;
+
+const PRODUCT: Product = Product {
+    app_id: menu::APP_ID,
+    name: menu::NAME,
+    command: "slopcamera",
+    binary: "slopcamera-menubar",
+    version: env!("CARGO_PKG_VERSION"),
 };
 
-const SUPPORT_URL: &str = "https://account.hraness.com/support?product=slopcamera&source=desktop#support";
+const SUPPORT_URL: &str = "https://account.hraness.com/support?product=slopcamera&source=desktop";
+const ACTION_ERROR_SECONDS: u64 = 60;
 
-/// Camera status mark. macOS renders `MARK_TITLE` as native colored emoji
-/// text; icon-only trays use this pre-rendered 32px Twemoji bitmap
-/// (U+1F4F7, CC-BY 4.0 — https://twemoji.twitter.com).
-const MARK_TITLE: &str = "\u{1f4f7}";
-fn mark_icon() -> RgbaIcon {
-    RgbaIcon {
-        rgba: include_bytes!("../icons/mark.rgba").to_vec(),
-        width: 32,
-        height: 32,
-    }
+fn env(name: &str) -> Option<String> {
+    std::env::var(name).ok()
 }
 
 /// `~/Library/Application Support/Slopcamera` on macOS, mirroring
 /// `defaultCliStateRoot` in `apps/desktop/cli/paths.ts`; XDG state elsewhere.
-fn product_root() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").map(PathBuf::from)?;
+fn product_root(home: &std::path::Path) -> PathBuf {
     if cfg!(target_os = "macos") {
-        Some(home.join("Library/Application Support/Slopcamera"))
-    } else if let Some(state) = std::env::var_os("XDG_STATE_HOME") {
-        Some(PathBuf::from(state).join("slopcamera"))
+        home.join("Library/Application Support/Slopcamera")
+    } else if let Some(state) = std::env::var_os("XDG_STATE_HOME")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+    {
+        state.join("slopcamera")
     } else {
-        Some(home.join(".local/state/slopcamera"))
+        home.join(".local/state/slopcamera")
     }
 }
 
 struct SlopcameraHost {
     outputs: OutputsSection,
     browser: BrowserOpener,
+    /// The CLI state folder, where `menubar-status.json` lives.
+    cli_root: Option<PathBuf>,
+    home: Option<PathBuf>,
+    executable: Option<PathBuf>,
+    action_error: Mutex<Option<(String, Instant)>>,
+}
+
+impl SlopcameraHost {
+    fn status(&self) -> Option<Status> {
+        self.cli_root.as_deref().and_then(Status::read)
+    }
+
+    fn login_plan(&self) -> Option<service::LaunchAgentPlan> {
+        let item = lifecycle::login_item(&PRODUCT, self.executable.clone()?);
+        service::plan(&item, self.home.as_deref()?).ok()
+    }
+
+    fn login(&self) -> menu::Login {
+        match self.login_plan().map(|plan| service::login_state(&plan)) {
+            Some(LoginState::On) => menu::Login::On,
+            Some(LoginState::Outdated) => menu::Login::Outdated,
+            Some(LoginState::NotOurs) => menu::Login::NotOurs,
+            _ => menu::Login::Off,
+        }
+    }
+
+    fn fail(&self, message: &str) -> DispatchOutcome {
+        *self
+            .action_error
+            .lock()
+            .unwrap_or_else(|error| error.into_inner()) =
+            Some((message.to_owned(), Instant::now()));
+        DispatchOutcome::Rejected
+    }
+
+    fn current_action_error(&self) -> Option<String> {
+        if let BrowserStatus::Failed(_) = self.browser.status() {
+            return Some("Couldn't open your browser".to_owned());
+        }
+        let mut slot = self
+            .action_error
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        match slot.as_ref() {
+            Some((message, when)) if when.elapsed() < Duration::from_secs(ACTION_ERROR_SECONDS) => {
+                Some(message.clone())
+            }
+            _ => {
+                *slot = None;
+                None
+            }
+        }
+    }
+
+    fn copy_diagnostics(&self) -> DispatchOutcome {
+        let text = menu::diagnostics(self.status().as_ref(), PRODUCT.version, SystemTime::now());
+        let child = std::process::Command::new("/usr/bin/pbcopy")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        let Ok(mut child) = child else {
+            return self.fail("Couldn't copy diagnostics");
+        };
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            let _ = stdin.write_all(text.as_bytes());
+        }
+        std::thread::spawn(move || {
+            let _ = child.wait();
+        });
+        DispatchOutcome::Accepted
+    }
+
+    fn toggle_login(&self) -> DispatchOutcome {
+        let Some(plan) = self.login_plan() else {
+            return self.fail("Couldn't change Open at login");
+        };
+        let result = match self.login() {
+            menu::Login::On => service::uninstall(&plan),
+            // Install repoints an outdated item; a changed one is refused.
+            menu::Login::Off | menu::Login::Outdated | menu::Login::NotOurs => {
+                service::install(&plan)
+            }
+        };
+        match result {
+            Ok(_) => DispatchOutcome::Accepted,
+            Err(_) => self.fail("Couldn't change Open at login"),
+        }
+    }
 }
 
 impl Host for SlopcameraHost {
     fn snapshot(&self) -> MenuModel {
-        let mut nodes = vec![
-            MenuNode::disabled("Slopcamera Outputs"),
-            MenuNode::Separator,
-        ];
-        nodes.extend(self.outputs.nodes());
-        nodes.push(MenuNode::Separator);
-        nodes.push(MenuNode::item("product.support", "Support Slopcamera development (optional paid)…"));
-        if matches!(self.browser.status(), BrowserStatus::Failed(_)) {
-            nodes.push(MenuNode::disabled("Browser unavailable — use account.hraness.com"));
-        }
-        nodes.push(MenuNode::Separator);
-        nodes.push(MenuNode::interactive(
-            MenuItem::action(desktop_foundation::QUIT_ACTION_ID, "Quit Slopcamera")
-                .with_shortcut("CmdOrCtrl+Q")
-                .with_accessibility(AccessibilityMetadata {
-                    label: Some("Quit Slopcamera".to_owned()),
-                    value: None,
-                    hint: Some("Exit the Slopcamera menu bar companion".to_owned()),
-                }),
-        ));
-        let mut model = MenuModel {
-            tooltip: Some("Slopcamera — agent outputs".to_owned()),
-            nodes,
-            ..MenuModel::default()
-        };
-        model.mark(MARK_TITLE, Some(mark_icon()));
-        model
+        let status = self.status();
+        let action_error = self.current_action_error();
+        menu::build(menu::View {
+            status: status.as_ref(),
+            outputs: self.outputs.nodes(),
+            login: self.login(),
+            action_error: action_error.as_deref(),
+            now: SystemTime::now(),
+        })
     }
 
     fn dispatch_result(&self, id: &str) -> DispatchOutcome {
-        if id == "product.support" {
-            return if self.browser.open(SUPPORT_URL).is_ok() { DispatchOutcome::Accepted } else { DispatchOutcome::Rejected };
-        }
-        if self.outputs.dispatch(id) {
-            DispatchOutcome::Accepted
-        } else {
-            DispatchOutcome::Rejected
+        match id {
+            menu::SUPPORT => match self.browser.open(SUPPORT_URL) {
+                Ok(()) => DispatchOutcome::Accepted,
+                Err(_) => self.fail("Couldn't open your browser"),
+            },
+            menu::DIAGNOSTICS => self.copy_diagnostics(),
+            menu::LOGIN => self.toggle_login(),
+            _ if self.outputs.dispatch(id) => DispatchOutcome::Accepted,
+            _ => DispatchOutcome::Rejected,
         }
     }
 
@@ -100,61 +184,50 @@ impl Host for SlopcameraHost {
     }
 }
 
-/// One status item per user; a second instance exits quietly.
-/// Exit code when another copy already holds the menu bar. The CLI reports it
-/// as success ("already in your menu bar"), not a startup failure.
-const ALREADY_RUNNING_EXIT: i32 = 3;
-
-enum InstanceError {
-    Held,
-    Unavailable,
-}
-
-fn acquire_instance_lock() -> Result<File, InstanceError> {
-    let dir = product_root()
-        .ok_or(InstanceError::Unavailable)?
-        .join("cli");
-    std::fs::create_dir_all(&dir).map_err(|_| InstanceError::Unavailable)?;
-    let file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .open(dir.join("slopcamera-menubar.lock"))
-        .map_err(|_| InstanceError::Unavailable)?;
-    let result = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
-    if result == 0 {
-        Ok(file)
-    } else if std::io::Error::last_os_error().raw_os_error() == Some(libc::EWOULDBLOCK) {
-        Err(InstanceError::Held)
-    } else {
-        Err(InstanceError::Unavailable)
-    }
-}
-
 fn main() {
-    let Some(root) = product_root() else {
-        eprintln!("slopcamera-menubar: cannot resolve the user state directory (HOME unset)");
-        std::process::exit(2);
-    };
-    // `--print-outputs` resolves the outputs directory for CLI/dev checks.
-    if std::env::args().nth(1).as_deref() == Some("--print-outputs") {
-        let outputs = root.join("outputs");
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .filter(|home| home.is_absolute());
+    // `--print-outputs` resolves the outputs folder for CLI and dev checks.
+    if args.first().map(String::as_str) == Some("--print-outputs") {
+        let Some(home) = home else {
+            eprintln!("✗ Couldn't find your home folder.\n→ slopcamera-menubar --help");
+            std::process::exit(2);
+        };
+        let outputs = product_root(&home).join("outputs");
         let _ = std::fs::create_dir_all(&outputs);
         println!("{}", outputs.display());
         return;
     }
-    let _instance = match acquire_instance_lock() {
-        Ok(lock) => lock,
-        // Another copy (usually the login item) already holds the menu bar.
-        Err(InstanceError::Held) => std::process::exit(ALREADY_RUNNING_EXIT),
-        Err(InstanceError::Unavailable) => {
-            eprintln!("slopcamera-menubar: cannot open the instance lock under the Slopcamera state directory");
-            std::process::exit(2);
-        }
+    if let Some(code) = lifecycle::main(PRODUCT, &args, BTreeMap::new()) {
+        std::process::exit(code);
+    }
+    let Some(home) = home else {
+        eprintln!("✗ Couldn't find your home folder.\n→ slopcamera-menubar --help");
+        std::process::exit(2);
     };
-    let outputs = OutputsSection::new(root.join("outputs"));
+    let glyphs = lifecycle::glyphs(&env);
+    let root = product_root(&home);
+    let _instance =
+        match InstanceLock::acquire(&lifecycle::state_dir(&home, &PRODUCT), PRODUCT.app_id) {
+            Ok(Some(lock)) => Some(lock),
+            Ok(None) => {
+                eprint!("{}", lifecycle::already_running(&PRODUCT, glyphs));
+                std::process::exit(service::EXIT_ALREADY_RUNNING);
+            }
+            Err(_) => None,
+        };
+    let outputs = OutputsSection::new(root.join("outputs")).with_limit(menu::OUTPUTS_LIMIT);
     let _ = std::fs::create_dir_all(outputs.dir());
-    let host = Arc::new(SlopcameraHost { outputs, browser: BrowserOpener::new() });
+    let host = Arc::new(SlopcameraHost {
+        outputs,
+        browser: BrowserOpener::new(),
+        cli_root: Some(root.join("cli")),
+        home: Some(home),
+        executable: std::env::current_exe().ok(),
+        action_error: Mutex::new(None),
+    });
     let options = Options {
         refresh: Duration::from_secs(3),
         companion_window: false,
@@ -166,22 +239,236 @@ fn main() {
 }
 
 #[cfg(test)]
-mod invitation_tests {
+mod tests {
     use super::*;
+    use crate::status::{Activity, Credits};
+    use std::time::UNIX_EPOCH;
+
+    const NOW_MS: u64 = 1_790_000_000_000;
+
+    fn now() -> SystemTime {
+        UNIX_EPOCH + Duration::from_millis(NOW_MS)
+    }
+
+    fn activity(state: &str, ago_s: u64, error: Option<&str>) -> Activity {
+        Activity {
+            state: state.into(),
+            label: "Rendering a recording".into(),
+            started_at: NOW_MS - ago_s * 1000,
+            finished_at: (state != "running").then_some(NOW_MS - ago_s * 1000 + 30_000),
+            error: error.map(str::to_owned),
+        }
+    }
+
+    fn credits(usd: &str, low: bool) -> Credits {
+        Credits {
+            usd: usd.into(),
+            low,
+            checked_at: NOW_MS - 7_300_000,
+        }
+    }
+
+    fn outputs(count: usize) -> (Vec<desktop_foundation::MenuNode>, PathBuf) {
+        static SEQ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let dir = std::env::temp_dir().join(format!(
+            "slopcamera-menubar-outputs-{}-{}",
+            std::process::id(),
+            SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        for index in 0..count {
+            std::fs::write(dir.join(format!("take {index}.mp4")), vec![b'x'; 4096]).unwrap();
+            std::thread::sleep(Duration::from_millis(15));
+        }
+        let nodes = OutputsSection::new(&dir)
+            .with_limit(menu::OUTPUTS_LIMIT)
+            .nodes();
+        (nodes, dir)
+    }
+
+    fn fixture(
+        state: &str,
+        status: Option<Status>,
+        count: usize,
+        login: menu::Login,
+        action_error: Option<&str>,
+    ) {
+        let (outputs, dir) = outputs(count);
+        let model = menu::build(menu::View {
+            status: status.as_ref(),
+            outputs,
+            login,
+            action_error,
+            now: now(),
+        });
+        menu_fixture::check(state, &model, menu::APP_ID, menu::NAME);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    fn status(activity: Option<Activity>, credits: Option<Credits>) -> Option<Status> {
+        Some(Status {
+            schema_version: 1,
+            activity,
+            credits,
+        })
+    }
 
     #[test]
-    fn unavailable_outputs_offer_optional_support_without_a_newsletter_or_launch() {
+    fn menu_first_run() {
+        fixture("first-run", None, 0, menu::Login::Off, None);
+    }
+
+    #[test]
+    fn menu_rendering() {
+        fixture(
+            "rendering",
+            status(
+                Some(activity("running", 90, None)),
+                Some(credits("$4.20", false)),
+            ),
+            2,
+            menu::Login::On,
+            None,
+        );
+    }
+
+    #[test]
+    fn menu_ready() {
+        fixture(
+            "ready",
+            status(
+                Some(activity("done", 600, None)),
+                Some(credits("$4.20", false)),
+            ),
+            5,
+            menu::Login::On,
+            None,
+        );
+    }
+
+    #[test]
+    fn menu_error() {
+        fixture(
+            "error",
+            status(Some(activity("failed", 600, Some("subprocess"))), None),
+            1,
+            menu::Login::On,
+            None,
+        );
+    }
+
+    #[test]
+    fn menu_low_credits() {
+        fixture(
+            "low-credits",
+            status(
+                Some(activity("done", 600, None)),
+                Some(credits("$0.40", true)),
+            ),
+            1,
+            menu::Login::On,
+            None,
+        );
+    }
+
+    #[test]
+    fn menu_stale_job() {
+        fixture(
+            "stale-job",
+            status(Some(activity("running", 8 * 3600, None)), None),
+            0,
+            menu::Login::Off,
+            None,
+        );
+    }
+
+    #[test]
+    fn menu_empty() {
+        fixture("empty", status(None, None), 0, menu::Login::On, None);
+    }
+
+    #[test]
+    fn menu_action_error() {
+        fixture(
+            "action-error",
+            status(
+                Some(activity("done", 600, None)),
+                Some(credits("$4.20", false)),
+            ),
+            5,
+            menu::Login::On,
+            Some("Couldn't open your browser"),
+        );
+    }
+
+    #[test]
+    fn menu_login_changed_elsewhere() {
+        fixture("login-not-ours", None, 0, menu::Login::NotOurs, None);
+    }
+
+    #[test]
+    fn worst_case_stays_within_ten_rows() {
+        let (outputs, dir) = outputs(9);
+        let status = status(
+            Some(activity("failed", 60, Some("subprocess"))),
+            Some(credits("$0.10", true)),
+        );
+        let model = menu::build(menu::View {
+            status: status.as_ref(),
+            outputs,
+            login: menu::Login::On,
+            action_error: None,
+            now: now(),
+        });
+        let rows = model
+            .nodes
+            .iter()
+            .filter(|node| {
+                !matches!(
+                    node,
+                    desktop_foundation::MenuNode::Separator
+                        | desktop_foundation::MenuNode::Header { .. }
+                )
+            })
+            .count();
+        assert!(rows <= 10, "{rows} rows");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn unknown_actions_are_rejected_without_opening_anything() {
         let host = SlopcameraHost {
             outputs: OutputsSection::new("/dev/null/absent-outputs"),
             browser: BrowserOpener::new(),
+            cli_root: None,
+            home: None,
+            executable: None,
+            action_error: Mutex::new(None),
         };
-        let model = host.snapshot();
-        assert!(model.nodes.iter().any(|node| matches!(node,
-            MenuNode::Item { id: Some(id), enabled: true, .. } if id == "product.support")));
-        assert!(!model.nodes.iter().any(|node| matches!(node,
-            MenuNode::Item { id: Some(id), .. } if id == "product.updates")));
+        assert!(matches!(
+            host.dispatch_result("unknown.action"),
+            DispatchOutcome::Rejected
+        ));
         assert_eq!(host.browser.status(), BrowserStatus::Idle);
-        assert!(matches!(host.dispatch_result("unknown.action"), DispatchOutcome::Rejected));
-        assert_eq!(host.browser.status(), BrowserStatus::Idle);
+        assert!(matches!(
+            host.dispatch_result(menu::LOGIN),
+            DispatchOutcome::Rejected
+        ));
+        assert_eq!(
+            host.current_action_error().as_deref(),
+            Some("Couldn't change Open at login")
+        );
+    }
+
+    #[test]
+    fn diagnostics_carry_state_but_no_paths() {
+        let status = status(
+            Some(activity("failed", 60, Some("subprocess"))),
+            Some(credits("$0.10", true)),
+        );
+        let text = menu::diagnostics(status.as_ref(), "0.2.0", now());
+        assert!(text.contains("subprocess"));
+        assert!(text.contains("$0.10, low"));
+        assert!(!text.contains('/'));
     }
 }
