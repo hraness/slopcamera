@@ -143,13 +143,13 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   const cssOutput = output.map(record).find(item => item.fileName === css[0]!.path)!
   const cssSource = typeof cssOutput.source === "string" ? cssOutput.source : new TextDecoder("utf-8", { fatal: true }).decode(cssOutput.source as Uint8Array)
   const urls = inspectCss(cssSource, css[0]!.path)
-  // The canonical 0.8 preset names each texture in both the editorial field
-  // and material wall, while a foil-mark mask is named once. Physical
-  // artifacts remain one per admitted byte hash.
+  // The portfolio preset names each texture exactly three times across its
+  // field, wall and pattern declarations; a foil-mark mask is named once.
+  // Physical artifacts remain one per admitted byte hash.
   assert.deepEqual(urls.map(url => {
     assert.match(url, /^(?:\.\/)?[A-Za-z0-9_-]+\.(?:woff2|svg)$/u, "Site foundation must use canonical local emitted font and texture URLs")
     return `assets/${url.replace(/^\.\//u, "")}`
-  }).sort(), [...fonts, ...textures, ...textures, ...masks].map(item => item.path).sort(),
+  }).sort(), [...fonts, ...textures, ...textures, ...textures, ...masks].map(item => item.path).sort(),
     "Site stylesheet must link every captured font, texture and mask with exact canonical multiplicity")
   const foundation = { artifacts, cssPath: `${foundationRoot}${css[0]!.path}`, privateScriptPath: `${foundationRoot}${chunk.fileName}` }
   capturedFoundation(foundation)
@@ -182,7 +182,7 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
     return graph.id
   }).sort(), ["site-foundation", "site-renderer"])
   assert.deepEqual(packages(complete.packages, "identity"), packages(expected.packages, "name"), "Site package manifest changed")
-  assert.ok(Array.isArray(complete.artifacts) && complete.artifacts.length >= 21 && complete.artifacts.length <= 64)
+  assert.ok(Array.isArray(complete.artifacts) && complete.artifacts.length >= 21 && complete.artifacts.length <= 80)
   const artifacts = complete.artifacts.map(artifact)
   assert.equal(new Set(artifacts.map(item => item.path)).size, artifacts.length, "Duplicate finalized site artifact")
   const finalCss = artifact(complete.finalCss)

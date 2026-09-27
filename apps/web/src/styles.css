@@ -77,7 +77,7 @@ html[data-theme="dark"]:not([data-hraness-theme="paper"]) {
   }
 }
 
-/* Bridge legacy product roles to Paper. The independent preview retains its
+/* Bridge legacy product roles to the selected shared palette. The independent preview retains its
  * fixed media palette; ordinary code examples resolve their local theme. */
 :root[data-hraness-theme="paper"] {
   --font-body: var(--font-text);
@@ -152,7 +152,7 @@ a {
 /* Example captions follow the accent surface inside an accent hero. */
 .hraness-marketing-hero[data-tone="accent"] .slopcamera-example {
   --ink: var(--hraness-marketing-accent-ink);
-  --muted: color-mix(in oklch, var(--hraness-marketing-accent-ink) 78%, transparent);
+  --muted: color-mix(in srgb, var(--hraness-marketing-accent-ink) 78%, transparent);
 }
 
 @media (forced-colors: active) {
@@ -496,3 +496,7 @@ h3 {
 
 /* Decorative topic icons (agent-generated line art, public/icons/). */
 .slopcamera-topic-icon { display: block; width: 88px; height: 88px; margin: 0 0 18px; }
+
+/* The shared light field sits behind focusable hero content. */
+.slopcamera-product-hero { position: relative; isolation: isolate; }
+.slopcamera-product-hero > :not([data-hraness-hero-backdrop]) { position: relative; z-index: 1; }

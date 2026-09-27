@@ -650,7 +650,10 @@ describe("workflow-examples-v1 independent native contract", () => {
  test("current hero and trust literals match authored content before reduced-motion enhancement", async () => {
   const source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
   expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
-  const tree = parseFragment(source.replace("{{EXAMPLE_HERO}}", () => renderExampleHero()))
+  // The shared inert hero artwork is a build-time slot that site-content.ts fills; it is not
+  // authored hero copy, and portfolio-surfaces-v3 checks the rendered artwork separately.
+  expect(source.split("{{HERO_BACKDROP}}")).toHaveLength(2)
+  const tree = parseFragment(source.replace("{{EXAMPLE_HERO}}", () => renderExampleHero()).replace(/^[ \t]*\{\{HERO_BACKDROP\}\}\r?\n/mu, ""))
   type Node = DefaultTreeAdapterMap["node"]
   type Element = DefaultTreeAdapterMap["element"]
   const descendants = (node: Node): Element[] => "childNodes" in node

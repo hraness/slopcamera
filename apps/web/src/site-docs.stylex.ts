@@ -79,7 +79,7 @@ const docs = stylex.create({
   navSectionLabel: {
     marginBottom: "0.35rem",
     color: "var(--muted)",
-    fontSize: "0.8rem",
+    fontSize: "0.9375rem",
     fontWeight: 600,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
@@ -167,13 +167,13 @@ const docs = stylex.create({
   p: {
     marginTop: 0,
     marginBottom: "1rem",
-    lineHeight: 1.65,
+    lineHeight: "var(--hraness-reading-leading, 1.7)",
   },
   list: {
     marginTop: 0,
     marginBottom: "1rem",
     paddingLeft: "1.4rem",
-    lineHeight: 1.65,
+    lineHeight: "var(--hraness-reading-leading, 1.7)",
   },
   listItem: {
     marginBottom: "0.3rem",
@@ -216,7 +216,7 @@ const docs = stylex.create({
     borderRadius: "0.625rem",
     backgroundColor: "color-mix(in srgb, var(--ink) 4%, transparent)",
     fontFamily: "var(--font-mono)",
-    fontSize: "0.85rem",
+    fontSize: "0.9375rem",
     lineHeight: 1.6,
     [forcedColors]: {
       backgroundColor: "Canvas",
@@ -296,7 +296,7 @@ const docs = stylex.create({
     borderTopStyle: "solid",
     borderTopColor: "var(--line)",
     color: "var(--muted)",
-    fontSize: "0.85rem",
+    fontSize: "0.9375rem",
     lineHeight: 1.6,
   },
   anchor: {
