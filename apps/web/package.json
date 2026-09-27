@@ -6,7 +6,7 @@
   "type": "module",
   "packageManager": "bun@1.3.14",
   "dependencies": {
-    "@hraness/design-kit": "github:hraness/design-kit#v0.13.0",
+    "@hraness/design-kit": "github:hraness/design-kit#v0.22.0",
     "@hraness/site-footer": "github:hraness/site-footer#v0.17.0",
     "@hraness/ui": "github:hraness/ui#v0.5.16",
     "@resvg/resvg-js": "2.6.2",
@@ -47,6 +47,7 @@
     "verify:support-copy": "bun run ./scripts/verify-site-support.ts --copy",
     "verify:refinement": "bun run ./scripts/verify-site-refinement.ts",
     "verify:refinement-copy": "bun run ./scripts/verify-site-refinement-copy.ts",
-    "verify:examples": "bun run ./scripts/verify-site-examples.ts"
+    "verify:examples": "bun run ./scripts/verify-site-examples.ts",
+    "sync:icons": "bun run ./scripts/sync-icons.ts"
   }
 }
