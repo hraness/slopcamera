@@ -33,7 +33,12 @@ export const blogSite: SearchSite = {
 }
 
 const byline = Object.freeze({ kind: "organization", name: "Hraness" } as const)
-const hraness: ArticleParty = { kind: "Organization", name: "Hraness" }
+const hraness: ArticleParty = {
+  kind: "Organization",
+  name: "Hraness",
+  url: "https://hraness.com",
+  sameAs: ["https://github.com/hraness"],
+}
 const socialImage = {
   path: "/og.png",
   contentType: "image/png",
