@@ -20,7 +20,7 @@ describe("Lantern material admission and scope", () => {
 
   test("admits only the complete released finite inventory and rejects changed ownership or bytes", async () => {
     const admitted = await snapshotLanternMaterial(vendor)
-    expect(admitted.sourceCommit).toBe("d38d13c07d7956d02ddfbca8d32aa2066d88fbd3")
+    expect(admitted.sourceCommit).toBe("3df4c411c7f5e5cbc02448463571696f0d47cee5")
     expect([...admitted.files.keys()].sort()).toEqual(["LICENSE", "check.d.mts", "check.mjs", "lantern-material.css"])
     const root = await realpath(await mkdtemp(join(tmpdir(), "slopcamera-lantern-")))
     try {
@@ -50,8 +50,8 @@ describe("Lantern material admission and scope", () => {
     ])
     expect(home.match(/data-hraness-material="lantern"/gu)).toHaveLength(1)
     expect(home).toContain('class="topbar hraness-material-chrome {{SITE_HEADER_CLASS}}"')
-    expect(home.match(/hraness-material-wall/gu)).toHaveLength(1)
-    expect(home).toContain('class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"')
+    expect(home).not.toContain("hraness-material-wall")
+    expect(home).toContain('class="hraness-marketing-hero slopcamera-product-hero"')
     expect(home).toContain("{{EXAMPLE_HERO}}")
     expect(home).not.toContain("hraness-material-terminal")
     expect(home).not.toContain('class="hraness-marketing-field"')

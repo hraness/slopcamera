@@ -1485,9 +1485,9 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "a1b58e2baaa64392de9e7d9f6bdde7f3bf9c455eea732f096b5989d5db2c9446",
-    "occurrenceCount": 7,
+    "identityLineCount": 6,
+    "identityLinesSha256": "f700451272b581928d6de554644c8b94f24a036f8f76d963b45301be3fc2a925",
+    "occurrenceCount": 8,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
       "native-film-studio",
@@ -1739,7 +1739,7 @@
   },
   {
     "identityLineCount": 4,
-    "identityLinesSha256": "31a588a1da828bc1e9f5fcb1c0d3f2b2790b07e6bb3541e476e2ee8b4a763780",
+    "identityLinesSha256": "19e324955414c3274688459121534cebb6583f34365c5a122babc761b542d235",
     "occurrenceCount": 4,
     "path": "apps/web/src/index.html",
     "categories": [
