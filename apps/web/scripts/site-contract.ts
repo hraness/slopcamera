@@ -80,7 +80,6 @@ function capturedFoundation(value: SiteFoundation): SiteArtifact[] {
   assert.equal(scripts.length, 1, "Site foundation requires one captured private entry")
   assert.equal(css.length, 1, "Site foundation requires one captured stylesheet")
   assert.equal(fonts.length, 14, "Site foundation requires fourteen captured fonts")
-  assert.ok(images.length >= 2, "Site foundation requires two captured textures plus one mask per foil mark")
   assert.equal(input.artifacts.length, 16 + images.length, "Site foundation artifact inventory must account for every foil mask")
   assert.equal(input.privateScriptPath, `${foundationRoot}${scripts[0]!.path}`)
   assert.equal(input.cssPath, `${foundationRoot}${css[0]!.path}`)
@@ -94,9 +93,9 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   assert.equal(fontHashes.length, 14)
   fontHashes.forEach(digest)
   assert.equal(new Set(fontHashes).size, 14, "Site foundation font inputs must be distinct")
-  assert.equal(imageHashes.length, 2)
+  assert.ok(imageHashes.length === 0 || imageHashes.length === 2, "Site textures must match either Quiet or the historical paired texture profile")
   imageHashes.forEach(digest)
-  assert.equal(new Set(imageHashes).size, 2, "Site foundation texture inputs must be distinct")
+  assert.equal(new Set(imageHashes).size, imageHashes.length, "Site foundation texture inputs must be distinct")
   maskHashes.forEach(digest)
   assert.equal(new Set(maskHashes).size, maskHashes.length, "Site foundation mask inputs must be distinct")
   for (const maskHash of maskHashes) {
@@ -105,7 +104,7 @@ export function snapshotSiteFoundation(value: unknown, fontHashes: readonly stri
   const results = Array.isArray(value) ? value : [value]
   assert.equal(results.length, 1, "Site foundation requires one Vite output")
   const output = record(results[0]).output
-  assert.ok(Array.isArray(output) && output.length === 18 + maskHashes.length, "Site foundation must emit one private entry, one CSS asset, fourteen WOFF2 assets and two SVG textures plus one mask per foil mark")
+  assert.ok(Array.isArray(output) && output.length === 16 + imageHashes.length + maskHashes.length, "Site foundation must emit one private entry, one CSS asset, fourteen WOFF2 assets and the exact approved SVG textures and foil masks")
   const chunks = output.map(record).filter(item => item.type === "chunk")
   assert.equal(chunks.length, 1, "Site foundation requires exactly one captured private entry")
   const chunk = chunks[0]!
@@ -217,8 +216,8 @@ export function projectSiteArtifacts(value: unknown, expected: Readonly<{
     return false
   })
   assert.equal(rendererEntries, 1, "Site generation requires one captured renderer entry")
-  const maskCount = captured.filter(item => item.path.endsWith(".svg")).length - 2
-  assert.equal(publicArtifacts.length, 18 + maskCount + expected.documents.length)
+  const imageCount = captured.filter(item => item.path.endsWith(".svg")).length
+  assert.equal(publicArtifacts.length, 16 + imageCount + expected.documents.length)
   for (const path of allowed) assert.ok(publicArtifacts.some(item => item.path === path), `Missing public site artifact: ${path}`)
   return sorted(publicArtifacts)
 }

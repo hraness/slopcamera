@@ -865,9 +865,9 @@ describe("static Slopcamera site", () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
     const blogDocuments = [blogIndexDocument, ...blogPosts.map(blogDocumentForPost)]
-    expect(artifacts).toHaveLength(19 + 2 + docPages.length + blogDocuments.length)
+    expect(artifacts).toHaveLength(17 + 2 + docPages.length + blogDocuments.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(19 + 2 + docPages.length + blogDocuments.length)
+    expect(new Set(paths).size).toBe(17 + 2 + docPages.length + blogDocuments.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
       "404.html", ...docPages.map(docsDocumentForPage), ...blogDocuments, "index.html",
     ].sort())
@@ -886,10 +886,10 @@ describe("static Slopcamera site", () => {
     const fonts = paths.filter(path => path.endsWith(".woff2"))
     expect(fonts).toHaveLength(14)
     const images = paths.filter(path => path.endsWith(".svg"))
-    expect(images).toHaveLength(3)
+    expect(images).toHaveLength(1)
     for (const name of ["grain.svg", "cells.svg"]) {
       const expected = await readFile(join(appDirectory, "vendor/marketing-preset/marketing-assets", name))
-      expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(true)
+      expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(false)
     }
     // The third SVG is the foil wordmark mask: the canonical product mark bytes.
     const markBytes = await readFile(join(appDirectory, "src/marks/slopcamera.svg"))
@@ -897,7 +897,7 @@ describe("static Slopcamera site", () => {
     const masks = images.filter(path => artifacts.find(item => item.path === path)!.sha256 === markSha256)
     const textures = images.filter(path => !masks.includes(path))
     expect(masks).toHaveLength(1)
-    expect(textures).toHaveLength(2)
+    expect(textures).toHaveLength(0)
     const foundation = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     const union = await readBuilt(builtAssets.stylesPath.slice(1))
     expect(foundation.match(/@font-face\b/gu)).toHaveLength(14)
@@ -1440,10 +1440,10 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.22.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.23.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.19.3",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.20.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1469,9 +1469,9 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.22.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.23.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.19.3"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.0"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')

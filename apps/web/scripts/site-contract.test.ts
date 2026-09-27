@@ -351,3 +351,19 @@ describe("site shell artifact publication (pure synthetic controls)", () => {
     }
   })
 })
+
+
+test("Quiet admits no decorative textures and rejects reintroduced texture bytes", () => {
+  const quiet = foundationOutput();
+  quiet.output = quiet.output.filter(item => !item.fileName?.endsWith(".svg"));
+  const css = quiet.output.find(item => item.fileName?.endsWith(".css"))!;
+  css.source = String(css.source).replace(/\.texture\d+\{[^}]+\}/gu, "");
+  const inspect = (source: string) => [...source.matchAll(/url\(([^)]+)\)/gu)].map(match => match[1]!);
+  expect(snapshotWithInspection(quiet, fontHashes, entrypoint, inspect, []).artifacts).toHaveLength(16);
+  expect(() => snapshotWithInspection(foundationOutput(), fontHashes, entrypoint, inspect, [])).toThrow();
+  const unapproved = structuredClone(quiet);
+  unapproved.output.push({ type: "asset", fileName: "assets/unapproved.svg", source: imageSources[0]! });
+  expect(() => snapshotWithInspection(unapproved, fontHashes, entrypoint, inspect, [])).toThrow();
+  css.source += ".unexpected{background:url(./texture-0.svg)}";
+  expect(() => snapshotWithInspection(quiet, fontHashes, entrypoint, inspect, [])).toThrow("multiplicity");
+});
