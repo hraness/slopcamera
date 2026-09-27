@@ -491,3 +491,16 @@ h3 {
   --hraness-marketing-inverse: var(--night);
   --hraness-marketing-inverse-ink: var(--night-ink);
 }
+
+.slopcamera-eyebrow {
+  color: var(--muted);
+  font: .75rem/1.5 var(--font-mono);
+  letter-spacing: .035em;
+}
+
+.slopcamera-text-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  text-decoration: underline;
+}
