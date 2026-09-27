@@ -198,6 +198,15 @@ export function createApiHandler(environment: ApiEnvironment) {
       )
       paidModel = model
       paidPrompt = prompt
+      // A paid call always produces a file; without storage the provider
+      // would be paid for an image the caller can never receive.
+      if (artifacts === undefined) {
+        throw new ApiError(
+          503,
+          "storage_unavailable",
+          "Artifact storage is not configured.",
+        )
+      }
       const idempotencyKey = `slopcamera-api:${call.idempotencyKey ?? randomUUID()}`
       const hold = await credits.hold({
         subjectToken: token,
@@ -220,15 +229,18 @@ export function createApiHandler(environment: ApiEnvironment) {
       )
     }
 
-    const workspace = await materializeWorkspace(
-      call.files,
-      {
-        maximumInlineBytes: config.maximumInlineBytes,
-        maximumUploadBytes: config.maximumUploadBytes,
-      },
-      r2,
-    )
+    let workspace: Awaited<ReturnType<typeof materializeWorkspace>> | undefined
     try {
+      // Inside the try so a rejected file map releases the hold at once
+      // instead of leaving the caller's credit locked until it expires.
+      workspace = await materializeWorkspace(
+        call.files,
+        {
+          maximumInlineBytes: config.maximumInlineBytes,
+          maximumUploadBytes: config.maximumUploadBytes,
+        },
+        r2,
+      )
       const result = await callHostedTool(
         tool,
         args,
@@ -299,7 +311,7 @@ export function createApiHandler(environment: ApiEnvironment) {
       }
       throw error
     } finally {
-      await workspace.cleanup()
+      await workspace?.cleanup()
     }
   }
 

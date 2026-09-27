@@ -517,6 +517,62 @@ describe("Vercel AI Gateway image generation", () => {
       expect(reports[0]?.every(line => line.basis === "reported")).toBe(true)
     })
 
+    test("reports the estimated worst case once when the Gateway answers 5xx", async () => {
+      const reports: Array<ReadonlyArray<{ basis: string; microUsd: number }>> = []
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1", prompt: "upstream timeout" },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          fetch: async () => Response.json({ error: "upstream" }, { status: 504 }),
+          loadRuntime: async () => {
+            let gatewayFetch: typeof fetch | undefined
+            return {
+              createGateway: settings => {
+                gatewayFetch = settings.fetch as typeof fetch
+                return { imageModel: (modelId: string) => modelId }
+              },
+              generateImage: async () => {
+                const response = await gatewayFetch?.(
+                  `${slopcameraGatewayApiBaseUrl}/image-model`,
+                  { method: "POST" },
+                )
+                throw new Error(`gateway ${String(response?.status)}`)
+              },
+            }
+          },
+        },
+      )).rejects.toThrow("[GENERATION_FAILED]")
+      expect(reports).toHaveLength(1)
+      expect(reports[0]?.every(line => line.basis === "estimated")).toBe(true)
+      expect(reports[0]?.[0]?.microUsd).toBe(250_000)
+    })
+
+    test("reports the estimated worst case once when the deadline passes after dispatch", async () => {
+      const reports: Array<ReadonlyArray<{ basis: string }>> = []
+      let finishLate: (() => void) | undefined
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1.5", prompt: "slow", timeoutMs: 1_000 },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          loadRuntime: async () => ({
+            createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+            generateImage: async () => await new Promise(resolve => {
+              finishLate = () => resolve({
+                images: [{ mediaType: "image/webp", uint8Array: Uint8Array.of(1) }],
+                usage: { inputTokens: 3, outputTokens: 272 },
+              })
+            }),
+          }),
+        },
+      )).rejects.toThrow("[GENERATION_FAILED]")
+      finishLate?.()
+      await new Promise(resolve => setTimeout(resolve, 10))
+      expect(reports).toHaveLength(1)
+      expect(reports[0]?.every(line => line.basis === "estimated")).toBe(true)
+    })
+
     test("reports nothing when no provider call was made or the Gateway refused it", async () => {
       const reports: unknown[] = []
       await expect(generateSlopcameraImage(

@@ -614,8 +614,9 @@ async function performGeneration(
   const timeout = combineSignals(input.signal, validateTimeout(input.timeoutMs))
   // Cost accounting: once the provider call starts it may be billed, so every
   // exit after that point reports a cost, from returned usage when there is
-  // one, otherwise the worst case. A non-2xx Gateway answer is a rejection
-  // the provider does not bill.
+  // one, otherwise the worst case. A 4xx Gateway answer is a refusal the
+  // provider does not bill; a 5xx may come after the provider already
+  // produced the image, so it still reports the worst case.
   let dispatched = false
   let rejected = false
   let reported = false
@@ -626,7 +627,7 @@ async function performGeneration(
   }
   const observedFetch: SlopcameraGatewayFetch = async (request, init) => {
     const response = await (dependencies.fetch ?? globalThis.fetch)(request, init)
-    if (!response.ok) rejected = true
+    if (response.status >= 400 && response.status < 500) rejected = true
     return response
   }
   try {
