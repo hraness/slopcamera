@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const canonicalRegistry = "https://registry.npmjs.org";
-const maximumArchiveBytes = 4_800_000;
+const maximumArchiveBytes = 5_200_000;
 const maximumAuditEntries = 2_000;
 const npmPublishPredicate = "https://github.com/npm/attestation/tree/main/specs/publish/v0.1";
 const slsaPredicate = "https://slsa.dev/provenance/v1";

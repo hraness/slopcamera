@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single-image film-transfer study</title>
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}canvas{display:block;width:100%;height:100%}</style>
+<canvas id="plate" aria-label="A single photographic plate with restrained optical movement"></canvas>
+<script>
+(() => {
+  'use strict';
+  if (!window.SlopcameraOverlay) throw new Error('Film plate requires the Slopcamera host and a declared local plate asset.');
+  const fail = message => { throw new TypeError(`Film plate: ${message}`); };
+  const integer = (value, min, max, name) => {
+    if (!Number.isInteger(value) || value < min || value > max) fail(`${name} must be an integer in [${min}, ${max}].`);
+    return value;
+  };
+  const parameters = SlopcameraOverlay.parameters;
+  if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) fail('parameters must be an object.');
+  const keys = ['kind', 'sourceWidth', 'sourceHeight', 'sourceSha256'];
+  if (Object.keys(parameters).length !== keys.length || Object.keys(parameters).some(key => !keys.includes(key))) fail('parameters must declare only kind, sourceWidth, sourceHeight, and sourceSha256.');
+  if (parameters.kind !== 'single-image-film-transfer') fail('This source is a single-image film-transfer study.');
+  const sourceWidth = integer(parameters.sourceWidth, 16, 33_000_000, 'sourceWidth');
+  const sourceHeight = integer(parameters.sourceHeight, 16, 33_000_000, 'sourceHeight');
+  if (sourceWidth * sourceHeight > 33_000_000) fail('The plate exceeds 33 megapixels.');
+  if (typeof parameters.sourceSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(parameters.sourceSha256)) fail('sourceSha256 must identify the retained local input.');
+  const width = integer(SlopcameraOverlay.width, 2, 8192, 'width');
+  const height = integer(SlopcameraOverlay.height, 2, 8192, 'height');
+  if (width % 2 || height % 2 || width * height > 33_000_000) fail('Use bounded even output dimensions.');
+  if (width > sourceWidth || height > sourceHeight) fail('Delivery dimensions cannot exceed the photographic source.');
+  // Even raster rounding may trim at most two source-proportional output pixels.
+  if (Math.abs(width - height * sourceWidth / sourceHeight) > Math.max(2, 2 * sourceWidth / sourceHeight)) fail('The output must preserve the plate aspect ratio.');
+  if (SlopcameraOverlay.fps !== 16 || SlopcameraOverlay.durationMs !== 6000) fail('This study requires six seconds at 16 fps.');
+  if (window.innerWidth !== width || window.innerHeight !== height || window.devicePixelRatio !== 1) fail('Use the declared CSS dimensions and device scale 1.');
+  const canvas = document.getElementById('plate');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { alpha: false });
+  if (!context) fail('Canvas2D is unavailable.');
+  const plate = new Image();
+  plate.decoding = 'sync';
+  plate.src = SlopcameraOverlay.asset('plate');
+  let decoded = false;
+  SlopcameraOverlay.ready(plate.decode().then(() => {
+    if (plate.naturalWidth !== sourceWidth || plate.naturalHeight !== sourceHeight) fail('Decoded plate dimensions differ from the inspected source.');
+    decoded = true;
+  }));
+  const TAU = Math.PI * 2;
+  SlopcameraOverlay.onFrame(({ timeMs }) => {
+    if (!decoded) fail('The plate must decode before any frame is drawn.');
+    if (typeof timeMs !== 'number' || !Number.isFinite(timeMs) || timeMs < 0 || timeMs > 6000) fail('timeMs must be in [0, 6000].');
+    const seconds = timeMs / 1000;
+    const progress = timeMs / 6000;
+    const eased = progress * progress * (3 - 2 * progress);
+    // The 0.4% initial overscan hides registration motion; the push adds 1.2%.
+    // No subject geometry is invented or animated inside the photographic plate.
+    const zoom = 1.004 + 0.012 * eased;
+    const scale = Math.max(width / sourceWidth, height / sourceHeight) * zoom;
+    const drawWidth = sourceWidth * scale;
+    const drawHeight = sourceHeight * scale;
+    const unit = Math.min(height / 1080, width / 1440);
+    const weaveX = (0.28 * Math.sin(TAU * 1.7 * seconds + 0.4) + 0.17 * Math.sin(TAU * 3.13 * seconds + 2.1)) * unit;
+    const weaveY = (0.28 * Math.sin(TAU * 1.3 * seconds + 0.9) + 0.17 * Math.sin(TAU * 2.7 * seconds + 1.4)) * unit;
+    const exposure = 1 + 0.004 * Math.sin(TAU * seconds / 4.3) + 0.002 * Math.sin(TAU * seconds / 1.7 + 0.42);
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.filter = 'none';
+    context.fillStyle = '#000';
+    context.fillRect(0, 0, width, height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.filter = `brightness(${exposure})`;
+    context.drawImage(plate, (width - drawWidth) / 2 + weaveX, (height - drawHeight) / 2 + weaveY, drawWidth, drawHeight);
+    context.filter = 'none';
+  });
+})();
+</script>
+</html>

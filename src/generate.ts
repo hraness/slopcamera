@@ -2,6 +2,13 @@ import { createHash, randomUUID } from "node:crypto"
 import { link, rm, writeFile } from "node:fs/promises"
 import { dirname, extname, resolve } from "node:path"
 import { SlopcameraCloudError } from "./cloud-errors.js"
+import {
+  imageCallCosts,
+  type SlopcameraImageUsage,
+  type SlopcameraProviderCost,
+} from "./generation-pricing.js"
+
+export type { SlopcameraProviderCost } from "./generation-pricing.js"
 
 export const slopcameraGatewayApiBaseUrl =
   "https://ai-gateway.vercel.sh/v4/ai" as const
@@ -85,6 +92,12 @@ export interface SlopcameraGenerateDependencies {
   readonly fetch?: SlopcameraGatewayFetch
   readonly loadRuntime?: () => Promise<GatewayRuntime>
   readonly maximumResponseBytes?: number
+  /**
+   * Called once for every image call that reached the provider, including a
+   * call that failed afterwards, with that call's provider cost lines.
+   * Billing uses it to settle or release with the actual cost.
+   */
+  readonly onProviderCost?: (costs: readonly SlopcameraProviderCost[]) => void
 }
 
 const defaultGenerationTimeoutMs = 5 * 60_000
@@ -522,6 +535,15 @@ function warningReceipt(value: unknown): string {
   return `${type} sha256:${createHash("sha256").update(detail).digest("hex")}`
 }
 
+function returnedUsage(value: unknown): SlopcameraImageUsage | undefined {
+  if (!isObject(value) || !isObject(value.usage)) return undefined
+  const { inputTokens, outputTokens } = value.usage
+  return {
+    inputTokens: typeof inputTokens === "number" ? inputTokens : undefined,
+    outputTokens: typeof outputTokens === "number" ? outputTokens : undefined,
+  }
+}
+
 function parseResult(
   value: unknown,
   model: string,
@@ -590,6 +612,24 @@ async function performGeneration(
   const prompt = validatePrompt(input.prompt)
   const credential = resolveSlopcameraGatewayCredential(dependencies.environment)
   const timeout = combineSignals(input.signal, validateTimeout(input.timeoutMs))
+  // Cost accounting: once the provider call starts it may be billed, so every
+  // exit after that point reports a cost, from returned usage when there is
+  // one, otherwise the worst case. A 4xx Gateway answer is a refusal the
+  // provider does not bill; a 5xx may come after the provider already
+  // produced the image, so it still reports the worst case.
+  let dispatched = false
+  let rejected = false
+  let reported = false
+  const report = (usage: SlopcameraImageUsage | undefined): void => {
+    if (reported || !dispatched || rejected) return
+    reported = true
+    dependencies.onProviderCost?.(imageCallCosts(model, prompt, usage))
+  }
+  const observedFetch: SlopcameraGatewayFetch = async (request, init) => {
+    const response = await (dependencies.fetch ?? globalThis.fetch)(request, init)
+    if (response.status >= 400 && response.status < 500) rejected = true
+    return response
+  }
   try {
     const generation = (async () => {
       assertGenerationActive(timeout.signal)
@@ -602,13 +642,14 @@ async function performGeneration(
         apiKey: credential.token,
         baseURL: slopcameraGatewayApiBaseUrl,
         fetch: createFixedGatewayFetch({
-          ...(dependencies.fetch === undefined ? {} : { fetch: dependencies.fetch }),
+          fetch: observedFetch,
           ...(dependencies.maximumResponseBytes === undefined
             ? {}
             : { maximumResponseBytes: dependencies.maximumResponseBytes }),
         }),
       })
       assertGenerationActive(timeout.signal)
+      dispatched = true
       const generated = await runtime.generateImage({
         abortSignal: timeout.signal,
         maxRetries: 0,
@@ -616,10 +657,12 @@ async function performGeneration(
         n: 1,
         prompt,
       })
+      report(returnedUsage(generated))
       return parseResult(generated, model)
     })()
     return await Promise.race([generation, timeout.interruption])
   } catch (error) {
+    report(undefined)
     if (error instanceof SlopcameraCloudError) throw error
     throw new SlopcameraCloudError(
       "GENERATION_FAILED",

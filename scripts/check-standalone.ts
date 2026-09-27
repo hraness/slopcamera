@@ -103,7 +103,7 @@ const TEXT_EXTENSIONS = new Set([
 const CANONICAL_TEXT_SENTINELS = [
   {
     path: "src/version.ts",
-    values: ['export const SLOPCAMERA_VERSION = "3.3.6" as const'],
+    values: ['export const SLOPCAMERA_VERSION = "3.6.0" as const'],
   },
   {
     path: "src/operations.ts",
@@ -125,7 +125,7 @@ const CANONICAL_TEXT_SENTINELS = [
   {
     path: "apps/desktop/dist/cli/main.js",
     values: [
-      '"3.3.6"',
+      '"3.6.0"',
       '"slopcamera.diagram.check"',
       '"slopcamera.edit-plan"',
       '"slopcamera.video-project"',
@@ -324,14 +324,13 @@ const problems = [
   ...inventoryUpdate.problems,
 ];
 const rootPackage = await readJson(join(ROOT, "package.json"));
-const expectedDescription = "A local visual studio for coding agents: author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources.";
+const expectedDescription = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.";
 const expectedKeywords = [
   "ai-media-generation",
   "ai-video-generation",
   "video-generation",
   "video-editing",
   "image-generation",
-  "screen-recording",
   "motion-graphics",
   "captions",
   "speech-generation",
@@ -389,8 +388,8 @@ if (
 const packageVersion = rootPackage.version;
 if (typeof packageVersion !== "string") {
   problems.push("package.json version must be a string");
-} else if (packageVersion !== "3.3.6") {
-  problems.push("package.json version must be 3.3.6 for this source candidate; it does not identify a published Slopcamera release");
+} else if (packageVersion !== "3.6.0") {
+  problems.push("package.json version must be 3.6.0 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
     [

@@ -1,15 +1,17 @@
+import { slopcameraSupportAdvancedHelp, slopcameraSupportHelpLine } from "../../../src/support";
+
 import { HTML_OVERLAY_SCAFFOLD_KINDS } from "../html-overlay";
 
 const HTML_OVERLAY_SCAFFOLD_KIND_HELP =
   HTML_OVERLAY_SCAFFOLD_KINDS.join("|");
 
-const GLOBAL_HELP = `slopcamera — creative scenes and non-destructive media editing for coding agents
+const globalHelp = () => `slopcamera: a media studio for coding agents
 
 Usage: slopcamera <command> [options]
 
 Commands:
-  capabilities                   Discover the exact static capability modules and qualification status
-  operations list|show           Discover host-owned typed operations and policies
+  capabilities                   List what this build can do and how well each part is tested
+  operations list|show           List the operations agents can run and their limits
   diagram init|check|render      Create, validate, or render portable diagram sources
   diagram sheets init|check|render
                                  Create and render black-and-white drawing sheets
@@ -24,6 +26,7 @@ Commands:
   image vectorize|generate|gallery|icon
                                  Create local SVGs, generated images, or review galleries
   html catalog|scaffold|render   Author HTML scenes and export video with local audio
+  style list|show                Discover reusable art direction and review criteria
   workflows list|show|plan|run   Plan or run a reviewed reusable workflow
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
   runs list|show|resume|approve|cancel
@@ -34,10 +37,6 @@ Commands:
   credits status|topup|wait|forget
                                  Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
-  menubar [--background]         Run the prebuilt menu-bar companion
-  menubar install|uninstall|status  Manage its per-user LaunchAgent
-  support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
-                                 Optional support; no feature requires payment
   outputs                        Print the agent outputs directory
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
@@ -54,13 +53,39 @@ Commands:
   render plan|run <recording>    Resolve or execute a render plan
   assets emoji search|resolve    Find checked local emoji overlays
 
-Agents: after useful work, read slopcamera support protocol --json for the optional
-closeout protocol. Discovery uses stderr; it does not claim an invitation.
-HRANESS_SUPPORT_AUDIENCE=off suppresses offers and incidental discovery.
+Examples:
+  slopcamera doctor                          Check what this Mac can render
+  slopcamera html scaffold plain --output intro.html
+                                             Start an HTML scene
+  slopcamera render run REC --output out.mp4  Render a recording
 
-Run slopcamera help <command> for command-specific help.`;
+Run slopcamera help <command> for command-specific help.
+${slopcameraSupportHelpLine()}`;
 
 const HELP: Readonly<Record<string, string>> = {
+  advanced: `${slopcameraSupportAdvancedHelp()}`,
+  menubar: `Usage:
+  slopcamera menubar [--foreground|--background] [--json]
+  slopcamera menubar install|uninstall|status|start [--json]
+
+Shows what Slopcamera is doing in the menu bar: a render in progress, how the
+last job ended and your last known credits balance, plus your newest outputs.
+It only reads that status and the outputs folder (slopcamera outputs).
+
+  menubar               Open it now; it closes when this command ends
+  menubar start         Open it now and return (same as --background)
+  menubar install       Open it every time you log in
+  menubar uninstall     Stop opening it at login and remove the installed copy
+  menubar status        Check whether it opens at login and is running
+
+If it's already in your menu bar, starting it again says so and succeeds.
+macOS shows a notice that slopcamera-menubar can open at login. Turn it off any
+time in System Settings › General › Login Items & Extensions.
+
+The menu bar isn't in released packages yet, so it isn't listed in
+slopcamera help. In a Slopcamera checkout, build it with
+cargo build --release --manifest-path desktop/Cargo.toml and slopcamera finds
+it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
   capabilities: `Usage: slopcamera capabilities [--json]
 
 Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
@@ -293,6 +318,15 @@ composes a labelled contact sheet plus receipt for agent review. Texture cells r
 candidate 2×2 so seams are inspectable (--tile/--no-tile overrides). It never replaces existing
 outputs and never promotes a candidate into authored source; review the sheet and select
 explicitly.`,
+  style: `Usage:
+  slopcamera style list [--json]
+  slopcamera style show <id> [--json]
+
+Styles describe palette, shape, materials, camera, exposure cadence, finishing targets,
+recommended delivery, and visual review criteria. They work across authored scenes and
+generation prompts, independently of the seven HTML library profiles. Discovery is local
+and read-only: it does not render, select a model, or apply an effect. A profile is art
+direction, not proof of visual quality or historically authentic footage.`,
   html: `Usage:
   slopcamera html catalog [--json]
   slopcamera html scaffold <${HTML_OVERLAY_SCAFFOLD_KIND_HELP}> --output <file.html>
@@ -667,18 +701,19 @@ Long inactivity is analyzed and removed by default; use --keep-inactivity to opt
 };
 
 export function commandHelp(topic: readonly string[]): string {
-  if (topic.length === 0) return GLOBAL_HELP;
-  return HELP[topic[0]!] ?? GLOBAL_HELP;
+  if (topic.length === 0) return globalHelp();
+  return HELP[topic[0]!] ?? globalHelp();
 }
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
   if (command === "html") return ["catalog", "scaffold", "render"];
+  if (command === "style") return ["list", "show"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
   if (command === "operations") return ["list", "show"];

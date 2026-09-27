@@ -171,6 +171,7 @@ export * from "./operations.js"
 export * from "./portable-capability-manifest.js"
 export * from "./scene-gallery.js"
 export * from "./studio/index.js"
+export * from "./visual-style.js"
 export * from "./workflow.js"
 export type * from "./types.js"
 export type {

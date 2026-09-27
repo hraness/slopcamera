@@ -1,10 +1,10 @@
 # Prepare patent-style drawing sheets
 
 Use `diagram sheets` for local monochrome vector drawing sheets with physical
-page dimensions. These commands require current source; do not assume a
-previously published archive includes them. Confirm `slopcamera help diagram`
-lists the commands. If absent, follow [installation](install.md) for an explicit
-source build rather than inventing a flag on ordinary diagram rendering.
+page dimensions. The commands ship in Slopcamera v3.3.5 and later. Confirm
+`slopcamera help diagram` lists them. If they are absent, the installed CLI is
+older: follow [installation](install.md) to update it rather than inventing a
+flag on ordinary diagram rendering.
 
 ## Preserve the authored content
 

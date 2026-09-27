@@ -10,6 +10,7 @@ import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-h
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 import { interfaceExamples } from "./site-code-examples"
 import { renderExampleGallery, renderExampleHero } from "./example-gallery"
+import { isBlogDocument } from "./blog-registry"
 
 // Existing content producers run within the ordinary page's captured SSR
 // graph. They introduce no client renderer and retain their public APIs.
@@ -108,11 +109,29 @@ function renderCopyCommand(options: CopyCommandOptions): string {
   </div>`
 }
 
-export type SiteDocument = "index.html" | "404.html" | `docs/${string}.html`
+export type SiteDocument = "index.html" | "404.html" | `docs/${string}.html` | `blog/${string}.html`
+/** Pre-rendered /blog page strings produced by src/blog-content.ts in the
+ * build entrypoint from sealed inputs and pinned packages. */
+export type BlogPageContent = Readonly<{
+  title: string
+  description: string
+  canonical: string
+  markdown: string
+  robots: string
+  ogType: string
+  articleMeta: string
+  jsonLd: string
+  main: string
+}>
 export type SiteAssets = Readonly<{
   themePath: string
   analyticsPath: string | null
   docBodies?: Readonly<Record<string, string>>
+  blogPages?: Readonly<Record<string, BlogPageContent>>
+  /** The 404 page's enhancement script, loaded only there. */
+  statusPagePath?: string
+  /** The shared design-kit status page markup, rendered by the build entrypoint. */
+  statusPage?: string
 }>
 
 function renderDocsFooter(slug: string): string {
@@ -122,18 +141,40 @@ function renderDocsFooter(slug: string): string {
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {
   if (!/^\/assets\/theme-[a-f0-9]{12}\.js$/u.test(assets.themePath)
-    || (assets.analyticsPath !== null && !/^\/assets\/analytics-[a-f0-9]{12}\.js$/u.test(assets.analyticsPath))) {
+    || (assets.analyticsPath !== null && !/^\/assets\/analytics-[a-f0-9]{12}\.js$/u.test(assets.analyticsPath))
+    || (assets.statusPagePath !== undefined && !/^\/assets\/status-page-[a-f0-9]{12}\.js$/u.test(assets.statusPagePath))) {
     throw new Error("Site content requires exact local fingerprinted script paths")
   }
   const common: ReadonlyArray<readonly [string, string, number]> = [
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
     ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
       id: "slopcamera", name: "Slopcamera", updates: false,
-      valueProposition: "Support ongoing development of local visual tools for agents.",
+      valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
   ]
-  if (document === "404.html") return common
+  if (document === "404.html") {
+    if (assets.statusPage === undefined || assets.statusPagePath === undefined
+      || !assets.statusPage.startsWith('<div class="hraness-status-page"')) {
+      throw new Error("The 404 page requires the shared status page markup and script")
+    }
+    return [...common, ["{{STATUS_PAGE}}", assets.statusPage, 1], ["{{STATUS_PAGE_ASSET}}", assets.statusPagePath, 1]]
+  }
+  if (isBlogDocument(document)) {
+    const page = assets.blogPages?.[document]
+    if (page === undefined) throw new Error(`Blog page content missing for ${document}`)
+    return [...common,
+      ["{{BLOG_TITLE}}", escapeHtml(page.title), 3],
+      ["{{BLOG_DESCRIPTION}}", escapeHtml(page.description), 3],
+      ["{{BLOG_CANONICAL}}", page.canonical, 2],
+      ["{{BLOG_ROBOTS}}", page.robots, 1],
+      ["{{BLOG_MARKDOWN}}", page.markdown, 1],
+      ["{{BLOG_OG_TYPE}}", page.ogType, 1],
+      ["{{BLOG_ARTICLE_META}}", page.articleMeta, 1],
+      ["{{BLOG_JSONLD}}", page.jsonLd, 1],
+      ["{{BLOG_MAIN}}", page.main, 1],
+    ]
+  }
   const docsPage = docsPageForDocument(document)
   if (docsPage !== undefined) {
     const body = assets.docBodies?.[document]

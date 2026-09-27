@@ -48,13 +48,17 @@ response.
 ### Billing
 
 Hraness Credits, cost-plus operations. The API holds a bounded ceiling
-(`providerCostMicroUsd * 2 + 100_000`, covering take rates up to 200% plus
-buffer), settles with the reported upstream provider cost, and releases on
-failure. The ceiling and the reported cost are decoupled: reporting the
+(`ceil(worstCase * 5/4) * 3 + 100_000`, covering Credits' 5/4 uplift on
+estimated costs and take rates up to 200% plus a fixed offset), where the
+worst case is the model's cited largest high-quality image plus every prompt
+byte as a text input token. It settles with the cost priced from the returned
+token usage (basis `reported`), falling back to that worst case (basis
+`estimated`) without usage, and releases on failure with the provider cost
+when the failure came after the provider call. The ceiling and the reported cost are decoupled: reporting the
 ceiling as cost would flat-rate every call under cost-plus pricing. Margin
 lives inside Credits'
-pricing revision (take rate + fixed offset); the API only reports provider
-cost with basis `contractual` from a reviewed per-model price table. The
+pricing revision (take rate + fixed offset); the API reports provider cost
+from the cited per-model price table in `src/generation-pricing.ts`. The
 allowlist of admitted models is itself a spend bound. On `402` the response
 carries Credits' `topup.url` verbatim so the calling agent can hand a human
 a pay link. Device tokens are never stored: a hold attempt is the

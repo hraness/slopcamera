@@ -323,6 +323,17 @@ describe("ordered beauty post-processing", () => {
       expect(result.authoring.html).toContain(marker);
     }
     expect(result.authoring.html).toContain("frame.timeUs");
+    /* The final composite samples the last ping-pong buffer; it must return to
+     * the default framebuffer first or the draw feeds back on itself. */
+    const chain = result.authoring.html.indexOf("runPostChain(frame,index,track)");
+    const release = result.authoring.html.indexOf("setRenderTarget(null)", chain);
+    const composite = result.authoring.html.indexOf("postMesh.material=postOutputMaterial", chain);
+    expect(release).toBeGreaterThan(chain);
+    expect(release).toBeLessThan(composite);
+    /* The overlay compiles RawShaderMaterial as GLSL ES 1.00, which has no array
+     * constructors — bloom weights must arrive as a uniform array. */
+    expect(result.authoring.html).toContain("uniform float bloomW[5]");
+    expect(result.authoring.html).not.toContain("float[5](");
   });
 
   test("motion-blur activates the velocity pass with per-frame previous transforms", () => {
@@ -347,6 +358,9 @@ describe("ordered beauty post-processing", () => {
     expect(result.metadata.effects?.postProcess?.depthSource).toContain("beauty-depth-buffer");
     expect(result.authoring.html).toContain("depthTexture");
     expect(result.authoring.html).toContain("dofTaps");
+    /* GLSL ES 1.00 has no array constructors — the gather taps bind as a uniform. */
+    expect(result.authoring.html).toContain("uniform vec2 dofTaps[16]");
+    expect(result.authoring.html).not.toContain("vec2[16](");
   });
 
   test("lut-grade requires and binds an exact prepared strip LUT", () => {

@@ -1,7 +1,7 @@
 # Slopcamera web
 
 `slopcamera.com` is the static public site and documentation for Slopcamera. It
-presents the agent-directed visual studio, SDK, Bun CLI, and local media runtime without
+presents the agent-directed media studio, SDK, Bun CLI, and local media runtime without
 adding a server, account surface, API route, remote font, or browser credential path.
 Agents can read `/llms.txt` and request `Accept: text/markdown` on the homepage.
 Generation runs from the local Slopcamera SDK or CLI with the operator's Vercel AI

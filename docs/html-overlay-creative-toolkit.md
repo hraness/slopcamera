@@ -17,6 +17,11 @@ part of Slopcamera's executable allowlist.
 
 ## Choose a supported profile
 
+Choose visual direction independently from the rendering library. The
+[film and animation style guide](how-to/direct-visual-styles.md) covers historical
+footage, cel animation, mathematical explanation, pixel art, and other families
+with reusable profiles and original rendered studies.
+
 Choose the first profile whose primary job matches the work:
 
 1. Use `plain` for text, interface-like composition, semantic HTML, CSS, SVG,

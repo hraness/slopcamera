@@ -6,7 +6,7 @@ Slopcamera offers four local interfaces plus a hosted adapter for platforms. The
 | CLI | Humans and agents in a terminal | The complete local surface, with `--json` receipts on reads and mutations | Bun 1.3.14+; engines and FFmpeg as each job requires |
 | TypeScript SDK | Bun code you own | Typed imports from `@hraness/slopcamera`, `/code`, `/workflow`, and `local/*` | The package or a source checkout |
 | MCP server | An MCP-capable client | A fixed 17-tool subset inside one workspace root | The installed CLI |
-| Hosted tool adapter | Agent platforms without a local shell | Bounded REST and MCP endpoints over the same registry | Separate deployment; see the repository |
+| Hosted tool adapter | Agent platforms without a local shell | REST and MCP endpoints at `api.slopcamera.com` over the same tool registry | Nothing to install; paid image generation needs a Hraness Credits device token |
 
 ## Agent Skill
 
@@ -26,8 +26,8 @@ The SDK puts the same operations behind typed Bun imports. `@hraness/slopcamera`
 
 ## Hosted tool adapter
 
-The `apps/api` adapter in the repository serves the checked tool registry to agent platforms that cannot run a local shell, over per-request ephemeral workspaces with billed operations held and settled through Hraness Credits. It is a separate deployment with its own operator runbook, not part of the local install; the repository's `docs/hosted-api.md` describes it.
+The hosted API at `api.slopcamera.com` serves the same tool registry to agent platforms that cannot run a local shell, over REST and MCP. Each call runs in a temporary workspace. Validation, inspection, planning, and diagram rendering are free with rate limits; image generation bills prepaid Hraness Credits. The CLI uses the same service for `slopcamera ai image generate --hosted`, and routes there automatically when no Gateway credential is set and a Credits device token is stored or set in `SLOPCAMERA_CREDITS_TOKEN`. The repository's `docs/hosted-api.md` covers running the service.
 
 ## A short decision path
 
-Let a coding agent work through the Agent Skill and CLI by default. Reach for the SDK when the caller is a program, MCP when the caller is an MCP client that should not see the whole CLI, and the hosted adapter only when the caller cannot have a machine at all. Whichever you pick, generation credentials live in the invoking local environment and never cross into the browser or a project file.
+Let a coding agent work through the Agent Skill and CLI by default. Reach for the SDK when the caller is a program, MCP when the caller is an MCP client that should not see the whole CLI, and the hosted adapter only when the caller cannot have a machine at all. With the local interfaces, your Gateway credential comes from the invoking process environment and your Credits device token from local CLI state or the environment; neither enters the browser or a project file.

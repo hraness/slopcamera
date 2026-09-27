@@ -38,12 +38,13 @@ import { installSkill, type SkillScope, type SkillTarget } from "./skill-install
 import { pathExists } from "./fs.js"
 import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./drawing.js"
 import { SLOPCAMERA_VERSION } from "./version.js"
+import { createVisualStyleDirection, getVisualStyleProfile, VISUAL_STYLE_PROFILES } from "./visual-style.js"
 import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
-import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
+import { runProductSupportCommand, showProductSupportInvitation, slopcameraSupportAdvancedHelp, slopcameraSupportHelpLine, standaloneSupportEnvironment } from "./support.js"
 
 export const slopcameraCliVersion = SLOPCAMERA_VERSION
 
-const help = `slopcamera ${slopcameraCliVersion}
+const help = () => `slopcamera ${slopcameraCliVersion}
 
 Turn source material into deterministic diagrams, images, and canvas assets.
 
@@ -62,11 +63,12 @@ Usage:
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
+  slopcamera style list [--json]
+  slopcamera style show <id> [--json]
   slopcamera code search [query] [--limit <number>]
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
   slopcamera doctor
-  slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -106,9 +108,9 @@ into one labelled contact sheet plus a receipt. Use it to review texture,
 skybox, backdrop, sprite, or design alternatives, then promote a chosen
 candidate file explicitly — nothing is applied automatically.
 
-Optional support: after useful work, agents can read slopcamera support protocol --json.
-Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
-No feature requires payment. Imported CLI/SDK calls and probes stay quiet.
+${slopcameraSupportHelpLine()}
+
+Advanced verbs, including the support protocol, live under \`slopcamera help advanced\`.
 
 Code mode searches and executes a fixed semantic registry. Execute accepts
 typed JSON for one exact owned operation code; it never evaluates source text.
@@ -361,7 +363,7 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     surface === "vectorize" ||
     surface === "generate"
   ) {
-    throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help}`)
+    throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help()}`)
   }
   return args
 }
@@ -370,6 +372,31 @@ export async function main(
   args: readonly string[],
   dependencies: SlopcameraCliDependencies = {},
 ): Promise<void> {
+  if (args[0] === "style") {
+    const [action, ...words] = args.slice(1)
+    const json = words.at(-1) === "--json"
+    const positionals = json ? words.slice(0, -1) : words
+    const log = dependencies.log ?? console.log
+    if (action === "list" && positionals.length === 0) {
+      log(json
+        ? JSON.stringify({ schemaVersion: 1, styles: VISUAL_STYLE_PROFILES })
+        : ["Visual style foundations (authoring guidance; no effects are applied):",
+          ...VISUAL_STYLE_PROFILES.map(style => `${style.id}  ${style.name}\n  ${style.summary}`),
+          "Use slopcamera style show <id> for palette, cadence, materials, delivery, and review criteria."].join("\n"))
+      return
+    }
+    if (action === "show" && positionals.length === 1 && !positionals[0]!.startsWith("-")) {
+      let style
+      try {
+        style = getVisualStyleProfile(positionals[0])
+      } catch {
+        throw new Error(`Unknown visual style: ${JSON.stringify(positionals[0]!.slice(0, 128))}. Use slopcamera style list.`)
+      }
+      log(json ? JSON.stringify({ schemaVersion: 1, style }) : createVisualStyleDirection(style.id))
+      return
+    }
+    throw new Error("Use slopcamera style list [--json] or slopcamera style show <id> [--json].")
+  }
   if (args[0] === "diagram" && args[1] === "sheets") {
     await runDrawingSheets(args.slice(2), dependencies)
     return
@@ -380,8 +407,12 @@ export async function main(
     return
   }
   const [command, ...rest] = canonicalArguments(args)
-  if (command === undefined || command === "help" || command === "--help" || command === "-h") {
-    console.log(help)
+  if (command === undefined || command === "--help" || command === "-h") {
+    console.log(help())
+    return
+  }
+  if (command === "help") {
+    console.log(rest[0] === "advanced" ? slopcameraSupportAdvancedHelp() : help())
     return
   }
   if (command === "version" || command === "--version" || command === "-v") {
@@ -821,7 +852,7 @@ export async function main(
     throw new Error("Use slopcamera skill path or install")
   }
 
-  throw new Error(`Unknown command: ${command}\n\n${help}`)
+  throw new Error(`Unknown command: ${command}\n\n${help()}`)
 }
 
 if (import.meta.main) {

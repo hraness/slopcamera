@@ -130,7 +130,10 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("bun run test:package")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- dist bun.lock")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
-  expect(workflow).toContain("needs: [plan, boundary, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain("copy:\n    name: Slopcamera public copy")
+  expect(workflow).toContain("bun run check:copy --require-history")
+  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain('[[ "$COPY" == success ]]')
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
   expect(workflow).not.toContain(["projects", "slopcamera"].join("/"))
@@ -153,8 +156,12 @@ function requireCompleteSourceCoverage(workflow: string): void {
   }
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
+  // Reviewed 2026-09-24: the unconditional `copy` job (public copy against
+  // source, full history, required) was added; every prior job is unchanged.
+  // Reviewed 2026-09-27: the `menubar` job gained a cargo test step and a
+  // fixture lint step after its release build; every prior job is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "94466b67389290b76774aa2b7f7cf15013aedfbfb9a8eaeaefb8ea6769de0bb1") {
+  if (priorDigest !== "b323e4453ab06904d133e62f8839c849f5c138d0f437c617448fbe440ab2b1f0") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
@@ -164,7 +171,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   const root = JSON.parse(await readFile(join(import.meta.dir, "../package.json"), "utf8"))
   const site = JSON.parse(await readFile(join(import.meta.dir, "../apps/web/package.json"), "utf8"))
   expect(root.scripts.check.split(" && ")).toEqual([
-    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:sdk",
+    "bun run check:cost-surfaces", "bun run check:standalone", "bun run check:copy", "bun run check:sdk",
     "bun run check:desktop", "bun run check:api", "bun run check:web", "bun run check:standalone", "bun run test:package",
   ])
   expect(root.scripts["check:sdk"].split(" && ")).toEqual([
@@ -873,9 +880,9 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 530")
-  expect(publishJob).toContain("const maximumPackedBytes = 4_800_000")
-  expect(publishJob).toContain("const maximumUnpackedBytes = 14_000_000")
+  expect(publishJob).toContain("const maximumFiles = 550")
+  expect(publishJob).toContain("const maximumPackedBytes = 5_200_000")
+  expect(publishJob).toContain("const maximumUnpackedBytes = 15_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
   expect(publishJob).toContain("unpackedSize !== record.unpackedSize")
   expect(publishJob).toContain('"src/assets/fonts/nebula-sans/PROVENANCE.md"')
@@ -1104,13 +1111,13 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.3.6")
+  expect(manifest.version).toBe("3.6.0")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.3.6")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz")
+  expect(publishedRelease.version).toBe("3.6.0")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
@@ -1136,7 +1143,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")
-  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath })")
+  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath, statusPagePath })")
   for (const source of ["src/site-content.ts", "src/site-renderer.ts", "src/published-release.ts"]) {
     expect(siteProducer).toContain(`"${source}"`)
   }
@@ -1183,28 +1190,32 @@ test("both tar readers bound file count and content independently of USTAR frami
   const workflow = await readWorkflow("public-release.yml", "release.yml")
   const script = workflowStepScript(workflow, "Rebind attested package before OIDC")
   const packageRoot = join(import.meta.dir, "..")
-  const [identitySource, smoke] = await Promise.all([
+  const [identitySource, smoke, npmAuthority, canonicalRelease] = await Promise.all([
     readFile(join(import.meta.dir, "npm-package-identity.ts"), "utf8"),
     readFile(join(packageRoot, "scripts/package-smoke.ts"), "utf8"),
+    readFile(join(import.meta.dir, "npm-publish-authority.ts"), "utf8"),
+    readFile(join(import.meta.dir, "github-release.ts"), "utf8"),
   ])
-  expect(identitySource).toContain("const maximumEntries = 530;")
-  expect(identitySource).toContain("const maximumArchiveBytes = 4_800_000;")
-  expect(identitySource).toContain("const maximumContentBytes = 14_000_000;")
+  expect(identitySource).toContain("const maximumEntries = 550;")
+  expect(identitySource).toContain("const maximumArchiveBytes = 5_200_000;")
+  expect(identitySource).toContain("const maximumContentBytes = 15_000_000;")
   expect(identitySource).toContain("maximumContentBytes + maximumEntries * 1_024 + 1_024")
-  expect(smoke).toContain("const maximumPackedFiles = 530;")
-  expect(smoke).toContain("const maximumPackedBytes = 4_800_000;")
-  expect(smoke).toContain("const maximumUnpackedBytes = 14_000_000;")
-  expect(script).toContain("const maximumFiles = 530;")
+  expect(smoke).toContain("const maximumPackedFiles = 550;")
+  expect(smoke).toContain("const maximumPackedBytes = 5_200_000;")
+  expect(smoke).toContain("const maximumUnpackedBytes = 15_000_000;")
+  expect(npmAuthority).toContain("const maximumArchiveBytes = 5_200_000;")
+  expect(canonicalRelease).toContain('positive(archive.bytes, "Archive size") > 5_200_000')
+  expect(script).toContain("const maximumFiles = 550;")
   expect(script).toContain("maxOutputLength: maximumUnpackedBytes + maximumFiles * 1_024 + 1_024")
-  const maximumAlignedTarBytes = Math.floor((14_000_000 + 530 * 1_024 + 1_024) / 512) * 512
-  expect(maximumAlignedTarBytes).toBe(14_543_360)
+  const maximumAlignedTarBytes = Math.floor((15_000_000 + 550 * 1_024 + 1_024) / 512) * 512
+  expect(maximumAlignedTarBytes).toBe(15_563_776)
   const root = await mkdtemp(join(tmpdir(), "slopcamera-tar-budgets-"))
   try {
     for (const scenario of ["at-all-limits", "content-over", "count-over", "framing-over"] as const) {
       await rm(join(root, "slopcamera-release"), { recursive: true, force: true })
       const artifact = await writeReleaseArtifactFixture(root, undefined, {
-        entries: scenario === "count-over" ? 531 : 530,
-        contentBytes: scenario === "content-over" ? 14_000_001 : 14_000_000,
+        entries: scenario === "count-over" ? 551 : 550,
+        contentBytes: scenario === "content-over" ? 15_000_001 : 15_000_000,
         serializedBytes: maximumAlignedTarBytes + (scenario === "framing-over" ? 512 : 0),
       })
       // Advertise an in-budget inventory for the hostile archives. The actual
@@ -1214,10 +1225,10 @@ test("both tar readers bound file count and content independently of USTAR frami
         const removed = metadata[0]!.files.findIndex(file => file.path.startsWith("fixture-") && file.size === 0)
         if (removed < 0) throw new Error("Fixture has no empty extra file")
         metadata[0]!.files.splice(removed, 1)
-        metadata[0]!.entryCount = 530
+        metadata[0]!.entryCount = 550
       } else if (scenario === "content-over") {
         metadata[0]!.files.at(-1)!.size -= 1
-        metadata[0]!.unpackedSize = 14_000_000
+        metadata[0]!.unpackedSize = 15_000_000
       }
       const metadataBytes = JSON.stringify(metadata)
       await writeFile(artifact.metadata, metadataBytes)
@@ -1247,19 +1258,19 @@ test("package smoke rejects oversized tar framing before installing a package be
   try {
     const guard = join(work, "deny-processes.ts")
     await writeFile(guard, `for (const name of ["spawn", "spawnSync"]) Object.defineProperty(Bun, name, { value: () => { throw new Error("PACKAGE_SMOKE_INSTALL_REACHED"); } });\n`)
-    const maximumAlignedTarBytes = Math.floor((14_000_000 + 530 * 1_024 + 1_024) / 512) * 512
+    const maximumAlignedTarBytes = Math.floor((15_000_000 + 550 * 1_024 + 1_024) / 512) * 512
     for (const extraBlock of [0, 1]) {
       const entries: PackageFixtureEntry[] = [
         { path: "package.json", body: "{}\n", mode: 0o644 },
-        { path: "padding.txt", body: "x".repeat(13_997_056), mode: 0o644 },
+        { path: "padding.txt", body: "x".repeat(14_997_056), mode: 0o644 },
       ]
       const contents = packageFixtureTar(entries)
       const tar = Buffer.concat([contents, Buffer.alloc(maximumAlignedTarBytes + extraBlock * 512 - contents.length)])
-      expect(tar.length).toBe(extraBlock === 0 ? 14_543_360 : 14_543_872)
+      expect(tar.length).toBe(extraBlock === 0 ? 15_563_776 : 15_564_288)
       const archive = gzipSync(tar, { level: 9 })
       const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
-      expect(metadata[0]!.unpackedSize).toBeLessThan(14_000_000)
-      expect(archive.length).toBeLessThan(4_800_000)
+      expect(metadata[0]!.unpackedSize).toBeLessThan(15_000_000)
+      expect(archive.length).toBeLessThan(5_200_000)
       const directory = join(work, String(extraBlock))
       await mkdir(directory)
       const archivePath = join(directory, filename), metadataPath = join(directory, "npm-pack.json")

@@ -1,5 +1,7 @@
 Slopcamera generates images, video, speech, and batch transcripts through the caller's own Vercel AI Gateway access. The `slopcamera ai` commands discover support from the live catalog rather than a checked-in model list, so the set of available models is whatever your Gateway account exposes at invocation time. Generation can incur provider charges on your account.
 
+Prompt-only images can instead run on the hosted API at `api.slopcamera.com` and bill prepaid Hraness Credits rather than your Gateway account. [Generate images, video, and narration](/docs/how-to/generate-media) covers the `slopcamera credits` commands and the `--hosted` flag.
+
 ## Credentials
 
 A request reads `AI_GATEWAY_API_KEY` first, falling back to `VERCEL_OIDC_TOKEN`, from the local process environment. The credential is sent only to the fixed Gateway origin over HTTPS and is never persisted, printed, placed on argv, or written into projects or receipts. A direct key needs no Vercel CLI; with a linked Vercel project, `vercel env run -- <command>` injects it for one invocation.

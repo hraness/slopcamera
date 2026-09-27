@@ -3,6 +3,7 @@ import { isAbsolute } from "node:path"
 import type { Browser, Page, Request, WebSocketRoute } from "playwright-core"
 import { bounded } from "./preview-browser-contract"
 import { normalizeInstallTransport } from "./site-install-dom"
+import { installReleaseCopyFocusGuard } from "./site-release-copy-focus"
 
 export const siteShellDeadlineMs = 720_000
 export const siteShellBaselineRevision = "f417770111f55f3f3eb13fbae7b6a030c33a445d"
@@ -1224,8 +1225,10 @@ export function assertFooterKeyboardCoverage(focus: readonly ShellElement[], pro
 }
 export async function checkShellCase(browser: Browser, payload: ShellPayload, scenario: ShellCase,
   source: "current" | "baseline", negative: boolean,
-  observeCurrentDesign?: (page: Page, positions?: ShellCurrentDesignPositions) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1" | "workflow-examples-v1"): Promise<ShellEvidence> {
+  observeCurrentDesign?: (page: Page, positions?: ShellCurrentDesignPositions) => Promise<void>, domProfile?: "marketing-refinement-v1" | "optional-support-v1" | "workflow-examples-v1",
+  tabSettlement?: "release-copy-v1"): Promise<ShellEvidence> {
   assert.ok(domProfile === undefined || domProfile === "marketing-refinement-v1" || domProfile === "optional-support-v1" || domProfile === "workflow-examples-v1", "Unknown ordinary DOM profile")
+  assert.ok(tabSettlement === undefined || tabSettlement === "release-copy-v1" && domProfile === "workflow-examples-v1", "Unknown native Tab settlement profile")
   const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height },
     deviceScaleFactor: scenario.reflowEquivalent ? 2 : 1, colorScheme: scenario.system, forcedColors: scenario.forced,
     hasTouch: scenario.coarse, bypassCSP: false, serviceWorkers: "block", reducedMotion: "reduce" })
@@ -1412,13 +1415,26 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
     const tabLimit = total + 2 + nativeMedia * 12
     let wrapped = false
     const seen = new Set<string>()
+    const focusGuard = tabSettlement === "release-copy-v1" ? await page.evaluateHandle(installReleaseCopyFocusGuard) : undefined
+    await withShellCaseCleanup(async () => {
     for (let tab = 0; tab <= tabLimit; tab++) {
+      if (focusGuard) await focusGuard.evaluate(guard => guard.prepare())
       await page.keyboard.press("Tab")
+      let key: string | null
+      if (focusGuard) {
+        key = await focusGuard.evaluate(guard => guard.read())
+        if (key !== null) {
+          // Every named stop, including skip and duplicates, keeps the complete
+          // existing settlement. Count it only after its key and node agree.
+          await settleCase()
+          key = await focusGuard.evaluate(guard => guard.settled())
+        }
+      } else {
       // Match the appearance-menu path: observe native focus after style/paint
       // settlement, never the pre-paint outline of the previously focused node.
       // Both current and baseline pages retain the same strict comparisons.
       await settleCase()
-      const key = await page.evaluate(() => {
+      key = await page.evaluate(() => {
         const active = document.activeElement
         if (!(active instanceof HTMLElement)) return null
         if (active.matches(".skip-link")) return "skip"
@@ -1427,6 +1443,7 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
         for (const selector of selectors) if (active.matches(selector)) return `${selector}|${[...document.querySelectorAll(selector)].indexOf(active)}`
         return null
       })
+      }
       if (key === "skip" && seen.size > 0) { wrapped = true; break }
       if (key === null || key === "skip" || seen.has(key)) continue
       seen.add(key)
@@ -1454,6 +1471,10 @@ export async function checkShellCase(browser: Browser, payload: ShellPayload, sc
         focusPositions.push(position)
       }
     }
+    if (focusGuard) await focusGuard.evaluate(guard => guard.finish())
+    }, async () => {
+      if (focusGuard) await withShellCaseCleanup(() => focusGuard.evaluate(guard => guard.dispose()), () => focusGuard.dispose())
+    })
     if (domProfile === "workflow-examples-v1") assert.equal(wrapped, true, "Native Tab loop did not return to the skip target")
     assert.equal(focus.filter(item => item.key.startsWith(".topbar a[")).length,
       nav.filter(item => item.styles.display !== "none").length + 1, "Header keyboard coverage incomplete")

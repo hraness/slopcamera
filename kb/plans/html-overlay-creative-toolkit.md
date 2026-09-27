@@ -208,7 +208,7 @@ in `scaffolds.ts`, and executable provenance remains in `libraries.ts`.
 ### Delivery policy
 
 Use Bun 1.3.14. Narrow deterministic tests may run directly. The real browser suite
-runs through `/Users/bg/.bun/bin/hra-host-run` on the `browser-auth` lane. The
+runs through `/Users/bg/.bun/bin/host-run` on the `browser-auth` lane. The
 repository aggregate gate `bun run check` runs through the same scheduler in
 exclusive compute mode after convergence. Delivery uses a current-head pull request,
 the repository's Required CI join, serialized merge, and production readback.

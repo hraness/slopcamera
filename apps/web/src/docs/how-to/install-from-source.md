@@ -35,7 +35,7 @@ cargo build --release --manifest-path desktop/menubar/Cargo.toml
 slopcamera menubar
 ```
 
-The companion is an unbundled status item. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
+The companion is an unbundled status item that shows what Slopcamera is rendering, your last known credits balance and your newest outputs. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
 
 ## Define the slopcamera command
 

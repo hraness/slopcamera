@@ -9,9 +9,9 @@ import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera (formerly Atet) is a local visual studio for coding agents. Author scenes, combine generated and recorded media, and export images, diagrams, animation, and video from retained sources."
+const definition = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 
-describe("visual studio public copy (pure, process-free)", () => {
+describe("media studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
     const [readme, guide, html] = await Promise.all([
       read("README.md"), read("docs/how-to/use-current-source.md"), read("apps/web/src/index.html"),
@@ -23,12 +23,12 @@ describe("visual studio public copy (pure, process-free)", () => {
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
     expect(readme).toContain("Historical Atet release evidence")
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.3.6/hraness-slopcamera-3.3.6.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')
     expect(homeMarkdown).toContain(archiveInstall.skillCommand)
-    expect(llmsTxt).toContain("Spatial rendering needs the admitted local browser runtime and the GPU support required by its selected profile")
+    expect(llmsTxt).toContain("Spatial rendering needs a local Chrome or Chromium runtime and the GPU support required by its selected profile")
     expect(llmsTxt).toContain("Native studio engines need separately installed executables or Python environments")
     expect(llmsTxt).not.toContain("camera-track export require the current source build")
     expect(llmsTxt).toContain("scene design catalog|init|inspect|set|compile|gallery")
@@ -115,7 +115,7 @@ describe("visual studio public copy (pure, process-free)", () => {
     expect(readme).toContain("Seven editable")
     expect(llmsTxt).toContain("GPU support required by its selected profile")
     expect(llmsTxt).toContain("`scene camera-track` export")
-    expect(llmsTxt).toContain("fixed set of 17 tools and six portable operation codes")
+    expect(llmsTxt).toContain("fixed set of 17 tools and six operation codes")
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {

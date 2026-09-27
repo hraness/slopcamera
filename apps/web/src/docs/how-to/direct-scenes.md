@@ -1,6 +1,6 @@
 A spatial scene is an editable JSON document: named entities, calibrated cameras, asset manifests, and animation channels rendered through the local Three.js renderer. You inspect stable entity IDs, apply typed patches to retained source, and read receipts that name the exact source, request, runtime, and output behind every frame.
 
-`slopcamera scene` rendering and patching, scene audits, character/performance authoring, cinematic direction, effects, and galleries ship in v3.3.1. Install the [verified release](/docs/reference/capabilities#install-the-release) or use [source](/docs/how-to/install-from-source); the capability reference identifies later renderer corrections separately. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
+`slopcamera scene` rendering and patching, scene audits, character/performance authoring, cinematic direction, effects, and galleries ship in v3.3.1 and later releases. Install the [verified release](/docs/reference/capabilities#install-the-release) or use [source](/docs/how-to/install-from-source); the capability reference names the release that added the later renderer corrections. Source inspection and patching run under Bun; rendering also needs the admitted local Chrome runtime, and video encoding needs FFmpeg and FFprobe. Check `slopcamera help scene` and `{{DOCTOR_COMMAND}}` for this machine's contract.
 
 ## Create and inspect a scene
 
@@ -97,6 +97,36 @@ A fixed camera holds the scene composition while the embedded editorial film con
 ::example[camera-handheld]
 
 Small seeded camera movements add a restrained handheld drift to the fixed composition. The media panels stay framed while the foreground fin shifts slightly against them.
+
+## Dress a whole premiere wall
+
+::example[premiere-scene]
+
+This eight-second take builds an entire cinema wall as one scene: the Island Pulse film plays on the main screen, the Interference Field poster hangs as a mounted print, and an editable `.diagram.json` board stands beside a brass calibration cube. A rail camera eases along the wall while a foreground column crosses the frame for parallax.
+
+Author and render it from a source checkout:
+
+```sh
+bun examples/showcase/spatial/author-premiere.ts
+slopcamera scene render artifacts/showcase/spatial/premiere/premiere.scene.json --request artifacts/showcase/spatial/premiere/premiere.request.json --json
+```
+
+The script binds the two published films by exact sha256, derives the bounded screen and print media, authors the scene with an audited rail rig, and emits the render request. The published MP4 is a silent delivery encode of the retained lossless MOV.
+
+## Light an emissive corridor
+
+::example[compute-temple]
+
+A dolly glides down a dark compute aisle: rows of racks carry emissive status strips, ceiling panels wash the hall in cold light, and a bright portal holds the end of the frame. Tone mapping, bloom, and a vignette finish the shot as declared post-process steps — no imported geometry, just typed entities, lights, and a rig.
+
+Author and render it from a source checkout:
+
+```sh
+bun examples/showcase/spatial/author-temple.ts
+slopcamera scene render artifacts/showcase/spatial/temple/temple.scene.json --request artifacts/showcase/spatial/temple/temple.cinematic.request.json --json
+```
+
+The script emits one entity per rack and status strip, compiles a smootherstep rail rig aimed at the portal, and plans the four-step post stack as a hash-bound effects document. Grain is deliberately absent: per-frame noise defeats the lossless encoder's byte budget, so the grade leans on bloom and tone mapping instead.
 
 ## Render on the GPU
 

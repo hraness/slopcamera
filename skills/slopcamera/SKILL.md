@@ -1,11 +1,19 @@
 ---
 name: slopcamera
-description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
+description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
 ---
 
 # Create visual media with Slopcamera
 
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
+
+For creative film and animation, choose coherent art direction before rendering.
+Use [visual style direction](references/visual-style-direction.md) for historical
+footage, animation families, resolution, and visual review. Default to native 4K
+for an unspecified creative master when the renderer and source support it;
+preserve deliberate pixel grids, period aspect ratios, source limits, and the
+user's explicit settings. Treat quality as staging,
+materials, movement, and finishing together.
 
 ## Establish the host
 
@@ -17,14 +25,16 @@ Slopcamera installs from its verified release archive or from source. Historical
 
 | Requested result | Read |
 | --- | --- |
+| Historical film, cel animation, pixel art, classic animation styles, or a demo portfolio | [Visual style direction](references/visual-style-direction.md) |
 | Editable diagram, flowchart or visual explanation | [Diagrams](references/diagrams.md) and [visual communication](references/visual-communication.md) |
-| Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md); requires current source |
+| Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md) |
 | Custom diagram themes, fonts or icon packages | [Customization](references/customization.md) |
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
-| Record, clean up, caption, frame or deliver video | [Video projects](references/video-projects.md) |
+| Clean up, caption, frame, or deliver existing recordings and footage | [Video projects](references/video-projects.md) |
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
 | Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
+| Product mark, marketing illustration or topic icon | [Brand illustrations](references/brand-illustrations.md) |
 | Compose an editorial or social banner from generated layers, local type and diagrams | [Social collage banners](references/social-collage-banners.md) |
 | Review alternative textures, skyboxes, backdrops, design candidates or whole-scene variants | [Image galleries](references/image-galleries.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |

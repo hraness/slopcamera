@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { ApiConfig } from "./config.js"
+import { CreditsClient } from "./credits.js"
 import { createApiHandler } from "./handler.js"
+import { holdCeilingMicroUsd } from "./tools.js"
+
+const WEBP = Uint8Array.from([
+  0x52, 0x49, 0x46, 0x46, 0x08, 0x00, 0x00, 0x00,
+  0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58,
+])
 
 const DIAGRAM = await readFile(
   join(import.meta.dir, "../../../examples/semantic-flow.diagram.json"),
@@ -15,7 +22,7 @@ function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     r2Proxy: undefined,
     r2: undefined,
     credits: undefined,
-    modelCostsMicroUsd: {},
+    paidModels: [],
     artifactTtlDays: 7,
     freeCallsPerHour: 120,
     renderCallsPerHour: 30,
@@ -69,10 +76,7 @@ describe("api handler", () => {
 
     const modelsHandler = createApiHandler({
       config: testConfig({
-        modelCostsMicroUsd: {
-          "openai/gpt-image-1": 40_000,
-          "black-forest-labs/flux-schnell": 3_000,
-        },
+        paidModels: ["openai/gpt-image-1", "openai/gpt-image-1-mini"],
       }),
       env: {},
     })
@@ -80,7 +84,7 @@ describe("api handler", () => {
       await modelsHandler(new Request("http://localhost:8787/v1/models"))
     ).json()) as { models: string[] }
     expect(models).toEqual({
-      models: ["black-forest-labs/flux-schnell", "openai/gpt-image-1"],
+      models: ["openai/gpt-image-1", "openai/gpt-image-1-mini"],
     })
 
     const spec = (await (
@@ -170,7 +174,8 @@ describe("api handler", () => {
     const handler = createApiHandler({
       config: testConfig({
         credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
-        modelCostsMicroUsd: { "openai/gpt-image-1": 40_000 },
+        r2Proxy: { url: "https://objects.invalid", secret: "s".repeat(32) },
+        paidModels: ["openai/gpt-image-1"],
       }),
       env: {},
     })
@@ -218,7 +223,8 @@ describe("api handler", () => {
     const handler = createApiHandler({
       config: testConfig({
         credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
-        modelCostsMicroUsd: { "openai/gpt-image-1": 40_000 },
+        r2Proxy: { url: "https://objects.invalid", secret: "s".repeat(32) },
+        paidModels: ["openai/gpt-image-1"],
       }),
       env: {},
       fetchImpl,
@@ -248,12 +254,299 @@ describe("api handler", () => {
     expect(paths).toContain("/v1/holds")
     expect(paths).toContain("/v1/holds/hold_1/release")
     expect(paths).not.toContain("/v1/holds/hold_1/settle")
+    // No provider call happened, so the release reports no cost.
+    expect(calls.find((call) => call.path.endsWith("/release"))?.body).toBe("{}")
     const holdBody = JSON.parse(calls[0]?.body ?? "{}") as {
       idempotencyKey?: string
       subjectToken?: string
     }
     expect(holdBody.idempotencyKey).toBe("slopcamera-api:test-idem-1")
     expect(holdBody.subjectToken).toBe("cr_dev_test")
+  })
+
+  test("holds the cited worst case and settles with the reported usage cost", async () => {
+    const calls: Array<{ path: string; body: string }> = []
+    const fetchImpl = (async (input: unknown, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ path: new URL(url).pathname, body: String(init?.body ?? "") })
+      if (url.endsWith("/v1/holds")) {
+        return Response.json({ holdId: "hold_2", ceilingMicroUsd: 1 }, { status: 201 })
+      }
+      return Response.json({ holdId: "hold_2", state: "settled", chargedMicroUsd: 1 })
+    }) as typeof fetch
+    const stored: string[] = []
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      stored.push(`${init?.method ?? "GET"} ${new URL(String(input)).hostname}`)
+      return new Response(null, { status: 200 })
+    }) as typeof fetch
+    try {
+      const handler = createApiHandler({
+        config: testConfig({
+          credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
+          r2Proxy: { url: "https://objects.invalid", secret: "s".repeat(32) },
+          paidModels: ["openai/gpt-image-1"],
+        }),
+        env: { AI_GATEWAY_API_KEY: "gateway-test-key-0001" },
+        fetchImpl,
+        gateway: {
+          loadRuntime: async () => ({
+            createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+            generateImage: async () => ({
+              images: [{ mediaType: "image/webp", uint8Array: WEBP }],
+              usage: { inputTokens: 20, outputTokens: 4_160 },
+            }),
+          }),
+        },
+      })
+      const prompt = "a quiet harbour"
+      const response = await handler(
+        post(
+          "/v1/tools/execute_slopcamera/call",
+          {
+            arguments: {
+              operation: "slopcamera.image.generate",
+              input: { model: "openai/gpt-image-1", prompt, outputPath: "o.webp" },
+            },
+          },
+          { authorization: "Bearer cr_dev_test" },
+        ),
+      )
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as { ok: boolean }).ok).toBe(true)
+      expect(stored.every((entry) => entry.endsWith("objects.invalid"))).toBe(true)
+
+      const hold = JSON.parse(calls[0]?.body ?? "{}") as { ceilingMicroUsd: number }
+      const worst = 250_000 + Math.ceil(((prompt.length + 64) * 5_000_000) / 1_000_000)
+      expect(hold.ceilingMicroUsd).toBe(holdCeilingMicroUsd(worst))
+      expect(hold.ceilingMicroUsd).toBeGreaterThanOrEqual(worst * 3 + 100_000)
+
+      const settle = calls.find((call) => call.path === "/v1/holds/hold_2/settle")
+      expect(JSON.parse(settle?.body ?? "{}")).toEqual({
+        costs: [
+          {
+            provider: "vercel-ai-gateway",
+            operation: "openai/gpt-image-1 image output",
+            microUsd: 166_400,
+            basis: "reported",
+          },
+          {
+            provider: "vercel-ai-gateway",
+            operation: "openai/gpt-image-1 text input",
+            microUsd: 100,
+            basis: "reported",
+          },
+        ],
+      })
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  function billingFetch(calls: Array<{ path: string; body: string }>, holdId: string) {
+    return (async (input: unknown, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ path: new URL(url).pathname, body: String(init?.body ?? "") })
+      if (url.endsWith("/v1/holds")) {
+        return Response.json({ holdId, ceilingMicroUsd: 1 }, { status: 201 })
+      }
+      return Response.json({}, { status: 200 })
+    }) as typeof fetch
+  }
+
+  const miniReported = [
+    {
+      provider: "vercel-ai-gateway",
+      operation: "openai/gpt-image-1-mini image output",
+      microUsd: 8_448,
+      basis: "reported",
+    },
+    {
+      provider: "vercel-ai-gateway",
+      operation: "openai/gpt-image-1-mini text input",
+      microUsd: 18,
+      basis: "reported",
+    },
+  ]
+
+  function paidHandler(
+    calls: Array<{ path: string; body: string }>,
+    holdId: string,
+    options: { storage: boolean; bytes?: Uint8Array },
+  ) {
+    return createApiHandler({
+      config: testConfig({
+        credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
+        ...(options.storage
+          ? { r2Proxy: { url: "https://objects.invalid", secret: "s".repeat(32) } }
+          : {}),
+        paidModels: ["openai/gpt-image-1-mini"],
+      }),
+      env: { AI_GATEWAY_API_KEY: "gateway-test-key-0001" },
+      fetchImpl: billingFetch(calls, holdId),
+      gateway: {
+        loadRuntime: async () => ({
+          createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+          generateImage: async () => ({
+            images: [{ mediaType: "image/webp", uint8Array: options.bytes ?? WEBP }],
+            usage: { inputTokens: 9, outputTokens: 1_056 },
+          }),
+        }),
+      },
+    })
+  }
+
+  const miniCall = (files?: unknown) =>
+    post(
+      "/v1/tools/execute_slopcamera/call",
+      {
+        arguments: {
+          operation: "slopcamera.image.generate",
+          input: { model: "openai/gpt-image-1-mini", prompt: "x", outputPath: "o.webp" },
+        },
+        ...(files === undefined ? {} : { files }),
+      },
+      { authorization: "Bearer cr_dev_test" },
+    )
+
+  test("refuses a paid call before any hold when storage is missing", async () => {
+    const calls: Array<{ path: string; body: string }> = []
+    const response = await paidHandler(calls, "hold_3", { storage: false })(miniCall())
+    expect(response.status).toBe(503)
+    expect(calls).toEqual([])
+  })
+
+  test("releases with the provider cost when storing the artifact fails", async () => {
+    const calls: Array<{ path: string; body: string }> = []
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response(null, { status: 500 })) as unknown as typeof fetch
+    try {
+      const response = await paidHandler(calls, "hold_4", { storage: true })(miniCall())
+      expect(response.status).toBeGreaterThanOrEqual(500)
+    } finally {
+      globalThis.fetch = realFetch
+    }
+    const paths = calls.map((call) => call.path)
+    expect(paths).not.toContain("/v1/holds/hold_4/settle")
+    const release = calls.find((call) => call.path === "/v1/holds/hold_4/release")
+    expect(JSON.parse(release?.body ?? "{}")).toEqual({ costs: miniReported })
+  })
+
+  test("releases with the provider cost when the returned image is unusable", async () => {
+    const calls: Array<{ path: string; body: string }> = []
+    const response = await paidHandler(calls, "hold_5", {
+      storage: true,
+      bytes: Uint8Array.of(1, 2, 3),
+    })(miniCall())
+    expect(((await response.json()) as { ok: boolean }).ok).toBe(false)
+    const paths = calls.map((call) => call.path)
+    expect(paths).not.toContain("/v1/holds/hold_5/settle")
+    const release = calls.find((call) => call.path === "/v1/holds/hold_5/release")
+    expect(JSON.parse(release?.body ?? "{}")).toEqual({ costs: miniReported })
+  })
+
+  test("releases the hold at once when the file map is rejected", async () => {
+    const calls: Array<{ path: string; body: string }> = []
+    const response = await paidHandler(calls, "hold_6", { storage: true })(
+      miniCall({ "../escape.txt": { text: "x" } }),
+    )
+    expect(response.status).toBe(400)
+    expect(calls.map((call) => call.path)).toEqual([
+      "/v1/holds",
+      "/v1/holds/hold_6/release",
+    ])
+    expect(JSON.parse(calls[1]?.body ?? "")).toEqual({})
+  })
+
+  test("the hold ceiling covers every cost-plus price Credits accepts", () => {
+    // Credits prices Σcost × (1 + take) + offset, rounded up to its step, and
+    // accepts a take of at most 2. The ceiling must never cap that price for
+    // any cost up to the worst case, even with the settle fallback's 5/4.
+    for (const worst of [0, 1, 35_000, 52_123, 200_001, 250_789, 999_999]) {
+      for (const take of [0, 0.5, 1.34, 2]) {
+        for (const [offset, step] of [[0, 1], [2_000, 10_000], [50_000, 50_000]] as const) {
+          const cost = Math.ceil((worst * 5) / 4)
+          const price = Math.ceil((cost * (1 + take) + offset) / step) * step
+          expect(price).toBeLessThanOrEqual(holdCeilingMicroUsd(worst))
+        }
+      }
+    }
+  })
+
+  test("admits only configured models that have a cited price", async () => {
+    const { readApiConfig } = await import("./config.js")
+    const config = readApiConfig({
+      SLOPCAMERA_API_PAID_MODELS: "openai/gpt-image-1.5, vendor/unpriced",
+      SLOPCAMERA_API_MODEL_COSTS_JSON: JSON.stringify({
+        "openai/gpt-image-1": 40_000,
+        "black-forest-labs/flux-schnell": 3_000,
+      }),
+    })
+    expect(config.paidModels).toEqual(["openai/gpt-image-1", "openai/gpt-image-1.5"])
+  })
+
+  test("refuses a reused idempotency key before running the paid tool", async () => {
+    const calls: string[] = []
+    const fetchImpl = (async (input: unknown) => {
+      const url = String(input)
+      calls.push(new URL(url).pathname)
+      if (url.endsWith("/v1/holds")) {
+        return Response.json({ error: "conflict", state: "settled" }, { status: 409 })
+      }
+      return Response.json({}, { status: 200 })
+    }) as typeof fetch
+    const handler = createApiHandler({
+      config: testConfig({
+        credits: { baseUrl: "https://credits.invalid", productKey: "cr_prod_x" },
+        r2Proxy: { url: "https://objects.invalid", secret: "s".repeat(32) },
+        paidModels: ["openai/gpt-image-1"],
+      }),
+      env: {},
+      fetchImpl,
+    })
+    const response = await handler(
+      post(
+        "/v1/tools/execute_slopcamera/call",
+        {
+          arguments: {
+            operation: "slopcamera.image.generate",
+            input: { model: "openai/gpt-image-1", prompt: "x", outputPath: "o.png" },
+          },
+          idempotencyKey: "already-settled",
+        },
+        { authorization: "Bearer cr_dev_test" },
+      ),
+    )
+    expect(response.status).toBe(409)
+    expect(((await response.json()) as { error?: string }).error).toBe("idempotency_key_reused")
+    expect(calls).toEqual(["/v1/holds"])
+  })
+
+  test("treats a settle that did not settle as a billing failure", async () => {
+    const credits = new CreditsClient({
+      baseUrl: "https://credits.invalid",
+      productKey: "cr_prod_x",
+      fetchImpl: (async () =>
+        Response.json(
+          { holdId: "hold_1", state: "expired", chargedMicroUsd: 0 },
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    })
+    await expect(
+      credits.settle("hold_1", [
+        { provider: "vercel-ai-gateway", operation: "image_generate", microUsd: 40_000, basis: "contractual" },
+      ]),
+    ).rejects.toMatchObject({ code: "billing_unavailable", status: 503 })
+    const settledClient = new CreditsClient({
+      baseUrl: "https://credits.invalid",
+      productKey: "cr_prod_x",
+      fetchImpl: (async () =>
+        Response.json(
+          { holdId: "hold_1", state: "settled", chargedMicroUsd: 90_000 },
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    })
+    await settledClient.settle("hold_1", [])
   })
 
   test("uploads and artifacts require configured storage", async () => {

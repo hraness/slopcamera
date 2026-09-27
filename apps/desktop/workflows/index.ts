@@ -48,6 +48,7 @@ function catalogEntry<Input, Output extends WorkflowOutputValue>(
   });
 }
 
+/** Public copy cites this count; `scripts/check-copy.ts` fails on drift. */
 export const BUILT_IN_WORKFLOWS: readonly BuiltInWorkflow[] = Object.freeze([
   catalogEntry(directedScene, {
     description: "Render a prepared immutable spatial scene composition with exact frame timing and retained project audio.",

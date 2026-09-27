@@ -1,0 +1,78 @@
+{
+  "appId": "slopcamera",
+  "items": [
+    {
+      "kind": "header",
+      "label": "Slopcamera"
+    },
+    {
+      "detail": "Rendering a recording · A render tool stopped with an error",
+      "kind": "status",
+      "label": "Last job didn't finish",
+      "symbol": "status.attention"
+    },
+    {
+      "kind": "separator"
+    },
+    {
+      "alternate": {
+        "id": "outputs.reveal.file1",
+        "label": "Show in Finder",
+        "symbol": "action.folder"
+      },
+      "badge": "MP4",
+      "id": "outputs.open.file1",
+      "kind": "action",
+      "label": "take 0",
+      "subtitle": "4 KB · today",
+      "symbol": "item.file"
+    },
+    {
+      "id": "outputs.folder",
+      "kind": "action",
+      "label": "Open outputs folder",
+      "opens": "finder",
+      "role": "primary",
+      "shortcut": "CmdOrCtrl+O",
+      "symbol": "action.folder"
+    },
+    {
+      "kind": "separator"
+    },
+    {
+      "id": "login",
+      "kind": "action",
+      "label": "Open at login",
+      "state": "on"
+    },
+    {
+      "kind": "separator"
+    },
+    {
+      "alternate": {
+        "id": "support.diagnostics",
+        "label": "Copy diagnostics",
+        "symbol": "action.copy"
+      },
+      "id": "support",
+      "kind": "action",
+      "label": "Updates & support",
+      "opens": "browser",
+      "symbol": "action.support"
+    },
+    {
+      "kind": "quit",
+      "label": "Quit Slopcamera"
+    }
+  ],
+  "mark": {
+    "letters": "Sc",
+    "symbol": "mark.camera",
+    "tone": "attention"
+  },
+  "name": "Slopcamera",
+  "revision": 1,
+  "tooltip": "Slopcamera · Last job didn't finish",
+  "type": "snapshot",
+  "version": 2
+}

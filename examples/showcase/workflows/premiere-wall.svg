@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
   <defs>
     <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1a1d26"/>
-      <stop offset="0.62" stop-color="#14161d"/>
-      <stop offset="1" stop-color="#101218"/>
+      <stop offset="0" stop-color="#262b38"/>
+      <stop offset="0.62" stop-color="#1d212b"/>
+      <stop offset="1" stop-color="#161a22"/>
     </linearGradient>
     <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#181a21"/>
-      <stop offset="1" stop-color="#0a0b0f"/>
+      <stop offset="0" stop-color="#242832"/>
+      <stop offset="1" stop-color="#14161c"/>
     </linearGradient>
     <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2b2f3a"/>
-      <stop offset="0.5" stop-color="#1d2029"/>
-      <stop offset="1" stop-color="#171a21"/>
+      <stop offset="0" stop-color="#3d4354"/>
+      <stop offset="0.5" stop-color="#2c303d"/>
+      <stop offset="1" stop-color="#232733"/>
     </linearGradient>
     <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#8a5a28"/>
@@ -20,23 +20,23 @@
       <stop offset="1" stop-color="#8a5a28"/>
     </linearGradient>
     <radialGradient id="screenGlow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#7fa0ff" stop-opacity="0.16"/>
+      <stop offset="0" stop-color="#8fb0ff" stop-opacity="0.26"/>
       <stop offset="1" stop-color="#7fa0ff" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="warmSpill" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#d49a54" stop-opacity="0.13"/>
+      <stop offset="0" stop-color="#e0aa60" stop-opacity="0.22"/>
       <stop offset="1" stop-color="#d49a54" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#33291c"/>
-      <stop offset="1" stop-color="#241d14"/>
+      <stop offset="0" stop-color="#4a3d28"/>
+      <stop offset="1" stop-color="#352b1c"/>
     </linearGradient>
   </defs>
 
   <!-- wall and floor -->
   <rect width="1280" height="560" fill="url(#wall)"/>
   <rect y="560" width="1280" height="160" fill="url(#floor)"/>
-  <rect y="556" width="1280" height="5" fill="#0b0c10"/>
+  <rect y="556" width="1280" height="5" fill="#14161c"/>
   <rect y="556" width="1280" height="1.6" fill="url(#brass)" opacity="0.55"/>
 
   <!-- warm projector cone -->
@@ -49,20 +49,20 @@
 
   <!-- main screen bezel and cavity: overlay screen area (84,120)-(756,498) 672x378 -->
   <rect x="64" y="100" width="712" height="420" rx="14" fill="url(#bezel)"/>
-  <rect x="64" y="100" width="712" height="420" rx="14" fill="none" stroke="#3a3f4d" stroke-width="1.5"/>
-  <rect x="80" y="116" width="680" height="386" rx="6" fill="#07080b"/>
+  <rect x="64" y="100" width="712" height="420" rx="14" fill="none" stroke="#4d5468" stroke-width="1.5"/>
+  <rect x="80" y="116" width="680" height="386" rx="6" fill="#0a0c10"/>
 
   <!-- side print bezel and cavity: print area (826,124)-(1116,286) 290x163 approx 16:9 -->
   <rect x="812" y="112" width="318" height="186" rx="8" fill="url(#bezel)"/>
-  <rect x="812" y="112" width="318" height="186" rx="8" fill="none" stroke="#3a3f4d" stroke-width="1.2"/>
-  <rect x="826" y="124" width="290" height="163" rx="3" fill="#07080b"/>
+  <rect x="812" y="112" width="318" height="186" rx="8" fill="none" stroke="#4d5468" stroke-width="1.2"/>
+  <rect x="826" y="124" width="290" height="163" rx="3" fill="#0a0c10"/>
 
   <!-- diagram easel: board (824,318)-(1124,664), stand to floor -->
-  <rect x="930" y="664" width="14" height="52" fill="#171a21"/>
-  <rect x="880" y="712" width="120" height="8" rx="4" fill="#171a21"/>
+  <rect x="930" y="664" width="14" height="52" fill="#262a35"/>
+  <rect x="880" y="712" width="120" height="8" rx="4" fill="#262a35"/>
   <rect x="818" y="312" width="312" height="356" rx="10" fill="url(#board)"/>
-  <rect x="818" y="312" width="312" height="356" rx="10" fill="none" stroke="#5a4a2e" stroke-width="1.6"/>
-  <rect x="832" y="326" width="284" height="328" rx="4" fill="#14110b"/>
+  <rect x="818" y="312" width="312" height="356" rx="10" fill="none" stroke="#7a6640" stroke-width="1.6"/>
+  <rect x="832" y="326" width="284" height="328" rx="4" fill="#211c12"/>
 
   <!-- screen light spill on floor -->
   <ellipse cx="420" cy="610" rx="380" ry="46" fill="url(#screenGlow)"/>

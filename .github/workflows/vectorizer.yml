@@ -3,7 +3,21 @@ name: Slopcamera VTracer
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/vectorizer.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig.json'
+      - 'scripts/official-vectorizer-smoke.ts'
+      - 'src/vectorize/**'
   pull_request:
+    paths:
+      - '.github/workflows/vectorizer.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig.json'
+      - 'scripts/official-vectorizer-smoke.ts'
+      - 'src/vectorize/**'
 
 permissions:
   contents: read

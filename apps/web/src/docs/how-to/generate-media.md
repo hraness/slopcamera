@@ -32,6 +32,19 @@ vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" ai
 
 Environment injection applies only to that child invocation, so repeat the same launcher for each generation command. Never put a credential on argv, in a source file, in a project, or in a provider-options file: Slopcamera sends it only to the fixed Gateway origin and never persists it. Generation can incur provider charges, and discovery does not authorize spending beyond the task's scope.
 
+## Or pay for hosted images with Hraness Credits
+
+Prompt-only image generation can also run on the hosted API at `api.slopcamera.com`, paid with prepaid Hraness Credits instead of your own Gateway account:
+
+```sh
+slopcamera credits topup    # prints a checkout URL
+slopcamera credits wait     # stores the device token after payment
+slopcamera credits status   # shows the balance
+slopcamera ai image generate --hosted --model <image-model-id> --prompt-file image-brief.txt --json
+```
+
+The hosted route takes one model and one prompt per call and rejects Gateway-only flags such as `--image`, `--aspect-ratio`, and `--count`. `https://api.slopcamera.com/v1/models` lists the models it accepts. With a stored device token and no Gateway credential, `ai image generate` uses the hosted API automatically; `--hosted` selects it when both are set. `SLOPCAMERA_CREDITS_TOKEN` supplies the token from the environment instead, and `slopcamera credits forget` removes the stored token. The token is stored with owner-only permissions and never appears in argv, receipts, or logs.
+
 ## Generate the selected media
 
 Run the command that matches the required output:

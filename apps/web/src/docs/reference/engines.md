@@ -24,7 +24,7 @@ Spatial scenes render through named cameras with a software default. The `three-
 
 ## Gateway generation
 
-Generation commands discover support from the live Gateway catalog rather than a checked-in model list. A request reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`, pins the fixed Gateway origin, bounds the response, and sets `maxRetries` to zero so an ambiguous paid call is never resubmitted. Uploads cross the boundary only for exact caller-named media after a modality acknowledgement; credentials stay in the invocation environment and never enter projects, receipts, argv, or logs. [Generating media](/docs/how-to/generate-media) covers discovery, acknowledgement, and retention.
+Generation commands discover support from the live Gateway catalog rather than a checked-in model list. A request reads `AI_GATEWAY_API_KEY` before `VERCEL_OIDC_TOKEN`, pins the fixed Gateway origin, bounds the response, and sets `maxRetries` to zero so an ambiguous paid call is never resubmitted. Uploads cross the boundary only for exact caller-named media after a modality acknowledgement; credentials stay in the invocation environment and never enter projects, receipts, argv, or logs. Prompt-only images can instead run on the hosted API at `api.slopcamera.com`, paid with prepaid Hraness Credits. [Generating media](/docs/how-to/generate-media) covers discovery, acknowledgement, hosted images, and retention.
 
 ## Native studio adapter
 

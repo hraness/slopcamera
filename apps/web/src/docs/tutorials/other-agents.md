@@ -32,4 +32,4 @@ An agent embedding TypeScript can skip the shell and import the same contracts: 
 
 - Generation needs the caller's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` in the process environment; this site never receives either.
 - Native engines such as Blender, CadQuery, and Manim install separately, and running authored native source additionally needs the invocation-scoped `--allow-trusted-code` flag, which grants current-user execution without an operating-system sandbox.
-- Basic scene, studio, and durable-run surfaces ship in the verified release; newer scene APIs require a [source build](/docs/how-to/install-from-source); the [capability reference](/docs/reference/capabilities) lists what each install includes and its platform requirements.
+- The released CLI includes the scene, studio, and durable-run commands. The [capability reference](/docs/reference/capabilities) lists what each install includes and its platform requirements.

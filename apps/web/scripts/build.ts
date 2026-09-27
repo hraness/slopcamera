@@ -14,6 +14,8 @@ import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/examp
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
 import { docsCanonicalUrl, docsMarkdownUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
+import { blogFeedPath, blogIndexMarkdownPath, blogMarkdownPath, blogPosts, indexableBlogPosts } from "../src/blog-registry"
+import { blogAtomFeed, blogIndexMarkdown, blogPostMarkdown, blogSitemapPaths } from "../src/blog-content"
 import {
   homeMarkdown,
   llmsTxt,
@@ -83,6 +85,21 @@ async function docsMirrors(): Promise<Readonly<Record<string, string>>> {
   return files
 }
 
+/** Markdown mirrors for the blog index and every post, plus the Atom feed of
+ * indexable posts. Quarantined posts keep a mirror (served noindex) but never
+ * enter the index, feed or sitemap. */
+async function blogTextFiles(): Promise<Readonly<Record<string, string>>> {
+  const bodies: Record<string, string> = {}
+  const files: Record<string, string> = { [blogIndexMarkdownPath.slice(1)]: blogIndexMarkdown() }
+  for (const post of blogPosts) {
+    const body = await readFile(join(sourceDirectory, "blog", `${post.slug}.md`), "utf8")
+    bodies[post.slug] = body
+    files[blogMarkdownPath(post).slice(1)] = blogPostMarkdown(post, body)
+  }
+  files[blogFeedPath.slice(1)] = blogAtomFeed(bodies)
+  return files
+}
+
 function assetPath(name: string, bytes: Uint8Array): string {
   const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12)
   const extensionIndex = name.lastIndexOf(".")
@@ -91,11 +108,11 @@ function assetPath(name: string, bytes: Uint8Array): string {
   return `/assets/${stem}-${digest}${extension}`
 }
 
-function renderSitemapUrl(path: string, examples: readonly WorkflowExample[] = []): string {
+function renderSitemapUrl(path: string, examples: readonly WorkflowExample[] = [], lastModified?: string): string {
   const escapeXml = (value: string) => value.replace(/[&<>"']/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[character]!)
   return `  <url>
     <loc>${siteOrigin}${path}</loc>
-${examples.map(example => `    <image:image><image:loc>${siteOrigin}${exampleUrl(example.poster)}</image:loc><image:caption>${escapeXml(example.poster.alt)}</image:caption></image:image>`).join("\n")}
+${lastModified === undefined ? "" : `    <lastmod>${lastModified}</lastmod>\n`}${examples.map(example => `    <image:image><image:loc>${siteOrigin}${exampleUrl(example.poster)}</image:loc><image:caption>${escapeXml(example.poster.alt)}</image:caption></image:image>`).join("\n")}
   </url>`
 }
 
@@ -110,6 +127,13 @@ export function renderSitemapXml(): string {
         renderSitemapUrl(canonical, workflowExamples.filter(example => example.guideSlug === page.slug)),
         renderSitemapUrl(mirror),
       ]
+    }),
+    // Only indexable posts enter the sitemap, each with its lastmod.
+    ...blogSitemapPaths().flatMap(entry => {
+      const lastModified = typeof entry.lastModified === "string" ? entry.lastModified : entry.lastModified?.toISOString()
+      const post = indexableBlogPosts.find(item => `/blog/${item.slug}` === entry.path)
+      const mirror = post === undefined ? blogIndexMarkdownPath : blogMarkdownPath(post)
+      return [renderSitemapUrl(entry.path, [], lastModified), renderSitemapUrl(mirror, [], lastModified)]
     }),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -198,6 +222,25 @@ async function bundleTheme(): Promise<Uint8Array> {
   return new Uint8Array(await output.arrayBuffer())
 }
 
+/** The 404 page's shared status-page enhancement, a separate bundle so the
+ * theme bundle every page loads stays unchanged. */
+async function bundleStatusPage(): Promise<Uint8Array> {
+  const result = await Bun.build({
+    entrypoints: [join(sourceDirectory, "status-page.ts")],
+    env: "disable",
+    format: "iife",
+    minify: true,
+    sourcemap: "none",
+    target: "browser",
+  })
+  const output = result.outputs[0]
+  if (!result.success || result.outputs.length !== 1 || output === undefined) {
+    const details = result.logs.map(log => log.message).join("\n")
+    throw new Error(`Could not bundle the status page client${details === "" ? "" : `: ${details}`}`)
+  }
+  return new Uint8Array(await output.arrayBuffer())
+}
+
 export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly<{
   analyticsPath: string | null
   previewArtifacts: readonly PreviewArtifact[]
@@ -209,20 +252,22 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   siteAttributions: readonly SiteArtifact[]
   siteEvidenceDirectory: string
   siteFoundationPath: string
+  statusPagePath: string
   themePath: string
 }>> {
   const environment = options.environment ?? process.env
   const outputDirectory = options.outputDirectory ?? defaultOutputDirectory
   const analyticsConfig = productionAnalyticsConfig(environment)
-  const [theme, socialImage] = await Promise.all([
-    bundleTheme(), renderSlopcameraSocialImage(),
+  const [theme, statusPage, socialImage] = await Promise.all([
+    bundleTheme(), bundleStatusPage(), renderSlopcameraSocialImage(),
   ])
   const themePath = assetPath("theme.js", theme)
+  const statusPagePath = assetPath("status-page.js", statusPage)
   const analytics = analyticsConfig === null ? null : await bundleAnalytics(analyticsConfig)
   const analyticsPath = analytics === null ? null : assetPath("analytics.js", analytics)
   // Finalize both independent closed graphs before replacing a public build.
   // All content and stylesheet substitutions happen inside the sealed producers.
-  const site = await buildSite(appDirectory, { themePath, analyticsPath })
+  const site = await buildSite(appDirectory, { themePath, analyticsPath, statusPagePath })
   const preview = await buildPreview(appDirectory)
   const icons = await readPublicIcons(appDirectory)
   const marketingIcons = await readMarketingIcons()
@@ -239,6 +284,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })
     }),
     writeFile(join(outputDirectory, themePath.slice(1)), theme),
+    writeFile(join(outputDirectory, statusPagePath.slice(1)), statusPage),
     writeFile(join(outputDirectory, "og.png"), socialImage),
     ...(analyticsPath === null || analytics === null
       ? []
@@ -252,14 +298,15 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   }
 
   const docsTextFiles = await docsMirrors()
-  await Promise.all(Object.entries({ ...generatedTextFiles, ...docsTextFiles }).map(async ([file, contents]) => {
+  const blogFiles = await blogTextFiles()
+  await Promise.all(Object.entries({ ...generatedTextFiles, ...docsTextFiles, ...blogFiles }).map(async ([file, contents]) => {
     const target = join(outputDirectory, file)
     await mkdir(dirname(target), { recursive: true })
     await writeFile(target, contents)
   }))
 
   return {
-    analyticsPath, stylesPath: site.stylesPath, themePath,
+    analyticsPath, statusPagePath, stylesPath: site.stylesPath, themePath,
     siteArtifacts: site.files.map(item => item.artifact),
     siteAttributions: site.attributions.map(item => item.artifact),
     siteEvidenceDirectory: site.evidenceDirectory,
@@ -275,7 +322,7 @@ if (import.meta.main) {
   const result = await buildWebsite()
   const generatedFiles = copiedFiles.length
     + Object.keys(generatedTextFiles).length
-    + 2 + result.siteArtifacts.length + result.siteAttributions.length + result.previewArtifacts.length
+    + 3 + result.siteArtifacts.length + result.siteAttributions.length + result.previewArtifacts.length
     + (result.analyticsPath === null ? 0 : 1)
   console.log(`Built ${generatedFiles} static files in ${defaultOutputDirectory}`)
   console.log(`Site compiler evidence retained in ${result.siteEvidenceDirectory}`)

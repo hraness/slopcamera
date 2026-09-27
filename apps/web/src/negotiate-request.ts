@@ -7,6 +7,7 @@ import {
   docsMarkdownUrl,
   docsPageForRequestPath,
 } from "./docs-registry"
+import { blogTargetForRequestPath, type BlogRequestTarget } from "./blog-registry"
 import {
   htmlMediaType,
   markdownMediaType,
@@ -50,6 +51,20 @@ export function isNegotiableDocumentPath(pathname: string): boolean {
   return !pathname.includes(".")
 }
 
+// A blog post or index markdown request is served from its sealed static
+// mirror. Quarantined posts carry noindex on the mirror as on the page.
+function blogMirrorResponse(request: Request, target: BlogRequestTarget): Response {
+  return new Response(null, {
+    headers: {
+      "Link": `<${target.canonicalUrl}>; rel="canonical", <${target.markdownPath}>; rel="alternate"; type="text/markdown"`,
+      "Vary": varyAcceptAndEncoding,
+      ...(target.indexable ? {} : { "X-Robots-Tag": "noindex" }),
+      "x-middleware-rewrite": new URL(target.markdownPath, request.url).href,
+    },
+    status: 200,
+  })
+}
+
 function canonicalHomeUrl(request: Request): string {
   return new URL("/", request.url).href
 }
@@ -66,6 +81,10 @@ export function negotiateSiteRequest(request: Request): Response | undefined {
     // the identical sealed file with the canonical document and alternate
     // representation headers the negotiated response carries.
     const docsMirror = pathname.endsWith(".md") ? docsPageForRequestPath(pathname) : null
+    const blogMirror = pathname.endsWith(".md") ? blogTargetForRequestPath(pathname) : null
+    if (blogMirror !== null && blogMirror.markdownPath === pathname) {
+      return blogMirrorResponse(request, blogMirror)
+    }
     if (docsMirror !== null && docsMarkdownUrl(docsMirror) === pathname) {
       return new Response(null, {
         headers: {
@@ -109,6 +128,11 @@ export function negotiateSiteRequest(request: Request): Response | undefined {
         },
         status: 200,
       })
+    }
+
+    const blogTarget = blogTargetForRequestPath(pathname)
+    if (blogTarget !== null) {
+      return blogMirrorResponse(request, blogTarget)
     }
 
     return new Response(negotiatedBody(request, notFoundMarkdown), {

@@ -1,13 +1,19 @@
 import {
   maybeShowSupportInvitation,
   runSupportCommand,
+  supportAdvancedHelp,
+  supportHelpLine,
   type SupportCommandOptions,
 } from "@hraness/support-foundation/node"
+
+/** The one support line for root help, and the agent verbs for `help advanced`. */
+export const slopcameraSupportHelpLine = () => supportHelpLine({ command: ["slopcamera"] })
+export const slopcameraSupportAdvancedHelp = () => supportAdvancedHelp({ command: ["slopcamera"] })
 
 export const supportProfile = {
   id: "slopcamera",
   name: "Slopcamera",
-  valueProposition: "Support ongoing development of local visual tools for agents.",
+  valueProposition: "Support ongoing development of local media tools for agents.",
   updates: false,
 } as const
 
