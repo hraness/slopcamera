@@ -12,5 +12,5 @@ const server = Bun.serve({
 })
 
 console.log(
-  `slopcamera-api listening on ${server.url} (storage=${config.r2 !== undefined}, billing=${config.credits !== undefined}, models=${Object.keys(config.modelCostsMicroUsd).length})`,
+  `slopcamera-api listening on ${server.url} (storage=${config.r2 !== undefined}, billing=${config.credits !== undefined}, models=${config.paidModels.length})`,
 )

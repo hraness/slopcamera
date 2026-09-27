@@ -439,4 +439,116 @@ describe("Vercel AI Gateway image generation", () => {
     await Bun.sleep(10)
     expect(dispatches).toBe(0)
   })
+
+  describe("provider cost reporting", () => {
+    const key = { AI_GATEWAY_API_KEY: "gateway-test-key-0001" }
+
+    test("prices returned usage as reported cost lines", async () => {
+      const reports: unknown[] = []
+      await generateSlopcameraImage(
+        { model: "openai/gpt-image-1", prompt: "a small test image" },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          loadRuntime: async () => ({
+            createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+            generateImage: async () => ({
+              images: [{ mediaType: "image/webp", uint8Array: webp }],
+              usage: { inputTokens: 12, outputTokens: 1_056 },
+            }),
+          }),
+        },
+      )
+      expect(reports).toEqual([[
+        {
+          provider: "vercel-ai-gateway",
+          operation: "openai/gpt-image-1 image output",
+          microUsd: 42_240,
+          basis: "reported",
+        },
+        {
+          provider: "vercel-ai-gateway",
+          operation: "openai/gpt-image-1 text input",
+          microUsd: 60,
+          basis: "reported",
+        },
+      ]])
+    })
+
+    test("reports the estimated worst case when the call fails after dispatch", async () => {
+      const reports: Array<ReadonlyArray<{ microUsd: number; basis: string }>> = []
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1-mini", prompt: "fails late" },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          loadRuntime: async () => ({
+            createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+            generateImage: async () => {
+              throw new Error("socket closed after the provider answered")
+            },
+          }),
+        },
+      )).rejects.toThrow("[GENERATION_FAILED]")
+      expect(reports).toHaveLength(1)
+      expect(reports[0]?.every(line => line.basis === "estimated")).toBe(true)
+      expect(reports[0]?.reduce((total, line) => total + line.microUsd, 0)).toBe(
+        52_000 + Math.ceil(((10 + 64) * 2_000_000) / 1_000_000),
+      )
+    })
+
+    test("reports once, from usage, when the returned media is invalid", async () => {
+      const reports: Array<ReadonlyArray<{ basis: string }>> = []
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1", prompt: "bad bytes" },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          loadRuntime: async () => ({
+            createGateway: () => ({ imageModel: (modelId: string) => modelId }),
+            generateImage: async () => ({
+              images: [{ mediaType: "image/webp", uint8Array: Uint8Array.of(1, 2, 3) }],
+              usage: { inputTokens: 5, outputTokens: 272 },
+            }),
+          }),
+        },
+      )).rejects.toThrow()
+      expect(reports).toHaveLength(1)
+      expect(reports[0]?.every(line => line.basis === "reported")).toBe(true)
+    })
+
+    test("reports nothing when no provider call was made or the Gateway refused it", async () => {
+      const reports: unknown[] = []
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1", prompt: "no credential" },
+        { environment: {}, onProviderCost: costs => reports.push(costs) },
+      )).rejects.toThrow("[AUTHENTICATION_REQUIRED]")
+
+      await expect(generateSlopcameraImage(
+        { model: "openai/gpt-image-1", prompt: "refused" },
+        {
+          environment: key,
+          onProviderCost: costs => reports.push(costs),
+          fetch: async () => Response.json({ error: "insufficient funds" }, { status: 402 }),
+          loadRuntime: async () => {
+            let gatewayFetch: typeof fetch | undefined
+            return {
+              createGateway: settings => {
+                gatewayFetch = settings.fetch as typeof fetch
+                return { imageModel: (modelId: string) => modelId }
+              },
+              generateImage: async () => {
+                const response = await gatewayFetch?.(
+                  `${slopcameraGatewayApiBaseUrl}/image-model`,
+                  { method: "POST" },
+                )
+                throw new Error(`gateway ${String(response?.status)}`)
+              },
+            }
+          },
+        },
+      )).rejects.toThrow("[GENERATION_FAILED]")
+      expect(reports).toEqual([])
+    })
+  })
 })
