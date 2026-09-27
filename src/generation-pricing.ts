@@ -53,7 +53,7 @@ interface ImagePricedModel {
 
 export type SlopcameraImageModelPrice = TokenPricedImageModel | ImagePricedModel
 
-export const slopcameraProviderPricesCheckedAt = "2026-09-26"
+export const slopcameraProviderPricesCheckedAt = "2026-09-27"
 
 /**
  * Cited list prices. A model without an entry here cannot be billed: the
@@ -87,6 +87,26 @@ export const slopcameraImageModelPrices: Readonly<
     kind: "image",
     perImage: 35_000,
     source: "https://vercel.com/ai-gateway/models/recraft-v4.1-utility",
+  }),
+  "bfl/flux-pro-1.1": Object.freeze({
+    kind: "image",
+    perImage: 40_000,
+    source: "https://vercel.com/ai-gateway/models/flux-pro-1.1",
+  }),
+  "bfl/flux-pro-1.1-ultra": Object.freeze({
+    kind: "image",
+    perImage: 60_000,
+    source: "https://vercel.com/ai-gateway/models/flux-pro-1.1-ultra",
+  }),
+  "bfl/flux-kontext-pro": Object.freeze({
+    kind: "image",
+    perImage: 40_000,
+    source: "https://vercel.com/ai-gateway/models/flux-kontext-pro",
+  }),
+  "bfl/flux-kontext-max": Object.freeze({
+    kind: "image",
+    perImage: 80_000,
+    source: "https://vercel.com/ai-gateway/models/flux-kontext-max",
   }),
 })
 
