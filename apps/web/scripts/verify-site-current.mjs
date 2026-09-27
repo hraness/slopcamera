@@ -16,7 +16,7 @@ const { chromium } = createRequire(join(appDirectory, "package.json"))("playwrig
 
 export const currentRoutes = ["/", "/docs", "/docs/tutorials/first-diagram", "/docs/reference/sdk", "/blog", "/blog/introducing-slopcamera"]
 export const missingRoute = "/not-a-page"
-export const widths = [390, 1440]
+export const widths = [360, 390, 1440]
 export const schemes = ["light", "dark"]
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml",
   ".woff2": "font/woff2", ".png": "image/png", ".webp": "image/webp", ".mp4": "video/mp4", ".json": "application/json" }

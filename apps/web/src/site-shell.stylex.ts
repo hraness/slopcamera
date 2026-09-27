@@ -60,6 +60,7 @@ const shell = stylex.create({
     backdropFilter: "var(--hraness-material-chrome-blur, blur(14px) saturate(1.4))",
   },
   wordmark: {
+    minHeight: "2.75rem",
     fontSize: "1rem",
     fontWeight: 600,
     letterSpacing: "-0.01em",
@@ -81,7 +82,8 @@ const shell = stylex.create({
   },
   navigation: {
     display: "flex",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
+    overflowX: "auto",
     alignItems: "center",
     rowGap: "0.25rem",
     columnGap: { default: "1.35rem", [tablet]: "1rem", [phone]: "0.85rem" },
@@ -91,15 +93,18 @@ const shell = stylex.create({
     marginLeft: { default: 0, [phone]: "auto" },
   },
   navigationLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "2.75rem",
+    flexShrink: 0,
     color: { default: "var(--muted)", ":hover": "var(--ink)" },
     fontSize: "0.92rem",
     fontWeight: 500,
     textDecoration: "none",
   },
   homeNavigationLink: {
-    // Only the homepage has an install action. Its other links leave the
-    // phone row, while the 404's Home and GitHub links stay visible.
-    display: { default: null, [phone]: "none" },
+    // Keep every destination available in the scrollable phone navigation.
+    display: "inline-flex",
   },
   primaryAction: {
     display: "inline-flex",
@@ -146,7 +151,8 @@ const shell = stylex.create({
     textDecoration: "none",
   },
   navigationAction: {
-    minHeight: "2.25rem",
+    minHeight: "2.75rem",
+    flexShrink: 0,
     paddingTop: "0.4rem",
     paddingRight: "0.9rem",
     paddingBottom: "0.4rem",

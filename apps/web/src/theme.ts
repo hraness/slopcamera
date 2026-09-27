@@ -1,4 +1,4 @@
-import { attachFoil, attachHeroLight, installAppearanceMenus } from "@hraness/design-kit/browser"
+import { attachFoil, installAppearanceMenus } from "@hraness/design-kit/browser"
 
 import { installCopyCommands } from "./copy-command"
 import { installExamplePlayers } from "./example-player"
@@ -12,8 +12,6 @@ function installPageControls(): void {
   installCopyCommands()
   installExamplePlayers()
   attachFoil(document.documentElement)
-  const hero = document.querySelector<HTMLElement>(".slopcamera-product-hero")
-  if (hero) attachHeroLight(hero)
 }
 
 installAppearanceMenus({
