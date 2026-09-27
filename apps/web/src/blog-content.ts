@@ -33,7 +33,12 @@ export const blogSite: SearchSite = {
 }
 
 const byline = Object.freeze({ kind: "organization", name: "Hraness" } as const)
-const hraness: ArticleParty = { kind: "Organization", name: "Hraness" }
+const hraness: ArticleParty = {
+  kind: "Organization",
+  name: "Hraness",
+  url: "https://hraness.com",
+  sameAs: ["https://github.com/hraness"],
+}
 const socialImage = {
   path: "/og.png",
   contentType: "image/png",
@@ -116,6 +121,12 @@ const publicationClassTokens: Readonly<Record<string, string>> = {
   "plain-publication__article-body": "{{BLOG_BLOCK_CLASS}}",
   "plain-publication__article-footer": "{{DOCS_FOOTER_CLASS}}",
   "plain-publication__sources": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__related": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__related-grid": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__related-mark": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__related-text": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__toc": "{{BLOG_BLOCK_CLASS}}",
+  "plain-publication__callout": "{{BLOG_BLOCK_CLASS}}",
 }
 
 function replaceExactly(html: string, search: string, replacement: string, count: number): string {
@@ -142,6 +153,8 @@ export function blogMarkupWithClassTokens(html: string, kind: "article" | "index
     mapped = replaceExactly(mapped, `</h2><ol><li>`, `</h2><ol class="{{DOCS_LIST_CLASS}}"><li>`, 1)
     mapped = replaceExactly(mapped, `<li><a href=`, `<li class="{{DOCS_LIST_ITEM_CLASS}}"><a class="{{DOCS_LINK_CLASS}}" href=`, sourceCount)
     mapped = replaceExactly(mapped, `<span>Checked `, `<span class="{{BLOG_SOURCE_CHECKED_CLASS}}">Checked `, sourceCount)
+    mapped = replaceExactly(mapped, `<h2 id="article-related-products">`, `<h2 class="{{DOCS_H3_CLASS}}" id="article-related-products">`, 1)
+    mapped = mapped.replaceAll(`<a href=`, `<a class="{{BLOG_ENTRY_LINK_CLASS}}" href=`)
   }
   const unclassed = /<(?:h1|h2|h3|p|ol|ul|li|a|pre|code|blockquote|section|header|footer|article|div)(?=[\s>])(?![^>]*\sclass=")[^>]*>/u.exec(mapped)
   if (unclassed !== null) throw new Error(`Blog markup has an unstyled element: ${unclassed[0]}`)

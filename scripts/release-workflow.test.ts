@@ -158,8 +158,10 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // deadline and failure boundary. A future update needs a coverage review.
   // Reviewed 2026-09-24: the unconditional `copy` job (public copy against
   // source, full history, required) was added; every prior job is unchanged.
+  // Reviewed 2026-09-27: the `menubar` job gained a cargo test step and a
+  // fixture lint step after its release build; every prior job is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "48be8e8f4620b3a8974c6e4385d1580625077535544a6aeb1f64e92ab02d6ec9") {
+  if (priorDigest !== "b323e4453ab06904d133e62f8839c849f5c138d0f437c617448fbe440ab2b1f0") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
@@ -183,6 +185,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   expect(root.scripts["check:web"]).toBe("bun apps/web/scripts/verify-example-sources.ts && bun run --cwd apps/web check")
   expect(site.scripts.check.split(" && ")).toEqual([
     "bun run check:theme", "bun run typecheck:preview", "bun run test", "bun run build", "bun run verify:preview",
+    "bun run verify:current",
   ])
   expect(() => requireCompleteSourceCoverage(workflow)).not.toThrow()
 
@@ -1109,13 +1112,13 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.4.0")
+  expect(manifest.version).toBe("3.6.0")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.4.0")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.4.0/hraness-slopcamera-3.4.0.tgz")
+  expect(publishedRelease.version).toBe("3.6.0")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
@@ -1141,7 +1144,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")
-  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath })")
+  expect(siteBuild).toContain("const site = await buildSite(appDirectory, { themePath, analyticsPath, statusPagePath })")
   for (const source of ["src/site-content.ts", "src/site-renderer.ts", "src/published-release.ts"]) {
     expect(siteProducer).toContain(`"${source}"`)
   }

@@ -1,0 +1,18 @@
+[mark.camera Sc] Slopcamera · Ready
+Slopcamera
+✓ Ready · Last job finished 9 min ago
+⚠︎ Couldn't open your browser · Try again
+─────────
+take 4 · 4 KB · today  MP4
+  ⌥ Show in Finder
+take 3 · 4 KB · today  MP4
+  ⌥ Show in Finder
+take 2 · 4 KB · today  MP4
+  ⌥ Show in Finder
+Show all 5 outputs (primary)  ⌘O
+─────────
+✓ Open at login
+─────────
+♡ Updates & support ↗
+  ⌥ Copy diagnostics
+Quit Slopcamera

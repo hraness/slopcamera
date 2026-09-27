@@ -48,11 +48,11 @@ import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./dra
 import { SLOPCAMERA_VERSION } from "./version.js"
 import { createVisualStyleDirection, getVisualStyleProfile, VISUAL_STYLE_PROFILES } from "./visual-style.js"
 import { reportUsefulResult, type UsefulResultObserver } from "./support-completion.js"
-import { runProductSupportCommand, showProductSupportInvitation, standaloneSupportEnvironment } from "./support.js"
+import { runProductSupportCommand, showProductSupportInvitation, slopcameraSupportAdvancedHelp, slopcameraSupportHelpLine, standaloneSupportEnvironment } from "./support.js"
 
 export const slopcameraCliVersion = SLOPCAMERA_VERSION
 
-const help = `slopcamera ${slopcameraCliVersion}
+const help = () => `slopcamera ${slopcameraCliVersion}
 
 Turn source material into deterministic diagrams, images, and canvas assets.
 
@@ -81,7 +81,6 @@ Usage:
   slopcamera code execute <operation> --input <JSON>
   slopcamera mcp --root <workspace>
   slopcamera doctor
-  slopcamera support [--json|protocol --json|offer --json|shown <id>|release <id>|dismiss|snooze|enable|status --json]
   slopcamera skill path
   slopcamera skill install [--target codex|claude|agents] [--scope user|project] [--force]
 
@@ -128,9 +127,9 @@ into one labelled contact sheet plus a receipt. Use it to review texture,
 skybox, backdrop, sprite, or design alternatives, then promote a chosen
 candidate file explicitly — nothing is applied automatically.
 
-Optional support: after useful work, agents can read slopcamera support protocol --json.
-Discovery uses stderr without claiming an invitation; HRANESS_SUPPORT_AUDIENCE=off disables it.
-No feature requires payment. Imported CLI/SDK calls and probes stay quiet.
+${slopcameraSupportHelpLine()}
+
+Advanced verbs, including the support protocol, live under \`slopcamera help advanced\`.
 
 Code mode searches and executes a fixed semantic registry. Execute accepts
 typed JSON for one exact owned operation code; it never evaluates source text.
@@ -384,7 +383,7 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     surface === "vectorize" ||
     surface === "generate"
   ) {
-    throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help}`)
+    throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help()}`)
   }
   return args
 }
@@ -428,8 +427,12 @@ export async function main(
     return
   }
   const [command, ...rest] = canonicalArguments(args)
-  if (command === undefined || command === "help" || command === "--help" || command === "-h") {
-    console.log(help)
+  if (command === undefined || command === "--help" || command === "-h") {
+    console.log(help())
+    return
+  }
+  if (command === "help") {
+    console.log(rest[0] === "advanced" ? slopcameraSupportAdvancedHelp() : help())
     return
   }
   if (command === "version" || command === "--version" || command === "-v") {
@@ -965,7 +968,7 @@ export async function main(
     throw new Error("Use slopcamera skill path or install")
   }
 
-  throw new Error(`Unknown command: ${command}\n\n${help}`)
+  throw new Error(`Unknown command: ${command}\n\n${help()}`)
 }
 
 if (import.meta.main) {

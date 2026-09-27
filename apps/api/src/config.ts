@@ -1,3 +1,4 @@
+import { slopcameraImageModelPrice } from "../../../src/generation-pricing.js"
 import type { ObjectProxyConfig } from "./object-proxy.js"
 import type { R2Config } from "./r2.js"
 
@@ -16,11 +17,11 @@ export interface ApiConfig {
     | { readonly baseUrl: string; readonly productKey: string }
     | undefined
   /**
-   * Per-model provider cost in micro-USD, keyed by exact
-   * `provider/model` id. Only listed models may run paid generation;
-   * the allowlist is itself the spend bound.
+   * Sorted `provider/model` ids admitted for paid generation. Only models
+   * with a cited list price in `src/generation-pricing.ts` are admitted;
+   * that price, never configuration, sets the hold ceiling and the cost.
    */
-  readonly modelCostsMicroUsd: Readonly<Record<string, number>>
+  readonly paidModels: readonly string[]
   /** Reported artifact lifetime; the bucket lifecycle enforces it. */
   readonly artifactTtlDays: number
   readonly freeCallsPerHour: number
@@ -44,29 +45,39 @@ function readInteger(
   return parsed
 }
 
-function readModelCosts(raw: string | undefined): Record<string, number> {
-  if (raw === undefined) return {}
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      return {}
-    }
-    const costs: Record<string, number> = {}
-    for (const [model, microUsd] of Object.entries(parsed)) {
-      if (
-        /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu.test(model) &&
-        typeof microUsd === "number" &&
-        Number.isInteger(microUsd) &&
-        microUsd > 0 &&
-        microUsd <= 100_000_000
-      ) {
-        costs[model] = microUsd
-      }
-    }
-    return costs
-  } catch {
-    return {}
+const modelIdPattern = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/iu
+
+/**
+ * The admitted model list. `SLOPCAMERA_API_PAID_MODELS` is a comma-separated
+ * list; the older `SLOPCAMERA_API_MODEL_COSTS_JSON` map still admits its
+ * keys, and its cost values are ignored. Models without a cited price are
+ * dropped, so configuration can narrow the list but never price a model.
+ */
+function readPaidModels(
+  list: string | undefined,
+  legacyCostsJson: string | undefined,
+): string[] {
+  const requested = new Set<string>()
+  for (const entry of (list ?? "").split(",")) {
+    const model = entry.trim()
+    if (model.length > 0) requested.add(model)
   }
+  if (legacyCostsJson !== undefined) {
+    try {
+      const parsed: unknown = JSON.parse(legacyCostsJson)
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        for (const model of Object.keys(parsed)) requested.add(model)
+      }
+    } catch {
+      // An unreadable legacy map admits nothing.
+    }
+  }
+  return [...requested]
+    .filter(
+      (model) =>
+        modelIdPattern.test(model) && slopcameraImageModelPrice(model) !== undefined,
+    )
+    .sort()
 }
 
 export function readApiConfig(
@@ -113,7 +124,10 @@ export function readApiConfig(
     r2Proxy,
     r2,
     credits,
-    modelCostsMicroUsd: readModelCosts(env.SLOPCAMERA_API_MODEL_COSTS_JSON),
+    paidModels: readPaidModels(
+      env.SLOPCAMERA_API_PAID_MODELS,
+      env.SLOPCAMERA_API_MODEL_COSTS_JSON,
+    ),
     artifactTtlDays: readInteger(env.SLOPCAMERA_API_ARTIFACT_TTL_DAYS, 7, 1, 30),
     freeCallsPerHour: readInteger(env.SLOPCAMERA_API_FREE_CALLS_PER_HOUR, 120, 1, 10_000),
     renderCallsPerHour: readInteger(env.SLOPCAMERA_API_RENDER_CALLS_PER_HOUR, 30, 1, 1_000),

@@ -449,7 +449,7 @@
   },
   {
     "identityLineCount": 23,
-    "identityLinesSha256": "79b84cd2034a09e6a9e59c5818508404203371a0b1c8e362573c3f59a2d943d7",
+    "identityLinesSha256": "1e454f0129acb251a9f00f6254d7ca363d4bb134d893b9129eee38488544db3f",
     "occurrenceCount": 32,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -472,6 +472,15 @@
     "path": "apps/desktop/cli/media-effects-service.test.ts",
     "categories": [
       "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
+    "occurrenceCount": 2,
+    "path": "apps/desktop/cli/menubar-status.ts",
+    "categories": [
+      "native-film-studio"
     ]
   },
   {
@@ -1287,8 +1296,8 @@
   },
   {
     "identityLineCount": 86,
-    "identityLinesSha256": "877daa4c81a61ce0a7c28a00f1fc3760353d1eb4c36e3751e4f755a01b735f99",
-    "occurrenceCount": 451,
+    "identityLinesSha256": "442bb5418f160daf55b197708679bb1f6f30d32fa94c98d5a562e36b341813d1",
+    "occurrenceCount": 453,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1523,7 +1532,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "026a0640a799ffb3fdaddef63be6d06929f4a00b74442dbdbee06f3965410dc2",
+    "identityLinesSha256": "1a36eee77e6baeb427eb209a4e2823c812157eb0ee4bbe1f3606cacfd9cebc51",
     "occurrenceCount": 2,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
@@ -1541,7 +1550,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "e31c33577eb1d91e26710ed3430ce94d23bf1e59ed0039b1d4e5a2b38bc15bea",
+    "identityLinesSha256": "5e50e0d6301575ba719e0183c3b67efb4ce6919a452042c0fee46fff1dec9310",
     "occurrenceCount": 1,
     "path": "apps/web/src/blog/introducing-slopcamera.md",
     "categories": [
@@ -1785,7 +1794,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "a564882b7bfbcf09fdb249fbebfaf4e1302075f0bf169437c4daae947d0918d1",
+    "identityLinesSha256": "2ea5f4f834343b4d19840c49d964a1234c8432be169cc1e57bf879d65e8e29d5",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1902,7 +1911,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "b58a5cb82eca0c8897b6bdd82fd1968e28e899993a0010658b600d7d7e0a591e",
+    "identityLinesSha256": "90d3bd3f19319e2cb6b5571e8cc62ee93205889bcb4a1dfcb674ef6555484dae",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [

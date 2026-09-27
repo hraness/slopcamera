@@ -22,7 +22,7 @@ The canonical tool semantics live in `src/mcp/tools.ts`. This app owns transport
 
 - **free** – anonymous, rate-limited validation, inspection, planning, and audit tools.
 - **render** – anonymous with a tighter limit; `render_diagram` is the only member.
-- **paid** – `execute_slopcamera` narrowed to `slopcamera.image.generate`. Requires a Hraness Credits device token (`Authorization: Bearer cr_dev_…`). The service prices a ceiling from its model allowlist, holds credits before any provider call, then settles the reported contractual cost on success or releases on failure. Margin lives inside the Credits pricing revision; this service never sees or quotes it.
+- **paid** – `execute_slopcamera` narrowed to `slopcamera.image.generate`. Requires a Hraness Credits device token (`Authorization: Bearer cr_dev_…`). The service holds credits up to a ceiling priced from the model's worst case (largest size, highest quality, and every prompt token) before any provider call, then settles with the provider cost priced from the usage the provider returns. When work fails after the provider call, it releases the hold and reports that cost. Margin lives inside the Credits pricing revision; this service never sees or quotes it.
 
 Callers without a token get `401` with a `signup` block describing the Credits claim flow. Insufficient balance returns `402` with a `topup.url` the caller's human can pay.
 
@@ -43,7 +43,7 @@ Outputs are harvested by diffing the workspace after the call. Each new file bec
 | `R2_ENDPOINT` | Optional custom S3 endpoint for the bucket. |
 | `SLOPCAMERA_API_CREDITS_PRODUCT_KEY` | Credits product key (`cr_prod_…`). Without it, paid tools answer `503`. |
 | `CREDITS_BASE_URL` | Credits origin; default `https://credits.hraness.com`. |
-| `SLOPCAMERA_API_MODEL_COSTS_JSON` | JSON map of admitted `provider/model` ids to provider cost in micro-USD. The allowlist is the spend bound; unlisted models are rejected before any hold. |
+| `SLOPCAMERA_API_PAID_MODELS` | Comma-separated `provider/model` ids admitted for paid generation. Only models with a cited list price in `src/generation-pricing.ts` are admitted; others are dropped. The keys of the older `SLOPCAMERA_API_MODEL_COSTS_JSON` map are still read as admitted ids, and its cost values are ignored. |
 | `AI_GATEWAY_API_KEY` | Vercel AI Gateway credential used by `slopcamera.image.generate`. |
 | `SLOPCAMERA_API_ARTIFACT_TTL_DAYS` | Reported artifact lifetime (1–30, default 7); the bucket lifecycle enforces it. |
 | `SLOPCAMERA_API_FREE_CALLS_PER_HOUR` | Anonymous free-tool limit (default 120). |
@@ -61,7 +61,7 @@ The Slopcamera CLI can drive the paid operation directly: `slopcamera credits to
 
 ## Credits setup
 
-Register the product once against the Credits admin CLI with a `cost-plus` operation named `image_generate`, then set `SLOPCAMERA_API_CREDITS_PRODUCT_KEY` to the issued `cr_prod_…` key. Populate `SLOPCAMERA_API_MODEL_COSTS_JSON` from the gateway's published per-image prices so ceilings reflect contractual cost. Callers top up through the `topup.url` returned in `402` responses; the service never touches payment pages.
+Register the product once against the Credits admin CLI with a `cost-plus` operation named `image_generate`, then set `SLOPCAMERA_API_CREDITS_PRODUCT_KEY` to the issued `cr_prod_…` key. Set `SLOPCAMERA_API_PAID_MODELS` to the models to offer; prices come from the cited table in `src/generation-pricing.ts`, which a reviewed change updates when a provider changes its list price. Callers top up through the `topup.url` returned in `402` responses; the service never touches payment pages.
 
 ## R2 setup
 

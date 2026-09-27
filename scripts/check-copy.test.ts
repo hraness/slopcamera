@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   COPY_RULES,
+  advertisedVersion,
   collectCommitLinks,
   collectCopyClaims,
   numberValue,
@@ -149,4 +150,15 @@ test("commit, tree and blob links are collected with their line", () => {
     { line: 2, path: "docs/page.md", sha: "63a0e3eed460fa80f1ae76983e9152c75a124392" },
     { line: 3, path: "docs/page.md", sha: "63a0e3e" },
   ]);
+});
+
+test("a release candidate may run ahead of the advertised release, never behind it", () => {
+  expect(advertisedVersion("3.4.0", "3.4.0")).toBe("3.4.0");
+  expect(advertisedVersion("3.5.0", "3.4.0")).toBe("3.4.0");
+  expect(advertisedVersion("3.4.1", "3.4.0")).toBe("3.4.0");
+  expect(advertisedVersion("4.0.0", "3.9.9")).toBe("3.9.9");
+  expect(advertisedVersion("3.10.0", "3.9.0")).toBe("3.9.0");
+  expect(() => advertisedVersion("3.3.9", "3.4.0")).toThrow("which is older");
+  expect(() => advertisedVersion("3.4.0-beta.1", "3.4.0")).toThrow("not MAJOR.MINOR.PATCH");
+  expect(() => advertisedVersion("3.4.0", "v3.4.0")).toThrow("not MAJOR.MINOR.PATCH");
 });

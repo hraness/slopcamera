@@ -37,9 +37,9 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Verified release contents
 
-The immutable [v3.4.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.4.0), published on September 23, 2026, contains the following command families. Its canonical archive is built from `e08bacf68c140062d9e2aebf314a4bd5d4d17cb7`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0), published on September 27, 2026, contains the following command families. Its canonical archive is built from `ebfe5739cf573b2a2b6592ecd562d8839f8d4035`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.4.0 |
+| Capability | Slopcamera v3.6.0 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |

@@ -1,0 +1,12 @@
+[mark.camera Sc] Slopcamera · Last job stopped early
+Slopcamera
+⚠︎ Last job stopped early · Rendering a recording · started 8 hours ago
+─────────
+No outputs yet · Agents save finished files here (label)
+Open outputs folder (primary)  ⌘O
+─────────
+Open at login · macOS shows a notice when you turn this on
+─────────
+♡ Updates & support ↗
+  ⌥ Copy diagnostics
+Quit Slopcamera

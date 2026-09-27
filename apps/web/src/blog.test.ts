@@ -37,7 +37,8 @@ describe("blog admissions", () => {
   test("records a disclosed AI review, never a human one", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
-      expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn: "2026-09-24" })
+      const reviewedOn = record.href === "/blog/introducing-slopcamera" ? "2026-09-27" : "2026-09-26"
+      expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
       expect(record.humanReview).toBeNull()
       expect(record.review.reviewer).not.toMatch(/human/iu)
       const total = Object.values(record.scores).reduce((sum, score) => sum + score, 0)
@@ -103,7 +104,7 @@ describe("blog pages", () => {
       const tokens = [...page.main.matchAll(/class="([^"]*)"/gu)].map(match => match[1]!)
       for (const token of tokens) expect(token).toMatch(/^\{\{(?:DOCS|BLOG)_[A-Z0-9_]+_CLASS\}\}$/u)
     }
-    expect(() => blogMarkupWithClassTokens('<div class="plain-publication__related"></div>', "article"))
+    expect(() => blogMarkupWithClassTokens('<div class="plain-publication__masthead"></div>', "article"))
       .toThrow("unmapped class")
     expect(() => blogMarkupWithClassTokens('<section class="plain-publication__list"><h1 id="blog-title">T</h1></section>', "index"))
       .toThrow("unmapped class")

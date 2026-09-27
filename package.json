@@ -1,6 +1,6 @@
 {
   "name": "@hraness/slopcamera",
-  "version": "3.4.0",
+  "version": "3.6.0",
   "description": "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   "license": "MIT",
   "type": "module",
@@ -260,7 +260,7 @@
   "dependencies": {
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
     "@hraness/algal": "github:hraness/algal#c46264a",
-    "@hraness/support-foundation": "github:hraness/support-foundation#b32c1c81bb2444f50509ed54388758ecfab1f1c0",
+    "@hraness/support-foundation": "github:hraness/support-foundation#8bb514d24b79dc3f305390700ae312cab88e7ad2",
     "@noble/hashes": "2.2.0",
     "@paper-design/shaders": "0.0.77",
     "@resvg/resvg-js": "2.6.2",
@@ -284,7 +284,6 @@
   "devDependencies": {
     "@antithesishq/bombadil": "0.7.2",
     "@eslint/js": "^9.39.2",
-    "@hraness/design-kit": "github:hraness/design-kit#v0.3.0",
     "@hraness/direct": "github:hraness/direct#v0.7.20",
     "@native-sdk/cli": "0.5.3",
     "@types/bun": "^1.3.14",

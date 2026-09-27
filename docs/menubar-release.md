@@ -17,16 +17,30 @@ application bundle and performs no signing or notarization. macOS may still
 apply its security policy to executables downloaded from the internet.
 
 `menubar install` copies the selected prebuilt executable into
-`~/Library/Application Support/Slopcamera/menubar/slopcamera-menubar` and
-registers an exact per-user LaunchAgent. Repeating installation stops the owned
-service, replaces its executable, and starts it again, including after a failed
-bootstrap. Set `SLOPCAMERA_MENUBAR` explicitly when upgrading from a new build.
-Existing shared directory permissions are preserved; foreign plists, symbolic
-links, and files writable by other users are refused.
+`~/Library/Application Support/Slopcamera/menubar/slopcamera-menubar` and runs
+that copy's own `install`, which writes the per-user login item through
+desktop-foundation's shared LaunchAgent helper (`app.hraness.slopcamera`).
+Repeating installation replaces the executable and repoints the login item.
+Set `SLOPCAMERA_MENUBAR` explicitly when upgrading from a new build. Existing
+shared directory permissions are preserved; login items changed by something
+else, symbolic links, and files writable by other users are refused.
 
-`menubar status` reports the installed configuration, not process liveness.
-Status and uninstall work without the original build. Uninstall removes only
-the exact owned LaunchAgent and its installed executable.
+Earlier releases wrote `com.hraness.slopcamera.menubar.plist`. Install and
+uninstall remove it when it is exactly the file those releases wrote; a copy
+that is already running keeps running until you quit it or log out.
+
+`menubar status` asks the installed copy whether its login item is on and
+whether it is running. Status and uninstall work without the original build.
+Uninstall removes the login item and the installed executable.
+
+The menu shows what Slopcamera is doing and your last known credits balance.
+The CLI writes both to `menubar-status.json` in its state folder: a plain label
+around each rendering or generating command, the fixed error code when one
+fails, and the balance after `slopcamera credits status`. The file holds no
+paths, prompts, tokens or account identifiers.
+
+Because released packages don't include the menu bar yet, `slopcamera help`
+doesn't list it; `slopcamera help menubar` still documents it.
 
 The launcher checks an explicit `SLOPCAMERA_MENUBAR` path, a companion beside the
 Bun executable, the installed companion, then a repository release build. It
