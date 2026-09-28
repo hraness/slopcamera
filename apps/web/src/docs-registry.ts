@@ -136,7 +136,7 @@ export const docPages: readonly DocsPage[] = [
     description: "What stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.",
     section: "explanation" },
   { slug: "explanation/why-slopcamera", title: "Why Slopcamera, compared with Remotion and HyperFrames",
-    description: "What Slopcamera keeps that one-off scripts lose, and when Remotion, HyperFrames, Blender MCP, or a hosted generator fits better.",
+    description: "What Slopcamera keeps that one-off scripts lose, and when Remotion, HyperFrames, MCP for Blender, or a hosted generator fits better.",
     section: "explanation" },
   { slug: "explanation/extending", title: "Extend Slopcamera",
     description: "Workflows, declarative graphs, the SDK, MCP, and separately installed native engines.",

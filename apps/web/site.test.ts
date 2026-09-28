@@ -1727,6 +1727,23 @@ describe("static Slopcamera site", () => {
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })
 
+  test("links the homepage comparison question to the dated comparison section", async () => {
+    const [home, why] = await Promise.all([readBuilt("index.html"), readBuilt("docs/explanation/why-slopcamera.html")])
+    const question = "How is Slopcamera different from Remotion or HyperFrames?"
+    expect(home).toContain(`<summary>${question}</summary>`)
+    expect(home).toContain('href="/docs/explanation/why-slopcamera#compared-with-other-tools"')
+    expect(homeMarkdown).toContain(`### ${question}`)
+    expect(homeMarkdown).toContain("(https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools)")
+    expect(why.match(/id="compared-with-other-tools"/gu)).toHaveLength(1)
+    expect(why).toContain("Competitor details as of 28 September 2026.")
+    // The comparison stays a visible answer; FAQPage markup keeps its reviewed set.
+    const graphs = [...home.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gu)]
+      .map(match => JSON.parse(match[1]!) as { "@graph"?: Array<Record<string, unknown>> })
+    const faq = graphs.flatMap(graph => graph["@graph"] ?? []).find(node => node["@type"] === "FAQPage")
+    expect(faq).toBeDefined()
+    expect(JSON.stringify(faq)).not.toContain("Remotion")
+  })
+
   test("publishes crawler discovery only for retained product pages", async () => {
     const [sitemap, notFound] = await Promise.all([
       readBuilt("sitemap.xml"),

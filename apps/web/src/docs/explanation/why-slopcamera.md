@@ -1,4 +1,4 @@
-Slopcamera keeps the source behind every render, such as a diagram file, a Blender program, a 3D scene, or a video edit, so your agent can change one detail and render again. This page explains what that gives you and when Remotion, HyperFrames, Blender MCP, or a hosted generator fits better.
+Slopcamera keeps the source behind every render, such as a diagram file, a Blender program, a 3D scene, or a video edit, so your agent can change one detail and render again. This page explains what that gives you and when Remotion, HyperFrames, MCP for Blender, or a hosted generator fits better.
 
 ## Sources stay editable after the render
 
@@ -26,9 +26,9 @@ Properties a per-task script would have to reimplement, such as absolute-time re
 
 ## Compared with other tools
 
-Use [Remotion](https://www.remotion.dev/) if your team writes React and wants to render at scale on [AWS Lambda](https://www.remotion.dev/docs/lambda). Use [HyperFrames](https://github.com/heygen-com/hyperframes) if you want HTML motion graphics rendered to MP4, with optional HeyGen-hosted rendering. Use [Blender MCP](https://github.com/ahujasid/blender-mcp) to model interactively in a running Blender. Use Slopcamera when one agent needs diagrams, 3D scenes, Blender or Manim films, and edits of your own footage in one local project it can revise. Remotion and HyperFrames have much larger communities.
+Use [Remotion](https://www.remotion.dev/) if your team writes React and wants to render at scale on [AWS Lambda](https://www.remotion.dev/docs/lambda). Use [HyperFrames](https://github.com/heygen-com/hyperframes) if you want HTML motion graphics rendered to MP4, with optional HeyGen-hosted rendering. Use [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender MCP, to model interactively in a running Blender. Use Slopcamera when one agent needs diagrams, 3D scenes, Blender or Manim films, and edits of your own footage in one local project it can revise. All three alternatives have much larger communities.
 
-| | Slopcamera | Remotion | HyperFrames | Blender MCP |
+| | Slopcamera | Remotion | HyperFrames | MCP for Blender |
 | --- | --- | --- | --- | --- |
 | What the agent writes | HTML scenes, diagram JSON, Three.js scene JSON, Blender, CadQuery, or Manim programs, and video edits | React components | HTML, CSS, and JavaScript animation | Commands sent to a running Blender |
 | License | MIT | Source-available; free for individuals, non-profits, and organizations of up to 3 people ([license FAQ](https://www.remotion.dev/docs/license/faq)) | Apache 2.0 | MIT |

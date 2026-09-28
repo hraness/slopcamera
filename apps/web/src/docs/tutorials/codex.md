@@ -44,7 +44,7 @@ Then ask for a short video:
 
 > Make an eight-second 1280 × 720 title animation that says "Launch week", render it to MP4, and show me the file.
 
-The skill should lead Codex to write an HTML scene and a render request, check it with `slopcamera html render --dry-run --json`, then render it. This needs the browser and FFmpeg runtimes that `{{DOCTOR_COMMAND}}` reports. [Create and revise your first animation](/docs/tutorials/first-animation) walks through the same steps.
+With the skill loaded, Codex can write an HTML scene and a render request, check the request with `slopcamera html render --dry-run --json`, then render it. This needs the browser and FFmpeg runtimes that `{{DOCTOR_COMMAND}}` reports. [Create and revise your first animation](/docs/tutorials/first-animation) walks through the same steps.
 
 ## What Codex can do next
 

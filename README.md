@@ -48,12 +48,12 @@ the rendered output with source, runtime requirements and reproduction steps.
 ## Compared with other tools
 
 - [Remotion](https://www.remotion.dev/) renders React components to video and can
-  render on AWS Lambda. It is source-available and needs a paid license for most
-  organizations of four or more people.
+  render on AWS Lambda. It is source-available and needs a paid license for
+  companies of four or more people.
 - [HyperFrames](https://github.com/heygen-com/hyperframes) renders HTML to MP4
   under Apache 2.0, with optional HeyGen-hosted rendering.
-- [Blender MCP](https://github.com/ahujasid/blender-mcp) lets an agent drive a
-  running Blender interactively.
+- [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender
+  MCP, lets an agent drive a running Blender interactively.
 
 Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, headless
 Blender, CadQuery, and Manim renders, and edits of your own footage in one local
