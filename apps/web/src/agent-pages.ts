@@ -103,6 +103,10 @@ The [documentation index](https://slopcamera.com/docs) connects learning, task g
 
 ## Before you install
 
+### How is Slopcamera different from Remotion or HyperFrames?
+
+Remotion renders React components to video, and HyperFrames renders HTML to video. Both offer cloud rendering and have much larger communities. Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, Blender, CadQuery and Manim films, and edits of your own footage, all in one local project. It is MIT-licensed. Remotion needs a paid license for companies of four or more people. [See how they compare](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools).
+
 ### Does Slopcamera require an account or subscription?
 
 No. Slopcamera has no account or subscription. Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits for hosted image generation. A Gateway API key works without the Vercel CLI.
@@ -197,11 +201,11 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 - [Raster to SVG](https://slopcamera.com/docs/how-to/vectorize-images.md): Local tracing, measured fidelity and a reproducible original illustration
 - [Edit video](https://slopcamera.com/docs/how-to/edit-video.md): Import, edit, preview, and delivery
 - [Generate media](https://slopcamera.com/docs/how-to/generate-media.md): Model discovery, your own Gateway access, and prepaid hosted image generation
-- [Educational video](https://slopcamera.com/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
+- [Make a math explainer video with Manim](https://slopcamera.com/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
 - [Music video](https://slopcamera.com/docs/how-to/music-video.md): Authored HTML visuals with a local track
-- [Directed scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
-- [Cinematic worlds](https://slopcamera.com/docs/how-to/cinematic-worlds.md): Recipe packs, direction, galleries, effects, and audits
-- [Native films](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
+- [Render and edit Three.js 3D scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
+- [Plan camera moves, lighting, and effects for a 3D scene](https://slopcamera.com/docs/how-to/cinematic-worlds.md): Recipe packs, direction, galleries, effects, and audits
+- [Render Blender, CadQuery, and Manim films from source](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
 - [Direct generated clips](https://slopcamera.com/docs/how-to/direct-takes.md): Shot recipes, budgets, takes, and review
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
 - [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup
@@ -228,7 +232,7 @@ ${blogPostLinks}
 - [Use cases](https://slopcamera.com/docs/explanation/use-cases.md): What people make, what each job needs, and its limits
 - [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
-- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): What a retained-source local studio gives an agent
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): What it keeps that one-off scripts lose, and how it compares with Remotion, HyperFrames, and MCP for Blender
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
 - [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
 - [Tutorials](https://slopcamera.com/docs/index.md): First diagram, first animation, first native film, and agent setup

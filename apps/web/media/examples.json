@@ -2,7 +2,7 @@
   {
     "id": "compute-temple",
     "title": "Compute aisle",
-    "description": "A dolly down a dark corridor of emissive rack lights toward a glowing portal — entities, rail rig, bloom, tone map.",
+    "description": "A dolly shot down a dark corridor of glowing server racks toward a bright portal, with bloom and tone mapping.",
     "family": "spatial-scenes",
     "techniques": [
       "camera.rail",

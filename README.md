@@ -45,9 +45,22 @@ the rendered output with source, runtime requirements and reproduction steps.
   instead run on the hosted API with prepaid Hraness Credits. Native Python
   authoring requires separate trust because it runs as your current user.
 
-## Install Slopcamera
+## Compared with other tools
 
-Slopcamera v3.6.0 includes 17 reusable film and animation direction profiles, deterministic exposure helpers, and a sample renderer that defaults to native 4K. Use the [style direction guide](docs/how-to/direct-visual-styles.md) to author cel animation, pixel art, mathematical explanations, and historical film treatments from retained sources. On macOS, `slopcamera menubar` puts Slopcamera in the menu bar and explains each macOS notice before it appears.
+- [Remotion](https://www.remotion.dev/) renders React components to video and can
+  render on AWS Lambda. It is source-available and needs a paid license for
+  companies of four or more people.
+- [HyperFrames](https://github.com/heygen-com/hyperframes) renders HTML to MP4
+  under Apache 2.0, with optional HeyGen-hosted rendering.
+- [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender
+  MCP, lets an agent drive a running Blender interactively.
+
+Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, headless
+Blender, CadQuery, and Manim renders, and edits of your own footage in one local
+project. It has no cloud rendering and a much smaller community. See
+[the full comparison](https://slopcamera.com/docs/explanation/why-slopcamera#compared-with-other-tools).
+
+## Install Slopcamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
 [Slopcamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
@@ -140,6 +153,8 @@ architecture from dimensions, [build a parametric design](https://slopcamera.com
 
 Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes,
 and video from source files it can keep revising.
+Direct cel animation, pixel art, math explainers, and period film looks with the
+[style direction guide](docs/how-to/direct-visual-styles.md).
 
 ### Author scenes and direct cameras
 
@@ -174,7 +189,7 @@ slopcamera workflows plan cinematic-world --input pack-input.json --json
 The `cinematic-world` workflow consumes one inert recipe pack — a bounded,
 content-addressed JSON document an agent can author — and stops before
 selection. Registration and selection stay explicit `scene project` operations.
-See [Direct a cinematic world](docs/how-to/direct-cinematic-worlds.md) and the
+See [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct-cinematic-worlds.md) and the
 [extension architecture](docs/extension-architecture.md).
 
 ### Film native worlds and educational animation
@@ -195,7 +210,7 @@ camera clock for reuse. Supported GLB derivatives and calibrated cameras can
 cross between native and portable scenes; rigs, solvers, and procedural materials
 remain native. Blender and Python environments are installed separately, and
 source execution requires explicit current-user trust. See [Native film studio](docs/studio.md)
-and [Make an educational video](docs/how-to/educational-video.md).
+and [Make a math explainer video with Manim](docs/how-to/educational-video.md).
 
 ### Build diagrams and motion graphics
 
@@ -349,7 +364,7 @@ vision](https://algal.computer/docs/vision/) states the bet behind it.
 ## Documentation
 
 - **Learn:** [Your first diagram](docs/tutorials/first-diagram.md) · [Your first native film](docs/tutorials/first-native-film.md).
-- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md) · [Direct a cinematic world](docs/how-to/direct-cinematic-worlds.md).
+- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md) · [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct-cinematic-worlds.md).
 - **Look up support:** [Capabilities and release availability](docs/reference/capabilities.md) · [SDK entrypoints](docs/reference/sdk.md) · [Creative tools](docs/html-overlay-creative-toolkit.md).
 - **Understand the system:** [Architecture](docs/architecture.md) · [Native studio](docs/studio.md) · [Directed scenes](docs/spatial-scenes.md) · [Extension architecture](docs/extension-architecture.md).
 

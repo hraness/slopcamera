@@ -1,6 +1,6 @@
-The `cinematic-world` built-in workflow runs the complete planning-and-review loop for one admitted spatial scene: inspect the world, check and compile authored direction, plan a bounded gallery per axis, bind declared effects into each preview render, and audit sampled temporal evidence. Its input is one inert `slopcamera.spatial-recipe-pack` document — bounded JSON data, never code.
+The `cinematic-world` workflow takes one 3D scene from direction to review. It checks your direction, plans variants along the axes you choose, such as camera or lighting, renders up to four previews with any effects you declare, and can audit frames sampled across the shot. You describe all of this in one JSON recipe file (`slopcamera.spatial-recipe-pack`), which Slopcamera reads as data and never runs as code.
 
-This guide is the durable-graph counterpart of the scene, direction, and effects commands covered in [Render and edit spatial scenes](/docs/how-to/direct-scenes). The commands ship in v3.3.1 and later releases; install the [verified release](/docs/reference/capabilities#install-the-release) or build from source. Check `slopcamera help scene` and `slopcamera workflows show cinematic-world --json` for the installed contract.
+This guide is the durable-graph counterpart of the scene, direction, and effects commands covered in [Render and edit Three.js 3D scenes](/docs/how-to/direct-scenes). The commands ship in v3.3.1 and later releases; install the [verified release](/docs/reference/capabilities#install-the-release) or build from source. Check `slopcamera help scene` and `slopcamera workflows show cinematic-world --json` for the installed contract.
 
 ## Author and check the direction
 

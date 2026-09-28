@@ -1513,9 +1513,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "82c7ec6334d3e6e0005c0b98e02b4bce7f47ee0708d1710d6b57b59bd78c9708",
-    "occurrenceCount": 4,
+    "identityLineCount": 3,
+    "identityLinesSha256": "95abb017e10538ea24fd5fdacbef319b855427e58165ff170caa3ad0eae176e8",
+    "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
@@ -1559,15 +1559,6 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "c904f57c6bf2d65bcca502bca50a81d5ab0297af09b52dc91d340cef48c10757",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/docs-registry.ts",
-    "categories": [
-      "native-film-studio"
-    ]
-  },
-  {
-    "identityLineCount": 1,
     "identityLinesSha256": "48f445c087d5ac8fe2b9cc5657e8b01dd1b1c405c84030e467941535c55de84d",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs.ts",
@@ -1586,7 +1577,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "50feb1333d091d263b5f0a2641ddb9a4029a9b2ae7435c6a1d5e5cf178c2ffbc",
+    "identityLinesSha256": "3405e0ff935ea99c06d1fa9e5fee0e9c5d13565d748c2e70465e8eb12df5d6cc",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/extending.md",
     "categories": [
@@ -1595,7 +1586,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "8b3b35b0c34eb52edb6c83abe7863be4b0f15d9e56632a456910c98dee9928a1",
+    "identityLinesSha256": "6fdbcdb3f7ea71373f09dcfada5e635b6d124e3524d2ad81cd33be8ced69d844",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/explanation/use-cases.md",
     "categories": [
@@ -1622,7 +1613,7 @@
   },
   {
     "identityLineCount": 27,
-    "identityLinesSha256": "e3a0138a6938bec819fec2bb982fffc4d9dcbfe4008ce2f8cb712aec34c44310",
+    "identityLinesSha256": "42fdd84a05a488d4bd69b8e852d90df169956e70018b71c0693c0075e1b32b28",
     "occurrenceCount": 38,
     "path": "apps/web/src/docs/how-to/native-films.md",
     "categories": [
@@ -1631,7 +1622,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "121f26f23f2403bc3ac58e2968987a56dab28f3fffa5f251e1e1e0924bb750f2",
+    "identityLinesSha256": "787d039bf832245360bcca7498f2c5227c655633b5910422ee2e2171377264e3",
     "occurrenceCount": 6,
     "path": "apps/web/src/docs/how-to/run-workflows.md",
     "categories": [
@@ -1902,7 +1893,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "251fcd25801ba5548806ee9f41831f03e1aedba14c2eda7fc750fccc16114b81",
+    "identityLinesSha256": "fb4c333e77916dc876dae2de0ccca0c7b6c218be261d61aba434fa69d6e05956",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [

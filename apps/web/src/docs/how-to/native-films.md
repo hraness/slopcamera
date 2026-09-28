@@ -1,4 +1,4 @@
-A native film keeps the engine's own source, a Blender scene, a CadQuery program, or a Manim scene, as the editable artifact. The `slopcamera studio` commands retain that source as an immutable bundle, run it through a closed host adapter against an engine you installed yourself, verify every declared output, and hand the result to an ordinary video project.
+A native film keeps the engine's own source, a Blender scene, a CadQuery program, or a Manim scene, as the editable artifact. The `slopcamera studio` commands save that source as a fixed bundle, run it with the Blender, CadQuery, or Manim you installed, check every declared output, and pass the result to an ordinary video project.
 
 Install a supported engine before running a job; Slopcamera does not silently install or upgrade native tools. The examples use Blender 5.2.1 LTS, CadQuery 2.8.0, and Manim Community 0.21.0 on macOS arm64; each source recipe records its qualified runtime. The `studio` commands ship in the verified release and run under Bun; a durable workflow that contains a native job needs the installed Bun package or a source checkout, since a copied standalone executable has no host source tree. For a bounded end-to-end pass, start with [Render your first native film](/docs/tutorials/first-native-film).
 
@@ -207,7 +207,7 @@ slopcamera studio asset studio_city --output-id city --asset-id asset_city --rep
 slopcamera studio asset studio_shot --output-id beauty --asset-id asset_reference --representation native --frame 1 --json
 ```
 
-The result contains an `asset`, a `binding`, and a retained admission receipt. Add the asset to the spatial scene and supply the bindings array through `slopcamera scene render --assets bindings.json`; the binding selects the exact retained physical bytes. A sequence needs an exact `--frame` for image admission, and encoded-video admission requires one unambiguous completed `studio encode` derivative. See [Render and edit spatial scenes](/docs/how-to/direct-scenes) for the scene side.
+The result contains an `asset`, a `binding`, and a retained admission receipt. Add the asset to the spatial scene and supply the bindings array through `slopcamera scene render --assets bindings.json`; the binding selects the exact retained physical bytes. A sequence needs an exact `--frame` for image admission, and encoded-video admission requires one unambiguous completed `studio encode` derivative. See [Render and edit Three.js 3D scenes](/docs/how-to/direct-scenes) for the scene side.
 
 Export a calibrated camera for a native scene with `slopcamera scene camera-track`:
 
@@ -241,4 +241,4 @@ slopcamera studio reconcile <studio-id> --json
 
 Reconciliation restores a missing receipt only when a closed successful process completion and an unchanged output-validation checkpoint exist; earlier interrupted execution stays ambiguous and is never automatically resubmitted. The supervisor bounds combined logs, the job deadline, and termination grace, retains failure evidence, and tracks native process groups. A machine-wide durable activity marker survives CLI death, and unresolved custody blocks later native dispatch: inspect and resolve the actual process ownership rather than deleting the marker. Choose a new job ID for an explicitly revised attempt after custody settles.
 
-For a Manim-led lesson with narration and captions, see [Make an educational video](/docs/how-to/educational-video).
+For a Manim-led lesson with narration and captions, see [Make a math explainer video with Manim](/docs/how-to/educational-video).

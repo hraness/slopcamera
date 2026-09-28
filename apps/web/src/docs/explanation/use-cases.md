@@ -10,7 +10,7 @@ Assemble existing screen or camera recordings and imported footage into polished
 
 ## Educational and explainer films
 
-Make lessons that combine authored motion, readable mathematics, a presenter, and narration. Manim scenes run through the [native studio adapter](/docs/reference/native-engines), and [Make an educational video](/docs/how-to/educational-video) keeps the visuals, narration, and timing evidence revisable.
+Make lessons that combine authored motion, readable mathematics, a presenter, and narration. Manim scenes run through the [native studio adapter](/docs/reference/native-engines), and [Make a math explainer video with Manim](/docs/how-to/educational-video) keeps the visuals, narration, and timing evidence revisable.
 
 ## Generated images, clips, and voice
 
@@ -18,7 +18,7 @@ Generate images, video takes, speech, and transcripts through your own [Vercel A
 
 ## Spatial scenes and product reveals
 
-Author editable Three.js scenes with calibrated cameras, mount images or video on world-space screens, and move the camera along explicit tracks. [Spatial scenes](/docs/reference/spatial-scenes) covers the data contract and GPU profiles; [Render and edit spatial scenes](/docs/how-to/direct-scenes) and [Direct a cinematic world](/docs/how-to/cinematic-worlds) cover the workflows.
+Author editable Three.js scenes with calibrated cameras, mount images or video on world-space screens, and move the camera along explicit tracks. [Spatial scenes](/docs/reference/spatial-scenes) covers the data contract and GPU profiles; [Render and edit Three.js 3D scenes](/docs/how-to/direct-scenes) and [Plan camera moves, lighting, and effects for a 3D scene](/docs/how-to/cinematic-worlds) cover the workflows.
 
 ## Parametric design studies
 
