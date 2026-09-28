@@ -3,7 +3,7 @@ import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
-  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument, docsSocialImage,
+  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument,
   renderDocsArticleHeader, renderDocsBody, renderDocsNav,
 } from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
@@ -132,7 +132,19 @@ export type SiteAssets = Readonly<{
   statusPagePath?: string
   /** The shared design-kit status page markup, rendered by the build entrypoint. */
   statusPage?: string
+  /**
+   * Each docs and blog document's share card, rendered by the build from the
+   * site's one @hraness/web-discovery declaration (src/social-image.ts).
+   */
+  socialImages?: Readonly<Record<string, SiteSocialImage>>
 }>
+export type SiteSocialImage = Readonly<{ url: string; alt: string; width: number; height: number }>
+
+function socialImageFor(document: SiteDocument, assets: SiteAssets): SiteSocialImage {
+  const image = assets.socialImages?.[document]
+  if (image === undefined) throw new Error(`Social image missing for ${document}`)
+  return image
+}
 
 function renderDocsFooter(slug: string): string {
   const sourcePath = `apps/web/src/docs/${slug}.md`
@@ -173,13 +185,15 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       ["{{BLOG_ARTICLE_META}}", page.articleMeta, 1],
       ["{{BLOG_JSONLD}}", page.jsonLd, 1],
       ["{{BLOG_MAIN}}", page.main, 1],
+      ["{{BLOG_IMAGE_URL}}", socialImageFor(document, assets).url, 2],
+      ["{{BLOG_IMAGE_ALT}}", escapeHtml(socialImageFor(document, assets).alt), 2],
     ]
   }
   const docsPage = docsPageForDocument(document)
   if (docsPage !== undefined) {
     const body = assets.docBodies?.[document]
     if (body === undefined) throw new Error(`Documentation body missing for ${document}`)
-    const social = docsSocialImage(docsPage)
+    const social = socialImageFor(document, assets)
     return [...common,
       ["{{DOC_TITLE}}", escapeHtml(docsPage.title), 3],
       ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],

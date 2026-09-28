@@ -76,13 +76,6 @@ export function docsJsonLd(page: DocsPage): string {
   return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</gu, "\\u003c")
 }
 
-export function docsSocialImage(page: DocsPage): Readonly<{ url: string; alt: string; width: number; height: number }> {
-  const example = workflowExamples.find(example => example.guideSlug === page.slug)
-  return example ? { url: `${docsOrigin}${exampleUrl(example.poster)}`, alt: example.poster.alt,
-    width: example.poster.width, height: example.poster.height }
-    : { url: `${docsOrigin}/og.png`, alt: "Slopcamera, a media studio for agents, beside a camera-frame and lens motif", width: 1200, height: 630 }
-}
-
 export function renderDocsBody(body: string): string {
   return renderDocsMarkdown(resolveDocsContent(body))
 }

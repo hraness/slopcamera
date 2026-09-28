@@ -52,7 +52,7 @@ import {
 } from "./src/negotiate-request"
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
-import { renderSlopcameraSocialImage } from "./scripts/generate-og"
+import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
@@ -677,7 +677,8 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<meta property="og:image:height" content="630">')
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">')
     expect(html).toContain('<meta name="twitter:image" content="https://slopcamera.com/og.png">')
-    expect(html).toContain('<meta name="twitter:image:alt" content="Slopcamera, a media studio for agents, beside a camera-frame and lens motif">')
+    expect(html).toContain(`<meta property="og:image:alt" content="${homeSocialImage.alt}">`)
+    expect(html).toContain(`<meta name="twitter:image:alt" content="${homeSocialImage.alt}">`)
     expect(html).toContain('<link rel="icon" href="/icon.png" type="image/png">')
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">')
     expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>')
@@ -1158,7 +1159,8 @@ describe("static Slopcamera site", () => {
   test("uses the camera identity without rewriting historical mythology", async () => {
     const html = await readSource("index.html")
     expect(html.replace(/\s+/gu, " ")).toContain(searchDescription)
-    expect(html).toContain("camera-frame and lens motif")
+    // The share card carries the camera mark; its alt names the product.
+    expect(html).toContain(`content="${homeSocialImage.alt}"`)
     expect(html).not.toMatch(/Atum|solar barque|Benben|hieroglyph|pharaoh|ankh/u)
   })
 
@@ -1282,48 +1284,51 @@ describe("static Slopcamera site", () => {
     expect(builtAssets.siteArtifacts.some(item => /PROVENANCE|\.(?:otf|json|map|ts|js)$/u.test(item.path))).toBe(false)
   })
 
-  test("ships reproducible correctly sized social and icon assets", async () => {
-    const social = new Uint8Array(await Bun.file(join(appDirectory, "src/og.png")).arrayBuffer())
-    const generatedSocial = await renderSlopcameraSocialImage()
-    const serifHero = new Uint8Array(await Bun.file(
-      join(appDirectory, "src/og-serif-hero.png"),
-    ).arrayBuffer())
+  test("ships share cards only from the shared web-discovery template", async () => {
+    // One declaration drives every card; pages pass only their own copy.
+    expect(slopcameraSocialSite.name).toBe("Slopcamera")
+    expect(slopcameraSocialSite.domain).toBe("slopcamera.com")
+    expect(slopcameraSocialSite.icon?.kind).toBe("mark")
+    expect(slopcameraSocialSite.icon?.src).toBe(`data:image/svg+xml;base64,${
+      Buffer.from(await readSource("marks/slopcamera.svg")).toString("base64")}`)
+    expect(slopcameraSocialSite.theme).toEqual({ accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85" })
+    expect(homeSocialImage).toMatchObject({ file: "og.png", url: "https://slopcamera.com/og.png", width: 1200, height: 630 })
+    expect(homeSocialImage.page).toBeUndefined()
+    expect(socialImages).toHaveLength(1 + 1 + blogPosts.length + docPages.length)
+    expect(new Set(socialImages.map(image => image.file)).size).toBe(socialImages.length)
+    for (const image of socialImages.slice(1)) {
+      expect(image.file).toMatch(/^og\/(?:blog|docs)(?:\/[a-z0-9/-]+)?\.png$/u)
+      expect(Object.keys(image.page ?? {}).sort()).toEqual(["description", "eyebrow", "headline"])
+    }
+    const doc = socialImageForDocument("docs/how-to/edit-video.html")
+    expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "How-to guides" } })
+    expect(doc.alt).toBe("Edit and deliver video, from Slopcamera")
+    for (const image of [homeSocialImage, doc]) {
+      const png = await renderSocialImage(image)
+      const view = new DataView(png.buffer, png.byteOffset, png.byteLength)
+      expect(Array.from(png.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+      expect(view.getUint32(16)).toBe(1200)
+      expect(view.getUint32(20)).toBe(630)
+      expect(png.byteLength).toBeLessThan(1024 * 1024)
+    }
+  })
+
+  test("points every docs and blog page at its own shared-template card", async () => {
+    for (const document of ["docs/how-to/edit-video.html", blogDocumentForPost(blogPosts[0]!), blogIndexDocument]) {
+      const html = await readBuilt(document)
+      const image = socialImageForDocument(document)
+      expect(html).toContain(`<meta property="og:image" content="${image.url}">`)
+      expect(html).toContain(`<meta name="twitter:image" content="${image.url}">`)
+      expect(html).toContain(`<meta property="og:image:alt" content="${image.alt.replaceAll("'", "&#39;")}">`)
+      expect((await readFile(join(appDirectory, "dist", image.file))).byteLength).toBeGreaterThan(0)
+    }
+  })
+
+  test("ships correctly sized icon assets", async () => {
     const apple = new Uint8Array(await Bun.file(join(appDirectory, "src/apple-touch-icon.png")).arrayBuffer())
-    const socialSource = await readSource("og-source.svg")
-    const socialGenerator = await readFile(join(appDirectory, "scripts/generate-og.ts"), "utf8")
     const icon = await readSource("icon.svg")
-    const socialView = new DataView(social.buffer, social.byteOffset, social.byteLength)
-    const serifHeroView = new DataView(
-      serifHero.buffer,
-      serifHero.byteOffset,
-      serifHero.byteLength,
-    )
     const appleView = new DataView(apple.buffer, apple.byteOffset, apple.byteLength)
 
-    expect(generatedSocial).toEqual(social)
-    expect(new Bun.CryptoHasher("sha256").update(social).digest("hex")).toBe(
-      "1d065a4ce62b383a7d540dff2ab7beb996a4b43a199f8b4752533d8eb419019f",
-    )
-    expect(Array.from(social.slice(1, 4))).toEqual([80, 78, 71])
-    expect(socialView.getUint32(16)).toBe(1200)
-    expect(socialView.getUint32(20)).toBe(630)
-    expect(socialSource).toContain("Direct scenes and films")
-    expect(socialSource).toContain("Scenes · films · motion graphics · diagrams")
-    expect(socialSource).toContain("with your coding agent.")
-    expect(socialSource).toContain('href="og-serif-hero.png"')
-    expect(socialSource.match(/font-family="Nebula Sans"/gu)).toHaveLength(4)
-    expect(socialSource).not.toMatch(/system-ui|-apple-system|sans-serif/u)
-    expect(socialSource).toContain('fill="#e8aa48"')
-    expect(serifHeroView.getUint32(16)).toBe(1200)
-    expect(serifHeroView.getUint32(20)).toBe(630)
-    expect(new Bun.CryptoHasher("sha256").update(serifHero).digest("hex")).toBe(
-      "4a4a132a6f8fd781df0c5804797799dc4179e56ab819de79f33fbeecc99b2f52",
-    )
-    expect(socialGenerator).toContain('loadSystemFonts: false')
-    expect(socialGenerator).toContain("NebulaSans-Book.otf")
-    expect(socialGenerator).toContain("NebulaSans-Bold.otf")
-    expect(socialGenerator).toContain("4cc650f856591af1affc4add4f50e260c8239a2542bafe77909b78006023f091")
-    expect(socialGenerator).toContain("91617d3e2281e8213f64f6bf359f387022d3149b35000b38365c32130a25bfa8")
     expect(Array.from(apple.slice(1, 4))).toEqual([80, 78, 71])
     expect(appleView.getUint32(16)).toBe(180)
     expect(appleView.getUint32(20)).toBe(180)
@@ -1383,11 +1388,12 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.0",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
       "react-dom": "19.2.3",
+      "satori": "0.33.4",
     })
     expect(manifest.devDependencies).toEqual({
       "@babel/core": "7.29.7",
@@ -1413,7 +1419,7 @@ describe("static Slopcamera site", () => {
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
@@ -1659,6 +1665,7 @@ describe("static Slopcamera site", () => {
       "llms.txt",
       "marketing-preset",
       "marks",
+      "og",
       "og.png",
       "preview.html",
       "robots.txt",
