@@ -1,0 +1,59 @@
+name: Production public site browser
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-public-browser
+  cancel-in-progress: false
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/production-chromium
+      SLOPCAMERA_SITE_ARTIFACTS: ${{ github.workspace }}/site-production-artifacts
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.1
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - name: Cache locked dependencies and browser
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.bun/install/cache
+            ${{ runner.temp }}/production-chromium
+          key: production-bun-1.3.14-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Install the locked browser and inspect the public site
+        run: |
+          playwright_cli="$(node -e 'const { createRequire } = require("node:module"); const { dirname, resolve } = require("node:path"); const appRequire = createRequire(resolve("apps/web/package.json")); const manifest = appRequire.resolve("playwright-core/package.json"); console.log(resolve(dirname(manifest), appRequire(manifest).bin["playwright-core"]))')"
+          node "$playwright_cli" install --no-shell chromium
+          SLOPCAMERA_CHROME_PATH="$(node -e 'const { createRequire } = require("node:module"); const { resolve } = require("node:path"); console.log(createRequire(resolve("apps/web/package.json"))("playwright-core").chromium.executablePath())')"
+          export SLOPCAMERA_CHROME_PATH
+          node apps/web/scripts/verify-site-current.mjs --production
+      - name: Retain production screenshots and receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-public-browser
+          path: site-production-artifacts/
+          retention-days: 7
+          if-no-files-found: error
+  required:
+    name: Required
+    if: always()
+    needs: browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULT: ${{ needs.browser.result }}
+        run: test "$RESULT" = success

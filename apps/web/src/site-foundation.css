@@ -31,3 +31,9 @@
   background-color: var(--hraness-material-chrome-paint);
   backdrop-filter: var(--hraness-material-chrome-blur);
 }
+
+/* The framework-neutral appearance trigger retains a full phone hit area. */
+.topbar .hraness-design-theme-toggle__trigger {
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+}
