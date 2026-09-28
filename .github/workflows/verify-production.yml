@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/production-chromium
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/production-chromium
       SLOPCAMERA_SITE_ARTIFACTS: ${{ github.workspace }}/site-production-artifacts
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -29,7 +29,7 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            ${{ runner.temp }}/production-chromium
+            ${{ github.workspace }}/.cache/production-chromium
           key: production-bun-1.3.14-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: Install the locked browser and inspect the public site
