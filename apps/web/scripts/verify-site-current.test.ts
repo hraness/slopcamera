@@ -3,7 +3,20 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { currentRoutes, missingRoute, resolveBuilt } from "./verify-site-current.mjs"
+import { allowsRequest, currentRoutes, missingRoute, requestedOrigin, resolveBuilt } from "./verify-site-current.mjs"
+
+test("live review has one fixed public origin and preserves the local network boundary", () => {
+  expect(requestedOrigin([])).toBeNull()
+  expect(requestedOrigin(["--production"])).toBe("https://slopcamera.com")
+  expect(() => requestedOrigin(["--origin", "https://example.com"])).toThrow()
+  expect(() => requestedOrigin(["--production", "https://example.com"])).toThrow()
+  expect(allowsRequest("http://127.0.0.1:1234/assets/site.css", "http://127.0.0.1:1234")).toBe(true)
+  expect(allowsRequest("https://us.i.posthog.com/i/v0/e/", "http://127.0.0.1:1234")).toBe(false)
+  expect(allowsRequest("https://us.i.posthog.com/i/v0/e/", "https://slopcamera.com")).toBe(true)
+  expect(allowsRequest("http://us.i.posthog.com/i/v0/e/", "https://slopcamera.com")).toBe(false)
+  expect(allowsRequest("https://us.i.posthog.com.example.com/", "https://slopcamera.com")).toBe(false)
+  expect(allowsRequest("https://example.com/font.woff2", "https://slopcamera.com")).toBe(false)
+})
 
 test("resolves clean URLs the way the static host does and refuses traversal", async () => {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-current-"))

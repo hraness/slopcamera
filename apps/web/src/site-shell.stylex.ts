@@ -95,6 +95,8 @@ const shell = stylex.create({
   navigationLink: {
     display: "inline-flex",
     alignItems: "center",
+    justifyContent: "center",
+    minWidth: "2.75rem",
     minHeight: "2.75rem",
     flexShrink: 0,
     color: { default: "var(--muted)", ":hover": "var(--ink)" },
