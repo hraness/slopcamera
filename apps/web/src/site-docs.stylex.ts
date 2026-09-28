@@ -180,8 +180,9 @@ const docs = stylex.create({
   },
   link: {
     color: { default: "var(--gold)", ":visited": "var(--gold)" },
-    textDecorationColor: "color-mix(in srgb, var(--gold) 45%, transparent)",
-    textUnderlineOffset: "0.15em",
+    textDecorationStyle: { default: "dotted", ":hover": "solid" },
+    textDecorationColor: "var(--gold)",
+    textUnderlineOffset: "0.18em",
   },
   code: {
     overflowWrap: "anywhere",

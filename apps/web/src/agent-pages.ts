@@ -54,7 +54,7 @@ For repository example helpers or development, follow the [complete source-insta
 
 ## Examples
 
-Each example links to its guide and source files. Start with an example, then ask your agent to change the words, geometry, camera, or timing.
+Each example names the packaged techniques it demonstrates and links to its guide and source files. A strong model could write each approach from scratch; reusing the shipped source spends the agent's context on your change instead. Start with an example, then ask your agent to change the words, geometry, camera, or timing.
 
 ${homepageExampleMarkdown()}
 

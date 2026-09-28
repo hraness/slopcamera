@@ -24,6 +24,15 @@
   overflow-wrap: anywhere;
 }
 
+/* The kicker names the packaged techniques the card demonstrates. */
+.slopcamera-example__techniques {
+  color: var(--primary, var(--gold));
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+}
+
 .slopcamera-example__title {
   display: block;
   font-size: 1.125rem;
@@ -33,6 +42,10 @@
 .slopcamera-example__caption p {
   max-inline-size: 68ch;
   margin: 0.5rem 0 0;
+}
+
+.slopcamera-example__caption .slopcamera-example__techniques {
+  margin: 0;
 }
 
 .slopcamera-example__details {
@@ -51,13 +64,13 @@
   display: inline-flex;
   align-items: center;
   min-block-size: 2.75rem;
-  color: inherit;
-  text-decoration: underline;
+  color: var(--primary, var(--gold));
+  text-decoration: underline dotted;
   text-underline-offset: 0.2em;
 }
 
 .slopcamera-example__links a:hover {
-  color: var(--gold);
+  text-decoration-style: solid;
 }
 
 .slopcamera-example :is(a, video):focus-visible {

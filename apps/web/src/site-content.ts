@@ -10,6 +10,7 @@ import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-h
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 import { interfaceExamples } from "./site-code-examples"
 import { renderExampleGallery, renderExampleHero } from "./example-gallery"
+import { exampleTechniqueSummary } from "./example-content"
 import { isBlogDocument } from "./blog-registry"
 
 // Existing content producers run within the ordinary page's captured SSR
@@ -203,6 +204,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
     ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
     ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
+    ["{{EXAMPLE_TECHNIQUE_SUMMARY}}", exampleTechniqueSummary(), 1],
     ["{{SKILL_EXAMPLE}}", renderHighlightedCode(interfaceExamples.skill, "shell"), 1],
     ["{{CLI_EXAMPLE}}", renderHighlightedCode(interfaceExamples.cli, "shell"), 1],
     ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],

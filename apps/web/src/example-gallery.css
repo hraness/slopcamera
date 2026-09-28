@@ -12,8 +12,15 @@
   margin: 0;
 }
 
+/* An odd last card spans the row but keeps one column's width, centered, so
+   every tile reads at the same size instead of stretching to the full row. */
 .slopcamera-work-gallery > li:last-child:nth-child(odd) {
   grid-column: 1 / -1;
+}
+
+.slopcamera-work-gallery > li:last-child:nth-child(odd) > .slopcamera-example {
+  inline-size: calc(50% - 1rem);
+  margin-inline: auto;
 }
 
 .slopcamera-work-gallery .slopcamera-example {
@@ -22,29 +29,47 @@
   border-block-start: 1px solid var(--hraness-material-seam);
 }
 
+/* One shared 16:9 media frame for every tile. Posters and videos letterbox
+   inside it, so different source ratios no longer size the cards. */
 .slopcamera-work-gallery .slopcamera-example__media {
-  inline-size: auto;
-  max-inline-size: 100%;
+  inline-size: 100%;
   block-size: auto;
-  max-block-size: min(52vh, 24rem);
+  aspect-ratio: 16 / 9;
   margin-inline: auto;
   border-radius: .5rem;
+  object-fit: contain;
 }
 
 .slopcamera-work-gallery .slopcamera-example__caption {
   padding: .85rem .5rem .25rem;
 }
 
+/* The technique index leads the section: the full packaged-technique index
+   sits between the header and the rendered tiles. */
 .slopcamera-techniques {
-  margin-block-start: 3rem;
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid var(--hraness-material-seam);
+  margin-block: 2rem 3rem;
+  padding-block-end: 1.5rem;
+  border-block-end: 1px solid var(--hraness-material-seam);
+}
+
+.slopcamera-techniques h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.slopcamera-techniques .quiet-note {
+  margin-top: 0.35rem;
+}
+
+.slopcamera-techniques ul + .quiet-note {
+  margin-top: 1rem;
 }
 
 .slopcamera-techniques ul {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem .75rem;
+  margin-top: 1rem;
   padding: 0;
   list-style: none;
 }
@@ -66,5 +91,9 @@
   .slopcamera-work-gallery {
     grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
+  }
+
+  .slopcamera-work-gallery > li:last-child:nth-child(odd) > .slopcamera-example {
+    inline-size: auto;
   }
 }

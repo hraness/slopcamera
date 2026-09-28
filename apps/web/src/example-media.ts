@@ -2,6 +2,8 @@ export type ExampleMediaRecord = Readonly<{
   id: string
   title: string
   description: string
+  /** Public labels for the packaged techniques the example demonstrates. */
+  techniques: readonly string[]
   poster: Readonly<{ url: string; width: number; height: number; alt?: string }>
   video?: Readonly<{
     url: string
@@ -40,6 +42,12 @@ function dimension(value: number): number {
 /** Pure server rendering. Publication admission, rights and byte limits belong to the registry. */
 export function renderExampleMedia(record: ExampleMediaRecord, options: Readonly<{ autoplayPreview?: boolean; eagerPoster?: boolean }> = {}): string {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(record.id)) throw new Error("Invalid example ID")
+  const techniques = record.techniques.map(label => {
+    if (!/^[\p{L}\p{N}][\p{L}\p{N} .:/()+-]{0,47}$/u.test(label)) throw new Error("Invalid example technique label")
+    return escapeHtml(label)
+  })
+  const techniqueLine = techniques.length
+    ? `<p class="slopcamera-example__techniques">${techniques.join(" · ")}</p>` : ""
   const id = `slopcamera-example-${record.id}`
   const title = escapeHtml(record.title)
   const description = escapeHtml(record.description)
@@ -74,5 +82,5 @@ export function renderExampleMedia(record: ExampleMediaRecord, options: Readonly
     const alt = escapeHtml(record.poster.alt ?? record.title)
     media = `<a class="slopcamera-example__image-link" href="${poster}" aria-label="Open ${title} image"><img class="slopcamera-example__media" src="${poster}" width="${posterWidth}" height="${posterHeight}" alt="${alt}" loading="${options.eagerPoster ? "eager" : "lazy"}"${options.eagerPoster ? ' fetchpriority="high"' : ""} decoding="async"></a>`
   }
-  return `<figure class="slopcamera-example" data-example-id="${record.id}">${media}<figcaption class="slopcamera-example__caption"><strong class="slopcamera-example__title" id="${id}-title">${title}</strong><p id="${id}-description">${description}</p>${details}<p class="slopcamera-example__links"><a href="${guide}">Follow the guide</a><a href="${source}">View source</a>${videoLink}</p>${downloads}${video ? '<p class="slopcamera-example__status" data-example-status role="status" hidden></p>' : ""}</figcaption></figure>`
+  return `<figure class="slopcamera-example" data-example-id="${record.id}">${media}<figcaption class="slopcamera-example__caption">${techniqueLine}<strong class="slopcamera-example__title" id="${id}-title">${title}</strong><p id="${id}-description">${description}</p>${details}<p class="slopcamera-example__links"><a href="${guide}">Follow the guide</a><a href="${source}">View source</a>${videoLink}</p>${downloads}${video ? '<p class="slopcamera-example__status" data-example-status role="status" hidden></p>' : ""}</figcaption></figure>`
 }

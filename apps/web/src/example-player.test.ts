@@ -234,6 +234,7 @@ test("a non-bubbling child-source failure presents recovery and its listener is 
 
 const record: ExampleMediaRecord = {
   id: "title-study", title: 'A title & "motion"', description: "Change <one> timing cue.",
+  techniques: ["Motion timeline", "WGSL shader"],
   poster: { url: "/assets/examples/poster.webp", width: 1280, height: 720 },
   video: { url: "/assets/examples/movie.mp4", mime: "video/mp4", width: 1280, height: 720, durationSeconds: 12, hasAudio: false },
   sourceUrl: "https://github.com/hraness/slopcamera/blob/main/examples/title.ts",
@@ -252,6 +253,9 @@ describe("example server rendering", () => {
     expect(html).toContain('href="/assets/examples/movie.mp4">Open video</a>')
     expect(html).toContain("A title &amp; &quot;motion&quot;")
     expect(html).toContain("Change &lt;one&gt; timing cue.")
+    expect(html).toContain('<p class="slopcamera-example__techniques">Motion timeline · WGSL shader</p>')
+    expect(renderExampleMedia({ ...record, techniques: [] })).not.toContain("__techniques")
+    expect(() => renderExampleMedia({ ...record, techniques: ['<img src=x onerror=alert(1)>'] })).toThrow()
   })
 
   test("only short previews opt into muted controller-managed playback", () => {

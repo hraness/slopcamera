@@ -128,6 +128,20 @@ a {
   text-underline-offset: 0.16em;
 }
 
+/* Canonical link style: primary ink with a dotted underline that solidifies on
+   hover. Navigation, controls, and the shared network footer keep their own
+   recipes; content links live inside #main, where only the CTA actions opt out. */
+#main a:not(.hraness-marketing-action) {
+  color: var(--primary, var(--gold));
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.18em;
+}
+
+#main a:not(.hraness-marketing-action):hover {
+  text-decoration-style: solid;
+}
+
 /* The homepage header action is outlined; its ink follows the header surface. */
 .topbar nav[aria-label="Primary"] > .site-action {
   --gold-ink: var(--ink);
@@ -151,6 +165,8 @@ a {
 .hraness-marketing-hero[data-tone="accent"] .slopcamera-example {
   --ink: var(--hraness-marketing-accent-ink);
   --muted: color-mix(in srgb, var(--hraness-marketing-accent-ink) 78%, transparent);
+  /* The accent wall is itself the primary color, so links read in accent ink. */
+  --primary: var(--hraness-marketing-accent-ink);
 }
 
 @media (forced-colors: active) {
