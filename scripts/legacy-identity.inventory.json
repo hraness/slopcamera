@@ -1504,9 +1504,9 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "880383edd4bb95231d0205528136ca8a54f321e8556b72874830578562bf925c",
-    "occurrenceCount": 9,
+    "identityLineCount": 8,
+    "identityLinesSha256": "d608b594a3389de65f9d16c3550517214ef4cef8323b965d7a85a1278dfa87c0",
+    "occurrenceCount": 8,
     "path": "apps/web/site.test.ts",
     "categories": [
       "test-fixture"
@@ -1522,28 +1522,10 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "13497b86488cc3489fc06ead369f58a9d643f08512bb1e00e9c95a63fb6024c0",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/blog-content.ts",
-    "categories": [
-      "compat-doc"
-    ]
-  },
-  {
     "identityLineCount": 2,
     "identityLinesSha256": "1a36eee77e6baeb427eb209a4e2823c812157eb0ee4bbe1f3606cacfd9cebc51",
     "occurrenceCount": 2,
     "path": "apps/web/src/blog-registry.ts",
-    "categories": [
-      "compat-doc"
-    ]
-  },
-  {
-    "identityLineCount": 2,
-    "identityLinesSha256": "18075b23297f63d111aa3eccdca724a97d321b324bb255f6d6e6b01ad0e88331",
-    "occurrenceCount": 2,
-    "path": "apps/web/src/blog.html",
     "categories": [
       "compat-doc"
     ]
@@ -1555,15 +1537,6 @@
     "path": "apps/web/src/blog/introducing-slopcamera.md",
     "categories": [
       "compat-doc"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "48f445c087d5ac8fe2b9cc5657e8b01dd1b1c405c84030e467941535c55de84d",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/docs.ts",
-    "categories": [
-      "native-film-studio"
     ]
   },
   {
@@ -1729,19 +1702,10 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "19e324955414c3274688459121534cebb6583f34365c5a122babc761b542d235",
-    "occurrenceCount": 4,
+    "identityLineCount": 2,
+    "identityLinesSha256": "a7fcdf97b04940ce1e9efc5b8c00de4c023e4b52d4453b024fe6604ff561d501",
+    "occurrenceCount": 2,
     "path": "apps/web/src/index.html",
-    "categories": [
-      "native-film-studio"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "1ada1b1ef3d1df81965905d8887dafa50e4ba580b527df3d3ac547db6c8557e0",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/og-source.svg",
     "categories": [
       "native-film-studio"
     ]

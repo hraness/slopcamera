@@ -1,6 +1,6 @@
 # Contents
 
-- `src/` contains the static `slopcamera.com` homepage and documentation, inert `/preview` composition, visual system, appearance control, crawler files, favicons, social preview, and machine-readable page bodies.
+- `src/` contains the static `slopcamera.com` homepage and documentation, inert `/preview` composition, visual system, appearance control, crawler files, favicons, the social-image declaration, and machine-readable page bodies.
 - `src/negotiate.ts`, `src/negotiate-request.ts`, and `middleware.ts` select HTML or markdown from `Accept` for document routes.
 - `scripts/build.ts` renders fingerprinted local assets into `dist/` from an explicit allowlist and bundles the pinned PostHog browser client only for a configured Production build.
 - `src/preview.stylex.ts`, `src/preview-renderer.ts`, and `src/preview-foundation.*` own the inert preview's static recipes, sealed HTML producer, and CSS-importing foundation entry. `scripts/build-preview.ts` compiles their public StyleX generation; `scripts/preview-contract.ts` bounds its publication projection.
@@ -15,6 +15,7 @@
 
 # Guidelines
 
+- Share images come only from the shared `@hraness/web-discovery` social-image template via the site's single `defineSocialImageSite` declaration in `src/social-image.ts` (real camera mark, light Catppuccin theme). `scripts/build.ts` renders every card with `createSocialImageCard`; the home card stays at `/og.png`, docs and blog pages get `/og/<document>.png` and pass copy only (`headline`, `description`, `eyebrow`), with `socialImageAlt` alt text handed to the sealed renderer as build assets. Do not add per-site drawing code, checked-in card PNGs or custom SVG layouts.
 - Keep the site static and useful without JavaScript. Browser code may load only fingerprinted local assets. The sole runtime request is the reviewed PostHog pageview boundary below.
 - Author `/preview`, the ordinary skip-link/header/navigation shell, and local install/copy presentation in product-owned literal StyleX recipes. Use the released `@hraness/ui/stylex-build` generation, Vite and Bun adapters, produced-template seal, and finalizer. Keep the ordinary homepage marketing, Ask-AI overrides, and framework-neutral appearance menu explicitly separate and unmigrated; a captured compatibility stylesheet is not a converted component.
 - Seal the install/copy state classes and fallback textarea in the same captured ordinary SSR graph. Preserve semantic hooks, hidden-before-JS behavior, exact commands/text, live status/described-by links, native focus, failed-hover gold ink, 34rem physical border change, and the exact 2500ms success reset. Never import a recipe into the theme client. Pure copy-handler and compiler-output ownership tests complement, not replace, all 76 ordinary native cases and additional real copy success/failure/fallback/reset/hover/focus/phone/forced-color evidence before delivery.

@@ -5,7 +5,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { paletteColors } from "@hraness/design-kit"
 
-import { renderSlopcameraSocialImage } from "./generate-og"
+import { renderSocialImage, socialImages } from "../src/social-image"
 import { buildPreview } from "./build-preview"
 import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
@@ -258,8 +258,9 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const environment = options.environment ?? process.env
   const outputDirectory = options.outputDirectory ?? defaultOutputDirectory
   const analyticsConfig = productionAnalyticsConfig(environment)
-  const [theme, statusPage, socialImage] = await Promise.all([
-    bundleTheme(), bundleStatusPage(), renderSlopcameraSocialImage(),
+  const [theme, statusPage, socialCards] = await Promise.all([
+    bundleTheme(), bundleStatusPage(),
+    Promise.all(socialImages.map(async image => ({ file: image.file, bytes: await renderSocialImage(image) }))),
   ])
   const themePath = assetPath("theme.js", theme)
   const statusPagePath = assetPath("status-page.js", statusPage)
@@ -285,7 +286,11 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
     }),
     writeFile(join(outputDirectory, themePath.slice(1)), theme),
     writeFile(join(outputDirectory, statusPagePath.slice(1)), statusPage),
-    writeFile(join(outputDirectory, "og.png"), socialImage),
+    ...socialCards.map(async ({ file, bytes }) => {
+      const destination = join(outputDirectory, file)
+      await mkdir(dirname(destination), { recursive: true })
+      await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })
+    }),
     ...(analyticsPath === null || analytics === null
       ? []
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),

@@ -1,6 +1,6 @@
 # Slopcamera
 
-[![Slopcamera: Visual work your agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
+[![Slopcamera: Images, diagrams, animation, 3D and video your coding agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
 
 **Slopcamera is a media studio for coding agents. Codex, Claude Code, and other
 agents make images, diagrams, animation, 3D scenes, and edited video from source
