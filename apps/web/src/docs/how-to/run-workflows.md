@@ -84,7 +84,7 @@ Approval records authority and releases the claim; it does not execute the node.
 slopcamera runs resume <run-id> --json
 ```
 
-A node that runs native studio source additionally needs an invocation-scoped runtime selection and trusted-code authorization: pass `--studio-blender-bin <executable>` or `--studio-python <venv-python>` together with `--allow-trusted-code` on `code run`, `workflows run`, or `runs resume`. Selecting a runtime or holding a generic write grant does not authorize native source. [Author a native film](/docs/how-to/native-films) describes what that execution does.
+A node that runs native studio source additionally needs an invocation-scoped runtime selection and trusted-code authorization: pass `--studio-blender-bin <executable>` or `--studio-python <venv-python>` together with `--allow-trusted-code` on `code run`, `workflows run`, or `runs resume`. Selecting a runtime or holding a generic write grant does not authorize native source. [Render Blender, CadQuery, and Manim films from source](/docs/how-to/native-films) describes what that execution does.
 
 ## Resume
 
@@ -104,4 +104,4 @@ To stop new work:
 slopcamera runs cancel <run-id> --json
 ```
 
-Cancellation is durable and prevents new dispatch or publication, but it does not roll back artifacts already published. Inspect the retained result and any unresolved custody before starting a replacement run. Studio reconciliation, directing resume, and Blob cleanup each have their own narrower commands described in [Author a native film](/docs/how-to/native-films) and [Direct short generated clips](/docs/how-to/direct-takes); none is a universal retry mechanism.
+Cancellation is durable and prevents new dispatch or publication, but it does not roll back artifacts already published. Inspect the retained result and any unresolved custody before starting a replacement run. Studio reconciliation, directing resume, and Blob cleanup each have their own narrower commands described in [Render Blender, CadQuery, and Manim films from source](/docs/how-to/native-films) and [Direct short generated clips](/docs/how-to/direct-takes); none is a universal retry mechanism.

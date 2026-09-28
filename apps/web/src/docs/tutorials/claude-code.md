@@ -32,6 +32,12 @@ Ask Claude Code in a fresh session:
 
 Claude Code should run `slopcamera diagram init`, edit the JSON source, run `slopcamera diagram check --strict`, then `slopcamera diagram render`, and open or report the resulting files. If it improvises with another tool instead, the skill did not load: start a new session or re-run the skill install.
 
+Then ask for a short video:
+
+> Make an eight-second 1280 × 720 title animation that says "Launch week", render it to MP4, and show me the file.
+
+The skill should lead Claude Code to write an HTML scene and a render request, check it with `slopcamera html render --dry-run --json`, then render it. This needs the browser and FFmpeg runtimes that `{{DOCTOR_COMMAND}}` reports. [Create and revise your first animation](/docs/tutorials/first-animation) walks through the same steps.
+
 ## What Claude Code can do next
 
 - Generate images, video clips, and narration through your own Vercel AI Gateway credential. See [generate media](/docs/how-to/generate-media).

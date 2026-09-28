@@ -44,4 +44,4 @@ slopcamera studio assemble <studio-id> --output-id beauty --name "The first shot
 
 Native jobs inside a durable workflow need the installed Bun package or a source checkout; a copied standalone executable has no host source tree. `slopcamera.studio.run` is the single operation allowed to execute authored code. The separate vgpu 0.4.1 example runtime is provisioned through Node and Dawn and is not a registered studio engine.
 
-For the end-to-end task, see [Author a native film](/docs/how-to/native-films) or the [first native film tutorial](/docs/tutorials/first-native-film).
+For the end-to-end task, see [Render Blender, CadQuery, and Manim films from source](/docs/how-to/native-films) or the [first native film tutorial](/docs/tutorials/first-native-film).

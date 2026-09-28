@@ -41,7 +41,7 @@ The trust model is explicit. A custom workflow module is an explicitly imported 
 
 Blender, CadQuery, and Manim are installed separately, and the operator selects the exact executable or Python environment per invocation; Slopcamera does not silently install or upgrade native tools. `slopcamera.studio.run` is the single operation allowed to execute authored code. It runs a previously retained, hash-bound bundle through the closed host adapter, and only inside an invocation-scoped trusted-current-user envelope: `--allow-trusted-code` plus an explicit runtime path on `code run`, `workflows run`, or `runs resume`. A stored write approval cannot grant it, and a missing envelope pauses the node before dispatch. Runtime paths and argv remain host-owned, and the profile declares no OS sandbox or hermetic dependency closure.
 
-The external vgpu example follows the same pattern through a separately provisioned Node/Dawn runtime. It is an example environment, not a registered studio engine. [Author a native film](/docs/how-to/native-films) describes the retained-source job lifecycle.
+The external vgpu example follows the same pattern through a separately provisioned Node/Dawn runtime. It is an example environment, not a registered studio engine. [Render Blender, CadQuery, and Manim films from source](/docs/how-to/native-films) describes the retained-source job lifecycle.
 
 ## Where extension stops
 

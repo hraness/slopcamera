@@ -42,7 +42,7 @@ import {
   docsPageForRequestPath,
   docPages,
 } from "./src/docs-registry"
-import { blogDocumentForPost, blogIndexDocument, blogMarkdownPath, blogPostPath, blogPosts, indexableBlogPosts } from "./src/blog-registry"
+import { blogDocumentForPost, blogIndexDocument, blogPostPath, blogPosts, indexableBlogPosts } from "./src/blog-registry"
 import {
   isDocsPath,
   isHomePath,
@@ -661,7 +661,8 @@ describe("static Slopcamera site", () => {
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
     const html = await readSource("index.html")
 
-    expect(html).toContain("<title>Slopcamera: Visual work your agent can keep revising.</title>")
+    expect(html).toContain("<title>Slopcamera: video, diagrams and 3D your coding agent can revise</title>")
+    expect(html).toContain('<meta property="og:title" content="Slopcamera: video, diagrams and 3D your coding agent can revise">')
     expect(html).toContain(`<meta name="description" content="${searchDescription}">`)
     expect(html).toContain(`<meta property="og:description" content="${searchDescription}">`)
     expect(html).toContain(`<meta name="twitter:description" content="${searchDescription}">`)
@@ -1734,12 +1735,11 @@ describe("static Slopcamera site", () => {
     const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
     expect(locations).toEqual([
       "https://slopcamera.com/",
-      "https://slopcamera.com/index.md",
-      ...docPages.flatMap(page => [docsCanonicalUrl(page), `https://slopcamera.com${docsMarkdownUrl(page)}`]),
+      ...docPages.map(docsCanonicalUrl),
       "https://slopcamera.com/blog",
-      "https://slopcamera.com/blog/index.md",
-      ...indexableBlogPosts.flatMap(post => [`https://slopcamera.com${blogPostPath(post)}`, `https://slopcamera.com${blogMarkdownPath(post)}`]),
+      ...indexableBlogPosts.map(post => `https://slopcamera.com${blogPostPath(post)}`),
     ])
+    expect(locations.filter(location => location?.endsWith(".md"))).toEqual([])
     expect(await readBuilt("index.md")).toBe(homeMarkdown)
     expect(await readBuilt("llms.txt")).toBe(llmsTxt)
     expect(await readBuilt("sitemap.md")).toBe(sitemapMarkdown)
@@ -1778,7 +1778,7 @@ describe("static Slopcamera site", () => {
       expect(sitemap).not.toContain(optional)
     }
     // Only blog entries carry lastmod, from their admitted publication dates.
-    expect(sitemap.match(/<lastmod>/gu)).toHaveLength(2 + 2 * indexableBlogPosts.length)
+    expect(sitemap.match(/<lastmod>/gu)).toHaveLength(1 + indexableBlogPosts.length)
     expect(sitemap.slice(0, sitemap.indexOf("<loc>https://slopcamera.com/blog</loc>"))).not.toContain("<lastmod>")
     expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
     expect(llmsTxt).toContain("> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.")

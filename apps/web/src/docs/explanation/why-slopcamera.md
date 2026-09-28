@@ -1,4 +1,4 @@
-An agent that produces visual work eventually has to answer two questions: what did it make, and what can still be changed. Slopcamera keeps both answers on the local machine as inspectable state. The source that owns each creative decision stays editable next to its exports, and important operations leave receipts that name their inputs and outputs.
+Slopcamera keeps the source behind every render, such as a diagram file, a Blender program, a 3D scene, or a video edit, so your agent can change one detail and render again. This page explains what that gives you and when Remotion, HyperFrames, Blender MCP, or a hosted generator fits better.
 
 ## Sources stay editable after the render
 
@@ -8,7 +8,7 @@ The difference shows up on the second request. A PNG does not record the JSON it
 
 ## One project model carries the evidence
 
-Ordinary projects keep the current edit plan alongside original media, analysis, and derived outputs. One project is immutable source plus explicit revisions, candidates, selections, and delivery variants that refer to the same inputs. Plans bind declared inputs before effects run, the durable scheduler admits work under resource claims and retains custody until processes settle, and completed work is reused only when its input, tool, and receipt identities still match.
+Ordinary projects keep the current edit plan alongside original media, analysis, and derived outputs. One project is immutable source plus explicit revisions, candidates, selections, and delivery variants that refer to the same inputs. Each plan fixes its inputs before anything runs. Slopcamera limits how much work runs at once, tracks each process until it exits, and reuses finished work only when the inputs, tool, and recorded result still match.
 
 That gives the agent a verifiable trail instead of a log to trust. A failed or interrupted attempt leaves its exact evidence for inspection and reconciliation; recovery re-checks the attempt rather than assuming a timeout meant nothing ran. A receipt proves a recorded operation and the identities involved, not visual quality. A successful plan or schema check still does not replace inspecting the result.
 
@@ -23,6 +23,22 @@ Model-backed work is opt-in per invocation. Image, video, speech, and transcript
 An agent does not have to guess the local contract. `slopcamera --help` prints the grammar, `{{DOCTOR_COMMAND}}` reports installed tools and readiness, `slopcamera operations list --json` enumerates the closed operation registry with its input schemas, and `slopcamera html catalog` lists the admitted HTML profiles. The version-matched Agent Skill routes the agent to the reference for each kind of job, SDK entrypoints select a typed capability boundary, and the MCP server publishes a fixed, bounded toolset.
 
 Properties a per-task script would have to reimplement, such as absolute-time rendering, declared assets, resource admission, bounded inputs, and provenance receipts, are host invariants here. They apply to every operation the same way, and they leave evidence the next operation can check. The [architecture explanation](/docs/explanation/architecture) develops this source, representation, and project model.
+
+## Compared with other tools
+
+Use [Remotion](https://www.remotion.dev/) if your team writes React and wants to render at scale on [AWS Lambda](https://www.remotion.dev/docs/lambda). Use [HyperFrames](https://github.com/heygen-com/hyperframes) if you want HTML motion graphics rendered to MP4, with optional HeyGen-hosted rendering. Use [Blender MCP](https://github.com/ahujasid/blender-mcp) to model interactively in a running Blender. Use Slopcamera when one agent needs diagrams, 3D scenes, Blender or Manim films, and edits of your own footage in one local project it can revise. Remotion and HyperFrames have much larger communities.
+
+| | Slopcamera | Remotion | HyperFrames | Blender MCP |
+| --- | --- | --- | --- | --- |
+| What the agent writes | HTML scenes, diagram JSON, Three.js scene JSON, Blender, CadQuery, or Manim programs, and video edits | React components | HTML, CSS, and JavaScript animation | Commands sent to a running Blender |
+| License | MIT | Source-available; free for individuals, non-profits, and organizations of up to 3 people ([license FAQ](https://www.remotion.dev/docs/license/faq)) | Apache 2.0 | MIT |
+| Agent integration | Version-matched Agent Skill, CLI, TypeScript SDK, and a 17-tool MCP server | [Official Agent Skills](https://www.remotion.dev/docs/ai/skills) | Agent Skills and a Claude Code plugin | MCP server plus a Blender add-on |
+| Cloud rendering | None; renders run on your machine | AWS Lambda in your AWS account | HeyGen-hosted rendering or AWS Lambda | None; work runs in your Blender |
+| Built-in diagram format | Yes, with light and dark SVG and PNG exports and a .tldr file | No | No | No |
+
+For a one-off image or clip, a hosted app such as Runway or ChatGPT is faster and needs no install. Slopcamera fits when you expect to revise the result.
+
+Competitor details as of 28 September 2026.
 
 ## What Slopcamera does not provide
 

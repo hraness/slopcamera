@@ -14,8 +14,8 @@ import { readExampleAssets } from "./example-assets"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
-import { docsCanonicalUrl, docsMarkdownUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
-import { blogFeedPath, blogIndexMarkdownPath, blogMarkdownPath, blogPosts, indexableBlogPosts } from "../src/blog-registry"
+import { docsCanonicalUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
+import { blogFeedPath, blogIndexMarkdownPath, blogMarkdownPath, blogPosts } from "../src/blog-registry"
 import { blogAtomFeed, blogIndexMarkdown, blogPostMarkdown, blogSitemapPaths } from "../src/blog-content"
 import {
   homeMarkdown,
@@ -118,23 +118,18 @@ ${lastModified === undefined ? "" : `    <lastmod>${lastModified}</lastmod>\n`}$
 }
 
 export function renderSitemapXml(): string {
+  // Only canonical HTML URLs enter the sitemap. Markdown twins stay discoverable
+  // through sitemap.md, llms.txt, rel=alternate, and Accept negotiation.
   const entries = [
     renderSitemapUrl("/", workflowExamples.filter(example => example.featured)),
-    renderSitemapUrl("/index.md"),
-    ...docPages.flatMap(page => {
-      const canonical = docsCanonicalUrl(page).slice(siteOrigin.length)
-      const mirror = docsMarkdownUrl(page)
-      return [
-        renderSitemapUrl(canonical, workflowExamples.filter(example => example.guideSlug === page.slug)),
-        renderSitemapUrl(mirror),
-      ]
-    }),
+    ...docPages.map(page => renderSitemapUrl(
+      docsCanonicalUrl(page).slice(siteOrigin.length),
+      workflowExamples.filter(example => example.guideSlug === page.slug),
+    )),
     // Only indexable posts enter the sitemap, each with its lastmod.
-    ...blogSitemapPaths().flatMap(entry => {
+    ...blogSitemapPaths().map(entry => {
       const lastModified = typeof entry.lastModified === "string" ? entry.lastModified : entry.lastModified?.toISOString()
-      const post = indexableBlogPosts.find(item => `/blog/${item.slug}` === entry.path)
-      const mirror = post === undefined ? blogIndexMarkdownPath : blogMarkdownPath(post)
-      return [renderSitemapUrl(entry.path, [], lastModified), renderSitemapUrl(mirror, [], lastModified)]
+      return renderSitemapUrl(entry.path, [], lastModified)
     }),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>

@@ -22,12 +22,12 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 - [Convert raster images to SVG](how-to/vectorize-images.md): trace artwork locally, compare a duotone treatment, and inspect fidelity.
 - [Generate images, video, or narration](how-to/generate-media.md): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
 - [Direct short generated clips](directing-video.md): budget, review takes, preserve endpoint continuity, and recover uncertain work.
-- [Author a native film](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
+- [Render Blender, CadQuery, and Manim films from source](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
 - [Build and revise a parametric design](how-to/parametric-design.md): generate architectural models from retained parameters, inspect dependencies and render alternatives.
-- [Render and edit spatial scenes](spatial-scenes.md): patch named entities, use hardware rendering, import a saved world, or prepare a V2 shot composition.
+- [Render and edit Three.js 3D scenes](spatial-scenes.md): patch named entities, use hardware rendering, import a saved world, or prepare a V2 shot composition.
 - [Build a directed cinematic character world](how-to/cinematic-character-worlds.md): admit a rigged world, direct it semantically, plan effects and galleries, and audit temporal evidence.
-- [Direct a cinematic world end to end](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
-- [Make an educational video](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
+- [Plan camera moves, lighting, and effects for a 3D scene](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
+- [Make a math explainer video with Manim](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
 - [Run or recover a workflow](how-to/run-workflows.md): use a built-in recipe or trusted Bun module and inspect its durable run.
 - [Configure Vercel](vercel.md), [publish Slopcamera](publishing.md), [operate the hosted API](hosted-api.md), or [file a platform submission](platform-submission.md): provider and maintainer procedures.
 
