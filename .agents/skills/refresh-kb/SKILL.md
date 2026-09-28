@@ -1,6 +1,6 @@
 ---
 name: refresh-kb
-description: Refresh and validate a hraness/kb Markdown knowledge graph after notes, concepts, typed relationships, attachments, repository scopes, or context mappings change. Use when an agent needs to maintain a managed or authored catalog, inspect graph and lifecycle findings, validate local artifacts and scope hubs, or complete a vault health check.
+description: Refresh and validate a hraness/wordcell Markdown knowledge graph after notes, concepts, typed relationships, attachments, repository scopes, or context mappings change. Use when an agent needs to maintain a managed or authored catalog, inspect graph and lifecycle findings, validate local artifacts and scope hubs, or complete a vault health check.
 metadata:
   internal: true
 ---
@@ -26,7 +26,7 @@ When several agents are still editing a managed vault, do not refresh its
 shared catalog in each lane. Validate the lane's Markdown and graph facts with:
 
 ```sh
-kb check --root "$KB_ROOT" --no-catalog
+wordcell check --root "$KB_ROOT" --no-catalog
 ```
 
 The integrating agent performs the managed refresh once after the lanes join.
@@ -36,12 +36,12 @@ no catalog write and is safe from that shared generated-file hotspot.
 Run:
 
 ```sh
-kb refresh --root "$KB_ROOT"
+wordcell refresh --root "$KB_ROOT"
 ```
 
 In managed mode this command atomically updates only the marked catalog region
 in `index.md`. In authored mode it reports the index as authored and leaves the
-file unchanged. Use `kb catalog --root "$KB_ROOT"` for a disposable exhaustive
+file unchanged. Use `wordcell catalog --root "$KB_ROOT"` for a disposable exhaustive
 inventory in either mode. Catalog links are navigation, so they do not count as
 contextual graph edges.
 
@@ -64,7 +64,7 @@ Open every reported source line and the relevant target notes before deciding wh
 - When a repository-owned scope audit reports an absent active or maintained
   scope, inspect it as possible stale routing. Future paths may intentionally
   be absent; terminal records may intentionally retain retired paths. The
-  portable `kb refresh` and `kb check` commands do not impose this lifecycle
+  portable `wordcell refresh` and `wordcell check` commands do not impose this lifecycle
   policy by themselves.
 
 Backlinks are derived from explicit contextual wikilinks and typed
@@ -76,7 +76,7 @@ automatically or apply suggestions mechanically in bulk.
 Run a bounded percolation review for each materially changed note:
 
 ```sh
-kb percolate "<changed-note-id>" --root "$KB_ROOT" --limit 25 --json
+wordcell percolate "<changed-note-id>" --root "$KB_ROOT" --limit 25 --json
 ```
 
 Open the cited notes before deciding whether to create a reusable
@@ -87,7 +87,7 @@ Intentional orphans and unlinked mentions may remain. Record the reason instead 
 Review recent captures without maintained disposition when useful:
 
 ```sh
-kb inbox --root "$KB_ROOT" --limit 25 --json
+wordcell inbox --root "$KB_ROOT" --limit 25 --json
 ```
 
 The inbox ignores source-to-source and catalog links. It is advisory; an
@@ -99,8 +99,8 @@ If the change adds, removes, renames, or moves a scope hub, changes its
 `type` or `scope`, or edits an `kb:context` marker, run:
 
 ```sh
-kb agents identity "<repository-scope>" --json
-kb agents check --root "$KB_ROOT" --repo "$KB_REPO"
+wordcell agents identity "<repository-scope>" --json
+wordcell agents check --root "$KB_ROOT" --repo "$KB_REPO"
 ```
 
 Use the non-mutating identity command to derive the hub path and exact marker
@@ -115,7 +115,7 @@ Use the audit when the change affects guide structure, inheritance, or repeated
 rules:
 
 ```sh
-kb agents audit --root "$KB_ROOT" --repo "$KB_REPO"
+wordcell agents audit --root "$KB_ROOT" --repo "$KB_REPO"
 ```
 
 The audit runs the correctness checks and adds deterministic per-guide,
@@ -130,7 +130,7 @@ generated and vendor directories and never follows symbolic-link directories.
 After any note or link edit, run the refresh command again so derived state and advisories reflect the final content. Then run the read-only gate:
 
 ```sh
-kb check --root "$KB_ROOT"
+wordcell check --root "$KB_ROOT"
 ```
 
 Finish only when the graph check and any required agent-context check succeed,
