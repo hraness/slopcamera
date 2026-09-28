@@ -1,6 +1,6 @@
 ---
 name: query-kb
-description: Load scoped repository context, then search and navigate a hraness/kb Markdown vault with hybrid text retrieval, exact metadata, bounded links and typed relationships, backlinks, whole-vault graph reports, and optional Git provenance. Use when an agent needs the applicable repository instructions, rationale, prior knowledge, plans, captures, decisions, concepts, relationships, or evidence before answering, planning, or changing code.
+description: Load scoped repository context, then search and navigate a hraness/wordcell Markdown vault with hybrid text retrieval, exact metadata, bounded links and typed relationships, backlinks, whole-vault graph reports, and optional Git provenance. Use when an agent needs the applicable repository instructions, rationale, prior knowledge, plans, captures, decisions, concepts, relationships, or evidence before answering, planning, or changing code.
 metadata:
   internal: true
 ---
@@ -23,39 +23,39 @@ authority; search scores, metadata rows, and graph results are derived views.
 
 ## Choose the retrieval lane
 
-- Repository file or directory: run `kb context` first. Read its inherited
+- Repository file or directory: run `wordcell context` first. Read its inherited
   guides root to nearest, then inspect its maintained knowledge, active plans,
   dated research, reports, and separate historical-plan group. Open only useful
   context hubs or records.
-- Known frontmatter field or tag such as type, status, or area: use `kb list`.
-- Known note title, path, or alias: use `kb links` or `kb backlinks`, which
+- Known frontmatter field or tag such as type, status, or area: use `wordcell list`.
+- Known note title, path, or alias: use `wordcell links` or `wordcell backlinks`, which
   resolve note identities before returning authored relationships.
-- A whole-vault structural question or relationship audit: use `kb graph --json`,
+- A whole-vault structural question or relationship audit: use `wordcell graph --json`,
   then inspect the smallest relevant portion of its canonical output.
-- A phrase, identity, or concept expressed with different vocabulary: use `kb search`, whose default hybrid result preserves exact and QMD evidence separately.
-- Direct provenance for one note or repository path: use `kb history` or
-  `kb history search` without changing authored metadata or links.
-- Recent captures awaiting maintained disposition: use the advisory `kb inbox` view.
-- Broad orientation: read `index.md`, then follow the smallest useful link trail. Use `kb catalog` when an exhaustive disposable inventory is actually needed.
+- A phrase, identity, or concept expressed with different vocabulary: use `wordcell search`, whose default hybrid result preserves exact and QMD evidence separately.
+- Direct provenance for one note or repository path: use `wordcell history` or
+  `wordcell history search` without changing authored metadata or links.
+- Recent captures awaiting maintained disposition: use the advisory `wordcell inbox` view.
+- Broad orientation: read `index.md`, then follow the smallest useful link trail. Use `wordcell catalog` when an exhaustive disposable inventory is actually needed.
 
 ```sh
-kb context src/parser.ts --root "$KB_ROOT" --repo "$KB_REPO"
-kb list --root "$KB_ROOT" --scope src/parser --where type=plan --json
-kb list --root "$KB_ROOT" --where type=plan --where status=in-progress --sort area --json
-kb list --root "$KB_ROOT" --tag retrieval --sort title --json
-kb backlinks "Plan title or path" --root "$KB_ROOT" --json
-kb links "Plan title or path" --root "$KB_ROOT" --direction both --depth 1 --limit 25 --json
-kb relation list "Plan title or path" --root "$KB_ROOT" --json
-kb graph --root "$KB_ROOT" --json
-kb search "why browser capture uses the current tab" --root "$KB_ROOT" --json
-kb search "accepted ingestion plans" --root "$KB_ROOT" --where type=plan --where status=accepted --tag ingestion --json
-kb search "notes/write-path" --root "$KB_ROOT" --mode exact --no-history --json
-kb history "notes/write-path" --root "$KB_ROOT" --repo "$KB_REPO" --json
-kb history search src/parser.ts --root "$KB_ROOT" --repo "$KB_REPO" --json
-kb inbox --root "$KB_ROOT" --limit 25 --json
+wordcell context src/parser.ts --root "$KB_ROOT" --repo "$KB_REPO"
+wordcell list --root "$KB_ROOT" --scope src/parser --where type=plan --json
+wordcell list --root "$KB_ROOT" --where type=plan --where status=in-progress --sort area --json
+wordcell list --root "$KB_ROOT" --tag retrieval --sort title --json
+wordcell backlinks "Plan title or path" --root "$KB_ROOT" --json
+wordcell links "Plan title or path" --root "$KB_ROOT" --direction both --depth 1 --limit 25 --json
+wordcell relation list "Plan title or path" --root "$KB_ROOT" --json
+wordcell graph --root "$KB_ROOT" --json
+wordcell search "why browser capture uses the current tab" --root "$KB_ROOT" --json
+wordcell search "accepted ingestion plans" --root "$KB_ROOT" --where type=plan --where status=accepted --tag ingestion --json
+wordcell search "notes/write-path" --root "$KB_ROOT" --mode exact --no-history --json
+wordcell history "notes/write-path" --root "$KB_ROOT" --repo "$KB_REPO" --json
+wordcell history search src/parser.ts --root "$KB_ROOT" --repo "$KB_REPO" --json
+wordcell inbox --root "$KB_ROOT" --limit 25 --json
 ```
 
-`kb context` prints hub and record summaries, not their bodies. Each record
+`wordcell context` prints hub and record summaries, not their bodies. Each record
 states the exact `repository_scopes` declaration that matched, the match depth,
 and whether that declaration currently names a file, directory, or absent
 future or retired path. Current memory and terminal plans stay in separate
@@ -79,7 +79,7 @@ known.
 
 ## Use hybrid search as discovery
 
-`kb search` first scans current Markdown for identity, phrase, metadata, tag,
+`wordcell search` first scans current Markdown for identity, phrase, metadata, tag,
 and prose matches. By default it runs that exact lane alongside QMD's local
 full-text and vector rankings, then combines the ranked lists while retaining
 each lane's evidence. Exact title and alias identities stay ahead of broader
@@ -89,7 +89,7 @@ The first hybrid or semantic query downloads QMD's compact local embedding
 model; later queries reuse the local cache. Prewarm explicitly when useful:
 
 ```sh
-kb index --root "$KB_ROOT"
+wordcell index --root "$KB_ROOT"
 ```
 
 Use `--mode exact` for live model-free search, `--mode keyword` for QMD
@@ -112,8 +112,8 @@ form. Graph neighbors and Git history remain separate from primary
 text rank. They explain and expand candidates without becoming authored facts,
 links, or recency boosts.
 
-`kb history <note>` returns the bounded commit history already associated with
-one resolved note. `kb history search <query-or-path>` searches the bounded Git
+`wordcell history <note>` returns the bounded commit history already associated with
+one resolved note. `wordcell history search <query-or-path>` searches the bounded Git
 projection directly and retains hashes, subjects, matched paths, co-change
 paths, and incomplete-detail diagnostics. Git co-change is historical evidence,
 not permission to write a scope or relationship.
@@ -124,7 +124,7 @@ For several related queries, prefer one SDK session to repeated CLI process
 startup:
 
 ```ts
-import { openKnowledgeBase, packSearchContext } from "@hraness/kb/sdk";
+import { openKnowledgeBase, packSearchContext } from "@hraness/wordcell/sdk";
 
 const kb = await openKnowledgeBase({ root: "kb", repository: "." });
 try {
@@ -154,14 +154,14 @@ results and the final output remain typed.
 
 ## Use focused structural views
 
-`kb graph --json` returns the current resolved wikilinks, typed relationships,
+`wordcell graph --json` returns the current resolved wikilinks, typed relationships,
 diagnostics, and note-level connection counts without creating a second graph
-store. Use it when a question spans the vault. Prefer `kb relation list`,
-`kb backlinks`, or `kb links` when a known note gives you a narrower starting
+store. Use it when a question spans the vault. Prefer `wordcell relation list`,
+`wordcell backlinks`, or `wordcell links` when a known note gives you a narrower starting
 point.
 
-`kb links` is cycle-safe and requires an explicit traversal depth and result
-limit. `kb relation list` separates authored outbound assertions from derived
+`wordcell links` is cycle-safe and requires an explicit traversal depth and result
+limit. `wordcell relation list` separates authored outbound assertions from derived
 inbound relationships while retaining canonical note IDs and source
 provenance. Open the returned Markdown before treating an edge as correct: a
 typed relationship records an authored assertion, not proof.
@@ -173,18 +173,18 @@ is evidence for a focused, tested command with an explicit output contract.
 
 ## Combine meaning with structure
 
-1. For a repository-path question, use `kb context` before broader retrieval.
+1. For a repository-path question, use `wordcell context` before broader retrieval.
 2. Use default hybrid search to discover candidate identities when exact
    structure does not answer the question. Read its lane evidence and partial
    diagnostics before relying on the order.
-3. Use `kb list` to narrow by authored metadata such as `type`, `status`,
+3. Use `wordcell list` to narrow by authored metadata such as `type`, `status`,
    `area`, or `tags`.
-4. Use `kb links` at depth 1 to inspect immediate explicit relationships and
-   `kb backlinks` for a focused inbound view. Increase depth only when the
+4. Use `wordcell links` at depth 1 to inspect immediate explicit relationships and
+   `wordcell backlinks` for a focused inbound view. Increase depth only when the
    first neighborhood is insufficient. Traversal defaults to 50 notes and
    reports truncation; lower `--limit` for tighter agent context or raise it
    deliberately when a high-degree hub is genuinely relevant.
-5. Use `kb graph --json` only when the question genuinely spans multiple
+5. Use `wordcell graph --json` only when the question genuinely spans multiple
    neighborhoods; keep one-off processing task-local.
 6. Read the authoritative notes and cited captures before synthesizing.
 
@@ -195,11 +195,11 @@ ownership in the candidate Markdown before answering or editing it.
 Do not infer an edge from semantic similarity, or a conclusion from a tag. Do
 not write generated backlink sections into notes. If the query exposes stale
 metadata or a broken link, repair the authored Markdown and finish with
-`kb refresh --root "$KB_ROOT"` and `kb check --root "$KB_ROOT"`.
+`wordcell refresh --root "$KB_ROOT"` and `wordcell check --root "$KB_ROOT"`.
 Close any open SDK session before that repair and reopen it after validation.
 
 An authored `index.md` may declare `kb_catalog: authored`; refresh and check
-then leave it untouched. `kb catalog --root "$KB_ROOT"` renders the exhaustive
+then leave it untouched. `wordcell catalog --root "$KB_ROOT"` renders the exhaustive
 inventory on demand. A managed vault keeps the original generated-catalog
 behavior. Neither mode changes scanning, graph analysis, semantic indexing, or
 attachment validation.

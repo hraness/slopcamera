@@ -18,7 +18,7 @@ Use the strongest available read route, then describe exactly what it retained. 
 | Instagram, Facebook, LinkedIn, and TikTok | Current tab, rendered profile, or saved HTML; yt-dlp for accessible media | Preserves the loaded post, caption, visible discussion, inline images, and exposed video poster or thumbnail | Lazy loading, collapsed branches, and virtualization remain partial |
 | Other signed-in pages, feeds, inboxes, and private documents | Current tab first; temporary path-backed profile copy when the tool should open a URL; cookie-backed HTTP or saved HTML when sufficient | Preserves the content rendered by the selected source surface | Content outside the current loaded representation is not inferred |
 
-Run `kb adapters --json` when software needs the installed capability matrix. Platform markup and routes change; a successful rendered fallback does not upgrade a partial tree to `complete` unless declared counts, cursors, and boundaries agree.
+Run `wordcell adapters --json` when software needs the installed capability matrix. Platform markup and routes change; a successful rendered fallback does not upgrade a partial tree to `complete` unless declared counts, cursors, and boundaries agree.
 
 For foreign structured data, parse from `unknown`. Keep missing, deleted, blocked, cyclic, depth-limited, item-limited, and pagination-boundary nodes visible instead of dropping them. For generic rendered discussions, retain the visible prose but use conservative item counts rather than inventing a thread structure.
 

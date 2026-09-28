@@ -16,7 +16,7 @@
 
 - Keep each portable skill self-contained with `SKILL.md`, its closest `AGENTS.md`, matching `agents/openai.yaml`, and only the references its workflow needs.
 - Keep these cross-repository workflows vendored and independently usable; never resolve a skill through a sibling checkout or Git submodule.
-- Refresh the KB skills from one reviewed immutable `hraness/kb` release and the orchestration pack from the pinned upstream release, then validate the complete copied directories.
+- Refresh the KB skills from one reviewed immutable `hraness/wordcell` release and the orchestration pack from the pinned upstream release, then validate the complete copied directories.
 - Keep product-specific operating skills in the root `skills/` directory when present. Portable repository workflows belong here.
 - Mark every portable repository workflow with `metadata.internal: true` so public `skills add hraness/slopcamera` discovery exposes only the product-owned `slopcamera` skill.
 - Preserve upstream attribution and license notices for adapted public resources.

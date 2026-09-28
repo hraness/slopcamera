@@ -1,6 +1,6 @@
 ---
 name: plan-kb
-description: Create or evolve a durable Markdown plan inside a hraness/kb vault. Use when a user asks for an implementation plan, proposal, RFC, migration plan, execution audit, phased checklist, or an update to an existing plan's decisions, progress, review findings, verification evidence, or final result.
+description: Create or evolve a durable Markdown plan inside a hraness/wordcell vault. Use when a user asks for an implementation plan, proposal, RFC, migration plan, execution audit, phased checklist, or an update to an existing plan's decisions, progress, review findings, verification evidence, or final result.
 metadata:
   internal: true
 ---
@@ -22,7 +22,7 @@ record, not a disposable answer or a duplicate task tracker.
    `KB_REPO` and load that path's current memory before a whole-vault search:
 
 ```sh
-kb context "<repository-path>" --root "$KB_ROOT" --repo "$KB_REPO"
+wordcell context "<repository-path>" --root "$KB_ROOT" --repo "$KB_REPO"
 ```
 
 Use `--kind file` or `--kind directory` when an absent future path cannot be
@@ -33,13 +33,13 @@ separate historical-plan group.
 3. Search existing plans before creating one:
 
 ```sh
-kb list --root "$KB_ROOT" --where type=plan --sort area --json
-kb search "the intended outcome" --root "$KB_ROOT" --json
+wordcell list --root "$KB_ROOT" --where type=plan --sort area --json
+wordcell search "the intended outcome" --root "$KB_ROOT" --json
 ```
 
-If `kb` is not installed, do not let retrieval tooling block the plan: use
+If `wordcell` is not installed, do not let retrieval tooling block the plan: use
 `rg` or the available file search over `<vault>/plans/`, titles, aliases, and relevant
-terms. If the directory is not an initialized hraness/kb vault, follow the
+terms. If the directory is not an initialized hraness/wordcell vault, follow the
 repository's existing planning convention instead of initializing one without
 being asked. Semantic search writes only a derived local cache; when that cache
 location is not writable, use exact search or point `XDG_CACHE_HOME` at a
@@ -102,12 +102,12 @@ a useful connection. Review the changed plan for reusable concepts before
 refreshing:
 
 ```sh
-kb percolate "<plan-note-id>" --root "$KB_ROOT" --limit 25 --json
-kb refresh --root "$KB_ROOT"
-kb check --root "$KB_ROOT"
+wordcell percolate "<plan-note-id>" --root "$KB_ROOT" --limit 25 --json
+wordcell refresh --root "$KB_ROOT"
+wordcell check --root "$KB_ROOT"
 ```
 
-Run those commands when the plan lives in an initialized hraness/kb vault. In a
+Run those commands when the plan lives in an initialized hraness/wordcell vault. In a
 repository-native planning directory, use that repository's own validation
 instead. Review broken links first, then inspect orphan and mention advisories
 in context. Promote only concepts likely to be reused, and ground every typed
@@ -116,7 +116,7 @@ remain an orphan in a new or sparse vault. Record that disposition mentally or
 in the task handoff; do not manufacture links or relations merely to improve
 graph counts.
 
-In an authored-catalog vault, refresh leaves the front door unchanged and `kb
+In an authored-catalog vault, refresh leaves the front door unchanged and `wordcell
 catalog --root "$KB_ROOT"` renders an exhaustive disposable inventory. In a
-managed vault, independent edit lanes use `kb check --root "$KB_ROOT"
+managed vault, independent edit lanes use `wordcell check --root "$KB_ROOT"
 --no-catalog`; the integrating lane performs the single catalog refresh.
