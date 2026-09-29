@@ -177,7 +177,8 @@ a {
 
 @media (forced-colors: active) {
   #main[data-hraness-marketing-preset="editorial"] .hraness-marketing-action[data-emphasis="primary"] {
-    color: Canvas;
+    color: ButtonText;
+    background: ButtonFace;
   }
 }
 
