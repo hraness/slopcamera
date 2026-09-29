@@ -10,7 +10,7 @@ const blogPostLinks = indexableBlogPosts
 
 export const homeMarkdown = `# Visual work your agent can keep revising.
 
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio for coding agents, it writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Open an example, adapt its source, and render a new version.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -50,7 +50,7 @@ ${archiveInstall.alternateSkillCommand}
 
 Start a new agent session. Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
 
-For repository example helpers or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
+For development or unreleased capabilities, follow the [source-install guide](${sourceInstall.guideUrl}). Native engines install separately.
 
 ## Examples
 
@@ -60,7 +60,7 @@ ${homepageExampleMarkdown()}
 
 The v${publishedRelease.version} release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender, CadQuery, and Manim films, cinematic direction, performance, effects, behavior, and parametric design. Examples whose inputs live in the repository need a checkout. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
-Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md). Browse the [use cases](https://slopcamera.com/docs/explanation/use-cases.md) by job, or look up a tool contract: [.diagram.json](https://slopcamera.com/docs/reference/diagram-format.md), [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md), [spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md), [vectorization](https://slopcamera.com/docs/reference/vectorization.md), [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md), [the video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md), [native engines](https://slopcamera.com/docs/reference/native-engines.md), or [the MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md).
+Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md). Browse the [use cases](https://slopcamera.com/docs/explanation/use-cases.md) by job, or look up a format or tool: [.diagram.json](https://slopcamera.com/docs/reference/diagram-format.md), [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md), [spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md), [vectorization](https://slopcamera.com/docs/reference/vectorization.md), [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md), [the video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md), [native engines](https://slopcamera.com/docs/reference/native-engines.md), or [the MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md).
 
 ## From source to a finished film
 
