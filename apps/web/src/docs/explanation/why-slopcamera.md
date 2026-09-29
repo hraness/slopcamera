@@ -34,7 +34,7 @@ AI generation is opt-in on each command. Image, video, speech, and transcription
 
 ## Interfaces an agent can inspect
 
-The agent does not have to guess what is installed. `slopcamera --help` prints the command grammar, `{{DOCTOR_COMMAND}}` reports installed tools, `slopcamera operations list --json` lists every operation with its input schema, and `slopcamera html catalog` lists the HTML profiles. The version-matched Agent Skill points the agent to the right guide for each job, the TypeScript SDK exposes the same operations, and the MCP server offers 17 fixed tools. The [architecture explanation](/docs/explanation/architecture) covers the source and project model in depth.
+The agent does not have to guess what is installed. `slopcamera --help` prints the command grammar, `{{DOCTOR_COMMAND}}` reports installed tools, `slopcamera operations list --json` lists every operation with its input schema, and `slopcamera html catalog` lists the HTML profiles. The version-matched Agent Skill points the agent to the right guide for each job, the TypeScript SDK exposes the same operations, and the MCP server offers 21 fixed tools. The [architecture explanation](/docs/explanation/architecture) covers the source and project model in depth.
 
 ## Compared with other tools
 

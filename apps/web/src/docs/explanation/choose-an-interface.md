@@ -5,7 +5,7 @@ Slopcamera offers four local interfaces plus a hosted adapter for platforms. The
 | Agent Skill | A coding agent reading instructions | Version-matched guidance that routes to the right commands | The CLI installed from the same release or checkout |
 | CLI | Humans and agents in a terminal | The complete local surface, with `--json` receipts on reads and mutations | Bun 1.3.14+; engines and FFmpeg as each job requires |
 | TypeScript SDK | Bun code you own | Typed imports from `@hraness/slopcamera`, `/code`, `/workflow`, and `local/*` | The package or a source checkout |
-| MCP server | An MCP-capable client | A fixed 17-tool subset inside one workspace root | The installed CLI |
+| MCP server | An MCP-capable client | A fixed subset inside one workspace root; see release scope below | The installed CLI |
 | Hosted tool adapter | Agent platforms without a local shell | REST and MCP endpoints at `api.slopcamera.com` over the same tool registry | Nothing to install; paid image generation needs a Hraness Credits device token |
 
 ## Agent Skill
@@ -22,7 +22,9 @@ The SDK puts the same operations behind typed Bun imports. `@hraness/slopcamera`
 
 ## MCP server
 
-`slopcamera mcp --root <workspace>` exposes [the fixed 17-tool set](/docs/reference/mcp-tools): diagram check and render, registry search, six operation codes including vectorization and paid image generation, and thirteen read-mostly scene tools. Paths stay root-relative and bounded. The server exposes no recording, project, studio, or workflow command, so it suits clients that need media tools without shelling out to the full CLI.
+The verified v3.8.1 archive has a 17-tool MCP subset and six registered operations. The four icon and soundtrack tools require a later source build; see [release scope](/docs/reference/mcp-tools).
+
+In current source, `slopcamera mcp --root <workspace>` exposes [the fixed 21-tool set](/docs/reference/mcp-tools): diagram check and render, registry search, ten operation codes including vectorization and paid image generation, thirteen read-mostly scene tools, and four local icon and soundtrack tools. Paths stay root-relative and bounded. The server exposes no recording, project, studio, or workflow command, so it suits clients that need media tools without shelling out to the full CLI.
 
 ## Hosted tool adapter
 

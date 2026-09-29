@@ -110,12 +110,15 @@ describe("media studio public copy (pure, process-free)", () => {
     const codes = operations.match(/export const slopcameraOperationCodes = \[([\s\S]*?)\] as const/u)![1]!
     expect([...codes.matchAll(/"([^"]+)"/gu)].map(match => match[1])).toEqual([
       "slopcamera.diagram.check", "slopcamera.diagram.render", "slopcamera.image.vectorize", "slopcamera.image.generate", "slopcamera.image.icon", "slopcamera.image.gallery",
+      "slopcamera.icon.compose", "slopcamera.icon.render", "slopcamera.soundtrack.compose", "slopcamera.soundtrack.grid",
     ])
     expect(html).toContain("It does not expose every CLI command.")
     expect(readme).toContain("Seven editable")
     expect(llmsTxt).toContain("GPU support required by its selected profile")
     expect(llmsTxt).toContain("`scene camera-track` export")
-    expect(llmsTxt).toContain("fixed set of 17 tools and six operation codes")
+    expect(llmsTxt).toContain("current-source set of 21 tools and ten operation codes")
+    expect(llmsTxt).toContain("verified v3.8.1 archive has a 17-tool MCP subset and six registered operations")
+    expect(homeMarkdown).toContain("verified v3.8.1 archive has a 17-tool MCP subset and six registered operations")
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {

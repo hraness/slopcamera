@@ -42,6 +42,12 @@ import {
   withSlopcameraOperationHostAdmission,
 } from "./operations.js"
 import type { HostResourceCoordinator } from "./host-resources.js"
+import {
+  slopcameraIconLanguages,
+  slopcameraIconPalettes,
+  slopcameraIconSceneLimits,
+} from "./icon-scene.js"
+import { slopcameraSoundtrackFormats } from "./soundtrack.js"
 import { installSkill, type SkillScope, type SkillTarget } from "./skill-install.js"
 import { pathExists } from "./fs.js"
 import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./drawing.js"
@@ -75,6 +81,14 @@ Usage:
   slopcamera image gallery <subject> --output-dir <directory> [--kind <${slopcameraGalleryKinds.join("|")}>]
     [--count <1-${slopcameraGalleryLimits.candidates}>] [--vary <axis[=v1,v2][;axis...]>] [--candidates <file.json>]
     [--model <provider/model>] [--cell <${slopcameraGalleryLimits.cellEdgeMin}-${slopcameraGalleryLimits.cellEdgeMax}>] [--tile|--no-tile] [--json]
+  slopcamera image icon compose <source.json> [--output <file.json>] [--json]
+  slopcamera image icon render <source.json> --output <file.svg> [--recipe <file.json>]
+    [--size <${slopcameraIconSceneLimits.sizeMin}-${slopcameraIconSceneLimits.sizeMax}>] [--background] [--palette <${slopcameraIconPalettes.join("|")}>]
+    [--language <language>] [--json]
+  slopcamera media soundtrack compose <score> [--output <file.json>]
+    [--format <${slopcameraSoundtrackFormats.join("|")}>] [--json]
+  slopcamera media soundtrack grid <score> [--output <file.json>] [--start-us <n>]
+    [--format <${slopcameraSoundtrackFormats.join("|")}>] [--json]
   slopcamera style list [--json]
   slopcamera style show <id> [--json]
   slopcamera code search [query] [--limit <number>]
@@ -121,6 +135,16 @@ once: each member keeps a small candidate pool, joint selection minimizes the
 measured coverage and stroke-weight spread across the set, and a
 contact-sheet critique reviews the family as a unit before SVGs publish.
 Manifests and receipts stay local.
+
+Icon compose and render are local and deterministic: they solve and draw
+vector icon scenes, collections, construction programs, and recipes with the
+bundled icon.place library, emit inert SVG, and replay a recipe only when its
+recorded digests match. Languages: ${slopcameraIconLanguages.join(", ")}.
+
+Media soundtrack verifies a Soundfish loop or song (compose text, song text,
+score JSON, or a Standard MIDI file) and derives its beat grid as the
+{bpm, beatOffsetUs, beatsPerBar} music timing HTML scene requests accept, plus
+section cue times. It renders no audio and makes no network requests.
 
 Gallery generates several bounded candidates in parallel and composes them
 into one labelled contact sheet plus a receipt. Use it to review texture,
@@ -365,6 +389,10 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     }
     throw new Error("Use slopcamera diagram init, check, render, or sheets")
   }
+  if (surface === "media") {
+    if (subcommand === "soundtrack") return ["soundtrack", ...rest]
+    throw new Error("Use slopcamera media soundtrack compose or grid")
+  }
   if (surface === "image") {
     if (
       subcommand === "vectorize" ||
@@ -386,6 +414,161 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help()}`)
   }
   return args
+}
+
+function rejectUnknownCliFlags(
+  parsed: ParsedArguments,
+  allowed: readonly string[],
+  command: string,
+): void {
+  const unknown = [...parsed.flags].find((flag) => !allowed.includes(flag))
+  if (unknown !== undefined) throw new Error(`Unknown ${command} option: --${unknown}`)
+}
+
+function exactlyOnePositional(parsed: ParsedArguments, usage: string): string {
+  if (parsed.positionals.length !== 1) throw new Error(`Use ${usage}`)
+  return parsed.positionals[0]!
+}
+
+function logOperationResult(
+  dependencies: SlopcameraCliDependencies,
+  json: boolean,
+  receipt: unknown,
+  summary: string,
+): void {
+  ;(dependencies.log ?? console.log)(json ? JSON.stringify(receipt, null, 2) : summary)
+  reportUsefulResult(dependencies.onUsefulResult)
+}
+
+async function runIconScene(
+  action: "compose" | "render",
+  args: readonly string[],
+  dependencies: SlopcameraCliDependencies,
+): Promise<void> {
+  if (action === "compose") {
+    const usage = "slopcamera image icon compose <source.json> [--output <file.json>] [--json]"
+    const parsed = parseArguments(args, new Set(["output"]))
+    rejectUnknownCliFlags(parsed, ["json"], "icon compose")
+    const sourcePath = exactlyOnePositional(parsed, usage)
+    const receipt = await executeSlopcameraOperation(
+      "slopcamera.icon.compose",
+      {
+        sourcePath,
+        ...(parsed.options.output === undefined ? {} : { outputPath: parsed.options.output }),
+      },
+      hostAdmissionOptions(dependencies),
+    )
+    logOperationResult(
+      dependencies,
+      parsed.flags.has("json"),
+      receipt,
+      `Composed ${receipt.form} "${receipt.title}": ${receipt.elementCount} element${receipt.elementCount === 1 ? "" : "s"}, geometry ${receipt.digests.geometry}` +
+        `${receipt.diagnostics.length === 0 ? "" : `, ${receipt.diagnostics.length} diagnostic${receipt.diagnostics.length === 1 ? "" : "s"}`}` +
+        `${receipt.output === null ? "" : ` -> ${receipt.output.path}`}`,
+    )
+    return
+  }
+  const parsed = parseArguments(args, new Set(["output", "recipe", "size", "palette", "language"]))
+  rejectUnknownCliFlags(parsed, ["json", "background"], "icon render")
+  const sourcePath = exactlyOnePositional(
+    parsed,
+    "slopcamera image icon render <source.json> --output <file.svg> [options]",
+  )
+  const size = parsed.options.size
+  if (size !== undefined && !/^\d{1,5}$/u.test(size)) {
+    throw new Error("--size must be an integer")
+  }
+  const receipt = await executeSlopcameraOperation(
+    "slopcamera.icon.render",
+    {
+      sourcePath,
+      outputPath: requiredOption(parsed, "output"),
+      ...(parsed.options.recipe === undefined ? {} : { recipePath: parsed.options.recipe }),
+      ...(size === undefined ? {} : { size: Number(size) }),
+      ...(parsed.flags.has("background") ? { background: true } : {}),
+      ...(parsed.options.palette === undefined ? {} : { palette: parsed.options.palette }),
+      ...(parsed.options.language === undefined ? {} : { language: parsed.options.language }),
+    },
+    hostAdmissionOptions(dependencies),
+  )
+  logOperationResult(
+    dependencies,
+    parsed.flags.has("json"),
+    receipt,
+    `Rendered ${receipt.form} "${receipt.title}"${receipt.replayed ? " (replayed recipe)" : ""}: ${receipt.output.path} ` +
+      `(${receipt.width}x${receipt.height}, svg ${receipt.digests.svg})` +
+      `${receipt.recipe === null ? "" : `\nRecipe: ${receipt.recipe.path}`}`,
+  )
+}
+
+async function runSoundtrack(
+  args: readonly string[],
+  dependencies: SlopcameraCliDependencies,
+): Promise<void> {
+  const [action, ...rest] = args
+  if (action === "compose") {
+    const parsed = parseArguments(rest, new Set(["output", "format"]))
+    rejectUnknownCliFlags(parsed, ["json"], "soundtrack compose")
+    const sourcePath = exactlyOnePositional(
+      parsed,
+      "slopcamera media soundtrack compose <score> [--output <file.json>] [--format <format>] [--json]",
+    )
+    const receipt = await executeSlopcameraOperation(
+      "slopcamera.soundtrack.compose",
+      {
+        sourcePath,
+        ...(parsed.options.output === undefined ? {} : { outputPath: parsed.options.output }),
+        ...(parsed.options.format === undefined ? {} : { format: parsed.options.format }),
+      },
+      hostAdmissionOptions(dependencies),
+    )
+    logOperationResult(
+      dependencies,
+      parsed.flags.has("json"),
+      receipt,
+      `Verified ${receipt.kind} "${receipt.title}": ${receipt.bpm} BPM, ${receipt.beatsPerBar}/bar, ${receipt.bars} bars, ` +
+        `${(receipt.durationUs / 1_000_000).toFixed(3)} s, digest ${receipt.digest}` +
+        `${receipt.output === null ? "" : ` -> ${receipt.output.path}`}`,
+    )
+    return
+  }
+  if (action === "grid") {
+    const parsed = parseArguments(rest, new Set(["output", "format", "start-us"]))
+    rejectUnknownCliFlags(parsed, ["json"], "soundtrack grid")
+    const sourcePath = exactlyOnePositional(
+      parsed,
+      "slopcamera media soundtrack grid <score> [--output <file.json>] [--start-us <n>] [--format <format>] [--json]",
+    )
+    const startUs = parsed.options["start-us"]
+    if (startUs !== undefined && !/^\d{1,10}$/u.test(startUs)) {
+      throw new Error("--start-us must be a non-negative integer")
+    }
+    const receipt = await executeSlopcameraOperation(
+      "slopcamera.soundtrack.grid",
+      {
+        sourcePath,
+        ...(parsed.options.output === undefined ? {} : { outputPath: parsed.options.output }),
+        ...(parsed.options.format === undefined ? {} : { format: parsed.options.format }),
+        ...(startUs === undefined ? {} : { startUs: Number(startUs) }),
+      },
+      hostAdmissionOptions(dependencies),
+    )
+    logOperationResult(
+      dependencies,
+      parsed.flags.has("json"),
+      receipt,
+      [
+        `Beat grid for ${receipt.scoreKind} "${receipt.title}": ${JSON.stringify(receipt.music)}`,
+        ...receipt.sections.map(
+          (section) =>
+            `  ${section.index}. ${section.label}  bars ${section.startBar}-${section.endBar}  ${section.startUs}-${section.endUs} us`,
+        ),
+        ...(receipt.output === null ? [] : [`Grid: ${receipt.output.path}`]),
+      ].join("\n"),
+    )
+    return
+  }
+  throw new Error("Use slopcamera media soundtrack compose or grid")
 }
 
 export async function main(
@@ -582,6 +765,14 @@ export async function main(
     return
   }
 
+  if (command === "icon" && (rest[0] === "compose" || rest[0] === "render")) {
+    await runIconScene(rest[0], rest.slice(1), dependencies)
+    return
+  }
+  if (command === "soundtrack") {
+    await runSoundtrack(rest, dependencies)
+    return
+  }
   if (command === "icon") {
     const parsed = parseArguments(
       rest,

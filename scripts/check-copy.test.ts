@@ -12,6 +12,7 @@ const facts: CopyFacts = {
   animationStudyCount: 12,
   generalToolNames: ["check_diagram", "render_diagram", "search_slopcamera", "execute_slopcamera"],
   hostedApiPathCount: 8,
+  mediaToolNames: [],
   hostedToolCount: 17,
   htmlFilmTemplates: ["launch-film"],
   htmlProfileCount: 7,
@@ -167,4 +168,23 @@ test("a release candidate may run ahead of the advertised release, never behind 
   expect(() => advertisedVersion("3.3.9", "3.4.0")).toThrow("which is older");
   expect(() => advertisedVersion("3.4.0-beta.1", "3.4.0")).toThrow("not MAJOR.MINOR.PATCH");
   expect(() => advertisedVersion("3.4.0", "v3.4.0")).toThrow("not MAJOR.MINOR.PATCH");
+});
+
+test("icon and soundtrack tools count separately from scene tools", () => {
+  const withMedia: CopyFacts = {
+    ...facts,
+    mediaToolNames: ["compose_icon", "render_icon", "compose_soundtrack", "derive_soundtrack_grid"],
+    mcpToolNames: [
+      ...facts.mcpToolNames,
+      "compose_icon", "render_icon", "compose_soundtrack", "derive_soundtrack_grid",
+    ],
+  };
+  const text = "It has 21 named tools: 13 scene tools, four local icon and soundtrack tools, and `derive_soundtrack_grid`.";
+  expect(collectCopyClaims("docs/reference/page.md", text, withMedia).filter((claim) => claim.problem !== undefined)).toEqual([]);
+  expect(new Set(collectCopyClaims("docs/reference/page.md", text, withMedia).map((claim) => claim.rule)))
+    .toEqual(new Set(["mcp-tools", "scene-tools", "media-tools", "mcp-tool-names"]));
+  const stale = collectCopyClaims("docs/reference/page.md", "17 scene tools and three icon and soundtrack tools", withMedia)
+    .filter((claim) => claim.problem !== undefined)
+    .map((claim) => claim.rule);
+  expect(stale).toEqual(["scene-tools", "media-tools"]);
 });

@@ -289,6 +289,7 @@ export async function runPortableSurface(
       argv[0] === "code"
       && (argv[1] === "search" || argv[1] === "execute")
     )
+    || (argv[0] === "media" && argv[1] === "soundtrack")
     || (
       argv[0] === "image"
       && (

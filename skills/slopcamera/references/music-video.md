@@ -18,8 +18,16 @@ delivery. Keep the scene's deliberate style and original media intact.
 
 Use the user's selected track and supplied tempo. Establish an explicit duration,
 beat-zero offset, and beats per bar from the task or relevant audio inspection.
-The first version does not detect tempo, downbeats, or track duration. Do not
-replace explicit musical timing with an unsupported automatic-analysis claim.
+The first version does not detect tempo, downbeats, or track duration from
+audio. Do not replace explicit musical timing with an unsupported
+automatic-analysis claim.
+
+When the track was made from a Soundfish score or a MIDI file, derive the timing
+from that source instead with
+`slopcamera media soundtrack grid <score> --start-us <n> --json`. Its `music`
+object drops straight into `parameters.music` below, and its section cue times
+mark shot changes. See [soundtracks](soundtracks.md). Take `timing.durationUs`
+from the audio file itself.
 
 Check the installed command and host before preparing exact source:
 

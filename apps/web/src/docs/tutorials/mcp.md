@@ -1,3 +1,5 @@
+The icon and soundtrack tools on this page require a [source build](/docs/how-to/install-from-source) after v3.8.1; they are absent from the verified release archive.
+
 An MCP-capable client can check and render diagrams, inspect scenes, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
 
 ## Install the CLI
@@ -40,11 +42,11 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 | `search_slopcamera` | Search the fixed Slopcamera operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
 
-`execute_slopcamera` admits six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+`execute_slopcamera` admits ten operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, `slopcamera.image.gallery`, `slopcamera.icon.compose`, `slopcamera.icon.render`, `slopcamera.soundtrack.compose`, and `slopcamera.soundtrack.grid`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
 
 ## Inspect and plan scenes
 
-The server exposes 17 named tools: the four above plus these 13 scene tools. The released CLI includes all of them.
+The current-source server exposes 21 named tools: the four above, these 13 scene tools, and the four icon and soundtrack tools below.
 
 | Scene tools | Effect |
 | --- | --- |
@@ -53,6 +55,13 @@ The server exposes 17 named tools: the four above plus these 13 scene tools. The
 | `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery` | Check a direction document, compile proposals, plan bounded variants. Read-only. |
 | `check_scene_effects`, `plan_scene_effects` | Check declared effects and bind them to a render plan. Read-only. |
 | `check_scene_behavior`, `audit_scene_behavior` | Check a behavior document and audit its declared behavior. Read-only. |
+
+Four local tools compose and render vector icon scenes and read soundtrack scores. They make no model or network request and write only optional outputs inside the root:
+
+| Tool | Effect |
+| --- | --- |
+| `compose_icon`, `render_icon` | Solve an icon scene, collection, construction program, or recipe; draw it to inert SVG or replay a recipe (`slopcamera.icon.compose`, `slopcamera.icon.render`) |
+| `compose_soundtrack`, `derive_soundtrack_grid` | Verify a loop, song, or MIDI file; derive its `bpm`, `beatOffsetUs`, `beatsPerBar`, and section cue times (`slopcamera.soundtrack.compose`, `slopcamera.soundtrack.grid`) |
 
 Discover the installed server's tools after restarting the client. Older releases have a smaller toolset, and a package version string alone does not identify a source checkout.
 

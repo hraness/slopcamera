@@ -102,7 +102,7 @@ editing, outputs, and the required visual review.
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-Slopcamera v3.8.1 exposes six operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+Current source exposes ten operation codes: diagram check/render, image generate/vectorize, image icon/gallery, icon compose/render, and soundtrack compose/grid. Its MCP server has 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits, and `compose_icon`, `render_icon`, `compose_soundtrack`, and `derive_soundtrack_grid`. The icon compose/render and soundtrack compose/grid codes, their MCP tools, and the `image icon compose|render` and `media soundtrack compose|grid` commands are in current source after the v3.8.1 release; they run locally with no model or network request. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Local execution profiles
 

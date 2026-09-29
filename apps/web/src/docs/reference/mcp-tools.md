@@ -1,8 +1,15 @@
+The icon and soundtrack tools on this page require a [source build](/docs/how-to/install-from-source) after v3.8.1; they are absent from the verified release archive.
+
+| MCP surface | Verified v3.8.1 archive | Current source |
+| --- | --- | --- |
+| Named tools | 17 | 21 |
+| Operation codes | 6 | 10 |
+
 `slopcamera mcp --root /absolute/workspace` serves a fixed toolset over stdio: newline-delimited JSON-RPC at protocol version `2025-11-25`, server name `hraness-slopcamera`, with protocol messages as the only stdout surface. Cursor, Claude Desktop, and other MCP-capable clients register it as a local command; every path the tools accept stays relative to the selected root.
 
 ## The fixed toolset
 
-The released server exposes 17 named tools. Four general tools:
+The current-source server exposes 21 named tools. Four general tools:
 
 | Tool | Effect |
 | --- | --- |
@@ -11,7 +18,7 @@ The released server exposes 17 named tools. Four general tools:
 | `search_slopcamera` | Search the fixed operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
 
-`execute_slopcamera` admits six operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, and `slopcamera.image.gallery`. Thirteen read-mostly scene tools inspect, plan, and audit without mutating project state:
+`execute_slopcamera` admits ten operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, `slopcamera.image.gallery`, `slopcamera.icon.compose`, `slopcamera.icon.render`, `slopcamera.soundtrack.compose`, and `slopcamera.soundtrack.grid`. Thirteen read-mostly scene tools inspect, plan, and audit without mutating project state:
 
 | Tools | Effect |
 | --- | --- |
@@ -21,6 +28,13 @@ The released server exposes 17 named tools. Four general tools:
 | `check_scene_effects`, `plan_scene_effects` | Check declared effects and bind them to a render plan |
 | `check_scene_behavior`, `audit_scene_behavior` | Check a behavior document and audit its declared behavior |
 
+Four local tools compose and render vector icon scenes and read soundtrack scores. They make no model or network request and write only optional outputs inside the root:
+
+| Tool | Effect |
+| --- | --- |
+| `compose_icon`, `render_icon` | Solve an icon scene, collection, construction program, or recipe; draw it to inert SVG or replay a recipe (`slopcamera.icon.compose`, `slopcamera.icon.render`) |
+| `compose_soundtrack`, `derive_soundtrack_grid` | Verify a loop, song, or MIDI file; derive its `bpm`, `beatOffsetUs`, `beatsPerBar`, and section cue times (`slopcamera.soundtrack.compose`, `slopcamera.soundtrack.grid`) |
+
 No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time. Older releases expose a smaller toolset; restart the client and call `tools/list` to discover the installed server.
 
 ## Bounds
@@ -29,6 +43,7 @@ No surface accepts source text, evaluates caller code, executes workspace config
 - Diagram sources must end in `.diagram.json`, fit in 1 MiB, and hold at most 64 shapes and 128 edges; checks and renders return at most 40 findings.
 - `render_diagram` accepts an optional `out_dir` and a `scale` of at most 4; the scaled canvas may not exceed 16,777,216 pixels and overwrites the five artifacts atomically.
 - Scene, direction, and effects JSON must end in `.json` and fit in 1 MiB.
+- Icon sources and soundtrack scores fit in 1 MiB, and each written SVG, recipe, score, or grid fits in 4 MiB. Icon renders are 16 to 1024 pixels on an edge; a grid holds at most 512 sections and a `start_us` of at most one hour. Out-of-range arguments reject before a resource lease.
 - `slopcamera.image.vectorize` reads a raster inside the root up to 16 MiB and writes an inert SVG inside the root.
 - `slopcamera.image.generate` takes a `provider/model` id, a prompt, and a root-relative `outputPath`, then sends one non-retried request through the [Gateway contract](/docs/reference/gateway-generation) using the server process's environment credential. Icon and gallery codes can also make paid requests.
 

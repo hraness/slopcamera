@@ -153,6 +153,10 @@ describe("Slopcamera MCP stdio server", () => {
         "check_scene_behavior",
         "audit_scene_behavior",
         "audit_scene_temporal",
+        "compose_icon",
+        "render_icon",
+        "compose_soundtrack",
+        "derive_soundtrack_grid",
       ])
       expect(listed.tools[0]?.annotations).toMatchObject({
         readOnlyHint: true,
@@ -166,10 +170,20 @@ describe("Slopcamera MCP stdio server", () => {
         idempotentHint: false,
         openWorldHint: true,
       })
-      for (const tool of listed.tools.slice(4)) {
+      // Scene tools sit between the general tools and the four icon and
+      // soundtrack tools, which write optional local outputs.
+      for (const tool of listed.tools.slice(4, -4)) {
         expect(tool.annotations).toMatchObject({
           readOnlyHint: true,
           destructiveHint: false,
+        })
+      }
+      for (const tool of listed.tools.slice(-4)) {
+        expect(tool.annotations).toMatchObject({
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         })
       }
       expect(responses[3]?.result).toMatchObject({
