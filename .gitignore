@@ -16,3 +16,7 @@ apps/desktop/analysis/dist/
 .vercel
 .env*
 .wrangler/
+
+# Local builds of the launch-film template
+examples/html/launch-film/out/
+examples/html/launch-film/node_modules/
