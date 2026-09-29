@@ -345,34 +345,109 @@ export function assertInertIconSvg(svg: string): void {
     throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", "Rendered SVG contains declarations or unknown entities.")
   }
   const ids = new Set<string>()
-  for (const tag of svg.matchAll(/<([A-Za-z][\w:.-]*)((?:\s+[^\s=/>]+="[^"]*")*)\s*\/?>/gu)) {
-    const name = tag[1]!
-    if (!allowedSvgElements.has(name)) {
-      throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", `Rendered SVG contains a disallowed <${name}> element.`)
+  const references: string[] = []
+  for (const tag of scanSvgTags(svg)) {
+    if (!allowedSvgElements.has(tag.name)) {
+      throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", `Rendered SVG contains a disallowed <${tag.name}> element.`)
     }
-    for (const attribute of tag[2]!.matchAll(/\s+([^\s=/>]+)="([^"]*)"/gu)) {
-      const attributeName = attribute[1]!
+    for (const [attributeName, value] of tag.attributes) {
       if (!allowedSvgAttributes.has(attributeName)) {
         throw new SlopcameraIconError(
           "UNSAFE_ICON_OUTPUT",
           `Rendered SVG contains a disallowed ${attributeName} attribute.`,
         )
       }
-      if (attributeName === "id") ids.add(attribute[2]!)
+      if (attributeName === "id") ids.add(value)
+      references.push(...urlReferences(value))
     }
   }
-  // Every opening tag must have matched the strict attribute grammar above.
-  const openings = svg.match(/<[A-Za-z]/gu)?.length ?? 0
-  const matched = [...svg.matchAll(/<([A-Za-z][\w:.-]*)((?:\s+[^\s=/>]+="[^"]*")*)\s*\/?>/gu)].length
-  if (openings !== matched) {
-    throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", "Rendered SVG contains a malformed element.")
-  }
-  for (const reference of svg.matchAll(/url\(([^)]*)\)/gu)) {
-    const target = reference[1]!
+  for (const target of references) {
     if (!/^#[A-Za-z0-9_-]+$/u.test(target) || !ids.has(target.slice(1))) {
       throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", "Rendered SVG references a non-local resource.")
     }
   }
+}
+
+interface SvgTag {
+  readonly name: string
+  readonly attributes: readonly (readonly [string, string])[]
+}
+
+const isSvgSpace = (character: string | undefined): boolean =>
+  character === " " || character === "\t" || character === "\n" || character === "\r"
+const isSvgNameStart = (character: string | undefined): boolean =>
+  character !== undefined && /^[A-Za-z]$/u.test(character)
+const isSvgNameCharacter = (character: string | undefined): boolean =>
+  character !== undefined && /^[\w:.-]$/u.test(character)
+const isSvgAttributeNameCharacter = (character: string | undefined): boolean =>
+  character !== undefined && !isSvgSpace(character) && character !== "=" && character !== "/" && character !== ">"
+
+/**
+ * Scan every opening tag in one linear pass. Each tag must be a name followed
+ * by whitespace-separated `name="value"` attributes and an optional `/`;
+ * anything else is malformed. Closing tags are skipped after a name check.
+ */
+function scanSvgTags(svg: string): SvgTag[] {
+  const malformed = (): never => {
+    throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", "Rendered SVG contains a malformed element.")
+  }
+  const tags: SvgTag[] = []
+  let index = svg.indexOf("<")
+  while (index !== -1) {
+    let cursor = index + 1
+    if (svg[cursor] === "/") {
+      cursor += 1
+      if (!isSvgNameStart(svg[cursor])) malformed()
+      while (isSvgNameCharacter(svg[cursor])) cursor += 1
+      while (isSvgSpace(svg[cursor])) cursor += 1
+      if (svg[cursor] !== ">") malformed()
+      index = svg.indexOf("<", cursor + 1)
+      continue
+    }
+    if (!isSvgNameStart(svg[cursor])) malformed()
+    const nameStart = cursor
+    while (isSvgNameCharacter(svg[cursor])) cursor += 1
+    const name = svg.slice(nameStart, cursor)
+    const attributes: (readonly [string, string])[] = []
+    for (;;) {
+      const spaceStart = cursor
+      while (isSvgSpace(svg[cursor])) cursor += 1
+      if (svg[cursor] === "/" && svg[cursor + 1] === ">") {
+        cursor += 1
+        break
+      }
+      if (svg[cursor] === ">") break
+      if (cursor === spaceStart) malformed()
+      const attributeStart = cursor
+      while (isSvgAttributeNameCharacter(svg[cursor])) cursor += 1
+      if (cursor === attributeStart || svg[cursor] !== "=" || svg[cursor + 1] !== "\"") malformed()
+      const valueStart = cursor + 2
+      const valueEnd = svg.indexOf("\"", valueStart)
+      if (valueEnd === -1) malformed()
+      const value = svg.slice(valueStart, valueEnd)
+      if (value.includes("<")) malformed()
+      attributes.push([svg.slice(attributeStart, cursor), value])
+      cursor = valueEnd + 1
+    }
+    tags.push({ name, attributes })
+    index = svg.indexOf("<", cursor + 1)
+  }
+  return tags
+}
+
+/** Every `url(...)` target in one attribute value, found without backtracking. */
+function urlReferences(value: string): string[] {
+  const targets: string[] = []
+  let index = value.indexOf("url(")
+  while (index !== -1) {
+    const close = value.indexOf(")", index + 4)
+    if (close === -1) {
+      throw new SlopcameraIconError("UNSAFE_ICON_OUTPUT", "Rendered SVG references a non-local resource.")
+    }
+    targets.push(value.slice(index + 4, close))
+    index = value.indexOf("url(", close + 1)
+  }
+  return targets
 }
 
 function svgDimensions(svg: string): { readonly width: number; readonly height: number } {

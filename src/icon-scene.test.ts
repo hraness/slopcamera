@@ -257,4 +257,29 @@ describe("inert SVG gate", () => {
   ])("rejects %s", (_name, svg) => {
     expect(() => assertInertIconSvg(svg)).toThrow(SlopcameraIconError)
   })
+
+  test("rejects malformed markup and scans hostile input in linear time", () => {
+    const wrap = (body: string): string => `${base}${body}</svg>`
+    const malformed = [
+      `<path d="M0 0"fill="none"/>`,
+      `<path d="M0 0 fill="none"/>`,
+      `<path d="M0 0" /`,
+      `<path d="x"></ path>`,
+      `<path fill="url(#a"/>`,
+      `<path d="<g/>"/>`,
+    ]
+    for (const body of malformed) {
+      expect(() => assertInertIconSvg(wrap(body))).toThrow(SlopcameraIconError)
+    }
+    expect(() => assertInertIconSvg(wrap(`<g id="a"><path d="M0 0" fill="url(#a)"/></g>`))).not.toThrow()
+
+    const hostile = [
+      wrap(`<path${" ".repeat(1_000_000)}`),
+      wrap(`<path fill="${"url(".repeat(250_000)}"/>`),
+      wrap(`<path d="M0 0"${" a=\"\"".repeat(200_000)}`),
+    ]
+    const started = performance.now()
+    for (const svg of hostile) expect(() => assertInertIconSvg(svg)).toThrow(SlopcameraIconError)
+    expect(performance.now() - started).toBeLessThan(2_000)
+  })
 })
