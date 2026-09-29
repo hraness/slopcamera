@@ -68,7 +68,7 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
     headline: "Headless Blender, Manim and CadQuery",
     description: "A scene your agent keeps as a short program is easy to revise and re-render.",
   },
-  "blog/introducing-slopcamera.html": { description: "The media studio for agents: images, diagrams, animation, 3D scenes, and video from source." },
+  "blog/introducing-slopcamera.html": { description: "Images, diagrams, animation, 3D scenes, and video, all from source files your agent revises." },
   "blog/how-slopcamera-uses-algal.html": {
     headline: "Character behavior with ALGAL",
     description: "The same scene and seed always bake the same motion.",
