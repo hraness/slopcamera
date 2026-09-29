@@ -77,8 +77,8 @@ The helpers in `@hraness/slopcamera/local/html-film` follow these rules.
 
 - **Cold open.** Two short lines over a collage of the problem. Stagger words
   by 60 to 90 ms and hold each line long enough to read twice.
-- **Title.** The product name and its one-line promise from the portfolio
-  registry. One idea, one hold.
+- **Title.** The product name and the same one-line promise the product's site
+  uses. One idea, one hold.
 - **Product walk.** One step per entry in `film.json`. Each step names a
   `data-film` surface for the camera `focus`, a `target` for the cursor click,
   an optional `highlight` outline and an optional `after` state set on the target

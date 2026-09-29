@@ -100,8 +100,11 @@ const mockupSlots: readonly { readonly id: string; readonly element: ReactElemen
 ];
 
 const read = (path: string) => readFileSync(join(here, path), "utf8");
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
+/** Seconds rounded to the millisecond, so beats.json reads cleanly as post source text. */
+const ms = (value: number) => Math.round(value * 1000) / 1000;
 const slots: Record<string, string> = {
-  TITLE: film.name,
+  TITLE: escapeHtml(film.name),
   ASPECT: aspect,
   WIDTH: String(width),
   HEIGHT: String(height),
@@ -145,10 +148,10 @@ const scene = HtmlSceneInputSchema.parse({
 writeFileSync(join(out, "scene.json"), `${JSON.stringify(scene, null, 2)}\n`);
 writeFileSync(join(out, "captions.vtt"), captionsFromTimeline(timeline));
 writeFileSync(join(out, "beats.json"), `${JSON.stringify({
-  duration: Math.min(timeline.duration, until),
+  duration: ms(Math.min(timeline.duration, until)),
   beats: timeline.acts
     .filter(({ start }) => start < until)
-    .map(({ id, start, end, caption }) => ({ id, start, end: Math.min(end, until), caption })),
+    .map(({ id, start, end, caption }) => ({ id, start: ms(start), end: ms(Math.min(end, until)), caption })),
 }, null, 2)}\n`);
 
 const kb = Math.round(Buffer.byteLength(html) / 1024);

@@ -466,6 +466,6 @@ export function formatHtmlFilmResult(result: HtmlFilmStillsResult | HtmlFilmDeli
   return [
     ...result.files.map(formatDeliveryLine),
     `receipt ${result.receipt}`,
-    ...(result.withinBudget ? [] : ["One or more files are over budget. Shorten the film, lower detail, or raise -crf and deliver again."]),
+    ...(result.withinBudget ? [] : ["One or more files are over budget. Shorten the film, lower its frame rate or simplify the grain, then render and deliver again."]),
   ].join("\n");
 }
