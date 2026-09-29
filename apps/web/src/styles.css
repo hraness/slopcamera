@@ -503,6 +503,9 @@ h3 {
 }
 
 @media (forced-colors: active) {
+  .hraness-platform-install__tab[aria-selected="true"] {
+    forced-color-adjust: none;
+  }
   [data-hraness-marketing-preset="editorial"] .hraness-marketing-install {
     --night: Canvas;
     --night-ink: CanvasText;
