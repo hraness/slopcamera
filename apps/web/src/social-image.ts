@@ -19,7 +19,7 @@ const markSvg = readFileSync(fileURLToPath(new URL("./marks/slopcamera.svg", imp
 
 /** Slopcamera's one social-image declaration. Every share card comes from it. */
 export const slopcameraSocialSite = defineSocialImageSite({
-  name: "Slopcamera",
+  name: "SlopCamera",
   description: "Images, diagrams, animation, 3D and video your coding agent can keep revising.",
   domain: "slopcamera.com",
   // The camera glyph behind /icon.png, the header mark and the manifest icons.

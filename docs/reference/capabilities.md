@@ -2,7 +2,7 @@
 
 This reference describes the current Slopcamera CLI and its runtime requirements. A package's version number alone does not identify a source checkout; inspect its commit and actual command help.
 
-## Current Slopcamera and historical Atet
+## Current SlopCamera and historical Atet
 
 Slopcamera v3.6.0 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
@@ -118,7 +118,7 @@ Slopcamera v3.6.0 exposes six operation codes: diagram check/render, image gener
 
 Native studio qualification used Blender 5.2.1 LTS, CadQuery 2.8.0 and Manim Community 0.21.0. These observations do not certify every plugin, solver, device or imported asset. [Native profile limits](../studio.md#qualified-profiles-and-extension-limits) and [spatial asset limits](../spatial-scenes.md#asset-and-rendering-profile) describe the admitted representations.
 
-The copied macOS executable supports direct studio commands with embedded starters and drivers. Local Code Mode workflows bind a build identity over the installed host source tree, so they run from the installed Bun package or a checkout but not from a copied standalone executable, which embeds no physical source tree. The CLI, its optional unbundled menu-bar companion, and the Bun package are separate interfaces with separate installation requirements.
+The copied macOS executable supports direct studio commands with embedded starters and drivers. Local Code Mode workflows bind a build identity over the installed host source tree, so they run from the installed Bun package or a checkout but not from a copied standalone executable, which embeds no physical source tree. The CLI and the Bun package are separate interfaces with separate installation requirements.
 
 Ordinary `project add` and SDK `media.ingest` imports require an existing project. Creation starts from a finished recording bundle, a successful studio/directing assembly, or an authored scene rendered with `html render`. The scene command accepts an optional explicit local soundtrack and retains the scene video and original music as separate sources. Arbitrary standalone files alone cannot create an empty project. [Video editing](../how-to/edit-video.md#inspect-the-source-and-project) explains these entry paths.
 

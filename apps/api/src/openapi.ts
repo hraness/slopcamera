@@ -9,10 +9,10 @@ export function openApiDocument(baseUrl: string): Record<string, unknown> {
   return {
     openapi: "3.1.0",
     info: {
-      title: "Slopcamera hosted tools",
+      title: "SlopCamera hosted tools",
       version: SLOPCAMERA_VERSION,
       description:
-        "Bounded Slopcamera tool surface for agent platforms. Authoring, validation, planning and audit tools run free with rate limits; image generation is billed through Hraness Credits. Binary artifacts return as ticketed URLs backed by short-lived object storage, never inline.",
+        "Bounded SlopCamera tool surface for agent platforms. Authoring, validation, planning and audit tools run free with rate limits; image generation is billed through Hraness Credits. Binary artifacts return as ticketed URLs backed by short-lived object storage, never inline.",
     },
     servers: [{ url: baseUrl }],
     paths: {

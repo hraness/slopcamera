@@ -5,6 +5,7 @@ import { runProductSupportCommand, showProductSupportInvitation, standaloneSuppo
 import { parseCliArgs } from "./args";
 import { runCli } from "./commands";
 import { asCliError, CliError, EXIT_CODE } from "./errors";
+import { isRegistryCommand, runRegistry } from "./registry";
 import { BunProcessRunner, processIo } from "./io";
 import { resolveRepositoryPaths } from "./paths";
 import {
@@ -42,6 +43,13 @@ export async function main(
     return await runProductSupportCommand(argv.slice(1),
       supportEnvironment === undefined ? {} : { env: supportEnvironment });
   }
+  if (isRegistryCommand(argv)) {
+    // status, tui, commands, legacy retire and outputs list|open|reveal
+    // answer in the shared desktop-foundation envelope.
+    return await runRegistry(argv, { stdout: process.stdout, stderr: process.stderr, env: process.env }, {
+      env: process.env, platform: process.platform, now: () => new Date(),
+    });
+  }
   const unifiedArgv = canonicalizeUnifiedCliArgs(argv);
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);
   if (portableExitCode !== undefined) return portableExitCode;
@@ -55,6 +63,7 @@ export async function main(
   }
   const paths = await resolveRepositoryPaths(processIo.cwd(), processIo.env);
   if (earlyCommand.kind === "html-render" || earlyCommand.kind === "spatial-world" || earlyCommand.kind === "spatial-asset" || earlyCommand.kind === "spatial-design" || earlyCommand.kind === "directing" || earlyCommand.kind === "studio"
+    || earlyCommand.kind === "html-film"
     || earlyCommand.kind === "spatial-scene" && (earlyCommand.action === "render" || earlyCommand.action === "camera-track" || earlyCommand.action === "render-audit" || earlyCommand.action === "review")) {
     const controller = new AbortController();
     const cancel = () => controller.abort(new CliError("cancelled", "Command interrupted."));

@@ -109,30 +109,32 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("plan:\n    name: Plan")
   expect(workflow).toContain("boundary:\n    name: Slopcamera standalone boundary")
   expect(workflow).toContain("sdk:\n    name: Slopcamera SDK")
-  expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime")
-  expect(workflow).toContain("site:\n    name: Slopcamera site")
+  expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime (${{ matrix.shard }})")
+  expect(workflow).toContain("site:\n    name: Slopcamera site (${{ matrix.part }})")
   expect(workflow).toContain("package:\n    name: Slopcamera packed consumer")
-  expect(workflow).toContain("menubar:\n    name: Slopcamera menu-bar companion")
   expect(workflow).toContain("api:\n    name: Slopcamera hosted API")
   expect(workflow).toContain("if: needs.plan.outputs.api == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.sdk == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.desktop == 'true'")
-  expect(workflow).toContain("if: needs.plan.outputs.menubar == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.site == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.package == 'true'")
-  expect(workflow).toContain("run: cargo build --release --locked --manifest-path desktop/Cargo.toml")
   expect(workflow).toContain("bun run check:standalone")
   expect(workflow).toContain("bun run check:sdk")
   expect(workflow).toContain("bun run check:api")
-  expect(workflow).toContain("bun run check:desktop")
+  expect(workflow).toContain("bun run check:effect && bun run typecheck:desktop && bun run lint:desktop && bun run build:desktop")
+  expect(workflow).toContain("bun run test:desktop:${{ matrix.shard }}")
   expect(workflow).toContain("bash scripts/install-ci-ffmpeg.sh")
-  expect(workflow).toContain("bun run check:web")
+  expect(workflow).toContain("bun run check:web:compile")
+  expect(workflow).toContain("bun run check:web:verify")
   expect(workflow).toContain("bun run test:package")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- dist bun.lock")
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
   expect(workflow).toContain("copy:\n    name: Slopcamera public copy")
   expect(workflow).toContain("bun run check:copy --require-history")
-  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, site, package]")
+  // The menu-bar companion was retired; nothing may route to or require it.
+  expect(workflow.toLowerCase()).not.toContain("menubar")
+  expect(workflow).not.toContain("cargo ")
   expect(workflow).toContain('[[ "$COPY" == success ]]')
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
@@ -141,15 +143,16 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
 
 function requireCompleteSourceCoverage(workflow: string): void {
   let priorWorkflow = workflow
-  for (const [job, phase, label] of [
-    ["sdk", "check:sdk", "SDK"],
-    ["desktop", "check:desktop", "desktop"],
-    ["site", "check:web", "site"],
-  ]) {
+  for (const [job, phases, label] of [
+    ["sdk", ["check:sdk"], "SDK"],
+    ["desktop", ["build:desktop", "test:desktop:${{ matrix.shard }}"], "desktop"],
+    ["site", ["check:web:compile", "check:web:verify"], "site"],
+  ] as const) {
     const jobSource = workflow.match(new RegExp(`\\n  ${job}:\\n[\\s\\S]*?(?=\\n  [a-z]+:\\n|$)`))?.[0]
     const scan = `      - name: Check generated ${label} standalone boundary\n        run: bun run check:standalone\n`
     if (jobSource === undefined || jobSource.split(scan).length !== 2
-      || jobSource.indexOf(scan) < jobSource.indexOf(`bun run ${phase}`)) {
+      || phases.some(phase => !jobSource.includes(`bun run ${phase}`)
+        || jobSource.indexOf(scan) < jobSource.indexOf(`bun run ${phase}`))) {
       throw new Error(`CI must scan ${job} generated output after its complete phase`)
     }
     priorWorkflow = priorWorkflow.replace(scan, "")
@@ -162,11 +165,60 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // fixture lint step after its release build; every prior job is unchanged.
   // Reviewed 2026-09-27: site screenshot output and artifact upload added;
   // every existing job, command, condition, deadline and boundary is unchanged.
+  // Reviewed 2026-09-29 (velocity sweep): `desktop` became a four-shard matrix
+  // (static effect/types/lint/build plus code, cli and rest test partitions of
+  // test:desktop, each scanned), and `site` became a two-part matrix (the
+  // repeated-compilation suite and the remaining check:web phases). The shard
+  // partition test below proves the union still equals check:desktop and
+  // check:web. Pull requests build the menu-bar debug profile and main pushes
+  // keep the release build; menubar routes only on desktop/ and ci.yml; PR
+  // runs cancel superseded PR runs while each main push keeps its own group;
+  // PR rust caches are restore-only. Every other job is unchanged.
+  // Reviewed 2026-09-29 (menu-bar retirement, on top of the velocity sweep):
+  // the `menubar` job (debug and release cargo builds, cargo test, fixture
+  // lint), its `desktop/*` and ci.yml routes, its plan output, its Required
+  // need and its result check were removed with the companion. The desktop
+  // shards, site parts, concurrency groups and every other job, command,
+  // condition, deadline and boundary are unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "5b89df9880c0932cc75c93384fc8b8ca5adf33196ca563758ecaebbdd150a24a") {
-    throw new Error("CI differs from the independently reviewed prior coverage")
+  if (priorDigest !== "ad141bdd45a5c699fb1480e364c75ad93c5ba75b68fe80b569c1e405916a0135") {
+    throw new Error(`CI differs from the independently reviewed prior coverage (${priorDigest})`)
   }
 }
+
+test("CI shards partition the complete desktop and site phases exactly", async () => {
+  const workflow = await readWorkflow("public-ci.yml", "ci.yml")
+  const root = JSON.parse(await readFile(join(import.meta.dir, "../package.json"), "utf8"))
+  const site = JSON.parse(await readFile(join(import.meta.dir, "../apps/web/package.json"), "utf8"))
+  const testTargets = (script: string): string[] => {
+    const [command, ...targets] = script.split(" ").filter(part => part !== "")
+    expect(command).toBe("bun")
+    expect(targets[0]).toBe("test")
+    return targets.slice(1)
+  }
+  expect(workflow).toContain("        shard: [static, code, cli, rest]\n")
+  expect(workflow).toContain("        part: [compile, verify]\n")
+
+  const desktop = testTargets(root.scripts["test:desktop"])
+  const shards = ["code", "cli", "rest"].flatMap(shard => testTargets(root.scripts[`test:desktop:${shard}`]))
+  expect(new Set(shards).size).toBe(shards.length)
+  expect(shards.toSorted()).toEqual(desktop.toSorted())
+  expect(root.scripts["check:desktop"].split(" && ").filter((phase: string) => phase !== "bun run test:desktop"))
+    .toEqual("bun run check:effect && bun run typecheck:desktop && bun run lint:desktop && bun run build:desktop".split(" && "))
+
+  const siteTests = testTargets(site.scripts.test)
+  const compileTests = testTargets(site.scripts["test:compile"])
+  // site.test.ts used to load Vite before any file imported
+  // @hraness/ui/stylex-build; Vite's module initialization throws under Bun
+  // in the reverse order, so the contracts run preloads it explicitly.
+  expect(site.scripts["test:contracts"]).toStartWith("bun test --preload vite ./")
+  const contractTests = testTargets(site.scripts["test:contracts"].replace(" --preload vite", ""))
+  expect(compileTests).toEqual(["./site.test.ts"])
+  expect([...compileTests, ...contractTests]).toEqual(siteTests)
+  expect(site.scripts["check:verify"]).toBe(site.scripts.check.replace("bun run test &&", "bun run test:contracts &&"))
+  expect(root.scripts["check:web:compile"]).toBe("bun run --cwd apps/web test:compile")
+  expect(root.scripts["check:web:verify"]).toBe(root.scripts["check:web"].replace("apps/web check", "apps/web check:verify"))
+})
 
 test("complete source CI preserves every aggregate phase and adds post-build scans without weakening prior coverage", async () => {
   const workflow = await readWorkflow("public-ci.yml", "ci.yml")
@@ -200,7 +252,7 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
     "if: needs.plan.outputs.sdk == 'true'", "if: false",
   ))).toThrow("prior coverage")
   expect(() => requireCompleteSourceCoverage(workflow.replace(
-    "      - run: bun run check:desktop\n", "      - run: bun run check:desktop\n        continue-on-error: true\n",
+    "        run: bun run test:desktop:${{ matrix.shard }}\n", "        run: bun run test:desktop:${{ matrix.shard }}\n        continue-on-error: true\n",
   ))).toThrow("prior coverage")
 })
 
@@ -227,8 +279,10 @@ test("site CI installs app-pinned Chromium in runner temp before the site check"
     'SLOPCAMERA_CHROME_PATH="$("$NODE_EXECUTABLE_PATH" -e \'const { createRequire } = require("node:module"); const { resolve } = require("node:path"); console.log(createRequire(resolve("apps/web/package.json"))("playwright-core").chromium.executablePath())\')"',
     'test -x "$SLOPCAMERA_CHROME_PATH"',
     "export SLOPCAMERA_CHROME_PATH",
-    "bun run check:web",
+    "bun run check:web:verify",
   ])
+  expect(site).toContain("        if: matrix.part == 'verify'\n        env:\n          SLOPCAMERA_SITE_ARTIFACTS:")
+  expect(site).toContain("        if: matrix.part == 'compile'\n        run: bun run check:web:compile")
 })
 
 test("hostile actor or sender drift cannot reach the protected release workflow", async () => {
@@ -883,7 +937,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 550")
+  expect(publishJob).toContain("const maximumFiles = 570")
   expect(publishJob).toContain("const maximumPackedBytes = 5_200_000")
   expect(publishJob).toContain("const maximumUnpackedBytes = 15_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
@@ -1114,7 +1168,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.6.0")
+  expect(manifest.version).toBe("3.8.0")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
@@ -1199,25 +1253,25 @@ test("both tar readers bound file count and content independently of USTAR frami
     readFile(join(import.meta.dir, "npm-publish-authority.ts"), "utf8"),
     readFile(join(import.meta.dir, "github-release.ts"), "utf8"),
   ])
-  expect(identitySource).toContain("const maximumEntries = 550;")
+  expect(identitySource).toContain("const maximumEntries = 570;")
   expect(identitySource).toContain("const maximumArchiveBytes = 5_200_000;")
   expect(identitySource).toContain("const maximumContentBytes = 15_000_000;")
   expect(identitySource).toContain("maximumContentBytes + maximumEntries * 1_024 + 1_024")
-  expect(smoke).toContain("const maximumPackedFiles = 550;")
+  expect(smoke).toContain("const maximumPackedFiles = 570;")
   expect(smoke).toContain("const maximumPackedBytes = 5_200_000;")
   expect(smoke).toContain("const maximumUnpackedBytes = 15_000_000;")
   expect(npmAuthority).toContain("const maximumArchiveBytes = 5_200_000;")
   expect(canonicalRelease).toContain('positive(archive.bytes, "Archive size") > 5_200_000')
-  expect(script).toContain("const maximumFiles = 550;")
+  expect(script).toContain("const maximumFiles = 570;")
   expect(script).toContain("maxOutputLength: maximumUnpackedBytes + maximumFiles * 1_024 + 1_024")
-  const maximumAlignedTarBytes = Math.floor((15_000_000 + 550 * 1_024 + 1_024) / 512) * 512
-  expect(maximumAlignedTarBytes).toBe(15_563_776)
+  const maximumAlignedTarBytes = Math.floor((15_000_000 + 570 * 1_024 + 1_024) / 512) * 512
+  expect(maximumAlignedTarBytes).toBe(15_584_256)
   const root = await mkdtemp(join(tmpdir(), "slopcamera-tar-budgets-"))
   try {
     for (const scenario of ["at-all-limits", "content-over", "count-over", "framing-over"] as const) {
       await rm(join(root, "slopcamera-release"), { recursive: true, force: true })
       const artifact = await writeReleaseArtifactFixture(root, undefined, {
-        entries: scenario === "count-over" ? 551 : 550,
+        entries: scenario === "count-over" ? 571 : 570,
         contentBytes: scenario === "content-over" ? 15_000_001 : 15_000_000,
         serializedBytes: maximumAlignedTarBytes + (scenario === "framing-over" ? 512 : 0),
       })
@@ -1228,7 +1282,7 @@ test("both tar readers bound file count and content independently of USTAR frami
         const removed = metadata[0]!.files.findIndex(file => file.path.startsWith("fixture-") && file.size === 0)
         if (removed < 0) throw new Error("Fixture has no empty extra file")
         metadata[0]!.files.splice(removed, 1)
-        metadata[0]!.entryCount = 550
+        metadata[0]!.entryCount = 570
       } else if (scenario === "content-over") {
         metadata[0]!.files.at(-1)!.size -= 1
         metadata[0]!.unpackedSize = 15_000_000
@@ -1261,7 +1315,7 @@ test("package smoke rejects oversized tar framing before installing a package be
   try {
     const guard = join(work, "deny-processes.ts")
     await writeFile(guard, `for (const name of ["spawn", "spawnSync"]) Object.defineProperty(Bun, name, { value: () => { throw new Error("PACKAGE_SMOKE_INSTALL_REACHED"); } });\n`)
-    const maximumAlignedTarBytes = Math.floor((15_000_000 + 550 * 1_024 + 1_024) / 512) * 512
+    const maximumAlignedTarBytes = Math.floor((15_000_000 + 570 * 1_024 + 1_024) / 512) * 512
     for (const extraBlock of [0, 1]) {
       const entries: PackageFixtureEntry[] = [
         { path: "package.json", body: "{}\n", mode: 0o644 },
@@ -1269,7 +1323,7 @@ test("package smoke rejects oversized tar framing before installing a package be
       ]
       const contents = packageFixtureTar(entries)
       const tar = Buffer.concat([contents, Buffer.alloc(maximumAlignedTarBytes + extraBlock * 512 - contents.length)])
-      expect(tar.length).toBe(extraBlock === 0 ? 15_563_776 : 15_564_288)
+      expect(tar.length).toBe(extraBlock === 0 ? 15_584_256 : 15_584_768)
       const archive = gzipSync(tar, { level: 9 })
       const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
       expect(metadata[0]!.unpackedSize).toBeLessThan(15_000_000)

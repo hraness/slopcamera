@@ -97,6 +97,8 @@
     "scripts/site-release-copy-profile.ts",
     "scripts/site-release-copy-browser-contract.ts",
     "scripts/site-release-copy-browser-contract.test.ts",
-    "scripts/verify-site-release-copy.ts"
+    "scripts/verify-site-release-copy.ts",
+    "scripts/retained-evidence.ts",
+    "scripts/retained-evidence.test.ts"
   ]
 }

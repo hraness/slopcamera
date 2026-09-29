@@ -9,8 +9,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull requests supersede their own earlier runs; every main push keeps its
+  # own group so a later merge never cancels an earlier commit's run.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   plan:
@@ -20,7 +22,6 @@ jobs:
     outputs:
       api: ${{ steps.routes.outputs.api }}
       desktop: ${{ steps.routes.outputs.desktop }}
-      menubar: ${{ steps.routes.outputs.menubar }}
       package: ${{ steps.routes.outputs.package }}
       sdk: ${{ steps.routes.outputs.sdk }}
       site: ${{ steps.routes.outputs.site }}
@@ -39,14 +40,12 @@ jobs:
           api=false
           sdk=false
           desktop=false
-          menubar=false
           package=false
           site=false
           if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BASE_SHA^{commit}"; then
             api=true
             sdk=true
             desktop=true
-            menubar=true
             package=true
             site=true
           else
@@ -56,15 +55,11 @@ jobs:
                   api=true
                   sdk=true
                   desktop=true
-                  menubar=true
                   package=true
                   site=true
                   ;;
                 api/*|apps/api/*)
                   api=true
-                  ;;
-                desktop/*)
-                  menubar=true
                   ;;
                 src/*|schema/*|examples/*|skills/*|packages/scene/*)
                   api=true
@@ -87,8 +82,8 @@ jobs:
               esac
             done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
           fi
-          printf 'api=%s\nsdk=%s\ndesktop=%s\nmenubar=%s\npackage=%s\nsite=%s\n' \
-            "$api" "$sdk" "$desktop" "$menubar" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
+          printf 'api=%s\nsdk=%s\ndesktop=%s\npackage=%s\nsite=%s\n' \
+            "$api" "$sdk" "$desktop" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
 
   boundary:
     name: Slopcamera standalone boundary
@@ -163,11 +158,18 @@ jobs:
       - run: bun run check:api
 
   desktop:
-    name: Slopcamera local runtime
+    name: Slopcamera local runtime (${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.desktop == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # Together these run every check:desktop phase: `static` runs the
+        # effect policy, types, lint and build, and the three test shards
+        # partition test:desktop by directory.
+        shard: [static, code, cli, rest]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -176,9 +178,15 @@ jobs:
         with:
           bun-version: "1.3.14"
       - name: Install FFmpeg
+        if: matrix.shard != 'static'
         run: bash scripts/install-ci-ffmpeg.sh
       - run: bun install --frozen-lockfile --ignore-scripts
-      - run: bun run check:desktop
+      - name: Check desktop effect policy, types, lint and build
+        if: matrix.shard == 'static'
+        run: bun run check:effect && bun run typecheck:desktop && bun run lint:desktop && bun run build:desktop
+      - name: Test desktop shard
+        if: matrix.shard != 'static'
+        run: bun run test:desktop:${{ matrix.shard }}
       - name: Check generated desktop standalone boundary
         run: bun run check:standalone
       - name: Verify committed CLI output
@@ -189,38 +197,19 @@ jobs:
             exit 1
           fi
 
-  menubar:
-    name: Slopcamera menu-bar companion
-    needs: plan
-    if: needs.plan.outputs.menubar == 'true'
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
-        with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          workspaces: desktop
-      - name: Build the menu-bar companion
-        run: cargo build --release --locked --manifest-path desktop/Cargo.toml
-      - name: Test the menu-bar companion and its menu fixtures
-        run: cargo test --locked --manifest-path desktop/Cargo.toml
-      - name: Lint menu fixtures
-        run: >-
-          npx --yes
-          --package=https://github.com/hraness/desktop-foundation/releases/download/v0.8.0/hraness-desktop-foundation-0.8.0.tgz
-          companion lint-menu --strict desktop/menubar/fixtures/*.json
-
   site:
-    name: Slopcamera site
+    name: Slopcamera site (${{ matrix.part }})
     needs: plan
     if: needs.plan.outputs.site == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Together these run every check:web phase: `compile` runs the
+        # repeated full-site compilation suite, and `verify` runs the example
+        # sources, theme, preview types, remaining tests, build and browser checks.
+        part: [compile, verify]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -233,7 +222,11 @@ jobs:
           node-version: "24.18.1"
           package-manager-cache: false
       - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Compile the site repeatedly
+        if: matrix.part == 'compile'
+        run: bun run check:web:compile
       - name: Verify the site with pinned Node and Chromium
+        if: matrix.part == 'verify'
         env:
           SLOPCAMERA_SITE_ARTIFACTS: ${{ github.workspace }}/site-browser-artifacts
         run: |
@@ -246,11 +239,11 @@ jobs:
           SLOPCAMERA_CHROME_PATH="$("$NODE_EXECUTABLE_PATH" -e 'const { createRequire } = require("node:module"); const { resolve } = require("node:path"); console.log(createRequire(resolve("apps/web/package.json"))("playwright-core").chromium.executablePath())')"
           test -x "$SLOPCAMERA_CHROME_PATH"
           export SLOPCAMERA_CHROME_PATH
-          bun run check:web
+          bun run check:web:verify
       - name: Check generated site standalone boundary
         run: bun run check:standalone
       - name: Upload site browser evidence
-        if: always()
+        if: always() && matrix.part == 'verify'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: slopcamera-site-browser-${{ github.sha }}
@@ -282,7 +275,7 @@ jobs:
   required:
     name: Required
     if: always()
-    needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]
+    needs: [plan, boundary, copy, api, sdk, desktop, site, package]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -294,7 +287,6 @@ jobs:
           API: ${{ needs.api.result }}
           SDK: ${{ needs.sdk.result }}
           DESKTOP: ${{ needs.desktop.result }}
-          MENUBAR: ${{ needs.menubar.result }}
           SITE: ${{ needs.site.result }}
           PACKAGE: ${{ needs.package.result }}
         run: |
@@ -302,6 +294,6 @@ jobs:
           [[ "$PLAN" == success ]]
           [[ "$BOUNDARY" == success ]]
           [[ "$COPY" == success ]]
-          for result in "$API" "$SDK" "$DESKTOP" "$MENUBAR" "$SITE" "$PACKAGE"; do
+          for result in "$API" "$SDK" "$DESKTOP" "$SITE" "$PACKAGE"; do
             [[ "$result" == success || "$result" == skipped ]]
           done

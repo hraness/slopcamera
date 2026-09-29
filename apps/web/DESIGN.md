@@ -12,7 +12,7 @@ monospace reserved for code. Design-kit v0.23.0 and its exact marketing, paper,
 and Lantern snapshots supply flat backgrounds and thin rules. The gallery
 keeps real media, with no decorative card chrome or floating hero artwork.
 Interface examples use ruled rows; technique links remain plain and touch-sized.
-The shared v0.20.0 footer follows the document and aligns with the 72rem column.
+The shared v0.20.1 footer follows the document and aligns with the 72rem column.
 
 ## Intentional differences for native review
 

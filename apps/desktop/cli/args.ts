@@ -1,5 +1,6 @@
 import { CliError } from "./errors";
 import { MAX_EVENT_QUERY_LIMIT } from "./query-limits";
+import { HTML_FILM_CUTS, type HtmlFilmCommand, type HtmlFilmCut } from "./html-film-names";
 import { STUDIO_TEMPLATES, type StudioTemplate } from "./studio-template-names";
 import {
   slopcameraGalleryKinds,
@@ -121,6 +122,7 @@ export type SpatialProjectCommand = JsonOption & {
 
 export type CliCommand =
   | { readonly kind: "html-render"; readonly input: string; readonly dryRun: boolean; readonly json: boolean }
+  | HtmlFilmCommand
   | StudioCommand
   | DirectingCommand
   | SpatialWorldCommand
@@ -333,7 +335,6 @@ export type CliCommand =
       readonly tint: number | undefined;
       readonly videoStreamIndex: number;
     } & JsonOption)
-  | ({ readonly kind: "menubar"; readonly action: "run" | "install" | "uninstall" | "status"; readonly mode: "foreground" | "background" } & JsonOption)
   | ({ readonly kind: "outputs" } & JsonOption)
   | ({ readonly kind: "credits-status" } & JsonOption)
   | ({
@@ -729,6 +730,63 @@ interface ParsedOptions {
 
 function fail(message: string): never {
   throw new CliError("usage", message);
+}
+
+const HTML_STILL_USAGE = "Use html still --input <scene.json> --at <seconds>[,<seconds>...] --output <dir> [--json].";
+const HTML_PREVIEW_USAGE = "Use html preview --input <scene.json> --output <dir> [--every <seconds>] [--json].";
+const HTML_DELIVER_USAGE = "Use html deliver <export.json> --basename <name> --poster-at <seconds> --social-at <seconds> [--cuts 1:1,9:16] [--per-beat-clips] [--beats <beats.json>] [--output <dir>] [--json].";
+
+function secondsList(value: string | undefined, usage: string): readonly number[] {
+  if (value === undefined) fail(usage);
+  return value.split(",").map(part => {
+    if (!/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u.test(part.trim())) fail(`Times must be seconds such as 3 or 12.5; got ${part}.`);
+    return Number(part.trim());
+  });
+}
+
+function parseHtmlFilmArgs(action: "still" | "preview" | "deliver", argv: readonly string[]): HtmlFilmCommand {
+  if (action === "still") {
+    const parsed = parseOptions(argv, { "--input": "value", "--at": "value", "--output": "value", "--json": "flag" });
+    const input = optionString(parsed, "--input");
+    const output = optionString(parsed, "--output");
+    if (input === undefined || output === undefined || parsed.positionals.length !== 0) fail(HTML_STILL_USAGE);
+    return { kind: "html-film", action, input, output, at: secondsList(optionString(parsed, "--at"), HTML_STILL_USAGE), json: optionFlag(parsed, "--json") };
+  }
+  if (action === "preview") {
+    const parsed = parseOptions(argv, { "--input": "value", "--every": "value", "--output": "value", "--json": "flag" });
+    const input = optionString(parsed, "--input");
+    const output = optionString(parsed, "--output");
+    if (input === undefined || output === undefined || parsed.positionals.length !== 0) fail(HTML_PREVIEW_USAGE);
+    const every = optionString(parsed, "--every");
+    const [seconds] = every === undefined ? [2] : secondsList(every, HTML_PREVIEW_USAGE);
+    if (seconds === undefined || seconds <= 0) fail("--every must be more than 0 seconds.");
+    return { kind: "html-film", action, input, output, every: seconds, json: optionFlag(parsed, "--json") };
+  }
+  const parsed = parseOptions(argv, {
+    "--basename": "value", "--poster-at": "value", "--social-at": "value", "--cuts": "value",
+    "--per-beat-clips": "flag", "--beats": "value", "--output": "value", "--json": "flag",
+  });
+  const basename = optionString(parsed, "--basename");
+  if (parsed.positionals.length !== 1 || basename === undefined) fail(HTML_DELIVER_USAGE);
+  const single = (name: string) => {
+    const values = secondsList(optionString(parsed, name), HTML_DELIVER_USAGE);
+    if (values.length !== 1) fail(`${name} takes one time in seconds.`);
+    return values[0]!;
+  };
+  const cutsInput = optionString(parsed, "--cuts");
+  const cuts = cutsInput === undefined ? [] : cutsInput.split(",").map(cut => {
+    if (!(HTML_FILM_CUTS as readonly string[]).includes(cut)) fail(`--cuts takes ${HTML_FILM_CUTS.join(", ")}; got ${cut}.`);
+    return cut as HtmlFilmCut;
+  });
+  const beats = optionString(parsed, "--beats");
+  const output = optionString(parsed, "--output");
+  return {
+    kind: "html-film", action, exportPath: parsed.positionals[0]!, basename,
+    posterAt: single("--poster-at"), socialAt: single("--social-at"), cuts,
+    perBeatClips: optionFlag(parsed, "--per-beat-clips"),
+    ...(beats === undefined ? {} : { beats }), ...(output === undefined ? {} : { output }),
+    json: optionFlag(parsed, "--json"),
+  };
 }
 
 function parseOptions(argv: readonly string[], spec: OptionSpec): ParsedOptions {
@@ -3631,6 +3689,7 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
   const command = argv[0]!;
   switch (command) {
     case "html": {
+      if (argv[1] === "still" || argv[1] === "preview" || argv[1] === "deliver") return parseHtmlFilmArgs(argv[1], argv.slice(2));
       if (argv[1] !== "render") fail("Use html render --input <scene.json> [--dry-run] [--json].");
       const parsed = parseOptions(argv.slice(2), { "--input": "value", "--dry-run": "flag", "--json": "flag" });
       const input = optionString(parsed, "--input");
@@ -3656,15 +3715,8 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "project": return parseProject(argv.slice(1));
     case "inspect": return parseInspect(argv.slice(1));
     case "events": return parseEvents(argv.slice(1));
-    case "menubar": {
-      const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--foreground": "flag", "--background": "flag" });
-      const positionals = parsed.positionals;
-      if (positionals.length > 1 || (positionals[0] !== undefined && !["install", "uninstall", "status", "start"].includes(positionals[0]))) throw new CliError("usage", "Use slopcamera menubar [--foreground|--background] or slopcamera menubar install|uninstall|status|start. See slopcamera help menubar.");
-      if (positionals[0] !== undefined && (optionFlag(parsed, "--foreground") || optionFlag(parsed, "--background"))) throw new CliError("usage", "Choose a menu-bar action or a run mode, not both.");
-      // `start` opens it now and returns, like --background; the login item's hints use it.
-      if (positionals[0] === "start") return { kind: "menubar", action: "run", mode: "background", json: optionFlag(parsed, "--json") };
-      return { kind: "menubar", action: (positionals[0] as "install" | "uninstall" | "status" | undefined) ?? "run", mode: optionFlag(parsed, "--background") ? "background" : "foreground", json: optionFlag(parsed, "--json") };
-    }
+    // Retired with the menu-bar companion; the old command name explains where it went.
+    case "menubar": throw new CliError("usage", "The menu bar was retired. Use slopcamera status or slopcamera tui to see what Slopcamera is doing, and slopcamera legacy retire to stop an old copy opening at login.");
     case "outputs": {
       const parsed = parseOptions(argv.slice(1), JSON_SPEC);
       exactPositionals(parsed, 0, "slopcamera outputs [--json]");

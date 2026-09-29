@@ -32,7 +32,7 @@ When the job needs Blender rigs and simulation, CadQuery solids and STEP, or Man
 
 Trace raster artwork into measured, inert SVG through [local vectorization](/docs/reference/vectorization), or produce a canonical icon through the Gateway-backed [icon recipe](/docs/reference/gateway-generation).
 
-## When Slopcamera is not the right tool
+## When SlopCamera is not the right tool
 
 - No hosted state: without an account or project database there is no built-in sync, sharing, or multi-machine collaboration.
 - The current CLI does not start new screen or camera recordings; it consumes existing finished bundles.

@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "schema": "slopcamera.status/1",
+  "generatedAt": "2026-09-28T12:00:00.000Z",
+  "data": {
+    "product": "slopcamera",
+    "version": "9.9.9",
+    "attention": false,
+    "activity": {
+      "state": "stale",
+      "headline": "Last job stopped early",
+      "detail": "Rendering a recording · started 8 hours ago",
+      "label": "Rendering a recording",
+      "startedAt": "2026-09-28T04:00:00.000Z"
+    },
+    "credits": null,
+    "outputs": {
+      "root": "/o",
+      "total": 0,
+      "latest": []
+    },
+    "legacyLoginItem": {
+      "state": "none"
+    }
+  },
+  "next": [
+    {
+      "command": "slopcamera runs list --json",
+      "why": "See which run stopped and whether it can resume.",
+      "audience": "agent"
+    }
+  ]
+}
