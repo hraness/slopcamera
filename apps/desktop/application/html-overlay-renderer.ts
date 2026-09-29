@@ -19,6 +19,12 @@ export interface HtmlOverlayFrameRenderRequest {
   readonly browserRuntime: HtmlOverlayBrowserRuntimeBinding;
   readonly outputDirectory: string;
   readonly resources: readonly BoundHtmlOverlayResource[];
+  /**
+   * Optional ascending subset of frame indexes to capture, for stills and
+   * previews. Omitted means every frame. Captured files keep their absolute
+   * frame index in the name, so `frame-%08d.png` stays addressable.
+   */
+  readonly frames?: readonly number[];
 }
 
 export interface HtmlOverlayFrameRenderResult {

@@ -10,7 +10,7 @@ const blogPostLinks = indexableBlogPosts
 
 export const homeMarkdown = `# Slopcamera is a domain-specific harness for visual creation.
 
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -158,9 +158,9 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 - [XML sitemap](https://slopcamera.com/sitemap.xml)
 `
 
-export const llmsTxt = `# Slopcamera
+export const llmsTxt = `# SlopCamera
 
-> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
+> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
 
 Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. Slopcamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. Slopcamera is free and open source.
 

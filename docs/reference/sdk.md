@@ -16,6 +16,7 @@ Slopcamera exposes a portable Bun SDK and a complete local media host. Imports s
 | `@hraness/slopcamera/local/code/advanced` | Local graph planning, execution and host integration. |
 | `@hraness/slopcamera/local/code/workflows` | Checked built-in local workflow definitions. |
 | `@hraness/slopcamera/local/html-overlay` | Local HTML authoring, scene-input schemas, music-clock and audio-reactivity helpers, rigged GLB preparation, profiles and contracts. |
+| `@hraness/slopcamera/local/html-film` | Motion helpers for HTML films: easing, springs, kinetic type, act timelines, camera, cursor, drawn highlights and WebVTT captions. Every helper is a pure function of time and the module has no imports. |
 
 There is no public `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint. The local subpaths need the source-backed Bun distribution — the installed package or a checkout, never a copied standalone executable; they are not browser SDKs.
 

@@ -1,4 +1,4 @@
-# Publish Slopcamera
+# Publish SlopCamera
 
 GitHub Releases are canonical. A protected stable tag produces one verified package archive, GitHub provenance, and an immutable Release, then the same workflow publishes those exact bytes to npm through trusted publishing. npm is a downstream mirror. The new `@hraness/slopcamera` package has no dual-use content declaration or classification-based disclosure requirement. Its npm publisher must be configured for this exact new identity; settings on historical `@hraness/atet` do not carry over.
 

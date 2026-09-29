@@ -26,9 +26,9 @@ import { resolveDocsContent } from "./docs-registry"
 assertArticleAdmissions(blogAdmissions)
 
 export const blogSite: SearchSite = {
-  name: "Slopcamera",
-  title: "Slopcamera",
-  description: "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+  name: "SlopCamera",
+  title: "SlopCamera",
+  description: "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   origin: "https://slopcamera.com",
   language: "en",
 }
@@ -312,7 +312,7 @@ function absoluteLinks(html: string): string {
 /** Atom feed of indexable posts with their full bodies. */
 export function blogAtomFeed(bodies: Readonly<Record<string, string>>): string {
   return createAtomFeed(blogSite, {
-    title: "Slopcamera blog",
+    title: "SlopCamera blog",
     description: blogIndex.description,
     homePath: "/blog",
     path: blogFeedPath,

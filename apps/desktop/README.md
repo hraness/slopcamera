@@ -1,4 +1,4 @@
-# Slopcamera local host and CLI
+# SlopCamera local host and CLI
 
 Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. `slopcamera status` and `slopcamera tui` show what is running, credits and the newest agent outputs in the terminal.
 

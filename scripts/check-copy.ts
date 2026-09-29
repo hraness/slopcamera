@@ -18,6 +18,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { openApiDocument } from "../apps/api/src/openapi";
 import { hostedTools } from "../apps/api/src/tools";
+import { HTML_FILM_TEMPLATES } from "../apps/desktop/cli/html-film-names";
 import { HTML_OVERLAY_SCAFFOLD_KINDS } from "../apps/desktop/html-overlay/catalog";
 import { THREE_RIGGED_GLB_LIMITS } from "../apps/desktop/html-overlay/rigged-glb";
 import { BUILT_IN_WORKFLOWS } from "../apps/desktop/workflows/index";
@@ -102,6 +103,7 @@ async function loadFacts(): Promise<CopyFacts> {
     ).length,
     hostedToolCount: hostedTools.length,
     htmlProfileCount: HTML_OVERLAY_SCAFFOLD_KINDS.length,
+    htmlFilmTemplates: HTML_FILM_TEMPLATES,
     mcpMaximumEdges,
     mcpMaximumReturnedFindings,
     mcpMaximumShapes,

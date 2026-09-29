@@ -1,9 +1,9 @@
 ---
 name: slopcamera
-description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
+description: Create, inspect, edit and render visual media with the SlopCamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
 ---
 
-# Create visual media with Slopcamera
+# Create visual media with SlopCamera
 
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
 
@@ -32,6 +32,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
 | Clean up, caption, frame, or deliver existing recordings and footage | [Video projects](references/video-projects.md) |
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
+| Product launch film, UI mockup motion, kinetic type, or coming from HyperFrames or Remotion | [Launch films](references/launch-films.md) |
 | Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
 | Product mark, marketing illustration or topic icon | [Brand illustrations](references/brand-illustrations.md) |

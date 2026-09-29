@@ -66,7 +66,7 @@ const evidence = (delta: number): ShellEvidence => {
   const appearance = selectors.flatMap((selector, index) => Array.from({ length: index < 4 ? 1 : 3 }, (_, i) => element(`${selector}[${i}]`)))
   const skip = { ...element(".skip-link[0]"), styles: { ...element(".skip-link[0]").styles, position: "fixed" }, geometrySpace: "viewport" as const, scrollY: 0, documentRect: [0, 0, 400, 20] }
   return { direction: "ltr", dom: "exact-outside-footer", recovery: false, elements: [
-    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "Slopcamera Docs GitHub Install Slopcamera by Hraness" : ""}Accept cookies` },
+    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "SlopCamera Docs GitHub Install Slopcamera by Hraness" : ""}Accept cookies` },
     { ...element("#hraness-site-footer[0]", 100 + delta), rect: [0, 900, 400, 100 + delta] }, element("#main[0]")],
     focus: [element(".topbar[0]")], hover: [element(".topbar[0]")], skip, obstructions: [],
     appearance: shellAppearanceSteps.map(step => ({ step: step.name, active: step.active, elements: appearance })) }

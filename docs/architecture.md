@@ -1,4 +1,4 @@
-# How Slopcamera connects sources, scenes and films
+# How SlopCamera connects sources, scenes and films
 
 Slopcamera keeps authored source available while turning it into inspectable visual artifacts. A diagram, a native Blender scene, an AI-generated clip and a recorded screen bundle can all contribute to a film, but they retain different editing capabilities and provenance. A finished image or video is a useful common boundary between renderers; it does not preserve every property of the source that produced it.
 
