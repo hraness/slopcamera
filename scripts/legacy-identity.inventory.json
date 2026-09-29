@@ -449,7 +449,7 @@
   },
   {
     "identityLineCount": 23,
-    "identityLinesSha256": "1e454f0129acb251a9f00f6254d7ca363d4bb134d893b9129eee38488544db3f",
+    "identityLinesSha256": "e5b8fc03a917c539b53d986b622f7c96488db00afcabc88dd2625e5a0d2b8e21",
     "occurrenceCount": 32,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -796,6 +796,15 @@
     "identityLinesSha256": "47ff43de423254086bf3775ef9478d4177d58069008c7b691ca04a2683821873",
     "occurrenceCount": 10,
     "path": "apps/desktop/cli/studio-workflow.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 14,
+    "identityLinesSha256": "5b7af76b101f40a1b18d7d4f1d958d88d560affe960ae3cead07c212c62063df",
+    "occurrenceCount": 20,
+    "path": "apps/desktop/cli/verbs.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1295,9 +1304,9 @@
     ]
   },
   {
-    "identityLineCount": 86,
-    "identityLinesSha256": "25486cf26a9761126c33f24f3eb0f07af1698353f6b476bb7532c1063aaf6f3a",
-    "occurrenceCount": 453,
+    "identityLineCount": 87,
+    "identityLinesSha256": "f1d0cd4412d9f0562b09a04a630a09556010c85b1f0b69841296446f9c16f2bb",
+    "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"

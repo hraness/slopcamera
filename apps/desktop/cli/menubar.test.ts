@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import type { CliIo } from "./io";
-import { ALREADY_RUNNING_EXIT, helperEnvironment, installBinary, installedBinaryPath, launchAgentPath, launchAgentPlist, launchMenubar, launchMessage, launchOutcome, manageMenubar, outputsRoot, removeLegacyAgent, resolveMenubarBinary, type HelperResult } from "./menubar";
+import { ALREADY_RUNNING_EXIT, helperEnvironment, installBinary, installedBinaryPath, launchAgentPath, launchAgentPlist, launchMenubar, launchMessage, launchOutcome, manageMenubar, removeLegacyAgent, resolveMenubarBinary, type HelperResult } from "./menubar";
+import { outputsDirectory } from "./outputs";
 import { commandHelp } from "./help";
 import { parseCliArgs } from "./args";
 
@@ -36,8 +37,8 @@ function io(home: string, env: Readonly<Record<string, string | undefined>>) {
 
 describe("Slopcamera menu-bar launcher", () => {
   test("keeps outputs beside the product state root", () => {
-    expect(outputsRoot("/tmp/Slopcamera/cli")).toBe("/tmp/Slopcamera/outputs");
-    expect(outputsRoot("/tmp/Slopcamera")).toBe("/tmp/Slopcamera/outputs");
+    expect(outputsDirectory("/tmp/Slopcamera/cli")).toBe("/tmp/Slopcamera/outputs");
+    expect(outputsDirectory("/tmp/Slopcamera")).toBe("/tmp/Slopcamera/outputs");
   });
 
   test("accepts a safe explicit companion and ignores retired desktop overrides", () => {
