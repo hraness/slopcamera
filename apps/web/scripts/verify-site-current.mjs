@@ -162,7 +162,8 @@ export async function main(args = process.argv.slice(2)) {
   let browser
   const results = []
   try {
-    browser = await chromium.launch({ executablePath: findChrome(), headless: true })
+    browser = await chromium.launch({ executablePath: findChrome(), headless: true,
+      args: ["--disable-features=PaintHolding,MacAppCodeSignClone", "--mute-audio"] })
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
       results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }
