@@ -89,7 +89,7 @@ Share supported geometry and calibrated cameras, or mount images and video in wo
 - Agent Skill: start here. It teaches your agent which commands fit each job and what to check before it renders.
 - CLI: human-readable commands and stable JSON for the broad local workflow. Start with \`slopcamera workflows list --json\`.
 - TypeScript SDK: declarative or imperative media work in Bun. For example, import \`vectorizeImage\` from \`@hraness/slopcamera\`.
-- MCP: a current-source set of 21 tools for checking and rendering diagrams, inspecting and planning scenes, making images, and composing icon scenes and soundtrack beat grids in one selected folder. Run \`slopcamera mcp --root /absolute/path/to/workspace\`. The verified v3.8.1 archive has a 17-tool MCP subset and six registered operations; icon and soundtrack composition require a later source build. It does not expose every CLI command.
+- MCP: a fixed set of 21 tools for checking and rendering diagrams, inspecting and planning scenes, making images, and composing icon scenes and soundtrack beat grids in one selected folder. Run \`slopcamera mcp --root /absolute/path/to/workspace\`. It does not expose every CLI command.
 
 ## What stays on your machine
 
@@ -178,7 +178,7 @@ export const llmsTxt = `# SlopCamera
 
 Slopcamera is a domain-specific harness for visual creation: it lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
 
-Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a current-source set of 21 tools and ten operation codes, including scene inspection and planning. The verified v3.8.1 archive has a 17-tool MCP subset and six registered operations; icon and soundtrack composition require a later source build. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
+Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 21 tools and ten operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
 ## When to use Slopcamera
 
@@ -244,7 +244,7 @@ ${blogPostLinks}
 - [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md): Credential, discovery, acknowledgement, and billing boundaries
 - [Video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md): The FFmpeg-backed project model, edits, and delivery formats
 - [Native engines](https://slopcamera.com/docs/reference/native-engines.md): Blender, CadQuery, and Manim adapter contract
-- [MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md): The 21 fixed tools in current source, bounds, and CLI-only remainder
+- [MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md): The 21 fixed tools, bounds, and CLI-only remainder
 - [Use cases](https://slopcamera.com/docs/explanation/use-cases.md): What people make, what each job needs, and its limits
 - [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host

@@ -14,14 +14,14 @@ command -v slopcamera
 
 A restricted shell can omit package-manager paths. Check known host installation paths before declaring a tool unavailable. If Bun is genuinely absent, follow its official [installation guide](https://bun.sh/docs/installation) within the user’s authorized setup scope. Do not switch package managers or pipe an unreviewed installer into a shell.
 
-Slopcamera installs from its verified release archive: `bun add --global https://github.com/hraness/slopcamera/releases/download/v3.8.1/hraness-slopcamera-3.8.1.tgz`, then `slopcamera doctor --json`. Building from source is the contributor path. Historical Atet archives do not install the renamed CLI; never substitute `slopcamera` into an old archive URL.
+Slopcamera installs from its verified release archive: `bun add --global https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz`, then `slopcamera doctor --json`. Building from source is the contributor path. Historical Atet archives do not install the renamed CLI; never substitute `slopcamera` into an old archive URL.
 
 If an update from a previous local archive reports `DependencyLoop`, use Bun's
 [named tarball syntax](https://bun.com/docs/pm/cli/add#tarball-dependencies) with
 the same verified archive:
 
 ```sh
-bun add --global @hraness/slopcamera@https://github.com/hraness/slopcamera/releases/download/v3.8.1/hraness-slopcamera-3.8.1.tgz
+bun add --global @hraness/slopcamera@https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz
 slopcamera --version
 ```
 

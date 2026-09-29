@@ -23,7 +23,7 @@ describe("media studio public copy (pure, process-free)", () => {
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
     expect(readme).toContain("Historical Atet release evidence")
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.8.1/hraness-slopcamera-3.8.1.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')
@@ -116,9 +116,11 @@ describe("media studio public copy (pure, process-free)", () => {
     expect(readme).toContain("Seven editable")
     expect(llmsTxt).toContain("GPU support required by its selected profile")
     expect(llmsTxt).toContain("`scene camera-track` export")
-    expect(llmsTxt).toContain("current-source set of 21 tools and ten operation codes")
-    expect(llmsTxt).toContain("verified v3.8.1 archive has a 17-tool MCP subset and six registered operations")
-    expect(homeMarkdown).toContain("verified v3.8.1 archive has a 17-tool MCP subset and six registered operations")
+    expect(llmsTxt).toContain("fixed set of 21 tools and ten operation codes")
+    for (const surface of [llmsTxt, homeMarkdown]) {
+      expect(surface).not.toContain("17-tool")
+      expect(surface).not.toContain("current-source set")
+    }
   })
 
   test("documentation discovery reaches the first-party index without inventing a hosted manual", async () => {
