@@ -3,12 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 
-import type { CliIO } from "@hraness/desktop-foundation/registry";
+import { HranessError, type CliIO } from "@hraness/desktop-foundation/registry";
 
 import { completions } from "./help";
 import type { ProcessRunner, RunOptions } from "./io";
 import { oldCliPlist } from "./legacy-login";
-import { isRegistryCommand, runRegistry, slopcameraRegistry, type RegistryDependencies } from "./registry";
+import { CliError } from "./errors";
+import { asHranessError, isRegistryCommand, runRegistry, slopcameraRegistry, type RegistryDependencies } from "./registry";
 import { CLI_VERBS } from "./verbs";
 
 const NOW = new Date("2026-09-28T12:00:00.000Z");
@@ -160,6 +161,27 @@ describe("slopcamera commands", () => {
 
     const linux = await run(["legacy", "retire", "--json"], { home, stateRoot, platform: "linux" });
     expect(linux.json.data).toEqual({ retired: [], loginItem: { state: "none" } });
+  });
+
+  test("application errors keep shared codes and prefix the rest with the product", () => {
+    for (const [code, expected] of [["usage", "usage"], ["not-found", "not-found"], ["conflict", "conflict"], ["unavailable", "slopcamera.unavailable"], ["unsafe-path", "slopcamera.unsafe-path"]] as const) {
+      const mapped = asHranessError(new CliError(code, "why"));
+      expect(mapped).toBeInstanceOf(HranessError);
+      expect((mapped as HranessError).code).toBe(expected);
+    }
+    const other = new Error("plain");
+    expect(asHranessError(other)).toBe(other);
+  });
+
+  test("legacy retire without an absolute HOME answers slopcamera.unavailable, not an internal failure", async () => {
+    const { home, stateRoot } = sandbox();
+    for (const HOME of ["", "relative"]) {
+      const result = await run(["legacy", "retire", "--json"], { home, stateRoot, env: { HOME, PATH: "" }, retire: { bootout: async () => { throw new Error("must not boot out"); } } });
+      expect(result.json.ok).toBe(false);
+      expect(result.json.error.code).toBe("slopcamera.unavailable");
+      expect(result.json.error.message).toContain("HOME must be an absolute directory");
+      expect(result.code).not.toBe(0);
+    }
   });
 
   test("outputs list, open and reveal touch only files in the outputs folder", async () => {

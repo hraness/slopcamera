@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 87,
-    "identityLinesSha256": "b328c6494dba1032356ad454e75c9740aba8f0d8e45afd0030472800665ca09b",
+    "identityLinesSha256": "eec4ff01db3e9e519dca77bd95d3c3b9fafe1f699db6f9ed92918ccd30104b27",
     "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -2919,9 +2919,9 @@
     ]
   },
   {
-    "identityLineCount": 16,
-    "identityLinesSha256": "fbb7a63508548aa3a7d49d8de5383947adb655a698799b29a2f7968663874f3b",
-    "occurrenceCount": 16,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ae9b4c1ef72d2b033082eefc4838bcf2d1d0aab8e9761bbe5ff11b09ba9fa0f1",
+    "occurrenceCount": 17,
     "path": "package.json",
     "categories": [
       "native-film-studio"
