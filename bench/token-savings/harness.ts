@@ -14,6 +14,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { FFMPEG, sha256, thumbnail } from "./media";
 import { TASKS, isTaskId, loadPrompts, type Step, type TaskId, type Validation } from "./tasks";
 import { summarize } from "./summarize";
+import { contactSheets } from "./contact";
 
 export const MODEL = "claude-opus-5-5";
 export const EFFORT = "medium";
@@ -220,13 +221,25 @@ interface StreamSummary {
   result: Record<string, unknown> | null;
   toolCalls: ToolCall[];
   toolInputText: string;
+  bashCommands: string[];
   rateLimitEvents: string[];
+}
+
+/**
+ * A Bash call counts when it invokes the `slopcamera` binary as a command word, at
+ * the start or after a shell separator. Paths such as /private/tmp/slopcamera-bench/
+ * or .claude/skills/slopcamera/ do not count.
+ */
+const SLOPCAMERA_INVOCATION = /(?:^|[\s;&|(`]|\/bin\/)slopcamera(?=[\s'"]|$)/m;
+
+export function countSlopcameraCommands(bashCommands: readonly string[]): number {
+  return bashCommands.filter((command) => SLOPCAMERA_INVOCATION.test(command)).length;
 }
 
 const RATE_LIMIT = /rate[ _-]?limit|\b429\b|usage limit|limit reached|too many requests|overloaded_error/i;
 
 function summarizeStream(lines: readonly string[]): StreamSummary {
-  const summary: StreamSummary = { init: null, result: null, toolCalls: [], toolInputText: "", rateLimitEvents: [] };
+  const summary: StreamSummary = { init: null, result: null, toolCalls: [], toolInputText: "", bashCommands: [], rateLimitEvents: [] };
   const inputs: string[] = [];
   for (const line of lines) {
     let event: unknown;
@@ -250,6 +263,8 @@ function summarizeStream(lines: readonly string[]): StreamSummary {
           const b = block as { name?: unknown; input?: unknown };
           const text = JSON.stringify(b.input ?? null);
           inputs.push(text);
+          const command = (b.input as { command?: unknown } | null)?.command;
+          if (b.name === "Bash" && typeof command === "string") summary.bashCommands.push(command);
           summary.toolCalls.push({ name: String(b.name), input: text.length > 600 ? `${text.slice(0, 600)}…` : text });
         }
       }
@@ -341,7 +356,13 @@ export interface StepRecord {
   readonly isError: boolean | null;
   readonly numTurns: number | null;
   readonly durationApiMs: number | null;
+  /** This step's own cost. For a revise step, the session cumulative minus the create step's cost. */
   readonly costUsd: number | null;
+  /**
+   * Claude Code's total_cost_usd and modelUsage are cumulative over a resumed session,
+   * while usage is per invocation. This keeps the raw cumulative figure.
+   */
+  readonly sessionCostUsd?: number | null;
   readonly usage: Usage | null;
   readonly inputSideTokens: number | null;
   readonly modelUsage: unknown;
@@ -423,6 +444,12 @@ export async function readRecords(rawDir: string): Promise<StepRecord[]> {
   return records;
 }
 
+/** A resumed session reports cumulative cost; subtract what earlier steps already spent. */
+export function stepCost(sessionCostUsd: number | null, priorSessionCostUsd: number | null): number | null {
+  if (sessionCostUsd === null || priorSessionCostUsd === null) return null;
+  return Math.round((sessionCostUsd - priorSessionCostUsd) * 1e7) / 1e7;
+}
+
 // ---------------------------------------------------------------- run
 
 class RateLimited extends Error {}
@@ -494,7 +521,7 @@ async function runSession(
   const preflight = await preflightOf(sandbox, env);
   const revise = await runStep(
     p, options, { key, task, condition, repeat, step: "revise", sandbox, env, outDir, preflight },
-    prompts.revisePrompt, create.sessionId, create.validation?.hashes ?? {},
+    prompts.revisePrompt, create.sessionId, create.validation?.hashes ?? {}, create.costUsd,
   );
   await writeFile(revisePath, `${JSON.stringify(revise, null, 2)}\n`);
   await copySandbox(sandbox, join(outDir, "after-revise"));
@@ -612,6 +639,7 @@ async function runStep(
   prompt: string,
   sessionId: string,
   createHashes: Readonly<Record<string, string | null>>,
+  priorSessionCostUsd: number | null = null,
 ): Promise<StepRecord> {
   const argv = claudeArgs(options.claude, ctx.sandbox, { sessionId, resume: ctx.step === "revise" });
   const startedAt = new Date().toISOString();
@@ -650,7 +678,8 @@ async function runStep(
     isError: typeof result?.is_error === "boolean" ? result.is_error : null,
     numTurns: numberOr(result?.num_turns),
     durationApiMs: numberOr(result?.duration_api_ms),
-    costUsd: numberOr(result?.total_cost_usd),
+    costUsd: stepCost(numberOr(result?.total_cost_usd), ctx.step === "revise" ? priorSessionCostUsd : 0),
+    sessionCostUsd: numberOr(result?.total_cost_usd),
     usage,
     inputSideTokens: usage === null ? null : usage.inputTokens + usage.cacheCreationInputTokens + usage.cacheReadInputTokens,
     modelUsage: result?.modelUsage ?? null,
@@ -667,7 +696,7 @@ async function runStep(
     },
     preflight: ctx.preflight,
     toolCallCounts: counts,
-    slopcameraCommands: session.stream.toolCalls.filter((c) => c.name === "Bash" && /\bslopcamera\b/.test(c.input)).length,
+    slopcameraCommands: countSlopcameraCommands(session.stream.bashCommands),
     skillCalls: session.stream.toolCalls.filter((c) => c.name === "Skill").map((c) => c.input),
     toolCalls: session.stream.toolCalls,
     stderrTail: session.stderr.slice(-2000),
@@ -722,8 +751,11 @@ async function runAll(p: Paths, options: RunOptions): Promise<number> {
   }, null, 2)}\n`);
   try {
     for (let repeat = 1; repeat <= options.repeats; repeat++) {
+      // Counterbalanced: odd repeats run the conditions in the given order, even repeats
+      // reversed, so a prompt-cache or time-of-day effect does not always favor one side.
+      const order = repeat % 2 === 1 ? options.conditions : [...options.conditions].reverse();
       for (const task of options.tasks) {
-        for (const condition of options.conditions) {
+        for (const condition of order) {
           await runSession(p, options, task, condition, repeat);
         }
       }
@@ -741,8 +773,68 @@ async function runAll(p: Paths, options: RunOptions): Promise<number> {
     throw error;
   }
   await summarize(p.results);
+  await contactSheets(p.results);
   console.log(`done: ${join(p.results, "summary.md")}`);
   return 0;
+}
+
+/**
+ * Recomputes derived fields in raw records from the saved stream transcripts: the
+ * slopcamera invocation count, and a revise step's own cost for records written
+ * before the harness subtracted the create step's share of the cumulative cost.
+ */
+async function recount(p: Paths): Promise<void> {
+  const records = await readRecords(p.raw);
+  const creates = new Map(records.filter((r) => r.step === "create").map((r) => [r.key, r]));
+  for (const record of records) {
+    if (record.status === "skipped") continue;
+    const streamPath = join(p.outputs, record.key, `${record.step}.stream.jsonl`);
+    const lines = (await readFile(streamPath, "utf8")).split("\n").filter((line) => line.trim() !== "");
+    const stream = summarizeStream(lines);
+    const slopcameraCommands = countSlopcameraCommands(stream.bashCommands);
+    const sessionCostUsd = numberOr(stream.result?.total_cost_usd);
+    const create = creates.get(record.key);
+    const costUsd = stepCost(sessionCostUsd, record.step === "revise" ? (create?.costUsd ?? null) : 0);
+    if (record.step === "revise" && create !== undefined) {
+      // Cross-check that the session totals are cumulative: modelUsage output = create + revise.
+      const models = Object.values((stream.result?.modelUsage ?? {}) as Record<string, { outputTokens?: number }>);
+      const cumulativeOut = models.reduce((sum, m) => sum + (m.outputTokens ?? 0), 0);
+      const expected = (create.usage?.outputTokens ?? 0) + (record.usage?.outputTokens ?? 0);
+      if (cumulativeOut !== expected) throw new Error(`${record.key}: modelUsage output ${cumulativeOut} != create+revise ${expected}; cost is not cumulative as assumed`);
+    }
+    if (slopcameraCommands === record.slopcameraCommands && costUsd === record.costUsd && record.sessionCostUsd !== undefined) continue;
+    console.log(`${record.key} ${record.step}: slopcameraCommands ${record.slopcameraCommands} -> ${slopcameraCommands}, costUsd ${record.costUsd} -> ${costUsd}`);
+    const path = join(p.raw, `${record.key}-${record.step}.json`);
+    await writeFile(path, `${JSON.stringify({ ...record, slopcameraCommands, costUsd, sessionCostUsd }, null, 2)}\n`);
+  }
+}
+
+/**
+ * Reruns the harness validators on the saved post-step sandbox snapshots, without
+ * running the agent again. Used after a validator fix so every step is judged by
+ * the same checks.
+ */
+async function revalidate(p: Paths): Promise<void> {
+  const records = await readRecords(p.raw);
+  const creates = new Map(records.filter((r) => r.step === "create").map((r) => [r.key, r]));
+  for (const record of records) {
+    if (record.status === "skipped") continue;
+    const outDir = join(p.outputs, record.key);
+    const lines = (await readFile(join(outDir, `${record.step}.stream.jsonl`), "utf8")).split("\n").filter((line) => line.trim() !== "");
+    const validation = await TASKS[record.task].validate({
+      sandbox: join(outDir, `after-${record.step}`),
+      step: record.step,
+      createHashes: record.step === "revise" ? (creates.get(record.key)?.validation?.hashes ?? {}) : {},
+      toolInputText: summarizeStream(lines).toolInputText,
+    });
+    const pass = record.status === "ok" && validation.pass;
+    const before = JSON.stringify(record.validation?.checks.map((c) => [c.name, c.ok]));
+    const after = JSON.stringify(validation.checks.map((c) => [c.name, c.ok]));
+    if (pass === record.pass && before === after) continue;
+    console.log(`${record.key} ${record.step}: pass ${record.pass} -> ${pass}${before === after ? "" : " (checks changed)"}`);
+    const note = [record.note, `revalidated ${new Date().toISOString()} after a validator fix`].filter((n) => n !== "").join("; ");
+    await writeFile(join(p.raw, `${record.key}-${record.step}.json`), `${JSON.stringify({ ...record, validation, pass, note }, null, 2)}\n`);
+  }
 }
 
 // ---------------------------------------------------------------- main
@@ -762,8 +854,17 @@ async function main(): Promise<number> {
     await probeIsolation(p, claude);
     return 0;
   }
+  if (command === "revalidate") {
+    await revalidate(p);
+    return 0;
+  }
+  if (command === "recount") {
+    await recount(p);
+    return 0;
+  }
   if (command === "summarize") {
     await summarize(p.results);
+    console.log((await contactSheets(p.results)).join("\n"));
     return 0;
   }
   if (command === "run") {
@@ -779,7 +880,7 @@ async function main(): Promise<number> {
     if (claude === null) throw new Error("claude CLI not found");
     return await runAll(p, { runId, tasks, conditions, repeats, maxTotalUsd, claude });
   }
-  console.error("usage: harness.ts setup|probe|run|summarize [--run-id ID] [--tasks t1,..] [--conditions A,B] [--repeats N] [--max-total-usd N] [--outputs DIR] [--sandboxes DIR]");
+  console.error("usage: harness.ts setup|probe|run|recount|revalidate|summarize [--run-id ID] [--tasks t1,..] [--conditions A,B] [--repeats N] [--max-total-usd N] [--outputs DIR] [--sandboxes DIR]");
   return 2;
 }
 

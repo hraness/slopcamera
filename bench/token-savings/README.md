@@ -89,7 +89,9 @@ during `setup`, and copies identical bytes into both conditions.
 - a capped, timed-out or errored step is a failure; a failed create step skips
   its revise step, which is recorded as skipped
 
-Sessions run one at a time.
+Sessions run one at a time. Repeat 1 runs A then B for each task; repeat 2
+runs B then A, so prompt-cache warmth or time-of-day drift does not always
+favor the same condition.
 
 ## Validation
 
@@ -105,6 +107,12 @@ Each check is recorded with a detail string. Gating checks decide pass or fail;
 informational checks (such as whether the old label is gone from the SVG) are
 recorded but do not decide the result.
 
+Text checks accept an exact, case-insensitive match, or the phrase's words in
+order as whole words within 400 characters of each other, because agents often
+split a headline or a wrapped label across lines or draw calls. The detail
+string says which match was found. `harness.ts revalidate` reruns every check
+on the saved sandbox snapshots without calling the agent.
+
 ## Metrics
 
 Per step, from the `result` event of `--output-format stream-json`:
@@ -112,12 +120,20 @@ Per step, from the `result` event of `--output-format stream-json`:
 - input-side tokens: `input_tokens + cache_creation_input_tokens +
   cache_read_input_tokens`
 - `output_tokens`
-- `total_cost_usd`
+- cost: `total_cost_usd` for a create step. Claude Code reports
+  `total_cost_usd` and `modelUsage` cumulatively over a resumed session while
+  `usage` is per invocation, so a revise step's cost is its session total minus
+  the create step's cost; the raw figure is kept as `sessionCostUsd`.
+  `harness.ts recount` recomputes this from the transcripts and fails if the
+  revise `modelUsage` output tokens are not create plus revise.
 - `num_turns`
 - wall-clock seconds and API milliseconds
 - pass or fail, with each check
 - tool-call counts, the number of Bash calls that invoke `slopcamera`, and
   Skill tool calls
+
+`--max-budget-usd` applies to the whole resumed session, so a revise step's
+effective cap is 6 dollars minus the create step's cost.
 
 The primary comparison is median output tokens and median cost for create,
 revise, and create plus revise, over sessions where both steps passed.
@@ -151,6 +167,8 @@ with `RATE_LIMITED`, and exits with status 3. It never retries in a loop.
   failures and all raw rows
 - `results/<run-id>/thumbs/`: small JPEG thumbnails of every raster and video
   output
+- `results/<run-id>/contact/<task>.png`: one contact sheet per task, one row
+  per session and one column per output after create and after revise
 - `../<worktree>-bench-outputs/<run-id>/<key>/`: full stream-json transcripts,
   stderr, and sandbox snapshots after each step, including MP4s; kept outside
   the repository

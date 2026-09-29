@@ -1,0 +1,470 @@
+{
+  "generatedAt": "2026-09-29T17:43:01.517Z",
+  "spentUsd": 5.6937,
+  "abortedSteps": 0,
+  "perGroup": [
+    {
+      "task": "t1",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 56802.5,
+          "outputTokens": 2072,
+          "costUsd": 0.1276873,
+          "numTurns": 7,
+          "wallSeconds": 24.75
+        },
+        "revise": {
+          "inputSideTokens": 82297.5,
+          "outputTokens": 1605.5,
+          "costUsd": 0.1240727,
+          "numTurns": 9,
+          "wallSeconds": 22.1
+        },
+        "total": {
+          "inputSideTokens": 139100,
+          "outputTokens": 3677.5,
+          "costUsd": 0.25176,
+          "numTurns": 16,
+          "wallSeconds": 46.85
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 56802.5,
+          "outputTokens": 2072,
+          "costUsd": 0.1276873,
+          "numTurns": 7,
+          "wallSeconds": 24.75
+        },
+        "revise": {
+          "inputSideTokens": 82297.5,
+          "outputTokens": 1605.5,
+          "costUsd": 0.1240727,
+          "numTurns": 9,
+          "wallSeconds": 22.1
+        },
+        "total": {
+          "inputSideTokens": 139100,
+          "outputTokens": 3677.5,
+          "costUsd": 0.25176,
+          "numTurns": 16,
+          "wallSeconds": 46.85
+        }
+      }
+    },
+    {
+      "task": "t1",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 166145.5,
+          "outputTokens": 2268.5,
+          "costUsd": 0.2155651,
+          "numTurns": 14,
+          "wallSeconds": 41.7
+        },
+        "revise": {
+          "inputSideTokens": 107756.5,
+          "outputTokens": 1106,
+          "costUsd": 0.0937855,
+          "numTurns": 7,
+          "wallSeconds": 20.5
+        },
+        "total": {
+          "inputSideTokens": 273902,
+          "outputTokens": 3374.5,
+          "costUsd": 0.30935060000000003,
+          "numTurns": 21,
+          "wallSeconds": 62.2
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 166145.5,
+          "outputTokens": 2268.5,
+          "costUsd": 0.2155651,
+          "numTurns": 14,
+          "wallSeconds": 41.7
+        },
+        "revise": {
+          "inputSideTokens": 107756.5,
+          "outputTokens": 1106,
+          "costUsd": 0.0937855,
+          "numTurns": 7,
+          "wallSeconds": 20.5
+        },
+        "total": {
+          "inputSideTokens": 273902,
+          "outputTokens": 3374.5,
+          "costUsd": 0.30935060000000003,
+          "numTurns": 21,
+          "wallSeconds": 62.2
+        }
+      }
+    },
+    {
+      "task": "t2",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 78476.5,
+          "outputTokens": 3579.5,
+          "costUsd": 0.16412179999999998,
+          "numTurns": 8,
+          "wallSeconds": 45.35
+        },
+        "revise": {
+          "inputSideTokens": 35172,
+          "outputTokens": 1126,
+          "costUsd": 0.048792699999999994,
+          "numTurns": 3,
+          "wallSeconds": 17.15
+        },
+        "total": {
+          "inputSideTokens": 113648.5,
+          "outputTokens": 4705.5,
+          "costUsd": 0.2129145,
+          "numTurns": 11,
+          "wallSeconds": 62.5
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 78476.5,
+          "outputTokens": 3579.5,
+          "costUsd": 0.16412179999999998,
+          "numTurns": 8,
+          "wallSeconds": 45.35
+        },
+        "revise": {
+          "inputSideTokens": 35172,
+          "outputTokens": 1126,
+          "costUsd": 0.048792699999999994,
+          "numTurns": 3,
+          "wallSeconds": 17.15
+        },
+        "total": {
+          "inputSideTokens": 113648.5,
+          "outputTokens": 4705.5,
+          "costUsd": 0.2129145,
+          "numTurns": 11,
+          "wallSeconds": 62.5
+        }
+      }
+    },
+    {
+      "task": "t2",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 400501,
+          "outputTokens": 5582.5,
+          "costUsd": 0.42677279999999995,
+          "numTurns": 20.5,
+          "wallSeconds": 444.25
+        },
+        "revise": {
+          "inputSideTokens": 204538,
+          "outputTokens": 1935,
+          "costUsd": 0.14525929999999998,
+          "numTurns": 6,
+          "wallSeconds": 248.5
+        },
+        "total": {
+          "inputSideTokens": 605039,
+          "outputTokens": 7517.5,
+          "costUsd": 0.5720320999999999,
+          "numTurns": 26.5,
+          "wallSeconds": 692.75
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 400501,
+          "outputTokens": 5582.5,
+          "costUsd": 0.42677279999999995,
+          "numTurns": 20.5,
+          "wallSeconds": 444.25
+        },
+        "revise": {
+          "inputSideTokens": 204538,
+          "outputTokens": 1935,
+          "costUsd": 0.14525929999999998,
+          "numTurns": 6,
+          "wallSeconds": 248.5
+        },
+        "total": {
+          "inputSideTokens": 605039,
+          "outputTokens": 7517.5,
+          "costUsd": 0.5720320999999999,
+          "numTurns": 26.5,
+          "wallSeconds": 692.75
+        }
+      }
+    },
+    {
+      "task": "t3",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 217656.5,
+          "outputTokens": 10096.5,
+          "costUsd": 0.4246016,
+          "numTurns": 13,
+          "wallSeconds": 261.5
+        },
+        "revise": {
+          "inputSideTokens": 140864,
+          "outputTokens": 1399,
+          "costUsd": 0.0947424,
+          "numTurns": 6,
+          "wallSeconds": 78.6
+        },
+        "total": {
+          "inputSideTokens": 358520.5,
+          "outputTokens": 11495.5,
+          "costUsd": 0.519344,
+          "numTurns": 19,
+          "wallSeconds": 340.1
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 217656.5,
+          "outputTokens": 10096.5,
+          "costUsd": 0.4246016,
+          "numTurns": 13,
+          "wallSeconds": 261.5
+        },
+        "revise": {
+          "inputSideTokens": 140864,
+          "outputTokens": 1399,
+          "costUsd": 0.0947424,
+          "numTurns": 6,
+          "wallSeconds": 78.6
+        },
+        "total": {
+          "inputSideTokens": 358520.5,
+          "outputTokens": 11495.5,
+          "costUsd": 0.519344,
+          "numTurns": 19,
+          "wallSeconds": 340.1
+        }
+      }
+    },
+    {
+      "task": "t3",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 372085,
+          "outputTokens": 6721.5,
+          "costUsd": 0.45557729999999996,
+          "numTurns": 19,
+          "wallSeconds": 170.2
+        },
+        "revise": {
+          "inputSideTokens": 190977.5,
+          "outputTokens": 1973,
+          "costUsd": 0.1349768,
+          "numTurns": 4.5,
+          "wallSeconds": 53.15
+        },
+        "total": {
+          "inputSideTokens": 563062.5,
+          "outputTokens": 8694.5,
+          "costUsd": 0.5905541000000001,
+          "numTurns": 23.5,
+          "wallSeconds": 223.35000000000002
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 372085,
+          "outputTokens": 6721.5,
+          "costUsd": 0.45557729999999996,
+          "numTurns": 19,
+          "wallSeconds": 170.2
+        },
+        "revise": {
+          "inputSideTokens": 190977.5,
+          "outputTokens": 1973,
+          "costUsd": 0.1349768,
+          "numTurns": 4.5,
+          "wallSeconds": 53.15
+        },
+        "total": {
+          "inputSideTokens": 563062.5,
+          "outputTokens": 8694.5,
+          "costUsd": 0.5905541000000001,
+          "numTurns": 23.5,
+          "wallSeconds": 223.35000000000002
+        }
+      }
+    },
+    {
+      "task": "t4",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 74953.5,
+          "outputTokens": 2527.5,
+          "costUsd": 0.1358096,
+          "numTurns": 10.5,
+          "wallSeconds": 31.35
+        },
+        "revise": {
+          "inputSideTokens": 32801.5,
+          "outputTokens": 991.5,
+          "costUsd": 0.040769200000000005,
+          "numTurns": 3,
+          "wallSeconds": 12.7
+        },
+        "total": {
+          "inputSideTokens": 107755,
+          "outputTokens": 3519,
+          "costUsd": 0.1765788,
+          "numTurns": 13.5,
+          "wallSeconds": 44.05
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 74953.5,
+          "outputTokens": 2527.5,
+          "costUsd": 0.1358096,
+          "numTurns": 10.5,
+          "wallSeconds": 31.35
+        },
+        "revise": {
+          "inputSideTokens": 32801.5,
+          "outputTokens": 991.5,
+          "costUsd": 0.040769200000000005,
+          "numTurns": 3,
+          "wallSeconds": 12.7
+        },
+        "total": {
+          "inputSideTokens": 107755,
+          "outputTokens": 3519,
+          "costUsd": 0.1765788,
+          "numTurns": 13.5,
+          "wallSeconds": 44.05
+        }
+      }
+    },
+    {
+      "task": "t4",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 88797,
+          "outputTokens": 2076.5,
+          "costUsd": 0.15082109999999999,
+          "numTurns": 9.5,
+          "wallSeconds": 27.950000000000003
+        },
+        "revise": {
+          "inputSideTokens": 59650,
+          "outputTokens": 1132,
+          "costUsd": 0.0635152,
+          "numTurns": 3.5,
+          "wallSeconds": 16.1
+        },
+        "total": {
+          "inputSideTokens": 148447,
+          "outputTokens": 3208.5,
+          "costUsd": 0.21433629999999998,
+          "numTurns": 13,
+          "wallSeconds": 44.05
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 88797,
+          "outputTokens": 2076.5,
+          "costUsd": 0.15082109999999999,
+          "numTurns": 9.5,
+          "wallSeconds": 27.950000000000003
+        },
+        "revise": {
+          "inputSideTokens": 59650,
+          "outputTokens": 1132,
+          "costUsd": 0.0635152,
+          "numTurns": 3.5,
+          "wallSeconds": 16.1
+        },
+        "total": {
+          "inputSideTokens": 148447,
+          "outputTokens": 3208.5,
+          "costUsd": 0.21433629999999998,
+          "numTurns": 13,
+          "wallSeconds": 44.05
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "task": "t1",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 1.095,
+      "create.costUsd.ratioBoverA": 1.688,
+      "revise.outputTokens.ratioBoverA": 0.689,
+      "revise.costUsd.ratioBoverA": 0.756,
+      "total.outputTokens.ratioBoverA": 0.918,
+      "total.costUsd.ratioBoverA": 1.229
+    },
+    {
+      "task": "t2",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 1.56,
+      "create.costUsd.ratioBoverA": 2.6,
+      "revise.outputTokens.ratioBoverA": 1.718,
+      "revise.costUsd.ratioBoverA": 2.977,
+      "total.outputTokens.ratioBoverA": 1.598,
+      "total.costUsd.ratioBoverA": 2.687
+    },
+    {
+      "task": "t3",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 0.666,
+      "create.costUsd.ratioBoverA": 1.073,
+      "revise.outputTokens.ratioBoverA": 1.41,
+      "revise.costUsd.ratioBoverA": 1.425,
+      "total.outputTokens.ratioBoverA": 0.756,
+      "total.costUsd.ratioBoverA": 1.137
+    },
+    {
+      "task": "t4",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 0.822,
+      "create.costUsd.ratioBoverA": 1.111,
+      "revise.outputTokens.ratioBoverA": 1.142,
+      "revise.costUsd.ratioBoverA": 1.558,
+      "total.outputTokens.ratioBoverA": 0.912,
+      "total.costUsd.ratioBoverA": 1.214
+    }
+  ],
+  "failures": []
+}

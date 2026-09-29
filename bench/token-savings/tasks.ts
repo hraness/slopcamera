@@ -99,6 +99,16 @@ async function common(
   return { checks, hashes, source: await sandboxSourceText(input.sandbox) };
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Finds a phrase in any haystack. An exact, case-insensitive match is preferred. A
+ * phrase the agent split across lines or draw calls ("Built To" then "Last") also
+ * counts when its words appear in order, each as a whole word, within 400 characters
+ * of the previous one; the detail string says which kind of match was found.
+ */
 function textEvidence(
   name: string,
   needle: string,
@@ -106,8 +116,13 @@ function textEvidence(
   gating: boolean,
 ): Check {
   const lower = needle.toLowerCase();
-  const found = Object.entries(haystacks).filter(([, text]) => text.toLowerCase().includes(lower)).map(([k]) => k);
-  return check(name, found.length > 0, found.length > 0 ? `found in ${found.join(", ")}` : "not found", gating);
+  const words = needle.split(/\s+/).filter((w) => w !== "").map(escapeRegExp);
+  const split = new RegExp(`\\b${words.join("\\b[\\s\\S]{1,400}?\\b")}\\b`, "i");
+  const exact = Object.entries(haystacks).filter(([, text]) => text.toLowerCase().includes(lower)).map(([k]) => k);
+  if (exact.length > 0) return check(name, true, `found in ${exact.join(", ")}`, gating);
+  const spread = words.length > 1 ? Object.entries(haystacks).filter(([, text]) => split.test(text)).map(([k]) => k) : [];
+  if (spread.length > 0) return check(name, true, `found split across lines in ${spread.join(", ")}`, gating);
+  return check(name, false, "not found", gating);
 }
 
 async function videoChecks(
