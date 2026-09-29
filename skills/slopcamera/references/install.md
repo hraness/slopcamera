@@ -1,4 +1,4 @@
-# Install and diagnose Slopcamera
+# Install and diagnose SlopCamera
 
 Use this reference when the CLI is unavailable, a command differs from the installed release, or `slopcamera doctor` reports a missing dependency for the selected workflow.
 

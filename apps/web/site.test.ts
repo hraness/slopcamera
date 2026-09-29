@@ -67,8 +67,8 @@ import { replaceSiteSlot } from "./src/site-template"
 import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
-const brandDescription = "Slopcamera is a media studio for coding agents."
-const searchDescription = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
+const brandDescription = "SlopCamera is a media studio for coding agents."
+const searchDescription = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
 // Each build compiles the independent ordinary-site and preview graphs. These
@@ -323,7 +323,7 @@ test("ships agent instructions for video editing and Gateway media generation", 
     readFile(join(repositoryDirectory, "skills/slopcamera/references/gateway-media.md"), "utf8"),
   ])
 
-  expect(skill).toContain("# Create visual media with Slopcamera")
+  expect(skill).toContain("# Create visual media with SlopCamera")
   expect(skill).toContain("[Video projects](references/video-projects.md)")
   expect(skill).toContain("[Gateway media](references/gateway-media.md)")
   // Slopcamera edits existing recordings; the Skill must not offer to record.
@@ -602,12 +602,12 @@ describe("static Slopcamera site", () => {
       .toLowerCase()
 
     for (const heading of [
-      "## Why Slopcamera",
-      "## Install Slopcamera",
+      "## Why SlopCamera",
+      "## Install SlopCamera",
       "## Make your first diagram",
       "### Instructions for coding agents",
-      "## What Slopcamera does",
-      "## How Slopcamera works",
+      "## What SlopCamera does",
+      "## How SlopCamera works",
       "## Important limitations",
       "## Design and trust",
       "## Verification",
@@ -617,11 +617,11 @@ describe("static Slopcamera site", () => {
     }
 
     const readerPath = [
-      "## Why Slopcamera",
-      "## Install Slopcamera",
+      "## Why SlopCamera",
+      "## Install SlopCamera",
       "## Make your first diagram",
-      "## What Slopcamera does",
-      "## How Slopcamera works",
+      "## What SlopCamera does",
+      "## How SlopCamera works",
       "## Important limitations",
       "## Design and trust",
       "## Verification",
@@ -666,8 +666,8 @@ describe("static Slopcamera site", () => {
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
     const html = await readSource("index.html")
 
-    expect(html).toContain("<title>Slopcamera: video, diagrams and 3D your coding agent can revise</title>")
-    expect(html).toContain('<meta property="og:title" content="Slopcamera: video, diagrams and 3D your coding agent can revise">')
+    expect(html).toContain("<title>SlopCamera: video, diagrams and 3D your coding agent can revise</title>")
+    expect(html).toContain('<meta property="og:title" content="SlopCamera: video, diagrams and 3D your coding agent can revise">')
     expect(html).toContain(`<meta name="description" content="${searchDescription}">`)
     expect(html).toContain(`<meta property="og:description" content="${searchDescription}">`)
     expect(html).toContain(`<meta name="twitter:description" content="${searchDescription}">`)
@@ -705,7 +705,7 @@ describe("static Slopcamera site", () => {
 
     for (const html of [source, built]) {
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
-      expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">Slopcamera<\/h1>/u)
+      expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">SlopCamera<\/h1>/u)
       expect(html).toMatch(/<main aria-labelledby="preview-title" class="preview-shell [^"]+">/u)
       expect(html).toContain("A domain-specific harness for visual creation.")
       expect(html).toContain('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">')
@@ -916,7 +916,7 @@ describe("static Slopcamera site", () => {
       expect(html).toContain(stylesheets)
       expect(html).not.toMatch(/\{\{|<style\b|\sstyle\s*=|graphs\/site-renderer|analytics-/u)
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
-      expect(html).toContain(`<title>${page.title} · Slopcamera</title>`)
+      expect(html).toContain(`<title>${page.title} · SlopCamera</title>`)
       expect(html).toContain(`<meta name="description" content="${page.description}">`)
       expect(html).toContain(`<link rel="canonical" href="${docsCanonicalUrl(page)}">`)
       expect(html).toContain(`<link rel="alternate" type="text/markdown" href="${docsMarkdownUrl(page)}">`)
@@ -1292,7 +1292,7 @@ describe("static Slopcamera site", () => {
 
   test("ships share cards only from the shared web-discovery template", async () => {
     // One declaration drives every card; pages pass only their own copy.
-    expect(slopcameraSocialSite.name).toBe("Slopcamera")
+    expect(slopcameraSocialSite.name).toBe("SlopCamera")
     expect(slopcameraSocialSite.domain).toBe("slopcamera.com")
     expect(slopcameraSocialSite.icon?.kind).toBe("mark")
     expect(slopcameraSocialSite.icon?.src).toBe(`data:image/svg+xml;base64,${
@@ -1308,7 +1308,7 @@ describe("static Slopcamera site", () => {
     }
     const doc = socialImageForDocument("docs/how-to/edit-video.html")
     expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "How-to guides" } })
-    expect(doc.alt).toBe("Edit and deliver video, from Slopcamera")
+    expect(doc.alt).toBe("Edit and deliver video, from SlopCamera")
     for (const image of [homeSocialImage, doc]) {
       const png = await renderSocialImage(image)
       const view = new DataView(png.buffer, png.byteOffset, png.byteLength)
@@ -1851,8 +1851,8 @@ describe("static Slopcamera site", () => {
     // Only blog entries carry lastmod, from their admitted publication dates.
     expect(sitemap.match(/<lastmod>/gu)).toHaveLength(1 + indexableBlogPosts.length)
     expect(sitemap.slice(0, sitemap.indexOf("<loc>https://slopcamera.com/blog</loc>"))).not.toContain("<lastmod>")
-    expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
-    expect(llmsTxt).toContain("> Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.")
+    expect(llmsTxt).toMatch(/^# SlopCamera\n/u)
+    expect(llmsTxt).toContain("> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.")
     expect(llmsTxt).toContain("## When to use Slopcamera")
     expect(llmsTxt).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)
@@ -2061,7 +2061,7 @@ describe("static Slopcamera site", () => {
       // The in-flow product content footer lands immediately before the shared
       // footer, carries the authored camera mark (never an emoji glyph), and
       // reuses the header's own destinations.
-      expect(contentFooter).toContain('<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">')
+      expect(contentFooter).toContain('<footer aria-label="SlopCamera" class="hraness-marketing-footer" data-hraness-marketing="footer">')
       expect(contentFooter).toContain('class="hraness-marketing-footer__inner"')
       expect(contentFooter).toContain('class="hraness-marketing-footer__brand"')
       expect(contentFooter).toContain('class="hraness-marketing-footer__name"')

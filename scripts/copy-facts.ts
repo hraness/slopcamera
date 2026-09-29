@@ -278,7 +278,7 @@ export const COPY_RULES: readonly CopyRule[] = [
     kind: "text",
     name: "current-version",
     pattern: re(
-      String.raw`(?:\bthe v|\| Slopcamera v|immutable \[v|\bSlopcamera v)(\d+\.\d+\.\d+)(?= portable projection\b| MCP server\b| \||(?: release\])|(?: (?:exposes|contains|includes|ships|serves)\b))`,
+      String.raw`(?:\bthe v|\| Slop[cC]amera v|immutable \[v|\bSlop[cC]amera v)(\d+\.\d+\.\d+)(?= portable projection\b| MCP server\b| \||(?: release\])|(?: (?:exposes|contains|includes|ships|serves)\b))`,
     ),
     expected: (facts) => facts.version,
     describe: "advertised release version (`apps/web/published-release.json`); historical mentions use a different phrasing such as \"introduced in\"",

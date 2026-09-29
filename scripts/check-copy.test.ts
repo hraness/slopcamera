@@ -65,7 +65,7 @@ test("every rule has a unique name and one capture", () => {
 
 test("matching counts, versions, names and the release commit pass", () => {
   const text = [
-    "Slopcamera v3.4.0 exposes six operation codes: diagram check/render, image generate/vectorize, and image icon/gallery.",
+    "SlopCamera v3.4.0 exposes six operation codes: diagram check/render, image generate/vectorize, and image icon/gallery.",
     "Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools such as `audit_scene_temporal`.",
     "The portable projection contains four operations; the skill calls it the four-operation projection.",
     "Seventeen read-only visual style profiles, seven authoring profiles, and eight workflows; all 17 profiles are read-only.",
@@ -89,7 +89,7 @@ test("stale counts, versions, names and commits are reported with their line", (
   const text = [
     "The portable projection contains six operations.",
     "MCP exposes a fixed set of 16 tools and five operation codes.",
-    "Slopcamera v3.3.1 exposes the registry.",
+    "SlopCamera v3.3.1 exposes the registry.",
     "Its canonical archive is built from `88aa724005ed924b6763f9a0fe39505d632c6191`.",
     "Call `render_diagrams` or `slopcamera.image.upscale`.",
     "Twelve read-mostly scene tools and nineteen style profiles; seven HTML profiles; 9 profiles.",
