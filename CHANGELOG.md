@@ -2,6 +2,17 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.9.0 - 2026-09-29
+
+SlopCamera can now draw vector icons with icon.place and time music videos from Soundfish scores. Both libraries are bundled at exact versions and run inside SlopCamera's own operations, so agents reach them through the same CLI, SDK and MCP surfaces as everything else.
+
+- `slopcamera image icon compose` (`slopcamera.icon.compose`, MCP `compose_icon`) solves a bounded icon.place scene or construction program and returns the solved scene with its digest.
+- `slopcamera image icon render` (`slopcamera.icon.render`, MCP `render_icon`) renders a solved scene, or replays a recipe, to inert SVG.
+- `slopcamera media soundtrack compose` (`slopcamera.soundtrack.compose`, MCP `compose_soundtrack`) parses and verifies a Soundfish loop or song and returns its canonical digest.
+- `slopcamera media soundtrack grid` (`slopcamera.soundtrack.grid`, MCP `derive_soundtrack_grid`) derives `bpm`, `beatOffsetUs`, `beatsPerBar` and section cue times from a Soundfish document or MIDI file, in the shape the music-video render input already accepts.
+- Current source has ten operation codes and 21 MCP tools. The Agent Skill gains `icon-place.md` and `soundtracks.md` references.
+- `@hraness/iconplace` 0.1.0 and `@hraness/soundfish` 0.7.0 are pinned at exact versions with their registry integrity recorded in `NOTICE.md`. Neither package's command is spawned.
+
 ## 3.8.1 - 2026-09-29
 
 Slopcamera's native HTML and spatial renderer prevents Chrome from creating extra application copies while rendering from its private, immutable browser runtime.

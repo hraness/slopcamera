@@ -1,6 +1,6 @@
 {
   "name": "@hraness/slopcamera",
-  "version": "3.8.1",
+  "version": "3.9.0",
   "description": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   "license": "MIT",
   "type": "module",
