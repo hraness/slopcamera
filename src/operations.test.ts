@@ -46,7 +46,7 @@ function recordingCoordinator(record: {
 }
 
 describe("canonical Slopcamera operations", () => {
-  test("publishes six exact semantic codes in stable order", () => {
+  test("publishes ten exact semantic codes in stable order", () => {
     expect(slopcameraOperationRegistry.map(({ code }) => code)).toEqual(
       [...slopcameraOperationCodes],
     )
@@ -124,6 +124,18 @@ describe("canonical Slopcamera operations", () => {
           { resource: "paid-call", amount: 1 },
         ],
       },
+      ...([
+        "slopcamera.icon.compose",
+        "slopcamera.icon.render",
+        "slopcamera.soundtrack.compose",
+        "slopcamera.soundtrack.grid",
+      ] as const).map((code) => ({
+        code,
+        resources: [
+          { resource: "cpu", amount: 1 },
+          { resource: "local-io", amount: 1 },
+        ],
+      })),
     ])
     expect(
       slopcameraOperationRegistry.find(

@@ -23,6 +23,26 @@ import {
   type VectorizeSlopcameraOperationInput,
 } from "../operations.js"
 import {
+  composeSlopcameraIcon,
+  renderSlopcameraIcon,
+  slopcameraIconLanguages,
+  slopcameraIconPalettes,
+  slopcameraIconSceneLimits,
+  SlopcameraIconError,
+  type SlopcameraIconComposeInput,
+  type SlopcameraIconRenderInput,
+} from "../icon-scene.js"
+import {
+  composeSlopcameraSoundtrack,
+  deriveSlopcameraSoundtrackGrid,
+  slopcameraSoundtrackFormats,
+  slopcameraSoundtrackLimits,
+  SlopcameraSoundtrackError,
+  type SlopcameraSoundtrackComposeInput,
+  type SlopcameraSoundtrackGridInput,
+} from "../soundtrack.js"
+import { BoundedFileError } from "../bounded-file.js"
+import {
   createDefaultHostResourceCoordinator,
   HostResourceError,
   type HostResourceCoordinator,
@@ -157,6 +177,28 @@ function deepFreeze<T>(value: T): T {
   for (const nested of Object.values(value)) deepFreeze(nested)
   return Object.freeze(value)
 }
+
+const iconReceiptOutputSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["ok", "operation", "receipt"],
+  properties: {
+    ok: { const: true },
+    operation: { type: "string", enum: ["slopcamera.icon.compose", "slopcamera.icon.render"] },
+    receipt: { type: "object" },
+  },
+} as const
+
+const soundtrackReceiptOutputSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["ok", "operation", "receipt"],
+  properties: {
+    ok: { const: true },
+    operation: { type: "string", enum: ["slopcamera.soundtrack.compose", "slopcamera.soundtrack.grid"] },
+    receipt: { type: "object" },
+  },
+} as const
 
 /**
  * The complete MCP tool registry. Public copy cites its size, its scene-tool
@@ -999,6 +1041,131 @@ export const slopcameraMcpTools: readonly McpToolDefinition[] = deepFreeze([
       openWorldHint: false,
     },
   },
+  {
+    name: "compose_icon",
+    title: "Compose icon scene",
+    description:
+      "Parse and solve one root-relative vector icon scene, collection, construction program, or recipe, and report its digests, geometry, and diagnostics. Optionally writes the canonical solved document. Local and deterministic; no model or network.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: {
+        path: {
+          type: "string",
+          description: `Root-relative path to an icon source JSON (${String(slopcameraIconSceneLimits.sourceBytes / 1024 / 1024)} MiB maximum).`,
+        },
+        output: {
+          type: "string",
+          description: "Optional root-relative .json path for the canonical solved document.",
+        },
+      },
+    },
+    outputSchema: iconReceiptOutputSchema,
+    annotations: {
+      title: "Compose icon scene",
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "render_icon",
+    title: "Render icon scene",
+    description:
+      "Draw one root-relative vector icon scene or construction program to an inert SVG, or replay a recipe and require its recorded digests. Optionally writes a replayable recipe. Local and deterministic; no model or network.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "output"],
+      properties: {
+        path: {
+          type: "string",
+          description: `Root-relative path to an icon source JSON (${String(slopcameraIconSceneLimits.sourceBytes / 1024 / 1024)} MiB maximum).`,
+        },
+        output: { type: "string", description: "Root-relative .svg output path." },
+        recipe: { type: "string", description: "Optional root-relative .json path for a replayable recipe." },
+        size: {
+          type: "integer",
+          minimum: slopcameraIconSceneLimits.sizeMin,
+          maximum: slopcameraIconSceneLimits.sizeMax,
+          description: "Output edge in pixels. Recipes fix their own size.",
+        },
+        background: { type: "boolean", description: "Paint the paper background." },
+        palette: { type: "string", enum: slopcameraIconPalettes, description: "Scene palette." },
+        language: { type: "string", enum: slopcameraIconLanguages, description: "Construction-program drawing language." },
+      },
+    },
+    outputSchema: iconReceiptOutputSchema,
+    annotations: {
+      title: "Render icon scene",
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "compose_soundtrack",
+    title: "Compose soundtrack score",
+    description:
+      "Parse and verify one root-relative loop or song from compose text, song text, score JSON, or a Standard MIDI file, and report its canonical digest, tempo, meter, and length. Optionally writes the score document. Renders no audio; no network.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: {
+        path: {
+          type: "string",
+          description: `Root-relative path to a score or MIDI file (${String(slopcameraSoundtrackLimits.sourceBytes / 1024 / 1024)} MiB maximum).`,
+        },
+        output: { type: "string", description: "Optional root-relative .json path for the score document." },
+        format: { type: "string", enum: slopcameraSoundtrackFormats, description: "Source format. Detected when omitted." },
+      },
+    },
+    outputSchema: soundtrackReceiptOutputSchema,
+    annotations: {
+      title: "Compose soundtrack score",
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "derive_soundtrack_grid",
+    title: "Derive soundtrack beat grid",
+    description:
+      "Derive bpm, beatOffsetUs, beatsPerBar, and section cue times from one root-relative loop, song, or Standard MIDI file, in the music timing HTML scene requests accept. Optionally writes the grid. Renders no audio; no network.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path"],
+      properties: {
+        path: {
+          type: "string",
+          description: `Root-relative path to a score or MIDI file (${String(slopcameraSoundtrackLimits.sourceBytes / 1024 / 1024)} MiB maximum).`,
+        },
+        output: { type: "string", description: "Optional root-relative .json path for the grid." },
+        format: { type: "string", enum: slopcameraSoundtrackFormats, description: "Source format. Detected when omitted." },
+        start_us: {
+          type: "integer",
+          minimum: 0,
+          maximum: slopcameraSoundtrackLimits.maxTimeUs,
+          description: "Timeline microsecond where the soundtrack's first beat lands. Defaults to 0.",
+        },
+      },
+    },
+    outputSchema: soundtrackReceiptOutputSchema,
+    annotations: {
+      title: "Derive soundtrack beat grid",
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
 ])
 
 class ToolFailure extends Error {
@@ -1402,6 +1569,65 @@ function parseSceneBehaviorAuditArguments(
   }
 }
 
+type LocalMediaOperation =
+  | { readonly operation: "slopcamera.icon.compose"; readonly input: SlopcameraIconComposeInput }
+  | { readonly operation: "slopcamera.icon.render"; readonly input: SlopcameraIconRenderInput }
+  | { readonly operation: "slopcamera.soundtrack.compose"; readonly input: SlopcameraSoundtrackComposeInput }
+  | { readonly operation: "slopcamera.soundtrack.grid"; readonly input: SlopcameraSoundtrackGridInput }
+
+const localMediaToolOperations = Object.freeze({
+  compose_icon: "slopcamera.icon.compose",
+  render_icon: "slopcamera.icon.render",
+  compose_soundtrack: "slopcamera.soundtrack.compose",
+  derive_soundtrack_grid: "slopcamera.soundtrack.grid",
+} as const)
+
+type LocalMediaToolName = keyof typeof localMediaToolOperations
+
+function isLocalMediaTool(name: string): name is LocalMediaToolName {
+  return Object.hasOwn(localMediaToolOperations, name)
+}
+
+function isLocalMediaOperation(
+  operation: SlopcameraOperationCode,
+): operation is LocalMediaOperation["operation"] {
+  return (Object.values(localMediaToolOperations) as readonly string[]).includes(operation)
+}
+
+/**
+ * Map a dedicated tool's snake_case arguments onto the operation's input and
+ * validate them with the same registry parser `execute_slopcamera` uses.
+ */
+function parseLocalMediaToolArguments(
+  name: LocalMediaToolName,
+  value: unknown,
+): LocalMediaOperation {
+  if (!isRecord(value)) {
+    throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
+  }
+  const allowed: Record<LocalMediaToolName, readonly string[]> = {
+    compose_icon: ["path", "output"],
+    render_icon: ["path", "output", "recipe", "size", "background", "palette", "language"],
+    compose_soundtrack: ["path", "output", "format"],
+    derive_soundtrack_grid: ["path", "output", "format", "start_us"],
+  }
+  rejectUnknownKeys(value, new Set(allowed[name]))
+  const renames: Readonly<Record<string, string>> = {
+    path: "sourcePath",
+    output: "outputPath",
+    recipe: "recipePath",
+    start_us: "startUs",
+  }
+  const input = Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [renames[key] ?? key, entry]),
+  )
+  const operation = localMediaToolOperations[name]
+  return {
+    operation,
+    input: parseSlopcameraOperationInput(operation, input),
+  } as LocalMediaOperation
+}
+
 function parseSceneTemporalArguments(value: unknown): ParsedSceneTemporalArguments {
   if (!isRecord(value)) {
     throw new ToolFailure("INVALID_ARGUMENTS", "Tool arguments must be an object.")
@@ -1568,6 +1794,13 @@ function failureResult(error: unknown): McpToolResult {
       error.message.replace(/^\[[A-Z_]+\]\s*/u, ""),
       320,
     )
+  } else if (
+    error instanceof SlopcameraIconError ||
+    error instanceof SlopcameraSoundtrackError ||
+    error instanceof BoundedFileError
+  ) {
+    code = error.code
+    message = safeFragment(error.message, 320)
   } else if (error instanceof VectorizeError) {
     code = `VECTORIZE_${error.code.toUpperCase()}`
     message = "Local vectorization failed safely."
@@ -1872,6 +2105,9 @@ export class SlopcameraMcpToolRuntime {
           async () => await this.auditSceneTemporal(options),
         )
       }
+      if (isLocalMediaTool(name)) {
+        return await this.runLocalMedia(parseLocalMediaToolArguments(name, argumentsValue))
+      }
       throw new ToolFailure("UNKNOWN_TOOL", "Requested tool is not available.")
     } catch (error) {
       return failureResult(error)
@@ -1896,6 +2132,18 @@ export class SlopcameraMcpToolRuntime {
   private async execute(
     options: ParsedExecuteArguments,
   ): Promise<McpToolResult> {
+    if (isLocalMediaOperation(options.operation)) {
+      const result = await this.runLocalMedia({
+        operation: options.operation,
+        input: parseSlopcameraOperationInput(options.operation, options.input),
+      } as LocalMediaOperation)
+      if (result.isError === true) return result
+      const structured = result.structuredContent as { readonly receipt: unknown }
+      return {
+        content: result.content,
+        structuredContent: { ok: true, operation: options.operation, result: structured.receipt },
+      }
+    }
     if (options.operation === "slopcamera.diagram.check") {
       const input = parseSlopcameraOperationInput(
         options.operation,
@@ -2019,6 +2267,69 @@ export class SlopcameraMcpToolRuntime {
         },
       )
     })
+  }
+
+  /**
+   * Icon and soundtrack operations: confine every path to the workspace root,
+   * cap the source before reading, run in process under the registry's host
+   * claim, and report root-relative paths in the receipt.
+   */
+  private async runLocalMedia(request: LocalMediaOperation): Promise<McpToolResult> {
+    // Queued with diagram renders so writes inside the root stay one at a time.
+    return await this.enqueueRender(async () => await this.withHostAdmission(request.operation, async () => {
+      const sourceLimit = request.operation.startsWith("slopcamera.icon.")
+        ? slopcameraIconSceneLimits.sourceBytes
+        : slopcameraSoundtrackLimits.sourceBytes
+      const source = await this.boundary.resolveInputFile(request.input.sourcePath, sourceLimit)
+      const relative = new Map<string, string>([[source.absolutePath, source.relativePath]])
+      const output = async (value: string | undefined): Promise<string | undefined> => {
+        if (value === undefined) return undefined
+        const prepared = await this.boundary.prepareOutputFile(value)
+        relative.set(prepared.absolutePath, prepared.relativePath)
+        return prepared.absolutePath
+      }
+      const outputPath = await output(request.input.outputPath)
+      const paths = {
+        sourcePath: source.absolutePath,
+        ...(outputPath === undefined ? {} : { outputPath }),
+      }
+      let receipt: { readonly operation: string }
+      switch (request.operation) {
+        case "slopcamera.icon.compose":
+          receipt = await composeSlopcameraIcon({ ...request.input, ...paths })
+          break
+        case "slopcamera.icon.render": {
+          if (paths.outputPath === undefined) {
+            throw new ToolFailure("INVALID_ARGUMENTS", "output is required.")
+          }
+          const recipePath = await output(request.input.recipePath)
+          receipt = await renderSlopcameraIcon({
+            ...request.input,
+            ...paths,
+            outputPath: paths.outputPath,
+            ...(recipePath === undefined ? {} : { recipePath }),
+          })
+          break
+        }
+        case "slopcamera.soundtrack.compose":
+          receipt = await composeSlopcameraSoundtrack({ ...request.input, ...paths })
+          break
+        case "slopcamera.soundtrack.grid":
+          receipt = await deriveSlopcameraSoundtrackGrid({ ...request.input, ...paths })
+          break
+      }
+      // Receipts carry absolute paths; the tool reports only root-relative ones.
+      const portable = JSON.parse(
+        JSON.stringify(receipt, (key, value: unknown) =>
+          key === "path" && typeof value === "string" ? (relative.get(value) ?? "") : value,
+        ),
+      ) as Record<string, unknown>
+      const written = [...relative.values()].filter((path) => path !== source.relativePath)
+      return successResult(
+        `Executed ${request.operation} on ${source.relativePath}${written.length === 0 ? "" : `: wrote ${written.join(", ")}`}.`,
+        { ok: true, operation: request.operation, receipt: portable },
+      )
+    }))
   }
 
   private async check(options: ParsedCheckArguments): Promise<McpToolResult> {

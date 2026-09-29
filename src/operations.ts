@@ -30,6 +30,29 @@ import {
   type SlopcameraGalleryReceipt,
 } from "./image-gallery.js"
 import {
+  composeSlopcameraIcon,
+  renderSlopcameraIcon,
+  slopcameraIconLanguages,
+  slopcameraIconPalettes,
+  slopcameraIconSceneLimits,
+  type SlopcameraIconComposeInput,
+  type SlopcameraIconComposeReceipt,
+  type SlopcameraIconPalette,
+  type SlopcameraIconRenderInput,
+  type SlopcameraIconRenderReceipt,
+} from "./icon-scene.js"
+import {
+  composeSlopcameraSoundtrack,
+  deriveSlopcameraSoundtrackGrid,
+  slopcameraSoundtrackFormats,
+  slopcameraSoundtrackLimits,
+  type SlopcameraSoundtrackComposeInput,
+  type SlopcameraSoundtrackComposeReceipt,
+  type SlopcameraSoundtrackFormat,
+  type SlopcameraSoundtrackGridInput,
+  type SlopcameraSoundtrackGridReceipt,
+} from "./soundtrack.js"
+import {
   vectorizeImage,
   type VectorizeReceipt,
 } from "./vectorize/index.js"
@@ -51,6 +74,10 @@ export const slopcameraOperationCodes = [
   "slopcamera.image.generate",
   "slopcamera.image.icon",
   "slopcamera.image.gallery",
+  "slopcamera.icon.compose",
+  "slopcamera.icon.render",
+  "slopcamera.soundtrack.compose",
+  "slopcamera.soundtrack.grid",
 ] as const
 
 export type SlopcameraOperationCode = (typeof slopcameraOperationCodes)[number]
@@ -101,6 +128,16 @@ const pathSchema = {
   type: "string",
   minLength: 1,
   maxLength: 4_096,
+} as const
+
+const localOperationResources = [
+  { resource: "cpu", amount: 1 },
+  { resource: "local-io", amount: 1 },
+] as const
+
+const soundtrackFormatSchema = {
+  type: "string",
+  enum: slopcameraSoundtrackFormats,
 } as const
 
 function deepFreeze<T>(value: T): T {
@@ -390,6 +427,102 @@ export const slopcameraOperationRegistry: readonly SlopcameraOperationDescriptor
         retry: "never",
       },
     },
+    {
+      code: "slopcamera.icon.compose",
+      title: "Compose icon scene",
+      description:
+        "Parse and solve a local vector icon scene, collection, construction program, or recipe, and report its digests and geometry. Optionally write the canonical solved document. Local and deterministic.",
+      execution: "local",
+      authentication: "none",
+      destructive: true,
+      idempotent: true,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourcePath"],
+        properties: {
+          sourcePath: pathSchema,
+          outputPath: pathSchema,
+        },
+      },
+      resources: [...localOperationResources],
+    },
+    {
+      code: "slopcamera.icon.render",
+      title: "Render icon scene",
+      description:
+        "Draw a local vector icon scene or construction program to an inert SVG, or replay a recipe and require its recorded digests. Optionally write a replayable recipe. Local and deterministic.",
+      execution: "local",
+      authentication: "none",
+      destructive: true,
+      idempotent: true,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourcePath", "outputPath"],
+        properties: {
+          sourcePath: pathSchema,
+          outputPath: pathSchema,
+          recipePath: pathSchema,
+          size: {
+            type: "integer",
+            minimum: slopcameraIconSceneLimits.sizeMin,
+            maximum: slopcameraIconSceneLimits.sizeMax,
+          },
+          background: { type: "boolean" },
+          palette: { type: "string", enum: slopcameraIconPalettes },
+          language: { type: "string", enum: slopcameraIconLanguages },
+        },
+      },
+      resources: [...localOperationResources],
+    },
+    {
+      code: "slopcamera.soundtrack.compose",
+      title: "Compose soundtrack score",
+      description:
+        "Parse and verify a local loop or song from compose text, song text, score JSON, or a Standard MIDI file, and report its canonical digest, tempo, and length. Optionally write the score document. Renders no audio.",
+      execution: "local",
+      authentication: "none",
+      destructive: true,
+      idempotent: true,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourcePath"],
+        properties: {
+          sourcePath: pathSchema,
+          outputPath: pathSchema,
+          format: soundtrackFormatSchema,
+        },
+      },
+      resources: [...localOperationResources],
+    },
+    {
+      code: "slopcamera.soundtrack.grid",
+      title: "Derive soundtrack beat grid",
+      description:
+        "Derive bpm, beatOffsetUs, beatsPerBar, and section cue times from a local loop, song, or Standard MIDI file, in the music timing HTML scene requests accept. Optionally write the grid. Renders no audio.",
+      execution: "local",
+      authentication: "none",
+      destructive: true,
+      idempotent: true,
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourcePath"],
+        properties: {
+          sourcePath: pathSchema,
+          outputPath: pathSchema,
+          format: soundtrackFormatSchema,
+          startUs: {
+            type: "integer",
+            minimum: 0,
+            maximum: slopcameraSoundtrackLimits.maxTimeUs,
+          },
+        },
+      },
+      resources: [...localOperationResources],
+    },
   ] satisfies readonly SlopcameraOperationDescriptor[])
 
 export interface CheckSlopcameraOperationInput {
@@ -448,6 +581,10 @@ export interface SlopcameraOperationInputMap {
   readonly "slopcamera.image.generate": GenerateSlopcameraOperationInput
   readonly "slopcamera.image.icon": IconSlopcameraOperationInput
   readonly "slopcamera.image.gallery": GallerySlopcameraOperationInput
+  readonly "slopcamera.icon.compose": SlopcameraIconComposeInput
+  readonly "slopcamera.icon.render": SlopcameraIconRenderInput
+  readonly "slopcamera.soundtrack.compose": SlopcameraSoundtrackComposeInput
+  readonly "slopcamera.soundtrack.grid": SlopcameraSoundtrackGridInput
 }
 
 export interface SlopcameraOperationResultMap {
@@ -467,6 +604,10 @@ export interface SlopcameraOperationResultMap {
   readonly "slopcamera.image.generate": GeneratedSlopcameraImageFile
   readonly "slopcamera.image.icon": SlopcameraIconReceipt
   readonly "slopcamera.image.gallery": SlopcameraGalleryReceipt
+  readonly "slopcamera.icon.compose": SlopcameraIconComposeReceipt
+  readonly "slopcamera.icon.render": SlopcameraIconRenderReceipt
+  readonly "slopcamera.soundtrack.compose": SlopcameraSoundtrackComposeReceipt
+  readonly "slopcamera.soundtrack.grid": SlopcameraSoundtrackGridReceipt
 }
 
 function operationFailure(message: string): never {
@@ -835,6 +976,123 @@ function parseGallery(value: unknown): GallerySlopcameraOperationInput {
   }
 }
 
+function optionalPathValue(value: unknown, name: string): string | undefined {
+  return value === undefined ? undefined : pathValue(value, name)
+}
+
+function requireSuffix(path: string | undefined, suffix: string, name: string): void {
+  if (path !== undefined && !path.toLowerCase().endsWith(suffix)) {
+    operationFailure(`${name} must end in ${suffix}.`)
+  }
+}
+
+function parseIconCompose(value: unknown): SlopcameraIconComposeInput {
+  const input = record(value, ["sourcePath", "outputPath"])
+  const outputPath = optionalPathValue(input.outputPath, "outputPath")
+  requireSuffix(outputPath, ".json", "outputPath")
+  return {
+    sourcePath: pathValue(input.sourcePath, "sourcePath"),
+    ...(outputPath === undefined ? {} : { outputPath }),
+  }
+}
+
+function parseIconRender(value: unknown): SlopcameraIconRenderInput {
+  const input = record(value, [
+    "sourcePath",
+    "outputPath",
+    "recipePath",
+    "size",
+    "background",
+    "palette",
+    "language",
+  ])
+  const outputPath = pathValue(input.outputPath, "outputPath")
+  requireSuffix(outputPath, ".svg", "outputPath")
+  const recipePath = optionalPathValue(input.recipePath, "recipePath")
+  requireSuffix(recipePath, ".json", "recipePath")
+  const { size, background, palette, language } = input
+  if (
+    size !== undefined &&
+    (!Number.isSafeInteger(size) ||
+      (size as number) < slopcameraIconSceneLimits.sizeMin ||
+      (size as number) > slopcameraIconSceneLimits.sizeMax)
+  ) {
+    operationFailure(
+      `size must be an integer from ${slopcameraIconSceneLimits.sizeMin} through ${slopcameraIconSceneLimits.sizeMax}.`,
+    )
+  }
+  if (background !== undefined && typeof background !== "boolean") {
+    operationFailure("background must be a boolean.")
+  }
+  if (
+    palette !== undefined &&
+    !slopcameraIconPalettes.includes(palette as SlopcameraIconPalette)
+  ) {
+    operationFailure(`palette must be one of ${slopcameraIconPalettes.join(", ")}.`)
+  }
+  if (
+    language !== undefined &&
+    (typeof language !== "string" || !slopcameraIconLanguages.includes(language as never))
+  ) {
+    operationFailure(`language must be one of ${slopcameraIconLanguages.join(", ")}.`)
+  }
+  return {
+    sourcePath: pathValue(input.sourcePath, "sourcePath"),
+    outputPath,
+    ...(recipePath === undefined ? {} : { recipePath }),
+    ...(size === undefined ? {} : { size: size as number }),
+    ...(background === undefined ? {} : { background: background as boolean }),
+    ...(palette === undefined ? {} : { palette: palette as SlopcameraIconPalette }),
+    ...(language === undefined
+      ? {}
+      : { language: language as NonNullable<SlopcameraIconRenderInput["language"]> }),
+  }
+}
+
+function parseSoundtrackFormat(value: unknown): SlopcameraSoundtrackFormat | undefined {
+  if (value === undefined) return undefined
+  if (!slopcameraSoundtrackFormats.includes(value as SlopcameraSoundtrackFormat)) {
+    operationFailure(`format must be one of ${slopcameraSoundtrackFormats.join(", ")}.`)
+  }
+  return value as SlopcameraSoundtrackFormat
+}
+
+function parseSoundtrackCompose(value: unknown): SlopcameraSoundtrackComposeInput {
+  const input = record(value, ["sourcePath", "outputPath", "format"])
+  const outputPath = optionalPathValue(input.outputPath, "outputPath")
+  requireSuffix(outputPath, ".json", "outputPath")
+  const format = parseSoundtrackFormat(input.format)
+  return {
+    sourcePath: pathValue(input.sourcePath, "sourcePath"),
+    ...(outputPath === undefined ? {} : { outputPath }),
+    ...(format === undefined ? {} : { format }),
+  }
+}
+
+function parseSoundtrackGrid(value: unknown): SlopcameraSoundtrackGridInput {
+  const input = record(value, ["sourcePath", "outputPath", "format", "startUs"])
+  const outputPath = optionalPathValue(input.outputPath, "outputPath")
+  requireSuffix(outputPath, ".json", "outputPath")
+  const format = parseSoundtrackFormat(input.format)
+  const startUs = input.startUs
+  if (
+    startUs !== undefined &&
+    (!Number.isSafeInteger(startUs) ||
+      (startUs as number) < 0 ||
+      (startUs as number) > slopcameraSoundtrackLimits.maxTimeUs)
+  ) {
+    operationFailure(
+      `startUs must be an integer from 0 through ${slopcameraSoundtrackLimits.maxTimeUs}.`,
+    )
+  }
+  return {
+    sourcePath: pathValue(input.sourcePath, "sourcePath"),
+    ...(outputPath === undefined ? {} : { outputPath }),
+    ...(format === undefined ? {} : { format }),
+    ...(startUs === undefined ? {} : { startUs: startUs as number }),
+  }
+}
+
 export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>(
   code: C,
   input: unknown,
@@ -852,6 +1110,14 @@ export function parseSlopcameraOperationInput<C extends SlopcameraOperationCode>
       return parseIcon(input) as SlopcameraOperationInputMap[C]
     case "slopcamera.image.gallery":
       return parseGallery(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.icon.compose":
+      return parseIconCompose(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.icon.render":
+      return parseIconRender(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.soundtrack.compose":
+      return parseSoundtrackCompose(input) as SlopcameraOperationInputMap[C]
+    case "slopcamera.soundtrack.grid":
+      return parseSoundtrackGrid(input) as SlopcameraOperationInputMap[C]
     default:
       throw new SlopcameraOperationError(
         "INVALID_OPERATION",
@@ -1165,6 +1431,46 @@ async function executeSlopcameraOperationUncoordinated<
         },
         dependencies,
       )) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.icon.compose": {
+      const options = input as SlopcameraIconComposeInput
+      return (await composeSlopcameraIcon({
+        sourcePath: resolve(options.sourcePath),
+        ...(options.outputPath === undefined
+          ? {}
+          : { outputPath: resolve(options.outputPath) }),
+      })) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.icon.render": {
+      const options = input as SlopcameraIconRenderInput
+      return (await renderSlopcameraIcon({
+        ...options,
+        sourcePath: resolve(options.sourcePath),
+        outputPath: resolve(options.outputPath),
+        ...(options.recipePath === undefined
+          ? {}
+          : { recipePath: resolve(options.recipePath) }),
+      })) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.soundtrack.compose": {
+      const options = input as SlopcameraSoundtrackComposeInput
+      return (await composeSlopcameraSoundtrack({
+        ...options,
+        sourcePath: resolve(options.sourcePath),
+        ...(options.outputPath === undefined
+          ? {}
+          : { outputPath: resolve(options.outputPath) }),
+      })) as SlopcameraOperationResultMap[C]
+    }
+    case "slopcamera.soundtrack.grid": {
+      const options = input as SlopcameraSoundtrackGridInput
+      return (await deriveSlopcameraSoundtrackGrid({
+        ...options,
+        sourcePath: resolve(options.sourcePath),
+        ...(options.outputPath === undefined
+          ? {}
+          : { outputPath: resolve(options.outputPath) }),
+      })) as SlopcameraOperationResultMap[C]
     }
     default:
       throw new SlopcameraOperationError(

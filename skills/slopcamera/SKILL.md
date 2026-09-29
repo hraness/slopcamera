@@ -30,6 +30,8 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md) |
 | Custom diagram themes, fonts or icon packages | [Customization](references/customization.md) |
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
+| Deterministic vector icon, icon scene or construction program, no model | [Icon scenes](references/icon-place.md) |
+| Tempo, meter and section cues from a Soundfish score or MIDI file | [Soundtracks](references/soundtracks.md) |
 | Clean up, caption, frame, or deliver existing recordings and footage | [Video projects](references/video-projects.md) |
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
 | Product launch film, UI mockup motion, kinetic type, or coming from HyperFrames or Remotion | [Launch films](references/launch-films.md); for a whole Hraness product launch, the `product-launch` agent skill |

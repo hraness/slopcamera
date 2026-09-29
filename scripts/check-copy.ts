@@ -61,6 +61,12 @@ const GENERAL_TOOL_NAMES = [
   "search_slopcamera",
   "execute_slopcamera",
 ];
+const MEDIA_TOOL_NAMES = [
+  "compose_icon",
+  "render_icon",
+  "compose_soundtrack",
+  "derive_soundtrack_grid",
+];
 
 async function markdownFiles(root: string): Promise<string[]> {
   const found: string[] = [];
@@ -98,6 +104,7 @@ async function loadFacts(): Promise<CopyFacts> {
   return {
     animationStudyCount: await animationStudyCount(),
     generalToolNames: GENERAL_TOOL_NAMES,
+    mediaToolNames: MEDIA_TOOL_NAMES,
     hostedApiPathCount: Object.keys(
       (openApiDocument("https://api.slopcamera.com").paths ?? {}) as Record<string, unknown>,
     ).length,
@@ -124,9 +131,9 @@ async function loadFacts(): Promise<CopyFacts> {
   };
 }
 
-for (const name of GENERAL_TOOL_NAMES) {
+for (const name of [...GENERAL_TOOL_NAMES, ...MEDIA_TOOL_NAMES]) {
   if (!slopcameraMcpTools.some((tool) => tool.name === name)) {
-    console.error(`check-copy: general MCP tool ${name} no longer exists; update GENERAL_TOOL_NAMES.`);
+    console.error(`check-copy: MCP tool ${name} no longer exists; update GENERAL_TOOL_NAMES or MEDIA_TOOL_NAMES.`);
     process.exit(2);
   }
 }

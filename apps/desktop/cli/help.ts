@@ -37,7 +37,7 @@ Commands:
                                  Discover and run Vercel AI Gateway media models
   credits status|topup|wait|forget
                                  Buy and inspect hosted generation credits
-  media audio|color              Apply local non-destructive audio and video effects
+  media audio|color|soundtrack   Apply local audio and video effects; derive soundtrack beat grids
   outputs                        Print the agent outputs directory
   outputs list|open|reveal       List the newest outputs or open one on this Mac
   status                         What Slopcamera is doing, credits and newest outputs
@@ -293,6 +293,10 @@ compliance. Drawing sheets are exposed through this CLI and the root SDK, not co
   slopcamera image icon --set <file.json> --output-dir <directory>
         [--context <card|hero|inline>] [--candidates <1-4>]
         [--set-rounds <1-4>] [--keep-raster] [--json]
+  slopcamera image icon compose <source.json> [--output <file.json>] [--json]
+  slopcamera image icon render <source.json> --output <file.svg> [--recipe <file.json>]
+        [--size <16-1024>] [--background] [--palette <original|ink|earth|night>]
+        [--language <language>] [--json]
 
 Explicit --output file commands delegate to @hraness/slopcamera. Vectorization is local,
 bounded, checksum-pinned, and emits inert SVG. File generation uses Vercel AI Gateway with the
@@ -308,7 +312,13 @@ variation axes or an explicit candidate list — keeps every candidate with its 
 composes a labelled contact sheet plus receipt for agent review. Texture cells repeat the
 candidate 2×2 so seams are inspectable (--tile/--no-tile overrides). It never replaces existing
 outputs and never promotes a candidate into authored source; review the sheet and select
-explicitly.`,
+explicitly.
+
+Icon compose and render are local and deterministic, with no model or network. They solve and
+draw icon.place scenes, collections, construction programs, and recipes into inert SVG; a recipe
+replays only when its recorded digests match. Construction-program languages: outline, sketch,
+pen, crosshatch, engraving, stipple, halftone, glyph, flat, shaded, figure, cutpaper, woodcut,
+offset.`,
   style: `Usage:
   slopcamera style list [--json]
   slopcamera style show <id> [--json]
@@ -616,6 +626,15 @@ argv, receipts, or logs. When a configured wallet runs out, paid calls fail with
         [--output <relative-path>] [--json]
   slopcamera media color <video-path> [grade] [--video-stream <index>]
         [--output <relative-path>] [--json]
+  slopcamera media soundtrack compose <score> [--output <file.json>]
+        [--format <compose|song|json|midi>] [--json]
+  slopcamera media soundtrack grid <score> [--output <file.json>] [--start-us <n>]
+        [--format <compose|song|json|midi>] [--json]
+
+Soundtrack verbs delegate to @hraness/slopcamera. They verify a Soundfish loop or song (compose
+text, song text, score JSON, or a Standard MIDI file) and derive the {bpm, beatOffsetUs,
+beatsPerBar} music timing that HTML scene requests accept, plus section cue times. They render
+no audio; pair the grid with the track you mix.
 
 Audio effects may be combined in one deterministic chain:
   --volume-db <-60..24>
@@ -725,7 +744,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "diagram") return words[1] === "sheets"
     ? ["init", "check", "render"]
     : ["init", "check", "render", "sheets"];
-  if (command === "image") return ["vectorize", "generate", "gallery", "icon"];
+  if (command === "image") return words[1] === "icon" ? ["compose", "render"] : ["vectorize", "generate", "gallery", "icon"];
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];
@@ -748,7 +767,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "fillers") return ["list", "apply"];
   if (command === "ai") return ["models", "provider-options", "image", "video", "speech", "transcribe"];
   if (command === "credits") return ["status", "topup", "wait", "forget"];
-  if (command === "media") return ["audio", "color"];
+  if (command === "media") return words[1] === "soundtrack" ? ["compose", "grid"] : ["audio", "color", "soundtrack"];
   if (command === "render") return ["plan", "run"];
   if (command === "assets") return ["emoji"];
   if (command === "outputs") return ["list", "open", "reveal"];
