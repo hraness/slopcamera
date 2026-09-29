@@ -11,7 +11,7 @@
     "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
     "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
     "@hraness/ui": "github:hraness/ui#v0.5.16",
-    "@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0",
+    "@hraness/web-discovery": "github:hraness/web-discovery#v0.11.0",
     "@resvg/resvg-js": "2.6.2",
     "posthog-js": "1.413.2",
     "react": "19.2.3",

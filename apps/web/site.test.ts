@@ -57,7 +57,7 @@ import {
 } from "./src/negotiate-request"
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
-import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageForDocument, socialImages } from "./src/social-image"
+import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFitFor, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
@@ -1354,6 +1354,18 @@ describe("static Slopcamera site", () => {
     }
   })
 
+  test("fits every declared share card as written", () => {
+    // Each card keeps its own headline and description whole: no clause cut,
+    // no smaller or three-line headline, nothing stripped.
+    for (const image of socialImages) {
+      const fit = socialImageFitFor(image)
+      expect({ file: image.file, issues: fit.issues }).toEqual({ file: image.file, issues: [] })
+      expect(fit.description?.cut ?? "none").toBe("none")
+      expect(fit.headline).toMatchObject({ reduced: false, threeLine: false, truncated: false })
+      expect(fit.removed).toEqual([])
+    }
+  })
+
   test("points every docs and blog page at its own shared-template card", async () => {
     for (const document of ["docs/how-to/edit-video.html", blogDocumentForPost(blogPosts[0]!), blogIndexDocument]) {
       const html = await readBuilt(document)
@@ -1429,7 +1441,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.11.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1460,7 +1472,7 @@ describe("static Slopcamera site", () => {
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.11.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
