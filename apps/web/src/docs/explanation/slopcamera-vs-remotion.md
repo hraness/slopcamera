@@ -85,7 +85,7 @@ Slopcamera is MIT licensed, so there is no company tier. Optional AI generation 
 
 ### Does SlopCamera use fewer tokens than Remotion?
 
-Slopcamera has not published a measurement. The mechanism is that the agent writes a short source file and the CLI does the rendering, checks, and variants, so none of that code enters the conversation. Remotion's Agent Skills serve a similar purpose for React video.
+Slopcamera has not been measured against Remotion. In Slopcamera's own [benchmark](/docs/explanation/token-benchmark), the median cost with Slopcamera installed was higher than without it on all four media tasks, a small sample of two sessions each. The extra went mostly to reading the skill, command help, and rendered frames. Remotion's Agent Skills serve a similar purpose for React video.
 
 ### Can SlopCamera render in the cloud?
 
