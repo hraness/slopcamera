@@ -108,7 +108,7 @@ Your agent also has to learn a file format. The diagram file, the HTML scene fil
 
 ## What these numbers do not show
 
-Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens, and no controlled comparison of token use between a one-shot model and the same model with SlopCamera exists yet. The byte-for-byte matches were renders of the same source with the same toolchain; SlopCamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
+Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens. A [controlled token benchmark](/docs/explanation/token-benchmark) that gave the same agent four media tasks, with and without SlopCamera installed, found no token or cost saving: with two sessions per task, the median cost was higher with SlopCamera on every task, mostly from reading the skill and inspecting rendered frames. The byte-for-byte matches were renders of the same source with the same toolchain; SlopCamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
 
 The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
 

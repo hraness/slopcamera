@@ -131,3 +131,9 @@ Released `html render` exports H.264 video with optional 48 kHz stereo AAC at 32
 Gateway model discovery and paid generation, selected cloud analysis, optional private Blob reference hosting, Poly Haven acquisition, and first-use runtime or tool provisioning have separate network roles. Rendering from a prepared local closure does not upload a project. Credentials and explicit upload/trusted-code acknowledgements remain invocation-scoped; a local source import does not authorize executing it or sending it to a model.
 
 Directing budgets use catalog estimates, not provider-enforced spending caps. Native supervision and hash receipts provide process control and observed provenance, not an OS sandbox or complete hermetic dependency closure.
+
+## Native browser isolation
+
+The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Current source disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
+
+New renders bind these arguments into execution-integrity version 2. Retained version-1 receipts keep their historical contract for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.

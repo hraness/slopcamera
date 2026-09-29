@@ -57,5 +57,6 @@ Competitor details as of 28 September 2026.
 - Platform limits. Vectorization runs on macOS and Linux and rejects Windows. The hardware Three.js profile requires a supported macOS graphics context.
 - No identical pixels across machines. Native tools, codecs, GPU drivers, and AI models affect results.
 - Generated media needs review. Models can change a subject, its motion, or its text, and a local budget estimate is not a spending cap at the provider.
+- No measured token saving. In a [controlled benchmark](/docs/explanation/token-benchmark) of four media tasks, an agent with Slopcamera installed spent more on a first render and one revision than the same agent without it.
 
 The [capability reference](/docs/reference/capabilities) lists current platforms and limits, [Extend Slopcamera](/docs/explanation/extending) covers what an agent can build on, and [Run or recover a workflow](/docs/how-to/run-workflows) shows run records and recovery in practice.
