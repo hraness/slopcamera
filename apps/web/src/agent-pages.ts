@@ -10,7 +10,7 @@ const blogPostLinks = indexableBlogPosts
 
 export const homeMarkdown = `# Slopcamera is a domain-specific harness for visual creation.
 
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent writes a short source file and revises it by editing that file. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
