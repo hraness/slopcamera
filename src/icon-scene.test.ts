@@ -63,6 +63,9 @@ describe("icon engine admission", () => {
   })
 })
 
+// Rendering every language or preset is CPU-bound; shared CI runners need headroom.
+const heavyIconTestTimeout = 30_000
+
 describe("slopcamera.icon.compose and render", () => {
   test("compose then render gives the same SVG digest as rendering the source", async () => {
     await withDirectory(async (directory) => {
@@ -154,7 +157,7 @@ describe("slopcamera.icon.compose and render", () => {
         expect(replay.output.sha256).toBe(first.output.sha256)
       }
     })
-  })
+  }, heavyIconTestTimeout)
 
   test("rejects a tampered recipe", async () => {
     await withDirectory(async (directory) => {
@@ -189,7 +192,7 @@ describe("slopcamera.icon.compose and render", () => {
         assertInertIconSvg(await readFile(receipt.output.path, "utf8"))
       }
     })
-  })
+  }, heavyIconTestTimeout)
 
   test("fails closed on bad sources, sizes, paths and option mismatches", async () => {
     await withDirectory(async (directory) => {
