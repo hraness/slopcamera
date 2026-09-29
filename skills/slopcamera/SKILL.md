@@ -32,7 +32,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
 | Clean up, caption, frame, or deliver existing recordings and footage | [Video projects](references/video-projects.md) |
 | Music video, dancing mascot or timed HTML scene with a local soundtrack | [Music videos](references/music-video.md) |
-| Product launch film, UI mockup motion, kinetic type, or coming from HyperFrames or Remotion | [Launch films](references/launch-films.md) |
+| Product launch film, UI mockup motion, kinetic type, or coming from HyperFrames or Remotion | [Launch films](references/launch-films.md); for a whole Hraness product launch, the `product-launch` agent skill |
 | Authorized YouTube or other public web-media excerpt (`yt-dlp` / `youtube-dl`) | [Web-media excerpts](references/web-media-excerpts.md) |
 | Generate images, clips, narration or transcripts | [Gateway media](references/gateway-media.md) |
 | Product mark, marketing illustration or topic icon | [Brand illustrations](references/brand-illustrations.md) |
