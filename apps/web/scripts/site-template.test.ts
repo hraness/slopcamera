@@ -124,7 +124,7 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     }
     // DOC_NAV owns both landmarks; the document must not wrap them in a
     // third navigation landmark or move their class slots outside that owner.
-    expect(doc).toContain('<div class="{{DOCS_LAYOUT_CLASS}}">\n      {{DOC_NAV}}\n      <main')
+    expect(doc).toContain('<div class="hraness-site-shell__content {{DOCS_LAYOUT_CLASS}}">\n      {{DOC_NAV}}\n      <main')
     expect(doc).not.toContain("{{DOCS_NAV_CLASS}}")
     for (const page of docPages) {
       const navigation = renderDocsNav(page)

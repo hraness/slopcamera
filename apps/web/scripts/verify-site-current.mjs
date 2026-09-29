@@ -73,6 +73,7 @@ async function inspect(page) {
     const header = document.querySelector("header")
     const main = document.querySelector("main")?.getBoundingClientRect()
     const footer = document.querySelector("#hraness-site-footer")?.getBoundingClientRect()
+    const sidebar = document.querySelector('nav[aria-label="Documentation"]')?.getBoundingClientRect()
     const menus = [...document.querySelectorAll("[aria-label^='Appearance:']")]
     const backdrop = document.querySelector("[data-hraness-hero-backdrop]")
     const lastAction = header ? [...header.querySelectorAll("a, button, summary")].at(-1) : null
@@ -86,6 +87,8 @@ async function inspect(page) {
         return { label: element.textContent?.trim() || element.getAttribute("aria-label"), width: box.width, height: box.height }
       }).filter(box => box.width > 0 && box.height > 0) : [],
       footerAfterMain: Boolean(main && footer && footer.top >= main.bottom - 1),
+      footerAtDocumentBottom: Boolean(footer && Math.abs(footer.bottom + scrollY - root.scrollHeight) <= 1),
+      footerAfterSidebar: !sidebar || sidebar.width === 0 || Boolean(footer && footer.top >= sidebar.bottom - 1),
       footerInViewport: Boolean(footer && footer.left >= -1 && footer.right <= innerWidth + 1),
       overflow: root.scrollWidth - innerWidth,
       h1: document.querySelectorAll("h1").length,
@@ -100,7 +103,7 @@ async function inspect(page) {
 }
 
 async function review(browser, origin, path, options) {
-  const context = await browser.newContext({ viewport: { width: options.width, height: options.width === 360 ? 740 : options.width === 390 ? 844 : 900 }, colorScheme: options.scheme ?? "light",
+  const context = await browser.newContext({ viewport: { width: options.width, height: options.height ?? (options.width === 360 ? 740 : options.width === 390 ? 844 : 900) }, colorScheme: options.scheme ?? "light",
     isMobile: options.width < 600, hasTouch: options.width < 600, serviceWorkers: "block",
     javaScriptEnabled: options.javaScript !== false, forcedColors: options.forcedColors ? "active" : "none", reducedMotion: "reduce" })
   const problems = []
@@ -117,7 +120,7 @@ async function review(browser, origin, path, options) {
   try {
     const response = await page.goto(origin + path, { waitUntil: "networkidle" })
     const state = await inspect(page)
-    const label = `${path} ${options.width}px ${options.scheme ?? "light"}${options.javaScript === false ? " no-JS" : ""}${options.forcedColors ? " forced-colors" : ""}`
+    const label = `${path} ${options.width}px${options.height ? ` × ${options.height}px` : ""} ${options.scheme ?? "light"}${options.javaScript === false ? " no-JS" : ""}${options.forcedColors ? " forced-colors" : ""}`
     const expectStatus = path === missingRoute ? 404 : 200
     const check = (ok, message) => { if (!ok) problems.push(message) }
     check(new URL(page.url()).origin === origin, `unexpected final origin ${new URL(page.url()).origin}`)
@@ -129,6 +132,8 @@ async function review(browser, origin, path, options) {
     check(state.targets.length > 0, "missing header targets")
     check(state.targets.every(target => target.width >= 44 && target.height >= 44), `undersized header targets ${JSON.stringify(state.targets.filter(target => target.width < 44 || target.height < 44))}`)
     check(state.footerAfterMain, "network footer does not follow main content")
+    check(state.footerAtDocumentBottom, "network footer does not reach the document bottom")
+    check(state.footerAfterSidebar, "network footer overlaps the documentation sidebar")
     check(state.footerInViewport, "network footer exceeds the viewport")
     check(state.h1 === 1, `${state.h1} h1 elements`)
     check(state.palette === "catppuccin", `palette ${state.palette}`)
@@ -161,6 +166,9 @@ export async function main(args = process.argv.slice(2)) {
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
       results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }
+    // A tall viewport exposes short-page gaps; the SDK reference also exercises
+    // natural long-document growth without changing footer positioning.
+    for (const path of ["/docs", "/docs/reference/sdk"]) results.push(await review(browser, origin, path, { width: 1440, height: 2400 }))
     for (const path of ["/", "/docs"]) results.push(await review(browser, origin, path, { width: 390, javaScript: false }))
     for (const path of ["/", "/blog"]) results.push(await review(browser, origin, path, { width: 1440, forcedColors: true }))
   } finally {

@@ -13,6 +13,7 @@
    stylesheet). It declares its own components.hraness-design-kit.legacy layer
    and loads no resources. */
 @import "../vendor/status-page/status-page.css";
+@import "../vendor/site-shell/site-shell.css";
 @import "../vendor/marketing-preset/product-marketing-preset.css";
 @import "../vendor/lantern-material/lantern-material.css";
 @import "./site-ua-compatibility.css" layer(base.slopcamera-ua);
