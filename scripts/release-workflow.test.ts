@@ -1168,7 +1168,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.8.1")
+  expect(manifest.version).toBe("3.9.0")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
