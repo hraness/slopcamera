@@ -11,7 +11,7 @@ import {
 import { collectBunStylexGraph } from "@hraness/ui/stylex-build/bun"
 import { stylexVite } from "@hraness/ui/stylex-build/vite"
 import { build as viteBuild, version as viteVersion } from "vite"
-import { inspectSiteCssResources } from "./site-css"
+import { assertSiteRecipeResources, inspectSiteCssResources } from "./site-css"
 import { readPreviewFile as bytesAt } from "./preview-file"
 import { projectSiteArtifacts, siteSha256, snapshotSiteFoundation, type SiteArtifact } from "./site-contract"
 import { snapshotMarketingPreset } from "./marketing-preset"
@@ -211,8 +211,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
       const bytes = await bytesAt(join(finalized, artifact.path))
       assert.equal(bytes.byteLength, artifact.bytes)
       assert.equal(siteSha256(bytes), artifact.sha256)
-      if (artifact.path === finalCssPath) assert.deepEqual(inspectSiteCssResources(new TextDecoder("utf-8", { fatal: true }).decode(bytes), artifact.path), [],
-        "Site recipes must not introduce resources outside the captured foundation")
+      if (artifact.path === finalCssPath) assertSiteRecipeResources(new TextDecoder("utf-8", { fatal: true }).decode(bytes), artifact.path)
       return { artifact, bytes }
     }))
     for (const input of snapshot) assert.deepEqual(await artifactForFile(root, input.path), input, "Site source or compiler input changed during compilation")
