@@ -414,12 +414,14 @@ if (typeof packageVersion !== "string") {
 }
 const sourceInstallContracts = [
   ["apps/web/src/index.html", "{{RELEASE_INSTALL_COMMANDS}}"],
-  ["apps/web/src/index.html", "Install the CLI, then its matching Agent Skill"],
+  ["apps/web/src/index.html", "Then install its matching Agent Skill"],
+  ["apps/web/src/index.html", "{{PLATFORM_INSTALL}}"],
   ["apps/web/src/index.html", "{{SOURCE_INSTALL_URL}}"],
   ["apps/web/src/index.html", "<summary>Build from source</summary>"],
   ["apps/web/src/index.html", "installs the guide from that same checkout. Native engines install separately."],
   ["apps/web/src/site-content.ts", '["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1]'],
-  ["apps/web/src/site-content.ts", 'command: `${archiveInstall.command}\\n${archiveInstall.skillCommand}`'],
+  ["apps/web/src/site-content.ts", "command: archiveInstall.skillCommand,"],
+  ["apps/web/src/site-content.ts", "{ id: \"windows\", command: archiveInstall.command, shell: \"PowerShell\""],
   ["README.md", sourceInstall.checkoutCommand],
   ["README.md", "bun install --frozen-lockfile --ignore-scripts"],
   ["README.md", "bun run build:sdk"],
