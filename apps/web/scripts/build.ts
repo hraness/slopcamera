@@ -261,7 +261,9 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const analyticsConfig = productionAnalyticsConfig(environment)
   const [theme, statusPage, , socialCards] = await Promise.all([
     bundleTheme(), bundleStatusPage(),
-    pruneRetainedEvidence(),
+    // Local housekeeping only: Vercel and CI builders are ephemeral, and a
+    // production build should not touch a shared $TMPDIR.
+    process.env.VERCEL || process.env.CI ? undefined : pruneRetainedEvidence(),
     Promise.all(socialImages.map(async image => ({ file: image.file, bytes: await renderSocialImage(image) }))),
   ])
   const themePath = assetPath("theme.js", theme)

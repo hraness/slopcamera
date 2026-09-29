@@ -63,6 +63,7 @@ jobs:
     name: Production verified
     if: >-
       always()
+      && needs.browser.result != 'cancelled'
       && (github.event_name == 'workflow_dispatch'
       || (github.event.deployment_status.state == 'success'
       && github.event.deployment.environment == 'Production – slopcamera'))
