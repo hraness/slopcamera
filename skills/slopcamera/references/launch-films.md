@@ -10,6 +10,10 @@ The same source gives a web MP4 and WebM, a poster, a social still, square and
 vertical cuts, one short clip per act, and WebVTT captions. Each act's caption
 doubles as the source text for a social thread post.
 
+On Hraness product sites the film is one step of the `product-launch` agent
+skill, which also covers the mockups, the launch post and the social kit. Use
+that skill for the whole launch and this page for the film.
+
 ## Check the command
 
 ```sh
