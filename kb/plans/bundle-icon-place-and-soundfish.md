@@ -1,9 +1,9 @@
 ---
 type: plan
 title: Bundle icon.place and Soundfish
-description: Planned Stage 2 integration that adds exact-version icon.place and Soundfish npm packages to SlopCamera as closed icon and soundtrack operations. Both packages are published.
+description: Completed Stage 2 integration that adds exact-version icon.place and Soundfish npm packages to SlopCamera as closed icon and soundtrack operations, MCP tools and CLI verbs.
 area: media-suite
-status: planned
+status: completed
 repository_scopes:
   - package.json
   - src
@@ -23,7 +23,7 @@ SlopCamera ships icon.place drawing and Soundfish scoring as fixed, typed operat
 
 ## Status
 
-Planned and unblocked. Both npm releases are out as of 2026-09-29:
+Completed on 2026-09-29 in one reviewed pull request; see [Result](#result). Both npm releases were out when the work started:
 
 - `@hraness/iconplace` 0.1.0: the first public release of the icon.place construction, scene and collection library, MIT-licensed. npm rejected the unscoped name `iconplace` as too similar to the unrelated `icon.place` package, so the package is scoped; its command is still `iconplace`. Later versions publish from hraness/iconplace through npm trusted publishing.
 - `@hraness/soundfish` 0.7.0: the first release with library `exports` (protocol, MIDI and beat grid), Node compatibility and an MIT license that permits bundling. 0.6.0 and earlier are `bin`-only and must not be pinned.
@@ -93,6 +93,17 @@ These rule changes go through review in the same pull request as the dependencie
 - Package size and install time grow with two more dependencies.
 - The fixed-registry and "no shell commands" rules rule out spawning either `bin`; if a needed function is only reachable through a CLI, the owning package must export it first.
 - Release PR #276 (3.7.0) and any later release change the same manifests; rebase onto the current release before adding pins.
+
+## Result
+
+Implemented as planned, with these decisions and findings:
+
+- **Admission.** `package.json` pins `"@hraness/iconplace": "0.1.0"` (registry integrity `sha512-ULepQla+5B37ULLSA0tMf48q/C7PyU8r3z1iOa4DNOHw2iJ/U+xod+6YUzgRj5ub7Nzd+sAIu6hKwk3HrBJy4g==`) and `"@hraness/soundfish": "0.7.0"` (`sha512-r9ZPw52nVIMElR0XGG4fbo3SKcOuGujGIHq5HryVoVyY6dCXm6GEpsRkr95CV69uxwJp/QvulhOqVg/Op6YHOA==`), both MIT. `scripts/dependency-admissions.test.ts` holds the recorded integrity and fails if `package.json` or `bun.lock` drifts, or if `src/` imports anything but the libraries' public entry points or their `bin`. `NOTICE.md` records both.
+- **Contracts.** `src/icon-scene.ts` and `src/soundtrack.ts` own the Slopcamera-named inputs, receipts and bounds; receipts name the engine as `{ package, version }` and nothing else from either library enters the public types. `src/bounded-file.ts` reads at most 1 MiB of source (non-blocking, regular files only) and writes at most 4 MiB atomically; an output that names its source by any spelling or link is rejected by device and inode. Source and output bytes, sizes and times are capped before execution; scene nodes (8) and collection layers (6) are capped by the libraries' own parsers, and grid sections (512) are checked after derivation but before anything is written. Icon SVG is re-checked as path-only and inert before it is written; a recipe replays only when the library reproduces its recorded digests.
+- **Surfaces.** Operations `slopcamera.icon.compose|render` and `slopcamera.soundtrack.compose|grid`; MCP tools `compose_icon`, `render_icon`, `compose_soundtrack`, `derive_soundtrack_grid` with closed argument sets, root-relative paths and range checks before resource admission; CLI verbs `slopcamera image icon compose|render` and `slopcamera media soundtrack compose|grid`. The four codes are not graph operations in the portable projection.
+- **Grid.** `slopcamera.soundtrack.grid` returns `music: { bpm, beatOffsetUs, beatsPerBar }`, exactly the HTML scene `parameters.music` shape, plus per-repeat section cues in whole microseconds on the same timeline. Property tests cover monotonic, gap-free cues, rounding within half a microsecond, and stable output. Tempo and meter come from the library's own beat grid and are range-checked; a constant tempo is assumed, and MIDI tempo maps or meter changes surface as the library's warnings rather than being modelled.
+- **Nothing CLI-only was needed.** Every function the operations use is a public library export (`@hraness/iconplace`, `/scene`, `/collections`; `@hraness/soundfish/protocol`, `/midi`, `/templates`). Neither `bin` is spawned, and the package smoke runs one icon and one soundtrack operation from the installed tarball under Bun and Node with fetch, sockets, DNS and process spawning denied. The Node run passes a process-local host-resource coordinator, because the default coordinator locks through `bun:ffi`.
+- **Not bundled.** The Soundfish Agent Skill, the icon.place web app and its vendored sets stay out of the Slopcamera tarball; they arrive only inside the separately installed dependencies.
 
 ## Recovery
 

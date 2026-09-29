@@ -11,6 +11,7 @@ import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
 import { publicIdentity, readPublicIcons } from "./public-identity"
 import { readExampleAssets } from "./example-assets"
+import { readLaunchAssets } from "./launch-assets"
 import { pruneRetainedEvidence } from "./retained-evidence"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
@@ -279,6 +280,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const marketingIcons = await readMarketingIcons()
   const brandMarks = await readBrandMarks()
   const examples = await readExampleAssets(appDirectory)
+  const launchAssets = await readLaunchAssets(appDirectory)
 
   await rm(outputDirectory, { force: true, recursive: true })
   await mkdir(join(outputDirectory, "assets"), { recursive: true })
@@ -301,7 +303,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks, ...examples]) {
+  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks, ...examples, ...launchAssets]) {
     const destination = join(outputDirectory, path)
     await mkdir(dirname(destination), { recursive: true })
     await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })

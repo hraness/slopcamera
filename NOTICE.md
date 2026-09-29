@@ -52,3 +52,17 @@ The complete local workflow host uses
 License (Copyright 2023 Effectful Technologies Inc). It remains a separately
 installed runtime dependency and is not relicensed by this project. Portable
 workflow authoring and graph compilation do not load this runtime.
+
+Icon scene composition and rendering use
+[`@hraness/iconplace`](https://github.com/hraness/iconplace) 0.1.0, the
+icon.place library, and soundtrack scores and beat grids use
+[`@hraness/soundfish`](https://github.com/hraness/soundfish) 0.7.0. Both are
+distributed under the MIT License and remain separately installed runtime
+dependencies pinned to exact versions; neither is relicensed by this project.
+The letterform outline data in `@hraness/iconplace/scene` and
+`@hraness/iconplace/collections` is derived from Cormorant Garamond and
+UnifrakturMaguntia and stays under the SIL Open Font License 1.1, as that
+package's `THIRD_PARTY_NOTICES.md` and `licenses/` record.
+Slopcamera imports their library entry points only and never runs their
+commands. The Soundfish Agent Skill ships with `@hraness/soundfish`, not with
+Slopcamera.

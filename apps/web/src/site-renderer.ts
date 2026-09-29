@@ -95,6 +95,9 @@ const blogClassSlots = {
   "{{BLOG_ENTRY_CLASS}}": siteBlogClassNames.entry,
   "{{BLOG_ENTRY_TITLE_CLASS}}": siteBlogClassNames.entryTitle,
   "{{BLOG_ENTRY_LINK_CLASS}}": siteBlogClassNames.entryLink,
+  "{{BLOG_FIGURE_CLASS}}": siteBlogClassNames.figure,
+  "{{BLOG_FIGURE_MEDIA_CLASS}}": siteBlogClassNames.figureMedia,
+  "{{BLOG_FIGCAPTION_CLASS}}": siteBlogClassNames.figcaption,
 } as const
 
 /** Produce the complete authored document once, before the public compiler

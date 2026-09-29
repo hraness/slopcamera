@@ -1,6 +1,7 @@
 # Fonts and icon adapters
 
-`slopcamera` deliberately ships no commercial font and no large icon set.
+`slopcamera` deliberately ships no commercial font and no large icon set. Its
+one built-in icon library, icon.place, is described below.
 
 ## Custom font
 
@@ -71,6 +72,12 @@ To use a third-party icon package, write a small local adapter that converts the
 package's data into `{ viewBox, body }`. Keep that package in the consuming
 repository rather than adding it to `slopcamera`. Preserve the icon package's
 license and attribution requirements.
+
+icon.place is the one icon library built into `slopcamera`. It draws its own
+icon scenes and construction programs to standalone SVG through
+`slopcamera image icon compose|render`; see [icon scenes](icon-place.md). It
+does not add icons to the diagram `icons` table, so diagram icons from any
+other package still go through a local adapter.
 
 Icon bodies may contain ordinary SVG geometry such as `path`, `circle`, `rect`,
 `line`, `polyline`, and `polygon`. Scripts, event handlers, `foreignObject`, and

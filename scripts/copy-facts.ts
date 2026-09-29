@@ -68,6 +68,8 @@ export interface CopyFacts {
   readonly mcpToolNames: readonly string[];
   /** Tools that are not scene tools: diagram check/render, search, execute. */
   readonly generalToolNames: readonly string[];
+  /** Icon and soundtrack tools; neither general nor scene tools. */
+  readonly mediaToolNames: readonly string[];
   readonly operationCodes: readonly string[];
   readonly portableOperationKinds: readonly string[];
   readonly workflowCount: number;
@@ -138,7 +140,7 @@ export const COPY_RULES: readonly CopyRule[] = [
   {
     kind: "count",
     name: "mcp-tools",
-    pattern: re(String.raw`\b${NUMBER} (?:named |fixed )?tools\b`),
+    pattern: re(String.raw`\b${NUMBER} (?:named |fixed |MCP )?tools\b`),
     expected: (facts) => [facts.mcpToolNames.length],
     describe: "MCP tool count (`slopcameraMcpTools` in src/mcp/tools.ts)",
     paths: /^(?!docs\/platform-submission\.md$)/u,
@@ -154,8 +156,17 @@ export const COPY_RULES: readonly CopyRule[] = [
     kind: "count",
     name: "scene-tools",
     pattern: re(String.raw`\b${NUMBER} (?:read-mostly |read-only )?scene tools\b`),
-    expected: (facts) => [facts.mcpToolNames.length - facts.generalToolNames.length],
-    describe: "MCP scene tool count (every tool except diagram check/render, search and execute)",
+    expected: (facts) => [
+      facts.mcpToolNames.length - facts.generalToolNames.length - facts.mediaToolNames.length,
+    ],
+    describe: "MCP scene tool count (every tool except diagram check/render, search, execute, and the icon and soundtrack tools)",
+  },
+  {
+    kind: "count",
+    name: "media-tools",
+    pattern: re(String.raw`\b${NUMBER} (?:local )?icon and soundtrack tools\b`),
+    expected: (facts) => [facts.mediaToolNames.length],
+    describe: "icon and soundtrack MCP tool count (`MEDIA_TOOL_NAMES` in scripts/check-copy.ts)",
   },
   {
     kind: "count",
@@ -302,7 +313,7 @@ export const COPY_RULES: readonly CopyRule[] = [
   {
     kind: "member",
     name: "mcp-tool-names",
-    pattern: re(String.raw`\x60((?:check|render|search|execute|inspect|audit|diff|evaluate|plan)_[a-z_]+)\x60`),
+    pattern: re(String.raw`\x60((?:check|render|search|execute|inspect|audit|diff|evaluate|plan|compose|derive)_[a-z_]+)\x60`),
     members: (facts) => facts.mcpToolNames,
     describe: "an MCP tool name that `slopcameraMcpTools` does not define",
   },
@@ -316,7 +327,7 @@ export const COPY_RULES: readonly CopyRule[] = [
   {
     kind: "member",
     name: "operation-code-names",
-    pattern: re(String.raw`\b(slopcamera\.(?:diagram|image)\.[a-z]+)\b`),
+    pattern: re(String.raw`\b(slopcamera\.(?:diagram|image|icon|soundtrack)\.[a-z]+)\b`),
     members: (facts) => facts.operationCodes,
     describe: "an operation code that `slopcameraOperationCodes` does not define",
   },

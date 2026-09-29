@@ -16,6 +16,8 @@ import {
   blogCanonicalUrl, blogMarkdownPath, blogPostPath, blogPosts, blogTargetForRequestPath, indexableBlogPosts,
 } from "./blog-registry"
 import { docPages, docsPageForRequestPath, resolveDocsContent } from "./docs-registry"
+import { exampleUrl, workflowExampleAssets, workflowExamples } from "./example-registry"
+import { launchMedia, launchMediaUrl } from "./launch-media"
 import { renderDocsMarkdown } from "./docs-markdown"
 import { negotiateSiteRequest } from "./negotiate-request"
 import { renderSitemapXml } from "../scripts/build"
@@ -136,6 +138,9 @@ describe("blog links", () => {
     ...blogPosts.map(blogPostPath),
     ...docPages.map(page => docsPageForRequestPath(`/docs/${page.slug}`) === null ? "" : `/docs/${page.slug}`),
     "/docs/",
+    // Launch-post figures link their published media as a no-video fallback.
+    ...launchMedia.map(launchMediaUrl),
+    ...workflowExampleAssets(workflowExamples).map(exampleUrl),
   ])
 
   test("internal links resolve to published routes and portfolio links use registry addresses", async () => {
