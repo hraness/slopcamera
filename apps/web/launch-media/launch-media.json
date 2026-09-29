@@ -1,0 +1,54 @@
+[
+  {
+    "role": "film",
+    "mime": "video/mp4",
+    "width": 1920,
+    "height": 1080,
+    "file": "launch-f395be1afeb5.mp4",
+    "sha256": "f395be1afeb5feb1895d6c8033a4eafcaefb539372c950d444eb7df49fc558f9",
+    "bytes": 2035379
+  },
+  {
+    "role": "square",
+    "mime": "video/mp4",
+    "width": 1080,
+    "height": 1080,
+    "file": "launch-square-3a93521332d6.mp4",
+    "sha256": "3a93521332d699c24790c3678c58ea9d332178449b836fda2ce1da68b759791f",
+    "bytes": 1041223
+  },
+  {
+    "role": "poster",
+    "mime": "image/jpeg",
+    "width": 1920,
+    "height": 1080,
+    "file": "launch-poster-1e1667c04df1.jpg",
+    "sha256": "1e1667c04df17a38da055bc51bcef5c78cfc65bb56b00e37ae4a23db02525566",
+    "bytes": 85740
+  },
+  {
+    "role": "captions",
+    "mime": "text/vtt",
+    "file": "launch-captions-37167ca913d9.vtt",
+    "sha256": "37167ca913d90bbae16c21d41aaabfe06693ecf9fd1bd217435d4a5c9c97a9ab",
+    "bytes": 983
+  },
+  {
+    "role": "portrait",
+    "mime": "video/mp4",
+    "width": 1080,
+    "height": 1920,
+    "file": "launch-portrait-fb56e540bc06.mp4",
+    "sha256": "fb56e540bc0689842c9c77d0bc7c3a41b81bbea7f01e8bef4af802397f631aa5",
+    "bytes": 1686121
+  },
+  {
+    "role": "portrait-poster",
+    "mime": "image/jpeg",
+    "width": 1080,
+    "height": 1920,
+    "file": "launch-portrait-poster-cb27b7a11563.jpg",
+    "sha256": "cb27b7a115636157d48d90d9b333f05fb08c3ca55331e3cc005f6aeb857eb5e1",
+    "bytes": 98815
+  }
+]

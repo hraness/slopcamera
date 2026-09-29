@@ -78,6 +78,27 @@ const blog = stylex.create({
     color: { default: "var(--ink)", ":hover": "var(--gold)" },
     textDecoration: "none",
   },
+  // Launch post figures: one reviewed render per beat, then its caption.
+  figure: {
+    marginTop: "1.25rem",
+    marginRight: 0,
+    marginBottom: "2.25rem",
+    marginLeft: 0,
+  },
+  figureMedia: {
+    display: "block",
+    width: "100%",
+    height: "auto",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "var(--line)",
+  },
+  figcaption: {
+    marginTop: "0.5rem",
+    color: "var(--muted)",
+    fontSize: "0.875rem",
+    lineHeight: 1.5,
+  },
 })
 
 export const siteBlogClassNames = {
@@ -92,4 +113,7 @@ export const siteBlogClassNames = {
   entry: stylex.props(blog.entry).className,
   entryTitle: stylex.props(blog.entryTitle).className,
   entryLink: stylex.props(blog.entryLink).className,
+  figure: stylex.props(blog.figure).className,
+  figureMedia: stylex.props(blog.figureMedia).className,
+  figcaption: stylex.props(blog.figcaption).className,
 } as const

@@ -39,7 +39,7 @@ describe("blog admissions", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
       const reviewedOn = ({
-        "/blog/introducing-slopcamera": "2026-09-27",
+        "/blog/introducing-slopcamera": "2026-09-29",
         "/blog/how-slopcamera-uses-algal": "2026-09-26",
       } as Readonly<Partial<Record<string, typeof record.review.reviewedOn>>>)[record.href] ?? "2026-09-28"
       expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
