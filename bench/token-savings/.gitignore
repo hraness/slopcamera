@@ -1,0 +1,2 @@
+# Pilot runs stay local; full runs are committed.
+results/pilot-*/
