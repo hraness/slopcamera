@@ -17,6 +17,7 @@ Installing `@hraness/slopcamera` does not enable every operation in every host. 
 | `@hraness/slopcamera/local/code/advanced` | Local graph planning, execution, and host integration. |
 | `@hraness/slopcamera/local/code/workflows` | Checked built-in local workflow definitions. |
 | `@hraness/slopcamera/local/html-overlay` | Local HTML scene authoring, request schemas, music-clock and audio-reactivity helpers, rigged GLB preparation, and rendering profiles. |
+| `@hraness/slopcamera/local/html-film` | Motion helpers for HTML films: easing, springs, kinetic type, act timelines, camera, cursor, drawn highlights and WebVTT captions. Every helper is a pure function of time and the module has no imports. |
 
 There is no `@hraness/slopcamera/code/testing` or portable `@hraness/slopcamera/code/workflows` entrypoint, and no open operation-registration hook on any surface. The `local` subpaths are not browser SDKs; they ship with the source-backed Bun package or a checkout.
 

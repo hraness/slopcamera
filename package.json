@@ -1,6 +1,6 @@
 {
   "name": "@hraness/slopcamera",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   "license": "MIT",
   "type": "module",
@@ -131,6 +131,10 @@
     "./local/html-overlay": {
       "types": "./apps/desktop/html-overlay/index.ts",
       "import": "./apps/desktop/html-overlay/index.ts"
+    },
+    "./local/html-film": {
+      "types": "./apps/desktop/html-overlay/film.ts",
+      "import": "./apps/desktop/html-overlay/film.ts"
     }
   },
   "bin": {
@@ -161,6 +165,8 @@
     "examples/studio/hybrid-scene.ts",
     "examples/html/*.html",
     "examples/html/*.json",
+    "examples/html/launch-film/*",
+    "!examples/html/launch-film/out",
     "examples/style-portfolio/**/*.html",
     "examples/style-portfolio/**/*.ts",
     "examples/style-portfolio/**/*.mjs",
