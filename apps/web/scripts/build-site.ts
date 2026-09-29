@@ -24,7 +24,7 @@ import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.29.2" },
+  { name: "@hraness/design-kit", version: "0.30.2" },
   { name: "@hraness/site-footer", version: "0.20.1" },
   { name: "@hraness/ui", version: "0.5.16" },
 ] as const
