@@ -258,8 +258,10 @@ h3 {
 }
 
 .slopcamera-product-hero .hraness-marketing-hero__heading {
-  font-size: var(--hraness-paper-heading-size);
-  max-inline-size: 17ch;
+  font-size: min(var(--hraness-paper-heading-size), clamp(2.35rem, 1.6rem + 2.6vw, 3.75rem));
+  line-height: 1.02;
+  max-inline-size: 18ch;
+  text-wrap: balance;
 }
 
 .slopcamera-product-hero .hraness-marketing-hero__frame {

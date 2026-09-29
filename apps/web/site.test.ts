@@ -19,7 +19,11 @@ import {
 
 import {
   isCanonicalAnalyticsPage,
+  ctaClickedEvent,
+  ctaProperties,
+  installCommandCopiedEvent,
   posthogCookielessDistinctId,
+  sanitizeEvent,
   sanitizePageview,
 } from "./src/analytics-contract"
 import {
@@ -703,7 +707,7 @@ describe("static Slopcamera site", () => {
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
       expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">Slopcamera<\/h1>/u)
       expect(html).toMatch(/<main aria-labelledby="preview-title" class="preview-shell [^"]+">/u)
-      expect(html).toContain("Visual work your agent can keep revising.")
+      expect(html).toContain("A domain-specific harness for visual creation.")
       expect(html).toContain('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">')
       expect(html).toContain('<link rel="canonical" href="https://slopcamera.com/">')
       expect(html).not.toMatch(/<script\b|<style\b|\sstyle\s*=|<a\b|<button\b|<form\b|<input\b|<select\b|<textarea\b|contenteditable/iu)
@@ -1255,7 +1259,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".transcript")
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
-    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Visual work your agent can keep revising.</h1>')
+    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Slopcamera is a domain-specific harness for visual creation.</h1>')
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
@@ -1571,6 +1575,47 @@ describe("static Slopcamera site", () => {
       },
       uuid: "0198c6a7-7c00-7000-8000-000000000005",
     }, "phc_testtoken")).toBeNull()
+  })
+
+  test("allows only allowlisted cookieless CTA and install-copy events", () => {
+    const base = {
+      $cookieless_mode: true,
+      $raw_user_agent: "Mozilla/5.0 Test",
+      distinct_id: posthogCookielessDistinctId,
+      token: "phc_testtoken",
+    }
+    const uuid = "0198c6a7-7c00-7000-8000-000000000009"
+    expect(ctaProperties("#install", "hero")).toEqual({ cta: "install", placement: "hero" })
+    expect(ctaProperties("https://github.com/hraness/slopcamera", "nav")).toEqual({ cta: "github", placement: "nav" })
+    expect(ctaProperties("/docs/how-to/music-video", "hero")).toBeNull()
+    expect(ctaProperties("#install", null)).toBeNull()
+
+    const cta = sanitizeEvent({
+      event: ctaClickedEvent,
+      properties: { ...base, cta: "install", placement: "closing", $current_url: "https://slopcamera.com/?ref=x", email: "a@b.c" },
+      uuid,
+    }, "phc_testtoken")
+    expect(cta?.event).toBe("cta clicked")
+    expect(cta?.properties).toEqual({
+      cta: "install",
+      placement: "closing",
+      $process_person_profile: false,
+      $cookieless_mode: true,
+      $raw_user_agent: "Mozilla/5.0 Test",
+      analytics_schema_version: 1,
+      distinct_id: posthogCookielessDistinctId,
+      site_id: "slopcamera",
+      token: "phc_testtoken",
+    })
+    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "pricing", placement: "hero" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "install", placement: "footer" }, uuid }, "phc_testtoken")).toBeNull()
+
+    const copied = sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, command: "secret" }, uuid }, "phc_testtoken")
+    expect(copied?.event).toBe("install command copied")
+    expect(copied?.properties).not.toHaveProperty("command")
+    expect(sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, token: "phc_other" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$autocapture", properties: base, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "checkout started", properties: base, uuid }, "phc_testtoken")).toBeNull()
   })
 
   test("emits analytics only for a configured Production build", async () => {
