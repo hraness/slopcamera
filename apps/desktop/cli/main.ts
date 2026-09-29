@@ -5,6 +5,7 @@ import { runProductSupportCommand, showProductSupportInvitation, standaloneSuppo
 import { parseCliArgs } from "./args";
 import { runCli } from "./commands";
 import { asCliError, CliError, EXIT_CODE } from "./errors";
+import { isRegistryCommand, runRegistry } from "./registry";
 import { BunProcessRunner, processIo } from "./io";
 import { resolveRepositoryPaths } from "./paths";
 import {
@@ -41,6 +42,13 @@ export async function main(
   if (argv[0] === "support") {
     return await runProductSupportCommand(argv.slice(1),
       supportEnvironment === undefined ? {} : { env: supportEnvironment });
+  }
+  if (isRegistryCommand(argv)) {
+    // status, tui, commands, legacy retire and outputs list|open|reveal
+    // answer in the shared desktop-foundation envelope.
+    return await runRegistry(argv, { stdout: process.stdout, stderr: process.stderr, env: process.env }, {
+      env: process.env, platform: process.platform, now: () => new Date(),
+    });
   }
   const unifiedArgv = canonicalizeUnifiedCliArgs(argv);
   const portableExitCode = await runPortableSurface(unifiedArgv, portableDependencies);

@@ -189,7 +189,9 @@ import { createLocalSlopcameraCapabilityManifest } from "./capability-manifest";
 import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
-import { launchMenubar, manageMenubar, reportOutputsRoot } from "./menubar";
+import { launchMenubar, manageMenubar } from "./menubar";
+import { reportOutputsRoot } from "./outputs";
+import { inspectLegacyLogin, retiredLegacyLogins } from "./legacy-login";
 import {
   codePreparationHostResourceClaims,
   combineHostResourceClaims,
@@ -7973,6 +7975,10 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
         platform: { architecture: process.arch, macOSVersion: macVersion.stdout.trim(), name: context.io.platform },
         repositoryRoot: context.paths.repositoryRoot,
         tools: Object.fromEntries(capabilities.map((capability) => [capability.name, capability])),
+        legacyLoginItem: {
+          ...inspectLegacyLogin(context.io.env.HOME),
+          retired: retiredLegacyLogins(context.io.env.HOME),
+        },
         version: context.version,
       };
       writeValue(context.io, command.json, output, () => [
@@ -7981,6 +7987,12 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
         `platform ${output.platform.name} ${output.platform.macOSVersion}`,
         ...capabilities.map((item) => `${item.name} ${item.available ? item.version ?? item.command : "unavailable"}`),
         `emoji ${emoji.provenance} ${emoji.installedCount}/${emoji.catalogCount}; generate: ${emoji.generationCommand}`,
+        output.legacyLoginItem.state === "found"
+          ? "login the old menu bar still opens at login; run: slopcamera legacy retire"
+          : output.legacyLoginItem.state === "not-ours"
+            ? `login ${output.legacyLoginItem.label ?? "an item"} was changed outside Slopcamera and is left alone`
+            : "login nothing starts at login",
+        ...output.legacyLoginItem.retired.map((item) => `retired ${item.path}; restore: ${item.restore}`),
       ].join("\n"));
       return;
     }

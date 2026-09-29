@@ -24,6 +24,8 @@ slopcamera menubar
 
 The companion is an unbundled status item. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
 
+Without the companion, `slopcamera status` prints the same information and `slopcamera tui` keeps it on screen. `slopcamera legacy retire` stops a companion opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
+
 In this shell, make `slopcamera` invoke that exact checkout:
 
 ```sh

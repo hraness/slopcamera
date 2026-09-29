@@ -261,6 +261,7 @@
   "dependencies": {
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
     "@hraness/algal": "github:hraness/algal#c46264a",
+    "@hraness/desktop-foundation": "https://github.com/hraness/desktop-foundation/releases/download/v0.9.0/hraness-desktop-foundation-0.9.0.tgz",
     "@hraness/support-foundation": "github:hraness/support-foundation#8bb514d24b79dc3f305390700ae312cab88e7ad2",
     "@noble/hashes": "2.2.0",
     "@paper-design/shaders": "0.0.77",

@@ -38,6 +38,11 @@ Commands:
                                  Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
   outputs                        Print the agent outputs directory
+  outputs list|open|reveal       List the newest outputs or open one on this Mac
+  status                         What Slopcamera is doing, credits and newest outputs
+  tui [--snapshot]               The status screen; --snapshot prints it once
+  commands [--json]              List every command with what it may change
+  legacy retire                  Stop the old menu bar opening at login
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
   project inspect|add|edit|render
@@ -714,7 +719,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -740,7 +745,8 @@ export function completions(words: readonly string[]): readonly string[] {
     if (words[1] === "direction") return ["check", "plan", "gallery"];
     if (words[1] === "effects") return ["check", "plan", "bake"];
     if (words[1] === "behavior") return ["check", "bake", "gallery", "audit"];
-    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "temporal-audit"];
+    if (words[1] === "design") return ["catalog", "init", "inspect", "set", "compile", "gallery"];
+    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "design", "temporal-audit"];
   }
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];
@@ -752,5 +758,8 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "media") return ["audio", "color"];
   if (command === "render") return ["plan", "run"];
   if (command === "assets") return ["emoji"];
+  if (command === "outputs") return ["list", "open", "reveal"];
+  if (command === "menubar") return ["start", "install", "uninstall", "status"];
+  if (command === "legacy") return ["retire"];
   return [];
 }

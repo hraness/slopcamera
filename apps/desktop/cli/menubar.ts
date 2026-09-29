@@ -4,7 +4,6 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { CliError } from "./errors";
 import type { CliIo } from "./io";
 import { writeJson, writeLine } from "./io";
-import { ensurePrivateDirectory } from "./paths";
 
 const SETTLE_MS = 400;
 /** The label earlier releases used; the menu bar now manages its own login item. */
@@ -13,11 +12,6 @@ const LABEL = "com.hraness.slopcamera.menubar";
 function xml(value: string): string { return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;"); }
 function exists(path: string): boolean { try { const info = lstatSync(path); return isAbsolute(path) && realpathSync(path) === resolve(path) && (info.uid === process.getuid?.() || info.uid === 0) && info.isFile() && (info.mode & 0o111) !== 0 && (info.mode & 0o022) === 0; } catch { return false; } }
 
-/** The directory agents write user-facing outputs into. */
-export function outputsRoot(stateRoot: string): string {
-  const productRoot = stateRoot.endsWith(`${sep}cli`) ? dirname(stateRoot) : stateRoot;
-  return join(productRoot, "outputs");
-}
 export function resolveMenubarBinary(repositoryRoot: string, environment: Readonly<Record<string, string | undefined>> = process.env): string | null {
   const explicit = environment.SLOPCAMERA_MENUBAR;
   if (explicit !== undefined) return explicit !== "" && exists(explicit) ? explicit : null;
@@ -262,11 +256,4 @@ export async function manageMenubar(io: CliIo, repositoryRoot: string, action: "
   const result = await run(stable, args, env);
   forward(result);
   if (action === "uninstall") rmSync(stable);
-}
-
-export async function reportOutputsRoot(io: CliIo, stateRoot: string, asJson: boolean): Promise<void> {
-  const directory = outputsRoot(stateRoot);
-  await ensurePrivateDirectory(directory);
-  if (asJson) writeJson(io, { outputs: directory });
-  else writeLine(io, directory);
 }

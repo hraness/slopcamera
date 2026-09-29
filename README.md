@@ -113,6 +113,16 @@ by immutable tag. Build it explicitly with
 `cargo build --release --manifest-path desktop/menubar/Cargo.toml`
 when working from source.
 
+`slopcamera status` shows the same information in the terminal: what is
+running, how the last job ended, your last known credits balance, the newest
+outputs and whether an old menu-bar login item remains. `slopcamera tui` keeps
+that screen open and refreshes it; `slopcamera tui --snapshot` prints it once
+and `--json` returns the data. `slopcamera outputs list|open|reveal` lists the
+newest outputs or opens one on this Mac, `slopcamera commands --json` lists
+every command with what it may change, and `slopcamera legacy retire` stops an
+old menu-bar companion opening at login by moving its LaunchAgent aside; it
+deletes nothing, and `slopcamera doctor` prints the command that restores it.
+
 <details>
 <summary>Historical Atet release evidence</summary>
 

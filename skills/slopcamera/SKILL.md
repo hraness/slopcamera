@@ -17,7 +17,7 @@ materials, movement, and finishing together.
 
 ## Establish the host
 
-Run `slopcamera --help` and use `slopcamera doctor --json` for the selected local tools. If installation or a version mismatch blocks the task, read [installation and readiness](references/install.md). A skill installation does not install the CLI or native engines.
+Run `slopcamera --help` and use `slopcamera doctor --json` for the selected local tools. `slopcamera status --json` reports what is running, credits and the newest outputs; `slopcamera commands --json` lists every command with what it may change. If installation or a version mismatch blocks the task, read [installation and readiness](references/install.md). A skill installation does not install the CLI or native engines.
 
 Slopcamera installs from its verified release archive or from source. Historical Atet archives contain the old package and executable, not these renamed commands. Discover IDs and options through help, `operations`, `workflows`, `ai models` and `html catalog`; never invent them or silently switch to historical paid-world commands.
 
