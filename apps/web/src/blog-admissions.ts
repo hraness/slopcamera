@@ -218,7 +218,7 @@ export const blogAdmissions = [
     lifecycle: "indexable",
     readerJob: "Decide whether Slopcamera fits my image, diagram or video work, and how to make a first picture with it.",
     nonObviousAnswer: "Slopcamera's first task needs no model or key: three diagram commands turn an editable JSON file into light and dark SVG and PNG plus a tldraw file, and AI images later go through your own Vercel AI Gateway key or a prompt-only hosted route paid with prepaid credits.",
-    originalContribution: "Shows Slopcamera's retained records in use on other Hraness sites (AI Charts image records, Ghostget WebMCP provenance files) and checks which options the hosted route accepts in the CLI, beyond what the README states.",
+    originalContribution: "Tells the launch in ten standalone beats, each with a real Slopcamera render from the reviewed example registry and a launch film Slopcamera rendered from its own launch-film template, with every number taken from the typed launch facts module. Also shows Slopcamera's retained records in use on other Hraness sites (AI Charts image records, Ghostget WebMCP provenance files) and checks which options the hosted route accepts in the CLI, beyond what the README states.",
     hostFit: "The product's own introduction on its own site; it links to the tutorials and guides for task steps instead of repeating them.",
     nearestUrls: [
       { url: "https://slopcamera.com/", distinction: "The homepage lists capabilities and installs the release; it does not explain why the tool exists or show its use on other sites." },
@@ -238,6 +238,7 @@ export const blogAdmissions = [
     observations: [
       "Every live AI Charts note has a Slopcamera figure whose record (size, hashes, prompt digest, Slopcamera version and commit, receipt and job paths) is in aicharts editorial/images.manifest.json, not in the image guide.",
       "From the CLI, --hosted accepts only a prompt and a model; reference images, video, speech and transcription need the user's own key (apps/desktop/cli/commands.ts at v3.4.0).",
+      "Every beat's visual is a registered workflow example, and every number in the beats resolves from apps/web/src/launch-facts.ts (examples.json counts and the published release record); the launch film's proof card reads the same module.",
       "Uploading named local media is a flag, not a prompt: without --allow-cloud-upload the CLI refuses with authorization-required (apps/desktop/cli/directing-service.ts).",
     ],
     scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 2, hostFit: 2, voiceIntegrity: 2, maintenanceValue: 1 },
