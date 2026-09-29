@@ -1,8 +1,15 @@
+The icon and soundtrack tools on this page require a [source build](/docs/how-to/install-from-source) after v3.8.1; they are absent from the verified release archive.
+
+| MCP surface | Verified v3.8.1 archive | Current source |
+| --- | --- | --- |
+| Named tools | 17 | 21 |
+| Operation codes | 6 | 10 |
+
 `slopcamera mcp --root /absolute/workspace` serves a fixed toolset over stdio: newline-delimited JSON-RPC at protocol version `2025-11-25`, server name `hraness-slopcamera`, with protocol messages as the only stdout surface. Cursor, Claude Desktop, and other MCP-capable clients register it as a local command; every path the tools accept stays relative to the selected root.
 
 ## The fixed toolset
 
-The server exposes 21 named tools. Four general tools:
+The current-source server exposes 21 named tools. Four general tools:
 
 | Tool | Effect |
 | --- | --- |

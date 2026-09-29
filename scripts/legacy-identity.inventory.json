@@ -1569,7 +1569,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "db47fbdf4f427c5b941d1f6d8c200b32b89caf2b3b48458ca08cd1eafa2bdb15",
+    "identityLinesSha256": "2129546756338ced564c0f790a0d70381bf6d47ac6a1d57cf3af523cebb8374e",
     "occurrenceCount": 2,
     "path": "apps/web/src/docs/explanation/choose-an-interface.md",
     "categories": [
@@ -1713,7 +1713,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "e0602ff63b03a8f9f8d430500fd68c01ec1d1d38770409406f062b5a6010e635",
+    "identityLinesSha256": "d0d956cbe3cb16ad72b1f82916efa0ae1ccd3ce39f012d6fda407f2807765d2a",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/sdk.md",
     "categories": [
@@ -1948,7 +1948,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "248e78c79415f3173a7beca82c031f9efb44eb1bc5360e7dd9c65eaf6bf61ba4",
+    "identityLinesSha256": "589b3e627f8592788905245137d28a236389915e31c73b191cb5f93bee610f15",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [

@@ -1,3 +1,5 @@
+The icon and soundtrack tools on this page require a [source build](/docs/how-to/install-from-source) after v3.8.1; they are absent from the verified release archive.
+
 An MCP-capable client can check and render diagrams, inspect scenes, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
 
 ## Install the CLI
@@ -44,7 +46,7 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 
 ## Inspect and plan scenes
 
-The server exposes 21 named tools: the four above, these 13 scene tools, and the four icon and soundtrack tools below.
+The current-source server exposes 21 named tools: the four above, these 13 scene tools, and the four icon and soundtrack tools below.
 
 | Scene tools | Effect |
 | --- | --- |
