@@ -80,21 +80,18 @@ const blog = stylex.create({
   },
   // Launch post figures: one reviewed render per beat, then its caption.
   figure: {
-    marginTop: "1.25rem",
+    marginTop: "1rem",
     marginRight: 0,
-    marginBottom: "2.25rem",
+    marginBottom: "2.5rem",
     marginLeft: 0,
   },
   figureMedia: {
     display: "block",
     width: "100%",
     height: "auto",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "var(--line)",
   },
   figcaption: {
-    marginTop: "0.5rem",
+    marginTop: "0.75rem",
     color: "var(--muted)",
     fontSize: "0.875rem",
     lineHeight: 1.5,

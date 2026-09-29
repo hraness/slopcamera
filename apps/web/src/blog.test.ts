@@ -16,6 +16,8 @@ import {
   blogCanonicalUrl, blogMarkdownPath, blogPostPath, blogPosts, blogTargetForRequestPath, indexableBlogPosts,
 } from "./blog-registry"
 import { docPages, docsPageForRequestPath, resolveDocsContent } from "./docs-registry"
+import { exampleUrl, workflowExampleAssets, workflowExamples } from "./example-registry"
+import { launchMedia, launchMediaUrl } from "./launch-media"
 import { renderDocsMarkdown } from "./docs-markdown"
 import { negotiateSiteRequest } from "./negotiate-request"
 import { renderSitemapXml } from "../scripts/build"
@@ -39,7 +41,7 @@ describe("blog admissions", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
       const reviewedOn = ({
-        "/blog/introducing-slopcamera": "2026-09-29",
+        "/blog/introducing-slopcamera": "2026-09-27",
         "/blog/how-slopcamera-uses-algal": "2026-09-26",
       } as Readonly<Partial<Record<string, typeof record.review.reviewedOn>>>)[record.href] ?? "2026-09-28"
       expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
@@ -136,6 +138,9 @@ describe("blog links", () => {
     ...blogPosts.map(blogPostPath),
     ...docPages.map(page => docsPageForRequestPath(`/docs/${page.slug}`) === null ? "" : `/docs/${page.slug}`),
     "/docs/",
+    // Launch-post figures link their published media as a no-video fallback.
+    ...launchMedia.map(launchMediaUrl),
+    ...workflowExampleAssets(workflowExamples).map(exampleUrl),
   ])
 
   test("internal links resolve to published routes and portfolio links use registry addresses", async () => {

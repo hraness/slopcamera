@@ -104,7 +104,7 @@ export function renderBlogBodyHtml(markdown: string): string {
  * tokens, which only the sealed renderer resolves to compiled recipes. */
 function renderBlogPageBodyHtml(markdown: string): string {
   const html = renderBlogMarkdownWithFigures(markdown, true)
-  if (/\{\{(?!DOCS_[A-Z0-9_]+_CLASS\}\})[^{}]*\}\}/u.test(html)) throw new Error("Blog body kept an unresolved placeholder")
+  if (/\{\{(?!DOCS_[A-Z0-9_]+_CLASS\}\}|BLOG_(?:FIGURE|FIGURE_MEDIA|FIGCAPTION)_CLASS\}\})[^{}]*\}\}/u.test(html)) throw new Error("Blog body kept an unresolved placeholder")
   return html
 }
 

@@ -19,7 +19,7 @@ describe("launch facts", () => {
     expect(launchFacts.release.version).toBe(published.version)
     expect(launchStatus).toBe(`Latest release: v${published.version}`)
     expect(launchFacts.exampleCount).toBe(workflowExamples.length)
-    expect(launchFacts.exampleCount).toBe((examples as { examples: unknown[] }).examples.length)
+    expect(launchFacts.exampleCount).toBe((examples as unknown[]).length)
     expect(launchFacts.deliveryCuts.every(id => workflowExamples.some(example => example.id === id))).toBe(true)
     expect(launchBeatFacts.deliveryCutCount?.value).toBe(String(launchFacts.deliveryCuts.length))
   })

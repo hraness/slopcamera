@@ -244,7 +244,7 @@ export const blogAdmissions = [
     scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 2, hostFit: 2, voiceIntegrity: 2, maintenanceValue: 1 },
     owner: "hraness/slopcamera",
     drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-29" },
+    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-27" },
     humanReview: null,
     reassessOn: "2026-11-05",
     harmIfWrong: "A reader could expect the hosted route to accept reference images or media, or expect Slopcamera to be a hosted app, and install a tool that does not fit their work.",
