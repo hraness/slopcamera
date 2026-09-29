@@ -37,9 +37,9 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Verified release contents
 
-The immutable [v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0), published on September 27, 2026, contains the following command families. Its canonical archive is built from `ebfe5739cf573b2a2b6592ecd562d8839f8d4035`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0), published on September 29, 2026, contains the following command families. Its canonical archive is built from `0eac2493db24a67c4a235966daa7ea3a781a6381`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.6.0 |
+| Capability | Slopcamera v3.8.0 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -48,6 +48,8 @@ The immutable [v3.6.0 release](https://github.com/hraness/slopcamera/releases/ta
 | Scene builders/admission, audits, rendered galleries, vision critique, character/performance and cinematic camera APIs | Included |
 | Scene effects, particles, simulation bakes, semantic direction, temporal/behavior audits, project cinema plans | Included |
 | Seventeen read-only visual style profiles (`style list` and `style show`), deterministic exposure and variation helpers, film-finishing controls | Included; authoring guidance, no effects applied |
+| Launch films: `html init --template launch-film`, `html still`, `html preview`, `html deliver`, and the `local/html-film` motion helpers | Included; `html deliver` needs FFmpeg |
+| Terminal status: `status`, `tui`, `commands --json`, `outputs list`, and on macOS `outputs open\|reveal` and `legacy retire` | Included; the menu-bar companion is removed |
 | Built-in workflows | Eight, including `cinematic-world`; inspect `workflows list` |
 | New screen, camera, microphone, or system-audio capture | Absent |
 
