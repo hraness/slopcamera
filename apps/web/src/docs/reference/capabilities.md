@@ -37,9 +37,9 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Verified release contents
 
-The immutable [v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0), published on September 29, 2026, contains the following command families. Its canonical archive is built from `0eac2493db24a67c4a235966daa7ea3a781a6381`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.8.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.1), published on September 29, 2026, contains the following command families. Its canonical archive is built from `2f24090f74b65c54a3675f22dffeaba99ff7f40b`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.8.0 |
+| Capability | Slopcamera v3.8.1 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -115,6 +115,6 @@ Native studio jobs and custom Bun workflow modules run as the current user witho
 
 ## Native browser isolation
 
-The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Current source disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
+The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera v3.8.1 disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
 
 New renders bind these arguments into execution-integrity version 2. Retained version-1 receipts keep their historical contract for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.

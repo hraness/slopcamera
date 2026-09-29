@@ -4,9 +4,9 @@ This reference describes the current Slopcamera CLI and its runtime requirements
 
 ## Current SlopCamera and historical Atet
 
-Slopcamera v3.8.0 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
+Slopcamera v3.8.1 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.8.1/hraness-slopcamera-3.8.1.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
-| Surface | Historical Atet v3.2.3 | Slopcamera v3.8.0 |
+| Surface | Historical Atet v3.2.3 | Slopcamera v3.8.1 |
 | --- | --- | --- |
 | Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
@@ -23,9 +23,9 @@ Use the Slopcamera release installation or a source build for the commands below
 
 ## Verified release contents
 
-The immutable [v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0), published on September 29, 2026, contains the following command families. Its canonical archive is built from `0eac2493db24a67c4a235966daa7ea3a781a6381`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.8.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.1), published on September 29, 2026, contains the following command families. Its canonical archive is built from `2f24090f74b65c54a3675f22dffeaba99ff7f40b`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.8.0 |
+| Capability | Slopcamera v3.8.1 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -45,7 +45,7 @@ This release includes the three renderer corrections introduced in v3.3.4 that v
 
 ## Parametric architectural designs
 
-Slopcamera v3.8.0 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+Slopcamera v3.8.1 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 Wall openings use corrected elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
 
@@ -102,7 +102,7 @@ editing, outputs, and the required visual review.
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-Slopcamera v3.8.0 exposes six operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+Slopcamera v3.8.1 exposes six operation codes: diagram check/render, image generate/vectorize, and image icon/gallery. Its MCP server has 17 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, and 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Local execution profiles
 
@@ -134,6 +134,6 @@ Directing budgets use catalog estimates, not provider-enforced spending caps. Na
 
 ## Native browser isolation
 
-The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Current source disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
+The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera v3.8.1 disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
 
 New renders bind these arguments into execution-integrity version 2. Retained version-1 receipts keep their historical contract for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.
