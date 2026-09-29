@@ -2,6 +2,18 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.8.0 - 2026-09-29
+
+SlopCamera no longer has a menu bar. Everything it showed is now in the terminal: `slopcamera status` and `slopcamera tui` show what is rendering, how the last job ended, your last known credits balance and the newest outputs, and every command reports its data in one JSON shape that agents can read.
+
+- `slopcamera status [--json]` shows the current render or generation, the last job's result, your last known credits balance, the newest outputs and whether the old menu-bar login item is still installed.
+- `slopcamera tui` keeps that screen open and refreshes it. `slopcamera tui --snapshot [--width N]` prints it once, and `slopcamera tui --json` returns the same data as `status --json`. When output is not a terminal, `tui` prints the snapshot.
+- `slopcamera commands --json` lists every command with the kind of action it takes: reading, a safe operation, or a human decision. `runs approve` keeps its current behaviour and is listed as a legacy decision.
+- `slopcamera outputs list|open|reveal` lists the newest files in the outputs folder or opens one on this Mac.
+- `slopcamera legacy retire` stops the old menu-bar companion from opening at login. It moves only the LaunchAgent that SlopCamera wrote aside as `*.retired-<time>`, never deletes a file, and leaves items it did not write alone. `slopcamera doctor` lists retired items and the command that restores one.
+- The menu-bar companion, its source build and `docs/menubar-release.md` are removed. `slopcamera menubar` now exits with a usage error that points to `status` and `tui`. [`docs/cli-parity.md`](docs/cli-parity.md) maps each former menu item to its command.
+- `@hraness/desktop-foundation` is pinned to the immutable v0.9.0 release.
+
 ## 3.7.0 - 2026-09-28
 
 SlopCamera can now start, review and deliver a product launch film. A new template lays out a short film in six acts around your product's own UI, a helper module keeps every frame a function of time, and one command turns a render into web, social and per-act files within size budgets.
