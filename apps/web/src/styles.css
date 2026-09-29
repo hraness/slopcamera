@@ -503,7 +503,6 @@ h3 {
 }
 
 @media (forced-colors: active) {
-  /* Preserve paired system colors without automatic text backplates on labels. */
   .hraness-platform-install__tab[aria-selected="true"] {
     forced-color-adjust: none;
     background-color: Highlight;
