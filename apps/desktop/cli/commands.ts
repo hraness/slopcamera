@@ -1,4 +1,4 @@
-import { activityLabel, recordActivity, recordCredits } from "./menubar-status";
+import { activityLabel, recordActivity, recordCredits } from "./activity-status";
 import { reportUsefulResult, type UsefulResultObserver } from "../../../src/support-completion";
 import { SlopcameraCloudError } from "../../../src/cloud-errors";
 import {
@@ -190,7 +190,6 @@ import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
 import { executeHtmlFilmCommand, formatHtmlFilmResult } from "./html-film";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
-import { launchMenubar, manageMenubar } from "./menubar";
 import { reportOutputsRoot } from "./outputs";
 import { inspectLegacyLogin, retiredLegacyLogins } from "./legacy-login";
 import {
@@ -8044,11 +8043,6 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
     case "credits-forget": await handleCreditsForget(context, command); return;
     case "media-audio": await handleMediaAudio(context, command); return;
     case "media-color": await handleMediaColor(context, command); return;
-    case "menubar": {
-      if (command.action === "run") await launchMenubar(context.io, context.paths.repositoryRoot, command.json, command.mode);
-      else await manageMenubar(context.io, context.paths.repositoryRoot, command.action, command.json);
-      return;
-    }
     case "outputs": {
       await reportOutputsRoot(context.io, context.stateRoot, command.json);
       return;
@@ -8377,7 +8371,6 @@ function commandMutationReference(command: CliCommand): MutationReference | unde
     case "fillers-list":
     case "emoji-search":
     case "emoji-resolve":
-    case "menubar":
     case "outputs":
     case "complete": return undefined;
     // Fresh projects write outside an existing mutable bundle and publish by

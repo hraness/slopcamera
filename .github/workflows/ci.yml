@@ -22,7 +22,6 @@ jobs:
     outputs:
       api: ${{ steps.routes.outputs.api }}
       desktop: ${{ steps.routes.outputs.desktop }}
-      menubar: ${{ steps.routes.outputs.menubar }}
       package: ${{ steps.routes.outputs.package }}
       sdk: ${{ steps.routes.outputs.sdk }}
       site: ${{ steps.routes.outputs.site }}
@@ -41,14 +40,12 @@ jobs:
           api=false
           sdk=false
           desktop=false
-          menubar=false
           package=false
           site=false
           if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BASE_SHA^{commit}"; then
             api=true
             sdk=true
             desktop=true
-            menubar=true
             package=true
             site=true
           else
@@ -63,9 +60,6 @@ jobs:
                   ;;
                 api/*|apps/api/*)
                   api=true
-                  ;;
-                desktop/*)
-                  menubar=true
                   ;;
                 src/*|schema/*|examples/*|skills/*|packages/scene/*)
                   api=true
@@ -85,14 +79,11 @@ jobs:
                 apps/web/*)
                   site=true
                   ;;
-                .github/workflows/ci.yml)
-                  menubar=true
-                  ;;
               esac
             done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
           fi
-          printf 'api=%s\nsdk=%s\ndesktop=%s\nmenubar=%s\npackage=%s\nsite=%s\n' \
-            "$api" "$sdk" "$desktop" "$menubar" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
+          printf 'api=%s\nsdk=%s\ndesktop=%s\npackage=%s\nsite=%s\n' \
+            "$api" "$sdk" "$desktop" "$package" "$site" | tee -a "$GITHUB_OUTPUT"
 
   boundary:
     name: Slopcamera standalone boundary
@@ -206,39 +197,6 @@ jobs:
             exit 1
           fi
 
-  menubar:
-    name: Slopcamera menu-bar companion
-    needs: plan
-    if: needs.plan.outputs.menubar == 'true'
-    runs-on: macos-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
-        with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-        with:
-          workspaces: desktop
-          # Pull requests restore main's cache but never save their own.
-          save-if: ${{ github.event_name != 'pull_request' }}
-      # Pull requests build the debug profile that cargo test reuses. The
-      # documented LTO release build still runs on every main push.
-      - name: Build the menu-bar companion
-        run: cargo build --locked --manifest-path desktop/Cargo.toml
-      - name: Build the release menu-bar companion
-        if: github.event_name != 'pull_request'
-        run: cargo build --release --locked --manifest-path desktop/Cargo.toml
-      - name: Test the menu-bar companion and its menu fixtures
-        run: cargo test --locked --manifest-path desktop/Cargo.toml
-      - name: Lint menu fixtures
-        run: >-
-          npx --yes
-          --package=https://github.com/hraness/desktop-foundation/releases/download/v0.8.0/hraness-desktop-foundation-0.8.0.tgz
-          companion lint-menu --strict desktop/menubar/fixtures/*.json
-
   site:
     name: Slopcamera site (${{ matrix.part }})
     needs: plan
@@ -317,7 +275,7 @@ jobs:
   required:
     name: Required
     if: always()
-    needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]
+    needs: [plan, boundary, copy, api, sdk, desktop, site, package]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -329,7 +287,6 @@ jobs:
           API: ${{ needs.api.result }}
           SDK: ${{ needs.sdk.result }}
           DESKTOP: ${{ needs.desktop.result }}
-          MENUBAR: ${{ needs.menubar.result }}
           SITE: ${{ needs.site.result }}
           PACKAGE: ${{ needs.package.result }}
         run: |
@@ -337,6 +294,6 @@ jobs:
           [[ "$PLAN" == success ]]
           [[ "$BOUNDARY" == success ]]
           [[ "$COPY" == success ]]
-          for result in "$API" "$SDK" "$DESKTOP" "$MENUBAR" "$SITE" "$PACKAGE"; do
+          for result in "$API" "$SDK" "$DESKTOP" "$SITE" "$PACKAGE"; do
             [[ "$result" == success || "$result" == skipped ]]
           done

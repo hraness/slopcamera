@@ -103,24 +103,15 @@ Native engines install separately. The [source-install guide](docs/how-to/use-cu
 explains workspace placement and durable-run identity; the
 [capability reference](docs/reference/capabilities.md) names runtime requirements.
 
-SlopCamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
-what SlopCamera is rendering, how the last job ended, your last known credits
-balance and the newest files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
-companion directly and does not install or launch an application bundle. The
-companion is a thin product binary over the shared
-[desktop-foundation](https://github.com/hraness/desktop-foundation) crate, pinned
-by immutable tag. Build it explicitly with
-`cargo build --release --manifest-path desktop/menubar/Cargo.toml`
-when working from source.
-
-`slopcamera status` shows the same information in the terminal: what is
-running, how the last job ended, your last known credits balance, the newest
-outputs and whether an old menu-bar login item remains. `slopcamera tui` keeps
+SlopCamera is a CLI with no menu-bar app or background process.
+`slopcamera status` shows what is running, how the last job ended, your last
+known credits balance, the newest outputs and whether the retired menu-bar
+companion still opens at login. `slopcamera tui` keeps
 that screen open and refreshes it; `slopcamera tui --snapshot` prints it once
 and `--json` returns the data. `slopcamera outputs list|open|reveal` lists the
 newest outputs or opens one on this Mac, `slopcamera commands --json` lists
-every command with what it may change, and `slopcamera legacy retire` stops an
-old menu-bar companion opening at login by moving its LaunchAgent aside; it
+every command with what it may change, and `slopcamera legacy retire` stops
+the retired menu-bar companion opening at login by moving its LaunchAgent aside; it
 deletes nothing, and `slopcamera doctor` prints the command that restores it.
 
 <details>

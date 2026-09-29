@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "schema": "slopcamera.status/1",
+  "generatedAt": "2026-09-28T12:00:00.000Z",
+  "data": {
+    "product": "slopcamera",
+    "version": "9.9.9",
+    "attention": true,
+    "activity": {
+      "state": "failed",
+      "headline": "Last job didn't finish",
+      "detail": "Rendering a recording · A render tool stopped with an error",
+      "label": "Rendering a recording",
+      "error": "subprocess",
+      "startedAt": "2026-09-28T11:55:00.000Z",
+      "finishedAt": "2026-09-28T11:56:00.000Z"
+    },
+    "credits": null,
+    "outputs": {
+      "root": "/o",
+      "total": 1,
+      "latest": [
+        {
+          "name": "take 0.mp4",
+          "kind": "MP4",
+          "bytes": 4096,
+          "modifiedAt": "2026-09-28T11:30:00.000Z"
+        }
+      ]
+    },
+    "legacyLoginItem": {
+      "state": "none"
+    }
+  },
+  "next": [
+    {
+      "command": "slopcamera runs list --json",
+      "why": "See which run stopped and whether it can resume.",
+      "audience": "agent"
+    }
+  ]
+}

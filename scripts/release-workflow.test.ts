@@ -112,18 +112,12 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime (${{ matrix.shard }})")
   expect(workflow).toContain("site:\n    name: Slopcamera site (${{ matrix.part }})")
   expect(workflow).toContain("package:\n    name: Slopcamera packed consumer")
-  expect(workflow).toContain("menubar:\n    name: Slopcamera menu-bar companion")
   expect(workflow).toContain("api:\n    name: Slopcamera hosted API")
   expect(workflow).toContain("if: needs.plan.outputs.api == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.sdk == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.desktop == 'true'")
-  expect(workflow).toContain("if: needs.plan.outputs.menubar == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.site == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.package == 'true'")
-  expect(workflow).toContain("run: cargo build --locked --manifest-path desktop/Cargo.toml")
-  expect(workflow).toContain(
-    "        if: github.event_name != 'pull_request'\n        run: cargo build --release --locked --manifest-path desktop/Cargo.toml",
-  )
   expect(workflow).toContain("bun run check:standalone")
   expect(workflow).toContain("bun run check:sdk")
   expect(workflow).toContain("bun run check:api")
@@ -137,7 +131,10 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
   expect(workflow).toContain("copy:\n    name: Slopcamera public copy")
   expect(workflow).toContain("bun run check:copy --require-history")
-  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, site, package]")
+  // The menu-bar companion was retired; nothing may route to or require it.
+  expect(workflow.toLowerCase()).not.toContain("menubar")
+  expect(workflow).not.toContain("cargo ")
   expect(workflow).toContain('[[ "$COPY" == success ]]')
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
@@ -177,8 +174,14 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // keep the release build; menubar routes only on desktop/ and ci.yml; PR
   // runs cancel superseded PR runs while each main push keeps its own group;
   // PR rust caches are restore-only. Every other job is unchanged.
+  // Reviewed 2026-09-29 (menu-bar retirement, on top of the velocity sweep):
+  // the `menubar` job (debug and release cargo builds, cargo test, fixture
+  // lint), its `desktop/*` and ci.yml routes, its plan output, its Required
+  // need and its result check were removed with the companion. The desktop
+  // shards, site parts, concurrency groups and every other job, command,
+  // condition, deadline and boundary are unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "699b3bb5e66c5b45056d3222998bfc530b9a4d31b84687c48326f7d003c238ce") {
+  if (priorDigest !== "ad141bdd45a5c699fb1480e364c75ad93c5ba75b68fe80b569c1e405916a0135") {
     throw new Error(`CI differs from the independently reviewed prior coverage (${priorDigest})`)
   }
 }

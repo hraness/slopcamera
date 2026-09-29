@@ -18,7 +18,7 @@ import { listOutputs, OUTPUTS_LIMIT, statusEnvelope, statusViews, STATUS_SCHEMA,
 import type { ProcessRunner } from "./io";
 import { CliError } from "./errors";
 import { BunProcessRunner } from "./io";
-import { readMenubarStatus } from "./menubar-status";
+import { readActivityStatus } from "./activity-status";
 import { inspectLegacyLogin, retireLegacyLogin, type RetireDependencies } from "./legacy-login";
 import { outputsDirectory } from "./outputs";
 import { defaultCliStateRoot } from "./paths";
@@ -61,7 +61,7 @@ export function loadStatus(deps: RegistryDependencies) {
   const stateRoot = stateRootOf(deps);
   return statusEnvelope({
     version: deps.version ?? SLOPCAMERA_VERSION,
-    status: readMenubarStatus(stateRoot),
+    status: readActivityStatus(stateRoot),
     outputs: listOutputs(outputsDirectory(stateRoot), OUTPUTS_LIMIT),
     legacyLogin: inspectLegacyLogin(deps.env.HOME),
     now: deps.now(),

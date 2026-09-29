@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "schema": "slopcamera.status/1",
+  "generatedAt": "2026-09-28T12:00:00.000Z",
+  "data": {
+    "product": "slopcamera",
+    "version": "9.9.9",
+    "attention": true,
+    "activity": {
+      "state": "done",
+      "headline": "Ready",
+      "detail": "Last job finished 9 min ago",
+      "label": "Rendering a recording",
+      "startedAt": "2026-09-28T11:48:00.000Z",
+      "finishedAt": "2026-09-28T11:51:00.000Z"
+    },
+    "credits": {
+      "usd": "0.40",
+      "low": true,
+      "checkedAt": "2026-09-28T10:00:00.000Z"
+    },
+    "outputs": {
+      "root": "/o",
+      "total": 1,
+      "latest": [
+        {
+          "name": "take 0.mp4",
+          "kind": "MP4",
+          "bytes": 4096,
+          "modifiedAt": "2026-09-28T11:30:00.000Z"
+        }
+      ]
+    },
+    "legacyLoginItem": {
+      "state": "none"
+    }
+  },
+  "next": [
+    {
+      "command": "slopcamera credits topup",
+      "why": "Credits are low; adding more opens a checkout for a person.",
+      "audience": "human"
+    }
+  ]
+}

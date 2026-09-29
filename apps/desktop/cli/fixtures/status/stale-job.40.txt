@@ -1,0 +1,11 @@
+== Slopcamera ==
+┌ Now ─────────────────────────────────┐
+│⚠ Last job stopped early · Rendering a│
+└──────────────────────────────────────┘
+┌ Outputs ─────────────────────────────┐
+│No outputs yet · Agents save finished │
+│slopcamera outputs open               │
+└──────────────────────────────────────┘
+┌ Login ───────────────────────────────┐
+│✓ Nothing starts at login             │
+└──────────────────────────────────────┘

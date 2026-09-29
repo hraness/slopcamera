@@ -63,7 +63,7 @@ Slopcamera v{{PUBLISHED_VERSION}} includes `scene design catalog|init|inspect|se
 
 Durable workflow planning and execution bind a build identity over the installed host source tree. `slopcamera workflows plan`, `slopcamera workflows run`, `slopcamera code check`, `slopcamera code plan`, `slopcamera code run`, and `slopcamera runs resume` therefore require the Bun package or a source checkout — both ship the checked host sources — rather than a copied standalone executable, which embeds no physical source tree; [Run or recover a workflow](/docs/how-to/run-workflows) covers the run model. The same boundary applies to local SDK imports through `@hraness/slopcamera/local/code`.
 
-Read-only catalog commands such as `workflows list`, `workflows show`, `runs list`, `runs show`, and `operations list` work from any install. The copied macOS executable supports direct `studio` commands with embedded starters and drivers. The CLI, its optional unbundled menu-bar companion, and the Bun package are separate interfaces with separate installation requirements.
+Read-only catalog commands such as `workflows list`, `workflows show`, `runs list`, `runs show`, and `operations list` work from any install. The copied macOS executable supports direct `studio` commands with embedded starters and drivers. The CLI and the Bun package are separate interfaces with separate installation requirements.
 
 ## Discover the installed contract
 

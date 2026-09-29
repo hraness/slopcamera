@@ -186,11 +186,6 @@ export const CLI_VERBS: readonly VerbRow[] = [
   row("support shown", "operate", "Record that an integration showed an invitation"),
   row("support release", "operate", "Release an invitation an integration did not show"),
 
-  row("menubar", "operate", "Open the menu bar until this command ends (retiring)"),
-  row("menubar start", "operate", "Open the menu bar and return (retiring)"),
-  row("menubar install", "decide-legacy", "Open the menu bar at every login (retiring)"),
-  row("menubar uninstall", "operate", "Stop opening the menu bar at login (retiring)"),
-  row("menubar status", "read", "Check the menu bar login item (retiring)"),
 
   row("status", "read", "What Slopcamera is doing, credits, newest outputs and old login items"),
   row("tui", "read", "The status screen; --snapshot prints it once, --json prints the status"),

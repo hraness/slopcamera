@@ -297,6 +297,15 @@
     ]
   },
   {
+    "identityLineCount": 1,
+    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
+    "occurrenceCount": 2,
+    "path": "apps/desktop/cli/activity-status.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 3,
     "identityLinesSha256": "d8624a139ff5c1fc29de4393879a1e0fdf17739dedba0fea6bc44190a5a76641",
     "occurrenceCount": 3,
@@ -449,7 +458,7 @@
   },
   {
     "identityLineCount": 23,
-    "identityLinesSha256": "e5b8fc03a917c539b53d986b622f7c96488db00afcabc88dd2625e5a0d2b8e21",
+    "identityLinesSha256": "48449b55e5ca421148d8a2d733b59bd7df61cad503b7431efdd992a3eb3499cf",
     "occurrenceCount": 32,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -472,15 +481,6 @@
     "path": "apps/desktop/cli/media-effects-service.test.ts",
     "categories": [
       "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
-    "occurrenceCount": 2,
-    "path": "apps/desktop/cli/menubar-status.ts",
-    "categories": [
-      "native-film-studio"
     ]
   },
   {
@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 87,
-    "identityLinesSha256": "f1d0cd4412d9f0562b09a04a630a09556010c85b1f0b69841296446f9c16f2bb",
+    "identityLinesSha256": "eec4ff01db3e9e519dca77bd95d3c3b9fafe1f699db6f9ed92918ccd30104b27",
     "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1613,7 +1613,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "710b3c8f9d05638e1ec779d1f874c7ee8d5ba19d55ea64daf23b1d6daebdcedf",
+    "identityLinesSha256": "defb9a159abd1a6a08a522ed603b532f13d5ebb3a67bb974f1ae3bdaa95f15d1",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/index.md",
     "categories": [
@@ -1622,7 +1622,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "a6bb4532bb6f3b17ea336b957170feaed474ad3e2f6185786cae0bd3e808858f",
+    "identityLinesSha256": "56470703585b167973e090920fb47695a8469980191818e782186ff9ff026d87",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1875,7 +1875,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "272552fb9452bf9ee60cd68be60d7f63930b07e8cda93bec626e3ad4a8479bf4",
+    "identityLinesSha256": "904475fbd24f22882464e153a8d6f7487c3613a13b89f5a73981b52a85018b26",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
