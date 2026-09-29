@@ -396,7 +396,8 @@ export async function verifyPreview(args: readonly string[] = []): Promise<void>
     const chrome = await cancellation.wait(findChrome)
     cancellation.signal.throwIfAborted()
     managed = spawnVerificationServer({ cwd: appDirectory, detachedProcessGroup: true, logLimit: 12_000, command: [
-      chrome, "--headless=new", "--no-sandbox", "--disable-background-networking", "--disable-component-update",
+      chrome, "--headless=new", "--disable-features=PaintHolding,MacAppCodeSignClone",
+      "--no-sandbox", "--disable-background-networking", "--disable-component-update",
       "--disable-default-apps", "--disable-extensions", "--disable-gpu", "--disable-sync", "--force-color-profile=srgb",
       "--metrics-recording-only", "--mute-audio", "--no-first-run", "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank",
