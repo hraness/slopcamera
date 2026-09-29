@@ -1559,15 +1559,6 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "c4b77f7410b2da88b30cb06a34488dde0070dc84bcd12da08ee838d1387833f0",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/blog/introducing-slopcamera.md",
-    "categories": [
-      "compat-doc"
-    ]
-  },
-  {
     "identityLineCount": 17,
     "identityLinesSha256": "73862e5a9859d84c38ae47b3a4563ceced59c0b4fce0d5b855e75e3bcaf96d00",
     "occurrenceCount": 19,
