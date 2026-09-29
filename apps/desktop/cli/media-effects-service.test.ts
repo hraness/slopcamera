@@ -460,7 +460,7 @@ test.skipIf(FFMPEG === undefined)("executes the complete audio-effects graph wit
   } finally {
     await rm(directory, { force: true, recursive: true });
   }
-});
+}, 30_000); // Allow native process startup within the aggregate suite.
 
 test.skipIf(FFMPEG === undefined)("executes temperature, tint, hue, and tonal controls with real FFmpeg", async () => {
   const directory = await mkdtemp(join(tmpdir(), "slopcamera-color-grade-ffmpeg-"));
