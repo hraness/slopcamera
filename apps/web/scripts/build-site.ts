@@ -24,7 +24,7 @@ import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.29.2" },
+  { name: "@hraness/design-kit", version: "0.30.2" },
   { name: "@hraness/site-footer", version: "0.20.1" },
   { name: "@hraness/ui", version: "0.5.16" },
 ] as const
@@ -53,7 +53,7 @@ const sourceFiles = [
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/site-foil.css", "src/styles.css",
-  "vendor/site-shell/site-shell.css", "vendor/site-shell/provenance.json", "vendor/site-shell/LICENSE", "vendor/paper-theme/paper-theme.css", "vendor/status-page/status-page.css",
+  "vendor/paper-theme/paper-theme.css", "vendor/status-page/status-page.css",
   "scripts/build.ts", "scripts/public-identity.ts", "src/icon.png", "src/apple-touch-icon.png", "scripts/build-site.ts", "scripts/site-contract.ts", "scripts/site-css.ts", "scripts/marketing-preset.ts", "scripts/lantern-material.ts", "scripts/preview-css.ts", "scripts/preview-file.ts",
 ] as const
 
