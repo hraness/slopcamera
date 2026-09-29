@@ -205,7 +205,11 @@ test("CI shards partition the complete desktop and site phases exactly", async (
 
   const siteTests = testTargets(site.scripts.test)
   const compileTests = testTargets(site.scripts["test:compile"])
-  const contractTests = testTargets(site.scripts["test:contracts"])
+  // site.test.ts used to load Vite before any file imported
+  // @hraness/ui/stylex-build; Vite's module initialization throws under Bun
+  // in the reverse order, so the contracts run preloads it explicitly.
+  expect(site.scripts["test:contracts"]).toStartWith("bun test --preload vite ./")
+  const contractTests = testTargets(site.scripts["test:contracts"].replace(" --preload vite", ""))
   expect(compileTests).toEqual(["./site.test.ts"])
   expect([...compileTests, ...contractTests]).toEqual(siteTests)
   expect(site.scripts["check:verify"]).toBe(site.scripts.check.replace("bun run test &&", "bun run test:contracts &&"))
