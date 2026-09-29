@@ -194,6 +194,10 @@ them all with their requirements.
 | Explainer video | A Manim scene, captions, and a presenter | A lesson video with typeset math | [Geometry lesson](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example) |
 | Footage edits | Cuts, captions, reframes, and color as project decisions | 16:9, 9:16, 1:1, and 4:5 exports from one edit | [Four formats](https://slopcamera.com/docs/how-to/edit-video#landscape-delivery) |
 
+SlopCamera also composes vector icon scenes with the bundled icon.place library
+and reads Soundfish scores or MIDI files into beat grids for music-timed scenes,
+both locally and without a model. Neither renders audio.
+
 Model-backed generation of images, video, and speech is available through your
 own provider access, and cinematic effects, particles, and character
 performance can be planned from source. The gallery has no rendered examples
@@ -321,9 +325,10 @@ or [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera).
   identical output elsewhere.
 - **Trusted code is not sandboxed.** Native Python and your own Bun workflows
   run with the current user's access.
-- **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and
-  audit scenes, and run six operation codes. It does not expose every CLI
-  command and never changes project state.
+- **MCP is a subset.** Its 21 fixed tools check and render diagrams, plan and
+  audit scenes, compose icon scenes and soundtrack beat grids, and run ten
+  operation codes. It does not expose every CLI command and never changes
+  project state.
 
 ## Design and trust
 

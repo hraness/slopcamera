@@ -71,6 +71,16 @@ SlopcameraOverlay.onFrame(({ timeMs }) => {
 
 Here `dancer`, `ring`, `scene`, `camera`, and `renderer` are objects your document creates. Use beat and bar positions for choreography, scenery changes, and camera movement, and avoid accumulated rotations, wall-clock time, and a second animation loop. The [SDK reference](/docs/reference/sdk) describes the clock fields and the pulse width. These helpers sample declared timing; they do not analyze the rendered frames for flashes or certify viewer safety, so review the actual movie before delivery.
 
+### Derive timing from a score
+
+When the track was made from a Soundfish score or a Standard MIDI file with one constant tempo, derive the timing from that source instead of entering it by hand:
+
+```sh
+slopcamera media soundtrack grid music/track.song --start-us 0 --output music/track.grid.json --json
+```
+
+The receipt's `music` object has exactly the `bpm`, `beatOffsetUs`, and `beatsPerBar` fields `parameters.music` accepts; copy it into the request. `--start-us` places the score's first beat on the movie timeline. Each section adds `startUs` and `endUs` cue times on the same timeline for shot and scenery changes. The command reads compose text, song text, score JSON, or MIDI, and renders no audio, so keep the mixed track as the request's `audio` and take `timing.durationUs` from that file.
+
 ## React to the audio itself
 
 Add `audio.reactivity` with `profile: "bands-v1"` to derive a bounded offline envelope from the verified soundtrack: bass (35–180 Hz), midrange (180–2,000 Hz), treble (2,000–12,000 Hz), and overall energy, decoded at 24 kHz into a 60 Hz series with a quiet-input floor, useful-range normalization, and attack/release smoothing. Analysis is limited to ten minutes. The generated source request declares a retained `audio-reactivity` resource, so rerendering that source reuses the hash-bound sidecar after checking that it still matches the soundtrack.

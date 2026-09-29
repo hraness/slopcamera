@@ -707,6 +707,106 @@ function describeSnapshotChanges(before: string, after: string): string {
   return [...removed, ...added].slice(0, 40).join("\n");
 }
 
+// One icon and one soundtrack operation run from the installed package with every
+// network and process-spawning entry point denied, so the bundled engines are
+// proven local. The same script runs under Bun and Node.
+const iconSoundtrackSmokeScene = {
+  version: "iconplace.collection.v1",
+  title: "A window of light",
+  family: "gothic",
+  seed: 7,
+  detail: "illustration",
+  letter: "A",
+  layers: [{ id: "layer-1", element: "gothic-arch", x: 50, y: 50, scale: 1, rotation: 0, flip: false }],
+} as const;
+const iconSoundtrackSmokeScore = [
+  "title Smoke check",
+  "bpm 120",
+  "bars 2",
+  "",
+  "section Verse x2",
+  "drums",
+  "kick:  x.......x....... | x.......x.......",
+  "",
+  "section Hook",
+  "drums",
+  "kick:  x...x...x...x... | x...x...x...x...",
+  "",
+].join("\n");
+
+function offlineIconSoundtrackSmokeSource(): string {
+  return `
+import { createRequire, syncBuiltinESMExports } from "node:module";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+const attempts = [];
+const deny = name => (..._arguments) => {
+  attempts.push(name);
+  throw new Error("offline smoke attempted " + name);
+};
+globalThis.fetch = deny("fetch");
+if (typeof globalThis.WebSocket === "function") globalThis.WebSocket = deny("WebSocket");
+const require = createRequire(import.meta.url);
+const patch = (specifier, names) => {
+  const target = require(specifier);
+  for (const name of names) {
+    if (typeof target[name] === "function") target[name] = deny(specifier + "." + name);
+  }
+};
+patch("node:child_process", ["exec", "execFile", "execFileSync", "execSync", "fork", "spawn", "spawnSync"]);
+patch("node:http", ["get", "request"]);
+patch("node:https", ["get", "request"]);
+patch("node:http2", ["connect"]);
+patch("node:net", ["connect", "createConnection"]);
+patch("node:tls", ["connect"]);
+patch("node:dgram", ["createSocket"]);
+patch("node:dns", ["lookup", "resolve", "resolve4", "resolve6", "resolveAny"]);
+syncBuiltinESMExports();
+if (typeof Bun !== "undefined") Bun.spawn = deny("Bun.spawn"), Bun.spawnSync = deny("Bun.spawnSync");
+
+const { executeSlopcameraOperation } = await import("@hraness/slopcamera/operations");
+// The default host coordinator locks through bun:ffi; a process-local one keeps the
+// same admission path portable to Node.
+const { createProcessLocalHostResourceCoordinator } = await import("@hraness/slopcamera/host-resources");
+const host = { hostResourceCoordinator: createProcessLocalHostResourceCoordinator() };
+const directory = process.cwd();
+await writeFile(join(directory, "offline-icon.json"), ${JSON.stringify(JSON.stringify(iconSoundtrackSmokeScene))});
+await writeFile(join(directory, "offline-score.song"), ${JSON.stringify(iconSoundtrackSmokeScore)});
+const icon = await executeSlopcameraOperation("slopcamera.icon.render", {
+  sourcePath: join(directory, "offline-icon.json"),
+  outputPath: join(directory, "offline-icon.svg"),
+  recipePath: join(directory, "offline-icon.recipe.json"),
+  palette: "ink",
+}, host);
+const svg = await readFile(join(directory, "offline-icon.svg"), "utf8");
+if (
+  icon.operation !== "slopcamera.icon.render"
+  || JSON.stringify(icon.engine) !== ${JSON.stringify(JSON.stringify({ package: "@hraness/iconplace", version: "0.1.0" }))}
+  || !svg.startsWith("<svg") || /<script|<style|href=/iu.test(svg)
+) throw new Error("Packed SDK did not render an inert icon scene offline.");
+const replay = await executeSlopcameraOperation("slopcamera.icon.render", {
+  sourcePath: join(directory, "offline-icon.recipe.json"),
+  outputPath: join(directory, "offline-icon.replay.svg"),
+}, host);
+if (!replay.replayed || replay.output.sha256 !== icon.output.sha256) throw new Error("Packed SDK recipe replay drifted.");
+const grid = await executeSlopcameraOperation("slopcamera.soundtrack.grid", {
+  sourcePath: join(directory, "offline-score.song"),
+  startUs: 500000,
+}, host);
+if (
+  grid.operation !== "slopcamera.soundtrack.grid"
+  || JSON.stringify(grid.engine) !== ${JSON.stringify(JSON.stringify({ package: "@hraness/soundfish", version: "0.7.0" }))}
+  || grid.music.bpm !== 120 || grid.music.beatOffsetUs !== 500000 || grid.music.beatsPerBar !== 4
+  || grid.sections.map(section => section.label).join(",") !== "Verse,Verse,Hook"
+  || grid.sections[0].startUs !== 500000
+  || grid.sections.some((section, index) => index > 0 && section.startUs !== grid.sections[index - 1].endUs)
+  || grid.sections.at(-1).endUs !== grid.endUs
+) throw new Error("Packed SDK did not derive a soundtrack grid offline.");
+if (attempts.length > 0) throw new Error("Offline smoke attempted " + attempts.join(", "));
+`;
+}
+
 function importSideEffectProbeSource(specifiers: readonly string[]): string {
   return `
 import { createRequire, syncBuiltinESMExports } from "node:module";
@@ -956,6 +1056,24 @@ if (Buffer.from(pngs[0]).equals(Buffer.from(pngs[1]))) throw new Error("Packed S
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "--help",
   ], consumer);
+  const offlineSmokeSource = offlineIconSoundtrackSmokeSource();
+  await writeFile(join(consumer, "offline-icon-soundtrack.mjs"), offlineSmokeSource, { flag: "wx" });
+  await run([process.execPath, "offline-icon-soundtrack.mjs"], consumer, packageEnvironment);
+  const iconCli = record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "image", "icon", "compose", "offline-icon.json", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed icon compose");
+  const soundtrackCli = record(JSON.parse(await runOutput([
+    join(consumer, "node_modules", ".bin", "slopcamera"),
+    "media", "soundtrack", "compose", "offline-score.song", "--json",
+  ], consumer, packageEnvironment)) as unknown, "packed soundtrack compose");
+  if (
+    iconCli.operation !== "slopcamera.icon.compose"
+    || soundtrackCli.operation !== "slopcamera.soundtrack.compose"
+    || soundtrackCli.kind !== "song"
+  ) {
+    throw new Error("Packed CLI did not compose an icon scene and a soundtrack score.");
+  }
   const publicStyleFixture = `
 const styleApi = await import("@hraness/slopcamera");
 const styleLocal = await import("@hraness/slopcamera/local/code");
@@ -1564,6 +1682,8 @@ void [
     join(npmConsumer, "node_modules", ".bin", "slopcamera"),
     "--version",
   ], npmConsumer, packageEnvironment);
+  await writeFile(join(npmConsumer, "offline-icon-soundtrack.mjs"), offlineIconSoundtrackSmokeSource(), { flag: "wx" });
+  await run(["node", "offline-icon-soundtrack.mjs"], npmConsumer, packageEnvironment);
   console.log(
     `Verified ${String(packedStats.fileCount)} packed files, ${String(archiveInfo.size)} packed bytes, and ${String(packedStats.unpackedBytes)} unpacked bytes.`,
   );

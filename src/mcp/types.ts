@@ -51,6 +51,10 @@ export interface McpToolDefinition {
     | "check_scene_behavior"
     | "audit_scene_behavior"
     | "audit_scene_temporal"
+    | "compose_icon"
+    | "render_icon"
+    | "compose_soundtrack"
+    | "derive_soundtrack_grid"
   readonly title: string
   readonly description: string
   readonly inputSchema: Readonly<Record<string, unknown>>

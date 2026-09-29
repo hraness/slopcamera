@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 87,
-    "identityLinesSha256": "f898f6e22d37233249cc5cd020bc9691afa4363d9c4d3156bdfb65b17ef2c46b",
+    "identityLinesSha256": "8b035059cdb021217448ae91bf67548a924f16e047fad6a62866117cf0b85b68",
     "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1578,7 +1578,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "5a485a48ad01d27111bc89004f9fa1e5d2ef6c4a90b3c21357cbeba9048eee3d",
+    "identityLinesSha256": "db47fbdf4f427c5b941d1f6d8c200b32b89caf2b3b48458ca08cd1eafa2bdb15",
     "occurrenceCount": 2,
     "path": "apps/web/src/docs/explanation/choose-an-interface.md",
     "categories": [
@@ -1722,7 +1722,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "aafb13994c93a45766a85411a960faa977431c20734b5b8e74f4dc12aa2a67b5",
+    "identityLinesSha256": "e0602ff63b03a8f9f8d430500fd68c01ec1d1d38770409406f062b5a6010e635",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/sdk.md",
     "categories": [
@@ -1821,15 +1821,6 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-6jrxaser.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1839,8 +1830,17 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
+    "occurrenceCount": 233,
+    "path": "dist/index-wvnscw1b.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "aef753f79da829a9d6222541ddb28cc5cf550aeecd78c17c8449e8f345b04c4a",
+    "identityLinesSha256": "c785625cf6cad8f58fefd71acbbc55bfd2f152a9a2038358530552ba0ba0ed8f",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1957,7 +1957,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "1895d69200ffdfb9481dd161948650d150e28bc285094792bd59fb286afb6108",
+    "identityLinesSha256": "248e78c79415f3173a7beca82c031f9efb44eb1bc5360e7dd9c65eaf6bf61ba4",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [

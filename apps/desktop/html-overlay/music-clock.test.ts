@@ -234,3 +234,23 @@ test("musical pulse properties: symmetry across exactly representable beat phase
     },
   ));
 });
+
+describe("soundtrack grid timing", () => {
+  test("every timing the soundtrack grid can emit is a valid music clock, and nothing wider", async () => {
+    const { slopcameraSoundtrackLimits: limits } = await import("../../../src/soundtrack");
+    const inside = [
+      { bpm: limits.minBpm, beatOffsetUs: 0, beatsPerBar: limits.minBeatsPerBar },
+      { bpm: limits.maxBpm, beatOffsetUs: limits.maxTimeUs, beatsPerBar: limits.maxBeatsPerBar },
+    ];
+    for (const timing of inside) expect(HtmlOverlayMusicTimingSchema.safeParse(timing).success).toBe(true);
+    const outside = [
+      { bpm: limits.minBpm - 1, beatOffsetUs: 0, beatsPerBar: 4 },
+      { bpm: limits.maxBpm + 1, beatOffsetUs: 0, beatsPerBar: 4 },
+      { bpm: 120, beatOffsetUs: limits.maxTimeUs + 1, beatsPerBar: 4 },
+      { bpm: 120, beatOffsetUs: 0, beatsPerBar: limits.minBeatsPerBar - 1 },
+      { bpm: 120, beatOffsetUs: 0, beatsPerBar: limits.maxBeatsPerBar + 1 },
+    ];
+    for (const timing of outside) expect(HtmlOverlayMusicTimingSchema.safeParse(timing).success).toBe(false);
+    expect(limits.maxTimeUs).toBe(HTML_OVERLAY_MAX_DURATION_US);
+  });
+});

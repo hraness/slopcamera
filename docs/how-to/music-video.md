@@ -103,6 +103,16 @@ The example uses smooth local light accents and gradual scenery changes. Smooth 
 
 The included mascot uses named articulated joints. [Imported character preparation](../reference/sdk.md#prepare-rigged-glb-assets) currently supports uncompressed skinned GLB; Draco compression, morph targets, and embedded animation clips are unsupported. Preserve the asset's source and required attribution when replacing the example character.
 
+### Derive timing from a score
+
+When the track was made from a Soundfish score or a Standard MIDI file with one constant tempo, derive the timing from that source instead of entering it by hand:
+
+```sh
+slopcamera media soundtrack grid music/track.song --start-us 0 --output music/track.grid.json --json
+```
+
+The receipt's `music` object has exactly the `bpm`, `beatOffsetUs`, and `beatsPerBar` fields `parameters.music` accepts; copy it into the request. `--start-us` places the score's first beat on the movie timeline. Each section adds `startUs` and `endUs` cue times on the same timeline for shot and scenery changes. The command reads compose text, song text, score JSON, or MIDI, and renders no audio, so keep the mixed track as the request's `audio` and take `timing.durationUs` from that file.
+
 ## Check the plan and render
 
 Validate the source and inspect the planned dimensions, frame count, and rounded duration:

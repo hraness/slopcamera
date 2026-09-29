@@ -96,6 +96,8 @@ export const CLI_VERBS: readonly VerbRow[] = [
   row("image generate", "operate", "Generate an image with Vercel AI Gateway"),
   row("image gallery", "operate", "Generate a review gallery of image candidates"),
   row("image icon", "operate", "Generate a line-art SVG icon"),
+  row("image icon compose", "operate", "Solve a vector icon scene and report its digests"),
+  row("image icon render", "operate", "Draw a vector icon scene or recipe to inert SVG"),
 
   row("html catalog", "read", "List HTML scene profiles"),
   row("html scaffold", "operate", "Write a new HTML scene"),
@@ -138,6 +140,8 @@ export const CLI_VERBS: readonly VerbRow[] = [
 
   row("media audio", "operate", "Apply audio effects into a new file"),
   row("media color", "operate", "Apply a color grade into a new file"),
+  row("media soundtrack compose", "operate", "Verify a loop or song score"),
+  row("media soundtrack grid", "operate", "Derive music timing and section cues from a score"),
 
   row("outputs", "read", "Print the outputs folder"),
   row("outputs list", "read", "List the files in the outputs folder, newest first"),

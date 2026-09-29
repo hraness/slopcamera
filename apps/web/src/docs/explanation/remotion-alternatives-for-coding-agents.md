@@ -71,7 +71,7 @@ Slopcamera runs Blender, CadQuery, and Manim programs that you allow with `--all
 
 ### SlopCamera
 
-Slopcamera packages diagrams, HTML motion graphics, Three.js scenes, parametric designs, native Blender, CadQuery, and Manim films, and footage editing behind one CLI, an Agent Skill, an SDK, and 17 MCP tools. The agent writes a short source file, and the CLI renders it, checks it, and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video. It renders locally, with no account, under the MIT license.
+Slopcamera packages diagrams, HTML motion graphics, Three.js scenes, parametric designs, native Blender, CadQuery, and Manim films, and footage editing behind one CLI, an Agent Skill, an SDK, and 21 MCP tools. The agent writes a short source file, and the CLI renders it, checks it, and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video. It renders locally, with no account, under the MIT license.
 
 Choose something else when you need an embeddable player (Remotion), hosted or distributed rendering (Remotion or HyperFrames), exact pixels across machines (HyperFrames in Docker), or GSAP (HyperFrames). See the [techniques catalog](/docs/reference/techniques) for what Slopcamera covers today.
 
