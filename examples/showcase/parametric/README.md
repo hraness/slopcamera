@@ -17,7 +17,7 @@ rendered studies and the complete revision workflow.
 
 ## Requirements
 
-Install [Slopcamera v3.3.1](../../../README.md#install-slopcamera) or use a
+Install [Slopcamera 3.3.1 or later](../../../README.md#install-slopcamera) or use a
 [source build](../../../docs/how-to/use-current-source.md). Obtain these later
 study inputs from a repository checkout; they are separate from the release archive. Check `slopcamera help scene` and
 `slopcamera doctor --json` in that installation. Inspection and compilation use

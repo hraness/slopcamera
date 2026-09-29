@@ -126,6 +126,7 @@ export function renderSitemapXml(): string {
     ...docPages.map(page => renderSitemapUrl(
       docsCanonicalUrl(page).slice(siteOrigin.length),
       workflowExamples.filter(example => example.guideSlug === page.slug),
+      page.modified,
     )),
     // Only indexable posts enter the sitemap, each with its lastmod.
     ...blogSitemapPaths().map(entry => {

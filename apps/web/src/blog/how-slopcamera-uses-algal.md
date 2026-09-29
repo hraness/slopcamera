@@ -77,4 +77,4 @@ Because behavior programs are data, your coding agent can write and revise them 
 
 Behavior baking decides when things happen. It does not create animation clips, rigs, or props; the channel map points at ones you already have, and anything you do not map stays in the timeline only. The four starting programs are small, and the function list is closed, so behavior outside what those functions express needs a change to SlopCamera itself. SlopCamera builds on a fixed ALGAL commit, and ALGAL is early software. The check and bake commands wait for free local CPU, so while a render is running, a bake can sit with no output until CPU frees up.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).

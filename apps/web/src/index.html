@@ -47,9 +47,9 @@
       <a aria-label="SlopCamera home" class="wordmark {{SITE_WORDMARK_CLASS}} hraness-foil-text" data-foil="" href="/"><span aria-hidden="true" class="hraness-foil-mark" data-foil=""><img alt="" aria-hidden="true" class="{{SITE_BRAND_MARK_CLASS}} hraness-foil-mark__image" height="22" src="/marks/slopcamera.svg" width="22"><span aria-hidden="true" class="hraness-foil-mark__paint"></span></span>SlopCamera</a>
       <div class="topbar-actions {{SITE_ACTIONS_CLASS}}">
         <nav aria-label="Primary" class="{{SITE_NAVIGATION_CLASS}}">
-          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="#examples">Examples</a>
-          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="#workflow">Workflow</a>
+          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="#examples">Techniques</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/docs">Docs</a>
+          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/blog">Blog</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="https://github.com/hraness/slopcamera">GitHub</a>
           <a class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install">Install Slopcamera</a>
         </nav>
@@ -78,19 +78,40 @@
           </div>
         </header>
 
+        <section aria-labelledby="why-title" class="hraness-marketing-section slopcamera-why" data-hraness-marketing="section" id="why">
+          <div class="hraness-marketing-section__heading-group">
+            <p class="slopcamera-eyebrow">Why install it</p>
+            <h2 class="hraness-marketing-section__heading" id="why-title">Write the source. The CLI does the rest.</h2>
+            <p class="hraness-marketing-section__summary">A one-shot reply writes the renderer, export code, and checks along with the scene, and the next request writes them all again. Here the agent writes only the source.</p>
+          </div>
+          <ol class="slopcamera-why-list">
+            <li><h3>Write a short source, not a pipeline</h3><p>The agent writes diagram JSON, scene JSON, an HTML scaffold, or Blender, CadQuery, or Manim source. The CLI renders it and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video.</p><a href="/docs/reference/techniques">See the techniques</a></li>
+            <li><h3>Check before you render</h3><p>A strict check names labels that overflow their boxes, shapes outside the canvas, and arrows too short to read. Scene checks validate the scene file, and scene audits sample what a named camera sees over time. The agent fixes the source before it renders.</p><a href="/docs/tutorials/first-diagram">Check a first diagram</a></li>
+            <li><h3>Revise by editing, then render again</h3><p>The source stays beside every output. A change is an edit to that file and one command:</p><pre class="hraness-material-code slopcamera-why-code"><code>- "label": "Delivery",
++ "label": "Social delivery",
+
+slopcamera diagram render \
+  source-to-film.diagram.json</code></pre><a href="/docs/tutorials/first-diagram#slopcamera-example-source-to-film-revised-title">See the revised render</a></li>
+          </ol>
+        </section>
+
         <section aria-labelledby="examples-title" class="hraness-marketing-primitives" data-hraness-marketing="primitives" id="examples">
           <header class="hraness-marketing-primitives__header">
             <p class="slopcamera-eyebrow">Examples</p>
             <h2 class="hraness-marketing-primitives__heading" id="examples-title">Open the source behind each render.</h2>
-            <p>Choose an example, open its source, and ask your agent to adapt it.</p>
+            <p>Each technique ships with a starter source, the command that renders it, its checks, and a guide. Choose an example below, open its source, and ask your agent to adapt it.</p>
           </header>
-          <ul class="slopcamera-work-gallery" aria-label="Rendered workflow examples">
+          <div class="slopcamera-technique-groups">
             {{EXAMPLE_GALLERY}}
-          </ul>
-          <div class="slopcamera-techniques" aria-labelledby="techniques-title" role="group">
+          </div>
+        </section>
+
+        <section aria-labelledby="techniques-title" class="hraness-marketing-section slopcamera-techniques" data-hraness-marketing="section" id="techniques">
+          <div class="hraness-marketing-section__heading-group">
             <p class="slopcamera-eyebrow">Guides by technique</p>
-            <h3 id="techniques-title">Home Depot for multimedia agents.</h3>
-            <p class="slopcamera-techniques__summary">Every technique has its own aisle and a tested guide, so your agent walks in knowing where the tools are.</p>
+            <h2 class="hraness-marketing-section__heading" id="techniques-title">Home Depot for multimedia agents.</h2>
+            <p class="hraness-marketing-section__summary">Every technique has its own aisle and a tested guide, so your agent walks in knowing where the tools are.</p>
+          </div>
             <ul class="slopcamera-aisles">
               <li><a href="/docs/tutorials/first-diagram"><span aria-hidden="true" class="slopcamera-aisle__number">Aisle 01</span><span class="slopcamera-aisle__name">Editable diagrams</span></a></li>
               <li><a href="/docs/how-to/render-motion-graphics"><span aria-hidden="true" class="slopcamera-aisle__number">Aisle 02</span><span class="slopcamera-aisle__name">Motion graphics and shaders</span></a></li>
@@ -103,8 +124,7 @@
               <li><a href="/docs/how-to/generate-media"><span aria-hidden="true" class="slopcamera-aisle__number">Aisle 09</span><span class="slopcamera-aisle__name">AI images, video and voice</span></a></li>
               <li><a href="/docs/how-to/run-workflows"><span aria-hidden="true" class="slopcamera-aisle__number">Aisle 10</span><span class="slopcamera-aisle__name">Reusable agent workflows</span></a></li>
             </ul>
-            <p class="quiet-note">See supported <a href="/docs/reference/capabilities">formats and tools</a>, or choose a <a href="/docs/explanation/use-cases">first project</a>.</p>
-          </div>
+            <p class="quiet-note">See every technique and its first command in the <a href="/docs/reference/techniques">techniques catalog</a>, supported <a href="/docs/reference/capabilities">formats and tools</a>, or choose a <a href="/docs/explanation/use-cases">first project</a>.</p>
         </section>
 
         <section aria-labelledby="workflow-title" class="hraness-marketing-section" data-hraness-marketing="section" data-layout="split" id="workflow">
@@ -143,7 +163,7 @@
           <header class="hraness-marketing-interfaces__header">
             <p class="slopcamera-eyebrow">Interfaces</p>
             <h2 class="hraness-marketing-interfaces__heading" id="interfaces-title">Choose how your agent works.</h2>
-            <p>Start with the Agent Skill. Scripts and programs can call the CLI or SDK, and MCP clients get a fixed toolset.</p>
+            <p>Start with the Agent Skill. Scripts and programs can call the CLI or SDK, and MCP clients get a <a href="/docs/reference/mcp-tools">fixed toolset</a>.</p>
           </header>
           <div class="hraness-marketing-interface-grid">
             <article class="hraness-marketing-interface">
@@ -179,7 +199,6 @@
 
         <section aria-labelledby="install-title" class="hraness-marketing-install" data-hraness-marketing="install" id="install">
           <div class="hraness-marketing-install__heading-group">
-            <p class="slopcamera-eyebrow">Install</p>
             <h2 class="hraness-marketing-install__heading" id="install-title">Install Slopcamera for your agent.</h2>
             <p class="install-note {{INSTALL_NOTE_CLASS}}">Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs Bun 1.3.14 or newer on macOS, Linux, or Windows. <a href="{{RELEASE_URL}}">Release v{{RELEASE_VERSION}}</a>.</p>
           </div>
@@ -217,7 +236,7 @@
             <h2 class="hraness-marketing-questions__heading" id="questions-title">Common questions</h2>
           </header>
           <div class="hraness-marketing-question-list">
-            <details class="hraness-marketing-question hraness-material-disclosure"><summary>How is Slopcamera different from Remotion or HyperFrames?</summary><div class="hraness-marketing-question__answer"><p>Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. <a href="/docs/explanation/why-slopcamera#compared-with-other-tools">Compare their workflows and licensing</a>.</p></div></details>
+            <details class="hraness-marketing-question hraness-material-disclosure"><summary>How is Slopcamera different from Remotion or HyperFrames?</summary><div class="hraness-marketing-question__answer"><p>Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. <a href="/docs/explanation/why-slopcamera#compared-with-other-tools">Compare their workflows and licensing</a>, or read <a href="/docs/explanation/slopcamera-vs-remotion">SlopCamera vs Remotion</a> and <a href="/docs/explanation/slopcamera-vs-hyperframes">SlopCamera vs HyperFrames</a>.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>Do I need to write code?</summary><div class="hraness-marketing-question__answer"><p>Describe the result to your coding agent; it writes the source and runs the commands.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>Does Slopcamera require an account or subscription?</summary><div class="hraness-marketing-question__answer"><p>No. Slopcamera has no account or subscription. Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits for hosted image generation.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>What does it cost?</summary><div class="hraness-marketing-question__answer"><p>Slopcamera is free; editing, diagrams, vectorization, and exports run locally. Model usage is billed to your Vercel AI Gateway account, or to prepaid Hraness Credits for hosted image generation.</p></div></details>
@@ -234,7 +253,7 @@
           <p class="hraness-marketing-cta__summary">Install the CLI and its Agent Skill, then describe the result you want.</p>
           <div class="hraness-marketing-cta__actions">
             <a class="hraness-marketing-action" data-emphasis="primary" href="#install">Install Slopcamera</a>
-            <a class="slopcamera-text-link" href="/docs">Read the docs</a>
+            <a class="slopcamera-text-link" href="/docs/reference/techniques">Browse all techniques</a>
           </div>
         </section>
       </div>

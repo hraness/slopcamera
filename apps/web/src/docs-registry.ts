@@ -15,6 +15,8 @@ export type DocsPage = Readonly<{
   title: string
   description: string
   section: DocsSection | "index"
+  /** ISO date the page's facts were last checked; emitted as dateModified and sitemap lastmod. */
+  modified?: string
 }>
 
 export const docsSectionLabels: Record<DocsSection, string> = {
@@ -98,6 +100,9 @@ export const docPages: readonly DocsPage[] = [
     description: "Use a built-in recipe or trusted Bun module and inspect its durable run.",
     section: "how-to" },
   // Reference: factual contracts for the multimedia engine.
+  { slug: "reference/techniques", title: "Techniques catalog: diagrams, motion graphics, 3D, and video",
+    description: "Every packaged SlopCamera technique by job: what it makes, when to use it, the first command, its guide, and a rendered example where one exists.",
+    section: "reference", modified: "2026-09-28" },
   { slug: "reference/capabilities", title: "Capabilities, versions, and platforms",
     description: "Current SlopCamera capabilities, release availability, and supported runtime boundaries.",
     section: "reference" },
@@ -135,9 +140,18 @@ export const docPages: readonly DocsPage[] = [
   { slug: "explanation/architecture", title: "How SlopCamera works: sources, renders, and projects",
     description: "What stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.",
     section: "explanation" },
-  { slug: "explanation/why-slopcamera", title: "Why SlopCamera, compared with Remotion and HyperFrames",
-    description: "What SlopCamera keeps that one-off scripts lose, and when Remotion, HyperFrames, MCP for Blender, or a hosted generator fits better.",
-    section: "explanation" },
+  { slug: "explanation/why-slopcamera", title: "Why SlopCamera: installed techniques and retained source",
+    description: "Why an agent with SlopCamera writes a short source file instead of a whole render pipeline, and how to choose between it and other tools.",
+    section: "explanation", modified: "2026-09-28" },
+  { slug: "explanation/slopcamera-vs-remotion", title: "SlopCamera vs Remotion for coding agents",
+    description: "How SlopCamera and Remotion differ for agent-made video and graphics: source formats, rendering, licenses, and when to use each or both.",
+    section: "explanation", modified: "2026-09-28" },
+  { slug: "explanation/slopcamera-vs-hyperframes", title: "SlopCamera vs HyperFrames for coding agents",
+    description: "How SlopCamera and HyperFrames differ: HTML video versus several engines, repeatable renders, hosted rendering, licenses, and using both.",
+    section: "explanation", modified: "2026-09-28" },
+  { slug: "explanation/remotion-alternatives-for-coding-agents", title: "Remotion alternatives for coding agents (2026)",
+    description: "Video and graphics tools a coding agent can use instead of or beside Remotion in 2026, grouped by job, with licenses and trade-offs.",
+    section: "explanation", modified: "2026-09-28" },
   { slug: "explanation/extending", title: "Extend SlopCamera",
     description: "Workflows, declarative graphs, the SDK, MCP, and separately installed native engines.",
     section: "explanation" },

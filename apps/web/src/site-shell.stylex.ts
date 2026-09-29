@@ -42,9 +42,9 @@ const shell = stylex.create({
     columnGap: "1.5rem",
     flexWrap: { default: "nowrap", [tablet]: "wrap" },
     paddingTop: { default: 0, [tablet]: "0.6rem" },
-    paddingRight: "max(var(--gutter), calc((100% - 72rem) / 2))",
+    paddingRight: "max(var(--gutter), calc((100% - var(--slopcamera-header-measure, 72rem)) / 2 + var(--slopcamera-header-inset, 0px)))",
     paddingBottom: { default: 0, [tablet]: "0.6rem" },
-    paddingLeft: "max(var(--gutter), calc((100% - 72rem) / 2))",
+    paddingLeft: "max(var(--gutter), calc((100% - var(--slopcamera-header-measure, 72rem)) / 2 + var(--slopcamera-header-inset, 0px)))",
     borderBottomWidth: "1px",
     borderBottomStyle: "solid",
     borderBottomColor: { default: "var(--hraness-material-outline, transparent)", [forcedColors]: "CanvasText" },
@@ -162,6 +162,8 @@ const shell = stylex.create({
     color: { default: "var(--gold-ink)", ":hover": "var(--ink)" },
     fontSize: "0.9rem",
     marginLeft: { default: 0, [tablet]: "auto" },
+    // The hero repeats this action on phones, so the header keeps one row of links.
+    display: { default: "inline-flex", [phone]: "none" },
   },
 })
 

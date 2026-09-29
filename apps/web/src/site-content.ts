@@ -141,7 +141,7 @@ function socialImageFor(document: SiteDocument, assets: SiteAssets): SiteSocialI
 
 function renderDocsFooter(slug: string): string {
   const sourcePath = `apps/web/src/docs/${slug}.md`
-  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a>.</p>`
+  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a></p>`
 }
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {
@@ -192,7 +192,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],
       ["{{DOC_CANONICAL}}", docsCanonicalUrl(docsPage), 2],
       ["{{DOC_MARKDOWN}}", docsMarkdownUrl(docsPage), 1],
-      ["{{DOC_JSONLD}}", docsJsonLd(docsPage), 1],
+      ["{{DOC_JSONLD}}", docsJsonLd(docsPage, body), 1],
       ["{{DOC_IMAGE_URL}}", social.url, 2],
       ["{{DOC_IMAGE_ALT}}", escapeHtml(social.alt), 2],
       ["{{DOC_IMAGE_WIDTH}}", String(social.width), 1],

@@ -1,4 +1,4 @@
-import { homepageExampleMarkdown } from "./example-gallery"
+import { homepageExampleMarkdown, homepageHeroMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 import { blogIndex, blogMarkdownPath, indexableBlogPosts } from "./blog-registry"
@@ -13,6 +13,8 @@ export const homeMarkdown = `# Slopcamera is a domain-specific harness for visua
 SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
+
+${homepageHeroMarkdown()}
 
 ## Your first local diagram
 
@@ -48,17 +50,25 @@ ${archiveInstall.skillCommand}
 ${archiveInstall.alternateSkillCommand}
 \`\`\`
 
-Start a new agent session. Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
+Start a new agent session. Use \`--target claude\` for Claude Code or omit the target for Codex; add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
 
 For repository example helpers or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
 
+## Why install it
+
+A one-shot reply writes the renderer, export code, and checks along with the scene, and the next request writes them all again. Here the agent writes only the source.
+
+- Write a short source, not a pipeline. The agent writes diagram JSON, scene JSON, an HTML scaffold, or Blender, CadQuery, or Manim source. The CLI renders it and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video. [See the techniques](https://slopcamera.com/docs/reference/techniques.md).
+- Check before you render. A strict check names labels that overflow their boxes, shapes outside the canvas, and arrows too short to read. Scene checks validate the scene file, and scene audits sample what a named camera sees over time. The agent fixes the source before it renders. [Check a first diagram](https://slopcamera.com/docs/tutorials/first-diagram.md).
+- Revise by editing, then render again. The source stays beside every output. A change is an edit to that file and one command, such as changing a diagram label from \"Delivery\" to \"Social delivery\" and running \`slopcamera diagram render source-to-film.diagram.json\`. [See the revised render](https://slopcamera.com/docs/tutorials/first-diagram.md).
+
 ## Examples
 
-Each example links to its guide and source files. Start with an example, then ask your agent to change the words, geometry, camera, or timing.
+Each technique ships with a starter source, the command that renders it, its checks, and a guide. Choose an example below, open its source, and ask your agent to adapt it. Browse [all techniques](https://slopcamera.com/docs/reference/techniques.md).
 
 ${homepageExampleMarkdown()}
 
-The v${publishedRelease.version} release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender, CadQuery, and Manim films, cinematic direction, performance, effects, behavior, and parametric design. Examples whose inputs live in the repository need a checkout. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
+The v${publishedRelease.version} release covers local diagrams, all seven HTML motion profiles, ordinary media editing, native Blender, CadQuery, and Manim films, and parametric design. Cinematic direction, performance, effects, and behavior commands write plans and audits; rendered results for them are planned. Examples whose inputs live in the repository need a checkout. [Check versions and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
 Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md). Browse the [use cases](https://slopcamera.com/docs/explanation/use-cases.md) by job, or look up a format or tool: [.diagram.json](https://slopcamera.com/docs/reference/diagram-format.md), [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md), [spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md), [vectorization](https://slopcamera.com/docs/reference/vectorization.md), [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md), [the video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md), [native engines](https://slopcamera.com/docs/reference/native-engines.md), or [the MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md).
 
@@ -105,7 +115,11 @@ The [documentation index](https://slopcamera.com/docs) connects learning, task g
 
 ### How is Slopcamera different from Remotion or HyperFrames?
 
-Remotion renders React components to video, and HyperFrames renders HTML to video. Both offer cloud rendering and have much larger communities. Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, Blender, CadQuery and Manim films, and edits of your own footage, all in one local project. It is MIT-licensed. Remotion needs a paid license for companies of four or more people. [See how they compare](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools).
+Remotion renders React components to video, and HyperFrames renders HTML to video. Both offer cloud rendering and have larger communities. Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, Blender, CadQuery, and Manim films, and edits of your own footage, in one local project. [See how they compare](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md), [Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md), and [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md).
+
+### Why not just ask the agent directly?
+
+You can, and for one throwaway image that is often enough. Each retry writes the take again, with new timing and framing. Slopcamera keeps the source beside the render, so your agent changes one field and renders again. [When each approach fits](https://slopcamera.com/blog/one-shot-render-vs-installed-techniques.md).
 
 ### Does Slopcamera require an account or subscription?
 
@@ -162,7 +176,7 @@ export const llmsTxt = `# SlopCamera
 
 > SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
 
-Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. Slopcamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. Slopcamera is free and open source.
+Slopcamera is a domain-specific harness for visual creation: it lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
 
 Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
@@ -182,6 +196,8 @@ Editing and rendering stay local. Gateway generation and selected cloud analysis
 - [Documentation index](https://slopcamera.com/docs/index.md): Learning, task guides, reference, and explanation
 - [First diagram](https://slopcamera.com/docs/tutorials/first-diagram.md): Complete local input-to-output task using the verified release
 - [First animation](https://slopcamera.com/docs/tutorials/first-animation.md): Render an original HTML title and make a visible source revision
+- [Techniques](https://slopcamera.com/docs/reference/techniques.md): Every packaged technique, its starter command, and its guide
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): Why the agent writes a short source file, and how Slopcamera compares with Remotion and HyperFrames
 - [Repository README](https://github.com/hraness/slopcamera#readme): Overview and install
 
 ## Optional support
@@ -197,8 +213,8 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 
 ## Choose a task
 
-- [Motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md): Seven authoring profiles, absolute timing, local video exports and transparent overlays
-- [Raster to SVG](https://slopcamera.com/docs/how-to/vectorize-images.md): Local tracing, measured fidelity and a reproducible original illustration
+- [Motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md): Seven authoring profiles, absolute timing, local video exports, and transparent overlays
+- [Raster to SVG](https://slopcamera.com/docs/how-to/vectorize-images.md): Local tracing, measured fidelity, and a reproducible original illustration
 - [Edit video](https://slopcamera.com/docs/how-to/edit-video.md): Import, edit, preview, and delivery
 - [Generate media](https://slopcamera.com/docs/how-to/generate-media.md): Model discovery, your own Gateway access, and prepaid hosted image generation
 - [Make a math explainer video with Manim](https://slopcamera.com/docs/how-to/educational-video.md): Diagrams, mathematics, presenters, and motion
@@ -232,7 +248,10 @@ ${blogPostLinks}
 - [Use cases](https://slopcamera.com/docs/explanation/use-cases.md): What people make, what each job needs, and its limits
 - [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
-- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): What it keeps that one-off scripts lose, and how it compares with Remotion, HyperFrames, and MCP for Blender
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): Why an agent with Slopcamera writes a short source file instead of a whole render pipeline, and how to choose between it and other tools
+- [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
+- [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
+- [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
 - [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
 - [Tutorials](https://slopcamera.com/docs/index.md): First diagram, first animation, first native film, and agent setup

@@ -16,9 +16,73 @@ export function registeredExample(id: string, examples: readonly WorkflowExample
   return record
 }
 
+/** One public label per admitted technique id. A new registry technique must
+ * pick its label here before any page can render the example, so the visible
+ * vocabulary stays closed and deliberate rather than derived from ids. */
+const techniqueLabels: Readonly<Record<string, string>> = {
+  "cad.parametric-build": "Parametric CAD",
+  "camera.crane": "Camera crane",
+  "camera.dolly": "Camera dolly",
+  "camera.handheld": "Handheld camera",
+  "camera.orbit": "Camera orbit",
+  "camera.rail": "Rail camera",
+  "camera.tripod": "Tripod lock-off",
+  "color.grade": "Color grade",
+  "delivery.1-1": "1:1 delivery",
+  "delivery.16-9": "16:9 delivery",
+  "delivery.4-5": "4:5 delivery",
+  "delivery.9-16": "9:16 delivery",
+  "design.crescent-pavilion": "Parametric pavilion",
+  "design.modular-bookshelf": "Parametric shelf",
+  "design.parameter-revision": "Parameter revision",
+  "design.ribbed-tower": "Parametric tower",
+  "design.spiral-stair": "Parametric stair",
+  "diagram.positioned": "Positioned diagram",
+  "diagram.revision": "Diagram revision",
+  "diagram.stack": "Stacked diagram",
+  "diagram.theming": "Diagram theme",
+  "edit.bootstrap": "Timeline bootstrap",
+  "edit.cuts-speed": "Cut pacing",
+  "edit.manual-camera": "Manual camera move",
+  "edit.overlays": "Overlay composition",
+  "education.manim-lesson": "Manim lesson",
+  "html.motion": "Motion timeline",
+  "html.p5": "p5 canvas",
+  "html.paper-shaders": "Paper shaders",
+  "html.plain": "HTML timeline",
+  "html.three": "Three.js scene",
+  "html.transparent-overlay": "Transparent overlay",
+  "html.two": "Two.js vectors",
+  "html.vgpu": "WGSL shader",
+  "native.character": "Character rig",
+  "native.cloth": "Cloth simulation",
+  "native.cloth-pins": "Pinned cloth",
+  "native.color-alpha": "Color-accurate render",
+  "native.fluid": "Fluid simulation",
+  "native.import-model": "GLB import",
+  "native.product": "Blender scene",
+  "scene.emissive-lighting": "Emissive lighting",
+  "scene.world-media": "World media surface",
+  "vector.simple-mark": "Vector trace",
+}
+
+export function exampleTechniques(example: WorkflowExample): readonly string[] {
+  return example.techniques.map(id => {
+    const label = techniqueLabels[id]
+    if (label === undefined) throw new Error(`Workflow example ${example.id} uses an unlabeled technique: ${id}`)
+    return label
+  })
+}
+
+/** The packaged-technique breadth, computed from the registry so marketing
+ * counts never drift from what the release actually contains. */
+export function exampleTechniqueSummary(examples: readonly WorkflowExample[] = workflowExamples): string {
+  return `${examples.length} published examples span ${new Set(examples.flatMap(example => example.techniques)).size} packaged techniques`
+}
+
 export function exampleMediaRecord(example: WorkflowExample, includeDownloads = false): ExampleMediaRecord {
   return {
-    id: example.id, title: example.title, description: example.description,
+    id: example.id, title: example.title, description: example.description, techniques: exampleTechniques(example),
     poster: { url: exampleUrl(example.poster), width: example.poster.width, height: example.poster.height, alt: example.poster.alt },
     ...(example.video ? { video: {
       url: exampleUrl(example.video), mime: "video/mp4" as const,
@@ -42,6 +106,7 @@ function markdownText(value: string): string {
 export function exampleMarkdown(example: WorkflowExample, includeDownloads = true): string {
   return [
     `![${markdownText(example.poster.alt)}](${exampleUrl(example.poster)})`,
+    `_${markdownText(exampleTechniques(example).join(" · "))}_`,
     `**${markdownText(example.title)}${/[.!?]$/u.test(example.title) ? "" : "."}** ${markdownText(example.description)}`,
     ...(example.video ? [`[Watch the ${Number(example.video.durationSeconds.toFixed(1))}-second ${example.video.hasAudio ? "video" : "silent video"}](${exampleUrl(example.video)}).`] : []),
     `[Follow the guide](${exampleGuideUrl(example)}) · [View source](${exampleSourceUrl(example)}).`,

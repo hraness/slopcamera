@@ -43,8 +43,24 @@ export function renderDocsNav(current: DocsPage): string {
 <nav aria-label="Documentation" class="{{DOCS_NAV_CLASS}}" data-docs-navigation="desktop">${links}</nav>`
 }
 
-/** Per-page JSON-LD: a TechArticle bound to its breadcrumb and site graph. */
-export function docsJsonLd(page: DocsPage): string {
+/** Reads the visible "## FAQ" section of an explanation page as question and answer pairs. */
+export function docsFaqEntries(body: string): { question: string; answer: string }[] {
+  const section = /^## FAQ\n([\s\S]*?)(?=^## |(?![\s\S]))/mu.exec(resolveDocsContent(body))?.[1]
+  if (section === undefined) return []
+  const plain = (text: string) => text
+    .replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1")
+    .replace(/[`*_]/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim()
+  return section.split(/^### /mu).slice(1).map(block => {
+    const [question = "", ...rest] = block.split("\n")
+    return { question: plain(question), answer: plain(rest.join("\n")) }
+  }).filter(entry => entry.question !== "" && entry.answer !== "")
+}
+
+/** Per-page JSON-LD: a TechArticle bound to its breadcrumb and site graph, plus a FAQPage
+ * when an explanation page shows a visible FAQ section. */
+export function docsJsonLd(page: DocsPage, body = ""): string {
   const canonical = docsCanonicalUrl(page)
   const media = workflowExamples.filter(example => example.guideSlug === page.slug)
   const graph: Record<string, unknown>[] = [
@@ -67,12 +83,19 @@ export function docsJsonLd(page: DocsPage): string {
       mainEntityOfPage: canonical,
       publisher: { "@id": "https://hraness.com/#organization" },
       url: canonical,
+      ...(page.modified === undefined ? {} : { datePublished: page.modified, dateModified: page.modified }),
       ...(media.length ? { image: media.map(example => ({
         "@type": "ImageObject", contentUrl: `${docsOrigin}${exampleUrl(example.poster)}`,
         caption: example.poster.alt, width: example.poster.width, height: example.poster.height,
       })) } : {}),
     },
   ]
+  const faq = page.section === "explanation" ? docsFaqEntries(body) : []
+  if (faq.length > 0) graph.push({
+    "@id": `${canonical}#faq`,
+    "@type": "FAQPage",
+    mainEntity: faq.map(entry => ({ "@type": "Question", name: entry.question, acceptedAnswer: { "@type": "Answer", text: entry.answer } })),
+  })
   return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</gu, "\\u003c")
 }
 

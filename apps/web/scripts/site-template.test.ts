@@ -112,12 +112,12 @@ describe("ordinary shell authored contract (pure, process-free)", () => {
     }
     expect(home.match(/\{\{SITE_HOME_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(4)
     expect(home.match(/\{\{SITE_NAVIGATION_ACTION_CLASS\}\}/gu)).toHaveLength(1)
-    expect(missing.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
+    expect(missing.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(4)
     expect(missing).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
     // The 404 body is the shared design-kit status page, filled as one slot.
     expect(missing.match(/\{\{STATUS_PAGE\}\}/gu)).toHaveLength(1)
     expect(missing).not.toMatch(/\{\{SITE_RECOVERY_[A-Z_]+\}\}/u)
-    expect(doc.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(2)
+    expect(doc.match(/\{\{SITE_NAVIGATION_LINK_CLASS\}\}/gu)).toHaveLength(4)
     expect(doc).not.toContain("{{SITE_HOME_NAVIGATION_LINK_CLASS}}")
     for (const slot of ["LAYOUT", "ARTICLE", "FOOTER"]) {
       expect(doc.match(new RegExp(`\\{\\{DOCS_${slot}_CLASS\\}\\}`, "gu"))).toHaveLength(1)
