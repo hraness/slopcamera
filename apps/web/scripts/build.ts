@@ -11,6 +11,7 @@ import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
 import { publicIdentity, readPublicIcons } from "./public-identity"
 import { readExampleAssets } from "./example-assets"
+import { pruneRetainedEvidence } from "./retained-evidence"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
@@ -258,8 +259,9 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const environment = options.environment ?? process.env
   const outputDirectory = options.outputDirectory ?? defaultOutputDirectory
   const analyticsConfig = productionAnalyticsConfig(environment)
-  const [theme, statusPage, socialCards] = await Promise.all([
+  const [theme, statusPage, , socialCards] = await Promise.all([
     bundleTheme(), bundleStatusPage(),
+    pruneRetainedEvidence(),
     Promise.all(socialImages.map(async image => ({ file: image.file, bytes: await renderSocialImage(image) }))),
   ])
   const themePath = assetPath("theme.js", theme)

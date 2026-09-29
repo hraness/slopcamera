@@ -1627,8 +1627,12 @@ describe("static Slopcamera site", () => {
         NEXT_PUBLIC_POSTHOG_KEY: "phc_test-token_value",
         VERCEL_ENV: "production",
       } as const
-      const first = await fixture.build({ environment, outputDirectory: productionDirectory })
-      const second = await fixture.build({ environment, outputDirectory: secondDirectory })
+      // Each build runs in its own child process and output directory, so the
+      // determinism comparison below holds whether they run serially or together.
+      const [first, second] = await Promise.all([
+        fixture.build({ environment, outputDirectory: productionDirectory }),
+        fixture.build({ environment, outputDirectory: secondDirectory }),
+      ])
       expect(first.analyticsPath).toMatch(/^\/assets\/analytics-[a-f0-9]{12}\.js$/u)
       expect(second.analyticsPath).toBe(first.analyticsPath)
       expect(second.previewStylesPath).toBe(first.previewStylesPath)
