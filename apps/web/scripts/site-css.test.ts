@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
-import { inspectSiteCssResources } from "./site-css"
+import { readFileSync } from "node:fs"
+import { assertSiteRecipeResources, inspectSiteCssResources } from "./site-css"
 
 test("ordinary CSS inspection includes local custom-property textures and typed font/image URLs", () => {
   const source = '@font-face{font-family:f;src:url(./font.woff2)}.x{--field:url(./grain.svg),var(--fallback,url(./cells.svg));background:image-set("./one.png" 1x,url(./two.png) 2x)}'
@@ -38,4 +39,13 @@ test.each([
   '.x{--field:image-set("./one.png" type(var(--mime)) 1x);background:var(--field)}',
 ])("ordinary CSS inspection rejects resource-producing substitutions: %s", source => {
   expect(() => inspectSiteCssResources(source, "fixture.css")).toThrow()
+})
+
+test("recipe resources admit only the pinned footer mask pair and reject changed, missing or added resources", () => {
+  const css = readFileSync(new URL(import.meta.resolve("@hraness/site-footer/stylex.css")), "utf8")
+  expect(() => assertSiteRecipeResources(css, "footer.css")).not.toThrow()
+  for (const source of ["", css + css, css.replaceAll("data:image/svg+xml", "data:image/svg+xml;utf8"),
+    css + '.extra{mask-image:url(./other.svg)}', css + '.extra{background:url(https://example.test/tracker)}']) {
+    expect(() => assertSiteRecipeResources(source, "footer.css")).toThrow("exact approved shared footer")
+  }
 })

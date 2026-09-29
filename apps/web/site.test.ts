@@ -1,4 +1,5 @@
 import { paletteColors } from "@hraness/design-kit"
+import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
 import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
@@ -863,7 +864,8 @@ describe("static Slopcamera site", () => {
       return url.pathname.slice(1)
     }).sort()).toEqual([...fonts, ...textures, ...textures, ...textures, ...masks].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
-    expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
+    expect(union).not.toMatch(/@font-face|sourceMappingURL/u)
+    expect(() => assertSiteRecipeResources(union, "sealed-site-union.css")).not.toThrow()
     expect(foundation).toContain("components.slopcamera-legacy")
     expect(union).toContain("components.hraness-stylex")
     expect(await readdir(join(appDirectory, "dist/graphs/site-foundation"))).toEqual(["assets"])
@@ -1386,7 +1388,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit": "github:hraness/design-kit#v0.24.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.20.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1415,7 +1417,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.24.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.0"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
