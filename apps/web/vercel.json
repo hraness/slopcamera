@@ -115,6 +115,26 @@
       ],
       "destination": "https://slopcamera.com/:path*",
       "permanent": true
+    },
+    {
+      "source": "/techniques",
+      "destination": "/docs/reference/techniques",
+      "permanent": true
+    },
+    {
+      "source": "/compare/remotion",
+      "destination": "/docs/explanation/slopcamera-vs-remotion",
+      "permanent": true
+    },
+    {
+      "source": "/compare/hyperframes",
+      "destination": "/docs/explanation/slopcamera-vs-hyperframes",
+      "permanent": true
+    },
+    {
+      "source": "/compare/remotion-alternatives",
+      "destination": "/docs/explanation/remotion-alternatives-for-coding-agents",
+      "permanent": true
     }
   ],
   "rewrites": [

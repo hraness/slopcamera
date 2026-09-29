@@ -78,8 +78,8 @@
     ],
     "guideSlug": "tutorials/first-diagram",
     "guideAnchor": "",
-    "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Bun. Local rendering; no model account.",
+    "featured": true,
+    "requirements": "Slopcamera 3.2.8 or later and Bun. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -173,7 +173,7 @@
     "guideSlug": "tutorials/first-diagram",
     "guideAnchor": "",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Bun. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Bun. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -267,7 +267,7 @@
     "guideSlug": "tutorials/first-animation",
     "guideAnchor": "render-and-inspect-the-title",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, Bun, a local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, Bun, a local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -332,7 +332,7 @@
     "guideSlug": "how-to/vectorize-images",
     "guideAnchor": "inspect-a-reproducible-example",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 on macOS or Linux. Reproduction script needs a source checkout.",
+    "requirements": "Slopcamera 3.2.8 or later on macOS or Linux. Reproduction script needs a source checkout.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -403,7 +403,7 @@
     "guideSlug": "tutorials/first-native-film",
     "guideAnchor": "inspect-the-finished-example",
     "featured": true,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -480,7 +480,7 @@
     "guideSlug": "how-to/educational-video",
     "guideAnchor": "inspect-the-finished-example",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Manim Community 0.21.0; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Manim Community 0.21.0; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -565,7 +565,7 @@
     "guideSlug": "tutorials/first-animation",
     "guideAnchor": "revise-the-same-source",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -630,7 +630,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "animate-type-with-motion",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -695,7 +695,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "draw-procedural-contours",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -760,7 +760,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "choreograph-vector-shapes",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -825,7 +825,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "shape-a-shader-background",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -890,7 +890,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "write-a-wgsl-field",
     "featured": true,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -954,8 +954,8 @@
     ],
     "guideSlug": "how-to/music-video",
     "guideAnchor": "inspect-the-island-example",
-    "featured": true,
-    "requirements": "Slopcamera 3.2.8, qualified macOS Three.js hardware profile, FFmpeg and Python 3 for the original track.",
+    "featured": false,
+    "requirements": "Slopcamera 3.2.8 or later, qualified macOS Three.js hardware profile, FFmpeg and Python 3 for the original track.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1024,7 +1024,7 @@
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "compose-a-transparent-lower-third",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8, an admitted local browser and FFmpeg. No model account.",
+    "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1089,7 +1089,7 @@
     "guideSlug": "how-to/native-films",
     "guideAnchor": "animate-a-native-character",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1166,7 +1166,7 @@
     "guideSlug": "how-to/native-films",
     "guideAnchor": "inspect-the-cloth-cache",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1247,7 +1247,7 @@
     "guideSlug": "how-to/native-films",
     "guideAnchor": "inspect-the-fluid-cache",
     "featured": true,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1328,7 +1328,7 @@
     "guideSlug": "how-to/native-films",
     "guideAnchor": "change-the-cad-dimensions",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS, CadQuery 2.8.0 and Python 3.12; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS, CadQuery 2.8.0 and Python 3.12; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1427,7 +1427,7 @@
     "guideSlug": "how-to/edit-video",
     "guideAnchor": "color-finishing",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "requirements": "Slopcamera 3.2.8 or later and FFmpeg. No model account; reproduction helper needs a source checkout.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1507,7 +1507,7 @@
     "guideSlug": "how-to/edit-video",
     "guideAnchor": "color-finishing",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "requirements": "Slopcamera 3.2.8 or later and FFmpeg. No model account; reproduction helper needs a source checkout.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1587,7 +1587,7 @@
     "guideSlug": "how-to/edit-video",
     "guideAnchor": "color-finishing",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and FFmpeg. No model account; reproduction helper needs a source checkout.",
+    "requirements": "Slopcamera 3.2.8 or later and FFmpeg. No model account; reproduction helper needs a source checkout.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1667,7 +1667,7 @@
     "guideSlug": "how-to/native-films",
     "guideAnchor": "compare-a-pinned-cloth-bake",
     "featured": false,
-    "requirements": "Slopcamera 3.2.8 and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
+    "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
       "files": [
@@ -1748,7 +1748,7 @@
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "crescent-pavilion",
     "featured": false,
-    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "requirements": "Slopcamera 3.3.1 or later, or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
       "files": [
@@ -1809,7 +1809,7 @@
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "spiral-stair",
     "featured": false,
-    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "requirements": "Slopcamera 3.3.1 or later, or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
       "files": [
@@ -1870,7 +1870,7 @@
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "ribbed-tower",
     "featured": false,
-    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "requirements": "Slopcamera 3.3.1 or later, or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
       "files": [
@@ -1931,7 +1931,7 @@
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "modular-bookshelf",
     "featured": false,
-    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "requirements": "Slopcamera 3.3.1 or later, or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
       "files": [
@@ -1992,7 +1992,7 @@
     "guideSlug": "how-to/parametric-design",
     "guideAnchor": "crescent-pavilion-wide",
     "featured": false,
-    "requirements": "Slopcamera v3.3.1 or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
+    "requirements": "Slopcamera 3.3.1 or later, or a source build, the linked repository study inputs, and a local Chrome or Chromium runtime. Local rendering; no cloud account.",
     "source": {
       "engineRevision": "6d53343b13fbc507bc3b25eb7453008e38ff93e9",
       "files": [

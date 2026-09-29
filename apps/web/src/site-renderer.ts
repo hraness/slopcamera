@@ -35,10 +35,10 @@ const homeSlots = [
 // The 404 body is the shared design-kit status page (plain classes from its
 // stylesheet in the captured foundation); only the retained header needs slots.
 const recoverySlots = [
-  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],
+  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 4],
 ] as const
 const docsSlots = [
-  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 2],
+  ["{{SITE_NAVIGATION_LINK_CLASS}}", siteShellClassNames.navigationLink, 4],
 ] as const
 // Blog pages reuse the ordinary shell. Their article and index markup carries
 // BLOG_*_CLASS tokens for its chrome and DOCS_*_CLASS tokens for post prose.

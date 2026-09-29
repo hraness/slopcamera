@@ -1,52 +1,61 @@
-Slopcamera keeps the source behind every render, such as a diagram file, a Blender program, a 3D scene, or a video edit, so your agent can change one detail and render again. This page explains what that gives you and when Remotion, HyperFrames, MCP for Blender, or a hosted generator fits better.
+A frontier model such as Claude Opus can write a video or a graphic in one pass. To do it, the agent writes the layout, the renderer setup, the export code, and the checks in the conversation, and on the next request it writes them again. With Slopcamera installed, those parts are already packaged and tested. The agent writes a short source file, and the CLI renders it, checks it, and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video. A revision is an edit to that source and a re-render.
+
+## Installed techniques instead of one-off code
+
+Each Slopcamera technique pairs a source format with a command that knows how to render it:
+
+| The agent writes | The CLI produces |
+| --- | --- |
+| A `.diagram.json` file with nodes, edges, and labels | An editable `.tldr` file, light and dark SVG, and light and dark PNG, after a layout check |
+| An HTML file from one of seven profile scaffolds | Frames and an H.264 video, rendered on one absolute clock with declared assets |
+| A `.scene.json` file with named parts and cameras | Three.js stills and video, and patches for later changes, checked against the scene |
+| A Blender, CadQuery, or Manim program from a starter | A native render kept next to its source, and an ordinary Slopcamera project |
+| Edit decisions over footage you already have | 16:9, 9:16, 1:1, and 4:5 deliveries from one edit |
+
+The source file is short because the rendering, layout rules, and exports are not in it. The [techniques catalog](/docs/reference/techniques) lists every technique with its first command, its guide, and a rendered example where the gallery has one. For measured file sizes and changed lines on four gallery revisions, read [Your model can one-shot a render. What does the second one take?](/blog/one-shot-render-vs-installed-techniques).
 
 ## Sources stay editable after the render
 
-A render produces derivatives; it does not consume its source. A diagram keeps its version-one JSON document beside the five files a render exports. A spatial scene keeps named entities and calibrated cameras as typed data an agent can patch by ID. A native bundle keeps its Blender, CadQuery, or Manim program. A video project records cuts, timing, framing, captions, and effects as decisions, so preview and final renders evaluate the same timeline and composition.
+A render writes new files and leaves its source in place. A diagram keeps its JSON beside the five exports. A scene keeps named parts and calibrated cameras that the agent changes by ID. A native bundle keeps its Blender, CadQuery, or Manim program. A video project records cuts, timing, framing, captions, and effects as decisions over the original media.
 
-The difference shows up on the second request. A PNG does not record the JSON it was rendered from, and an exported MP4 does not preserve the edit plan that produced it. When an agent assembles one-off scripts, those relationships live in a transcript, if anywhere. In Slopcamera they are the retained state, so revising a label means editing the diagram source and re-rendering it, as in the [first-diagram tutorial](/docs/tutorials/first-diagram), rather than producing a new image that has lost its connection to the source.
+The source matters when the work is revised. A PNG does not record the JSON it came from, and an exported MP4 does not keep the edit that produced it. In Slopcamera, changing a label means editing one line of the diagram source and rendering again, as in the [first-diagram tutorial](/docs/tutorials/first-diagram).
 
-## One project model carries the evidence
+## Every run leaves a record
 
-Ordinary projects keep the current edit plan alongside original media, analysis, and derived outputs. One project is immutable source plus explicit revisions, candidates, selections, and delivery variants that refer to the same inputs. Each plan fixes its inputs before anything runs. Slopcamera limits how much work runs at once, tracks each process until it exits, and reuses finished work only when the inputs, tool, and recorded result still match.
+Each plan fixes its inputs before anything runs. Slopcamera limits how much work runs at once, tracks each process until it exits, and reuses finished work only when the inputs, the tool, and the recorded result still match. A failed or interrupted run leaves its record for inspection, and recovery checks what actually happened instead of assuming a timeout meant nothing ran.
 
-That gives the agent a verifiable trail instead of a log to trust. A failed or interrupted attempt leaves its exact evidence for inspection and reconciliation; recovery re-checks the attempt rather than assuming a timeout meant nothing ran. A receipt proves a recorded operation and the identities involved, not visual quality. A successful plan or schema check still does not replace inspecting the result.
+A record proves what ran and on which inputs. It does not prove the result looks right, so inspect the output too.
 
-## Execution and credentials stay local
+## Rendering and credentials stay local
 
-There is no Slopcamera account, hosted project database, or browser generation service. Ordinary editing and rendering run on the machine in front of the agent, and the durable state is ordinary files under your control.
+There is no Slopcamera account or hosted project database. Editing and rendering run on the machine in front of the agent, and project state is ordinary files you control.
 
-Model-backed work is opt-in per invocation. Image, video, speech, and transcription generation use the caller's own Vercel AI Gateway access, read from the local process environment and never persisted as project data. Prompt-only images can instead run on the hosted API at `api.slopcamera.com`, paid with prepaid Hraness Credits. Uploading named local media requires an explicit acknowledgement on that invocation, `--allow-cloud-upload` for image and video and `--allow-cloud-audio-upload` for transcription. Discovering a model, paying for a result, and rendering retained bytes are distinct operations with distinct receipts.
+AI generation is opt-in on each command. Image, video, speech, and transcription use your own Vercel AI Gateway key from the local environment, and Slopcamera does not save it. Prompt-only images can instead run on the hosted API at `api.slopcamera.com`, paid with prepaid Hraness Credits. Uploading local media to a provider needs an explicit flag on that command: `--allow-cloud-upload` for image and video, and `--allow-cloud-audio-upload` for transcription.
 
-## Fixed interfaces an agent can inspect
+## Interfaces an agent can inspect
 
-An agent does not have to guess the local contract. `slopcamera --help` prints the grammar, `{{DOCTOR_COMMAND}}` reports installed tools and readiness, `slopcamera operations list --json` enumerates the closed operation registry with its input schemas, and `slopcamera html catalog` lists the admitted HTML profiles. The version-matched Agent Skill routes the agent to the reference for each kind of job, SDK entrypoints select a typed capability boundary, and the MCP server publishes a fixed, bounded toolset.
-
-Properties a per-task script would have to reimplement, such as absolute-time rendering, declared assets, resource admission, bounded inputs, and provenance receipts, are host invariants here. They apply to every operation the same way, and they leave evidence the next operation can check. The [architecture explanation](/docs/explanation/architecture) develops this source, representation, and project model.
+The agent does not have to guess what is installed. `slopcamera --help` prints the command grammar, `{{DOCTOR_COMMAND}}` reports installed tools, `slopcamera operations list --json` lists every operation with its input schema, and `slopcamera html catalog` lists the HTML profiles. The version-matched Agent Skill points the agent to the right guide for each job, the TypeScript SDK exposes the same operations, and the MCP server offers 17 fixed tools. The [architecture explanation](/docs/explanation/architecture) covers the source and project model in depth.
 
 ## Compared with other tools
 
-Use [Remotion](https://www.remotion.dev/) if your team writes React and wants to render at scale on [AWS Lambda](https://www.remotion.dev/docs/lambda). Use [HyperFrames](https://github.com/heygen-com/hyperframes) if you want HTML motion graphics rendered to MP4, with optional HeyGen-hosted rendering. Use [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender MCP, to model interactively in a running Blender. Use Slopcamera when one agent needs diagrams, 3D scenes, Blender or Manim films, and edits of your own footage in one local project it can revise. All three alternatives have much larger communities.
+- [Remotion](https://www.remotion.dev/) renders React components to video. Choose it if your team writes React, needs a player inside a web app, or wants distributed rendering on AWS Lambda. Read [Slopcamera vs Remotion](/docs/explanation/slopcamera-vs-remotion).
+- [HyperFrames](https://github.com/heygen-com/hyperframes), from HeyGen, renders HTML and GSAP animation to MP4. Choose it for all-HTML videos, exact output across machines in Docker, or rendering on HeyGen's cloud, AWS Lambda, or Google Cloud Run. Read [Slopcamera vs HyperFrames](/docs/explanation/slopcamera-vs-hyperframes).
+- [MCP for Blender](https://github.com/ahujasid/mcp-for-blender) lets an agent control a running Blender. Choose it for live, interactive modeling.
+- A hosted app such as Runway or ChatGPT is faster for a one-off image or clip and needs no install.
+- Choose Slopcamera when one agent needs diagrams, 3D scenes, Blender or Manim films, and edits of your own footage, kept as source it can revise.
 
-| | Slopcamera | Remotion | HyperFrames | MCP for Blender |
-| --- | --- | --- | --- | --- |
-| What the agent writes | HTML scenes, diagram JSON, Three.js scene JSON, Blender, CadQuery, or Manim programs, and video edits | React components | HTML, CSS, and JavaScript animation | Commands sent to a running Blender |
-| License | MIT | Source-available; free for individuals, non-profits, and organizations of up to 3 people ([license FAQ](https://www.remotion.dev/docs/license/faq)) | Apache 2.0 | MIT |
-| Agent integration | Version-matched Agent Skill, CLI, TypeScript SDK, and a 17-tool MCP server | [Official Agent Skills](https://www.remotion.dev/docs/ai/skills) | Agent Skills and a Claude Code plugin | MCP server plus a Blender add-on |
-| Cloud rendering | None; renders run on your machine | AWS Lambda in your AWS account | HeyGen-hosted rendering or AWS Lambda | None; work runs in your Blender |
-| Built-in diagram format | Yes, with light and dark SVG and PNG exports and a .tldr file | No | No | No |
-
-For a one-off image or clip, a hosted app such as Runway or ChatGPT is faster and needs no install. Slopcamera fits when you expect to revise the result.
+Remotion, HyperFrames, and MCP for Blender all have much larger communities than Slopcamera. For more options grouped by job, read [Remotion alternatives for coding agents](/docs/explanation/remotion-alternatives-for-coding-agents).
 
 Competitor details as of 28 September 2026.
 
 ## What Slopcamera does not provide
 
-- No hosted state. Without an account or project database there is no built-in sync, sharing, or multi-machine collaboration. Project state lives in local files you manage.
-- No sandbox for trusted code. Native Python sources and caller-authored Bun workflows run with the current user's access, including potential network access. Hashes and receipts identify what ran; they do not confine it.
-- Platform limits. New recording capture is absent from both the release and current CLI. Vectorization runs on macOS and Linux and deliberately rejects Windows. The hardware scene profiles require a qualified macOS graphics context.
-- No promised pixels across machines. Native tools, codecs, GPU drivers, and provider models affect results, so retained source identity does not guarantee identical output elsewhere.
-- Generated media needs review. Models can change subject identity, motion, or text, and a local budget estimate is not a provider-enforced spending cap.
-- Bounded interchange. A GLB export carries a supported geometry and material subset; it does not turn a native rig into an editable scene.
+- No hosted projects. Without an account or project database there is no built-in sync, sharing, or multi-machine collaboration.
+- No hosted video rendering. Video renders run on your machine.
+- No sandbox for trusted code. Native Python sources and your own Bun workflows run with your user's access, including network access. Records identify what ran; they do not confine it.
+- No capture. Slopcamera edits footage and existing recordings; it does not record the screen, camera, or microphone.
+- Platform limits. Vectorization runs on macOS and Linux and rejects Windows. The hardware Three.js profile requires a supported macOS graphics context.
+- No identical pixels across machines. Native tools, codecs, GPU drivers, and AI models affect results.
+- Generated media needs review. Models can change a subject, its motion, or its text, and a local budget estimate is not a spending cap at the provider.
 
-The [capability reference](/docs/reference/capabilities) records the current platform and trust boundaries, [Extend Slopcamera](/docs/explanation/extending) covers the surfaces an agent builds on, and [run or recover a workflow](/docs/how-to/run-workflows) shows receipts and recovery in practice.
+The [capability reference](/docs/reference/capabilities) lists current platforms and limits, [Extend Slopcamera](/docs/explanation/extending) covers what an agent can build on, and [Run or recover a workflow](/docs/how-to/run-workflows) shows run records and recovery in practice.

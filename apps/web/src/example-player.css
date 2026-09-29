@@ -29,7 +29,6 @@
   color: var(--primary, var(--gold));
   font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
   line-height: 1.35;
 }
 

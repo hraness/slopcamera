@@ -142,6 +142,12 @@ a {
   text-decoration-style: solid;
 }
 
+/* The homepage header lines up with the marketing content column (70rem plus its 2rem gutter). */
+:root:has(main[data-hraness-marketing-preset="editorial"]) {
+  --slopcamera-header-measure: 70rem;
+  --slopcamera-header-inset: 2rem;
+}
+
 /* The homepage header action is outlined; its ink follows the header surface. */
 .topbar nav[aria-label="Primary"] > .site-action {
   --gold-ink: var(--ink);
@@ -352,9 +358,10 @@ h3 {
   align-items: start;
   gap: 1.5rem 2rem;
   min-inline-size: 0;
-  padding-block: 1.75rem;
+  padding-block: 1.25rem;
+  padding-inline: 0;
   background: transparent;
-  border-block-start: 1px solid var(--hraness-material-seam);
+  border-block-start: 1px solid var(--line-strong);
   border-radius: 0;
   box-shadow: none;
 }
@@ -367,7 +374,7 @@ h3 {
 }
 
 .hraness-marketing-interface .hraness-material-code {
-  border: 1px solid var(--hraness-material-seam);
+  border: 1px solid var(--line-strong);
   border-radius: .75rem;
   background: color-mix(in oklch, var(--background, Canvas) 70%, var(--hraness-material-plane));
   box-shadow: none;
@@ -404,6 +411,67 @@ h3 {
 
 :where(.trust-links, .origin-note, .hraness-marketing-question__answer) a {
   color: var(--gold);
+}
+
+/* Why install it: three pillars, one line and one link each. */
+.slopcamera-why-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem 2.5rem;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: why;
+}
+
+.slopcamera-why-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding-block-start: 1.25rem;
+  border-block-start: 2px solid var(--primary, var(--gold));
+  counter-increment: why;
+}
+
+.slopcamera-why-list > li::before {
+  content: "0" counter(why);
+  color: var(--muted);
+  font: .75rem/1.5 var(--font-mono);
+}
+
+.slopcamera-why-list h3 {
+  margin: 0;
+  font-size: 1.1875rem;
+  line-height: 1.3;
+}
+
+.slopcamera-why-list p {
+  flex: 1;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.slopcamera-why-list .slopcamera-why-code {
+  border: 1px solid var(--line-strong);
+  border-radius: .5rem;
+  padding: .875rem 1rem;
+  font-size: .8125rem;
+}
+
+.slopcamera-why-list a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 56rem) {
+  .slopcamera-why-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Install panel */

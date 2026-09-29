@@ -1,99 +1,169 @@
-.slopcamera-work-gallery {
+/* Techniques grouped by job. Each group pairs its technique list with one
+   rendered example; groups alternate sides on wide screens. */
+.slopcamera-technique-groups {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3rem 2rem;
-  margin: 2rem 0 0;
+  gap: 0;
+  margin-block-start: 2.5rem;
+}
+
+.slopcamera-technique-group {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 1.5rem 3rem;
+  align-items: start;
+  padding-block: 2.5rem;
+  border-block-start: 1px solid var(--hraness-material-seam);
+}
+
+.slopcamera-technique-group:nth-child(even) > .slopcamera-technique-group__body {
+  order: 2;
+}
+
+.slopcamera-technique-group:nth-child(even) {
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+}
+
+.slopcamera-technique-group__body {
+  min-inline-size: 0;
+}
+
+.slopcamera-technique-group__body > h3 {
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.slopcamera-technique-group__body > p {
+  max-inline-size: 52ch;
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
+.slopcamera-technique-list {
+  display: grid;
+  gap: 1.125rem;
+  margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
 }
 
-.slopcamera-work-gallery > li {
+.slopcamera-technique-list > li {
+  display: grid;
+  gap: 0.25rem;
   min-inline-size: 0;
   margin: 0;
 }
 
-/* An odd last card spans the row but keeps one column's width, centered, so
-   every tile reads at the same size instead of stretching to the full row. */
-.slopcamera-work-gallery > li:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
-.slopcamera-work-gallery > li:last-child:nth-child(odd) > .slopcamera-example {
-  inline-size: calc(50% - 1rem);
-  margin-inline: auto;
-}
-
-.slopcamera-work-gallery .slopcamera-example {
-  margin: 0;
-  padding-block-start: 1rem;
-  border-block-start: 1px solid var(--hraness-material-seam);
-}
-
-/* One shared 16:9 media frame for every tile. Posters and videos letterbox
-   inside it, so different source ratios no longer size the cards. */
-.slopcamera-work-gallery .slopcamera-example__media {
-  inline-size: 100%;
-  block-size: auto;
-  aspect-ratio: 16 / 9;
-  margin-inline: auto;
-  border-radius: .5rem;
-  object-fit: contain;
-}
-
-.slopcamera-work-gallery .slopcamera-example__caption {
-  padding: .85rem .5rem .25rem;
-}
-
-/* The technique index leads the section: the full packaged-technique index
-   sits between the header and the rendered tiles. */
-.slopcamera-techniques {
-  margin-block: 2rem 3rem;
-  padding-block-end: 1.5rem;
-  border-block-end: 1px solid var(--hraness-material-seam);
-}
-
-.slopcamera-techniques h3 {
-  font-size: 1.05rem;
+.slopcamera-technique-list strong {
+  font-size: 1rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 
-.slopcamera-techniques .quiet-note {
-  margin-top: 0.35rem;
+.slopcamera-technique-list span {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
 }
 
-.slopcamera-techniques ul + .quiet-note {
-  margin-top: 1rem;
+.slopcamera-technique-list code {
+  display: block;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block-start: 0.25rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  background: var(--hraness-material-warm-plane, var(--panel));
+  border: 1px solid var(--hraness-material-seam);
+  border-radius: 0.375rem;
 }
 
-.slopcamera-techniques ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem .75rem;
-  margin-top: 1rem;
-  padding: 0;
-  list-style: none;
-}
-
-.slopcamera-techniques ul a {
+.slopcamera-technique-group__guide {
   display: inline-flex;
   align-items: center;
   min-block-size: 2.75rem;
-  padding-inline: 0;
-  text-decoration: none;
-  border-block-end: 1px solid var(--hraness-material-seam);
+  margin-block-start: 0.75rem;
+  color: var(--primary, var(--gold));
+  font-weight: 600;
 }
 
-.slopcamera-techniques ul a:hover {
-  background: var(--hraness-material-warm-plane);
+.slopcamera-technique-group__guide::after {
+  content: " \2192";
+  white-space: pre;
 }
 
-@media (max-width: 48rem) {
-  .slopcamera-work-gallery {
+/* One shared 16:9 frame for every rendered example. Posters and videos
+   letterbox inside it, so different source ratios do not size the groups. */
+.slopcamera-technique-group .slopcamera-example__media {
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+/* Still posters (diagrams and drawings) sit on the page color, so a light,
+   non-16:9 poster does not show dark pillarbox bars. Videos keep the night frame. */
+.slopcamera-technique-group img.slopcamera-example__media {
+  background: var(--paper);
+}
+
+.slopcamera-technique-group .slopcamera-example__caption {
+  padding-block-start: 0.75rem;
+}
+
+.slopcamera-technique-group .slopcamera-example__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.slopcamera-technique-group .slopcamera-example__caption > p:not(.slopcamera-example__links, .slopcamera-example__status) {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.slopcamera-technique-group .slopcamera-example__links {
+  gap: 0 1rem;
+  font-size: 0.875rem;
+}
+
+.slopcamera-techniques-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--hraness-material-seam);
+}
+
+.slopcamera-techniques-more a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  color: var(--primary, var(--gold));
+  font-weight: 600;
+}
+
+.slopcamera-techniques-more a:first-child::after {
+  content: " \2192";
+  white-space: pre;
+}
+
+@media (max-width: 56rem) {
+  .slopcamera-technique-group,
+  .slopcamera-technique-group:nth-child(even) {
     grid-template-columns: minmax(0, 1fr);
-    gap: 2.5rem;
+    padding-block: 2rem;
   }
 
-  .slopcamera-work-gallery > li:last-child:nth-child(odd) > .slopcamera-example {
-    inline-size: auto;
+  .slopcamera-technique-group:nth-child(even) > .slopcamera-technique-group__body {
+    order: 0;
+  }
+
+  .slopcamera-technique-group > .slopcamera-example {
+    order: -1;
   }
 }

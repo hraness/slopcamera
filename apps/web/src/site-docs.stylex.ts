@@ -78,11 +78,9 @@ const docs = stylex.create({
   },
   navSectionLabel: {
     marginBottom: "0.35rem",
-    color: "var(--muted)",
     fontSize: "0.9375rem",
+    color: "var(--ink)",
     fontWeight: 600,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
   },
   navList: {
     display: "grid",
@@ -133,8 +131,9 @@ const docs = stylex.create({
   heading: {
     marginTop: 0,
     marginBottom: "0.75rem",
-    maxWidth: "22ch",
+    maxWidth: "24ch",
     fontSize: "clamp(2rem, 4.5vw, 3rem)",
+    textWrap: "balance",
     fontWeight: 600,
     letterSpacing: "-0.02em",
     lineHeight: 1.08,
@@ -185,7 +184,7 @@ const docs = stylex.create({
     textUnderlineOffset: "0.18em",
   },
   code: {
-    overflowWrap: "anywhere",
+    overflowWrap: "break-word",
     paddingTop: "0.08em",
     paddingRight: "0.3em",
     paddingBottom: "0.08em",
@@ -256,6 +255,7 @@ const docs = stylex.create({
   },
   table: {
     width: "100%",
+    minWidth: { default: null, [tablet]: "34rem" },
     borderCollapse: "collapse",
     fontSize: "0.92rem",
     lineHeight: 1.5,

@@ -122,9 +122,14 @@ describe("media studio public copy (pure, process-free)", () => {
     const [html, config] = await Promise.all([read("apps/web/src/index.html"), read("apps/web/vercel.json")])
     expect(html).toContain('href="/docs">Docs</a>')
     for (const source of [homeMarkdown, llmsTxt, sitemapMarkdown]) expect(source).toContain("https://slopcamera.com/docs")
-    // /docs is a sealed first-party surface: no path-level redirect may return.
+    // /docs is a sealed first-party surface: only the short aliases below may point into it.
     const routes = JSON.parse(config).redirects.filter((route: { has?: unknown }) => route.has === undefined)
-    expect(routes).toEqual([])
+    expect(routes).toEqual([
+      { source: "/techniques", destination: "/docs/reference/techniques", permanent: true },
+      { source: "/compare/remotion", destination: "/docs/explanation/slopcamera-vs-remotion", permanent: true },
+      { source: "/compare/hyperframes", destination: "/docs/explanation/slopcamera-vs-hyperframes", permanent: true },
+      { source: "/compare/remotion-alternatives", destination: "/docs/explanation/remotion-alternatives-for-coding-agents", permanent: true },
+    ])
     const links = [...html.matchAll(/href="(https:\/\/github.com\/hraness\/slopcamera\/blob\/main\/docs\/[^"#]+)(?:#[^"]*)?"/gu)]
     expect(links.length).toBeGreaterThanOrEqual(1)
     const firstPartyLinks = [...html.matchAll(/href="(\/docs\/[^"#]+)"/gu)]

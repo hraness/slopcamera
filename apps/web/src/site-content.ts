@@ -10,7 +10,6 @@ import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-h
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
 import { interfaceExamples } from "./site-code-examples"
 import { renderExampleGallery, renderExampleHero } from "./example-gallery"
-import { exampleTechniqueSummary } from "./example-content"
 import { isBlogDocument } from "./blog-registry"
 
 // Existing content producers run within the ordinary page's captured SSR
@@ -137,7 +136,7 @@ export type SiteAssets = Readonly<{
 
 function renderDocsFooter(slug: string): string {
   const sourcePath = `apps/web/src/docs/${slug}.md`
-  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a>.</p>`
+  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a></p>`
 }
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {
@@ -186,7 +185,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],
       ["{{DOC_CANONICAL}}", docsCanonicalUrl(docsPage), 2],
       ["{{DOC_MARKDOWN}}", docsMarkdownUrl(docsPage), 1],
-      ["{{DOC_JSONLD}}", docsJsonLd(docsPage), 1],
+      ["{{DOC_JSONLD}}", docsJsonLd(docsPage, body), 1],
       ["{{DOC_IMAGE_URL}}", social.url, 2],
       ["{{DOC_IMAGE_ALT}}", escapeHtml(social.alt), 2],
       ["{{DOC_IMAGE_WIDTH}}", String(social.width), 1],
@@ -204,7 +203,6 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
     ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
     ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
-    ["{{EXAMPLE_TECHNIQUE_SUMMARY}}", exampleTechniqueSummary(), 1],
     ["{{SKILL_EXAMPLE}}", renderHighlightedCode(interfaceExamples.skill, "shell"), 1],
     ["{{CLI_EXAMPLE}}", renderHighlightedCode(interfaceExamples.cli, "shell"), 1],
     ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],

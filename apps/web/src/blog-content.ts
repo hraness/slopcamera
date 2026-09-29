@@ -42,7 +42,7 @@ const hraness: ArticleParty = {
 const socialImage = {
   path: "/og.png",
   contentType: "image/png",
-  alt: "Slopcamera, a media studio for agents, beside a camera-frame and lens motif",
+  alt: "Slopcamera, a video and graphics framework for coding agents, beside a camera-frame and lens motif",
   width: 1200,
   height: 630,
 } as const
