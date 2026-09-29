@@ -6,6 +6,11 @@ import { join } from "node:path";
 import { FFMPEG } from "./media";
 import { TASKS, type TaskId } from "./tasks";
 
+/** Escapes a label for a single-quoted ffmpeg drawtext value inside a filtergraph. */
+function drawtextEscape(label: string): string {
+  return label.replace(/[\\':;,[\]%]/g, (ch) => `\\${ch}`);
+}
+
 const CELL = 320;
 const LABEL = 28;
 const FONT = "/System/Library/Fonts/Supplemental/Arial.ttf";
@@ -40,7 +45,7 @@ export async function contactSheets(resultsDir: string): Promise<string[]> {
     for (const [r, key] of rows.entries()) {
       for (const [c, col] of columns.entries()) {
         const file = `${key}-${col.step}-${col.stem}.jpg`;
-        const text = `${key} ${col.step} ${col.stem}`.replace(/:/g, "\\:");
+        const text = drawtextEscape(`${key} ${col.step} ${col.stem}`);
         const draw = `drawtext=fontfile=${FONT}:text='${text}':fontsize=15:fontcolor=white:x=8:y=7`;
         if (have.has(file)) {
           inputs.push("-i", join(thumbs, file));
