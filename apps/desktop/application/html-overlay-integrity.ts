@@ -24,6 +24,9 @@ import {
 } from "./html-overlay-browser-runtime";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u);
+const ExecutionContractVersionSchema = z.union([z.literal(1), z.literal(2)]);
+export type HtmlOverlayExecutionContractVersion = z.infer<typeof ExecutionContractVersionSchema>;
+
 const IntegrityLeafSchema = z.strictObject({
   key: z.string().min(1).max(512),
   sha256: Sha256Schema,
@@ -44,7 +47,7 @@ export const HtmlOverlayExecutionIntegritySchema = z.strictObject({
   }),
   rootSha256: Sha256Schema,
   runtimeSha256: Sha256Schema,
-  schemaVersion: z.literal(1),
+  schemaVersion: ExecutionContractVersionSchema,
 });
 export type HtmlOverlayExecutionIntegrity = Readonly<
   z.infer<typeof HtmlOverlayExecutionIntegritySchema>
@@ -185,7 +188,7 @@ function legacyHtmlOverlayRendererContract(profileInput?: HtmlOverlayExecutionPr
 }
 
 /** Fetch opt-in grants only the exact declared private paths and changes execution identity. */
-export function htmlOverlayRendererContract(
+function historicalHtmlOverlayRendererContract(
   profileInput?: HtmlOverlayExecutionProfile,
   resourcesInput: readonly HtmlOverlayDeclaredResource[] = [],
 ) {
@@ -201,6 +204,25 @@ export function htmlOverlayRendererContract(
     contentSecurityPolicy: Object.freeze(contract.contentSecurityPolicy.map(directive =>
       directive === "connect-src 'none'" ? `connect-src ${urls.join(" ")}` : directive)),
     schemaVersion: 3,
+  });
+}
+
+/** Historical receipts select v1 explicitly; all new execution binds clone prevention. */
+export function htmlOverlayRendererContract(
+  profileInput?: HtmlOverlayExecutionProfile,
+  resourcesInput: readonly HtmlOverlayDeclaredResource[] = [],
+  version: HtmlOverlayExecutionContractVersion = 2,
+) {
+  const contract = historicalHtmlOverlayRendererContract(profileInput, resourcesInput);
+  if (ExecutionContractVersionSchema.parse(version) === 1) return contract;
+  return Object.freeze({
+    ...contract,
+    launch: Object.freeze({
+      ...contract.launch,
+      args: Object.freeze(contract.launch.args.map(argument => argument.startsWith("--disable-features=")
+        ? `${argument},PaintHolding,MacAppCodeSignClone` : argument)),
+    }),
+    schemaVersion: 4,
   });
 }
 
@@ -258,6 +280,7 @@ export function createHtmlOverlayExecutionBundle(
   authoringInput: HtmlOverlayAuthoringInput,
   browserRuntimeInput: HtmlOverlayBrowserRuntimeBinding,
   executionProfile?: HtmlOverlayExecutionProfile,
+  contractVersion: HtmlOverlayExecutionContractVersion = 2,
 ): HtmlOverlayExecutionBundle {
   const authoring = HtmlOverlayAuthoringInputSchema.parse(authoringInput);
   assertHtmlOverlayExecutionProfileLibraries(authoring.libraries, executionProfile);
@@ -290,7 +313,7 @@ export function createHtmlOverlayExecutionBundle(
       },
     },
     { key: "browser-runtime", value: browserRuntime },
-    { key: "renderer-contract", value: htmlOverlayRendererContract(executionProfile, authoring.resources) },
+    { key: "renderer-contract", value: htmlOverlayRendererContract(executionProfile, authoring.resources, contractVersion) },
     {
       key: "document",
       value: {
@@ -326,7 +349,7 @@ export function createHtmlOverlayExecutionBundle(
     leaves,
     rootSha256: merkleRoot(leaves),
     runtimeSha256,
-    schemaVersion: 1,
+    schemaVersion: contractVersion,
   });
   return Object.freeze({
     importMap,

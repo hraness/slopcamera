@@ -381,7 +381,7 @@ export async function recoverSpatialRenderOutput(application: ApplicationContext
       mode: plan.request.mode, frameRate: plan.request.selection.kind === "video" ? plan.request.selection.frameRate : { numerator: 1, denominator: 1 }, preparedAssets: batch.preparedAssets });
     equal(batch.metadata, expectedBatch.metadata, "Spatial batch metadata differs from the exact scene samples.");
     equal(batch.metadataSha256, expectedBatch.metadataSha256, "Spatial batch metadata digest is invalid.");
-    const execution = createHtmlOverlayExecutionBundle(expectedBatch.authoring, input.browserRuntime, plan.request.executionProfile);
+    const execution = createHtmlOverlayExecutionBundle(expectedBatch.authoring, input.browserRuntime, plan.request.executionProfile, batch.executionIntegrity.schemaVersion);
     assertHtmlOverlayGpuEvidenceProfile(plan.request.executionProfile, batch.gpuEvidence);
     equal(batch.gpuEvidence, receipt.runtime.gpuEvidence, "Spatial batch hardware identity differs from its completion receipt.");
     equal(batch.executionIntegrity, execution.integrity, "Spatial batch execution integrity differs from its exact authored runtime.");
