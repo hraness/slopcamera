@@ -10,7 +10,7 @@ const blogPostLinks = indexableBlogPosts
 
 export const homeMarkdown = `# Slopcamera is a domain-specific harness for visual creation.
 
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles documented techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles documented techniques so your agent writes a short source file and revises it by editing that file. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -252,6 +252,7 @@ ${blogPostLinks}
 - [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
 - [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
 - [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
+- [Token benchmark](https://slopcamera.com/docs/explanation/token-benchmark.md): Agent token use and cost on four media tasks with and without Slopcamera installed
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
 - [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
 - [Tutorials](https://slopcamera.com/docs/index.md): First diagram, first animation, first native film, and agent setup

@@ -416,6 +416,11 @@ describe("media.html-overlay application operation", () => {
         locks: [motion] as readonly HtmlOverlayActiveLibraryLock[],
         tamperIntegrity: true,
       },
+      {
+        expected: "integrity evidence",
+        locks: [motion] as readonly HtmlOverlayActiveLibraryLock[],
+        legacyIntegrity: true,
+      },
     ] as const;
     for (const [index, testCase] of cases.entries()) {
       const capabilities = await fixtureCapabilities(root);
@@ -435,6 +440,8 @@ describe("media.html-overlay application operation", () => {
               const executionIntegrity = createHtmlOverlayExecutionBundle(
                 request.authoring,
                 request.browserRuntime,
+                request.executionProfile,
+                "legacyIntegrity" in testCase ? 1 : 2,
               ).integrity;
               return Promise.resolve({
                 executionIntegrity: "tamperIntegrity" in testCase
@@ -580,7 +587,7 @@ describe("media.html-overlay application operation", () => {
       version: 1,
     });
     const output = HtmlOverlayOutputSchema.parse(result.output);
-    expect(observedGeneratorVersion).toBe("slopcamera-3.8.0");
+    expect(observedGeneratorVersion).toBe("slopcamera-3.8.1");
     expect(result.receiptReference).toBe(output.receipt.path);
     const receipt = HtmlOverlayReceiptSchema.parse(JSON.parse(
       await readFile(join(root, output.receipt.path), "utf8"),

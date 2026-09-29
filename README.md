@@ -23,7 +23,9 @@ file and a new render.
   is a JSON file of boxes and arrows, a title animation is an HTML scaffold
   for one of seven profiles, and a 3D shot is scene JSON with a named camera.
   The renderer, frame timing, encoding, and export formats are already
-  installed. No benchmark of token use has been published yet.
+  installed. This does not make it cheaper in tokens: in our
+  [benchmark](https://slopcamera.com/docs/explanation/token-benchmark), the median cost with
+  SlopCamera installed was higher than without it on all four tasks.
 - **Revisions change the source, not the whole result.** Change one label,
   camera, or cut and render again. Every export comes from the same source, so
   light and dark versions, or 16:9 and 9:16 cuts, stay in step.

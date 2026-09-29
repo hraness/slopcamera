@@ -20,7 +20,7 @@ Without an installed renderer, the agent writes the whole pipeline for each vide
 
 With SlopCamera installed, the agent writes only the part that is specific to the video. In the recipes below, that is a 13-line JSON request next to an HTML page, a scene JSON file with named entities and cameras, or a Blender or Manim `scene.py`. The `slopcamera` command does the rendering, checks the frames, encodes the output, and prints a JSON result for the agent to read. A revision is an edit to the source followed by another render. The skill tells the agent which command fits which shot and what each source file looks like. Anthropic's [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) describes the same pattern for scripts bundled with a skill: the agent runs the script through bash and receives only its output, so the script's code stays out of the context window.
 
-We have not measured model tokens for this. The post on [one-shot renders and installed techniques](/blog/one-shot-render-vs-installed-techniques) counts the bytes and lines the agent writes for four revisions in the gallery.
+This does not make the agent cheaper to run: in our [token benchmark](/docs/explanation/token-benchmark), the median cost with SlopCamera installed was higher than without it on all four tasks. The post on [one-shot renders and installed techniques](/blog/one-shot-render-vs-installed-techniques) counts the bytes and lines the agent writes for four revisions in the gallery.
 
 ## Install once for Claude Code or Codex
 
