@@ -1,4 +1,5 @@
 import { paletteColors } from "@hraness/design-kit"
+import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
 import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
@@ -863,7 +864,8 @@ describe("static Slopcamera site", () => {
       return url.pathname.slice(1)
     }).sort()).toEqual([...fonts, ...textures, ...textures, ...textures, ...masks].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
-    expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
+    expect(union).not.toMatch(/@font-face|sourceMappingURL/u)
+    expect(() => assertSiteRecipeResources(union, "sealed-site-union.css")).not.toThrow()
     expect(foundation).toContain("components.slopcamera-legacy")
     expect(union).toContain("components.hraness-stylex")
     expect(await readdir(join(appDirectory, "dist/graphs/site-foundation"))).toEqual(["assets"])
