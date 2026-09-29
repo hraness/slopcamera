@@ -13,6 +13,7 @@ SlopCamera no longer has a menu bar. Everything it showed is now in the terminal
 - `slopcamera legacy retire` stops the old menu-bar companion from opening at login. It moves only the LaunchAgent that SlopCamera wrote aside as `*.retired-<time>`, never deletes a file, and leaves items it did not write alone. `slopcamera doctor` lists retired items and the command that restores one.
 - The menu-bar companion, its source build and `docs/menubar-release.md` are removed. `slopcamera menubar` now exits with a usage error that points to `status` and `tui`. [`docs/cli-parity.md`](docs/cli-parity.md) maps each former menu item to its command.
 - `@hraness/desktop-foundation` is pinned to the immutable v0.9.0 release.
+- Image processing uses sharp 0.35.4, which fixes a high-severity sharp advisory. Spatial asset receipts now record the profile `sdr-png-jpeg-sharp-0.35.4`.
 
 ## 3.7.0 - 2026-09-28
 

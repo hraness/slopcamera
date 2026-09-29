@@ -27,8 +27,8 @@
     ],
     "catalog": {
       "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
-      "@img/sharp-darwin-arm64": "0.35.3",
-      "@img/sharp-libvips-darwin-arm64": "1.3.2",
+      "@img/sharp-darwin-arm64": "0.35.4",
+      "@img/sharp-libvips-darwin-arm64": "1.3.3",
       "@native-sdk/cli": "0.5.3",
       "@types/bun": "^1.3.14",
       "@types/node": "^24.10.0",
@@ -225,6 +225,9 @@
     "test": "bun run test:sdk && bun run test:desktop && bun run test:api && bun run --cwd apps/web test",
     "test:sdk": "bun test ./src ./packages/scene",
     "test:desktop": "bun test ./apps/desktop/contracts ./apps/desktop/core ./apps/desktop/application ./apps/desktop/code ./apps/desktop/workflows ./apps/desktop/html-overlay ./apps/desktop/cli ./apps/desktop/analysis ./apps/desktop/studio",
+    "test:desktop:code": "bun test ./apps/desktop/code",
+    "test:desktop:cli": "bun test ./apps/desktop/cli",
+    "test:desktop:rest": "bun test ./apps/desktop/contracts ./apps/desktop/core ./apps/desktop/application ./apps/desktop/workflows ./apps/desktop/html-overlay ./apps/desktop/analysis ./apps/desktop/studio",
     "build:desktop:analysis:macos": "bun run ./apps/desktop/analysis/build.ts",
     "build:cli:macos": "bun run ./apps/desktop/cli/build-compiled.ts",
     "test:cli:compiled:macos": "bun run build:cli:macos && SLOPCAMERA_RUN_COMPILED_CLI_SMOKE=1 bun test ./apps/desktop/cli/compiled-portable-surface.macos.test.ts",
@@ -249,6 +252,8 @@
     "check:sdk": "bun run typecheck:sdk && bun run lint:sdk && bun run build:sdk && bun run test:sdk && bun run check:release-workflows && bun run check:schema && bun run check:skill",
     "check:desktop": "bun run check:effect && bun run typecheck:desktop && bun run lint:desktop && bun run test:desktop && bun run build:desktop",
     "check:web": "bun apps/web/scripts/verify-example-sources.ts && bun run --cwd apps/web check",
+    "check:web:compile": "bun run --cwd apps/web test:compile",
+    "check:web:verify": "bun apps/web/scripts/verify-example-sources.ts && bun run --cwd apps/web check:verify",
     "kb:refresh": "bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.24.0/hraness-wordcell-0.24.0.tgz wordcell refresh --root kb",
     "kb:check:lane": "bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.24.0/hraness-wordcell-0.24.0.tgz wordcell check --root kb --no-catalog",
     "kb:check": "bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.24.0/hraness-wordcell-0.24.0.tgz wordcell check --root kb && bunx --bun --package https://github.com/hraness/wordcell/releases/download/v0.24.0/hraness-wordcell-0.24.0.tgz wordcell agents check --root kb --repo .",
@@ -280,14 +285,14 @@
     "playwright-core": "1.62.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "sharp": "0.35.3",
+    "sharp": "0.35.4",
     "three": "0.183.2",
     "typescript": "^6.0.3",
     "zod": "^4.4.3"
   },
   "optionalDependencies": {
-    "@img/sharp-darwin-arm64": "0.35.3",
-    "@img/sharp-libvips-darwin-arm64": "1.3.2"
+    "@img/sharp-darwin-arm64": "0.35.4",
+    "@img/sharp-libvips-darwin-arm64": "1.3.3"
   },
   "devDependencies": {
     "@antithesishq/bombadil": "0.7.2",

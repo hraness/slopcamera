@@ -103,7 +103,7 @@ describe("private HTML-overlay browser runtime launch", () => {
     expect(error.cause.message).toContain("launch late settlement");
     expect(JSON.parse(await readFile(join(snapshot, ".slopcamera-runtime-lease.json"), "utf8")).state).toBe("active");
     expect(await readdir(item.frames)).toEqual([]);
-  });
+  }, 60_000); // Allow bounded snapshot scavenging before the injected launch.
 
   test.each([false, true])("failed browser close preserves the active runtime snapshot and primary failure (cancelled=%s)", async cancelled => {
     const item = await setup(), controller = new AbortController(), cancellation = new Error("fixture cancellation");

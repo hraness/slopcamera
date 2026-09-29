@@ -292,4 +292,4 @@ test("raw tracer output is stopped at the streaming byte quota", async () => {
     else process.env.SLOPCAMERA_VTRACER_PATH = previousOverride
     await rm(work, { force: true, recursive: true })
   }
-})
+}, 30_000) // Allow setup and cleanup beyond the operation's own five-second budget.

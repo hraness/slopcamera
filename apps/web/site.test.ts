@@ -1627,8 +1627,12 @@ describe("static Slopcamera site", () => {
         NEXT_PUBLIC_POSTHOG_KEY: "phc_test-token_value",
         VERCEL_ENV: "production",
       } as const
-      const first = await fixture.build({ environment, outputDirectory: productionDirectory })
-      const second = await fixture.build({ environment, outputDirectory: secondDirectory })
+      // Each build runs in its own child process and output directory, so the
+      // determinism comparison below holds whether they run serially or together.
+      const [first, second] = await Promise.all([
+        fixture.build({ environment, outputDirectory: productionDirectory }),
+        fixture.build({ environment, outputDirectory: secondDirectory }),
+      ])
       expect(first.analyticsPath).toMatch(/^\/assets\/analytics-[a-f0-9]{12}\.js$/u)
       expect(second.analyticsPath).toBe(first.analyticsPath)
       expect(second.previewStylesPath).toBe(first.previewStylesPath)
@@ -2066,7 +2070,10 @@ describe("static Slopcamera site", () => {
       expect(contentFooter).toContain('class="hraness-marketing-footer__brand"')
       expect(contentFooter).toContain('class="hraness-marketing-footer__name"')
       expect(contentFooter).toContain('aria-label="Footer navigation" class="hraness-marketing-footer__nav"')
-      expect(contentFooter).toContain('viewBox="0 0 64 64"')
+      expect(contentFooter).toContain('class="hraness-marketing-footer__brand" data-foil=""')
+      expect(contentFooter).toContain('class="hraness-foil-mark__paint"')
+      expect(contentFooter).toContain('src="/marks/slopcamera.svg"')
+      expect(contentFooter).not.toContain('slopcamera-footer-lens')
       expect(contentFooter).not.toMatch(/📷|📸/u)
       expect([...contentFooter.matchAll(/<a\b[^>]*\shref="([^"]+)"/gu)].map(match => match[1]))
         .toEqual(["/", "/docs", "https://github.com/hraness/slopcamera", "/#install"])
