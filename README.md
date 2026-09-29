@@ -43,11 +43,11 @@ file and a new render.
 ## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[SlopCamera v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0)
+[SlopCamera v3.8.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.1)
 and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.8.1/hraness-slopcamera-3.8.1.tgz
 slopcamera skill install --target agents
 ```
 
@@ -325,10 +325,11 @@ or [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera).
   identical output elsewhere.
 - **Trusted code is not sandboxed.** Native Python and your own Bun workflows
   run with the current user's access.
-- **MCP is a subset.** Its 21 fixed tools check and render diagrams, plan and
+- **MCP is a subset.** Current source has 21 fixed tools that check and render diagrams, plan and
   audit scenes, compose icon scenes and soundtrack beat grids, and run ten
   operation codes. It does not expose every CLI command and never changes
-  project state.
+  project state. The verified v3.8.1 archive has a 17-tool subset and six
+  registered operations; icon and soundtrack composition require a later source build.
 
 ## Design and trust
 
