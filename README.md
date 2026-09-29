@@ -41,11 +41,11 @@ file and a new render.
 ## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[SlopCamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
+[SlopCamera v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0)
 and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz
 slopcamera skill install --target agents
 ```
 

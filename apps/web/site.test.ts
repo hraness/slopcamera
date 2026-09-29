@@ -535,9 +535,9 @@ describe("static Slopcamera site", () => {
   }, compilationTimeoutMs)
 
   test("release installation advertises the exact canonical archive beside the source path", async () => {
-    expect(publishedRelease).toEqual({ version: "3.6.0", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.6.0" })
+    expect(publishedRelease).toEqual({ version: "3.8.0", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.8.0" })
     expect(Object.isFrozen(publishedRelease)).toBe(true)
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
     for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
