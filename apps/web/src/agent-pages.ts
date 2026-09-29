@@ -10,7 +10,7 @@ const blogPostLinks = indexableBlogPosts
 
 export const homeMarkdown = `# Visual work your agent can keep revising.
 
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Open an example, adapt its source, and render a new version.
+Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio for coding agents, it writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -50,7 +50,7 @@ ${archiveInstall.alternateSkillCommand}
 
 Start a new agent session. Use \`slopcamera skill install\` for Codex by default, or add \`--scope project\` inside the target repository. Check local tools with \`slopcamera doctor --json\`.
 
-For development or unreleased capabilities, follow the [source-install guide](${sourceInstall.guideUrl}). Native engines install separately.
+For repository example helpers or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
 
 ## Examples
 

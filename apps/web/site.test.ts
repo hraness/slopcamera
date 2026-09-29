@@ -681,7 +681,7 @@ describe("static Slopcamera site", () => {
     expect(html).toContain(`<meta name="twitter:image:alt" content="${homeSocialImage.alt}">`)
     expect(html).toContain('<link rel="icon" href="/icon.png" type="image/png">')
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">')
-    expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">source-install guide</a>')
+    expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>')
     expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="https://github.com/hraness/slopcamera/blob/main/skills/slopcamera/SKILL.md">Agent Skill</a>')
   })
 
@@ -1102,7 +1102,7 @@ describe("static Slopcamera site", () => {
       "slopcamera mcp --root /absolute/path/to/workspace",
     ])
     expect(html).toContain("Choose how your agent works.")
-    expect(html).toContain("MCP covers a subset of the CLI.")
+    expect(html).toContain("It does not expose every CLI command.")
     expect(html).not.toContain("Each one reaches the same project and the same operations.")
     expect(html).not.toMatch(/hosted (?:project|generation|media) (?:service|surface)/iu)
   })

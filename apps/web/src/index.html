@@ -64,8 +64,8 @@
             <p class="hraness-marketing-hero__name">Media studio for coding agents</p>
             <h1 class="hraness-marketing-hero__heading" id="page-title">Visual work your agent can keep revising.</h1>
             <p class="hraness-marketing-hero__summary">
-              Ask your agent to make images, diagrams, animation, 3D scenes, or video.
-              Keep the source files for the next revision.
+              Images, diagrams, animation, 3D scenes, and edited video, built from source files
+              so your agent can revise a scene and render it again.
             </p>
             <div class="hraness-marketing-hero__actions">
               <a class="hraness-marketing-action" data-emphasis="primary" href="#install">Install Slopcamera</a>
@@ -141,7 +141,7 @@
           <header class="hraness-marketing-interfaces__header">
             <p class="slopcamera-eyebrow">Interfaces</p>
             <h2 class="hraness-marketing-interfaces__heading" id="interfaces-title">Choose how your agent works.</h2>
-            <p>Start with the Agent Skill, or use Slopcamera from your terminal, TypeScript program, or MCP client.</p>
+            <p>Start with the Agent Skill. Scripts and programs can call the CLI or SDK, and MCP clients get a fixed toolset.</p>
           </header>
           <div class="hraness-marketing-interface-grid">
             <article class="hraness-marketing-interface">
@@ -154,7 +154,7 @@
             <article class="hraness-marketing-interface">
               <div class="interface-copy">
                 <h3 class="hraness-marketing-interface__heading">CLI</h3>
-                <p>Run media operations from your terminal, with JSON results for scripts.</p>
+                <p>Every studio operation as a plain command, with JSON output for scripts.</p>
               </div>
               <figure class="hraness-marketing-proof-frame" data-hraness-marketing="proof-frame"><div aria-hidden="true" class="hraness-marketing-proof-frame__chrome"><span class="hraness-marketing-proof-frame__lights"><span class="hraness-marketing-proof-frame__light"></span><span class="hraness-marketing-proof-frame__light"></span><span class="hraness-marketing-proof-frame__light"></span></span><span class="hraness-marketing-proof-frame__title">CLI · Terminal</span></div><div class="hraness-marketing-proof-frame__content"><pre aria-label="CLI example" class="hraness-material-code" tabindex="0">{{CLI_EXAMPLE}}</pre></div></figure>
             </article>
@@ -168,7 +168,7 @@
             <article class="hraness-marketing-interface">
               <div class="interface-copy">
                 <h3 class="hraness-marketing-interface__heading">MCP</h3>
-                <p>Use 17 tools to render diagrams, inspect scenes, and generate images in one folder. MCP covers a subset of the CLI.</p>
+                <p>A fixed set of 17 tools for MCP clients: check and render diagrams, inspect and plan scenes, and make images in one folder. It does not expose every CLI command.</p>
               </div>
               <figure class="hraness-marketing-proof-frame" data-hraness-marketing="proof-frame"><div aria-hidden="true" class="hraness-marketing-proof-frame__chrome"><span class="hraness-marketing-proof-frame__lights"><span class="hraness-marketing-proof-frame__light"></span><span class="hraness-marketing-proof-frame__light"></span><span class="hraness-marketing-proof-frame__light"></span></span><span class="hraness-marketing-proof-frame__title">MCP · Terminal</span></div><div class="hraness-marketing-proof-frame__content"><pre aria-label="MCP example" class="hraness-material-code" tabindex="0">{{MCP_EXAMPLE}}</pre></div></figure>
             </article>
@@ -188,7 +188,7 @@
             <details class="source-install hraness-marketing-question hraness-material-disclosure">
               <summary>Build from source</summary>
               <div class="hraness-marketing-question__answer">
-                <p class="panel-note {{INSTALL_PANEL_NOTE_CLASS}}">For development or unreleased capabilities, follow the <a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">source-install guide</a>.</p>
+                <p class="panel-note {{INSTALL_PANEL_NOTE_CLASS}}">For source-only capabilities or development, follow the <a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>. It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.</p>
               </div>
             </details>
           </div>
@@ -198,14 +198,15 @@
           <header class="hraness-marketing-trust__header">
             <p class="slopcamera-eyebrow">Your files</p>
             <h2 class="hraness-marketing-trust__heading" id="design-title">What stays on your machine</h2>
-            <p>Keep your source, project, and renders locally. Optional generation and cloud analysis use external services.</p>
+            <p>Slopcamera keeps editable source beside each render. Sources, edits, and local renders stay on your own storage; generation and selected cloud analysis use the services described below.</p>
           </header>
           <dl class="hraness-marketing-trust-grid">
             <div class="hraness-marketing-trust-item"><dt>Source media stays unchanged</dt><dd>Original recordings and imported media stay unchanged. Cuts, framing, overlays, and effects remain project decisions.</dd></div>
-            <div class="hraness-marketing-trust-item"><dt>Project state stays on your machine</dt><dd>You control the source, project, previews, and final files. There is no hosted project database.</dd></div>
-            <div class="hraness-marketing-trust-item"><dt>Gateway credentials stay local</dt><dd>The CLI and SDK use your Vercel AI Gateway credential locally. Uploads for generation or cloud analysis require acknowledgement.</dd></div>
+            <div class="hraness-marketing-trust-item"><dt>Project state stays on your machine</dt><dd>There is no Slopcamera account or hosted project database. You control source, project state, previews, and final files.</dd></div>
+            <div class="hraness-marketing-trust-item"><dt>Gateway credentials stay local</dt><dd>Local processes use your Vercel AI Gateway credential without storing or printing it. Media uploads require acknowledgement.</dd></div>
+            <div class="hraness-marketing-trust-item"><dt>Operations leave a record</dt><dd>Important operations save a record of their inputs and outputs, with no secrets in it.</dd></div>
           </dl>
-          <p class="trust-links">Review native jobs and custom Bun workflows before running them: they have your user permissions and can access the network. Native jobs require <code>--allow-trusted-code</code>. See <a href="https://github.com/hraness/slopcamera/blob/main/SECURITY.md">security</a> and <a href="https://github.com/hraness/slopcamera/blob/main/PRIVACY.md">privacy</a>.</p>
+          <p class="trust-links">Native engine jobs run only with <code>--allow-trusted-code</code>. They and custom Bun workflows run as your current user, without an operating-system sandbox, so review their source first. Read the <a href="https://github.com/hraness/slopcamera/blob/main/SECURITY.md">security policy</a> and <a href="https://github.com/hraness/slopcamera/blob/main/PRIVACY.md">privacy guide</a>.</p>
         </section>
 
         <section aria-labelledby="questions-title" class="hraness-marketing-questions" data-hraness-marketing="questions" id="questions">
