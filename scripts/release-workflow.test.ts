@@ -1196,7 +1196,8 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
     expect(siteTemplate).not.toContain(`{{${slot}}}`)
   }
   expect(siteContent).toContain("archiveInstall.alternateSkillCommand")
-  expect(siteContent).toContain("`${archiveInstall.command}\\n${archiveInstall.skillCommand}`")
+  expect(siteContent).toContain("command: archiveInstall.skillCommand,")
+  expect(siteContent).toContain('{ id: "macos", command: archiveInstall.command, shell: "Terminal"')
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")

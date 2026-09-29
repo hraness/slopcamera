@@ -1,5 +1,7 @@
 import { renderHranessSiteFooter } from "@hraness/site-footer"
 import { AskAiAboutThis } from "@hraness/ui"
+import { PlatformInstall, type PlatformInstallTarget } from "@hraness/design-kit/react/platform-install"
+import { PlatformBadges } from "@hraness/design-kit/react/server"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
@@ -18,6 +20,30 @@ export function renderAskAiAboutThis(canonicalUrl: string): string {
   return renderToStaticMarkup(createElement(AskAiAboutThis, {
     className: "slopcamera-ask-ai",
     url: canonicalUrl,
+  }))
+}
+
+/** The CLI is one Bun package, so every platform runs the same archive install. */
+export const platformInstallTargets: readonly PlatformInstallTarget[] = [
+  { id: "macos", command: archiveInstall.command, shell: "Terminal", note: "Requires Bun 1.3.14+" },
+  { id: "linux", command: archiveInstall.command, shell: "Terminal", note: "Requires Bun 1.3.14+" },
+  { id: "windows", command: archiveInstall.command, shell: "PowerShell", note: "Requires Bun 1.3.14+" },
+]
+
+/** Server markup for the shared design-kit install tabs. The static site has no
+ * React client, so src/platform-install.ts enhances this markup in the browser. */
+export function renderPlatformInstall(): string {
+  return renderToStaticMarkup(createElement(PlatformInstall, {
+    detect: false,
+    id: "cli-install",
+    label: "Operating system",
+    platforms: platformInstallTargets,
+  }))
+}
+
+export function renderPlatformBadges(): string {
+  return renderToStaticMarkup(createElement(PlatformBadges, {
+    platforms: platformInstallTargets.map(target => target.id),
   }))
 }
 
@@ -90,7 +116,7 @@ function renderCopyCommand(options: CopyCommandOptions): string {
   const id = escapeHtml(options.id)
   return `<div class="copy-command {{INSTALL_COPY_CLASS}}" data-copy-command>
     <code class="copy-command__value ${command.className} {{INSTALL_VALUE_CLASS}}" data-language="shell" data-copy-command-value tabindex="0">${command.html}</code>
-    <button aria-describedby="${id}" aria-label="Copy install commands" class="copy-command__button {{INSTALL_IDLE_CLASS}}"
+    <button aria-describedby="${id}" aria-label="Copy the Agent Skill install command" class="copy-command__button {{INSTALL_IDLE_CLASS}}"
       data-copy-idle-class="copy-command__button {{INSTALL_IDLE_CLASS}}"
       data-copy-copied-class="copy-command__button {{INSTALL_COPIED_CLASS}}"
       data-copy-failed-class="copy-command__button {{INSTALL_FAILED_CLASS}}"
@@ -215,9 +241,11 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],
     ["{{MCP_EXAMPLE}}", renderHighlightedCode(interfaceExamples.mcp, "shell"), 1],
     ["{{ANALYTICS_SCRIPT}}", assets.analyticsPath === null ? "" : `<script src="${assets.analyticsPath}" type="module"></script>`, 1],
+    ["{{PLATFORM_BADGES}}", renderPlatformBadges(), 1],
+    ["{{PLATFORM_INSTALL}}", renderPlatformInstall(), 1],
     ["{{RELEASE_INSTALL_COMMANDS}}", renderCopyCommand({
       alternateCommand: archiveInstall.alternateSkillCommand,
-      command: `${archiveInstall.command}\n${archiveInstall.skillCommand}`,
+      command: archiveInstall.skillCommand,
       id: "skill-install-copy-status",
     }), 1],
   ]

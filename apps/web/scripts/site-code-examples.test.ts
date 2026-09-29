@@ -7,14 +7,24 @@ import { archiveInstall, publishedRelease } from "../src/published-release"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
-test("one copy target installs the verified archive before its matching skill", () => {
+test("platform tabs install the verified archive before one skill copy target", () => {
   const slots = new Map(siteContentSlots("index.html", { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null }).map(([key, value]) => [key, value]))
   const copy = slots.get("{{RELEASE_INSTALL_COMMANDS}}")!
   const value = copy.match(/<code\b[^>]*data-copy-command-value[^>]*>([\s\S]*?)<\/code>/u)?.[1]
   expect(value).toBeDefined()
-  expect(text(value!)).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
+  expect(text(value!)).toBe(archiveInstall.skillCommand)
   expect(copy).toContain('data-copy-command-value tabindex="0"')
-  expect(copy).toContain('aria-label="Copy install commands"')
+  expect(copy).toContain('aria-label="Copy the Agent Skill install command"')
+  const platforms = slots.get("{{PLATFORM_INSTALL}}")!
+  for (const [id, shell] of [["macos", "Terminal"], ["linux", "Terminal"], ["windows", "PowerShell"]] as const) {
+    expect(platforms).toContain(`data-platform="${id}"`)
+    expect(platforms).toContain(shell)
+  }
+  expect([...platforms.matchAll(/role="tab"[^>]*data-platform="([a-z]+)"|data-platform="([a-z]+)"[^>]*role="tab"/gu)].map(match => match[1] ?? match[2]))
+    .toEqual(["macos", "linux", "windows"])
+  expect(text(platforms)).toContain(archiveInstall.command)
+  expect(platforms).not.toContain("unavailable")
+  expect(slots.get("{{PLATFORM_BADGES}}")).toContain("data-hraness-platform-badges")
   expect(copy).toContain('data-copy-command-button hidden type="button"')
   expect(copy).toContain(archiveInstall.alternateSkillCommand)
   expect(slots.get("{{RELEASE_URL}}")).toBe(publishedRelease.releaseUrl)
