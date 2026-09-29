@@ -15,6 +15,10 @@ import {
   type HtmlOverlayScaffoldKind,
 } from "../html-overlay";
 import { CliError } from "./errors";
+import {
+  createHtmlFilmProject, HTML_FILM_ASPECTS, HTML_FILM_TEMPLATES,
+  type HtmlFilmAspect, type HtmlFilmInitResult, type HtmlFilmTemplate,
+} from "./html-film-init";
 
 const HEADLESS_SLOPCAMERA_CLI_MODULE = "@hraness/slopcamera/cli";
 
@@ -42,6 +46,7 @@ export interface PortableSurfaceDependencies {
   readonly log?: (value: string) => void;
   readonly runHeadless?: (argv: readonly string[], options?: Readonly<{ onUsefulResult?: UsefulResultObserver }>) => Promise<void>;
   readonly writeScaffold?: (path: string, html: string) => Promise<void>;
+  readonly createFilm?: typeof createHtmlFilmProject;
 }
 function optionValue(argv: readonly string[], name: string): string | undefined {
   const indexes = argv.flatMap((value, index) => value === name ? [index] : []);
@@ -215,6 +220,53 @@ function runHtmlCatalog(
   return 0;
 }
 
+const HTML_INIT_USAGE = "Use slopcamera html init <dir> --template launch-film [--aspect 16:9|1:1|9:16] [--json].";
+
+async function runHtmlInit(
+  argv: readonly string[],
+  dependencies: PortableSurfaceDependencies,
+): Promise<number> {
+  let directory: string | undefined;
+  let template: string | undefined;
+  let aspect: string | undefined;
+  let json = false;
+  for (let index = 2; index < argv.length; index += 1) {
+    const value = argv[index]!;
+    if (value === "--json") {
+      if (json) throw new CliError("usage", "--json may be supplied at most once.");
+      json = true;
+    } else if (value === "--template" || value === "--aspect") {
+      const next = argv[index + 1];
+      if (next === undefined || next.startsWith("--")) throw new CliError("usage", `${value} requires a value.`);
+      if ((value === "--template" ? template : aspect) !== undefined) throw new CliError("usage", `${value} may be supplied at most once.`);
+      if (value === "--template") template = next;
+      else aspect = next;
+      index += 1;
+    } else if (value.startsWith("-") || directory !== undefined) {
+      throw new CliError("usage", HTML_INIT_USAGE);
+    } else {
+      directory = value;
+    }
+  }
+  if (directory === undefined || template === undefined) throw new CliError("usage", HTML_INIT_USAGE);
+  if (!(HTML_FILM_TEMPLATES as readonly string[]).includes(template)) {
+    throw new CliError("usage", `Unknown film template ${template}. Use one of: ${HTML_FILM_TEMPLATES.join(", ")}.`);
+  }
+  const selectedAspect = aspect ?? "16:9";
+  if (!(HTML_FILM_ASPECTS as readonly string[]).includes(selectedAspect)) {
+    throw new CliError("usage", `--aspect must be one of ${HTML_FILM_ASPECTS.join(", ")}.`);
+  }
+  const result: HtmlFilmInitResult = await (dependencies.createFilm ?? createHtmlFilmProject)(
+    resolve((dependencies.cwd ?? process.cwd)(), directory),
+    { template: template as HtmlFilmTemplate, aspect: selectedAspect as HtmlFilmAspect },
+  );
+  (dependencies.log ?? console.log)(json
+    ? JSON.stringify(result)
+    : [`Created ${result.directory} from ${result.template} (${result.aspect})`, ...result.next.map(line => `next ${line}`)].join("\n"));
+  reportUsefulResult(dependencies.onUsefulResult);
+  return 0;
+}
+
 export async function runPortableSurface(
   argvInput: readonly string[],
   dependencies: PortableSurfaceDependencies = {},
@@ -222,8 +274,10 @@ export async function runPortableSurface(
   const argv = canonicalizeUnifiedCliArgs(argvInput);
   if (argv[0] === "style" && (argv.includes("--help") || argv.includes("-h"))) return undefined;
   if (argv[0] === "html") {
-    if (argv[1] === "render" || argv.includes("--help") || argv.includes("-h")) return undefined;
+    if (argv[1] === "render" || argv[1] === "still" || argv[1] === "preview" || argv[1] === "deliver"
+      || argv.includes("--help") || argv.includes("-h")) return undefined;
     if (argv[1] === "catalog") return runHtmlCatalog(argv, dependencies);
+    if (argv[1] === "init") return await runHtmlInit(argv, dependencies);
     return await runHtmlScaffold(argv, dependencies);
   }
   const delegatesToHeadless = argv[0] === "diagram"

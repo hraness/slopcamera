@@ -13,6 +13,7 @@ const facts: CopyFacts = {
   generalToolNames: ["check_diagram", "render_diagram", "search_slopcamera", "execute_slopcamera"],
   hostedApiPathCount: 8,
   hostedToolCount: 17,
+  htmlFilmTemplates: ["launch-film"],
   htmlProfileCount: 7,
   mcpMaximumEdges: 128,
   mcpMaximumReturnedFindings: 40,
@@ -74,6 +75,7 @@ test("matching counts, versions, names and the release commit pass", () => {
     "| Capability | Slopcamera v3.4.0 |",
     "The immutable [v3.4.0 release](https://example.invalid) contains the following command families. Its canonical archive is built from `e08bacf68c140062d9e2aebf314a4bd5d4d17cb7`.",
     "`slopcamera.image.vectorize` runs locally; twelve animation studies ship in the example.",
+    "Run `slopcamera html init film --template launch-film --aspect 9:16`; there is one film template.",
   ].join("\n");
   expect(problems(text)).toEqual([]);
   expect(new Set(rules(text))).toEqual(new Set([
@@ -82,6 +84,7 @@ test("matching counts, versions, names and the release commit pass", () => {
     "html-profiles", "workflows", "diagram-shapes", "diagram-edges", "diagram-findings",
     "rigged-glb-nodes", "rigged-glb-skins", "rigged-glb-joints", "rigged-glb-images",
     "rigged-glb-module", "release-commit", "animation-studies", "bare-profiles",
+    "html-film-template-ids", "html-film-templates",
   ]));
 });
 
@@ -93,6 +96,7 @@ test("stale counts, versions, names and commits are reported with their line", (
     "Its canonical archive is built from `88aa724005ed924b6763f9a0fe39505d632c6191`.",
     "Call `render_diagrams` or `slopcamera.image.upscale`.",
     "Twelve read-mostly scene tools and nineteen style profiles; seven HTML profiles; 9 profiles.",
+    "Run slopcamera html init film --template product-tour; two film templates ship.",
   ].join("\n");
   const found = problems(text);
   expect(found.map((claim) => [claim.line, claim.rule])).toEqual([
@@ -106,6 +110,8 @@ test("stale counts, versions, names and commits are reported with their line", (
     [6, "scene-tools"],
     [6, "style-profiles"],
     [6, "bare-profiles"],
+    [7, "html-film-templates"],
+    [7, "html-film-template-ids"],
   ]);
   expect(found[0]!.problem).toContain("says six; source says 4");
   expect(found[4]!.problem).toContain("source says e08bacf68c140062d9e2aebf314a4bd5d4d17cb7");

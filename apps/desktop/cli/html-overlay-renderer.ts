@@ -1844,6 +1844,30 @@ async function fulfillPreparedRoute(
   });
 }
 
+/**
+ * Validates a still/preview frame selection: distinct, ascending, in range.
+ * Ascending order keeps the runtime's virtual clock monotonic.
+ */
+export function selectedHtmlOverlayFrames(
+  frames: readonly number[],
+  frameCount: number,
+): readonly number[] {
+  if (frames.length === 0) {
+    throw new ApplicationError("invalid-data", "A frame selection must name at least one frame.");
+  }
+  let previous = -1;
+  for (const frame of frames) {
+    if (!Number.isSafeInteger(frame) || frame < 0 || frame >= frameCount) {
+      throw new ApplicationError("invalid-data", `Frame ${String(frame)} is outside the render range of ${String(frameCount)} frames.`);
+    }
+    if (frame <= previous) {
+      throw new ApplicationError("invalid-data", "A frame selection must be strictly ascending.");
+    }
+    previous = frame;
+  }
+  return [...frames];
+}
+
 export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
   readonly #browserStepTimeoutMs: number;
   readonly #cacheRoot: string;
@@ -1963,6 +1987,9 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
       join(request.outputDirectory, ".html-overlay-frames-"),
     );
     const frameCount = htmlOverlayFrameCount(request.authoring.timing);
+    const frameIndexes = request.frames === undefined
+      ? this.orderedFrameIndexes(frameCount)
+      : selectedHtmlOverlayFrames(request.frames, frameCount);
     const diagnostics: string[] = [];
     const pageErrors: string[] = [];
     let browserRuntimeSnapshot: PreparedBrowserRuntimeSnapshot | undefined;
@@ -2306,7 +2333,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
               "document load",
             );
             await assertNoDeniedBrowserActivity(host);
-            for (const frameIndex of this.orderedFrameIndexes(frameCount)) {
+            for (const frameIndex of frameIndexes) {
               if (signal.aborted) throw cancellationReason(signal);
               const frame = createHtmlOverlayRuntimeFrame(
                 frameIndex,
@@ -2445,7 +2472,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
       renderResult = {
         ...(gpuEvidence === undefined ? {} : { gpuEvidence }),
         executionIntegrity: execution.integrity,
-        frameCount,
+        frameCount: frameIndexes.length,
         framePattern: join(finalFrameDirectory, "frame-%08d.png"),
         libraryLocks: locks,
       };

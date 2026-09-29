@@ -73,6 +73,8 @@ export interface CopyFacts {
   readonly workflowCount: number;
   readonly styleProfileCount: number;
   readonly htmlProfileCount: number;
+  /** Film template ids that `html init --template` accepts. */
+  readonly htmlFilmTemplates: readonly string[];
   readonly animationStudyCount: number;
   readonly hostedToolCount: number;
   readonly hostedApiPathCount: number;
@@ -206,6 +208,13 @@ export const COPY_RULES: readonly CopyRule[] = [
   },
   {
     kind: "count",
+    name: "html-film-templates",
+    pattern: re(String.raw`\b${NUMBER} (?:HTML |launch )?film templates?\b`),
+    expected: (facts) => [facts.htmlFilmTemplates.length],
+    describe: "film template count (`HTML_FILM_TEMPLATES` in apps/desktop/cli/html-film-names.ts)",
+  },
+  {
+    kind: "count",
     name: "animation-studies",
     pattern: re(String.raw`\b${NUMBER} animation studies\b`),
     expected: (facts) => [facts.animationStudyCount],
@@ -296,6 +305,13 @@ export const COPY_RULES: readonly CopyRule[] = [
     pattern: re(String.raw`\x60((?:check|render|search|execute|inspect|audit|diff|evaluate|plan)_[a-z_]+)\x60`),
     members: (facts) => facts.mcpToolNames,
     describe: "an MCP tool name that `slopcameraMcpTools` does not define",
+  },
+  {
+    kind: "member",
+    name: "html-film-template-ids",
+    pattern: re(String.raw`\bhtml init [^\n\x60]*?--template ([a-z][a-z0-9-]*)`),
+    members: (facts) => facts.htmlFilmTemplates,
+    describe: "a film template id that `HTML_FILM_TEMPLATES` does not define",
   },
   {
     kind: "member",

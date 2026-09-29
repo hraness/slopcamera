@@ -43,6 +43,7 @@ export function activityLabel(command: CliCommand): string | undefined {
     case "project-render": return command.action === "run" && !command.dryRun ? "Rendering a project" : undefined;
     case "project-cinema": return "Rendering a project";
     case "html-render": return "Rendering an HTML scene";
+    case "html-film": return command.action === "deliver" ? "Encoding a film" : "Rendering film stills";
     case "diagram-render": return "Rendering a diagram";
     case "image-vectorize": return "Vectorizing an image";
     case "ai-image-generate": return "Generating an image";
