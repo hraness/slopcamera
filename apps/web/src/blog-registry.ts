@@ -84,7 +84,7 @@ const sources: readonly BlogPostSource[] = [
     slug: "introducing-slopcamera",
     title: "Introducing SlopCamera",
     description: "SlopCamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
-    eyebrow: "Introducing",
+    eyebrow: "Release",
     published: "2026-09-24",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],
   },
