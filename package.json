@@ -220,7 +220,7 @@
     "typecheck:sdk": "tsc --noEmit -p tsconfig.json",
     "typecheck:desktop": "tsc --noEmit -p apps/desktop/tsconfig.json",
     "lint": "bun run lint:sdk && bun run lint:desktop && bun run lint:api",
-    "lint:sdk": "eslint src packages/scene scripts",
+    "lint:sdk": "eslint src packages/scene scripts bench",
     "lint:desktop": "eslint apps/desktop/contracts apps/desktop/core apps/desktop/application apps/desktop/code apps/desktop/workflows apps/desktop/html-overlay apps/desktop/cli apps/desktop/qualification apps/desktop/analysis apps/desktop/studio",
     "test": "bun run test:sdk && bun run test:desktop && bun run test:api && bun run --cwd apps/web test",
     "test:sdk": "bun test ./src ./packages/scene",

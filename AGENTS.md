@@ -16,6 +16,7 @@
 - `kb/` – the Git-backed Markdown vault for rationale, evidence, maintained synthesis, plans, and scoped agent context.
 - `examples/` – checked diagram, configuration, and executable imperative and declarative Bun workflow examples.
 - `scripts/` – schema, skill, package, release, and official-vectorizer verification.
+- `bench/` – maintainer benchmarks run on demand, never in CI or the package; `bench/token-savings/` measures agent token use with and without Slopcamera installed.
 - `dist/` and `apps/desktop/dist/cli/` – committed Bun-targeted entrypoints consumed by package and Git installs.
 - `.github/workflows/` – routed SDK, local-host, static-site, macOS-native, official VTracer, and immutable release checks.
 - `docs/` – the documentation entry point, first-result tutorials, creative task guides, capability and SDK reference, architecture explanations, and provider/release runbooks.

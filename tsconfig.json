@@ -78,6 +78,7 @@
     "scripts/**/*.ts",
     "examples/**/*.ts",
     "examples/**/*.tsx",
-    "api/**/*.ts"
+    "api/**/*.ts",
+    "bench/**/*.ts"
   ]
 }
