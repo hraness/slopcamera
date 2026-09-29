@@ -70,10 +70,36 @@ describe("HTML-overlay browser execution integrity", () => {
       ["three-spark-webgl2-hardware-v1", "6bc02946ed69f065b2e06c6b0d22ee54acbd9e3cceb0527cda1d6b3c5223c284"],
     ] as const;
     for (const [profile, expected] of hashes) {
-      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile))).toBe(expected);
-      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, authoring.resources))).toBe(expected);
+      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, [], 1))).toBe(expected);
+      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, authoring.resources, 1))).toBe(expected);
     }
-    expect(htmlOverlayRendererContract(undefined, authoring.resources)).toBe(HTML_OVERLAY_RENDERER_CONTRACT);
+    expect(htmlOverlayRendererContract(undefined, authoring.resources, 1)).toBe(HTML_OVERLAY_RENDERER_CONTRACT);
+  });
+
+  test("historical fetch contracts remain byte-identical and new identities bind clone prevention", () => {
+    const resources = [{ ...authoring.resources[0]!, transport: "fetch" as const }];
+    const cases = [
+      [undefined, "4c5fb45e0e3306bd16dd72b4d3e3c512a7bb7e136c6c40cf9c528eb76b7a0a61"],
+      ["three-webgl2-hardware-v1", "dc0255109a935dd4d60875280854719be53cf8cebed0342447c493d9151a5fcc"],
+      ["three-spark-webgl2-hardware-v1", "6bc02946ed69f065b2e06c6b0d22ee54acbd9e3cceb0527cda1d6b3c5223c284"],
+    ] as const;
+    for (const [profile, expected] of cases) {
+      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, resources, 1))).toBe(expected);
+      for (const declared of [[], resources]) {
+        const libraries = profile === undefined ? [] : profile === "three-webgl2-hardware-v1"
+          ? ["three"] : ["@sparkjsdev/spark", "three", "three/addons/postprocessing/Pass.js"];
+        const input = HtmlOverlayAuthoringInputSchema.parse({ ...authoring, libraries, resources: declared });
+        const old = createHtmlOverlayExecutionBundle(input, browserRuntime, profile, 1);
+        const current = createHtmlOverlayExecutionBundle(input, browserRuntime, profile);
+        expect(old.integrity.schemaVersion).toBe(1);
+        expect(current.integrity.schemaVersion).toBe(2);
+        expect(current.integrity.leaves.filter(leaf => old.integrity.leaves.find(item => item.key === leaf.key)?.sha256 !== leaf.sha256)
+          .map(leaf => leaf.key)).toEqual(["renderer-contract"]);
+        expect(current.integrity.rootSha256).not.toBe(old.integrity.rootSha256);
+        expect(current.runtimeSource).toBe(old.runtimeSource);
+      }
+    }
+    expect(() => createHtmlOverlayExecutionBundle(authoring, browserRuntime, undefined, 3 as 2)).toThrow();
   });
 
   test("fetch opt-in permits only the exact hash-addressed private paths in canonical order", () => {
@@ -84,7 +110,7 @@ describe("HTML-overlay browser execution integrity", () => {
     for (const profile of [undefined, "three-webgl2-hardware-v1"] as const) {
       const legacy = htmlOverlayRendererContract(profile), current = htmlOverlayRendererContract(profile, resources);
       expect(current.contentSecurityPolicy.find(directive => directive.startsWith("connect-src "))).toBe(expected);
-      expect(current.schemaVersion).toBe(3);
+      expect(current.schemaVersion).toBe(4);
       expect(current.contentSecurityPolicy.filter(directive => !directive.startsWith("connect-src ")))
         .toEqual(legacy.contentSecurityPolicy.filter(directive => !directive.startsWith("connect-src ")));
       expect(current.launch).toEqual(legacy.launch);
@@ -144,7 +170,7 @@ describe("HTML-overlay browser execution integrity", () => {
     const input = { ...authoring, libraries: ["three" as const] };
     const legacy = createHtmlOverlayExecutionBundle(input, browserRuntime);
     expect(createHtmlOverlayExecutionBundle(input, browserRuntime, undefined)).toEqual(legacy);
-    expect(htmlOverlayRendererContract()).toBe(HTML_OVERLAY_RENDERER_CONTRACT);
+    expect(htmlOverlayRendererContract(undefined, [], 1)).toBe(HTML_OVERLAY_RENDERER_CONTRACT);
     const hardware = createHtmlOverlayExecutionBundle(input, browserRuntime, "three-webgl2-hardware-v1");
     expect(hardware.integrity.rootSha256).not.toBe(legacy.integrity.rootSha256);
     expect(hardware.runtimeSource).toBe(legacy.runtimeSource);

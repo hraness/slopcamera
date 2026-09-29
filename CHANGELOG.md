@@ -2,6 +2,13 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.8.1 - 2026-09-29
+
+Slopcamera's native HTML and spatial renderer prevents Chrome from creating extra application copies while rendering from its private, immutable browser runtime.
+
+- Disable Chrome's app-cloning feature in every native renderer profile while preserving signature verification, runtime integrity checks, and graceful browser cleanup.
+- Bind the updated launch arguments into new execution receipts while preserving verification and recovery of historical version-1 receipts.
+
 ## 3.8.0 - 2026-09-29
 
 SlopCamera no longer has a menu bar. Everything it showed is now in the terminal: `slopcamera status` and `slopcamera tui` show what is rendering, how the last job ended, your last known credits balance and the newest outputs, and every command reports its data in one JSON shape that agents can read.

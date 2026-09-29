@@ -8,7 +8,7 @@ import { fixtureCamera, fixtureEntity, fixtureScene } from "../../../../src/spat
 import type { ApplicationContext } from "../context";
 import { ApplicationError } from "../errors";
 import { bindHtmlOverlayBrowserRuntime } from "../html-overlay-browser-runtime";
-import { createHtmlOverlayExecutionBundle } from "../html-overlay-integrity";
+import { createHtmlOverlayExecutionBundle, type HtmlOverlayExecutionIntegrity } from "../html-overlay-integrity";
 import { hardwareEvidenceFixture } from "../../html-overlay/execution-profile.testing";
 import type { OperationExecutionContext } from "../operation";
 import type { OperationCheckpointExecutionIdentity } from "../operation-completion-checkpoint";
@@ -36,6 +36,7 @@ async function fixture() {
   const sourcePath = join(root, "original.scene.json");
   await writeFile(sourcePath, JSON.stringify(scene, null, 2));
   let renders = 0;
+  const historicalIntegrities: HtmlOverlayExecutionIntegrity[] = [];
   const capabilityRequests: string[] = [];
   const application: ApplicationContext = {
     paths: { repositoryRoot: root, privateRoot, artifactRoot: join(root, "artifacts", "slopcamera", "recordings"), desktopRoot: root, projectRoot: join(root, "artifacts", "slopcamera", "projects") },
@@ -49,13 +50,14 @@ async function fixture() {
       const bytes = await sharp({ create: { width: rendered.authoring.canvas.width, height: rendered.authoring.canvas.height, channels: 4, background: { r: 0, g: 255, b: 0, alpha: 0.5 } } }).png().toBuffer();
       for (let index = 0; index < count; index++) await writeFile(join(frames, `frame-${String(index).padStart(8, "0")}.png`), bytes);
       const bundle = createHtmlOverlayExecutionBundle(rendered.authoring, rendered.browserRuntime, rendered.executionProfile);
+      historicalIntegrities.push(createHtmlOverlayExecutionBundle(rendered.authoring, rendered.browserRuntime, rendered.executionProfile, 1).integrity);
       return { frameCount: count, framePattern: join(frames, "frame-%08d.png"), executionIntegrity: bundle.integrity, libraryLocks: bundle.libraryLocks,
         ...(rendered.executionProfile === undefined ? {} : { gpuEvidence: hardwareEvidenceFixture(rendered.executionProfile) }) };
     } },
   };
   const context: OperationExecutionContext = { application, abortSignal: new AbortController().signal, workflow: { ...identity, workspaceDirectory: workspace, beforePublication: async () => {} } };
   const input = await bindSpatialRenderInput(application, { source: { path: "original.scene.json" }, request }, context.abortSignal, bindRuntime);
-  return { root, sourcePath, scene, input, context, application, workspace, capabilityRequests, renders: () => renders };
+  return { root, sourcePath, scene, input, context, application, workspace, capabilityRequests, historicalIntegrities, renders: () => renders };
 }
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 async function withFixture(run: (f: Fixture) => Promise<void>) {
@@ -192,12 +194,29 @@ test("recovery rejects foreign output getters before parsing and proves primary 
   await expect(recoverSpatialRenderOutput(f.application, f.input, modified, identity, f.context.abortSignal)).rejects.toThrow("Primary spatial frame");
 }));
 
+test("recovery verifies retained v1 render identities without rendering or accepting mismatched versions", async () => withFixture(async f => {
+  const output = await executeSpatialRender(f.context, f.input, dependencies);
+  const original = await receipt(f, output);
+  const originalBatch = await json(f, original.batches[0]!) as Record<string, unknown>;
+  for (const version of [1, 2] as const) {
+    const batch = { ...originalBatch, executionIntegrity: { ...f.historicalIntegrities[0]!, schemaVersion: version } };
+    const artifact = await publishJson(f, batch);
+    const receiptArtifact = await publishJson(f, { ...original, batches: [artifact], costs: { ...original.costs, actualBatchMetadataBytes: artifact.bytes } });
+    const retained = { ...output, receipt: receiptArtifact };
+    if (version === 1) expect(await recoverSpatialRenderOutput(f.application, f.input, retained, identity, f.context.abortSignal)).toEqual(retained);
+    else await expect(recoverSpatialRenderOutput(f.application, f.input, retained, identity, f.context.abortSignal)).rejects.toMatchObject({ code: "incompatible" });
+  }
+  expect(f.renders()).toBe(1);
+}));
+
 test("recovery rederives batch metadata, execution integrity, library locks, manifests, and sample partitions", async () => withFixture(async f => {
   const output = await executeSpatialRender(f.context, f.input, dependencies);
   const original = await receipt(f, output);
   const originalBatch = await json(f, original.batches[0]!);
   const changes: readonly { label: string; apply(value: Record<string, unknown>): void }[] = [
     { label: "metadata", apply: value => { const metadata = value.metadata as { frames: { stateSha256: string }[] }; metadata.frames[0]!.stateSha256 = "f".repeat(64); } },
+    { label: "contract version mismatch", apply: value => { (value.executionIntegrity as { schemaVersion: number }).schemaVersion = 1; } },
+    { label: "unknown contract version", apply: value => { (value.executionIntegrity as { schemaVersion: number }).schemaVersion = 3; } },
     { label: "integrity", apply: value => { (value.executionIntegrity as { rootSha256: string }).rootSha256 = "f".repeat(64); } },
     { label: "locks", apply: value => { (value.libraryLocks as { version: string }[])[0]!.version = "0.0.0"; } },
     { label: "partition", apply: value => { (value.samples as { sample: { index: number } }[])[0]!.sample.index = 1; } },
@@ -210,7 +229,9 @@ test("recovery rederives batch metadata, execution integrity, library locks, man
     const artifact = await publishJson(f, batch);
     const changed = { ...original, batches: [artifact], costs: { ...original.costs, actualBatchMetadataBytes: artifact.bytes } };
     const modified = { ...output, receipt: await publishJson(f, changed) };
-    await expect(recoverSpatialRenderOutput(f.application, f.input, modified, identity, f.context.abortSignal), change.label).rejects.toMatchObject({ code: "incompatible" });
+    const recovery = recoverSpatialRenderOutput(f.application, f.input, modified, identity, f.context.abortSignal);
+    if (change.label === "unknown contract version") await expect(recovery).rejects.toThrow("schemaVersion");
+    else await expect(recovery, change.label).rejects.toMatchObject({ code: "incompatible" });
   }
   expect(f.renders()).toBe(1);
 }));

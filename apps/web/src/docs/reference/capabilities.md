@@ -112,3 +112,9 @@ There is no Slopcamera account or hosted project database. Editing and rendering
 Credentials and upload or trusted-code acknowledgements remain invocation-scoped: `--allow-cloud-upload`, `--allow-cloud-audio-upload`, `--allow-paid-generation`, `--allow-reference-hosting`, and `--allow-trusted-code` apply to one invocation, and a local source import does not authorize executing it or sending it to a model. Rendering from a prepared local closure does not upload a project.
 
 Native studio jobs and custom Bun workflow modules run as the current user without an OS sandbox; hash receipts and process supervision provide provenance and control, not confinement. Directing budgets use catalog estimates, not provider-enforced spending caps.
+
+## Native browser isolation
+
+The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Current source disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
+
+New renders bind these arguments into execution-integrity version 2. Retained version-1 receipts keep their historical contract for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.
