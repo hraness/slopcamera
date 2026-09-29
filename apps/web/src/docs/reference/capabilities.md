@@ -11,7 +11,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 | TypeScript SDK | `@hraness/slopcamera` portable imports plus the complete-local-host `./local/*` surfaces; see [SDK surfaces](/docs/reference/sdk) |
 | MCP server | `slopcamera mcp --root <workspace>` exposes a fixed toolset inside one selected root; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp) |
 
-Current source exposes ten operation codes: diagram check/render, image generate/vectorize, image icon/gallery, icon compose/render, and soundtrack compose/grid. Its MCP server has 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits, and `compose_icon`, `render_icon`, `compose_soundtrack`, and `derive_soundtrack_grid`. The icon compose/render and soundtrack compose/grid codes, their MCP tools, and the `image icon compose|render` and `media soundtrack compose|grid` commands are in current source after the v3.8.1 release; they run locally with no model or network request. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+Slopcamera exposes ten operation codes: diagram check/render, image generate/vectorize, image icon/gallery, icon compose/render, and soundtrack compose/grid. Its MCP server has 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits, and `compose_icon`, `render_icon`, `compose_soundtrack`, and `derive_soundtrack_grid`. The icon compose/render and soundtrack compose/grid codes, their MCP tools, and the `image icon compose|render` and `media soundtrack compose|grid` commands were introduced in v3.9.0; they run locally with no model or network request. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Install the release
 
@@ -37,14 +37,15 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Verified release contents
 
-The immutable [v3.8.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.1), published on September 29, 2026, contains the following command families. Its canonical archive is built from `2f24090f74b65c54a3675f22dffeaba99ff7f40b`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.9.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.9.0), published on September 29, 2026, contains the following command families. Its canonical archive is built from `7a2de2fe1a67ae74baf52b574c07ea98c5e6cfce`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.8.1 |
+| Capability | Slopcamera v3.9.0 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
 | Spatial scenes, calibrated camera tracks, hardware/Spark profiles, saved-world import | Included |
 | Static `capabilities --json` manifest; image icon and candidate-gallery recipes | Included |
+| Local icon.place and Soundfish commands: `image icon compose\|render` and `media soundtrack compose\|grid` | Included; no model or network request |
 | Scene builders/admission, audits, rendered galleries, vision critique, character/performance and cinematic camera APIs | Included |
 | Scene effects, particles, simulation bakes, semantic direction, temporal/behavior audits, project cinema plans | Included |
 | Seventeen read-only visual style profiles (`style list` and `style show`), deterministic exposure and variation helpers, film-finishing controls | Included; authoring guidance, no effects applied |
@@ -115,6 +116,6 @@ Native studio jobs and custom Bun workflow modules run as the current user witho
 
 ## Native browser isolation
 
-The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera v3.8.1 disables Chrome's `MacAppCodeSignClone` feature for that copy to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
+The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera disables Chrome's `MacAppCodeSignClone` feature for that copy, a change introduced in v3.8.1, to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
 
 New renders bind these arguments into execution-integrity version 2. Retained version-1 receipts keep their historical contract for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.

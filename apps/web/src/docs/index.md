@@ -55,7 +55,7 @@ Then give your coding agent the matching guidance:
 - [Vercel AI Gateway media generation](/docs/reference/gateway-generation): credentials, live model discovery, upload acknowledgements, and receipts.
 - [Video editing, compositing, and delivery](/docs/reference/video-pipeline): the FFmpeg-backed project model, typed edits, and delivery variants.
 - [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the source Slopcamera keeps, the runtime you choose, and the job lifecycle.
-- [The Slopcamera MCP toolset](/docs/reference/mcp-tools): the 21 fixed tools in current source, their bounds, and what stays CLI-only.
+- [The Slopcamera MCP toolset](/docs/reference/mcp-tools): the 21 fixed tools, their bounds, and what stays CLI-only.
 
 ## Understand the design
 

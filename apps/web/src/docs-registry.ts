@@ -134,7 +134,7 @@ export const docPages: readonly DocsPage[] = [
     description: "How SlopCamera runs Blender, CadQuery, and Manim jobs: the source it keeps, the runtime you choose, and the --allow-trusted-code flag.",
     section: "reference" },
   { slug: "reference/mcp-tools", title: "The SlopCamera MCP toolset",
-    description: "The 21 fixed tools served by current-source slopcamera mcp, their bounds, and what stays CLI-only.",
+    description: "The 21 fixed tools slopcamera mcp serves over stdio, their bounds, and what stays CLI-only.",
     section: "reference" },
   // Explanation: concepts, differentiators, and extension surfaces.
   { slug: "explanation/architecture", title: "How SlopCamera works: sources, renders, and projects",
