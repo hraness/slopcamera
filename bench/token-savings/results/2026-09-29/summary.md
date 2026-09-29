@@ -1,6 +1,6 @@
 # Token-savings benchmark summary
 
-Generated 2026-09-29T17:43:01.517Z. Spent $5.69 across 32 recorded steps and 0 aborted steps.
+Generated 2026-09-29T17:54:16.562Z. Spent $5.69 across 32 recorded steps and 0 aborted steps.
 
 ## Medians over successful sessions (create and revise both passed)
 
@@ -23,6 +23,49 @@ Generated 2026-09-29T17:43:01.517Z. Spent $5.69 across 32 recorded steps and 0 a
 | t2 | 2 | 2 | 1.56 | 1.72 | 1.60 | 2.60 | 2.98 | 2.69 |
 | t3 | 2 | 2 | 0.67 | 1.41 | 0.76 | 1.07 | 1.43 | 1.14 |
 | t4 | 2 | 2 | 0.82 | 1.14 | 0.91 | 1.11 | 1.56 | 1.21 |
+
+## Per-session create plus revise totals
+
+With two sessions per cell a median is the mean of two sessions, so the ranges matter more than the medians.
+
+| Session | Pass | Out | $ | In-side | Wall s | API s | Outside API s | slopcamera cmds | Skill loaded |
+|---|---|---|---|---|---|---|---|---|---|
+| t1-A-r1 | yes | 3,303 | 0.202 | 110,791 | 38 | 33 | 5 | 0 | – |
+| t1-A-r2 | yes | 4,052 | 0.301 | 167,409 | 56 | 51 | 4 | 0 | – |
+| t1-B-r1 | yes | 3,346 | 0.320 | 279,971 | 65 | 50 | 15 | 5 | yes |
+| t1-B-r2 | yes | 3,403 | 0.299 | 267,833 | 60 | 39 | 20 | 5 | yes |
+| t2-A-r1 | yes | 5,183 | 0.223 | 118,606 | 78 | 55 | 23 | 0 | – |
+| t2-A-r2 | yes | 4,228 | 0.203 | 108,691 | 48 | 41 | 7 | 0 | – |
+| t2-B-r1 | yes | 9,259 | 0.780 | 897,786 | 851 | 94 | 758 | 8 | yes |
+| t2-B-r2 | yes | 5,776 | 0.365 | 312,292 | 534 | 60 | 474 | 6 | yes |
+| t3-A-r1 | yes | 12,798 | 0.565 | 392,232 | 324 | 121 | 203 | 0 | – |
+| t3-A-r2 | yes | 10,193 | 0.473 | 324,809 | 356 | 95 | 261 | 0 | – |
+| t3-B-r1 | yes | 8,502 | 0.579 | 570,592 | 245 | 87 | 157 | 7 | yes |
+| t3-B-r2 | yes | 8,887 | 0.602 | 555,533 | 202 | 101 | 102 | 7 | yes |
+| t4-A-r1 | yes | 3,739 | 0.195 | 119,404 | 46 | 39 | 7 | 0 | – |
+| t4-A-r2 | yes | 3,299 | 0.158 | 96,106 | 42 | 33 | 8 | 0 | – |
+| t4-B-r1 | yes | 2,904 | 0.187 | 119,739 | 42 | 31 | 11 | 0 | no |
+| t4-B-r2 | yes | 3,513 | 0.242 | 177,155 | 46 | 35 | 11 | 1 | yes |
+
+## Per-session ranges, A versus B
+
+| Task | Out A | Out B | Output | $ A | $ B | Cost |
+|---|---|---|---|---|---|---|
+| t1 | 3,303–4,052 | 3,346–3,403 | ranges overlap | 0.202–0.301 | 0.299–0.320 | ranges overlap |
+| t2 | 4,228–5,183 | 5,776–9,259 | B higher, ranges do not overlap | 0.203–0.223 | 0.365–0.780 | B higher, ranges do not overlap |
+| t3 | 10,193–12,798 | 8,502–8,887 | B lower, ranges do not overlap | 0.473–0.565 | 0.579–0.602 | B higher, ranges do not overlap |
+| t4 | 3,299–3,739 | 2,904–3,513 | ranges overlap | 0.158–0.195 | 0.187–0.242 | ranges overlap |
+
+## Cost by token type, all steps
+
+Prices per million tokens: input $4, cache write $8, cache read $0.2, output $20. They reproduce every step's reported cost to within $0.000000.
+
+| Cond | Steps | Input tok | Cache write tok | Cache read tok | Output tok | $ input | $ cache write | $ cache read | $ output | $ total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| A | 16 | 168 | 140,647 | 1,297,233 | 46,795 | 0.001 | 1.125 | 0.259 | 0.936 | 2.32 |
+| B | 16 | 256 | 233,794 | 2,946,851 | 45,590 | 0.001 | 1.870 | 0.589 | 0.912 | 3.37 |
+
+Prompts identical across conditions and repeats for every task and step: yes.
 
 ## Failures
 

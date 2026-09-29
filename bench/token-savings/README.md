@@ -9,6 +9,14 @@ measured.
 The results are a controlled benchmark on one Mac with one model. They are not
 a general claim about every agent, task or machine.
 
+## Result, 2026-09-29
+
+All 32 steps passed. Having SlopCamera installed did not reduce the agent's
+token spend or cost: median create-plus-revise cost was higher with SlopCamera
+on every task (B/A 1.14 to 2.69), with two sessions per task per condition. See
+[`results/2026-09-29/summary.md`](results/2026-09-29/summary.md) and the audit
+corrections in [`results/2026-09-29/NOTES.md`](results/2026-09-29/NOTES.md).
+
 ## Conditions
 
 Both conditions run headless Claude Code (`claude -p`) with model
@@ -56,8 +64,12 @@ happened in the first pilot. The agent's own `$HOME` is unchanged.
 `harness.ts probe` runs one short session per condition with the same flags
 and asks the agent to list its skills, instruction files and MCP servers. It
 writes `results/<run-id>/isolation-probe.json`. Claude Code's built-in skills
-(for example `dataviz` and `design`) remain available in both conditions; they
-ship with Claude Code and are the same in A and B.
+(for example `dataviz` and `design`), two built-in plugins and the session's
+system reminder remain in both conditions; they ship with Claude Code and are
+the same in A and B. The isolation removes the operator's configuration, not
+everything. Every raw row records the session's `init` event, so isolation can
+be checked per step. The probe output can contain the account's email address;
+pilot results are gitignored for that reason.
 
 ### Permissions
 
@@ -127,7 +139,9 @@ Per step, from the `result` event of `--output-format stream-json`:
   `harness.ts recount` recomputes this from the transcripts and fails if the
   revise `modelUsage` output tokens are not create plus revise.
 - `num_turns`
-- wall-clock seconds and API milliseconds
+- wall-clock seconds and API milliseconds; `duration_api_ms` is also
+  cumulative over a resumed session, so a revise row's figure covers both
+  steps
 - pass or fail, with each check
 - tool-call counts, the number of Bash calls that invoke `slopcamera`, and
   Skill tool calls
@@ -135,9 +149,19 @@ Per step, from the `result` event of `--output-format stream-json`:
 `--max-budget-usd` applies to the whole resumed session, so a revise step's
 effective cap is 6 dollars minus the create step's cost.
 
+Input-side tokens add token types with very different prices: at this run's
+prices, a cache read costs a fortieth of a cache write. `summary.md`
+therefore also breaks cost down by token type, and cost is the primary
+metric. The token prices it uses are checked against every step's reported
+cost.
+
 The primary comparison is median output tokens and median cost for create,
 revise, and create plus revise, over sessions where both steps passed.
 Failures are listed and counted separately.
+
+With two sessions per cell, a median is the mean of two sessions and no test
+can reach significance. `summary.md` lists every session's totals and says, per
+task, whether the A and B ranges overlap.
 
 ## Run it
 
