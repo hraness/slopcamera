@@ -1,10 +1,10 @@
 # Public writing style
 
-This guide covers everything written for readers outside a repository: product pages, documentation, READMEs, interface text, metadata, and text a model writes for publication. Apply the voice rules in [`WRITING.md`](WRITING.md) first. The [documentation guidelines](DOCUMENTATION_GUIDELINES.md) choose a document's purpose and shape, and the [README guidelines](README_GUIDELINES.md) cover the repository front door.
+This guide covers everything written for readers outside a repository: product pages, documentation, READMEs, interface text, metadata, and text a model writes for publication. Apply the voice rules in [`WRITING.md`](WRITING.md) first. The [documentation guidelines](https://github.com/hraness/.github/blob/main/DOCUMENTATION_GUIDELINES.md) choose a document's purpose and shape, and the [README guidelines](https://github.com/hraness/.github/blob/main/README_GUIDELINES.md) cover the repository front door.
 
 Public prose must be precise, useful, and free of hype. Use a direct, natural voice that reads well aloud.
 
-This is the canonical copy. Repositories keep a synced copy so agents can read it offline; rules that apply to one repository go under “Repository additions” at the end of that copy.
+This is a synced copy of the [Hraness public writing style](https://github.com/hraness/.github/blob/main/STYLE.md), kept here so agents can read it offline. Repository-specific rules appear under “Repository additions” below.
 
 ## Leave the reader with a clearer model
 
@@ -233,7 +233,7 @@ A prompt, skill, or template that makes a model write published text is public c
 - Read a sample of real outputs after every prompt change.
 - Tell the model who reads the output and that the reader has not seen the inputs or the instructions. Name every field that is published, including rationales and labels.
 - Set length limits as maximums. A minimum longer than the evidence forces padding.
-- Include the shared generation block from [`GENERATION_STYLE.md`](GENERATION_STYLE.md) and record its version with the prompt version.
+- Include the shared generation block from [`GENERATION_STYLE.md`](https://github.com/hraness/.github/blob/main/GENERATION_STYLE.md) and record its version with the prompt version.
 - Check the prompt, skill, and examples for the patterns they forbid; a prompt that uses em dashes and staged contrasts produces them.
 
 ## Keep tests and guides from freezing copy
@@ -245,7 +245,7 @@ A prompt, skill, or template that makes a model write published text is public c
 
 ## Say who wrote and who checked
 
-- Show AI-drafting disclosure on hraness.com through its shared disclosure component, on every page with AI-drafted text. Essays and blog posts on any Hraness site also show the provenance note from [`GENERATION_STYLE.md`](GENERATION_STYLE.md), naming the recorded reviewer. Other pages on other Hraness sites and products do not carry AI-drafting disclosures, labels, or badges.
+- Show AI-drafting disclosure on hraness.com through its shared disclosure component, on every page with AI-drafted text. Essays and blog posts on any Hraness site also show the provenance note from [`GENERATION_STYLE.md`](https://github.com/hraness/.github/blob/main/GENERATION_STYLE.md), naming the recorded reviewer. Other pages on other Hraness sites and products do not carry AI-drafting disclosures, labels, or badges.
 - Everywhere, keep a record of who drafted and who reviewed generated or agent-drafted text: the author, an independent human, or an AI agent, by name.
 - Never credit AI-drafted text to a person as its sole author, never describe AI review as human review, and never claim a review that has no record. A page without a review record makes no review claim.
 - Text an agent posts from a person's account does not claim that person wrote AI-drafted work.
