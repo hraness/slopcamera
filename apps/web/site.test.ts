@@ -233,7 +233,8 @@ function assertBuiltHtmlBudget(html: string): number {
   // analytics attributes it measured 71,721. The shared design-kit platform
   // install tabs and Runs-on badges add 30,268 bytes of server markup (each
   // Linux mark path is 5,354 bytes, drawn three times); the page measured
-  // 102,334. The 102,800 ceiling leaves 466 bytes; count every byte.
+  // 102,334. design-kit v0.29.2 draws each install mark once as a <symbol>
+  // (one Linux path fewer): 97,331. The 102,800 ceiling stays; count every byte.
   const bytes = Buffer.byteLength(html, "utf8")
   if (bytes >= 102_800) throw new Error(`Built site HTML exceeds its 102,800-byte budget: ${bytes}`)
   return bytes
@@ -1423,7 +1424,7 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.29.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.29.2",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
@@ -1453,7 +1454,7 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.29.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.29.2"')
     expect(localLockfile).toContain(
       '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
     )
