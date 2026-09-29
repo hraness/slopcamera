@@ -1,13 +1,22 @@
 name: Production public site browser
 on:
   workflow_dispatch:
+  # Vercel reports each deployment through the GitHub Deployments API. Only a
+  # successful Production deployment of the site runs this check.
+  deployment_status:
 permissions:
   contents: read
-concurrency:
-  group: production-public-browser
-  cancel-in-progress: false
 jobs:
   browser:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.deployment_status.state == 'success'
+      && github.event.deployment.environment == 'Production – slopcamera')
+    # Job-level, so the skipped runs for Preview deployments never queue in
+    # (or displace a pending Production check from) this group.
+    concurrency:
+      group: production-public-browser
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -48,8 +57,16 @@ jobs:
           retention-days: 7
           if-no-files-found: error
   required:
-    name: Required
-    if: always()
+    # Not named Required: deployment_status runs attach to the deployed SHA,
+    # and pull request Preview deployments must never add a check with the
+    # ruleset's Required name. The same event gate as browser applies.
+    name: Production verified
+    if: >-
+      always()
+      && needs.browser.result != 'cancelled'
+      && (github.event_name == 'workflow_dispatch'
+      || (github.event.deployment_status.state == 'success'
+      && github.event.deployment.environment == 'Production – slopcamera'))
     needs: browser
     runs-on: ubuntu-24.04
     timeout-minutes: 5

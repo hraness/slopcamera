@@ -149,7 +149,9 @@ jobs:
 
   official_vtracer:
     name: Slopcamera VTracer (${{ matrix.target }})
-    needs: verify
+    # Tests the tagged source, not the verified archive, so it runs beside
+    # Verify. Attestation and publication still need both.
+    needs: authorize
     permissions:
       contents: read
     runs-on: ${{ matrix.runner }}

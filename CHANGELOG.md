@@ -2,6 +2,10 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## Unreleased
+
+- Image processing uses sharp 0.35.4, which fixes a high-severity sharp advisory. Spatial asset receipts now record the profile `sdr-png-jpeg-sharp-0.35.4`.
+
 ## 3.7.0 - 2026-09-28
 
 SlopCamera can now start, review and deliver a product launch film. A new template lays out a short film in six acts around your product's own UI, a helper module keeps every frame a function of time, and one command turns a render into web, social and per-act files within size budgets.

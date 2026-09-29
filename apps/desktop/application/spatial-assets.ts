@@ -459,7 +459,7 @@ export async function withPreparedSpatialAssets<Result>(
     }
     const decoded = await raster(bytes, interpretation.alpha === "opaque");
     if (decoded.width !== interpretation.width || decoded.height !== interpretation.height) throw new RangeError("Image dimensions differ from its interpretation.");
-    profiles.add("sdr-png-jpeg-sharp-0.35.3");
+    profiles.add("sdr-png-jpeg-sharp-0.35.4");
     return publishRaster(decoded);
   };
   const native = async (argv: readonly [string, ...string[]], maxOutputBytes = 16_384) => {
