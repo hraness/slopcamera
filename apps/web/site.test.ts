@@ -642,7 +642,7 @@ describe("static Slopcamera site", () => {
       "Agent Skill",
       "MCP server",
       "Vercel AI Gateway",
-      "video and graphics framework for coding agents",
+      "media studio for coding agents",
       "import existing footage or recording bundles",
       "image, video, speech, and transcription models",
       "clean and captioned versions",

@@ -6,13 +6,11 @@ You install the renderer and the skill once; after that, each video is a source 
 
 Most "make me a video" requests fall into one of five kinds of shot, and each suits a different engine.
 
-| You need | Engine | What the agent writes | Start with |
-| --- | --- | --- | --- |
-| Titles, kinetic type, lower thirds, shader or chart backgrounds | HTML in a local browser | An HTML page and a short JSON request | `slopcamera html render` |
-| A camera moving through a 3D arrangement of objects or media panels | Three.js scene | A scene JSON file with named entities and cameras | `slopcamera scene render` |
-| A product film with physical materials, cloth, liquid, or a rigged character | Blender | A Python scene and a source list | `slopcamera studio run` |
-| A math or science explainer | Manim | A Python scene and a lesson file | `slopcamera studio run` |
-| Cuts, color, overlays, and aspect-ratio variants of footage you already have | Project compositor with FFmpeg | Edit commands against a project | `slopcamera project edit` |
+- **Titles, kinetic type, lower thirds, shader or chart backgrounds.** HTML in a local browser. The agent writes an HTML page and a short JSON request. Start with `slopcamera html render`.
+- **A camera moving through a 3D arrangement of objects or media panels.** Three.js scene. The agent writes a scene JSON file with named entities and cameras. Start with `slopcamera scene render`.
+- **A product film with physical materials, cloth, liquid, or a rigged character.** Blender. The agent writes a Python scene and a source list. Start with `slopcamera studio run`.
+- **A math or science explainer.** Manim. The agent writes a Python scene and a lesson file. Start with `slopcamera studio run`.
+- **Cuts, color, overlays, and aspect-ratio variants of footage you already have.** Project compositor with FFmpeg. The agent writes edit commands against a project. Start with `slopcamera project edit`.
 
 The first two engines render in the local Chrome runtime that SlopCamera checks. Blender, Manim, and CadQuery are programs you install yourself; SlopCamera runs the copy you point it at. FFmpeg and FFprobe handle encoding for all five. Run `{{DOCTOR_COMMAND}}` to see what your machine can render before you ask for anything.
 
@@ -191,4 +189,4 @@ SlopCamera fits when one project needs more than one engine, or when native tool
 
 Every render here runs on your machine. A finished encode does not prove the video is right, so watch the start, the middle, the last frame, and each cut, and listen to any audio. Rendering the same source on another computer can produce small pixel differences, because browsers, GPUs, and native engine builds differ. The published Three.js gallery shots used a macOS WebGL2 hardware profile, and the native examples need Blender, Manim, or CadQuery installed at the versions their guides name.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).

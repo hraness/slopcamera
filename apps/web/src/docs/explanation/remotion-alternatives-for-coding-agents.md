@@ -10,16 +10,14 @@ Remotion is a widely used way to make video with code, but a coding agent can dr
 
 ## At a glance
 
-| Tool | What the agent writes | Renders with | License | GitHub stars |
-| --- | --- | --- | --- | --- |
-| [Remotion](https://github.com/remotion-dev/remotion) | React components | Chrome, locally or on AWS Lambda | Remotion License: free for up to 3 employees, paid above | 60,940 |
-| [HyperFrames](https://github.com/heygen-com/hyperframes) | HTML, CSS, and seekable animation | Headless Chrome, locally, in Docker, or on HeyGen's cloud, Lambda, or Cloud Run | Apache 2.0 | 53,905 |
-| [Revideo](https://github.com/midrender/revideo) | TypeScript scenes | A headless render API | MIT | 4,070 |
-| [Motion Canvas](https://github.com/motion-canvas/motion-canvas) | TypeScript generator functions | Its editor with a live preview | MIT | 19,194 |
-| [Manim Community](https://github.com/ManimCommunity/manim) | Python scenes | Cairo or OpenGL | MIT | 41,118 |
-| [video-use](https://github.com/browser-use/video-use) | Nothing; the agent follows a skill over your footage | FFmpeg, with overlays from other tools | MIT | 27,501 |
-| [MCP for Blender](https://github.com/ahujasid/mcp-for-blender) | Blender commands over MCP | A running Blender | MIT | 29,552 |
-| [Slopcamera](https://github.com/hraness/slopcamera) | Diagram JSON, HTML in seven profiles, scene JSON, Blender, CadQuery, and Manim programs, and edit decisions | Local Chrome, FFmpeg, Blender, CadQuery, and Manim | MIT | 6 |
+- **[Remotion](https://github.com/remotion-dev/remotion).** The agent writes React components. Chrome renders them, locally or on AWS Lambda. Remotion License: free for up to 3 employees, paid above. 60,940 GitHub stars.
+- **[HyperFrames](https://github.com/heygen-com/hyperframes).** The agent writes HTML, CSS, and seekable animation. Headless Chrome renders it, locally, in Docker, or on HeyGen's cloud, Lambda, or Cloud Run. Apache 2.0. 53,905 GitHub stars.
+- **[Revideo](https://github.com/midrender/revideo).** The agent writes TypeScript scenes. A headless render API renders them. MIT. 4,070 GitHub stars.
+- **[Motion Canvas](https://github.com/motion-canvas/motion-canvas).** The agent writes TypeScript generator functions. Its editor renders them with a live preview. MIT. 19,194 GitHub stars.
+- **[Manim Community](https://github.com/ManimCommunity/manim).** The agent writes Python scenes. Cairo or OpenGL renders them. MIT. 41,118 GitHub stars.
+- **[video-use](https://github.com/browser-use/video-use).** The agent writes nothing; it follows a skill over your footage. FFmpeg renders, with overlays from other tools. MIT. 27,501 GitHub stars.
+- **[MCP for Blender](https://github.com/ahujasid/mcp-for-blender).** The agent sends Blender commands over MCP to a running Blender. MIT. 29,552 GitHub stars.
+- **[Slopcamera](https://github.com/hraness/slopcamera).** The agent writes diagram JSON, HTML in seven profiles, scene JSON, Blender, CadQuery, and Manim programs, and edit decisions. Local Chrome, FFmpeg, Blender, CadQuery, and Manim render them. MIT. 6 GitHub stars.
 
 Star counts come from the GitHub API on 28 September 2026. They show how many people have looked at a project, not how well it fits your job.
 

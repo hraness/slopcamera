@@ -97,4 +97,4 @@ For how this fits the rest of SlopCamera, read [why SlopCamera](/docs/explanatio
 
 The same source can render slightly differently on another machine, because Blender builds, GPU drivers, and codecs vary. The saved record names the Blender executable, its hash, and the observed package versions. It does not hash every system library, font, or add-on. Physics settings in the cloth and fluid starters are not proof of a correct simulation; review the baked frames. Native control rigs and IK stay in Blender; a portable GLB export and a rendered MP4 do not carry them. Durable workflows that include a native job need the Bun package or a source checkout, not a copied standalone executable. The `studio` commands do not capture screen or camera recordings.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).

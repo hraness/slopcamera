@@ -102,7 +102,7 @@ None of these checks say whether the result looks good. Someone still has to wat
 
 ## What installing costs
 
-An agent skill is not free context. Anthropic's [Agent Skills documentation](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) says an installed skill costs about 100 tokens for its name and description until it is used. When a request matches, the agent reads the skill's instructions. SlopCamera's `SKILL.md` is 6,834 bytes, and it points to separate reference files that the agent reads only when a task needs them. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
+An agent skill is not free context. Anthropic's [Agent Skills documentation](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) says an installed skill costs about 100 tokens for its name and description until it is used. When a request matches, the agent reads the skill's instructions. SlopCamera's `SKILL.md` is about 7 KB, and it points to separate reference files that the agent reads only when a task needs them. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
 
 Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are SlopCamera's formats, and the agent reads examples or references before writing them.
 
@@ -110,7 +110,7 @@ Your agent also has to learn a file format. The diagram file, the HTML scene fil
 
 Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens, and no controlled comparison of token use between a one-shot model and the same model with SlopCamera exists yet. The byte-for-byte matches were renders of the same source with the same toolchain; SlopCamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
 
 ```sh
 {{ARCHIVE_INSTALL_COMMAND}}

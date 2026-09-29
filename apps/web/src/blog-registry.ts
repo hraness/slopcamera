@@ -15,7 +15,7 @@ export const blogIndexDocument = "blog/index.html"
 export const blogIndex = Object.freeze({
   title: "Blog",
   heading: "SlopCamera blog",
-  description: "Posts from Hraness about SlopCamera, the video and graphics framework for coding agents: how its techniques work and when to use them.",
+  description: "Posts from Hraness about SlopCamera, the media studio for agents: how its techniques work and when to use them.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"

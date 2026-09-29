@@ -1,6 +1,6 @@
 import { exampleMarkdown, exampleMediaRecord } from "./example-content"
 import { renderExampleMedia } from "./example-media"
-import { workflowExamples, type WorkflowExample } from "./example-registry"
+import { exampleUrl, workflowExamples, type WorkflowExample } from "./example-registry"
 
 /** One packaged technique: what the agent gets and the first command it runs. */
 export interface HomepageTechnique {
@@ -119,7 +119,8 @@ export function renderExampleGallery(): string {
     const example = registered(group.example.id, workflowExamples)
     const record = { ...exampleMediaRecord(example), title: group.example.name }
     const autoplay = example.video !== undefined && example.video.durationSeconds <= 15
-    const figure = renderExampleMedia(record, { autoplayPreview: autoplay, compact: true })
+    const darkPoster = example.video === undefined ? example.downloads.find(file => file.label === "Dark PNG") : undefined
+    const figure = renderExampleMedia(record, { autoplayPreview: autoplay, compact: true, ...(darkPoster ? { darkPosterUrl: exampleUrl(darkPoster) } : {}) })
     const items = group.techniques.map(item =>
       `<li><strong>${escapeText(item.name)}</strong><span>${escapeText(item.result)}</span><code>${escapeText(item.command)}</code></li>`).join("")
     return `<section aria-labelledby="techniques-${group.id}" class="slopcamera-technique-group"><div class="slopcamera-technique-group__body"><h3 id="techniques-${group.id}">${escapeText(group.title)}</h3><p>${escapeText(group.summary)}</p><ul class="slopcamera-technique-list">${items}</ul><a class="slopcamera-technique-group__guide" href="${group.guide.href}">${escapeText(group.guide.label)}</a></div>${figure}</section>`

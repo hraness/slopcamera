@@ -49,6 +49,8 @@ export type ExampleMediaOptions = Readonly<{
   command?: string
   /** Homepage cards: short quiet links (Guide, Source, Video) and no duration line. */
   compact?: boolean
+  /** Still examples: a dark render of the same image, shown in the dark theme. */
+  darkPosterUrl?: string
 }>
 
 export function renderExampleMedia(record: ExampleMediaRecord, options: ExampleMediaOptions = {}): string {
@@ -95,7 +97,11 @@ export function renderExampleMedia(record: ExampleMediaRecord, options: ExampleM
     if (!options.compact) details = `<p class="slopcamera-example__details">${Number(video.durationSeconds.toFixed(1))}s · ${video.hasAudio ? "Sound available in video controls" : "Silent"}</p>`
   } else {
     const alt = escapeHtml(record.poster.alt ?? record.title)
-    media = `<a class="slopcamera-example__image-link" href="${poster}" aria-label="Open ${title} image"><img class="slopcamera-example__media" src="${poster}" width="${posterWidth}" height="${posterHeight}" alt="${alt}" loading="${options.eagerPoster ? "eager" : "lazy"}"${options.eagerPoster ? ' fetchpriority="high"' : ""} decoding="async"></a>`
+    const image = (url: string, variant: string) => `<img class="slopcamera-example__media${variant}" src="${url}" width="${posterWidth}" height="${posterHeight}" alt="${alt}" loading="${options.eagerPoster ? "eager" : "lazy"}"${options.eagerPoster ? ' fetchpriority="high"' : ""} decoding="async">`
+    const images = options.darkPosterUrl === undefined
+      ? image(poster, "")
+      : `${image(poster, " slopcamera-example__media--light")}${image(safeUrl(options.darkPosterUrl, true), " slopcamera-example__media--dark")}`
+    media = `<a class="slopcamera-example__image-link" href="${poster}" aria-label="Open ${title} image">${images}</a>`
   }
   return `<figure class="slopcamera-example" data-example-id="${record.id}">${media}<figcaption class="slopcamera-example__caption">${techniqueLine}<strong class="slopcamera-example__title" id="${id}-title">${title}</strong><p id="${id}-description">${description}</p>${command}${details}<p class="slopcamera-example__links"><a href="${guide}">${labels[0]}</a><a href="${source}">${labels[1]}</a>${videoLink}</p>${downloads}${video ? '<p class="slopcamera-example__status" data-example-status role="status" hidden></p>' : ""}</figcaption></figure>`
 }

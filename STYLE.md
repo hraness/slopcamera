@@ -1,12 +1,10 @@
 # Public writing style
 
-<!-- synced from hraness/.github STYLE.md sha256:3e0d4984501e1d7bfbaa2812fa0b71ba6846cc537d9e79c358e771e567aa58a5 -->
-
 This guide covers everything written for readers outside a repository: product pages, documentation, READMEs, interface text, metadata, and text a model writes for publication. Apply the voice rules in [`WRITING.md`](WRITING.md) first. The [documentation guidelines](https://github.com/hraness/.github/blob/main/DOCUMENTATION_GUIDELINES.md) choose a document's purpose and shape, and the [README guidelines](https://github.com/hraness/.github/blob/main/README_GUIDELINES.md) cover the repository front door.
 
 Public prose must be precise, useful, and free of hype. Use a direct, natural voice that reads well aloud.
 
-This copy is synced from [hraness/.github](https://github.com/hraness/.github/blob/main/STYLE.md). Change shared rules there; add rules for this repository under “Repository additions” below.
+This is a synced copy of the [Hraness public writing style](https://github.com/hraness/.github/blob/main/STYLE.md), kept here so agents can read it offline. Repository-specific rules appear under “Repository additions” below.
 
 ## Leave the reader with a clearer model
 
@@ -109,6 +107,18 @@ Most Hraness copy is drafted by agents working inside repository guides full of 
 - Remove unverifiable superlatives such as “the first” and “the only” unless a cited source supports them.
 - Keep repository instructions and tests from demanding reader-hostile copy. When a guide or test requires a status phrase on every page, change the requirement to the fact that must stay true and let the page say it plainly.
 
+## Give marketing pages a readable path
+
+- Start with what the product helps someone do, who it is for, and a useful next action. Introduce implementation details only when they help that reader choose or use the product.
+- Make each section answer the next question a visitor is likely to have. Remove a section when it repeats the introduction or explains internal work without helping that decision.
+- Use a preview to show a recognizable task and a useful result. A CLI help dump, test log, checksum, or release-verification link does not show a product's value unless that is the product's actual task. Omit a preview that adds no useful example.
+- Keep release inspection, protocol contracts, configuration details, and maintainer evidence in the install guide or reference. Label links by what readers can do there, such as “Get started” or “See an example”.
+- Keep examples truthful. Label illustrations as examples, and never present invented output, timings, customer data, or completion claims as a recorded run.
+- Render code and executable commands with the shared syntax highlighter and the correct language. Do not bypass it with a bare code block or manually colored text. Keep natural-language prompts and non-code output readable as text.
+- Use the shared terminal frame for shell commands and terminal interactions. Use a code block for source files and structured data; do not dress ordinary prose in terminal chrome. Apply the same treatment to equivalent examples across sites.
+- Copy controls copy executable input without shell prompts or displayed output. Preserve complete commands, keyboard access, readable colors in both themes, and horizontal scrolling for long lines on narrow screens.
+- Review the page as a new visitor at desktop and phone widths. Confirm that the headline, example, and next action make sense before reading the documentation, and that essential limits appear beside the claims they qualify.
+
 ## State each limit once
 
 Readers trust a page that states its limits plainly. They skim a page that repeats them.
@@ -198,6 +208,7 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 - Name the consequence in a confirmation. Repeat the exact verb and object for a destructive action.
 - Use nouns for labels. Use placeholders for a format or example, not a repeated label.
 - State the completed result in past tense in a toast notification.
+- Follow [`CLI_MENU_STYLE.md`](https://github.com/hraness/.github/blob/main/CLI_MENU_STYLE.md) for command-line output, menu bar menus, and macOS permission notices.
 
 ## Vary a generated series
 

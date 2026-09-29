@@ -4,33 +4,29 @@ Use HyperFrames when the whole video is HTML motion graphics and you want exact,
 
 HyperFrames is HeyGen's open-source framework for turning HTML, CSS, media, and seekable animation into MP4. The agent writes HTML with timing data attributes, usually animated with GSAP. Agent skills teach the project format and the render loop.
 
-Slopcamera is a video and graphics framework: packaged techniques behind one CLI. HTML is one of its source formats. The others are diagram JSON, Three.js scene JSON, parametric designs, native Blender, CadQuery, and Manim programs, and edit decisions over footage. The agent writes the short source file, and the CLI renders, checks, and writes the variants.
+Slopcamera is a media studio for coding agents: packaged techniques behind one CLI. HTML is one of its source formats. The others are diagram JSON, Three.js scene JSON, parametric designs, native Blender, CadQuery, and Manim programs, and edit decisions over footage. The agent writes the short source file, and the CLI renders, checks, and writes the variants.
 
 ## Competitor details as of 28 September 2026
 
-| HyperFrames detail | Value | Source |
-| --- | --- | --- |
-| What you write | HTML and CSS with data attributes for timing, animated with GSAP, CSS, Lottie, Three.js, Anime.js, WAAPI, or a custom adapter | [README](https://github.com/heygen-com/hyperframes/blob/main/README.md) |
-| License | Apache 2.0, with no per-render fees or commercial-use thresholds | [README](https://github.com/heygen-com/hyperframes/blob/main/README.md) |
-| Repeatable renders | Frame capture in headless Chrome with a seek-based clock. `render --docker` pins Chromium, fonts, and the FFmpeg encoder for exact output across machines | [Deterministic rendering](https://hyperframes.heygen.com/concepts/determinism) |
-| Hosted rendering | `hyperframes cloud render` renders on HeyGen's managed cloud after sign-in | [Cloud rendering](https://hyperframes.heygen.com/deploy/cloud) |
-| Your own cloud | Distributed rendering on AWS Lambda or Google Cloud Run | [AWS Lambda](https://hyperframes.heygen.com/deploy/aws-lambda), [Cloud Run](https://hyperframes.heygen.com/deploy/gcp-cloud-run) |
-| Agent integration | 21 skills that agents load on demand, starting with a `/hyperframes` router | [README](https://github.com/heygen-com/hyperframes/blob/main/README.md) |
-| Starting points | A catalog of blocks and components, and Figma import | [Documentation](https://hyperframes.heygen.com/introduction) |
-| Community | 53,905 GitHub stars as of 28 September 2026 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) |
+- **What you write.** HTML and CSS with data attributes for timing, animated with GSAP, CSS, Lottie, Three.js, Anime.js, WAAPI, or a custom adapter. Source: [README](https://github.com/heygen-com/hyperframes/blob/main/README.md).
+- **License.** Apache 2.0, with no per-render fees or commercial-use thresholds. Source: [README](https://github.com/heygen-com/hyperframes/blob/main/README.md).
+- **Repeatable renders.** Frame capture in headless Chrome with a seek-based clock. `render --docker` pins Chromium, fonts, and the FFmpeg encoder for exact output across machines. Source: [Deterministic rendering](https://hyperframes.heygen.com/concepts/determinism).
+- **Hosted rendering.** `hyperframes cloud render` renders on HeyGen's managed cloud after sign-in. Source: [Cloud rendering](https://hyperframes.heygen.com/deploy/cloud).
+- **Your own cloud.** Distributed rendering on AWS Lambda or Google Cloud Run. Source: [AWS Lambda](https://hyperframes.heygen.com/deploy/aws-lambda), [Cloud Run](https://hyperframes.heygen.com/deploy/gcp-cloud-run).
+- **Agent integration.** 21 skills that agents load on demand, starting with a `/hyperframes` router. Source: [README](https://github.com/heygen-com/hyperframes/blob/main/README.md).
+- **Starting points.** A catalog of blocks and components, and Figma import. Source: [Documentation](https://hyperframes.heygen.com/introduction).
+- **Community.** 53,905 GitHub stars as of 28 September 2026. Source: [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes).
 
 ## Where they differ
 
-| | Slopcamera | HyperFrames |
-| --- | --- | --- |
-| What the agent writes | Diagram JSON, HTML in one of seven profiles, Three.js scene JSON, Blender, CadQuery, or Manim programs, and edit decisions for footage | HTML, CSS, and seekable animation |
-| Renderers | Chrome for HTML and Three.js, plus Blender, CadQuery, and Manim on your machine | Headless Chrome |
-| Outputs | Video, stills, light and dark SVG and PNG diagrams, editable `.tldr` files, STEP parts, and PDF drawing sheets | MP4 and other video formats |
-| Repeatable renders | One absolute clock, seeded randomness, declared assets, and locked library versions for HTML. No claim of identical pixels across machines | Same rules, plus a Docker mode for exact output across machines |
-| Your own footage | Cuts, speed, zooms, overlays, captions, filler removal, audio alignment, and 16:9, 9:16, 1:1, and 4:5 deliveries, recorded as edit decisions | Media placed in the HTML composition |
-| Hosted rendering | Video renders run on your machine | HeyGen cloud, Lambda, or Cloud Run |
-| Account | None for local rendering | None for local rendering; sign-in for HeyGen cloud rendering |
-| License | MIT | Apache 2.0 |
+- **What the agent writes.** Slopcamera: Diagram JSON, HTML in one of seven profiles, Three.js scene JSON, Blender, CadQuery, or Manim programs, and edit decisions for footage. HyperFrames: HTML, CSS, and seekable animation.
+- **Renderers.** Slopcamera: Chrome for HTML and Three.js, plus Blender, CadQuery, and Manim on your machine. HyperFrames: Headless Chrome.
+- **Outputs.** Slopcamera: Video, stills, light and dark SVG and PNG diagrams, editable `.tldr` files, STEP parts, and PDF drawing sheets. HyperFrames: MP4 and other video formats.
+- **Repeatable renders.** Slopcamera: One absolute clock, seeded randomness, declared assets, and locked library versions for HTML. No claim of identical pixels across machines. HyperFrames: Same rules, plus a Docker mode for exact output across machines.
+- **Your own footage.** Slopcamera: Cuts, speed, zooms, overlays, captions, filler removal, audio alignment, and 16:9, 9:16, 1:1, and 4:5 deliveries, recorded as edit decisions. HyperFrames: Media placed in the HTML composition.
+- **Hosted rendering.** Slopcamera: Video renders run on your machine. HyperFrames: HeyGen cloud, Lambda, or Cloud Run.
+- **Account.** Slopcamera: None for local rendering. HyperFrames: None for local rendering; sign-in for HeyGen cloud rendering.
+- **License.** Slopcamera: MIT. HyperFrames: Apache 2.0.
 
 Here is a real revision from the repository's diagram example. The agent changes one label:
 

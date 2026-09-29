@@ -105,4 +105,4 @@ The skill tells the agent to look for an existing `.diagram.json` on the same su
 
 The linter checks geometry, not meaning. It cannot tell whether an arrow points the right way or whether a box should exist. Someone still needs to look at the rendered PNG before it ships. The diagram format covers rectangles, ellipses, text, lines, and labeled arrows, with optional icons; it is not a general drawing tool, and a diagram with more than nine primary shapes draws a lint finding that suggests a higher-level view.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).

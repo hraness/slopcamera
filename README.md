@@ -2,10 +2,9 @@
 
 [![A brass optical instrument rendered in Blender from a SlopCamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
 
-**SlopCamera is a media studio for coding agents.** It is a video and graphics
-framework for coding agents such as Codex and Claude Code. SlopCamera lets your
-coding agent make images, diagrams, animation, 3D scenes, and video from source
-files it can keep revising.
+**SlopCamera is a media studio for coding agents.** SlopCamera lets your coding
+agent make images, diagrams, animation, 3D scenes, and video from source files
+it can keep revising. It works with Codex, Claude Code, and other agents.
 
 A frontier model such as Claude Opus can write a video or a graphic from
 scratch in one pass. SlopCamera gives the agent packaged, tested techniques to
@@ -66,7 +65,7 @@ Blender install separately; the
 [capability reference](docs/reference/capabilities.md) lists what each
 technique needs.
 
-SlopCamera is a CLI with no menu-bar app or background process.
+From 3.8.0, SlopCamera is a CLI with no menu-bar app or background process.
 `slopcamera status` shows what is running, how the last job ended, your last
 known credits balance, the newest outputs and whether the retired menu-bar
 companion still opens at login. `slopcamera tui` keeps

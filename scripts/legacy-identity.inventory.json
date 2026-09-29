@@ -1513,18 +1513,18 @@
     ]
   },
   {
-    "identityLineCount": 7,
-    "identityLinesSha256": "6a828b8720bd59ee12dc64c155249515d4be82cbeeac13e32da9e1b5edac5830",
-    "occurrenceCount": 7,
+    "identityLineCount": 8,
+    "identityLinesSha256": "fe27c96c327a06db9222b04112d7764c5363f68b1346b555eff7269d6a24ac9e",
+    "occurrenceCount": 8,
     "path": "apps/web/site.test.ts",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "e88ead9f3b295578284e97eb9cd5cbbbeb6c1dd2388cea56447755a607b19a55",
-    "occurrenceCount": 2,
+    "identityLineCount": 3,
+    "identityLinesSha256": "3d5011d5fe5f2896c247d2a5f008dae77da0091f245934d1deb6375a1393df9c",
+    "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
@@ -1540,9 +1540,9 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "63b936a832a8a7c0a8da5f567feae9d91336a1e2945a37a6ada3840b7e949ca9",
-    "occurrenceCount": 2,
+    "identityLineCount": 3,
+    "identityLinesSha256": "c6e7b41d61058c9c78e323585cfdd537605311ab022f4afb3d2e79c8e4f9080a",
+    "occurrenceCount": 3,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
       "compat-doc",
@@ -1569,7 +1569,7 @@
   },
   {
     "identityLineCount": 17,
-    "identityLinesSha256": "e8461c2ac050a40b9c7b1bddc96024caa3da6bf16cbdede536da119d860c65b2",
+    "identityLinesSha256": "73862e5a9859d84c38ae47b3a4563ceced59c0b4fce0d5b855e75e3bcaf96d00",
     "occurrenceCount": 19,
     "path": "apps/web/src/blog/make-video-with-claude-code.md",
     "categories": [
@@ -1599,6 +1599,24 @@
     "identityLinesSha256": "1ce8fad6651b5d0a917f5685fe1183bb138efb35f52ce8234c64e70241074e4d",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/remotion-alternatives-for-coding-agents.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "cc94474d205d5ba5c0cdbda8028447bff45ce6516768a733a49e1d1e82baae2e",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/explanation/slopcamera-vs-hyperframes.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "8df26ad1255c6eea13182b6ac5b77cdefca21b835f62b25278c3a15f6236e453",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/explanation/slopcamera-vs-remotion.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1644,6 +1662,15 @@
     "identityLinesSha256": "787d039bf832245360bcca7498f2c5227c655633b5910422ee2e2171377264e3",
     "occurrenceCount": 6,
     "path": "apps/web/src/docs/how-to/run-workflows.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "21e9f02c679f0a348d5d1944b752a62919ee00ff6c956e6735aa1e6adb340a41",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/index.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1911,9 +1938,9 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "0c9ab45a969e49af8598b4c554670e15d27410ec6699f8b72ba5f05722b42b5e",
-    "occurrenceCount": 1,
+    "identityLineCount": 2,
+    "identityLinesSha256": "630579faa19f483165029699530aaf65a35c8281886890e414bbf93f97de22bb",
+    "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
       "native-film-studio"
@@ -2975,7 +3002,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "2c8946dc9bc7f3e5c4b0a13ba95e63a2022d8c6d5d72c11dc35c81096f4e7602",
+    "identityLinesSha256": "e57b38c97c0f0e3bdd5047e1e816b3d9c139220440cdd5d5234553122d373ac8",
     "occurrenceCount": 7,
     "path": "README.md",
     "categories": [

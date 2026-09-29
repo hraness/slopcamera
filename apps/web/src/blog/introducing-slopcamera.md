@@ -49,4 +49,4 @@ The aim is that every picture, clip, or diagram SlopCamera renders carries the r
 
 Generated media still needs a person to look at it. Models can change a subject's identity, its motion, or any text in the image, and the record of a run tells you what went in and what came out, not whether the result is good. The same sources can render slightly differently on another machine, because native tools, codecs, and GPU drivers vary. Exporting a native Blender rig to a portable format does not keep the rig editable. Native Python and custom workflow code run with your own user's access and are not sandboxed. The video editor works on recordings you already have and does not capture new ones. Media, GPU, and native profiles have their own requirements, which `slopcamera doctor` reports.
 
-Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
