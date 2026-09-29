@@ -125,6 +125,11 @@ export function commandHostResourceClaims(
   coordinator: HostResourceCoordinator,
 ): readonly HostResourceClaim[] {
   switch (command.kind) {
+    case "html-film": return command.action === "deliver"
+      ? claims(coordinator, ["cpu", "ffmpeg", "local-io"])
+      : claims(coordinator, command.action === "preview"
+        ? ["cpu", "local-io", "browser", "ffmpeg"]
+        : ["cpu", "local-io", "browser"]);
     case "html-render": return command.dryRun
       ? claims(coordinator, ["cpu", "local-io"])
       : claims(coordinator, ["cpu", "local-io", "browser", "ffmpeg", "output-publication", "project-render"]);
@@ -261,7 +266,6 @@ export function commandHostResourceClaims(
     case "help":
     case "capabilities":
     case "inspect":
-    case "menubar":
     case "operations-list":
     case "operations-show":
     case "outputs":

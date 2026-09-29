@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { transform } from "lightningcss"
 
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value)
@@ -71,4 +72,13 @@ export function inspectSiteCssResources(source: string, filename: string): reado
   })
   assert.equal(result.warnings.length, 0, "Site CSS parser emitted warnings")
   return urls
+}
+
+/** The pinned footer 0.20.1 emits standard and vendor-prefixed mask declarations.
+ * Admit only its exact inline SVG bytes; all other recipe resources stay forbidden. */
+export function assertSiteRecipeResources(source: string, filename: string): void {
+  const footerMaskSha256 = "6dc303d9fdadfd813c146ab94f7f837eeafb841760b3bc9924b7c1385477b813"
+  const hashes = inspectSiteCssResources(source, filename).map(url => createHash("sha256").update(url).digest("hex"))
+  assert.deepEqual(hashes, [footerMaskSha256, footerMaskSha256],
+    "Site recipes must contain only the two exact approved shared footer mask declarations")
 }

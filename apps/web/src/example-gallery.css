@@ -130,28 +130,6 @@
   font-size: 0.875rem;
 }
 
-.slopcamera-techniques-more {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
-  margin: 0;
-  padding-block-start: 1.5rem;
-  border-block-start: 1px solid var(--hraness-material-seam);
-}
-
-.slopcamera-techniques-more a {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 2.75rem;
-  color: var(--primary, var(--gold));
-  font-weight: 600;
-}
-
-.slopcamera-techniques-more a:first-child::after {
-  content: " \2192";
-  white-space: pre;
-}
-
 @media (max-width: 56rem) {
   .slopcamera-technique-group,
   .slopcamera-technique-group:nth-child(even) {
@@ -165,5 +143,101 @@
 
   .slopcamera-technique-group > .slopcamera-example {
     order: -1;
+  }
+}
+
+/* Numbered aisles: one tested guide per technique. */
+.slopcamera-techniques {
+  display: grid;
+  gap: .75rem;
+  margin-block-start: 4rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid var(--hraness-material-seam);
+}
+
+.slopcamera-techniques h3 {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.1rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+
+.slopcamera-techniques__summary {
+  max-inline-size: 42rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.slopcamera-aisles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin: 1rem 0 .25rem;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 62rem) {
+  .slopcamera-aisles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.slopcamera-aisles > li {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.slopcamera-aisles a {
+  display: grid;
+  align-content: start;
+  gap: .3rem;
+  block-size: 100%;
+  min-block-size: 2.75rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--hraness-material-seam);
+  border-radius: .5rem;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.slopcamera-aisles a:hover {
+  border-color: var(--hraness-marketing-accent);
+}
+
+.slopcamera-aisles a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .slopcamera-aisles a:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.slopcamera-aisle__number {
+  color: var(--hraness-marketing-accent);
+  font: .7rem/1.4 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.slopcamera-aisle__name {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.slopcamera-techniques .quiet-note {
+  margin: 0;
+}
+
+@media (max-width: 48rem) {
+  .slopcamera-work-gallery {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
   }
 }

@@ -65,11 +65,11 @@ export function docsJsonLd(page: DocsPage, body = ""): string {
   const media = workflowExamples.filter(example => example.guideSlug === page.slug)
   const graph: Record<string, unknown>[] = [
     { "@id": "https://hraness.com/#organization", "@type": "Organization", name: "Hraness", url: "https://hraness.com/" },
-    { "@id": `${docsOrigin}/#website`, "@type": "WebSite", name: "Slopcamera", publisher: { "@id": "https://hraness.com/#organization" }, url: `${docsOrigin}/` },
+    { "@id": `${docsOrigin}/#website`, "@type": "WebSite", name: "SlopCamera", publisher: { "@id": "https://hraness.com/#organization" }, url: `${docsOrigin}/` },
     {
       "@type": "BreadcrumbList",
       itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Slopcamera", item: `${docsOrigin}/` },
+        { "@type": "ListItem", position: 1, name: "SlopCamera", item: `${docsOrigin}/` },
         { "@type": "ListItem", position: 2, name: "Documentation", item: `${docsOrigin}/docs` },
         ...(page.slug === "index" ? [] : [{ "@type": "ListItem", position: 3, name: page.title, item: canonical }]),
       ],
@@ -97,13 +97,6 @@ export function docsJsonLd(page: DocsPage, body = ""): string {
     mainEntity: faq.map(entry => ({ "@type": "Question", name: entry.question, acceptedAnswer: { "@type": "Answer", text: entry.answer } })),
   })
   return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</gu, "\\u003c")
-}
-
-export function docsSocialImage(page: DocsPage): Readonly<{ url: string; alt: string; width: number; height: number }> {
-  const example = workflowExamples.find(example => example.guideSlug === page.slug)
-  return example ? { url: `${docsOrigin}${exampleUrl(example.poster)}`, alt: example.poster.alt,
-    width: example.poster.width, height: example.poster.height }
-    : { url: `${docsOrigin}/og.png`, alt: "Slopcamera, a video and graphics framework for coding agents, beside a camera-frame and lens motif", width: 1200, height: 630 }
 }
 
 export function renderDocsBody(body: string): string {

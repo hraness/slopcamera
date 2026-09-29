@@ -1,4 +1,4 @@
-Slopcamera is a video and graphics framework for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK, Agent Skill, and the optional macOS menu-bar companion, which installs separately.
+Slopcamera is a video and graphics framework for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK and Agent Skill.
 
 Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop Slopcamera:
 

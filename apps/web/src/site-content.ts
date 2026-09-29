@@ -3,7 +3,7 @@ import { AskAiAboutThis } from "@hraness/ui"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
-  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument, docsSocialImage,
+  docsCanonicalUrl, docsJsonLd, docsMarkdownUrl, docsPageForDocument,
   renderDocsArticleHeader, renderDocsBody, renderDocsNav,
 } from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
@@ -61,21 +61,14 @@ export function renderHighlightedCode(value: string, language: SyntaxLanguage): 
   return `<code class="${highlighted.className}" data-language="${highlighted.language}">${highlighted.html}</code>`
 }
 
-// The authored Slopcamera camera mark (apps/web/src/icon.svg, byte-identical to
-// apps/desktop/assets/brand-emoji/slopcamera.com.svg), normalized for inlining:
-// the labelled link owns the accessible name, so the vector stays decorative and
-// its gradient id is namespaced against other inline SVGs on the page.
-const SLOPCAMERA_MARK_SVG = `<svg aria-hidden="true" focusable="false" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="slopcamera-footer-lens" x1="14" y1="16" x2="50" y2="50" gradientUnits="userSpaceOnUse"><stop stop-color="#fff3c2"/><stop offset=".55" stop-color="#f6b94a"/><stop offset="1" stop-color="#e97835"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#090a12"/><path d="M12 24h10l4-6h12l4 6h10v27H12Z" fill="#16162a" stroke="url(#slopcamera-footer-lens)" stroke-linejoin="round" stroke-width="2.4"/><circle cx="32" cy="36" r="10" fill="none" stroke="url(#slopcamera-footer-lens)" stroke-width="3"/><circle cx="32" cy="36" r="5" fill="#f6b94a"/><circle cx="47" cy="29" r="1.7" fill="#fff3c2"/></svg>`
-
 /** The in-flow product content footer shared by every ordinary document. It
  * lands immediately before the canonical Hraness network footer, reuses the
- * header's own destinations, and carries the authored camera mark rather than
- * an emoji. Presentation comes from design-kit's `hraness-marketing-footer`
+ * header's own destinations and metallic mark. Presentation comes from design-kit's `hraness-marketing-footer`
  * grammar; product links and disclosures stay outside the shared footer. */
 function renderSiteContentFooter(): string {
-  return `<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
+  return `<footer aria-label="SlopCamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
       <div class="hraness-marketing-footer__inner">
-        <a aria-label="Slopcamera home" class="hraness-marketing-footer__brand" href="/">${SLOPCAMERA_MARK_SVG}<span class="hraness-marketing-footer__name">Slopcamera</span></a>
+        <a aria-label="SlopCamera home" class="hraness-marketing-footer__brand" data-foil="" href="/"><span aria-hidden="true" class="hraness-foil-mark" data-foil=""><img alt="" class="hraness-foil-mark__image" height="22" src="/marks/slopcamera.svg" width="22"><span aria-hidden="true" class="hraness-foil-mark__paint"></span></span><span class="hraness-marketing-footer__name">SlopCamera</span></a>
         <nav aria-label="Footer navigation" class="hraness-marketing-footer__nav">
           <a href="/docs">Docs</a>
           <a href="https://github.com/hraness/slopcamera">GitHub</a>
@@ -132,7 +125,19 @@ export type SiteAssets = Readonly<{
   statusPagePath?: string
   /** The shared design-kit status page markup, rendered by the build entrypoint. */
   statusPage?: string
+  /**
+   * Each docs and blog document's share card, rendered by the build from the
+   * site's one @hraness/web-discovery declaration (src/social-image.ts).
+   */
+  socialImages?: Readonly<Record<string, SiteSocialImage>>
 }>
+export type SiteSocialImage = Readonly<{ url: string; alt: string; width: number; height: number }>
+
+function socialImageFor(document: SiteDocument, assets: SiteAssets): SiteSocialImage {
+  const image = assets.socialImages?.[document]
+  if (image === undefined) throw new Error(`Social image missing for ${document}`)
+  return image
+}
 
 function renderDocsFooter(slug: string): string {
   const sourcePath = `apps/web/src/docs/${slug}.md`
@@ -148,7 +153,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   const common: ReadonlyArray<readonly [string, string, number]> = [
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
     ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
-      id: "slopcamera", name: "Slopcamera", updates: false,
+      id: "slopcamera", name: "SlopCamera", updates: false,
       valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
@@ -173,13 +178,15 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       ["{{BLOG_ARTICLE_META}}", page.articleMeta, 1],
       ["{{BLOG_JSONLD}}", page.jsonLd, 1],
       ["{{BLOG_MAIN}}", page.main, 1],
+      ["{{BLOG_IMAGE_URL}}", socialImageFor(document, assets).url, 2],
+      ["{{BLOG_IMAGE_ALT}}", escapeHtml(socialImageFor(document, assets).alt), 2],
     ]
   }
   const docsPage = docsPageForDocument(document)
   if (docsPage !== undefined) {
     const body = assets.docBodies?.[document]
     if (body === undefined) throw new Error(`Documentation body missing for ${document}`)
-    const social = docsSocialImage(docsPage)
+    const social = socialImageFor(document, assets)
     return [...common,
       ["{{DOC_TITLE}}", escapeHtml(docsPage.title), 3],
       ["{{DOC_DESCRIPTION}}", escapeHtml(docsPage.description), 3],

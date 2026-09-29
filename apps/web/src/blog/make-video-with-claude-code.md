@@ -1,6 +1,6 @@
 To make a video with Claude Code or Codex, match the shot to the engine that draws its frames, then have the agent write a short source file for that engine. A kinetic title, a camera move through a 3D room, a glass product shot, a geometry lesson, and a cut of footage you already filmed each suit a different renderer. Each video ends up as a short source file in a project that the agent can open and revise later.
 
-You install the renderer and the skill once; after that, each video is a source file the agent writes and the command line renders. The guide uses Slopcamera for the commands because that is what we build. The same questions apply if you choose another tool, and a later section names the alternatives.
+You install the renderer and the skill once; after that, each video is a source file the agent writes and the command line renders. The guide uses SlopCamera for the commands because that is what we build. The same questions apply if you choose another tool, and a later section names the alternatives.
 
 ## Choose the engine by the shot
 
@@ -14,13 +14,13 @@ Most "make me a video" requests fall into one of five kinds of shot, and each su
 | A math or science explainer | Manim | A Python scene and a lesson file | `slopcamera studio run` |
 | Cuts, color, overlays, and aspect-ratio variants of footage you already have | Project compositor with FFmpeg | Edit commands against a project | `slopcamera project edit` |
 
-The first two engines render in the local Chrome runtime that Slopcamera checks. Blender, Manim, and CadQuery are programs you install yourself; Slopcamera runs the copy you point it at. FFmpeg and FFprobe handle encoding for all five. Run `{{DOCTOR_COMMAND}}` to see what your machine can render before you ask for anything.
+The first two engines render in the local Chrome runtime that SlopCamera checks. Blender, Manim, and CadQuery are programs you install yourself; SlopCamera runs the copy you point it at. FFmpeg and FFprobe handle encoding for all five. Run `{{DOCTOR_COMMAND}}` to see what your machine can render before you ask for anything.
 
 ## What the agent writes
 
 Without an installed renderer, the agent writes the whole pipeline for each video: the page or scene, a script that steps a headless browser through the frames, the FFmpeg flags, and whatever checks it thinks to add. A frontier model can often write all of that in one reply. The cost comes later, when a revision means reading that pipeline back or writing it again.
 
-With Slopcamera installed, the agent writes only the part that is specific to the video. In the recipes below, that is a 13-line JSON request next to an HTML page, a scene JSON file with named entities and cameras, or a Blender or Manim `scene.py`. The `slopcamera` command does the rendering, checks the frames, encodes the output, and prints a JSON result for the agent to read. A revision is an edit to the source followed by another render. The skill tells the agent which command fits which shot and what each source file looks like. Anthropic's [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) describes the same pattern for scripts bundled with a skill: the agent runs the script through bash and receives only its output, so the script's code stays out of the context window.
+With SlopCamera installed, the agent writes only the part that is specific to the video. In the recipes below, that is a 13-line JSON request next to an HTML page, a scene JSON file with named entities and cameras, or a Blender or Manim `scene.py`. The `slopcamera` command does the rendering, checks the frames, encodes the output, and prints a JSON result for the agent to read. A revision is an edit to the source followed by another render. The skill tells the agent which command fits which shot and what each source file looks like. Anthropic's [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) describes the same pattern for scripts bundled with a skill: the agent runs the script through bash and receives only its output, so the script's code stays out of the context window.
 
 We have not measured model tokens for this. The post on [one-shot renders and installed techniques](/blog/one-shot-render-vs-installed-techniques) counts the bytes and lines the agent writes for four revisions in the gallery.
 
@@ -149,7 +149,7 @@ As in the Blender recipe, `prepare-lesson.ts` copies the bundle digest into `cur
 
 ## Recipe 5: edit footage and deliver variants
 
-Slopcamera does not record your screen or camera. It edits media you already have. Start from a project that an earlier recipe created, or from an existing recording. `media color` grades a movie into a separate file and leaves the original unchanged. `project add` then imports the graded file into the project:
+SlopCamera does not record your screen or camera. It edits media you already have. Start from a project that an earlier recipe created, or from an existing recording. `media color` grades a movie into a separate file and leaves the original unchanged. `project add` then imports the graded file into the project:
 
 ```sh
 slopcamera media color product.mp4 --preset warm \
@@ -183,9 +183,9 @@ Several projects give a coding agent video skills, and one of them may fit your 
 - [HyperFrames](https://github.com/heygen-com/hyperframes) renders HTML compositions to video and installs with `npx skills add heygen-com/hyperframes`. Choose it if every shot you need is HTML motion.
 - [video-use](https://github.com/browser-use/video-use) edits a folder of raw clips into a cut with subtitles and color. It uses an ElevenLabs key for transcription, so it fits talking-head footage that needs cutting by what was said.
 
-Remotion and HyperFrames also document rendering in the cloud, including on AWS Lambda ([Remotion Lambda](https://www.remotion.dev/docs/lambda), [HyperFrames README](https://github.com/heygen-com/hyperframes/blob/main/README.md)). Slopcamera renders video only on your machine.
+Remotion and HyperFrames also document rendering in the cloud, including on AWS Lambda ([Remotion Lambda](https://www.remotion.dev/docs/lambda), [HyperFrames README](https://github.com/heygen-com/hyperframes/blob/main/README.md)). SlopCamera renders video only on your machine.
 
-Slopcamera fits when one project needs more than one engine, or when native tools such as Blender and Manim sit beside HTML. The comparisons with [Remotion](/docs/explanation/slopcamera-vs-remotion) and [HyperFrames](/docs/explanation/slopcamera-vs-hyperframes) go through the differences in detail.
+SlopCamera fits when one project needs more than one engine, or when native tools such as Blender and Manim sit beside HTML. The comparisons with [Remotion](/docs/explanation/slopcamera-vs-remotion) and [HyperFrames](/docs/explanation/slopcamera-vs-hyperframes) go through the differences in detail.
 
 ## What you still check yourself
 

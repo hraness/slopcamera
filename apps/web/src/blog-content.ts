@@ -10,9 +10,10 @@ import {
 } from "@hraness/web-discovery"
 import { blogAdmissions } from "./blog-admissions"
 import {
-  blogCanonicalUrl, blogFeedPath, blogIndex, blogIndexMarkdownPath, blogMarkdownPath, blogOrigin, blogPath,
+  blogCanonicalUrl, blogDocumentForPost, blogFeedPath, blogIndex, blogIndexMarkdownPath, blogMarkdownPath, blogOrigin, blogPath,
   blogPostPath, indexableBlogPosts, isBlogPostIndexable, type BlogPost,
 } from "./blog-registry"
+import { socialImageForDocument } from "./social-image"
 import { renderDocsMarkdown } from "./docs-markdown"
 import { resolveDocsContent } from "./docs-registry"
 
@@ -25,9 +26,9 @@ import { resolveDocsContent } from "./docs-registry"
 assertArticleAdmissions(blogAdmissions)
 
 export const blogSite: SearchSite = {
-  name: "Slopcamera",
-  title: "Slopcamera",
-  description: "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+  name: "SlopCamera",
+  title: "SlopCamera",
+  description: "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   origin: "https://slopcamera.com",
   language: "en",
 }
@@ -39,13 +40,6 @@ const hraness: ArticleParty = {
   url: "https://hraness.com",
   sameAs: ["https://github.com/hraness"],
 }
-const socialImage = {
-  path: "/og.png",
-  contentType: "image/png",
-  alt: "Slopcamera, a video and graphics framework for coding agents, beside a camera-frame and lens motif",
-  width: 1200,
-  height: 630,
-} as const
 
 /** Portfolio addresses a post may link to, resolved from design-kit's facts. */
 const productTokens: Readonly<Record<string, string>> = {
@@ -161,13 +155,18 @@ export function blogMarkupWithClassTokens(html: string, kind: "article" | "index
   return mapped
 }
 
+function blogSocialImage(post: BlogPost): ArticleDiscovery["image"] {
+  const image = socialImageForDocument(blogDocumentForPost(post))
+  return { path: `/${image.file}`, contentType: "image/png", alt: image.alt, width: image.width, height: image.height }
+}
+
 export function blogArticleDiscovery(post: BlogPost): ArticleDiscovery {
   return {
     type: "BlogPosting",
     canonicalPath: blogPostPath(post),
     title: post.title,
     description: post.description,
-    image: socialImage,
+    image: blogSocialImage(post),
     publishedTime: timestamp(post.published),
     ...(post.updated === undefined ? {} : { modifiedTime: timestamp(post.updated) }),
     authors: [hraness],
@@ -313,7 +312,7 @@ function absoluteLinks(html: string): string {
 /** Atom feed of indexable posts with their full bodies. */
 export function blogAtomFeed(bodies: Readonly<Record<string, string>>): string {
   return createAtomFeed(blogSite, {
-    title: "Slopcamera blog",
+    title: "SlopCamera blog",
     description: blogIndex.description,
     homePath: "/blog",
     path: blogFeedPath,

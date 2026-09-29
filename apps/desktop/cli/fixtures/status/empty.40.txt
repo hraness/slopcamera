@@ -1,0 +1,11 @@
+== Slopcamera ==
+┌ Now ─────────────────────────────────┐
+│○ Ready · Nothing rendered yet        │
+└──────────────────────────────────────┘
+┌ Outputs ─────────────────────────────┐
+│No outputs yet · Agents save finished │
+│slopcamera outputs open               │
+└──────────────────────────────────────┘
+┌ Login ───────────────────────────────┐
+│✓ Nothing starts at login             │
+└──────────────────────────────────────┘

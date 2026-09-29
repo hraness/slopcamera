@@ -1,6 +1,6 @@
-# Slopcamera local host and CLI
+# SlopCamera local host and CLI
 
-Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. An optional unbundled `slopcamera menubar` companion surfaces the agent outputs directory in the macOS menu bar; it carries no capture or editing authority.
+Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. `slopcamera status` and `slopcamera tui` show what is running, credits and the newest agent outputs in the terminal.
 
 ## Recording bundles
 
@@ -819,13 +819,6 @@ bun run test:html-overlay
 bun run benchmark:code-concurrency
 ```
 
-The optional Rust menu-bar companion lives under `desktop/` at the repository root and builds with Cargo:
-
-```sh
-cargo build --manifest-path desktop/menubar/Cargo.toml
-slopcamera menubar
-```
-
 `test:html-overlay` is portable and leaves the real-browser tests registered as
 skipped. `test:html-overlay:browser:macos` runs the real Chrome frame suite,
 including a declared PNG. `test:html-overlay:libraries:macos` additionally
@@ -847,4 +840,4 @@ The compiled smoke copies the executable away from the checkout and proves
 diagram initialization/rendering plus PNG-to-SVG vectorization without
 `node_modules`.
 
-Screen recording, microphone, camera, Input Monitoring, and Accessibility are separate macOS permissions. A missing optional source becomes a typed diagnostic; strict-input mode fails before recording begins. Slopcamera ships as a CLI with an unbundled menu-bar companion; it does not produce, install, sign, or notarize a desktop application.
+Screen recording, microphone, camera, Input Monitoring, and Accessibility are separate macOS permissions. A missing optional source becomes a typed diagnostic; strict-input mode fails before recording begins. Slopcamera ships as a CLI; it does not produce, install, sign, or notarize a desktop application.

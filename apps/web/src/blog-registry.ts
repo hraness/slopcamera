@@ -14,8 +14,8 @@ export const blogIndexDocument = "blog/index.html"
 
 export const blogIndex = Object.freeze({
   title: "Blog",
-  heading: "Slopcamera blog",
-  description: "Posts from Hraness about Slopcamera, the video and graphics framework for coding agents: how its techniques work and when to use them.",
+  heading: "SlopCamera blog",
+  description: "Posts from Hraness about SlopCamera, the video and graphics framework for coding agents: how its techniques work and when to use them.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"
@@ -39,7 +39,7 @@ const sources: readonly BlogPostSource[] = [
   {
     slug: "one-shot-render-vs-installed-techniques",
     title: "Your model can one-shot a render. What does the second one take?",
-    description: "What revisions, variants, and checks take on four Slopcamera gallery examples, measured in file sizes and changed lines at one commit.",
+    description: "What revisions, variants, and checks take on four SlopCamera gallery examples, measured in file sizes and changed lines at one commit.",
     eyebrow: "Frameworks and agents",
     published: "2026-09-28",
     keywords: [
@@ -77,21 +77,21 @@ const sources: readonly BlogPostSource[] = [
     published: "2026-09-28",
     keywords: [
       "headless Blender", "Blender MCP", "Blender command-line rendering", "Manim", "CadQuery", "coding agents",
-      "Claude Code Blender", "parametric CAD agent", "scene as code", "Slopcamera studio",
+      "Claude Code Blender", "parametric CAD agent", "scene as code", "SlopCamera studio",
     ],
   },
   {
     slug: "introducing-slopcamera",
-    title: "Introducing Slopcamera",
-    description: "Slopcamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
+    title: "Introducing SlopCamera",
+    description: "SlopCamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
     eyebrow: "Introducing",
     published: "2026-09-24",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],
   },
   {
     slug: "how-slopcamera-uses-algal",
-    title: "How Slopcamera bakes character behavior with ALGAL",
-    description: "Slopcamera runs a character's behavior as a small ALGAL program with no tools, models, or side effects, so the same scene and seed always bake the same motion.",
+    title: "How SlopCamera bakes character behavior with ALGAL",
+    description: "SlopCamera runs a character's behavior as a small ALGAL program with no tools, models, or side effects, so the same scene and seed always bake the same motion.",
     eyebrow: "Integration",
     published: "2026-09-24",
     keywords: ["slopcamera", "algal", "character animation", "3d scenes", "deterministic rendering", "coding agents"],

@@ -149,7 +149,9 @@ jobs:
 
   official_vtracer:
     name: Slopcamera VTracer (${{ matrix.target }})
-    needs: verify
+    # Tests the tagged source, not the verified archive, so it runs beside
+    # Verify. Attestation and publication still need both.
+    needs: authorize
     permissions:
       contents: read
     runs-on: ${{ matrix.runner }}
@@ -459,7 +461,7 @@ jobs:
           const { posix } = require("node:path");
           const { gunzipSync } = require("node:zlib");
 
-          const maximumFiles = 550;
+          const maximumFiles = 570;
           const maximumMetadataBytes = 1_000_000;
           const maximumPackedBytes = 5_200_000;
           const maximumUnpackedBytes = 15_000_000;

@@ -1,23 +1,24 @@
-# Slopcamera
+# SlopCamera
 
-[![A brass optical instrument rendered in Blender from a Slopcamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
+[![A brass optical instrument rendered in Blender from a SlopCamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
 
-**Slopcamera is a video and graphics framework for coding agents such as Codex
-and Claude Code.** Slopcamera lets your coding agent make images, diagrams,
-animation, 3D scenes, and video from source files it can keep revising.
+**SlopCamera is a media studio for coding agents.** It is a video and graphics
+framework for coding agents such as Codex and Claude Code. SlopCamera lets your
+coding agent make images, diagrams, animation, 3D scenes, and video from source
+files it can keep revising.
 
 A frontier model such as Claude Opus can write a video or a graphic from
-scratch in one pass. Slopcamera gives the agent packaged, tested techniques to
+scratch in one pass. SlopCamera gives the agent packaged, tested techniques to
 reuse instead, for diagrams, motion graphics, 3D scenes, native Blender,
 CadQuery, and Manim films, and footage edits. The agent writes a short source
-file, and the Slopcamera CLI renders it, checks it, and writes the variants each
+file, and the SlopCamera CLI renders it, checks it, and writes the variants each
 technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a
 video. The source stays beside the output, so a revision is an edit to that
 file and a new render.
 
 [Install](#install-slopcamera) · [First diagram](#make-your-first-diagram) · [Techniques](https://slopcamera.com/docs/reference/techniques) · [Docs](https://slopcamera.com/docs) · [Compare](#compared-with-other-tools) · [slopcamera.com](https://slopcamera.com)
 
-## Why Slopcamera
+## Why SlopCamera
 
 - **The agent writes the part that is specific to your request.** A diagram
   is a JSON file of boxes and arrows, a title animation is an HTML scaffold
@@ -35,13 +36,13 @@ file and a new render.
   and an Agent Skill ship at the same version. The skill sends the agent to
   the guide for its current job instead of loading every guide at once.
 - **Work stays on your machine.** Projects are local files and there is no
-  Slopcamera account. Generation is optional: it uses your own Vercel AI
+  SlopCamera account. Generation is optional: it uses your own Vercel AI
   Gateway access or, for prompt-only images, prepaid Hraness Credits.
 
-## Install Slopcamera
+## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[Slopcamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
+[SlopCamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
 and its matching Agent Skill:
 
 ```sh
@@ -64,6 +65,17 @@ Setup guides: [Claude Code](https://slopcamera.com/docs/tutorials/claude-code) �
 Blender install separately; the
 [capability reference](docs/reference/capabilities.md) lists what each
 technique needs.
+
+SlopCamera is a CLI with no menu-bar app or background process.
+`slopcamera status` shows what is running, how the last job ended, your last
+known credits balance, the newest outputs and whether the retired menu-bar
+companion still opens at login. `slopcamera tui` keeps
+that screen open and refreshes it; `slopcamera tui --snapshot` prints it once
+and `--json` returns the data. `slopcamera outputs list|open|reveal` lists the
+newest outputs or opens one on this Mac, `slopcamera commands --json` lists
+every command with what it may change, and `slopcamera legacy retire` stops
+the retired menu-bar companion opening at login by moving its LaunchAgent aside; it
+deletes nothing, and `slopcamera doctor` prints the command that restores it.
 
 <details>
 <summary>Build from source</summary>
@@ -94,12 +106,6 @@ The skill comes from the same checkout as the CLI. In a later shell, restore
 the checkout path and function. The
 [source-install guide](docs/how-to/use-current-source.md) covers workspace
 placement and resuming long runs.
-
-On macOS, a source checkout can also build an optional menu-bar companion with
-`cargo build --release --manifest-path desktop/menubar/Cargo.toml`. It shows
-what Slopcamera is rendering, how the last job ended, your last known credits
-balance, and the newest output files; `slopcamera menubar` runs it. It is not
-part of the released package and does not install an application bundle.
 
 </details>
 
@@ -168,14 +174,14 @@ including the
 [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) walks
 through the same edit.
 
-## What Slopcamera does
+## What SlopCamera does
 
 Each technique pairs a short source file the agent writes with commands that
 render and check it. The
 [techniques reference](https://slopcamera.com/docs/reference/techniques) lists
 them all with their requirements.
 
-| Technique | The agent writes | Slopcamera renders | Example |
+| Technique | The agent writes | SlopCamera renders | Example |
 | --- | --- | --- | --- |
 | Diagrams | Diagram JSON | `.tldr`, light and dark SVG and PNG, after a strict check | [Pipeline](https://slopcamera.com/docs/tutorials/first-diagram#stack-layout) |
 | Vector tracing | A path to a raster image | SVG traced locally with VTracer (macOS and Linux) | [Color and duotone](https://slopcamera.com/docs/how-to/vectorize-images#inspect-a-reproducible-example) |
@@ -194,7 +200,7 @@ of these yet.
 
 ### Film native worlds and educational animation
 
-Slopcamera can direct Blender for sets, materials, lighting, skinned
+SlopCamera can direct Blender for sets, materials, lighting, skinned
 characters, cloth, and liquid caches; CadQuery for parametric solids and STEP;
 and Manim Community for mathematical animation. Seven editable starters
 include a product, character, shaded street, cloth, liquid, CAD bracket, and
@@ -234,7 +240,7 @@ and captioned versions in each format from the same edit.
 > the speaker framed, add captions and `logo.svg`, and show a preview before
 > export.
 
-Slopcamera edits recordings you already have; it does not record the screen,
+SlopCamera edits recordings you already have; it does not record the screen,
 camera, or microphone.
 Standalone media imports need an existing project; `html render`, `studio assemble`,
 or `direct assemble` can create one. Read [`PRIVACY.md`](PRIVACY.md) before
@@ -249,12 +255,12 @@ slopcamera workflows show social-variants --json
 Start with [Edit a video](docs/how-to/edit-video.md) or
 [Run workflows](docs/how-to/run-workflows.md).
 
-## How Slopcamera works
+## How SlopCamera works
 
 Each kind of work keeps its own source file. A native scene holds a rig or
 simulation; a portable scene holds geometry, cameras, and media placement; a
 diagram holds its shapes and labels; a video project holds cuts and delivery
-settings. Slopcamera connects them through files: a rendered diagram can
+settings. SlopCamera connects them through files: a rendered diagram can
 appear on a screen in a 3D scene, and native frames can become a clip in a
 video project.
 
@@ -286,16 +292,16 @@ Details as of 28 September 2026.
 
 | | Agent writes | License | Cloud rendering | Choose it when |
 | --- | --- | --- | --- | --- |
-| Slopcamera | Diagram JSON, HTML scenes, scene JSON, Blender, CadQuery, or Manim programs, and video edits | MIT | Video renders on your machine; a hosted API checks and renders diagrams and generates images | One agent needs diagrams, 3D, native films, and footage edits in one local project |
+| SlopCamera | Diagram JSON, HTML scenes, scene JSON, Blender, CadQuery, or Manim programs, and video edits | MIT | Video renders on your machine; a hosted API checks and renders diagrams and generates images | One agent needs diagrams, 3D, native films, and footage edits in one local project |
 | [Remotion](https://www.remotion.dev/) | React components | Source-available; free for individuals, non-profits, and organizations of up to 3 people | AWS Lambda in your account | Your team writes React and renders at scale |
 | [HyperFrames](https://github.com/heygen-com/hyperframes) | HTML, CSS, and JavaScript animation | Apache 2.0 | HeyGen-hosted rendering or AWS Lambda | You want HTML motion graphics rendered to MP4 |
 
 Remotion and HyperFrames have much larger communities. For a one-off image or
 clip, a hosted app needs no install. Read
-[Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion),
-[Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes),
+[SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion),
+[SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes),
 [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents),
-or [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera).
+or [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera).
 
 ## Important limitations
 
@@ -320,7 +326,7 @@ or [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera).
 
 ## Design and trust
 
-There is no Slopcamera account or hosted project database. Video editing and
+There is no SlopCamera account or hosted project database. Video editing and
 rendering run on your machine; the optional hosted API checks and renders
 diagrams and generates images. Gateway generation and cloud
 analysis use credentials from the local process and ask for your
@@ -407,9 +413,9 @@ the local suite, `support snooze` pauses the notice for 30 days, and
 <details>
 <summary>Historical Atet release evidence</summary>
 
-Slopcamera was called Atet until September 2026.
+SlopCamera was called Atet until September 2026.
 [Atet v3.2.3](https://github.com/hraness/atet/releases/tag/v3.2.3) and its
 [original archive](https://github.com/hraness/atet/releases/download/v3.2.3/hraness-atet-3.2.3.tgz)
-still install Atet, not Slopcamera.
+still install Atet, not SlopCamera.
 
 </details>

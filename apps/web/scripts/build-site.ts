@@ -11,7 +11,7 @@ import {
 import { collectBunStylexGraph } from "@hraness/ui/stylex-build/bun"
 import { stylexVite } from "@hraness/ui/stylex-build/vite"
 import { build as viteBuild, version as viteVersion } from "vite"
-import { inspectSiteCssResources } from "./site-css"
+import { assertSiteRecipeResources, inspectSiteCssResources } from "./site-css"
 import { readPreviewFile as bytesAt } from "./preview-file"
 import { projectSiteArtifacts, siteSha256, snapshotSiteFoundation, type SiteArtifact } from "./site-contract"
 import { snapshotMarketingPreset } from "./marketing-preset"
@@ -19,12 +19,13 @@ import { snapshotLanternMaterial } from "./lantern-material"
 import { docsDocumentForPage, docPages } from "../src/docs-registry"
 import { blogDocumentForPost, blogIndexDocument, blogPostForDocument, blogPosts } from "../src/blog-registry"
 import { blogIndexSlots, blogPostSlots } from "../src/blog-content"
+import { socialImagesByDocument } from "../src/social-image"
 import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
   { name: "@hraness/design-kit", version: "0.24.0" },
-  { name: "@hraness/site-footer", version: "0.20.0" },
+  { name: "@hraness/site-footer", version: "0.20.1" },
   { name: "@hraness/ui", version: "0.5.16" },
 ] as const
 const fontFiles = [
@@ -47,6 +48,7 @@ const sourceFiles = [
   "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
   "src/blog.html", "src/blog-admissions.ts", "src/blog-registry.ts", "src/blog-content.ts", "src/site-blog.stylex.ts",
+  "src/social-image.ts", "src/marks/slopcamera.svg",
   "src/status-page-content.ts", "src/status-page.ts",
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
@@ -186,7 +188,9 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     for (const item of renderer.outputs) assert.deepEqual(await artifactForFile(rendererRoot, item.path), item)
     const module: unknown = await import(pathToFileURL(join(rendererRoot, entries[0]!.path)).href)
     assert.ok(module !== null && typeof module === "object" && "renderSiteDocument" in module && typeof module.renderSiteDocument === "function")
-    const sealedAssets: SiteAssets = { ...assets, docBodies, blogPages, statusPage: renderStatusPage() }
+    const socialImages = Object.fromEntries(Object.entries(socialImagesByDocument)
+      .map(([document, { url, alt, width, height }]) => [document, { url, alt, width, height }]))
+    const sealedAssets: SiteAssets = { ...assets, docBodies, blogPages, socialImages, statusPage: renderStatusPage() }
     for (const document of documents) {
       const template = inputs.find(item => item.path === below(root, join(app, "src", document.template)))!
       const html: unknown = module.renderSiteDocument(new TextDecoder("utf-8", { fatal: true }).decode(template.bytes), document.outputPath, sealedAssets,
@@ -207,8 +211,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
       const bytes = await bytesAt(join(finalized, artifact.path))
       assert.equal(bytes.byteLength, artifact.bytes)
       assert.equal(siteSha256(bytes), artifact.sha256)
-      if (artifact.path === finalCssPath) assert.deepEqual(inspectSiteCssResources(new TextDecoder("utf-8", { fatal: true }).decode(bytes), artifact.path), [],
-        "Site recipes must not introduce resources outside the captured foundation")
+      if (artifact.path === finalCssPath) assertSiteRecipeResources(new TextDecoder("utf-8", { fatal: true }).decode(bytes), artifact.path)
       return { artifact, bytes }
     }))
     for (const input of snapshot) assert.deepEqual(await artifactForFile(root, input.path), input, "Site source or compiler input changed during compilation")

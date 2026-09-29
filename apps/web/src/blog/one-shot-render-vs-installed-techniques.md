@@ -1,6 +1,6 @@
 Ask a frontier model such as Claude Opus for an eight-second title animation and it can write one in a single reply: some HTML, a script that captures frames in a headless browser, and an FFmpeg command that encodes them. You don't need to install anything for that. The harder question is what happens on the next request, when the title needs new words, the diagram needs a dark version, or the same film has to run as a 9:16 story.
 
-Revisions, variants, checks, and re-renders are where the two routes differ, and the examples below use files committed to the Slopcamera repository. With Slopcamera installed, the agent edits a short source file and a command does the rest. [Why Slopcamera](/docs/explanation/why-slopcamera) explains the model; this post measures it.
+Revisions, variants, checks, and re-renders are where the two routes differ, and the examples below use files committed to the SlopCamera repository. With SlopCamera installed, the agent edits a short source file and a command does the rest. [Why SlopCamera](/docs/explanation/why-slopcamera) explains the model; this post measures it.
 
 ## What a one-shot reply contains
 
@@ -8,13 +8,13 @@ A model that one-shots a render writes the whole pipeline in its reply: the pict
 
 The difference shows up when the work continues. Without a framework, the second request starts from whatever the first reply left behind. If the model kept its capture script, it has to read it again, change it, and hope the change does not break the export. If it did not, it writes the pipeline again, and the new output may not match the first in spacing, color, or timing.
 
-With an installed framework, the pipeline is not in the conversation at all. Slopcamera's renderers, checks, and exporters are commands on your computer. The agent writes a small source file, runs a command, and reads the command's output. A revision is an edit to that file and one more command.
+With an installed framework, the pipeline is not in the conversation at all. SlopCamera's renderers, checks, and exporters are commands on your computer. The agent writes a small source file, runs a command, and reads the command's output. A revision is an edit to that file and one more command.
 
-Remotion and HyperFrames, two frameworks for making video from code, also ship agent skills ([Remotion's skills](https://www.remotion.dev/docs/ai/skills), [HyperFrames' skills guide](https://hyperframes.heygen.com/guides/skills)). The same reasoning applies to any installed framework; the measurements below are Slopcamera's own.
+Remotion and HyperFrames, two frameworks for making video from code, also ship agent skills ([Remotion's skills](https://www.remotion.dev/docs/ai/skills), [HyperFrames' skills guide](https://hyperframes.heygen.com/guides/skills)). The same reasoning applies to any installed framework; the measurements below are SlopCamera's own.
 
 ## Four examples from the gallery, measured
 
-The examples below come from the Slopcamera gallery. The first three are pairs: an original and a revision made from the same source. The fourth is a set of format variants cut from one film. The numbers are byte and line counts of files in the repository at commit [`a95e7fe`](https://github.com/hraness/slopcamera/tree/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase). They measure what the agent writes and what the commands produce. They are not counts of model tokens.
+The examples below come from the SlopCamera gallery. The first three are pairs: an original and a revision made from the same source. The fourth is a set of format variants cut from one film. The numbers are byte and line counts of files in the repository at commit [`a95e7fe`](https://github.com/hraness/slopcamera/tree/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase). They measure what the agent writes and what the commands produce. They are not counts of model tokens.
 
 | Example | What the agent writes first | What the revision changes | What the command produces |
 | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ The [four-ratio edit](https://github.com/hraness/slopcamera/blob/a95e7feef61c650
 
 ## What the commands check
 
-A one-shot reply is checked by looking at it. Slopcamera's commands check the source before and after rendering, and a failed check gives the agent a short message instead of a broken file.
+A one-shot reply is checked by looking at it. SlopCamera's commands check the source before and after rendering, and a failed check gives the agent a short message instead of a broken file.
 
 - `slopcamera diagram check` stops with exit code 1 and a message when the file is invalid, such as a stack wider than its canvas. With `--strict`, a layout finding, such as a label likely to overflow its box, sets exit code 2.
 - `scene design set` enforces the template's limits. Asking for a 9-meter span stops with `Parameter span must be between 4 and 8.` and writes nothing.
@@ -97,18 +97,18 @@ None of these checks say whether the result looks good. Someone still has to wat
 ## When one-shotting is the better choice
 
 - **The picture is used once.** A throwaway sketch for a chat, a slide nobody will revise, or a quick test does not need a source file.
-- **You need a format Slopcamera does not cover.** A model can write any code it likes. Slopcamera covers diagrams, HTML motion graphics, portable 3D scenes, parametric designs, video edits of existing recordings, and Blender, CadQuery, and Manim when you install those separately. The [techniques reference](/docs/reference/techniques) lists what is demonstrated.
-- **You cannot install software.** Slopcamera runs on your computer and needs Bun 1.3.14 or newer. HTML renders need Chrome and FFmpeg, and native engines have their own installs. A chat window needs nothing.
+- **You need a format SlopCamera does not cover.** A model can write any code it likes. SlopCamera covers diagrams, HTML motion graphics, portable 3D scenes, parametric designs, video edits of existing recordings, and Blender, CadQuery, and Manim when you install those separately. The [techniques reference](/docs/reference/techniques) lists what is demonstrated.
+- **You cannot install software.** SlopCamera runs on your computer and needs Bun 1.3.14 or newer. HTML renders need Chrome and FFmpeg, and native engines have their own installs. A chat window needs nothing.
 
 ## What installing costs
 
-An agent skill is not free context. Anthropic's [Agent Skills documentation](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) says an installed skill costs about 100 tokens for its name and description until it is used. When a request matches, the agent reads the skill's instructions. Slopcamera's `SKILL.md` is 6,834 bytes, and it points to separate reference files that the agent reads only when a task needs them. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
+An agent skill is not free context. Anthropic's [Agent Skills documentation](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) says an installed skill costs about 100 tokens for its name and description until it is used. When a request matches, the agent reads the skill's instructions. SlopCamera's `SKILL.md` is 6,834 bytes, and it points to separate reference files that the agent reads only when a task needs them. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
 
-Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are Slopcamera's formats, and the agent reads examples or references before writing them.
+Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are SlopCamera's formats, and the agent reads examples or references before writing them.
 
 ## What these numbers do not show
 
-Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens, and no controlled comparison of token use between a one-shot model and the same model with Slopcamera exists yet. The byte-for-byte matches were renders of the same source with the same toolchain; Slopcamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
+Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens, and no controlled comparison of token use between a one-shot model and the same model with SlopCamera exists yet. The byte-for-byte matches were renders of the same source with the same toolchain; SlopCamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
 
 Latest release: [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
 

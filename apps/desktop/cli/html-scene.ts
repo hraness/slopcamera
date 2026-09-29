@@ -67,7 +67,7 @@ async function readPngHeader(path: string, expectedBytes: number) {
   } finally { await handle.close(); }
 }
 
-async function readSource(application: ApplicationContext, input: unknown, signal: AbortSignal) {
+export async function readHtmlSceneSource(application: ApplicationContext, input: unknown, signal: AbortSignal) {
   const request = HtmlSceneInputSchema.parse(input);
   assertHtmlOverlayExecutionProfileLibraries(request.libraries, request.executionProfile);
   const loadedDocument = "path" in request.document
@@ -100,7 +100,7 @@ async function readSource(application: ApplicationContext, input: unknown, signa
 }
 
 export async function planHtmlScene(application: ApplicationContext, input: unknown, signal: AbortSignal) {
-  const source = await readSource(application, input, signal);
+  const source = await readHtmlSceneSource(application, input, signal);
   return {
     kind: "slopcamera.html-scene-plan" as const, schemaVersion: 1 as const,
     executed: false, name: source.request.name, frameCount: source.frameCount,
@@ -221,7 +221,7 @@ export async function renderHtmlScene(
   };
   await active();
   dependencies.progress?.("source");
-  const source = await readSource(application, input, signal);
+  const source = await readHtmlSceneSource(application, input, signal);
   if (application.htmlOverlayRenderer === undefined) throw new CliError("unavailable", "HTML scene renderer is unavailable.");
   const tools = await (dependencies.bindTools ?? bindExactCapabilities)(application, ["ffmpeg", "ffprobe", "html-browser"]);
   const tool = (name: string): ExactCapabilityBinding => {

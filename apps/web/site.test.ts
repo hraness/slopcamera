@@ -1,4 +1,5 @@
 import { paletteColors } from "@hraness/design-kit"
+import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
 import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
@@ -18,7 +19,11 @@ import {
 
 import {
   isCanonicalAnalyticsPage,
+  ctaClickedEvent,
+  ctaProperties,
+  installCommandCopiedEvent,
   posthogCookielessDistinctId,
+  sanitizeEvent,
   sanitizePageview,
 } from "./src/analytics-contract"
 import {
@@ -52,7 +57,7 @@ import {
 } from "./src/negotiate-request"
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
-import { renderSlopcameraSocialImage } from "./scripts/generate-og"
+import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
@@ -62,8 +67,8 @@ import { replaceSiteSlot } from "./src/site-template"
 import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
-const brandDescription = "Slopcamera is a video and graphics framework for coding agents such as Codex and Claude Code."
-const searchDescription = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
+const brandDescription = "SlopCamera is a media studio for coding agents."
+const searchDescription = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
 // Each build compiles the independent ordinary-site and preview graphs. These
@@ -177,9 +182,10 @@ function assertAuthoredShellBudget(template: string): number {
   // 70 bytes of palette/pattern attributes and spacing, plus 444 bytes of
   // shared inert hero markup. Count all of it; keep the full HTML ceiling too.
   // The framework homepage grows the authored shell for the same sections;
-  // the 44,000 ceiling bounds it with the full built-HTML ceiling below.
+  // merged with the numbered technique aisles it measured 46,105 bytes, and
+  // the 46,600 ceiling bounds it with the full built-HTML ceiling below.
   const bytes = Buffer.byteLength(authored, "utf8")
-  if (bytes >= 44_000) throw new Error(`Authored site shell exceeds its 44,000-byte budget: ${bytes}`)
+  if (bytes >= 46_600) throw new Error(`Authored site shell exceeds its 46,600-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -221,18 +227,20 @@ function assertBuiltHtmlBudget(html: string): number {
   // Exact predecessor 64,732 -> portfolio 65,272: palette attributes +61,
   // compiled header classes +26 and inert hero markup +453. The framework
   // homepage (why-install pillars, five technique groups, comparison rows)
-  // measured 68,777. The 69,200 ceiling leaves 423 bytes; count every byte.
+  // measured 68,777; merged with the numbered technique aisles and CTA
+  // analytics attributes it measured 71,721. The 72,200 ceiling leaves 479
+  // bytes; count every byte.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 69_200) throw new Error(`Built site HTML exceeds its 69,200-byte budget: ${bytes}`)
+  if (bytes >= 72_200) throw new Error(`Built site HTML exceeds its 72,200-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(69_199))).toBe(69_199)
-  expect(() => assertBuiltHtmlBudget("x".repeat(69_200)))
-    .toThrow("Built site HTML exceeds its 69,200-byte budget: 69200")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(69_199)}é`))
-    .toThrow("Built site HTML exceeds its 69,200-byte budget: 69201")
+  expect(assertBuiltHtmlBudget("x".repeat(72_199))).toBe(72_199)
+  expect(() => assertBuiltHtmlBudget("x".repeat(72_200)))
+    .toThrow("Built site HTML exceeds its 72,200-byte budget: 72200")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(72_199)}é`))
+    .toThrow("Built site HTML exceeds its 72,200-byte budget: 72201")
 })
 
 test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its routes are real pages", async () => {
@@ -290,12 +298,12 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   const template = await readSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
-  expect(bytes).toBeLessThan(44_000)
-  expect(assertAuthoredShellBudget(grow("x".repeat(43_999 - bytes)))).toBe(43_999)
-  expect(() => assertAuthoredShellBudget(grow("x".repeat(44_000 - bytes))))
-    .toThrow("Authored site shell exceeds its 44,000-byte budget: 44000")
-  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(43_999 - bytes)}é`)))
-    .toThrow("Authored site shell exceeds its 44,000-byte budget: 44001")
+  expect(bytes).toBeLessThan(46_600)
+  expect(assertAuthoredShellBudget(grow("x".repeat(46_599 - bytes)))).toBe(46_599)
+  expect(() => assertAuthoredShellBudget(grow("x".repeat(46_600 - bytes))))
+    .toThrow("Authored site shell exceeds its 46,600-byte budget: 46600")
+  expect(() => assertAuthoredShellBudget(grow(`${"x".repeat(46_599 - bytes)}é`)))
+    .toThrow("Authored site shell exceeds its 46,600-byte budget: 46601")
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_UNKNOWN_CLASS}}`))
     .toThrow("Unexpected site class slot")
   expect(() => assertAuthoredShellBudget(`${template}{{INSTALL_UNKNOWN_CLASS}}`))
@@ -321,7 +329,7 @@ test("ships agent instructions for video editing and Gateway media generation", 
     readFile(join(repositoryDirectory, "skills/slopcamera/references/gateway-media.md"), "utf8"),
   ])
 
-  expect(skill).toContain("# Create visual media with Slopcamera")
+  expect(skill).toContain("# Create visual media with SlopCamera")
   expect(skill).toContain("[Video projects](references/video-projects.md)")
   expect(skill).toContain("[Gateway media](references/gateway-media.md)")
   // Slopcamera edits existing recordings; the Skill must not offer to record.
@@ -600,12 +608,12 @@ describe("static Slopcamera site", () => {
       .toLowerCase()
 
     for (const heading of [
-      "## Why Slopcamera",
-      "## Install Slopcamera",
+      "## Why SlopCamera",
+      "## Install SlopCamera",
       "## Make your first diagram",
       "### Instructions for coding agents",
-      "## What Slopcamera does",
-      "## How Slopcamera works",
+      "## What SlopCamera does",
+      "## How SlopCamera works",
       "## Important limitations",
       "## Design and trust",
       "## Verification",
@@ -615,11 +623,11 @@ describe("static Slopcamera site", () => {
     }
 
     const readerPath = [
-      "## Why Slopcamera",
-      "## Install Slopcamera",
+      "## Why SlopCamera",
+      "## Install SlopCamera",
       "## Make your first diagram",
-      "## What Slopcamera does",
-      "## How Slopcamera works",
+      "## What SlopCamera does",
+      "## How SlopCamera works",
       "## Important limitations",
       "## Design and trust",
       "## Verification",
@@ -664,8 +672,8 @@ describe("static Slopcamera site", () => {
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
     const html = await readSource("index.html")
 
-    expect(html).toContain("<title>Slopcamera: a video and graphics framework for coding agents</title>")
-    expect(html).toContain('<meta property="og:title" content="Slopcamera: a video and graphics framework for coding agents">')
+    expect(html).toContain("<title>SlopCamera: video, diagrams and 3D your coding agent can revise</title>")
+    expect(html).toContain('<meta property="og:title" content="SlopCamera: video, diagrams and 3D your coding agent can revise">')
     expect(html).toContain(`<meta name="description" content="${searchDescription}">`)
     expect(html).toContain(`<meta property="og:description" content="${searchDescription}">`)
     expect(html).toContain(`<meta name="twitter:description" content="${searchDescription}">`)
@@ -680,7 +688,8 @@ describe("static Slopcamera site", () => {
     expect(html).toContain('<meta property="og:image:height" content="630">')
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">')
     expect(html).toContain('<meta name="twitter:image" content="https://slopcamera.com/og.png">')
-    expect(html).toContain('<meta name="twitter:image:alt" content="Slopcamera, a video and graphics framework for coding agents, beside a camera-frame and lens motif">')
+    expect(html).toContain(`<meta property="og:image:alt" content="${homeSocialImage.alt}">`)
+    expect(html).toContain(`<meta name="twitter:image:alt" content="${homeSocialImage.alt}">`)
     expect(html).toContain('<link rel="icon" href="/icon.png" type="image/png">')
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">')
     expect(html).toContain('<a class="{{INSTALL_PANEL_LINK_CLASS}}" href="{{SOURCE_INSTALL_URL}}">complete source-install guide</a>')
@@ -702,9 +711,9 @@ describe("static Slopcamera site", () => {
 
     for (const html of [source, built]) {
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
-      expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">Slopcamera<\/h1>/u)
+      expect(html).toMatch(/<h1 id="preview-title" class="[^"]+">SlopCamera<\/h1>/u)
       expect(html).toMatch(/<main aria-labelledby="preview-title" class="preview-shell [^"]+">/u)
-      expect(html).toContain("Visual work your agent can keep revising.")
+      expect(html).toContain("A domain-specific harness for visual creation.")
       expect(html).toContain('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">')
       expect(html).toContain('<link rel="canonical" href="https://slopcamera.com/">')
       expect(html).not.toMatch(/<script\b|<style\b|\sstyle\s*=|<a\b|<button\b|<form\b|<input\b|<select\b|<textarea\b|contenteditable/iu)
@@ -865,7 +874,8 @@ describe("static Slopcamera site", () => {
       return url.pathname.slice(1)
     }).sort()).toEqual([...fonts, ...textures, ...textures, ...textures, ...masks].sort())
     expect(foundation).not.toMatch(/sourceMappingURL|@import\b/u)
-    expect(union).not.toMatch(/url\(|@font-face|sourceMappingURL/u)
+    expect(union).not.toMatch(/@font-face|sourceMappingURL/u)
+    expect(() => assertSiteRecipeResources(union, "sealed-site-union.css")).not.toThrow()
     expect(foundation).toContain("components.slopcamera-legacy")
     expect(union).toContain("components.hraness-stylex")
     expect(await readdir(join(appDirectory, "dist/graphs/site-foundation"))).toEqual(["assets"])
@@ -912,7 +922,7 @@ describe("static Slopcamera site", () => {
       expect(html).toContain(stylesheets)
       expect(html).not.toMatch(/\{\{|<style\b|\sstyle\s*=|graphs\/site-renderer|analytics-/u)
       expect(html.match(/<h1\b/gu)).toHaveLength(1)
-      expect(html).toContain(`<title>${page.title} · Slopcamera</title>`)
+      expect(html).toContain(`<title>${page.title} · SlopCamera</title>`)
       expect(html).toContain(`<meta name="description" content="${page.description}">`)
       expect(html).toContain(`<link rel="canonical" href="${docsCanonicalUrl(page)}">`)
       expect(html).toContain(`<link rel="alternate" type="text/markdown" href="${docsMarkdownUrl(page)}">`)
@@ -1142,7 +1152,7 @@ describe("static Slopcamera site", () => {
         expect(technique.command.startsWith("slopcamera ")).toBe(true)
       }
     }
-    expect(html).toContain('<a href="/docs/reference/techniques">All techniques</a>')
+    expect(html).toContain('<a href="/docs/reference/techniques">techniques catalog</a>')
     expect(html).not.toMatch(/<table\b|class="table-wrap"/)
     expect(html).not.toMatch(/AI_GATEWAY_API_KEY|VERCEL_OIDC_TOKEN|SLOPCAMERA_CACHE_DIR/)
   })
@@ -1180,7 +1190,8 @@ describe("static Slopcamera site", () => {
   test("uses the camera identity without rewriting historical mythology", async () => {
     const html = await readSource("index.html")
     expect(html.replace(/\s+/gu, " ")).toContain(searchDescription)
-    expect(html).toContain("camera-frame and lens motif")
+    // The share card carries the camera mark; its alt names the product.
+    expect(html).toContain(`content="${homeSocialImage.alt}"`)
     expect(html).not.toMatch(/Atum|solar barque|Benben|hieroglyph|pharaoh|ankh/u)
   })
 
@@ -1273,7 +1284,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".transcript")
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
-    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">A video and graphics framework for coding agents.</h1>')
+    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Slopcamera is a domain-specific harness for visual creation.</h1>')
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
@@ -1304,48 +1315,51 @@ describe("static Slopcamera site", () => {
     expect(builtAssets.siteArtifacts.some(item => /PROVENANCE|\.(?:otf|json|map|ts|js)$/u.test(item.path))).toBe(false)
   })
 
-  test("ships reproducible correctly sized social and icon assets", async () => {
-    const social = new Uint8Array(await Bun.file(join(appDirectory, "src/og.png")).arrayBuffer())
-    const generatedSocial = await renderSlopcameraSocialImage()
-    const serifHero = new Uint8Array(await Bun.file(
-      join(appDirectory, "src/og-serif-hero.png"),
-    ).arrayBuffer())
+  test("ships share cards only from the shared web-discovery template", async () => {
+    // One declaration drives every card; pages pass only their own copy.
+    expect(slopcameraSocialSite.name).toBe("SlopCamera")
+    expect(slopcameraSocialSite.domain).toBe("slopcamera.com")
+    expect(slopcameraSocialSite.icon?.kind).toBe("mark")
+    expect(slopcameraSocialSite.icon?.src).toBe(`data:image/svg+xml;base64,${
+      Buffer.from(await readSource("marks/slopcamera.svg")).toString("base64")}`)
+    expect(slopcameraSocialSite.theme).toEqual({ accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85" })
+    expect(homeSocialImage).toMatchObject({ file: "og.png", url: "https://slopcamera.com/og.png", width: 1200, height: 630 })
+    expect(homeSocialImage.page).toBeUndefined()
+    expect(socialImages).toHaveLength(1 + 1 + blogPosts.length + docPages.length)
+    expect(new Set(socialImages.map(image => image.file)).size).toBe(socialImages.length)
+    for (const image of socialImages.slice(1)) {
+      expect(image.file).toMatch(/^og\/(?:blog|docs)(?:\/[a-z0-9/-]+)?\.png$/u)
+      expect(Object.keys(image.page ?? {}).sort()).toEqual(["description", "eyebrow", "headline"])
+    }
+    const doc = socialImageForDocument("docs/how-to/edit-video.html")
+    expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "How-to guides" } })
+    expect(doc.alt).toBe("Edit and deliver video, from SlopCamera")
+    for (const image of [homeSocialImage, doc]) {
+      const png = await renderSocialImage(image)
+      const view = new DataView(png.buffer, png.byteOffset, png.byteLength)
+      expect(Array.from(png.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+      expect(view.getUint32(16)).toBe(1200)
+      expect(view.getUint32(20)).toBe(630)
+      expect(png.byteLength).toBeLessThan(1024 * 1024)
+    }
+  })
+
+  test("points every docs and blog page at its own shared-template card", async () => {
+    for (const document of ["docs/how-to/edit-video.html", blogDocumentForPost(blogPosts[0]!), blogIndexDocument]) {
+      const html = await readBuilt(document)
+      const image = socialImageForDocument(document)
+      expect(html).toContain(`<meta property="og:image" content="${image.url}">`)
+      expect(html).toContain(`<meta name="twitter:image" content="${image.url}">`)
+      expect(html).toContain(`<meta property="og:image:alt" content="${image.alt.replaceAll("'", "&#39;")}">`)
+      expect((await readFile(join(appDirectory, "dist", image.file))).byteLength).toBeGreaterThan(0)
+    }
+  })
+
+  test("ships correctly sized icon assets", async () => {
     const apple = new Uint8Array(await Bun.file(join(appDirectory, "src/apple-touch-icon.png")).arrayBuffer())
-    const socialSource = await readSource("og-source.svg")
-    const socialGenerator = await readFile(join(appDirectory, "scripts/generate-og.ts"), "utf8")
     const icon = await readSource("icon.svg")
-    const socialView = new DataView(social.buffer, social.byteOffset, social.byteLength)
-    const serifHeroView = new DataView(
-      serifHero.buffer,
-      serifHero.byteOffset,
-      serifHero.byteLength,
-    )
     const appleView = new DataView(apple.buffer, apple.byteOffset, apple.byteLength)
 
-    expect(generatedSocial).toEqual(social)
-    expect(new Bun.CryptoHasher("sha256").update(social).digest("hex")).toBe(
-      "504717b8b00928234cb98e91efe9cc7a6c110e5380ff1e69faab1f24ac565801",
-    )
-    expect(Array.from(social.slice(1, 4))).toEqual([80, 78, 71])
-    expect(socialView.getUint32(16)).toBe(1200)
-    expect(socialView.getUint32(20)).toBe(630)
-    expect(socialSource).toContain("A video and graphics framework for coding agents")
-    expect(socialSource).toContain("Your agent writes a short source file, and the CLI renders and checks it.")
-    expect(socialSource).not.toMatch(/letter-spacing|>[A-Z ]{6,}</u)
-    expect(socialSource).toContain('href="og-serif-hero.png"')
-    expect(socialSource.match(/font-family="Nebula Sans"/gu)).toHaveLength(4)
-    expect(socialSource).not.toMatch(/system-ui|-apple-system|sans-serif/u)
-    expect(socialSource).toContain('fill="#e8aa48"')
-    expect(serifHeroView.getUint32(16)).toBe(1200)
-    expect(serifHeroView.getUint32(20)).toBe(630)
-    expect(new Bun.CryptoHasher("sha256").update(serifHero).digest("hex")).toBe(
-      "4a4a132a6f8fd781df0c5804797799dc4179e56ab819de79f33fbeecc99b2f52",
-    )
-    expect(socialGenerator).toContain('loadSystemFonts: false')
-    expect(socialGenerator).toContain("NebulaSans-Book.otf")
-    expect(socialGenerator).toContain("NebulaSans-Bold.otf")
-    expect(socialGenerator).toContain("4cc650f856591af1affc4add4f50e260c8239a2542bafe77909b78006023f091")
-    expect(socialGenerator).toContain("91617d3e2281e8213f64f6bf359f387022d3149b35000b38365c32130a25bfa8")
     expect(Array.from(apple.slice(1, 4))).toEqual([80, 78, 71])
     expect(appleView.getUint32(16)).toBe(180)
     expect(appleView.getUint32(20)).toBe(180)
@@ -1403,13 +1417,14 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit": "github:hraness/design-kit#v0.24.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.20.0",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
       "react-dom": "19.2.3",
+      "satori": "0.33.4",
     })
     expect(manifest.devDependencies).toEqual({
       "@babel/core": "7.29.7",
@@ -1431,22 +1446,22 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.24.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.0"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.9.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.10.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(44_000)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(46_600)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(69_200)
+    expect(emittedBytes).toBeLessThan(72_200)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1587,6 +1602,47 @@ describe("static Slopcamera site", () => {
     }, "phc_testtoken")).toBeNull()
   })
 
+  test("allows only allowlisted cookieless CTA and install-copy events", () => {
+    const base = {
+      $cookieless_mode: true,
+      $raw_user_agent: "Mozilla/5.0 Test",
+      distinct_id: posthogCookielessDistinctId,
+      token: "phc_testtoken",
+    }
+    const uuid = "0198c6a7-7c00-7000-8000-000000000009"
+    expect(ctaProperties("#install", "hero")).toEqual({ cta: "install", placement: "hero" })
+    expect(ctaProperties("https://github.com/hraness/slopcamera", "nav")).toEqual({ cta: "github", placement: "nav" })
+    expect(ctaProperties("/docs/how-to/music-video", "hero")).toBeNull()
+    expect(ctaProperties("#install", null)).toBeNull()
+
+    const cta = sanitizeEvent({
+      event: ctaClickedEvent,
+      properties: { ...base, cta: "install", placement: "closing", $current_url: "https://slopcamera.com/?ref=x", email: "a@b.c" },
+      uuid,
+    }, "phc_testtoken")
+    expect(cta?.event).toBe("cta clicked")
+    expect(cta?.properties).toEqual({
+      cta: "install",
+      placement: "closing",
+      $process_person_profile: false,
+      $cookieless_mode: true,
+      $raw_user_agent: "Mozilla/5.0 Test",
+      analytics_schema_version: 1,
+      distinct_id: posthogCookielessDistinctId,
+      site_id: "slopcamera",
+      token: "phc_testtoken",
+    })
+    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "pricing", placement: "hero" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "install", placement: "footer" }, uuid }, "phc_testtoken")).toBeNull()
+
+    const copied = sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, command: "secret" }, uuid }, "phc_testtoken")
+    expect(copied?.event).toBe("install command copied")
+    expect(copied?.properties).not.toHaveProperty("command")
+    expect(sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, token: "phc_other" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$autocapture", properties: base, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "checkout started", properties: base, uuid }, "phc_testtoken")).toBeNull()
+  })
+
   test("emits analytics only for a configured Production build", async () => {
     await ownedCompilation(async fixture => {
       const productionDirectory = await fixture.temporaryDirectory("slopcamera-web-production-")
@@ -1596,8 +1652,12 @@ describe("static Slopcamera site", () => {
         NEXT_PUBLIC_POSTHOG_KEY: "phc_test-token_value",
         VERCEL_ENV: "production",
       } as const
-      const first = await fixture.build({ environment, outputDirectory: productionDirectory })
-      const second = await fixture.build({ environment, outputDirectory: secondDirectory })
+      // Each build runs in its own child process and output directory, so the
+      // determinism comparison below holds whether they run serially or together.
+      const [first, second] = await Promise.all([
+        fixture.build({ environment, outputDirectory: productionDirectory }),
+        fixture.build({ environment, outputDirectory: secondDirectory }),
+      ])
       expect(first.analyticsPath).toMatch(/^\/assets\/analytics-[a-f0-9]{12}\.js$/u)
       expect(second.analyticsPath).toBe(first.analyticsPath)
       expect(second.previewStylesPath).toBe(first.previewStylesPath)
@@ -1681,6 +1741,7 @@ describe("static Slopcamera site", () => {
       "llms.txt",
       "marketing-preset",
       "marks",
+      "og",
       "og.png",
       "preview.html",
       "robots.txt",
@@ -1822,12 +1883,8 @@ describe("static Slopcamera site", () => {
     expect(sitemap.match(/<lastmod>/gu)).toHaveLength(1 + indexableBlogPosts.length + datedDocs.length)
     for (const page of datedDocs) expect(sitemap).toContain(`<loc>${docsCanonicalUrl(page)}</loc>\n    <lastmod>${page.modified}</lastmod>`)
     expect(sitemap.slice(0, sitemap.indexOf("<loc>https://slopcamera.com/docs</loc>"))).not.toContain("<lastmod>")
-    expect(llmsTxt).toMatch(/^# Slopcamera\n/u)
-    // The hero summary, index.md and llms.txt open with the same value sentence.
-    const valueSentence = "A frontier model can one-shot a video or a graphic. Slopcamera gives your agent packaged, tested techniques to reuse instead: the agent writes a short source file, the CLI checks and renders it, and a revision is an edit and a new render."
-    expect(llmsTxt).toContain(`> ${valueSentence}`)
-    expect(homeMarkdown.split("\n\n")[1]).toBe(valueSentence)
-    expect((await readSource("index.html")).replace(/\s+/gu, " ")).toContain(`<p class="hraness-marketing-hero__summary"> ${valueSentence} </p>`)
+    expect(llmsTxt).toMatch(/^# SlopCamera\n/u)
+    expect(llmsTxt).toContain("> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.")
     for (const route of ["docs/reference/techniques", "docs/explanation/slopcamera-vs-remotion", "docs/explanation/slopcamera-vs-hyperframes", "docs/explanation/remotion-alternatives-for-coding-agents"]) {
       expect(llmsTxt).toContain(`(https://slopcamera.com/${route}.md)`)
     }
@@ -2045,12 +2102,15 @@ describe("static Slopcamera site", () => {
       // The in-flow product content footer lands immediately before the shared
       // footer, carries the authored camera mark (never an emoji glyph), and
       // reuses the header's own destinations.
-      expect(contentFooter).toContain('<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">')
+      expect(contentFooter).toContain('<footer aria-label="SlopCamera" class="hraness-marketing-footer" data-hraness-marketing="footer">')
       expect(contentFooter).toContain('class="hraness-marketing-footer__inner"')
       expect(contentFooter).toContain('class="hraness-marketing-footer__brand"')
       expect(contentFooter).toContain('class="hraness-marketing-footer__name"')
       expect(contentFooter).toContain('aria-label="Footer navigation" class="hraness-marketing-footer__nav"')
-      expect(contentFooter).toContain('viewBox="0 0 64 64"')
+      expect(contentFooter).toContain('class="hraness-marketing-footer__brand" data-foil=""')
+      expect(contentFooter).toContain('class="hraness-foil-mark__paint"')
+      expect(contentFooter).toContain('src="/marks/slopcamera.svg"')
+      expect(contentFooter).not.toContain('slopcamera-footer-lens')
       expect(contentFooter).not.toMatch(/📷|📸/u)
       expect([...contentFooter.matchAll(/<a\b[^>]*\shref="([^"]+)"/gu)].map(match => match[1]))
         .toEqual(["/", "/docs", "https://github.com/hraness/slopcamera", "/#install"])

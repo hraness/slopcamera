@@ -8,11 +8,9 @@ const blogPostLinks = indexableBlogPosts
   .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
   .join("\n")
 
-export const homeMarkdown = `# A video and graphics framework for coding agents.
+export const homeMarkdown = `# Slopcamera is a domain-specific harness for visual creation.
 
-A frontier model can one-shot a video or a graphic. Slopcamera gives your agent packaged, tested techniques to reuse instead: the agent writes a short source file, the CLI checks and renders it, and a revision is an edit and a new render.
-
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. It also mixes in generated media or your own footage.
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles tested techniques so your agent spends tokens on the work instead of rediscovering how to do it. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -174,11 +172,11 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 - [XML sitemap](https://slopcamera.com/sitemap.xml)
 `
 
-export const llmsTxt = `# Slopcamera
+export const llmsTxt = `# SlopCamera
 
-> A frontier model can one-shot a video or a graphic. Slopcamera gives your agent packaged, tested techniques to reuse instead: the agent writes a short source file, the CLI checks and renders it, and a revision is an edit and a new render.
+> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
 
-Slopcamera is a video and graphics framework for coding agents. Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
+Slopcamera is a domain-specific harness for visual creation: it lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
 
 Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 17 tools and six operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 

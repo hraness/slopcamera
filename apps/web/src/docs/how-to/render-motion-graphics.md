@@ -103,6 +103,22 @@ Use vgpu for a custom GPU pass with explicit shader resources. The example draws
 
 The title enters, holds and leaves over a colored preview plate. To use the source's transparent background, render it through `workflow.media.htmlOverlay` and inspect the returned overlay over your destination footage. The published MP4 demonstrates the opaque preview; it does not demonstrate alpha delivery.
 
+## Make a product launch film
+
+For a film that walks through a product, start from the launch-film template instead of a blank scene:
+
+```sh
+slopcamera html init video --template launch-film --aspect 16:9
+cd video && bun install && bun run build
+slopcamera html still --input out/scene.json --at 3,12.5 --output out/stills
+slopcamera html render --input out/scene.json --json > out/export.json
+slopcamera html deliver out/export.json --basename launch --poster-at 9 --social-at 9 --cuts 1:1,9:16 --per-beat-clips
+```
+
+The template has six acts: cold open, title, a product walk with a browser frame, camera, cursor and drawn highlight, proof, limits and an end card. Replace its placeholder mockups with your product's own components; React renders them to static markup at build time and the film itself stays plain HTML, CSS and JavaScript. The motion helpers in `@hraness/slopcamera/local/html-film` are pure functions of time, and the same timeline writes WebVTT captions and a beats file with one caption per act.
+
+`html still` and `html preview` draw frames with the same runtime as `html render`, so review them before a full render. `html deliver` reads the render's JSON result and writes a faststart MP4, a VP9 WebM, a poster, a 1200x630 social still, the requested aspect cuts and one 6 to 10 second clip per act, with a receipt. It exits non-zero when an MP4 is over 12 MB, the WebM over 10 MB or a JPEG over 250 KB. The [launch films skill reference](https://github.com/hraness/slopcamera/blob/main/skills/slopcamera/references/launch-films.md) explains each act, the review loop and how HyperFrames or Remotion ideas map onto the helpers.
+
 ## Resolve a failed render
 
 Read the reported stage and keep its retained source and error evidence. A missing runtime needs the matching `doctor` fix; an undeclared resource needs a corrected request. If the lossless intermediate reaches the media-size bound, reduce resolution, frame rate, or duration. A dry run alone does not qualify a browser or GPU profile. Preserve the failing request before trying a reduced reproduction.

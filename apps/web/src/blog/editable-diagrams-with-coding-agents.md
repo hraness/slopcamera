@@ -1,10 +1,10 @@
 A service gets renamed, and the architecture diagram in the docs has to change with it. If the diagram exists only as a PNG, or as a one-off picture a model generated, a coding agent has to draw it again from a new description, and the boxes, spacing, and colors can come out different from the last version. If it is hand-written SVG, the agent can change the one `<text>` node in place. That edit does not update the dark version, the PNG exports, or the tldraw file, and nothing checks whether a longer label still fits its box.
 
-Slopcamera avoids that by making a small JSON file the diagram's source. The agent writes and edits that file. The `slopcamera` command checks it and renders the exports: a tldraw file, light and dark SVG, and light and dark PNG. A later change is a one-line JSON edit and a new render.
+SlopCamera avoids that by making a small JSON file the diagram's source. The agent writes and edits that file. The `slopcamera` command checks it and renders the exports: a tldraw file, light and dark SVG, and light and dark PNG. A later change is a one-line JSON edit and a new render.
 
 ## Write the diagram as source
 
-A Slopcamera diagram is a `.diagram.json` file. It names the shapes, their labels and sizes, the arrows between them, and a layout. This source describes a four-step checkout path:
+A SlopCamera diagram is a `.diagram.json` file. It names the shapes, their labels and sizes, the arrows between them, and a layout. This source describes a four-step checkout path:
 
 ```json
 {
@@ -28,7 +28,7 @@ A Slopcamera diagram is a `.diagram.json` file. It names the shapes, their label
 
 The `stack` layout places the boxes in array order with a fixed gap, so the file has no `x` or `y` coordinates to drift. Each shape has a stable `id`, which the edges refer to. A diagram with branches can use explicit positions instead; the [diagram format reference](/docs/reference/diagram-format) covers both forms.
 
-Keep this file in the repository, next to the page that uses it or in a `diagrams/` directory. The Slopcamera skill follows the repository's existing layout and otherwise puts new sources at `diagrams/<slug>.diagram.json`. Treat everything rendered from the source as generated output.
+Keep this file in the repository, next to the page that uses it or in a `diagrams/` directory. The SlopCamera skill follows the repository's existing layout and otherwise puts new sources at `diagrams/<slug>.diagram.json`. Treat everything rendered from the source as generated output.
 
 ## Check before you render
 
@@ -63,7 +63,7 @@ The render uses the document's `name` for its filenames and writes five files be
 - `checkout-architecture.light.svg` and `checkout-architecture.dark.svg`
 - `checkout-architecture.light.png` and `checkout-architecture.dark.png`
 
-The light and dark versions come from the same source, so a docs site that switches themes shows the same diagram in both. The `.tldr` file opens in [tldraw](https://tldraw.dev) if someone wants to sketch on top of it. Slopcamera writes that file but does not read it back, so changes made in tldraw do not reach the JSON. Make lasting changes in the source.
+The light and dark versions come from the same source, so a docs site that switches themes shows the same diagram in both. The `.tldr` file opens in [tldraw](https://tldraw.dev) if someone wants to sketch on top of it. SlopCamera writes that file but does not read it back, so changes made in tldraw do not reach the JSON. Make lasting changes in the source.
 
 To keep several diagrams consistent, put a `slopcamera.config.*` file beside the sources, or pass one with `--config`. It sets the font, named icons, and light and dark theme colors the diagrams render with. A JSON config is only read as data. A TypeScript or JavaScript config runs as code with your user's access.
 
@@ -84,13 +84,13 @@ This is where an installed tool pays off for an agent. Without a source file, th
 
 [Mermaid](https://mermaid.js.org/) diagrams are text inside a Markdown code block, and [GitHub renders them](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams) in issues, pull requests, discussions, wikis, and Markdown files. For a sequence diagram in a pull request description, or a flowchart in a README that should update whenever someone edits the Markdown, Mermaid is simpler. There is nothing to install, nothing to render, and the diff a reviewer sees is the diagram's source. Many documentation site generators render Mermaid blocks too.
 
-Slopcamera adds four things. Shape sizes, gaps, and order come from the source file. The light and dark PNG and SVG files are built ahead of time, so they work where no Mermaid renderer runs, such as slides, social images, and email. One config file sets the font, icons, and theme for many diagrams, and each render also writes a tldraw file.
+SlopCamera adds four things. Shape sizes, gaps, and order come from the source file. The light and dark PNG and SVG files are built ahead of time, so they work where no Mermaid renderer runs, such as slides, social images, and email. One config file sets the font, icons, and theme for many diagrams, and each render also writes a tldraw file.
 
 The cost is generated files. In this example each SVG was about 197 KB. About 192 KB of that is the regular and bold Nebula Sans font files, which the default render embeds in each SVG as base64, so most of each SVG is the font, not the diagram. Each PNG was about 34 KB. A diff of those files is not readable, so review the JSON change, then look at the new PNG.
 
 ## Use it from an agent
 
-Install Slopcamera and its agent skill:
+Install SlopCamera and its agent skill:
 
 ```sh
 {{ARCHIVE_INSTALL_COMMAND}}
@@ -99,7 +99,7 @@ Install Slopcamera and its agent skill:
 
 For Claude Code, install the skill with `{{SKILL_INSTALL_COMMAND_CLAUDE}}` instead; the [Claude Code tutorial](/docs/tutorials/claude-code) covers that setup.
 
-The skill tells the agent to look for an existing `.diagram.json` on the same subject before creating a new one, to update that source rather than edit a generated image, and to keep labels to a few words. Agents that use MCP instead of a shell can run the same two steps with the `check_diagram` and `render_diagram` tools. Those tools use the built-in icons and themes and do not read a `slopcamera.config.*` file, and the check returns its findings instead of an exit code. The [first diagram tutorial](/docs/tutorials/first-diagram) walks through the same loop with the starter file from `slopcamera diagram init`. The [techniques reference](/docs/reference/techniques#diagrams-and-drawings) lists the other diagram techniques, and [Why Slopcamera](/docs/explanation/why-slopcamera) explains why the agent writes source instead of drawing.
+The skill tells the agent to look for an existing `.diagram.json` on the same subject before creating a new one, to update that source rather than edit a generated image, and to keep labels to a few words. Agents that use MCP instead of a shell can run the same two steps with the `check_diagram` and `render_diagram` tools. Those tools use the built-in icons and themes and do not read a `slopcamera.config.*` file, and the check returns its findings instead of an exit code. The [first diagram tutorial](/docs/tutorials/first-diagram) walks through the same loop with the starter file from `slopcamera diagram init`. The [techniques reference](/docs/reference/techniques#diagrams-and-drawings) lists the other diagram techniques, and [Why SlopCamera](/docs/explanation/why-slopcamera) explains why the agent writes source instead of drawing.
 
 ## What the checker does not catch
 
