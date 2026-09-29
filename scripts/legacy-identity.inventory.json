@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 87,
-    "identityLinesSha256": "e5ba236994dbc4573e764f029da91009f3f0c1c2b31f5f98a58fdde61b4bbeb8",
+    "identityLinesSha256": "0e38abea574b4b7fdb15095c837ef296d3f4e6d9520ac5bfb8c3fbcb75a02f0b",
     "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1514,7 +1514,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "d608b594a3389de65f9d16c3550517214ef4cef8323b965d7a85a1278dfa87c0",
+    "identityLinesSha256": "fe27c96c327a06db9222b04112d7764c5363f68b1346b555eff7269d6a24ac9e",
     "occurrenceCount": 8,
     "path": "apps/web/site.test.ts",
     "categories": [
@@ -1523,7 +1523,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "ca68504e772e038389a7e62cb44b16c05ab803e97dd251db57cf75b47e58cd36",
+    "identityLinesSha256": "5614d875c270ebf3d6b6561202aa9cce94a20ec8899face13be9896e358fb1fd",
     "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1532,7 +1532,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "1a36eee77e6baeb427eb209a4e2823c812157eb0ee4bbe1f3606cacfd9cebc51",
+    "identityLinesSha256": "a2732e0fbdcd87444d996aa28cb46eb0ec672040dc531247d05b98e7b44721cf",
     "occurrenceCount": 2,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
@@ -1541,7 +1541,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "5e50e0d6301575ba719e0183c3b67efb4ce6919a452042c0fee46fff1dec9310",
+    "identityLinesSha256": "c4b77f7410b2da88b30cb06a34488dde0070dc84bcd12da08ee838d1387833f0",
     "occurrenceCount": 1,
     "path": "apps/web/src/blog/introducing-slopcamera.md",
     "categories": [
@@ -1721,7 +1721,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
+    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
@@ -1748,15 +1748,6 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-6gkjry1c.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1766,8 +1757,17 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
+    "occurrenceCount": 233,
+    "path": "dist/index-nv3byqa1.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "2ea5f4f834343b4d19840c49d964a1234c8432be169cc1e57bf879d65e8e29d5",
+    "identityLinesSha256": "553ec03f56038ad0be349adf7b7e14039e9be8c246b5f77753f56860ff0eef14",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -2929,7 +2929,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "a7d760cdde1f85cec1cde5fdeafbb2cefd47637f0235c7ebb92d8593171bb149",
+    "identityLinesSha256": "2d517b36ca76a0267dc6209ec85af9fced19fdae7861b4ed4e55d492f85c0be2",
     "occurrenceCount": 7,
     "path": "README.md",
     "categories": [

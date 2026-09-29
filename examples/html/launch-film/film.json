@@ -1,0 +1,63 @@
+{
+  "name": "Introducing Example",
+  "aspect": "16:9",
+  "fps": 30,
+  "seed": 20260101,
+  "background": "#111214",
+  "accent": "#5b8def",
+  "copy": {
+    "name": "Example",
+    "promise": "Keeps your team's requests in one list.",
+    "url": "example.com",
+    "open": [
+      "Requests arrive from everywhere.",
+      "Most of them wait for someone to notice."
+    ],
+    "steps": [
+      {
+        "heading": "Collect",
+        "body": "New requests land in one list, newest first.",
+        "focus": "list",
+        "target": "row-2",
+        "highlight": "row-2"
+      },
+      {
+        "heading": "Review",
+        "body": "Open one to see who asked and what they need.",
+        "focus": "detail-body",
+        "target": "action",
+        "highlight": "detail-body"
+      },
+      {
+        "heading": "Close",
+        "body": "Mark it done and the requester sees it.",
+        "focus": "list",
+        "target": "row-2",
+        "highlight": "row-2",
+        "after": "done"
+      }
+    ],
+    "proof": {
+      "caption": "Numbers from the facts file.",
+      "items": [
+        {
+          "value": 3,
+          "suffix": "",
+          "label": "Replace with a number from your facts file"
+        },
+        {
+          "value": 12,
+          "suffix": " s",
+          "label": "Replace with a number from your facts file"
+        }
+      ]
+    },
+    "limits": {
+      "heading": "What it does not do",
+      "body": "It does not assign work for you. It shows what is waiting."
+    },
+    "end": {
+      "line": "Free to try."
+    }
+  }
+}

@@ -1,22 +1,22 @@
-# Slopcamera
+# SlopCamera
 
-[![Slopcamera: Images, diagrams, animation, 3D and video your coding agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
+[![SlopCamera: Images, diagrams, animation, 3D and video your coding agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
 
-**Slopcamera is a media studio for coding agents. Codex, Claude Code, and other
+**SlopCamera is a media studio for coding agents. Codex, Claude Code, and other
 agents make images, diagrams, animation, 3D scenes, and edited video from source
 files they can keep revising.**
 
 Describe the result you want to Codex, Claude Code, or another coding agent.
-Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
+SlopCamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
 to the CLI version, so it can inspect sources, set up cameras, edit a composition,
 and render. `slopcamera mcp` runs an MCP server with a smaller, fixed set of diagram,
-image, and scene tools. Projects stay in local files, and there is no Slopcamera
+image, and scene tools. Projects stay in local files, and there is no SlopCamera
 account. Generation uses your own Vercel AI Gateway account or, for prompt-only
 images, prepaid Hraness Credits.
 
 [Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
 
-## Made with Slopcamera
+## Made with SlopCamera
 
 [![An original brass optical instrument rendered in Blender](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
 
@@ -27,7 +27,7 @@ The [portrait geometry lesson](https://slopcamera.com/docs/how-to/educational-vi
 adds mathematical typesetting, a presenter and authored captions. Each guide pairs
 the rendered output with source, runtime requirements and reproduction steps.
 
-## Why Slopcamera
+## Why SlopCamera
 
 - **Keep creative work editable.** Native scenes, portable scenes, diagrams,
   and video projects retain their own sources and settings. Rendered frames
@@ -55,15 +55,15 @@ the rendered output with source, runtime requirements and reproduction steps.
 - [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender
   MCP, lets an agent drive a running Blender interactively.
 
-Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, headless
+SlopCamera renders HTML motion too, and adds diagrams, Three.js scenes, headless
 Blender, CadQuery, and Manim renders, and edits of your own footage in one local
 project. It has no cloud rendering and a much smaller community. See
 [the full comparison](https://slopcamera.com/docs/explanation/why-slopcamera#compared-with-other-tools).
 
-## Install Slopcamera
+## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
+[SlopCamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
 from its canonical archive:
 
 ```sh
@@ -103,8 +103,8 @@ Native engines install separately. The [source-install guide](docs/how-to/use-cu
 explains workspace placement and durable-run identity; the
 [capability reference](docs/reference/capabilities.md) names runtime requirements.
 
-Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
-what Slopcamera is rendering, how the last job ended, your last known credits
+SlopCamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
+what SlopCamera is rendering, how the last job ended, your last known credits
 balance and the newest files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
 companion directly and does not install or launch an application bundle. The
 companion is a thin product binary over the shared
@@ -129,14 +129,14 @@ deletes nothing, and `slopcamera doctor` prints the command that restores it.
 [Atet v3.2.3](https://github.com/hraness/atet/releases/tag/v3.2.3) and its
 [original archive](https://github.com/hraness/atet/releases/download/v3.2.3/hraness-atet-3.2.3.tgz)
 remain historical publication evidence. Those immutable bytes install Atet,
-not Slopcamera. Renaming the repository does not create a renamed package or
+not SlopCamera. Renaming the repository does not create a renamed package or
 change an existing release.
 
 </details>
 
 ## Make your first diagram
 
-After installing Slopcamera, this local task needs no model account. In a new directory,
+After installing SlopCamera, this local task needs no model account. In a new directory,
 create the included diagram, check it, and render it:
 
 ```sh
@@ -159,9 +159,9 @@ For detailed native 3D, follow
 [Your first native film](docs/tutorials/first-native-film.md). To generate editable
 architecture from dimensions, [build a parametric design](https://slopcamera.com/docs/how-to/parametric-design).
 
-## What Slopcamera does
+## What SlopCamera does
 
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes,
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes,
 and video from source files it can keep revising.
 Direct cel animation, pixel art, math explainers, and period film looks with the
 [style direction guide](docs/how-to/direct-visual-styles.md).
@@ -183,7 +183,7 @@ rigged/morph profile in v3.3.1 admits bounded skins and morph targets. Saved spl
 capture appearance; they do not establish collision geometry or editable native
 meshes. See [Directed scenes](docs/spatial-scenes.md).
 
-Slopcamera v3.3.1 introduced the cinematic planning loop: a `slopcamera.spatial-direction`
+SlopCamera v3.3.1 introduced the cinematic planning loop: a `slopcamera.spatial-direction`
 document describes beats, actions, camera coverage, and look intents, compiles
 into proposed performance/camera/cinema/material-lighting/shot documents, and
 fans out into bounded galleries per axis. Declared effects bind into renders,
@@ -204,7 +204,7 @@ See [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct
 
 ### Film native worlds and educational animation
 
-Slopcamera can direct Blender for detailed sets, materials,
+SlopCamera can direct Blender for detailed sets, materials,
 lighting, skinned characters, cloth and liquid caches; CadQuery for parametric
 solids and STEP; and Manim Community for mathematical animation. Seven editable
 starters include a product, character, shaded street, cloth, liquid, CAD bracket,
@@ -294,12 +294,12 @@ slopcamera workflows list --json
 slopcamera workflows show social-variants --json
 ```
 
-## How Slopcamera works
+## How SlopCamera works
 
 Keep the source that owns each creative decision. A native scene owns a rig or
 simulation; a portable scene owns supported geometry, cameras, and media surfaces;
 a diagram owns its objects and labels; a video project owns cuts and delivery.
-Slopcamera connects these through explicit assets and rendered derivatives.
+SlopCamera connects these through explicit assets and rendered derivatives.
 
 1. **Prepare the sources.** Import footage and assets or author a scene, diagram,
    or native program. Inspect available tools before choosing an engine.
@@ -343,7 +343,7 @@ declarative graphs, approvals, and resuming work.
 
 ## Design and trust
 
-There is no Slopcamera account, hosted project database, or browser generation service.
+There is no SlopCamera account, hosted project database, or browser generation service.
 Ordinary editing and rendering remain local. Gateway generation and selected
 cloud analysis use credentials from the local process and request explicit
 acknowledgement before uploading named media. The optional hosted API runs each
@@ -438,4 +438,4 @@ an acknowledgment; the unacknowledged offer expires after ten minutes and does n
 consume the weekly shown cooldown. `support dismiss` opts out across the local suite;
 `support snooze` pauses for 30 days. `HRANESS_SUPPORT_AUDIENCE=off` disables ambient
 notices and claimed offers. Payment is an explicit human choice on the shared support
-page; Slopcamera has no product-updates mailing list or account-status lookup.
+page; SlopCamera has no product-updates mailing list or account-status lookup.

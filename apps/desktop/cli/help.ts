@@ -25,7 +25,8 @@ Commands:
                                  Author and render retained Blender, CAD and Manim productions
   image vectorize|generate|gallery|icon
                                  Create local SVGs, generated images, or review galleries
-  html catalog|scaffold|render   Author HTML scenes and export video with local audio
+  html catalog|scaffold|init|render|still|preview|deliver
+                                 Author HTML scenes and launch films, render, and deliver web video
   style list|show                Discover reusable art direction and review criteria
   workflows list|show|plan|run   Plan or run a reviewed reusable workflow
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
@@ -342,7 +343,12 @@ direction, not proof of visual quality or historically authentic footage.`,
   html: `Usage:
   slopcamera html catalog [--json]
   slopcamera html scaffold <${HTML_OVERLAY_SCAFFOLD_KIND_HELP}> --output <file.html>
+  slopcamera html init <dir> --template launch-film [--aspect 16:9|1:1|9:16] [--json]
   slopcamera html render --input <scene.json> [--dry-run] [--json]
+  slopcamera html still --input <scene.json> --at <seconds>[,<seconds>...] --output <dir> [--json]
+  slopcamera html preview --input <scene.json> --output <dir> [--every <seconds>] [--json]
+  slopcamera html deliver <export.json> --basename <name> --poster-at <seconds> --social-at <seconds>
+      [--cuts 1:1,9:16,4:5] [--per-beat-clips] [--beats <beats.json>] [--output <dir>] [--json]
 
 Catalog lists the closed scaffold profiles in stable order with their primary jobs, render
 substrates, and current exact browser-library versions. Scaffold creates a complete transparent
@@ -356,7 +362,16 @@ with separate scene-video and original-audio tracks. Device dimensions must be e
 Duration rounds up to whole frames; audio starts at zero and is trimmed or padded to that
 duration. Soundtracks encode as 48 kHz stereo AAC at 320 kb/s. Dry run checks source and
 workload bounds without launching a browser, importing audio, or writing project state.
-Progress uses stderr; --json keeps stdout machine-readable.`,
+Progress uses stderr; --json keeps stdout machine-readable.
+
+Init creates a launch-film project (film.html, film.css, film.js, build.ts and a sample
+product mockup) in a new directory. Its build writes out/scene.json, out/beats.json and
+out/captions.vtt. Still and preview draw frames with the same injected runtime that render
+uses, so a still matches the rendered frame at that time; preview adds a contact sheet.
+Deliver reads output.path from html render --json output and writes a faststart H.264 MP4,
+a VP9 WebM, a poster, a 1200x630 social still, optional aspect cuts over a blurred fill, and
+optional 6 to 10 second clips per beat. It prints a receipt per file and exits non-zero when
+a file is over its budget: 12 MB per MP4, 10 MB for the WebM, 250 KB per JPEG.`,
   operations: `Usage:
   slopcamera operations list [--json]
   slopcamera operations show <kind>[@<version>] [--json]
@@ -724,7 +739,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (words.length <= 1) return topLevel;
   const command = words[0];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
-  if (command === "html") return ["catalog", "scaffold", "render"];
+  if (command === "html") return ["catalog", "scaffold", "init", "render", "still", "preview", "deliver"];
   if (command === "style") return ["list", "show"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];

@@ -1,4 +1,4 @@
-# Slopcamera web
+# SlopCamera web
 
 `slopcamera.com` is the static public site and documentation for Slopcamera. It
 presents the agent-directed media studio, SDK, Bun CLI, and local media runtime without

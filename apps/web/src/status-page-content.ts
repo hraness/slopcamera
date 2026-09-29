@@ -19,7 +19,7 @@ function routeLabel(title: string): string {
 /** Every known page, for "Did you mean": home, docs, the blog, and listed posts. */
 export function statusPageRoutes(): StatusPageLink[] {
   return [
-    { href: "/", label: "Slopcamera" },
+    { href: "/", label: "SlopCamera" },
     ...docPages.map(page => ({ href: docsCanonicalUrl(page).slice(docsOrigin.length), label: routeLabel(page.title) })),
     { href: blogPath, label: routeLabel(blogIndex.heading) },
     ...indexableBlogPosts.map(post => ({ href: blogPostPath(post), label: routeLabel(post.title) })),
@@ -49,6 +49,6 @@ export function renderStatusPage(): string {
     primaryAction: { href: "/#install", label: "Install Slopcamera" },
     rootElement: "div",
     routes: statusPageRoutes(),
-    siteName: "Slopcamera",
+    siteName: "SlopCamera",
   })
 }

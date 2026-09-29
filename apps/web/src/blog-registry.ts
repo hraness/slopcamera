@@ -14,8 +14,8 @@ export const blogIndexDocument = "blog/index.html"
 
 export const blogIndex = Object.freeze({
   title: "Blog",
-  heading: "Slopcamera blog",
-  description: "Posts from Hraness about Slopcamera, the media studio for agents: who it is for and how its parts work.",
+  heading: "SlopCamera blog",
+  description: "Posts from Hraness about SlopCamera, the media studio for agents: who it is for and how its parts work.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"
@@ -38,16 +38,16 @@ type BlogPostSource = Omit<BlogPost, "lifecycle">
 const sources: readonly BlogPostSource[] = [
   {
     slug: "introducing-slopcamera",
-    title: "Introducing Slopcamera",
-    description: "Slopcamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
+    title: "Introducing SlopCamera",
+    description: "SlopCamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
     eyebrow: "Introducing",
     published: "2026-09-24",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],
   },
   {
     slug: "how-slopcamera-uses-algal",
-    title: "How Slopcamera bakes character behavior with ALGAL",
-    description: "Slopcamera runs a character's behavior as a small ALGAL program with no tools, models or side effects, so the same scene and seed always bake the same motion.",
+    title: "How SlopCamera bakes character behavior with ALGAL",
+    description: "SlopCamera runs a character's behavior as a small ALGAL program with no tools, models or side effects, so the same scene and seed always bake the same motion.",
     eyebrow: "Integration",
     published: "2026-09-24",
     keywords: ["slopcamera", "algal", "character animation", "3d scenes", "deterministic rendering", "coding agents"],

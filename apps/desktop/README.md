@@ -1,4 +1,4 @@
-# Slopcamera local host and CLI
+# SlopCamera local host and CLI
 
 Slopcamera reads finished recording bundles from repository-local directories, combines independent camera and audio takes on one typed project clock, then applies non-destructive edits through the `slopcamera` CLI. The CLI is the product surface for agents. An optional unbundled `slopcamera menubar` companion surfaces the agent outputs directory in the macOS menu bar; it carries no capture or editing authority.
 

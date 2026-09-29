@@ -188,6 +188,7 @@ import { commandHelp, completions } from "./help";
 import { createLocalSlopcameraCapabilityManifest } from "./capability-manifest";
 import { PlaywrightHtmlOverlayRenderer } from "./html-overlay-renderer";
 import { executeHtmlSceneCommand } from "./html-scene";
+import { executeHtmlFilmCommand, formatHtmlFilmResult } from "./html-film";
 import { BunProcessRunner, processIo, writeJson, writeLine, type CliIo, type ProcessRunner } from "./io";
 import { launchMenubar, manageMenubar } from "./menubar";
 import { reportOutputsRoot } from "./outputs";
@@ -365,7 +366,7 @@ import {
   workflowRunStore,
 } from "./workflow-runs";
 
-export const SLOPCAMERA_VERSION = "3.6.0";
+export const SLOPCAMERA_VERSION = "3.7.0";
 
 // Legacy direct renders predate per-target output contracts. Keep them
 // bounded generously enough for long-form production while preventing one
@@ -7452,6 +7453,16 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
       return;
     }
+    case "html-film": {
+      const output = await executeHtmlFilmCommand(applicationContext(context), command,
+        context.abortSignal ?? new AbortController().signal,
+        { progress: stage => context.io.stderr(`HTML film: ${stage}\n`) });
+      writeValue(context.io, command.json, output, () => formatHtmlFilmResult(output));
+      if (output.kind === "slopcamera.html-film-delivery" && !output.withinBudget) {
+        throw new CliError("invalid-data", "One or more delivered files are over budget.");
+      }
+      return;
+    }
     case "studio": {
       const output = await executeStudioCommand(applicationContext(context), command, context.abortSignal ?? new AbortController().signal);
       writeValue(context.io, command.json, output, () => JSON.stringify(output, null, 2));
@@ -8281,6 +8292,7 @@ type MutationReference =
 function commandMutationReference(command: CliCommand): MutationReference | undefined {
   switch (command.kind) {
     case "html-render": return undefined; // A fresh retained attempt owns its publication lease.
+    case "html-film": return undefined; // Fresh private job directories; outputs are plain caller files.
     case "studio": return undefined; // Native jobs and the machine custody marker own explicit leases.
     case "directing": return undefined; // The directing store owns its explicit lease.
     case "spatial-world": return undefined; // Immutable world attempts and imports own their publication custody.

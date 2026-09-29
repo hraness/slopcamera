@@ -1,4 +1,4 @@
-# Slopcamera documentation
+# SlopCamera documentation
 
 Slopcamera is a media studio for coding agents. It retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
 

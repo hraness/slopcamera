@@ -99,7 +99,11 @@ export const CLI_VERBS: readonly VerbRow[] = [
 
   row("html catalog", "read", "List HTML scene profiles"),
   row("html scaffold", "operate", "Write a new HTML scene"),
+  row("html init", "operate", "Start an HTML film from a template"),
   row("html render", "operate", "Render an HTML scene to video"),
+  row("html still", "operate", "Render frames of an HTML scene as images"),
+  row("html preview", "operate", "Render a contact sheet of an HTML scene"),
+  row("html deliver", "operate", "Write the finished cuts, poster and social image for an HTML film"),
 
   row("style list", "read", "List visual styles"),
   row("style show", "read", "Show one visual style"),

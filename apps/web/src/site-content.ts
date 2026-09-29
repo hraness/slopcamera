@@ -73,9 +73,9 @@ const SLOPCAMERA_MARK_SVG = `<svg aria-hidden="true" focusable="false" viewBox="
  * an emoji. Presentation comes from design-kit's `hraness-marketing-footer`
  * grammar; product links and disclosures stay outside the shared footer. */
 function renderSiteContentFooter(): string {
-  return `<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
+  return `<footer aria-label="SlopCamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
       <div class="hraness-marketing-footer__inner">
-        <a aria-label="Slopcamera home" class="hraness-marketing-footer__brand" href="/">${SLOPCAMERA_MARK_SVG}<span class="hraness-marketing-footer__name">Slopcamera</span></a>
+        <a aria-label="SlopCamera home" class="hraness-marketing-footer__brand" href="/">${SLOPCAMERA_MARK_SVG}<span class="hraness-marketing-footer__name">SlopCamera</span></a>
         <nav aria-label="Footer navigation" class="hraness-marketing-footer__nav">
           <a href="/docs">Docs</a>
           <a href="https://github.com/hraness/slopcamera">GitHub</a>
@@ -160,7 +160,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
   const common: ReadonlyArray<readonly [string, string, number]> = [
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
     ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
-      id: "slopcamera", name: "Slopcamera", updates: false,
+      id: "slopcamera", name: "SlopCamera", updates: false,
       valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
