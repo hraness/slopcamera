@@ -51,7 +51,7 @@ const sourceFiles = [
   "src/social-image.ts", "src/marks/slopcamera.svg",
   "src/status-page-content.ts", "src/status-page.ts",
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
-  "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts",
+  "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts", "src/launch-facts.ts", "src/launch-beats.ts", "src/launch-figures.ts", "src/launch-media.ts", "launch-media/launch-media.json", "media/source-to-film-source-ad4ec8806384.json", "media/source-to-film-revised-source-822a690049ca.json",
   "src/site-foundation.ts", "src/site-foundation.css", "src/site-ua-compatibility.css", "src/site-ask-ai-compatibility.css", "src/site-footer-compatibility.css", "src/site-foil.css", "src/styles.css",
   "vendor/paper-theme/paper-theme.css", "vendor/status-page/status-page.css",
   "scripts/build.ts", "scripts/public-identity.ts", "src/icon.png", "src/apple-touch-icon.png", "scripts/build-site.ts", "scripts/site-contract.ts", "scripts/site-css.ts", "scripts/marketing-preset.ts", "scripts/lantern-material.ts", "scripts/preview-css.ts", "scripts/preview-file.ts",

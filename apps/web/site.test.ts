@@ -1774,6 +1774,7 @@ describe("static Slopcamera site", () => {
     ])
     expect(assetFiles.sort()).toEqual([
       "examples",
+      "launch",
       builtAssets.previewStylesPath.split("/").at(-1)!,
       builtAssets.statusPagePath.split("/").at(-1)!,
       builtAssets.stylesPath.split("/").at(-1)!,

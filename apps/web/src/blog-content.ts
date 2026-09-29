@@ -16,6 +16,8 @@ import {
 import { socialImageForDocument } from "./social-image"
 import { renderDocsMarkdown } from "./docs-markdown"
 import { resolveDocsContent } from "./docs-registry"
+import { launchTokens } from "./launch-facts"
+import { launchFigureSentinels, launchFiguresInMarkdown, replaceLaunchFigureSentinels } from "./launch-figures"
 
 // Build-time producer for the /blog collection. It runs in the build
 // entrypoint, never inside the sealed StyleX graph: design-kit's static article
@@ -63,19 +65,35 @@ function timestamp(date: string): string {
 
 /** Substitute portfolio addresses and reviewed release tokens; unknown tokens fail closed. */
 export function resolveBlogContent(markdown: string): string {
+  return resolveBlogTextTokens(launchFiguresInMarkdown(markdown))
+}
+
+function resolveBlogTextTokens(markdown: string): string {
   const withProducts = markdown.replace(/\{\{(PRODUCT_URL_[A-Z_]+)\}\}/gu, (match, name: string) => {
     const value = productTokens[name]
     if (value === undefined) throw new Error(`Unknown blog product token: ${match}`)
     return value
   })
-  return resolveDocsContent(withProducts)
+  // Launch numbers come from the typed facts module, never from the post text.
+  const withLaunch = withProducts.replace(/\{\{(LAUNCH_[A-Z_]+)\}\}/gu, (match, name: string) => {
+    const value = launchTokens[name]
+    if (value === undefined) throw new Error(`Unknown blog launch token: ${match}`)
+    return value
+  })
+  return resolveDocsContent(withLaunch)
+}
+
+/** Render a body with launch figures swapped in after the Markdown pass. */
+function renderBlogMarkdownWithFigures(markdown: string, classes: boolean): string {
+  const { markdown: withSentinels, names } = launchFigureSentinels(markdown)
+  return replaceLaunchFigureSentinels(renderDocsMarkdown(resolveBlogTextTokens(withSentinels), []), names, classes)
 }
 
 /** Render a post body as plain semantic HTML for feeds. The shared bounded
  * Markdown renderer escapes source HTML and admits only reviewed link schemes;
  * its docs class tokens and heading self-links are dropped here. */
 export function renderBlogBodyHtml(markdown: string): string {
-  const html = renderDocsMarkdown(resolveBlogContent(markdown), [])
+  const html = renderBlogMarkdownWithFigures(markdown, false)
     .replace(/<a class="\{\{DOCS_ANCHOR_CLASS\}\}" href="#[a-z0-9-]+">([\s\S]*?)<\/a>/gu, "$1")
     .replace(/ class="\{\{DOCS_[A-Z0-9_]+\}\}"/gu, "")
   if (/\{\{[^{}]*\}\}/u.test(html)) throw new Error("Blog body kept an unresolved placeholder")
@@ -85,8 +103,8 @@ export function renderBlogBodyHtml(markdown: string): string {
 /** Render a post body for its page. It keeps the documentation prose class
  * tokens, which only the sealed renderer resolves to compiled recipes. */
 function renderBlogPageBodyHtml(markdown: string): string {
-  const html = renderDocsMarkdown(resolveBlogContent(markdown), [])
-  if (/\{\{(?!DOCS_[A-Z0-9_]+_CLASS\}\})[^{}]*\}\}/u.test(html)) throw new Error("Blog body kept an unresolved placeholder")
+  const html = renderBlogMarkdownWithFigures(markdown, true)
+  if (/\{\{(?!DOCS_[A-Z0-9_]+_CLASS\}\}|BLOG_(?:FIGURE|FIGURE_MEDIA|FIGCAPTION)_CLASS\}\})[^{}]*\}\}/u.test(html)) throw new Error("Blog body kept an unresolved placeholder")
   return html
 }
 
@@ -308,7 +326,7 @@ Atom feed: ${blogOrigin}${blogFeedPath}
 }
 
 function absoluteLinks(html: string): string {
-  return html.replace(/ href="\/(?!\/)/gu, ` href="${blogOrigin}/`)
+  return html.replace(/ (href|src|poster)="\/(?!\/)/gu, (_match, attribute: string) => ` ${attribute}="${blogOrigin}/`)
 }
 
 /** Atom feed of indexable posts with their full bodies. */
