@@ -261,7 +261,6 @@ export function commandHostResourceClaims(
     case "help":
     case "capabilities":
     case "inspect":
-    case "menubar":
     case "operations-list":
     case "operations-show":
     case "outputs":

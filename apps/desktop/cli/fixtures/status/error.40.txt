@@ -1,0 +1,12 @@
+== Slopcamera ==
+┌ Now ─────────────────────────────────┐
+│⚠ Last job didn't finish · Rendering a│
+└──────────────────────────────────────┘
+┌ Outputs ─────────────────────────────┐
+│Output      Size  Saved  Type         │
+│take 0.mp4  4 KB  today  MP4          │
+│slopcamera outputs open               │
+└──────────────────────────────────────┘
+┌ Login ───────────────────────────────┐
+│✓ Nothing starts at login             │
+└──────────────────────────────────────┘

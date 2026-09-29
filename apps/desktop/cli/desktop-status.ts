@@ -5,7 +5,7 @@ import { okEnvelope, type Envelope, type NextStep } from "@hraness/desktop-found
 import { box, clean, table, type View } from "@hraness/desktop-foundation/tui";
 
 import type { LegacyLoginReport } from "./legacy-login";
-import type { MenubarStatus } from "./menubar-status";
+import type { ActivityStatus } from "./activity-status";
 
 /**
  * `slopcamera status` and `slopcamera tui`: what Slopcamera is doing, how
@@ -62,7 +62,7 @@ export interface StatusData {
 
 export interface StatusInput {
   readonly version: string;
-  readonly status: MenubarStatus;
+  readonly status: ActivityStatus;
   readonly outputs: StatusOutputs;
   readonly legacyLogin: LegacyLoginReport;
   readonly now: Date;
@@ -107,7 +107,7 @@ function iso(ms: number): string | undefined {
   return Number.isFinite(ms) && ms >= 0 && ms <= 8.64e15 ? new Date(ms).toISOString() : undefined;
 }
 
-function activityOf(status: MenubarStatus, now: number): StatusActivity {
+function activityOf(status: ActivityStatus, now: number): StatusActivity {
   const activity = status.activity;
   if (activity === undefined || !plain(activity.label, MAX_LABEL_CHARS) || !Number.isFinite(activity.startedAt)) {
     return { state: "idle", headline: "Ready", detail: "Nothing rendered yet" };
@@ -129,7 +129,7 @@ function activityOf(status: MenubarStatus, now: number): StatusActivity {
   return { state: "done", headline: "Ready", detail: `Last job finished ${ago(finishedMs, now)}`, label: activity.label, ...times };
 }
 
-function creditsOf(status: MenubarStatus): StatusCredits | null {
+function creditsOf(status: ActivityStatus): StatusCredits | null {
   const credits = status.credits;
   if (credits === undefined || !plain(credits.usd, 16) || typeof credits.low !== "boolean") return null;
   const checkedAt = iso(credits.checkedAt);

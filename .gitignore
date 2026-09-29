@@ -12,7 +12,6 @@ next-env.d.ts
 .DS_Store
 .vercel/
 apps/desktop/analysis/dist/
-/desktop/target/
 .vercel
 .env*
 .wrangler/

@@ -28,16 +28,7 @@ bun run build:desktop:cli
 
 These build the portable SDK and the source-backed CLI entrypoint at `apps/desktop/dist/cli/main.js`. They do not build a desktop application, provision a native engine, or run a scene.
 
-To use the optional macOS menu-bar companion, build it explicitly and then launch it through the CLI:
-
-```sh
-cargo build --release --manifest-path desktop/menubar/Cargo.toml
-slopcamera menubar
-```
-
-The companion is an unbundled status item that shows what Slopcamera is rendering, your last known credits balance and your newest outputs. `slopcamera menubar install` can register it as a per-user LaunchAgent; it does not create, install, sign, or notarize an application bundle.
-
-Without the companion, `slopcamera status` prints the same information and `slopcamera tui` keeps it on screen. `slopcamera legacy retire` stops a companion opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
+`slopcamera status` shows what Slopcamera is rendering, your last known credits balance and your newest outputs, and `slopcamera tui` keeps that on screen. Earlier releases had an optional macOS menu-bar companion; `slopcamera legacy retire` stops it opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
 
 ## Define the slopcamera command
 

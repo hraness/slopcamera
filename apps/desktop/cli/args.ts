@@ -333,7 +333,6 @@ export type CliCommand =
       readonly tint: number | undefined;
       readonly videoStreamIndex: number;
     } & JsonOption)
-  | ({ readonly kind: "menubar"; readonly action: "run" | "install" | "uninstall" | "status"; readonly mode: "foreground" | "background" } & JsonOption)
   | ({ readonly kind: "outputs" } & JsonOption)
   | ({ readonly kind: "credits-status" } & JsonOption)
   | ({
@@ -3656,15 +3655,8 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "project": return parseProject(argv.slice(1));
     case "inspect": return parseInspect(argv.slice(1));
     case "events": return parseEvents(argv.slice(1));
-    case "menubar": {
-      const parsed = parseOptions(argv.slice(1), { ...JSON_SPEC, "--foreground": "flag", "--background": "flag" });
-      const positionals = parsed.positionals;
-      if (positionals.length > 1 || (positionals[0] !== undefined && !["install", "uninstall", "status", "start"].includes(positionals[0]))) throw new CliError("usage", "Use slopcamera menubar [--foreground|--background] or slopcamera menubar install|uninstall|status|start. See slopcamera help menubar.");
-      if (positionals[0] !== undefined && (optionFlag(parsed, "--foreground") || optionFlag(parsed, "--background"))) throw new CliError("usage", "Choose a menu-bar action or a run mode, not both.");
-      // `start` opens it now and returns, like --background; the login item's hints use it.
-      if (positionals[0] === "start") return { kind: "menubar", action: "run", mode: "background", json: optionFlag(parsed, "--json") };
-      return { kind: "menubar", action: (positionals[0] as "install" | "uninstall" | "status" | undefined) ?? "run", mode: optionFlag(parsed, "--background") ? "background" : "foreground", json: optionFlag(parsed, "--json") };
-    }
+    // Retired with the menu-bar companion; the old command name explains where it went.
+    case "menubar": throw new CliError("usage", "The menu bar was retired. Use slopcamera status or slopcamera tui to see what Slopcamera is doing, and slopcamera legacy retire to stop an old copy opening at login.");
     case "outputs": {
       const parsed = parseOptions(argv.slice(1), JSON_SPEC);
       exactPositionals(parsed, 0, "slopcamera outputs [--json]");

@@ -69,28 +69,6 @@ ${slopcameraSupportHelpLine()}`;
 
 const HELP: Readonly<Record<string, string>> = {
   advanced: `${slopcameraSupportAdvancedHelp()}`,
-  menubar: `Usage:
-  slopcamera menubar [--foreground|--background] [--json]
-  slopcamera menubar install|uninstall|status|start [--json]
-
-Shows what Slopcamera is doing in the menu bar: a render in progress, how the
-last job ended and your last known credits balance, plus your newest outputs.
-It only reads that status and the outputs folder (slopcamera outputs).
-
-  menubar               Open it now; it closes when this command ends
-  menubar start         Open it now and return (same as --background)
-  menubar install       Open it every time you log in
-  menubar uninstall     Stop opening it at login and remove the installed copy
-  menubar status        Check whether it opens at login and is running
-
-If it's already in your menu bar, starting it again says so and succeeds.
-macOS shows a notice that slopcamera-menubar can open at login. Turn it off any
-time in System Settings › General › Login Items & Extensions.
-
-The menu bar isn't in released packages yet, so it isn't listed in
-slopcamera help. In a Slopcamera checkout, build it with
-cargo build --release --manifest-path desktop/Cargo.toml and slopcamera finds
-it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
   capabilities: `Usage: slopcamera capabilities [--json]
 
 Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
@@ -719,7 +697,7 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
@@ -759,7 +737,6 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "render") return ["plan", "run"];
   if (command === "assets") return ["emoji"];
   if (command === "outputs") return ["list", "open", "reveal"];
-  if (command === "menubar") return ["start", "install", "uninstall", "status"];
   if (command === "legacy") return ["retire"];
   return [];
 }

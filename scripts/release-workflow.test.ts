@@ -112,15 +112,12 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("desktop:\n    name: Slopcamera local runtime")
   expect(workflow).toContain("site:\n    name: Slopcamera site")
   expect(workflow).toContain("package:\n    name: Slopcamera packed consumer")
-  expect(workflow).toContain("menubar:\n    name: Slopcamera menu-bar companion")
   expect(workflow).toContain("api:\n    name: Slopcamera hosted API")
   expect(workflow).toContain("if: needs.plan.outputs.api == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.sdk == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.desktop == 'true'")
-  expect(workflow).toContain("if: needs.plan.outputs.menubar == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.site == 'true'")
   expect(workflow).toContain("if: needs.plan.outputs.package == 'true'")
-  expect(workflow).toContain("run: cargo build --release --locked --manifest-path desktop/Cargo.toml")
   expect(workflow).toContain("bun run check:standalone")
   expect(workflow).toContain("bun run check:sdk")
   expect(workflow).toContain("bun run check:api")
@@ -132,7 +129,10 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
   expect(workflow).toContain("git status --porcelain --untracked-files=all -- apps/desktop/dist/cli bun.lock")
   expect(workflow).toContain("copy:\n    name: Slopcamera public copy")
   expect(workflow).toContain("bun run check:copy --require-history")
-  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, menubar, site, package]")
+  expect(workflow).toContain("needs: [plan, boundary, copy, api, sdk, desktop, site, package]")
+  // The menu-bar companion was retired; nothing may route to or require it.
+  expect(workflow.toLowerCase()).not.toContain("menubar")
+  expect(workflow).not.toContain("cargo ")
   expect(workflow).toContain('[[ "$COPY" == success ]]')
   expect(workflow).toContain('[[ "$result" == success || "$result" == skipped ]]')
   expect(workflow).not.toContain(`@${"jungle"}/`)
@@ -162,8 +162,11 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // fixture lint step after its release build; every prior job is unchanged.
   // Reviewed 2026-09-27: site screenshot output and artifact upload added;
   // every existing job, command, condition, deadline and boundary is unchanged.
+  // Reviewed 2026-09-29: the retired `menubar` job, its `desktop/*` route,
+  // its plan output and its `Required` entry were removed with the companion;
+  // every remaining job, command, condition, deadline and boundary is unchanged.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
-  if (priorDigest !== "5b89df9880c0932cc75c93384fc8b8ca5adf33196ca563758ecaebbdd150a24a") {
+  if (priorDigest !== "e7d9c468c82fe1d3348f1a9e28b117a7df904eee937aeab26ffa1aa0591d11ac") {
     throw new Error("CI differs from the independently reviewed prior coverage")
   }
 }
