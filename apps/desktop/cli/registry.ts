@@ -7,6 +7,7 @@ import {
   okEnvelope,
   runCli as runRegistryCli,
   type CliIO,
+  type ErrorCode,
   type Registry,
   type Verb,
 } from "@hraness/desktop-foundation/registry";
@@ -15,6 +16,7 @@ import { chooseMode, renderSnapshot, runTui, type TuiIO } from "@hraness/desktop
 import { SLOPCAMERA_VERSION } from "../../../src/version";
 import { listOutputs, OUTPUTS_LIMIT, statusEnvelope, statusViews, STATUS_SCHEMA, type StatusOutputs } from "./desktop-status";
 import type { ProcessRunner } from "./io";
+import { CliError } from "./errors";
 import { BunProcessRunner } from "./io";
 import { readMenubarStatus } from "./menubar-status";
 import { inspectLegacyLogin, retireLegacyLogin, type RetireDependencies } from "./legacy-login";
@@ -259,8 +261,44 @@ function listed(row: VerbRow): Verb<unknown, unknown> {
   };
 }
 
+/** The shared envelope codes a Slopcamera error keeps as is. */
+const SHARED_CODES = new Set<ErrorCode>(["usage", "not-found", "conflict", "internal"]);
+
+/**
+ * Answers a Slopcamera application error with a declared envelope code: the
+ * shared code when there is one, otherwise `slopcamera.<code>`. Without this
+ * the registry reports every such error as an unexpected internal failure.
+ */
+export function asHranessError(error: unknown): unknown {
+  if (!(error instanceof CliError)) return error;
+  const shared = error.code as ErrorCode;
+  const code: ErrorCode = SHARED_CODES.has(shared) ? shared : `${PRODUCT}.${error.code}`;
+  return new HranessError(code, error.message);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function withDeclaredErrors(verb: Verb<any, any>): Verb<any, any> {
+  return {
+    ...verb,
+    input(argv) {
+      try {
+        return verb.input(argv);
+      } catch (error) {
+        throw asHranessError(error);
+      }
+    },
+    async run(input, ctx) {
+      try {
+        return await verb.run(input, ctx);
+      } catch (error) {
+        throw asHranessError(error);
+      }
+    },
+  };
+}
+
 export function slopcameraRegistry(deps: RegistryDependencies): Registry {
-  const own = implemented(deps);
+  const own = implemented(deps).map(withDeclaredErrors);
   const ownPaths = new Set(own.map(verb => verb.path.join(" ")));
   return defineRegistry(PRODUCT, [
     ...own,
