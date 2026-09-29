@@ -1485,9 +1485,9 @@
     ]
   },
   {
-    "identityLineCount": 6,
-    "identityLinesSha256": "f700451272b581928d6de554644c8b94f24a036f8f76d963b45301be3fc2a925",
-    "occurrenceCount": 8,
+    "identityLineCount": 5,
+    "identityLinesSha256": "a1b58e2baaa64392de9e7d9f6bdde7f3bf9c455eea732f096b5989d5db2c9446",
+    "occurrenceCount": 7,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
       "native-film-studio",
@@ -1514,7 +1514,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "95abb017e10538ea24fd5fdacbef319b855427e58165ff170caa3ad0eae176e8",
+    "identityLinesSha256": "ca68504e772e038389a7e62cb44b16c05ab803e97dd251db57cf75b47e58cd36",
     "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1702,18 +1702,18 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "a7fcdf97b04940ce1e9efc5b8c00de4c023e4b52d4453b024fe6604ff561d501",
-    "occurrenceCount": 2,
+    "identityLineCount": 1,
+    "identityLinesSha256": "866dfa4e771143ec01e6fcf5b94c747b8cf377e40423abaf17fd665ae299280d",
+    "occurrenceCount": 1,
     "path": "apps/web/src/index.html",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "f9f755c8b9e98f41826c9ed25a332bc161bb2168dfbe80c62b676a06431cf5c8",
-    "occurrenceCount": 2,
+    "identityLineCount": 1,
+    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
+    "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
       "native-film-studio"
