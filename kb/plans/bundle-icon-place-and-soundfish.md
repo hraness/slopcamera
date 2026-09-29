@@ -1,9 +1,9 @@
 ---
 type: plan
 title: Bundle icon.place and Soundfish
-description: Planned Stage 2 integration that adds exact-version icon.place and Soundfish npm packages to SlopCamera as closed icon and soundtrack operations, blocked until both packages publish.
+description: Planned Stage 2 integration that adds exact-version icon.place and Soundfish npm packages to SlopCamera as closed icon and soundtrack operations. Both packages are published.
 area: media-suite
-status: blocked
+status: planned
 repository_scopes:
   - package.json
   - src
@@ -23,12 +23,12 @@ SlopCamera ships icon.place drawing and Soundfish scoring as fixed, typed operat
 
 ## Status
 
-Planned. Blocked on two npm releases:
+Planned and unblocked. Both npm releases are out as of 2026-09-29:
 
-- `iconplace` on npm: the first public release of the icon.place construction, scene and collection library. The package does not exist yet; the name `iconplace` and the scoped `@hraness/iconplace` both return 404 today.
-- `@hraness/soundfish` 0.7.0 or later: the first release with library `exports` (protocol, MIDI and beat grid), Node compatibility and a license that permits bundling. The current 0.6.0 is `bin`-only, and its skill license forbids incorporating the CLI into another distribution.
+- `@hraness/iconplace` 0.1.0: the first public release of the icon.place construction, scene and collection library, MIT-licensed. npm rejected the unscoped name `iconplace` as too similar to the unrelated `icon.place` package, so the package is scoped; its command is still `iconplace`. Later versions publish from hraness/iconplace through npm trusted publishing.
+- `@hraness/soundfish` 0.7.0: the first release with library `exports` (protocol, MIDI and beat grid), Node compatibility and an MIT license that permits bundling. 0.6.0 and earlier are `bin`-only and must not be pinned.
 
-Nothing in this plan starts until both releases are published and admitted. A design spike against local builds may start earlier, but it lands no dependency.
+Each dependency is admitted through the repository's normal dependency review before it lands.
 
 ## Context
 
@@ -43,7 +43,7 @@ ALGAL is the precedent for an external Hraness package: `@hraness/algal` is pinn
 
 ## Scope
 
-- Exact-version dependencies in the root `package.json`: `iconplace` at one pinned version, and `@hraness/soundfish` at one pinned version, 0.7.0 or later. No ranges, no `github:` pins to private repositories, and no sibling paths.
+- Exact-version dependencies in the root `package.json`: `@hraness/iconplace` at one pinned version, 0.1.0 or later, and `@hraness/soundfish` at one pinned version, 0.7.0 or later. No ranges, no `github:` pins to private repositories, and no sibling paths.
 - Four closed operations in `src/operations.ts`, with receipts:
   - `slopcamera.icon.compose`: parse and solve a bounded icon.place scene or construction program and return the solved scene with its digest.
   - `slopcamera.icon.render`: render a solved scene or replay a recipe to inert SVG through icon.place `renderScene` and `replayRecipe`.
