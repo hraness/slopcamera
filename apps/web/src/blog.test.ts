@@ -86,6 +86,12 @@ describe("blog pages", () => {
     }
   })
 
+  test("related products put each role on its own line under the name", () => {
+    const main = blogPostSlots(blogPosts[0]!, bodies[blogPosts[0]!.slug]!).main
+    expect(main).toContain('</strong><span class="{{BLOG_SOURCE_CHECKED_CLASS}}">')
+    expect(main).not.toContain("</strong><span>")
+  })
+
   test("quarantined posts ship noindex and indexable posts ship index", () => {
     for (const post of blogPosts) {
       const slots = blogPostSlots(post, bodies[post.slug]!)
