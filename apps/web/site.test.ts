@@ -164,7 +164,9 @@ async function readBuilt(path: string): Promise<string> {
 
 function assertAuthoredShellBudget(template: string): number {
   let authored = template
-  const outsideContent = new Set(["{{APPEARANCE_MENU}}", "{{HRANESS_SITE_FOOTER}}", "{{THEME_ASSET}}", "{{ASK_AI_ABOUT_THIS}}", "{{ANALYTICS_SCRIPT}}"])
+  // Shared package producers (footer, ask-AI, and the design-kit platform
+  // install tabs and badges) are bounded by the built-HTML ceiling instead.
+  const outsideContent = new Set(["{{APPEARANCE_MENU}}", "{{HRANESS_SITE_FOOTER}}", "{{THEME_ASSET}}", "{{ASK_AI_ABOUT_THIS}}", "{{ANALYTICS_SCRIPT}}", "{{PLATFORM_INSTALL}}", "{{PLATFORM_BADGES}}"])
   for (const [slot, value, count] of siteContentSlots("index.html", { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null })) {
     if (!outsideContent.has(slot)) authored = replaceSiteSlot(authored, slot, value, count)
   }
@@ -173,7 +175,7 @@ function assertAuthoredShellBudget(template: string): number {
   for (const [slot, count] of [
     ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_BRAND_MARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
     ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
-    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
+    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 2], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
     ["INSTALL_COPY_CLASS", 1], ["INSTALL_VALUE_CLASS", 1], ["INSTALL_IDLE_CLASS", 2], ["INSTALL_COPIED_CLASS", 1],
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
@@ -228,19 +230,21 @@ function assertBuiltHtmlBudget(html: string): number {
   // compiled header classes +26 and inert hero markup +453. The framework
   // homepage (why-install pillars, five technique groups, comparison rows)
   // measured 68,777; merged with the numbered technique aisles and CTA
-  // analytics attributes it measured 71,721. The 72,200 ceiling leaves 479
-  // bytes; count every byte.
+  // analytics attributes it measured 71,721. The shared design-kit platform
+  // install tabs and Runs-on badges add 30,268 bytes of server markup (each
+  // Linux mark path is 5,354 bytes, drawn three times); the page measured
+  // 102,334. The 102,800 ceiling leaves 466 bytes; count every byte.
   const bytes = Buffer.byteLength(html, "utf8")
-  if (bytes >= 72_200) throw new Error(`Built site HTML exceeds its 72,200-byte budget: ${bytes}`)
+  if (bytes >= 102_800) throw new Error(`Built site HTML exceeds its 102,800-byte budget: ${bytes}`)
   return bytes
 }
 
 test("built site HTML budget counts the complete UTF-8 document and rejects its exact ceiling", () => {
-  expect(assertBuiltHtmlBudget("x".repeat(72_199))).toBe(72_199)
-  expect(() => assertBuiltHtmlBudget("x".repeat(72_200)))
-    .toThrow("Built site HTML exceeds its 72,200-byte budget: 72200")
-  expect(() => assertBuiltHtmlBudget(`${"x".repeat(72_199)}é`))
-    .toThrow("Built site HTML exceeds its 72,200-byte budget: 72201")
+  expect(assertBuiltHtmlBudget("x".repeat(102_799))).toBe(102_799)
+  expect(() => assertBuiltHtmlBudget("x".repeat(102_800)))
+    .toThrow("Built site HTML exceeds its 102,800-byte budget: 102800")
+  expect(() => assertBuiltHtmlBudget(`${"x".repeat(102_799)}é`))
+    .toThrow("Built site HTML exceeds its 102,800-byte budget: 102801")
 })
 
 test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its routes are real pages", async () => {
@@ -280,18 +284,20 @@ test("combined site CSS budget counts both complete UTF-8 artifacts and rejects 
 function assertThemeBundleBudget(script: string): number {
   // Build-time palette constants avoid 6,263 bytes of unused palette-table data.
   // Exact predecessor 28,561 + shared hero controller 2,906 = 31,467 bytes;
-  // the 31,800 ceiling leaves 333 bytes and includes all runtime code.
+  // The shared platform-install enhancer (tabs, OS detection, copy) measured
+  // 28,578 -> 32,491 bytes (+3,913); the 32,800 ceiling leaves 309 bytes and
+  // includes all runtime code.
   const bytes = Buffer.byteLength(script, "utf8")
-  if (bytes >= 31_800) throw new Error(`Theme bundle exceeds its 31,800-byte budget: ${bytes}`)
+  if (bytes >= 32_800) throw new Error(`Theme bundle exceeds its 32,800-byte budget: ${bytes}`)
   return bytes
 }
 
 test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceiling", () => {
-  expect(assertThemeBundleBudget("x".repeat(31_799))).toBe(31_799)
-  expect(() => assertThemeBundleBudget("x".repeat(31_800)))
-    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31800")
-  expect(() => assertThemeBundleBudget(`${"x".repeat(31_799)}é`))
-    .toThrow("Theme bundle exceeds its 31,800-byte budget: 31801")
+  expect(assertThemeBundleBudget("x".repeat(32_799))).toBe(32_799)
+  expect(() => assertThemeBundleBudget("x".repeat(32_800)))
+    .toThrow("Theme bundle exceeds its 32,800-byte budget: 32800")
+  expect(() => assertThemeBundleBudget(`${"x".repeat(32_799)}é`))
+    .toThrow("Theme bundle exceeds its 32,800-byte budget: 32801")
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
@@ -1034,7 +1040,10 @@ describe("static Slopcamera site", () => {
     const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(installHtml).indexOf(command))
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
-    expect(installHtml).toContain("Install the CLI, then its matching Agent Skill")
+    expect(installHtml).toContain("Install the CLI</p>")
+    expect(installHtml).toContain("Then install its matching Agent Skill")
+    expect(installHtml.match(/data-hraness-platform-install/gu)).toHaveLength(1)
+    expect(installHtml.match(/data-hraness-platform-badges/gu)).toHaveLength(1)
     expect(installHtml).toContain("<summary>Build from source</summary>")
     expect(installHtml).toContain("installs locked dependencies, builds the SDK and CLI")
     expect(installHtml).toContain(sourceInstall.guideUrl)
@@ -1054,10 +1063,10 @@ describe("static Slopcamera site", () => {
     expect(html.match(/data-copy-command(?:>|\s)/gu)).toHaveLength(1)
     const command = html.match(/<code\b[^>]*data-copy-command-value[^>]*>([\s\S]*?)<\/code>/u)?.[1]
     expect(command).toBeDefined()
-    expect(plainCode(command!)).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
+    expect(plainCode(command!)).toBe(archiveInstall.skillCommand)
     expect(html.match(/For Claude Code: <code class="[A-Za-z_][A-Za-z0-9_ -]*">([^<]+)<\/code>/u)?.[1])
       .toBe(archiveInstall.alternateSkillCommand)
-    expect(html).toContain('aria-label="Copy install commands"')
+    expect(html).toContain('aria-label="Copy the Agent Skill install command"')
     expect(html).toContain("data-copy-command-button hidden type=\"button\">Copy</button>")
     expect(html).toContain('aria-live="polite"')
     expect(html).toContain('aria-describedby="skill-install-copy-status"')
@@ -1414,7 +1423,7 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.24.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.29.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
@@ -1444,7 +1453,7 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.24.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.29.0"')
     expect(localLockfile).toContain(
       '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
     )
@@ -1461,7 +1470,7 @@ describe("static Slopcamera site", () => {
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
-    expect(emittedBytes).toBeLessThan(72_200)
+    expect(emittedBytes).toBeLessThan(102_800)
     expect(new TextEncoder().encode(css).byteLength).toBeLessThan(36_000)
     expect(new TextEncoder().encode(theme).byteLength).toBeLessThan(3_000)
     expect(new TextEncoder().encode(copyCommand).byteLength).toBeLessThan(4_000)
@@ -1805,7 +1814,7 @@ describe("static Slopcamera site", () => {
     // a strict ceiling over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
     expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(500_000)
-    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(31_800)
+    expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })
