@@ -69,6 +69,10 @@ Counted without weighting, the sessions with Slopcamera used about 2.2 times as 
 - **Both conditions shared Claude Code's built-in skills and plugins.** These ship with Claude Code and were the same in A and B.
 - **The checks are structural.** They confirm the files are the right format, size, and length, and that revisions changed them. They do not judge quality. The contact sheets in the repository show every output.
 
+## A harder pilot
+
+On the same day we tried a single pilot of a harder version: one session per task and condition, not a full run. Each task was made once and then revised five times, the last two revisions in a fresh session. Four tasks ran with and without Slopcamera, and Slopcamera cost more on all four: $1.55 against $0.80 (that session stopped one revision early), $2.08 against $1.18, $1.37 against $1.02, and $1.51 against $1.06. The revisions cost about the same in both conditions, so they did not make up the higher cost of the first version. Sessions without Slopcamera needed four retries after a failed check, against one with it. One session per cell is too few to support a conclusion, and the pilot cost about $12.47, so we did not run the full version.
+
 ## Cost of running it
 
 The 32 steps cost $5.69 at list prices, $2.32 without Slopcamera and $3.37 with it. An earlier pilot, whose results are not used here, cost $1.47.
