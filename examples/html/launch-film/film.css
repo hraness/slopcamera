@@ -247,9 +247,16 @@ body {
   position: absolute;
   left: 0;
   top: 0;
+  display: flex;
+  flex-direction: column;
   width: 1280px;
   transform-origin: 0 0;
   will-change: transform;
+}
+
+/* film.js sets the surface's min-height to the window at rest, so the mockup fills it. */
+.win-surface > * {
+  flex: 1 0 auto;
 }
 
 .win-cursor {
@@ -414,6 +421,8 @@ body {
 
 /* Placeholder product mockup (mockups.tsx). Replace with your own. */
 .fm-browser {
+  display: flex;
+  flex-direction: column;
   width: 1280px;
   font-family: "Film Sans", ui-sans-serif, system-ui, sans-serif;
   color: #16171a;
@@ -456,6 +465,7 @@ body {
 }
 
 .fm-page {
+  flex: 1 0 auto;
   display: grid;
   grid-template-columns: 200px 1fr 440px;
   min-height: 860px;

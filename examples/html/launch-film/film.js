@@ -253,6 +253,7 @@ function walk(t) {
   const surface = $("win-surface");
   surface.style.transform = "";
   for (const el of surface.querySelectorAll("[data-film-state]")) el.removeAttribute("data-film-state");
+  surface.style.minHeight = "";
   const content = { w: surface.offsetWidth, h: surface.offsetHeight };
   const baseZoom = L.win.w / content.w;
   // Measure every target while the camera is reset; the transform below would skew the rects.
@@ -274,6 +275,9 @@ function walk(t) {
   }
   cam = cameraBetween(cam, rest, inOutCubic(prog(t, last.end - 1.4, last.end - 0.4)));
   surface.style.transform = cameraTransform(cam);
+  // Paint the mockup's own page below its natural height, so a short mockup in a tall
+  // window never leaves a blank band. The camera above still frames the measured content.
+  surface.style.minHeight = `${Math.ceil(Math.max(content.h, (L.win.h - cam.ty) / cam.z))}px`;
 
   // Copy, dots, cursor and highlight for each step.
   const toWindow = (x, y) => ({ x: cam.tx + x * cam.z, y: cam.ty + y * cam.z });
