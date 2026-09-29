@@ -40,7 +40,7 @@ For a one-off image or clip, a hosted app such as Runway or ChatGPT is faster an
 
 Competitor details as of 28 September 2026.
 
-## What Slopcamera does not provide
+## What SlopCamera does not provide
 
 - No hosted state. Without an account or project database there is no built-in sync, sharing, or multi-machine collaboration. Project state lives in local files you manage.
 - No sandbox for trusted code. Native Python sources and caller-authored Bun workflows run with the current user's access, including potential network access. Hashes and receipts identify what ran; they do not confine it.

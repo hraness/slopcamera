@@ -2,7 +2,7 @@
 
 This reference describes the current Slopcamera CLI and its runtime requirements. A package's version number alone does not identify a source checkout; inspect its commit and actual command help.
 
-## Current Slopcamera and historical Atet
+## Current SlopCamera and historical Atet
 
 Slopcamera v3.6.0 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
