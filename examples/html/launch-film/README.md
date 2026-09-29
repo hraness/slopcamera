@@ -48,4 +48,4 @@ Run each command from this directory. Look at the stills before rendering the fu
 
 1. Replace `ProductMockup` and `OpenCard` in `mockups.tsx`. Keep the `data-film` names that `film.json` steps point at (`list`, `detail-body`, `row-2`, `action`), or change both together. Each step names a `focus` for the camera, a `target` for the cursor click, an optional `highlight`, and an optional `after` state that the target gets once clicked (styled with `[data-film-state="done"]` in `film.css`).
 2. If your site uses `@hraness/design-kit`, its `mockups.css` is inlined automatically. List any other product stylesheets in `film.json` under `productCss`.
-3. List your fonts in `film.json` under `fonts` as `{ "name", "family", "weight", "file" }`. Without them the film uses the Nebula Sans files that ship with Slopcamera.
+3. List your fonts in `film.json` under `fonts` as `{ "name", "family", "weight", "file" }`. Without them the film uses the Nebula Sans files that ship with SlopCamera.

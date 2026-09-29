@@ -4,13 +4,13 @@ Each released version has a section headed with its version, such as `## 3.4.0 -
 
 ## 3.7.0 - 2026-09-28
 
-Slopcamera can now start, review and deliver a product launch film. A new template lays out a short film in six acts around your product's own UI, a helper module keeps every frame a function of time, and one command turns a render into web, social and per-act files within size budgets.
+SlopCamera can now start, review and deliver a product launch film. A new template lays out a short film in six acts around your product's own UI, a helper module keeps every frame a function of time, and one command turns a render into web, social and per-act files within size budgets.
 
 - `slopcamera html init <dir> --template launch-film [--aspect 16:9|1:1|9:16]` writes a film project: an HTML page with slots, its stylesheet and choreography, a `build.ts` that renders React mockups to static markup, and a README. The acts are a cold open, a title, a product walk with a browser frame, camera, cursor and drawn highlight, proof, limits and an end card.
 - `@hraness/slopcamera/local/html-film` exports motion helpers for HTML films: `clamp`, `lerp`, `prog`, `easings`, `spring`, `split`, `kin`, `show`, `stepValue`, `crossfade`, `defineTimeline`, `camera`, `cursor`, `drawMark` and `captionsFromTimeline`, which writes WebVTT from act captions. `show` sets both visibility and display so a hidden scene never leaks into a later frame.
 - `slopcamera html still --input scene.json --at 3,12.5 --output <dir>` and `slopcamera html preview` draw frames with the same injected runtime as `html render`; preview also writes a contact sheet.
 - `slopcamera html deliver <export.json> --basename <name> --poster-at <s> --social-at <s> [--cuts 1:1,9:16] [--per-beat-clips]` writes a faststart MP4, a VP9 WebM, a poster, a 1200x630 social still, aspect cuts and one clip per act, with a receipt. It exits non-zero when an MP4 is over 12 MB, the WebM over 10 MB or a JPEG over 250 KB.
-- The Slopcamera skill has a launch films reference, including a short mapping for people coming from HyperFrames or Remotion.
+- The SlopCamera skill has a launch films reference, including a short mapping for people coming from HyperFrames or Remotion.
 
 ## 3.6.0 - 2026-09-27
 
