@@ -145,3 +145,33 @@ export async function sandboxSourceText(root: string): Promise<{ files: string[]
   await walk(root, 0);
   return { files: files.sort(), text: parts.join("\n") };
 }
+
+export interface AudioProbe {
+  readonly codec: string | null;
+  readonly duration: number | null;
+}
+
+/** The first audio stream, or null when the file has none or cannot be read. */
+export async function probeAudio(path: string): Promise<AudioProbe | null> {
+  const result = await run([FFPROBE, "-v", "error", "-print_format", "json", "-show_streams", "-select_streams", "a", path]);
+  if (result.code !== 0) return null;
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(result.stdout)) as { streams?: Record<string, unknown>[] };
+    const audio = parsed.streams?.[0];
+    if (audio === undefined) return null;
+    return { codec: typeof audio.codec_name === "string" ? audio.codec_name : null, duration: num(audio.duration) };
+  } catch {
+    return null;
+  }
+}
+
+/** Mean audio level in dB over [start, start + length) seconds, from ffmpeg volumedetect. */
+export async function meanVolume(path: string, start: number, length: number): Promise<number | null> {
+  const result = await run([
+    FFMPEG, "-v", "info", "-ss", String(Math.max(0, start)), "-t", String(length), "-i", path,
+    "-vn", "-af", "volumedetect", "-f", "null", "-",
+  ]);
+  const match = /mean_volume:\s*(-?[\d.]+|-inf) dB/.exec(result.stderr);
+  if (match === null) return null;
+  return match[1] === "-inf" ? -120 : Number(match[1]);
+}

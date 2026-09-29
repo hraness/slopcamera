@@ -28,10 +28,10 @@ const RELEASE_BASE = `https://github.com/hraness/slopcamera/releases/download/v$
 export type Condition = "A" | "B";
 export type Status = "ok" | "capped" | "timeout" | "error" | "skipped";
 
-const BENCH_DIR = dirname(new URL(import.meta.url).pathname);
-const REPO_ROOT = resolve(BENCH_DIR, "..", "..");
+export const BENCH_DIR = dirname(new URL(import.meta.url).pathname);
+export const REPO_ROOT = resolve(BENCH_DIR, "..", "..");
 
-interface Paths {
+export interface Paths {
   readonly results: string;
   readonly raw: string;
   readonly thumbs: string;
@@ -40,7 +40,7 @@ interface Paths {
   readonly sandboxes: string;
 }
 
-function parseFlags(argv: readonly string[]): Map<string, string> {
+export function parseFlags(argv: readonly string[]): Map<string, string> {
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
@@ -87,13 +87,13 @@ async function run(
   return { code, stdout, stderr };
 }
 
-async function must(argv: readonly string[], options: { cwd?: string; env?: Record<string, string> } = {}): Promise<string> {
+export async function must(argv: readonly string[], options: { cwd?: string; env?: Record<string, string> } = {}): Promise<string> {
   const result = await run(argv, options);
   if (result.code !== 0) throw new Error(`${argv.join(" ")} failed (${result.code}): ${result.stderr.trim()}`);
   return result.stdout;
 }
 
-async function isDir(path: string): Promise<boolean> {
+export async function isDir(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isDirectory();
   } catch {
@@ -150,11 +150,11 @@ async function setup(p: Paths): Promise<void> {
 // ---------------------------------------------------------------- environment
 
 /** Bench-owned bin dir exposing only bun/bunx from the user's Bun install, not the user's other global binaries. */
-function benchBin(p: Paths): string {
+export function benchBin(p: Paths): string {
   return join(p.tools, "bin");
 }
 
-async function ensureBenchBin(p: Paths): Promise<void> {
+export async function ensureBenchBin(p: Paths): Promise<void> {
   const bin = benchBin(p);
   await mkdir(bin, { recursive: true });
   const bun = Bun.which("bun");
@@ -171,7 +171,7 @@ async function ensureBenchBin(p: Paths): Promise<void> {
  * global prefix. The user's Claude settings, CLAUDE.md, plugins, hooks, MCP servers and
  * local model proxy are excluded by the minimal env plus the claude flags below.
  */
-function conditionEnv(condition: Condition, p: Paths, bunPrefix: string, tmp: string): Record<string, string> {
+export function conditionEnv(condition: Condition, p: Paths, bunPrefix: string, tmp: string): Record<string, string> {
   const path = [
     ...(condition === "B" ? [join(bunPrefix, "bin")] : []),
     benchBin(p),
@@ -192,7 +192,12 @@ function conditionEnv(condition: Condition, p: Paths, bunPrefix: string, tmp: st
   };
 }
 
-export function claudeArgs(claude: string, sandbox: string, session: { sessionId: string; resume: boolean }): string[] {
+export function claudeArgs(
+  claude: string,
+  sandbox: string,
+  session: { sessionId: string; resume: boolean },
+  budgetUsd: number = STEP_BUDGET_USD,
+): string[] {
   return [
     claude, "-p",
     "--model", MODEL,
@@ -204,19 +209,19 @@ export function claudeArgs(claude: string, sandbox: string, session: { sessionId
     "--allowedTools", TOOLS,
     "--permission-mode", "dontAsk",
     "--add-dir", sandbox,
-    "--max-budget-usd", String(STEP_BUDGET_USD),
+    "--max-budget-usd", String(budgetUsd),
     ...(session.resume ? ["--resume", session.sessionId] : ["--session-id", session.sessionId]),
   ];
 }
 
 // ---------------------------------------------------------------- claude session
 
-interface ToolCall {
+export interface ToolCall {
   readonly name: string;
   readonly input: string;
 }
 
-interface StreamSummary {
+export interface StreamSummary {
   init: Record<string, unknown> | null;
   result: Record<string, unknown> | null;
   toolCalls: ToolCall[];
@@ -238,7 +243,7 @@ export function countSlopcameraCommands(bashCommands: readonly string[]): number
 
 const RATE_LIMIT = /rate[ _-]?limit|\b429\b|usage limit|limit reached|too many requests|overloaded_error/i;
 
-function summarizeStream(lines: readonly string[]): StreamSummary {
+export function summarizeStream(lines: readonly string[]): StreamSummary {
   const summary: StreamSummary = { init: null, result: null, toolCalls: [], toolInputText: "", bashCommands: [], rateLimitEvents: [] };
   const inputs: string[] = [];
   for (const line of lines) {
@@ -274,7 +279,7 @@ function summarizeStream(lines: readonly string[]): StreamSummary {
   return summary;
 }
 
-interface SessionRun {
+export interface SessionRun {
   readonly exitCode: number | null;
   readonly signal: string | null;
   readonly timedOut: boolean;
@@ -283,7 +288,7 @@ interface SessionRun {
   readonly stream: StreamSummary;
 }
 
-async function runClaude(argv: readonly string[], prompt: string, cwd: string, env: Record<string, string>, streamPath: string): Promise<SessionRun> {
+export async function runClaude(argv: readonly string[], prompt: string, cwd: string, env: Record<string, string>, streamPath: string): Promise<SessionRun> {
   const started = Date.now();
   const [command, ...args] = argv;
   if (command === undefined) throw new Error("empty argv");
@@ -387,11 +392,11 @@ export interface StepRecord {
   readonly note: string;
 }
 
-function numberOr(value: unknown): number | null {
+export function numberOr(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function usageOf(result: Record<string, unknown> | null): Usage | null {
+export function usageOf(result: Record<string, unknown> | null): Usage | null {
   const u = result?.usage as Record<string, unknown> | undefined;
   if (u === undefined) return null;
   return {
@@ -402,7 +407,7 @@ function usageOf(result: Record<string, unknown> | null): Usage | null {
   };
 }
 
-function statusOf(session: SessionRun): Status {
+export function statusOf(session: SessionRun): Status {
   if (session.timedOut) return "timeout";
   const subtype = session.stream.result?.subtype;
   if (typeof subtype === "string" && /budget/i.test(subtype)) return "capped";
@@ -410,7 +415,7 @@ function statusOf(session: SessionRun): Status {
   return "ok";
 }
 
-function isRateLimited(session: SessionRun): string | null {
+export function isRateLimited(session: SessionRun): string | null {
   const result = session.stream.result;
   const resultText = typeof result?.result === "string" ? result.result : "";
   const failed = result === null || result.is_error === true;
@@ -420,7 +425,7 @@ function isRateLimited(session: SessionRun): string | null {
   return null;
 }
 
-async function readRecord(path: string): Promise<StepRecord | null> {
+export async function readRecord(path: string): Promise<StepRecord | null> {
   try {
     return JSON.parse(await readFile(path, "utf8")) as StepRecord;
   } catch {
@@ -452,8 +457,8 @@ export function stepCost(sessionCostUsd: number | null, priorSessionCostUsd: num
 
 // ---------------------------------------------------------------- run
 
-class RateLimited extends Error {}
-class BudgetExhausted extends Error {}
+export class RateLimited extends Error {}
+export class BudgetExhausted extends Error {}
 
 interface RunOptions {
   readonly runId: string;
@@ -464,7 +469,7 @@ interface RunOptions {
   readonly claude: string;
 }
 
-async function spentUsd(p: Paths): Promise<number> {
+export async function spentUsd(p: Paths): Promise<number> {
   const records = [...(await readRecords(p.raw)), ...(await readRecords(join(p.results, "aborted")))];
   return records.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
 }
@@ -544,13 +549,18 @@ async function isolateSlopcameraState(bunPrefix: string): Promise<void> {
   await writeFile(link, `#!/bin/sh\nHOME='${stateHome}' exec '${target}' "$@"\n`, { mode: 0o755 });
 }
 
-async function prepareSandbox(
+export async function prepareSandbox(
   p: Paths,
   condition: Condition,
   sandbox: string,
   bunPrefix: string,
   env: Record<string, string>,
-  content: { readonly taskMd: string | null; readonly t4Inputs: boolean },
+  content: {
+    readonly taskMd: string | null;
+    readonly t4Inputs: boolean;
+    /** Round 2: harness-generated input files, [source path, path relative to the sandbox]. */
+    readonly extraInputs?: readonly (readonly [string, string])[];
+  },
 ): Promise<void> {
   await rm(sandbox, { recursive: true, force: true });
   await rm(bunPrefix, { recursive: true, force: true });
@@ -559,6 +569,10 @@ async function prepareSandbox(
   if (content.t4Inputs) {
     await mkdir(join(sandbox, "inputs"), { recursive: true });
     for (const name of ["clip-a.mp4", "clip-b.mp4"]) await cp(join(p.tools, "t4-inputs", name), join(sandbox, "inputs", name));
+  }
+  for (const [from, rel] of content.extraInputs ?? []) {
+    await mkdir(dirname(join(sandbox, rel)), { recursive: true });
+    await cp(from, join(sandbox, rel));
   }
   if (condition === "B") {
     await cp(join(p.tools, "prefix-b"), bunPrefix, { recursive: true, verbatimSymlinks: true });
@@ -580,7 +594,7 @@ const PROBE_PROMPT = [
 ].join("\n");
 
 /** Keeps account details the model may echo from its context out of committed results. */
-function redact(value: unknown): string | null {
+export function redact(value: unknown): string | null {
   return typeof value === "string" ? value.replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "<email>") : null;
 }
 
@@ -615,7 +629,7 @@ async function probeIsolation(p: Paths, claude: string): Promise<void> {
   console.log(JSON.stringify(report, null, 2));
 }
 
-async function preflightOf(sandbox: string, env: Record<string, string>): Promise<Record<string, string>> {
+export async function preflightOf(sandbox: string, env: Record<string, string>): Promise<Record<string, string>> {
   const probe = await run(["/bin/sh", "-c", "command -v slopcamera || echo 'not on PATH'; slopcamera --version 2>/dev/null; ls .claude/skills 2>/dev/null || echo 'no .claude/skills'"], { cwd: sandbox, env });
   return { path: env.PATH ?? "", bunInstall: env.BUN_INSTALL ?? "", probe: probe.stdout.trim() };
 }
@@ -842,6 +856,13 @@ async function revalidate(p: Paths): Promise<void> {
 async function main(): Promise<number> {
   const [command, ...rest] = process.argv.slice(2);
   const flags = parseFlags(rest);
+  const round = flags.get("round") ?? "1";
+  if (round === "2") {
+    // Round 2 (harder tasks, five revisions, fix-up retries). Round 1 below is unchanged.
+    const { mainR2 } = await import("./round2");
+    return await mainR2(command, flags);
+  }
+  if (round !== "1") throw new Error("--round is 1 or 2");
   const runId = flags.get("run-id") ?? new Date().toISOString().slice(0, 10);
   const p = paths(flags, runId);
   if (command === "setup") {
@@ -880,7 +901,7 @@ async function main(): Promise<number> {
     if (claude === null) throw new Error("claude CLI not found");
     return await runAll(p, { runId, tasks, conditions, repeats, maxTotalUsd, claude });
   }
-  console.error("usage: harness.ts setup|probe|run|recount|revalidate|summarize [--run-id ID] [--tasks t1,..] [--conditions A,B] [--repeats N] [--max-total-usd N] [--outputs DIR] [--sandboxes DIR]");
+  console.error("usage: harness.ts setup|probe|run|recount|revalidate|summarize [--round 1|2] [--run-id ID] [--tasks t1,..] [--conditions A,B] [--repeats N] [--max-total-usd N] [--outputs DIR] [--sandboxes DIR]");
   return 2;
 }
 

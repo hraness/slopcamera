@@ -66,20 +66,20 @@ export async function loadPrompts(spec: TaskSpec): Promise<TaskPrompts> {
   };
 }
 
-function check(name: string, ok: boolean, detail: string, gating = true): Check {
+export function check(name: string, ok: boolean, detail: string, gating = true): Check {
   return { name, ok, gating, detail };
 }
 
-function near(value: number | null, target: number, tolerance: number): boolean {
+export function near(value: number | null, target: number, tolerance: number): boolean {
   return value !== null && Math.abs(value - target) <= tolerance;
 }
 
-function fmt(p: Probe | null): string {
+export function fmt(p: Probe | null): string {
   if (p === null) return "unreadable";
   return `${p.formatName} ${p.codec ?? "?"} ${p.width ?? "?"}x${p.height ?? "?"} fps=${p.fps?.toFixed(3) ?? "?"} dur=${p.duration?.toFixed(3) ?? "?"} frames=${p.frames ?? "?"}`;
 }
 
-async function common(
+export async function common(
   input: ValidationInput,
   outputs: readonly string[],
 ): Promise<{ checks: Check[]; hashes: Record<string, string | null>; source: { files: string[]; text: string } }> {
@@ -109,7 +109,7 @@ function escapeRegExp(text: string): string {
  * counts when its words appear in order, each as a whole word, within 400 characters
  * of the previous one; the detail string says which kind of match was found.
  */
-function textEvidence(
+export function textEvidence(
   name: string,
   needle: string,
   haystacks: Readonly<Record<string, string>>,
@@ -125,7 +125,7 @@ function textEvidence(
   return check(name, false, "not found", gating);
 }
 
-async function videoChecks(
+export async function videoChecks(
   path: string,
   label: string,
   expect: { width: number; height: number; fps: number; duration: number; durationTolerance: number },
@@ -239,7 +239,7 @@ const t4: TaskSpec = {
   },
 };
 
-function finish(checks: Check[], hashes: Record<string, string | null>, sourceFiles: string[]): Validation {
+export function finish(checks: Check[], hashes: Record<string, string | null>, sourceFiles: string[]): Validation {
   return { pass: checks.every((c) => !c.gating || c.ok), checks, hashes, sourceFiles };
 }
 

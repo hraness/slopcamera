@@ -182,6 +182,28 @@ a step fails because of a rate limit or usage limit, the harness records it
 under `results/<run-id>/aborted/`, writes the summary, prints a line starting
 with `RATE_LIMITED`, and exits with status 3. It never retries in a loop.
 
+## Round 2
+
+Round 2 tests what round 1 did not: five harder tasks (`tasks/r2/`), a create
+step followed by five revisions per session, revisions 4 and 5 in a new
+session with no conversation memory, and up to two harness fix-up retries per
+step. It keeps round 1's agent command, isolation, HOME shim, redaction and
+condition B install, and round 1 stays reproducible with the commands above
+(`--round 1` is the default). The design, hypotheses, tests and the frozen
+validator hash are in [`PREREGISTRATION-r2.md`](PREREGISTRATION-r2.md).
+
+```sh
+bun bench/token-savings/harness.ts run --round 2 --run-id <date>-r2 --repeats 4 --max-total-usd 220
+bun bench/token-savings/harness.ts summarize --round 2 --run-id <date>-r2
+```
+
+Files: `round2.ts` (runner), `tasks-r2.ts` (task specs, input generators,
+validators) and `summarize-r2.ts` (medians, cumulative cost by step, exact
+Mann-Whitney U, stratified bootstrap). `run` needs round 1's `setup` tools.
+Per-step records go to `results/<run-id>/raw/<task>-<condition>-r<n>-<step>.json`
+with one entry per attempt; transcripts and per-step sandbox snapshots go to
+`../<worktree>-bench-outputs/r2/<run-id>/`.
+
 ## Where results go
 
 - `results/<run-id>/raw/<task>-<condition>-r<n>-<step>.json`: one record per
