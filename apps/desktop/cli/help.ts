@@ -25,7 +25,8 @@ Commands:
                                  Author and render retained Blender, CAD and Manim productions
   image vectorize|generate|gallery|icon
                                  Create local SVGs, generated images, or review galleries
-  html catalog|scaffold|render   Author HTML scenes and export video with local audio
+  html catalog|scaffold|init|render|still|preview|deliver
+                                 Author HTML scenes and launch films, render, and deliver web video
   style list|show                Discover reusable art direction and review criteria
   workflows list|show|plan|run   Plan or run a reviewed reusable workflow
   code init|check|plan|run       Author, preflight, and run trusted TypeScript workflows
@@ -38,6 +39,11 @@ Commands:
                                  Buy and inspect hosted generation credits
   media audio|color              Apply local non-destructive audio and video effects
   outputs                        Print the agent outputs directory
+  outputs list|open|reveal       List the newest outputs or open one on this Mac
+  status                         What Slopcamera is doing, credits and newest outputs
+  tui [--snapshot]               The status screen; --snapshot prints it once
+  commands [--json]              List every command with what it may change
+  legacy retire                  Stop the old menu bar opening at login
   recordings list               List recording bundles
   projects list|create           List projects or create one from a recording
   project inspect|add|edit|render
@@ -64,28 +70,6 @@ ${slopcameraSupportHelpLine()}`;
 
 const HELP: Readonly<Record<string, string>> = {
   advanced: `${slopcameraSupportAdvancedHelp()}`,
-  menubar: `Usage:
-  slopcamera menubar [--foreground|--background] [--json]
-  slopcamera menubar install|uninstall|status|start [--json]
-
-Shows what Slopcamera is doing in the menu bar: a render in progress, how the
-last job ended and your last known credits balance, plus your newest outputs.
-It only reads that status and the outputs folder (slopcamera outputs).
-
-  menubar               Open it now; it closes when this command ends
-  menubar start         Open it now and return (same as --background)
-  menubar install       Open it every time you log in
-  menubar uninstall     Stop opening it at login and remove the installed copy
-  menubar status        Check whether it opens at login and is running
-
-If it's already in your menu bar, starting it again says so and succeeds.
-macOS shows a notice that slopcamera-menubar can open at login. Turn it off any
-time in System Settings › General › Login Items & Extensions.
-
-The menu bar isn't in released packages yet, so it isn't listed in
-slopcamera help. In a Slopcamera checkout, build it with
-cargo build --release --manifest-path desktop/Cargo.toml and slopcamera finds
-it; elsewhere, set SLOPCAMERA_MENUBAR to the built file.`,
   capabilities: `Usage: slopcamera capabilities [--json]
 
 Print the exact statically assembled capability manifest for this CLI build. Each module owns named operation, workflow, MCP-tool, command, and runtime-profile identities. The manifest includes trust classes, resource/effect policies, runtime requirements, qualification status, and a canonical SHA-256. It reads no workspace source, loads no plugin, probes no runtime, and grants no authority. Use doctor separately to inspect this machine's currently available executables.`,
@@ -337,7 +321,12 @@ direction, not proof of visual quality or historically authentic footage.`,
   html: `Usage:
   slopcamera html catalog [--json]
   slopcamera html scaffold <${HTML_OVERLAY_SCAFFOLD_KIND_HELP}> --output <file.html>
+  slopcamera html init <dir> --template launch-film [--aspect 16:9|1:1|9:16] [--json]
   slopcamera html render --input <scene.json> [--dry-run] [--json]
+  slopcamera html still --input <scene.json> --at <seconds>[,<seconds>...] --output <dir> [--json]
+  slopcamera html preview --input <scene.json> --output <dir> [--every <seconds>] [--json]
+  slopcamera html deliver <export.json> --basename <name> --poster-at <seconds> --social-at <seconds>
+      [--cuts 1:1,9:16,4:5] [--per-beat-clips] [--beats <beats.json>] [--output <dir>] [--json]
 
 Catalog lists the closed scaffold profiles in stable order with their primary jobs, render
 substrates, and current exact browser-library versions. Scaffold creates a complete transparent
@@ -351,7 +340,16 @@ with separate scene-video and original-audio tracks. Device dimensions must be e
 Duration rounds up to whole frames; audio starts at zero and is trimmed or padded to that
 duration. Soundtracks encode as 48 kHz stereo AAC at 320 kb/s. Dry run checks source and
 workload bounds without launching a browser, importing audio, or writing project state.
-Progress uses stderr; --json keeps stdout machine-readable.`,
+Progress uses stderr; --json keeps stdout machine-readable.
+
+Init creates a launch-film project (film.html, film.css, film.js, build.ts and a sample
+product mockup) in a new directory. Its build writes out/scene.json, out/beats.json and
+out/captions.vtt. Still and preview draw frames with the same injected runtime that render
+uses, so a still matches the rendered frame at that time; preview adds a contact sheet.
+Deliver reads output.path from html render --json output and writes a faststart H.264 MP4,
+a VP9 WebM, a poster, a 1200x630 social still, optional aspect cuts over a blurred fill, and
+optional 6 to 10 second clips per beat. It prints a receipt per file and exits non-zero when
+a file is over its budget: 12 MB per MP4, 10 MB for the WebM, 250 KB per JPEG.`,
   operations: `Usage:
   slopcamera operations list [--json]
   slopcamera operations show <kind>[@<version>] [--json]
@@ -714,12 +712,12 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "menubar", "support", "outputs", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
-  if (command === "html") return ["catalog", "scaffold", "render"];
+  if (command === "html") return ["catalog", "scaffold", "init", "render", "still", "preview", "deliver"];
   if (command === "style") return ["list", "show"];
   if (command === "direct") return ["init", "anchor", "plan", "start", "inspect", "revise", "generate", "resume", "review", "assemble", "cleanup"];
   if (command === "studio") return words[2] === "assets" || words[1] === "assets" ? ["search", "describe", "plan", "import"] : ["init", "bundle", "plan", "probe", "run", "encode", "asset", "assemble", "inspect", "reconcile", "assets"];
@@ -740,7 +738,8 @@ export function completions(words: readonly string[]): readonly string[] {
     if (words[1] === "direction") return ["check", "plan", "gallery"];
     if (words[1] === "effects") return ["check", "plan", "bake"];
     if (words[1] === "behavior") return ["check", "bake", "gallery", "audit"];
-    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "temporal-audit"];
+    if (words[1] === "design") return ["catalog", "init", "inspect", "set", "compile", "gallery"];
+    return ["init", "check", "inspect", "diff", "patch", "evaluate", "audit", "render-audit", "solve", "review", "camera-track", "generate", "plan", "render", "direction", "effects", "behavior", "design", "temporal-audit"];
   }
   if (command === "edit") return ["init", "show", "trim", "cut", "speed", "zoom", "overlay", "cursor", "clicks", "keystrokes", "typed-text"];
   if (command === "analyze") return ["faces", "inactivity", "zooms", "music", "scenes", "speech"];
@@ -752,5 +751,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "media") return ["audio", "color"];
   if (command === "render") return ["plan", "run"];
   if (command === "assets") return ["emoji"];
+  if (command === "outputs") return ["list", "open", "reveal"];
+  if (command === "legacy") return ["retire"];
   return [];
 }

@@ -66,7 +66,7 @@ const evidence = (delta: number): ShellEvidence => {
   const appearance = selectors.flatMap((selector, index) => Array.from({ length: index < 4 ? 1 : 3 }, (_, i) => element(`${selector}[${i}]`)))
   const skip = { ...element(".skip-link[0]"), styles: { ...element(".skip-link[0]").styles, position: "fixed" }, geometrySpace: "viewport" as const, scrollY: 0, documentRect: [0, 0, 400, 20] }
   return { direction: "ltr", dom: "exact-outside-footer", recovery: false, elements: [
-    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "Slopcamera Docs GitHub Install Slopcamera by Hraness" : ""}Accept cookies` },
+    { ...element("body[0]", 1000 + delta), text: `Retained${delta ? "SlopCamera Docs GitHub Install Slopcamera by Hraness" : ""}Accept cookies` },
     { ...element("#hraness-site-footer[0]", 100 + delta), rect: [0, 900, 400, 100 + delta] }, element("#main[0]")],
     focus: [element(".topbar[0]")], hover: [element(".topbar[0]")], skip, obstructions: [],
     appearance: shellAppearanceSteps.map(step => ({ step: step.name, active: step.active, elements: appearance })) }
@@ -146,7 +146,7 @@ test("copy compares both exact current commands, all states, paint, timer ports 
   expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, supportBaselineInstallCommand), scenario, true)).not.toThrow()
   expect(() => compareSupportCopy(withCommand(current, refinementInstallCommand), withCommand(baseline, "bun add --global other"), scenario, true)).toThrow()
   expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: collapse(supportBaselineInstallCommand) }).text).toBe(collapse(refinementInstallCommand))
-  expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.2.6 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.2.6", role: null } })).toEqual({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.6.0 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.6.0", role: null } })
+  expect(projectSupportBaselineCommand({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.2.6 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.2.6", role: null } })).toEqual({ ...current.steps[0]!.elements[0]!, text: "Slopcamera v3.8.0 release", semantics: { href: "https://github.com/hraness/slopcamera/releases/tag/v3.8.0", role: null } })
   const changed = copy(); (changed.steps[0]!.elements[0]!.styles as Record<string, string>).color = "red"
   expect(() => compareSupportCopy({ ...changed, negativeControls: copyNegativeControls }, baseline, scenario, true)).toThrow()
 })

@@ -5,7 +5,6 @@
 - `analysis/` – the signed local Vision face-analysis helper for existing recording media.
 - `assets/` – generated identity assets.
 - `qualification/` – opt-in native scene, composition, and timing fixtures with retained measurements.
-- `../../desktop/` – the Rust menu-bar workspace (`slopcamera-menubar`) built on `desktop-foundation`; it renders the agent outputs directory as a live menu.
 
 # Guidelines
 
@@ -21,4 +20,4 @@
 - Apply effects only through typed bounded non-destructive transforms. Use argv arrays, owned kernels, and fresh repository-local outputs; never interpolate caller text into filters or overwrite sources. Parse manifests, JSONL, native messages, tool results, and CLI edits from `unknown`.
 - Keep HTML overlays deterministic and transparent: exact approved library locks, local bound assets, integer-microsecond frame time, seeded randomness, fixed browser settings, and denied ambient browser networking. Render them to verified alpha media before the ordinary overlay compositor sees them.
 - Keep ordinary build, lint, typecheck, and TypeScript tests portable. Exercise the Vision analysis helper only through explicit `*:macos` commands.
-- The menu-bar companion is a disposable client: it reads the agent outputs directory, renders filename descriptions with image previews, and opens or reveals files. Product authority stays in the CLI.
+- There is no menu-bar companion: `slopcamera status`, `tui`, `commands --json` and `outputs` are the surfaces, and `legacy retire` moves an old login item aside without deleting it.

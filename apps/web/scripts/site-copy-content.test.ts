@@ -9,7 +9,7 @@ import { renderSlopcameraIcons } from "./generate-icons"
 
 const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
+const definition = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 
 describe("media studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {
@@ -23,7 +23,7 @@ describe("media studio public copy (pure, process-free)", () => {
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
     expect(readme).toContain("Historical Atet release evidence")
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')
@@ -122,9 +122,14 @@ describe("media studio public copy (pure, process-free)", () => {
     const [html, config] = await Promise.all([read("apps/web/src/index.html"), read("apps/web/vercel.json")])
     expect(html).toContain('href="/docs">Docs</a>')
     for (const source of [homeMarkdown, llmsTxt, sitemapMarkdown]) expect(source).toContain("https://slopcamera.com/docs")
-    // /docs is a sealed first-party surface: no path-level redirect may return.
+    // /docs is a sealed first-party surface: only the short aliases below may point into it.
     const routes = JSON.parse(config).redirects.filter((route: { has?: unknown }) => route.has === undefined)
-    expect(routes).toEqual([])
+    expect(routes).toEqual([
+      { source: "/techniques", destination: "/docs/reference/techniques", permanent: true },
+      { source: "/compare/remotion", destination: "/docs/explanation/slopcamera-vs-remotion", permanent: true },
+      { source: "/compare/hyperframes", destination: "/docs/explanation/slopcamera-vs-hyperframes", permanent: true },
+      { source: "/compare/remotion-alternatives", destination: "/docs/explanation/remotion-alternatives-for-coding-agents", permanent: true },
+    ])
     const links = [...html.matchAll(/href="(https:\/\/github.com\/hraness\/slopcamera\/blob\/main\/docs\/[^"#]+)(?:#[^"]*)?"/gu)]
     expect(links.length).toBeGreaterThanOrEqual(1)
     const firstPartyLinks = [...html.matchAll(/href="(\/docs\/[^"#]+)"/gu)]

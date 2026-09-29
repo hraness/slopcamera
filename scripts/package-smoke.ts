@@ -40,14 +40,15 @@ const importSpecifiers = [
   `${packageName}/local/code/advanced`,
   `${packageName}/local/code/workflows`,
   `${packageName}/local/html-overlay`,
+  `${packageName}/local/html-film`,
 ] as const;
 const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
 // Initial 3.4 source-portfolio measurement: 535 files, 4,862,866 packed bytes,
 // 14,000,164 content bytes, including 227,137 bytes of new editable examples.
 // Final rebuilt candidates must still pass these bounded admission limits.
-// Archive: at most 550 files, 5.2 MB packed and 15 MB of file content.
+// Archive: at most 570 files, 5.2 MB packed and 15 MB of file content.
 // Independent readers add only bounded USTAR headers, padding and termination.
-const maximumPackedFiles = 550;
+const maximumPackedFiles = 570;
 const maximumPackedBytes = 5_200_000;
 const maximumUnpackedBytes = 15_000_000;
 const packedHtmlExamplePaths = [
@@ -73,8 +74,19 @@ const packedStylePortfolioPaths = [
   "examples/style-portfolio/market-street/source.json",
   "examples/style-portfolio/market-street/street_data.py",
 ] as const;
+const packedLaunchFilmPaths = [
+  "examples/html/launch-film/README.md",
+  "examples/html/launch-film/build.ts",
+  "examples/html/launch-film/film.css",
+  "examples/html/launch-film/film.html",
+  "examples/html/launch-film/film.js",
+  "examples/html/launch-film/film.json",
+  "examples/html/launch-film/mockups.tsx",
+  "examples/html/launch-film/timeline.ts",
+] as const;
 const publishedExamplePaths = new Set<string>([
   ...packedHtmlExamplePaths,
+  ...packedLaunchFilmPaths,
   ...packedStylePortfolioPaths,
 ]);
 const requiredPackedPaths = [
@@ -111,7 +123,10 @@ const requiredPackedPaths = [
   "apps/desktop/studio/drivers/cadquery_driver.py",
   "apps/desktop/studio/education/driver.py",
   ...packedHtmlExamplePaths,
+  ...packedLaunchFilmPaths,
   ...packedStylePortfolioPaths,
+  "apps/desktop/html-overlay/film.ts",
+  "skills/slopcamera/references/launch-films.md",
   "examples/studio/blender/product.py",
   "examples/studio/education/scene.py",
   "examples/studio/native-workflow.ts",
@@ -1155,6 +1170,13 @@ if (downbeat.beatPosition !== 4 || downbeat.beatIndex !== 4 || downbeat.beatPhas
   || preRoll.beatPosition !== -0.5 || preRoll.beatIndex !== -1 || preRoll.beatPhase !== 0.5 || preRoll.barIndex !== -1 || preRoll.barPhase !== 0.875
   || htmlOverlayMusicPulse(0) !== 1 || htmlOverlayMusicPulse(0.5) !== 0) {
   throw new Error("Packed HTML music helpers did not preserve absolute-time beat and pulse semantics.");
+}
+const film = await import("@hraness/slopcamera/local/html-film");
+const filmTimeline = film.defineTimeline([{ id: "open", duration: 2, caption: "First line" }, { id: "end", duration: 1.5, caption: "Last line" }]);
+const filmCaptions = film.captionsFromTimeline(filmTimeline);
+if (filmTimeline.duration !== 3.5 || !filmCaptions.startsWith("WEBVTT") || !filmCaptions.includes("00:00:02.000 --> 00:00:03.500")
+  || film.prog(1, 0, 2) !== 0.5 || film.clamp(2) !== 1) {
+  throw new Error("Packed html-film helpers did not keep timeline, caption and progress semantics.");
 }
 `;
   await run([process.execPath, "-e", publicHtmlFixture], consumer, packageEnvironment);

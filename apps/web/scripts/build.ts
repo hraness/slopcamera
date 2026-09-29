@@ -11,6 +11,7 @@ import type { PreviewArtifact } from "./preview-contract"
 import { buildSite } from "./build-site"
 import { publicIdentity, readPublicIcons } from "./public-identity"
 import { readExampleAssets } from "./example-assets"
+import { pruneRetainedEvidence } from "./retained-evidence"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
@@ -125,6 +126,7 @@ export function renderSitemapXml(): string {
     ...docPages.map(page => renderSitemapUrl(
       docsCanonicalUrl(page).slice(siteOrigin.length),
       workflowExamples.filter(example => example.guideSlug === page.slug),
+      page.modified,
     )),
     // Only indexable posts enter the sitemap, each with its lastmod.
     ...blogSitemapPaths().map(entry => {
@@ -258,8 +260,11 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const environment = options.environment ?? process.env
   const outputDirectory = options.outputDirectory ?? defaultOutputDirectory
   const analyticsConfig = productionAnalyticsConfig(environment)
-  const [theme, statusPage, socialCards] = await Promise.all([
+  const [theme, statusPage, , socialCards] = await Promise.all([
     bundleTheme(), bundleStatusPage(),
+    // Local housekeeping only: Vercel and CI builders are ephemeral, and a
+    // production build should not touch a shared $TMPDIR.
+    process.env.VERCEL || process.env.CI ? undefined : pruneRetainedEvidence(),
     Promise.all(socialImages.map(async image => ({ file: image.file, bytes: await renderSocialImage(image) }))),
   ])
   const themePath = assetPath("theme.js", theme)

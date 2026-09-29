@@ -297,6 +297,15 @@
     ]
   },
   {
+    "identityLineCount": 1,
+    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
+    "occurrenceCount": 2,
+    "path": "apps/desktop/cli/activity-status.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 3,
     "identityLinesSha256": "d8624a139ff5c1fc29de4393879a1e0fdf17739dedba0fea6bc44190a5a76641",
     "occurrenceCount": 3,
@@ -449,7 +458,7 @@
   },
   {
     "identityLineCount": 23,
-    "identityLinesSha256": "1e454f0129acb251a9f00f6254d7ca363d4bb134d893b9129eee38488544db3f",
+    "identityLinesSha256": "48449b55e5ca421148d8a2d733b59bd7df61cad503b7431efdd992a3eb3499cf",
     "occurrenceCount": 32,
     "path": "apps/desktop/cli/help.ts",
     "categories": [
@@ -472,15 +481,6 @@
     "path": "apps/desktop/cli/media-effects-service.test.ts",
     "categories": [
       "test-fixture"
-    ]
-  },
-  {
-    "identityLineCount": 1,
-    "identityLinesSha256": "e5ecefad5045d6b109403952808a330707e72f69e5c35fd78fbde355400b2cb1",
-    "occurrenceCount": 2,
-    "path": "apps/desktop/cli/menubar-status.ts",
-    "categories": [
-      "native-film-studio"
     ]
   },
   {
@@ -796,6 +796,15 @@
     "identityLinesSha256": "47ff43de423254086bf3775ef9478d4177d58069008c7b691ca04a2683821873",
     "occurrenceCount": 10,
     "path": "apps/desktop/cli/studio-workflow.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 14,
+    "identityLinesSha256": "5b7af76b101f40a1b18d7d4f1d958d88d560affe960ae3cead07c212c62063df",
+    "occurrenceCount": 20,
+    "path": "apps/desktop/cli/verbs.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1295,9 +1304,9 @@
     ]
   },
   {
-    "identityLineCount": 86,
-    "identityLinesSha256": "442bb5418f160daf55b197708679bb1f6f30d32fa94c98d5a562e36b341813d1",
-    "occurrenceCount": 453,
+    "identityLineCount": 87,
+    "identityLinesSha256": "2256e5662f53a1e02b194f007e3bfc3ee53c434a743ed380d2c18ca9fb96843a",
+    "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
       "generated"
@@ -1486,8 +1495,8 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "a1b58e2baaa64392de9e7d9f6bdde7f3bf9c455eea732f096b5989d5db2c9446",
-    "occurrenceCount": 7,
+    "identityLinesSha256": "98de322af7fca9e31f4e74c1631042d59191f1d0aa60df078e992f27c695c13e",
+    "occurrenceCount": 9,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
       "native-film-studio",
@@ -1495,9 +1504,9 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5e07f422b3373abc45312f53afd3fa74e0edee7689056ce93c75ea9f7ccc9c57",
-    "occurrenceCount": 2,
+    "identityLineCount": 3,
+    "identityLinesSha256": "62c5525e814c4d374286f8266a8916b655980d8fb685de35936c660eee1ea57a",
+    "occurrenceCount": 5,
     "path": "apps/web/scripts/site-refinement-fixtures.ts",
     "categories": [
       "native-film-studio"
@@ -1505,7 +1514,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "d608b594a3389de65f9d16c3550517214ef4cef8323b965d7a85a1278dfa87c0",
+    "identityLinesSha256": "fe27c96c327a06db9222b04112d7764c5363f68b1346b555eff7269d6a24ac9e",
     "occurrenceCount": 8,
     "path": "apps/web/site.test.ts",
     "categories": [
@@ -1514,7 +1523,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "1c3fdb083d696c148848d839229fd8bb8902698fbabca971a44ae384658d05b7",
+    "identityLinesSha256": "9a4c3b2f3da76912cb1e54e48dca69a5f5e49419606d097692e03b0a81d7c8d7",
     "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1522,21 +1531,49 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "1a36eee77e6baeb427eb209a4e2823c812157eb0ee4bbe1f3606cacfd9cebc51",
-    "occurrenceCount": 2,
+    "identityLineCount": 8,
+    "identityLinesSha256": "33f403d334f420bbd4d8843ea0fbd0c14068a5b5bcb3684908f2ea992725bd17",
+    "occurrenceCount": 9,
+    "path": "apps/web/src/blog-admissions.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "c6e7b41d61058c9c78e323585cfdd537605311ab022f4afb3d2e79c8e4f9080a",
+    "occurrenceCount": 3,
     "path": "apps/web/src/blog-registry.ts",
+    "categories": [
+      "compat-doc",
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 17,
+    "identityLinesSha256": "22e62aee027667d4539587c09a0f1a546eadb56b968fe2810d2dcacc6e31ee83",
+    "occurrenceCount": 22,
+    "path": "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "c4b77f7410b2da88b30cb06a34488dde0070dc84bcd12da08ee838d1387833f0",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/blog/introducing-slopcamera.md",
     "categories": [
       "compat-doc"
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "5e50e0d6301575ba719e0183c3b67efb4ce6919a452042c0fee46fff1dec9310",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/blog/introducing-slopcamera.md",
+    "identityLineCount": 17,
+    "identityLinesSha256": "73862e5a9859d84c38ae47b3a4563ceced59c0b4fce0d5b855e75e3bcaf96d00",
+    "occurrenceCount": 19,
+    "path": "apps/web/src/blog/make-video-with-claude-code.md",
     "categories": [
-      "compat-doc"
+      "native-film-studio"
     ]
   },
   {
@@ -1553,6 +1590,33 @@
     "identityLinesSha256": "3405e0ff935ea99c06d1fa9e5fee0e9c5d13565d748c2e70465e8eb12df5d6cc",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/extending.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "1ce8fad6651b5d0a917f5685fe1183bb138efb35f52ce8234c64e70241074e4d",
+    "occurrenceCount": 3,
+    "path": "apps/web/src/docs/explanation/remotion-alternatives-for-coding-agents.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "cc94474d205d5ba5c0cdbda8028447bff45ce6516768a733a49e1d1e82baae2e",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/explanation/slopcamera-vs-hyperframes.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "8df26ad1255c6eea13182b6ac5b77cdefca21b835f62b25278c3a15f6236e453",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/docs/explanation/slopcamera-vs-remotion.md",
     "categories": [
       "native-film-studio"
     ]
@@ -1603,9 +1667,9 @@
     ]
   },
   {
-    "identityLineCount": 3,
-    "identityLinesSha256": "710b3c8f9d05638e1ec779d1f874c7ee8d5ba19d55ea64daf23b1d6daebdcedf",
-    "occurrenceCount": 3,
+    "identityLineCount": 1,
+    "identityLinesSha256": "21e9f02c679f0a348d5d1944b752a62919ee00ff6c956e6735aa1e6adb340a41",
+    "occurrenceCount": 1,
     "path": "apps/web/src/docs/index.md",
     "categories": [
       "native-film-studio"
@@ -1613,7 +1677,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "a6bb4532bb6f3b17ea336b957170feaed474ad3e2f6185786cae0bd3e808858f",
+    "identityLinesSha256": "56470703585b167973e090920fb47695a8469980191818e782186ff9ff026d87",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
@@ -1666,6 +1730,15 @@
     ]
   },
   {
+    "identityLineCount": 6,
+    "identityLinesSha256": "4f86a794e339d0ce56559372c251aa0238c8b78bdd8fecf4d7049baddcfba0f0",
+    "occurrenceCount": 6,
+    "path": "apps/web/src/docs/reference/techniques.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "6f61e17ba3e3d098cfed3ce0426f921ad50fbb749bccd8a9d95ff2264ab5c437",
     "occurrenceCount": 1,
@@ -1702,6 +1775,15 @@
     ]
   },
   {
+    "identityLineCount": 3,
+    "identityLinesSha256": "2e8beace1890ab86420e2eac72205cc8764944fb845201247433757d2b07e11c",
+    "occurrenceCount": 3,
+    "path": "apps/web/src/example-gallery.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "866dfa4e771143ec01e6fcf5b94c747b8cf377e40423abaf17fd665ae299280d",
     "occurrenceCount": 1,
@@ -1712,7 +1794,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
+    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
@@ -1739,15 +1821,6 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-6gkjry1c.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1757,8 +1830,17 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
+    "occurrenceCount": 233,
+    "path": "dist/index-k9bjw80z.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "2ea5f4f834343b4d19840c49d964a1234c8432be169cc1e57bf879d65e8e29d5",
+    "identityLinesSha256": "422f093fa27a2d4ac6f9c7ff49a4c0a14e9dec25ef6d701696543e49a17db67a",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1857,7 +1939,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "fb4c333e77916dc876dae2de0ccca0c7b6c218be261d61aba434fa69d6e05956",
+    "identityLinesSha256": "630579faa19f483165029699530aaf65a35c8281886890e414bbf93f97de22bb",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
@@ -1866,7 +1948,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "272552fb9452bf9ee60cd68be60d7f63930b07e8cda93bec626e3ad4a8479bf4",
+    "identityLinesSha256": "904475fbd24f22882464e153a8d6f7487c3613a13b89f5a73981b52a85018b26",
     "occurrenceCount": 8,
     "path": "docs/reference/capabilities.md",
     "categories": [
@@ -1875,7 +1957,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "90d3bd3f19319e2cb6b5571e8cc62ee93205889bcb4a1dfcb674ef6555484dae",
+    "identityLinesSha256": "1895d69200ffdfb9481dd161948650d150e28bc285094792bd59fb286afb6108",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [
@@ -2910,9 +2992,9 @@
     ]
   },
   {
-    "identityLineCount": 16,
-    "identityLinesSha256": "fbb7a63508548aa3a7d49d8de5383947adb655a698799b29a2f7968663874f3b",
-    "occurrenceCount": 16,
+    "identityLineCount": 17,
+    "identityLinesSha256": "ae9b4c1ef72d2b033082eefc4838bcf2d1d0aab8e9761bbe5ff11b09ba9fa0f1",
+    "occurrenceCount": 17,
     "path": "package.json",
     "categories": [
       "native-film-studio"
@@ -2920,7 +3002,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "a7d760cdde1f85cec1cde5fdeafbb2cefd47637f0235c7ebb92d8593171bb149",
+    "identityLinesSha256": "e57b38c97c0f0e3bdd5047e1e816b3d9c139220440cdd5d5234553122d373ac8",
     "occurrenceCount": 7,
     "path": "README.md",
     "categories": [

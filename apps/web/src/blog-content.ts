@@ -26,9 +26,9 @@ import { resolveDocsContent } from "./docs-registry"
 assertArticleAdmissions(blogAdmissions)
 
 export const blogSite: SearchSite = {
-  name: "Slopcamera",
-  title: "Slopcamera",
-  description: "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+  name: "SlopCamera",
+  title: "SlopCamera",
+  description: "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   origin: "https://slopcamera.com",
   language: "en",
 }
@@ -148,6 +148,8 @@ export function blogMarkupWithClassTokens(html: string, kind: "article" | "index
     mapped = replaceExactly(mapped, `<li><a href=`, `<li class="{{DOCS_LIST_ITEM_CLASS}}"><a class="{{DOCS_LINK_CLASS}}" href=`, sourceCount)
     mapped = replaceExactly(mapped, `<span>Checked `, `<span class="{{BLOG_SOURCE_CHECKED_CLASS}}">Checked `, sourceCount)
     mapped = replaceExactly(mapped, `<h2 id="article-related-products">`, `<h2 class="{{DOCS_H3_CLASS}}" id="article-related-products">`, 1)
+    // Each related product's role sits on its own muted line under the name.
+    mapped = replaceExactly(mapped, `</strong><span>`, `</strong><span class="{{BLOG_SOURCE_CHECKED_CLASS}}">`, relatedFor("slopcamera").length)
     mapped = mapped.replaceAll(`<a href=`, `<a class="{{BLOG_ENTRY_LINK_CLASS}}" href=`)
   }
   const unclassed = /<(?:h1|h2|h3|p|ol|ul|li|a|pre|code|blockquote|section|header|footer|article|div)(?=[\s>])(?![^>]*\sclass=")[^>]*>/u.exec(mapped)
@@ -312,7 +314,7 @@ function absoluteLinks(html: string): string {
 /** Atom feed of indexable posts with their full bodies. */
 export function blogAtomFeed(bodies: Readonly<Record<string, string>>): string {
   return createAtomFeed(blogSite, {
-    title: "Slopcamera blog",
+    title: "SlopCamera blog",
     description: blogIndex.description,
     homePath: "/blog",
     path: blogFeedPath,

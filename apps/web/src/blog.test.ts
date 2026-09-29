@@ -15,7 +15,8 @@ import {
 import {
   blogCanonicalUrl, blogMarkdownPath, blogPostPath, blogPosts, blogTargetForRequestPath, indexableBlogPosts,
 } from "./blog-registry"
-import { docPages, docsPageForRequestPath } from "./docs-registry"
+import { docPages, docsPageForRequestPath, resolveDocsContent } from "./docs-registry"
+import { renderDocsMarkdown } from "./docs-markdown"
 import { negotiateSiteRequest } from "./negotiate-request"
 import { renderSitemapXml } from "../scripts/build"
 
@@ -26,7 +27,7 @@ const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const bodies = Object.fromEntries(await Promise.all(blogPosts.map(async post =>
   [post.slug, await readFile(join(appDirectory, "src/blog", `${post.slug}.md`), "utf8")] as const)))
 const quarantined = blogPosts.filter(post => post.lifecycle === "quarantined")
-const reviewer = "Claude Opus 5.5 (claude-opus-5-5) editorial review"
+const reviewer = "Claude Opus 5.5"
 
 describe("blog admissions", () => {
   test("design-kit validates every admission record", () => {
@@ -37,7 +38,10 @@ describe("blog admissions", () => {
   test("records a disclosed AI review, never a human one", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
-      const reviewedOn = record.href === "/blog/introducing-slopcamera" ? "2026-09-27" : "2026-09-26"
+      const reviewedOn = ({
+        "/blog/introducing-slopcamera": "2026-09-27",
+        "/blog/how-slopcamera-uses-algal": "2026-09-26",
+      } as Readonly<Partial<Record<string, typeof record.review.reviewedOn>>>)[record.href] ?? "2026-09-28"
       expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
       expect(record.humanReview).toBeNull()
       expect(record.review.reviewer).not.toMatch(/human/iu)
@@ -47,12 +51,22 @@ describe("blog admissions", () => {
     }
   })
 
-  test("admits the introduction and quarantines the ALGAL post", () => {
+  test("admits the reviewed posts and quarantines the ALGAL post", () => {
     expect(blogPosts.map(post => [post.slug, post.lifecycle])).toEqual([
-      ["how-slopcamera-uses-algal", "quarantined"],
+      ["one-shot-render-vs-installed-techniques", "indexable"],
+      ["make-video-with-claude-code", "indexable"],
+      ["editable-diagrams-with-coding-agents", "indexable"],
+      ["headless-blender-manim-cadquery-for-agents", "indexable"],
       ["introducing-slopcamera", "indexable"],
+      ["how-slopcamera-uses-algal", "quarantined"],
     ])
-    expect(indexableBlogPosts.map(post => post.slug)).toEqual(["introducing-slopcamera"])
+    expect(indexableBlogPosts.map(post => post.slug)).toEqual([
+      "one-shot-render-vs-installed-techniques",
+      "make-video-with-claude-code",
+      "editable-diagrams-with-coding-agents",
+      "headless-blender-manim-cadquery-for-agents",
+      "introducing-slopcamera",
+    ])
   })
 })
 
@@ -70,6 +84,12 @@ describe("blog pages", () => {
       expect(markdown).toContain(sentence)
       expect(markdown).toContain("## Sources")
     }
+  })
+
+  test("related products put each role on its own line under the name", () => {
+    const main = blogPostSlots(blogPosts[0]!, bodies[blogPosts[0]!.slug]!).main
+    expect(main).toContain('</strong><span class="{{BLOG_SOURCE_CHECKED_CLASS}}">')
+    expect(main).not.toContain("</strong><span>")
   })
 
   test("quarantined posts ship noindex and indexable posts ship index", () => {
@@ -118,12 +138,20 @@ describe("blog links", () => {
     "/docs/",
   ])
 
-  test("internal links resolve to published routes and portfolio links use registry addresses", () => {
+  test("internal links resolve to published routes and portfolio links use registry addresses", async () => {
     for (const post of blogPosts) {
       const html = renderBlogBodyHtml(bodies[post.slug]!)
       for (const [, href] of html.matchAll(/ href="([^"]+)"/gu)) {
         if (href!.startsWith("/")) {
-          expect(manifestRoutes.has(href!) || docsPageForRequestPath(href!) !== null).toBe(true)
+          const [path, fragment] = href!.split("#") as [string, string | undefined]
+          const docsPage = docsPageForRequestPath(path)
+          expect(manifestRoutes.has(path) || docsPage !== null).toBe(true)
+          if (fragment !== undefined) {
+            // A fragment must name a heading the target docs page renders.
+            expect(docsPage === null || docsPage.slug === "").toBe(false)
+            const target = renderDocsMarkdown(resolveDocsContent(await readFile(join(appDirectory, "src/docs", `${docsPage!.slug}.md`), "utf8")))
+            expect(target).toContain(`id="${fragment}"`)
+          }
         } else {
           expect(href).toMatch(/^https:\/\//u)
         }
@@ -159,8 +187,16 @@ describe("blog discovery", () => {
       }
     }
     expect(blogSitemapPaths().map(entry => entry.path)).toEqual(["/blog", ...indexableBlogPosts.map(blogPostPath)])
-    for (const entry of blogSitemapPaths()) expect(entry.lastModified).toBe("2026-09-24T00:00:00.000Z")
+    expect(blogSitemapPaths().map(entry => [entry.path, entry.lastModified])).toEqual([
+      ["/blog", "2026-09-28T00:00:00.000Z"],
+      ["/blog/one-shot-render-vs-installed-techniques", "2026-09-28T00:00:00.000Z"],
+      ["/blog/make-video-with-claude-code", "2026-09-28T00:00:00.000Z"],
+      ["/blog/editable-diagrams-with-coding-agents", "2026-09-28T00:00:00.000Z"],
+      ["/blog/headless-blender-manim-cadquery-for-agents", "2026-09-28T00:00:00.000Z"],
+      ["/blog/introducing-slopcamera", "2026-09-24T00:00:00.000Z"],
+    ])
     expect(sitemap).toContain("<loc>https://slopcamera.com/blog/introducing-slopcamera</loc>\n    <lastmod>2026-09-24T00:00:00.000Z</lastmod>")
+    expect(sitemap).toContain("<loc>https://slopcamera.com/blog</loc>\n    <lastmod>2026-09-28T00:00:00.000Z</lastmod>")
   })
 
   test("vercel noindex headers cover exactly the quarantined posts", async () => {

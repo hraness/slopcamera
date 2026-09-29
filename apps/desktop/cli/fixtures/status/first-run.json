@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "schema": "slopcamera.status/1",
+  "generatedAt": "2026-09-28T12:00:00.000Z",
+  "data": {
+    "product": "slopcamera",
+    "version": "9.9.9",
+    "attention": false,
+    "activity": {
+      "state": "idle",
+      "headline": "Ready",
+      "detail": "Nothing rendered yet"
+    },
+    "credits": null,
+    "outputs": {
+      "root": "/o",
+      "total": 0,
+      "latest": []
+    },
+    "legacyLoginItem": {
+      "state": "none"
+    }
+  }
+}

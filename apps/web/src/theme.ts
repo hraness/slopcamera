@@ -2,6 +2,7 @@ import { attachFoil, installAppearanceMenus } from "@hraness/design-kit/browser"
 
 import { installCopyCommands } from "./copy-command"
 import { installExamplePlayers } from "./example-player"
+import { installPlatformInstalls } from "./platform-install"
 
 // The static builder resolves these two colors from the shared palette. Keep
 // the complete palette table out of the browser's appearance controller.
@@ -10,6 +11,7 @@ declare const __SLOPCAMERA_LIGHT_THEME_COLOR__: string
 
 function installPageControls(): void {
   installCopyCommands()
+  installPlatformInstalls()
   installExamplePlayers()
   attachFoil(document.documentElement)
 }

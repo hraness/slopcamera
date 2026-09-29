@@ -12,7 +12,10 @@ next-env.d.ts
 .DS_Store
 .vercel/
 apps/desktop/analysis/dist/
-/desktop/target/
 .vercel
 .env*
 .wrangler/
+
+# Local builds of the launch-film template
+examples/html/launch-film/out/
+examples/html/launch-film/node_modules/

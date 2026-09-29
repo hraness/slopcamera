@@ -1,4 +1,4 @@
-Slopcamera is a media studio for coding agents. It keeps editable source files, renders local or generated media from them, and assembles the results into projects on your machine. These pages cover the CLI, SDK, Agent Skill, and the optional macOS menu-bar companion, which installs separately.
+Slopcamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK and Agent Skill.
 
 Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop Slopcamera:
 
@@ -59,10 +59,10 @@ Then give your coding agent the matching guidance:
 
 ## Understand the design
 
-- [Slopcamera use cases](/docs/explanation/use-cases): the jobs the studio covers, the surface each uses, and where it is not the right tool.
+- [Slopcamera use cases](/docs/explanation/use-cases): the jobs Slopcamera covers, the interface each uses, and where it is not the right tool.
 - [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
 - [How Slopcamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
-- [Why Slopcamera](/docs/explanation/why-slopcamera): what a retained-source local studio gives an agent that a loose toolchain does not.
+- [Why Slopcamera](/docs/explanation/why-slopcamera): why the agent writes a short source file and reuses installed techniques instead of a loose toolchain.
 - [Extend Slopcamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
 - [Choose an HTML authoring surface](/docs/explanation/html-authoring): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs.
 

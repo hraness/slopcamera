@@ -84,7 +84,7 @@ export function refinementCaseFailure(request: RefinementRequest, scenario: stri
 const near = (actual: string | number, expected: number, label: string, tolerance = .5) =>
   assert.ok(Math.abs(Number.parseFloat(String(actual)) - expected) <= tolerance, `${label}: ${actual} != ${expected}`)
 
-/** The only DOM substitutions are six literal reviewed islands. Their complete
+/** The only DOM substitutions are nine literal reviewed islands. Their complete
  * current serialized HTML is first checked against a separately stored fixture.
  * The remaining body, including every compiled shell class, stays byte-exact. */
 export async function refinementDom(page: Page, current: boolean, scenario: ShellCase): Promise<string> {
@@ -266,7 +266,7 @@ export function projectRefinementHeroPosition(item:ShellElement,currentCopyTop:n
  * Everything else keeps exact geometry relative to its unchanged section. */
 export function compareRefinementEvidence(actual:ShellEvidence,baseline:ShellEvidence,scenario:ShellCase,paint?:RefinementPaint,hero?:{current:RefinementHero|undefined;baseline:RefinementHero|undefined}):void {
   if(scenario.route==="/404.html"){compareShellEvidence(actual,baseline,scenario.name);return}
-  assert.ok(paint);assert.ok(hero?.current!==undefined&&hero.baseline!==undefined);compareRefinementHeroCopies(hero.current,hero.baseline);const currentCopyTop=hero.current.copyTop,baselineCopyTop=hero.baseline.copyTop;assert.equal(actual.dom,baseline.dom,"Exact DOM outside six positively admitted islands")
+  assert.ok(paint);assert.ok(hero?.current!==undefined&&hero.baseline!==undefined);compareRefinementHeroCopies(hero.current,hero.baseline);const currentCopyTop=hero.current.copyTop,baselineCopyTop=hero.baseline.copyTop;assert.equal(actual.dom,baseline.dom,"Exact DOM outside nine positively admitted islands")
   assert.equal(actual.direction,baseline.direction);assert.equal(actual.recovery,baseline.recovery)
   assertMarketingFlow(actual.elements,baseline.elements)
   const landmark = (items: readonly ShellElement[], key: string) => { const item=items.find(item=>item.key===`${key}[0]`); assert.ok(item); return item }

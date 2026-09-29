@@ -13,7 +13,7 @@ import { parseWorkflowExamples, workflowExampleAssets, workflowExamples, type Wo
 function fixture(): WorkflowExample {
   return {
     id: "diagram-example", title: "An editable flow", description: "Three sources become one project.",
-    family: "diagram", techniques: ["diagram.export"], guideSlug: "tutorials/first-diagram", guideAnchor: "", featured: false,
+    family: "diagram", techniques: ["diagram.stack"], guideSlug: "tutorials/first-diagram", guideAnchor: "", featured: false,
     requirements: "Bun and Slopcamera",
     source: { engineRevision: "a".repeat(40), files: [{ path: "examples/showcase/diagram/flow.json", sha256: "b".repeat(64) }],
       command: "slopcamera diagram render flow.json", toolVersion: "3.2.8", runtimes: ["Bun 1.3.14"], license: "MIT" },

@@ -1,78 +1,85 @@
-# Slopcamera
+# SlopCamera
 
-[![Slopcamera: Images, diagrams, animation, 3D and video your coding agent can keep revising.](https://slopcamera.com/og.png)](https://slopcamera.com)
+[![A brass optical instrument rendered in Blender from a SlopCamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
 
-**Slopcamera is a media studio for coding agents. Codex, Claude Code, and other
-agents make images, diagrams, animation, 3D scenes, and edited video from source
-files they can keep revising.**
+**SlopCamera is a media studio for coding agents.** SlopCamera lets your coding
+agent make images, diagrams, animation, 3D scenes, and video from source files
+it can keep revising. It works with Codex, Claude Code, and other agents.
 
-Describe the result you want to Codex, Claude Code, or another coding agent.
-Slopcamera gives the agent a Bun CLI, a TypeScript SDK, and an Agent Skill matched
-to the CLI version, so it can inspect sources, set up cameras, edit a composition,
-and render. `slopcamera mcp` runs an MCP server with a smaller, fixed set of diagram,
-image, and scene tools. Projects stay in local files, and there is no Slopcamera
-account. Generation uses your own Vercel AI Gateway account or, for prompt-only
-images, prepaid Hraness Credits.
+A frontier model such as Claude Opus can write a video or a graphic from
+scratch in one pass. SlopCamera gives the agent packaged, tested techniques to
+reuse instead, for diagrams, motion graphics, 3D scenes, native Blender,
+CadQuery, and Manim films, and footage edits. The agent writes a short source
+file, and the SlopCamera CLI renders it, checks it, and writes the variants each
+technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a
+video. The source stays beside the output, so a revision is an edit to that
+file and a new render.
 
-[Install](#install-slopcamera) · [Make a first diagram](#make-your-first-diagram) · [Capabilities](#what-slopcamera-does) · [Documentation](https://slopcamera.com/docs) · [slopcamera.com](https://slopcamera.com)
+[Install](#install-slopcamera) · [First diagram](#make-your-first-diagram) · [Techniques](https://slopcamera.com/docs/reference/techniques) · [Docs](https://slopcamera.com/docs) · [Compare](#compared-with-other-tools) · [slopcamera.com](https://slopcamera.com)
 
-## Made with Slopcamera
+## Why SlopCamera
 
-[![An original brass optical instrument rendered in Blender](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
+- **The agent writes the part that is specific to your request.** A diagram
+  is a JSON file of boxes and arrows, a title animation is an HTML scaffold
+  for one of seven profiles, and a 3D shot is scene JSON with a named camera.
+  The renderer, frame timing, encoding, and export formats are already
+  installed. No benchmark of token use has been published yet.
+- **Revisions change the source, not the whole result.** Change one label,
+  camera, or cut and render again. Every export comes from the same source, so
+  light and dark versions, or 16:9 and 9:16 cuts, stay in step.
+- **Checks run before the agent reports back.** A strict diagram checker,
+  scene audits, render plans, and `doctor` catch problems the agent can
+  fix before you look. They check structure, not taste; you still review the
+  render.
+- **The techniques match the installed CLI.** The Bun CLI, a TypeScript SDK,
+  and an Agent Skill ship at the same version. The skill sends the agent to
+  the guide for its current job instead of loading every guide at once.
+- **Work stays on your machine.** Projects are local files and there is no
+  SlopCamera account. Generation is optional: it uses your own Vercel AI
+  Gateway access or, for prompt-only images, prepaid Hraness Credits.
 
-Watch the [six-second product film](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example),
-then change its [geometry, materials and camera](examples/showcase/native/product).
-For 2D motion, try the [editable editorial animation](https://slopcamera.com/docs/tutorials/first-animation).
-The [portrait geometry lesson](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example)
-adds mathematical typesetting, a presenter and authored captions. Each guide pairs
-the rendered output with source, runtime requirements and reproduction steps.
+## Install SlopCamera
 
-## Why Slopcamera
-
-- **Keep creative work editable.** Native scenes, portable scenes, diagrams,
-  and video projects retain their own sources and settings. Rendered frames
-  and portable assets are derivatives; a video of a character does not retain
-  its rig.
-- **Give agents explicit operations.** Inspect a project, name a camera, plan
-  a render, review a candidate, and select a result. The CLI returns structured
-  results and keeps operation receipts that identify inputs and outputs.
-- **Revise without replacing the originals.** Normal media edits record cuts,
-  timing, framing, captions, and effects as project decisions. Preview and final
-  renders use the same timeline and composition.
-- **Choose where computation happens.** Local rendering and editing use your
-  machine. Optional model-backed work uses your Vercel AI Gateway access and
-  uploads named local media only after you acknowledge it. Prompt-only images can
-  instead run on the hosted API with prepaid Hraness Credits. Native Python
-  authoring requires separate trust because it runs as your current user.
-
-## Compared with other tools
-
-- [Remotion](https://www.remotion.dev/) renders React components to video and can
-  render on AWS Lambda. It is source-available and needs a paid license for
-  companies of four or more people.
-- [HyperFrames](https://github.com/heygen-com/hyperframes) renders HTML to MP4
-  under Apache 2.0, with optional HeyGen-hosted rendering.
-- [MCP for Blender](https://github.com/ahujasid/mcp-for-blender), formerly Blender
-  MCP, lets an agent drive a running Blender interactively.
-
-Slopcamera renders HTML motion too, and adds diagrams, Three.js scenes, headless
-Blender, CadQuery, and Manim renders, and edits of your own footage in one local
-project. It has no cloud rendering and a much smaller community. See
-[the full comparison](https://slopcamera.com/docs/explanation/why-slopcamera#compared-with-other-tools).
-
-## Install Slopcamera
-
-Install [Bun 1.3.14 or newer](https://bun.sh), then install the verified
-[Slopcamera v3.6.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.6.0)
-from its canonical archive:
+Install [Bun 1.3.14 or newer](https://bun.sh), then install the
+[SlopCamera v3.8.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.8.0)
+and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.6.0/hraness-slopcamera-3.6.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.8.0/hraness-slopcamera-3.8.0.tgz
 slopcamera skill install --target agents
 ```
 
-Contributors can build from source instead. Install Git as well, then use a new
-checkout:
+The `agents` target works for agents that read `~/.agents/skills`. Use
+`--target claude` for Claude Code, or omit the target for Codex. Add `--scope project`
+inside a repository for a project-only install. Start a new
+agent session so it loads the skill, then ask for a result:
+
+> Create a two-box diagram showing ingestion flowing into review, render it,
+> and show me the dark PNG.
+
+Setup guides: [Claude Code](https://slopcamera.com/docs/tutorials/claude-code) ·
+[Codex](https://slopcamera.com/docs/tutorials/codex) ·
+[Other agents](https://slopcamera.com/docs/tutorials/other-agents) ·
+[MCP clients](https://slopcamera.com/docs/tutorials/mcp). Native engines such as
+Blender install separately; the
+[capability reference](docs/reference/capabilities.md) lists what each
+technique needs.
+
+From 3.8.0, SlopCamera is a CLI with no menu-bar app or background process.
+`slopcamera status` shows what is running, how the last job ended, your last
+known credits balance, the newest outputs and whether the retired menu-bar
+companion still opens at login. `slopcamera tui` keeps
+that screen open and refreshes it; `slopcamera tui --snapshot` prints it once
+and `--json` returns the data. `slopcamera outputs list|open|reveal` lists the
+newest outputs or opens one on this Mac, `slopcamera commands --json` lists
+every command with what it may change, and `slopcamera legacy retire` stops
+the retired menu-bar companion opening at login by moving its LaunchAgent aside; it
+deletes nothing, and `slopcamera doctor` prints the command that restores it.
+
+<details>
+<summary>Build from source</summary>
+
+Install Git as well, then use a new checkout:
 
 ```sh
 git clone --branch main https://github.com/hraness/slopcamera.git slopcamera-source
@@ -83,8 +90,8 @@ bun run build:sdk
 bun run build:desktop:cli
 ```
 
-Keep the checkout and recorded commit. In this shell, define the command against
-that exact build:
+Keep the checkout and recorded commit. In this shell, define the command
+against that exact build:
 
 ```sh
 export SLOPCAMERA_SOURCE_ROOT="$PWD"
@@ -94,40 +101,17 @@ slopcamera doctor --json
 slopcamera skill install --target agents
 ```
 
-Use `--target claude` for Claude Code or omit the target for Codex. Add
-`--scope project` inside the target repository for a project-only skill install.
-The skill comes from the same checkout as the CLI. Start a new agent session
-after installation. In a later shell, restore the checkout path and function.
-
-Native engines install separately. The [source-install guide](docs/how-to/use-current-source.md)
-explains workspace placement and durable-run identity; the
-[capability reference](docs/reference/capabilities.md) names runtime requirements.
-
-Slopcamera is a CLI. On macOS, an optional unbundled menu-bar companion shows
-what Slopcamera is rendering, how the last job ended, your last known credits
-balance and the newest files in the agent outputs directory; `slopcamera menubar` runs a prebuilt
-companion directly and does not install or launch an application bundle. The
-companion is a thin product binary over the shared
-[desktop-foundation](https://github.com/hraness/desktop-foundation) crate, pinned
-by immutable tag. Build it explicitly with
-`cargo build --release --manifest-path desktop/menubar/Cargo.toml`
-when working from source.
-
-<details>
-<summary>Historical Atet release evidence</summary>
-
-[Atet v3.2.3](https://github.com/hraness/atet/releases/tag/v3.2.3) and its
-[original archive](https://github.com/hraness/atet/releases/download/v3.2.3/hraness-atet-3.2.3.tgz)
-remain historical publication evidence. Those immutable bytes install Atet,
-not Slopcamera. Renaming the repository does not create a renamed package or
-change an existing release.
+The skill comes from the same checkout as the CLI. In a later shell, restore
+the checkout path and function. The
+[source-install guide](docs/how-to/use-current-source.md) covers workspace
+placement and resuming long runs.
 
 </details>
 
 ## Make your first diagram
 
-After installing Slopcamera, this local task needs no model account. In a new directory,
-create the included diagram, check it, and render it:
+This local task needs no model account. In a new directory, create the
+included diagram, check it, and render it:
 
 ```sh
 mkdir slopcamera-first
@@ -139,243 +123,245 @@ slopcamera diagram render first.diagram.json
 
 You now have `example-flow.tldr`, `example-flow.light.svg`,
 `example-flow.dark.svg`, `example-flow.light.png`, and
-`example-flow.dark.png`. Open a PNG to inspect the result. The JSON remains
-editable, and the `.tldr` file is editable tldraw interchange. Rendering again
-replaces those five derived files.
+`example-flow.dark.png`. The JSON stays editable, and the `.tldr` file opens in
+tldraw. Rendering again replaces those five files.
 
-Follow [Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) to change a label and
-see the result. To animate type and SVG, [make your first animation](https://slopcamera.com/docs/tutorials/first-animation). For a moving 3D subject, use [Directed scenes](docs/spatial-scenes.md).
-For detailed native 3D, follow
-[Your first native film](docs/tutorials/first-native-film.md). To generate editable
-architecture from dimensions, [build a parametric design](https://slopcamera.com/docs/how-to/parametric-design).
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="apps/web/media/source-to-film-dark-png-b8db55ec6e42.png">
+  <img alt="Diagram export, rendered scene, and footage point into Project, which points to Preview and Delivery." src="apps/web/media/source-to-film-light-png-c3c24c460490.png">
+</picture>
 
-## What Slopcamera does
+The diagram above was rendered from one
+[JSON file](examples/showcase/diagram/source-to-film.diagram.json). Each box in
+it is a short object the agent writes:
 
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes,
-and video from source files it can keep revising.
-Direct cel animation, pixel art, math explainers, and period film looks with the
-[style direction guide](docs/how-to/direct-visual-styles.md).
-
-### Author scenes and direct cameras
-
-Place geometry, images, video, diagrams, and text in a portable scene. Inspect
-stable part IDs, make typed edits, select a named camera, and render frames,
-contact sheets, or video. The Three.js profile includes calibrated cameras,
-explicit animation, supported GLB geometry, and an explicitly selected hardware
-GPU path. Spark admits saved splat worlds for local camera direction.
-
-> Create a short product reveal. Keep the model editable, orbit the camera,
-> mount the product diagram on a screen in the scene, and show me contact frames
-> before rendering the video.
-
-The portable GLB profiles have defined geometry and material subsets. The
-rigged/morph profile in v3.3.1 admits bounded skins and morph targets. Saved splats
-capture appearance; they do not establish collision geometry or editable native
-meshes. See [Directed scenes](docs/spatial-scenes.md).
-
-Slopcamera v3.3.1 introduced the cinematic planning loop: a `slopcamera.spatial-direction`
-document describes beats, actions, camera coverage, and look intents, compiles
-into proposed performance/camera/cinema/material-lighting/shot documents, and
-fans out into bounded galleries per axis. Declared effects bind into renders,
-and a temporal audit samples evidence at explicit times — all deterministic,
-all reviewable before anything is selected.
-
-```sh
-slopcamera scene direction check direction.json --scene world.json --json
-slopcamera scene direction gallery direction.json --scene world.json --axis camera --output gallery.json --json
-slopcamera workflows plan cinematic-world --input pack-input.json --json
+```json
+{
+  "id": "diagram",
+  "type": "rect",
+  "x": 100,
+  "y": 140,
+  "width": 320,
+  "height": 140,
+  "radius": 24,
+  "label": "Diagram export",
+  "labelFontSize": 36,
+  "labelWeight": 500,
+  "tone": "blue"
+}
 ```
 
-The `cinematic-world` workflow consumes one inert recipe pack — a bounded,
-content-addressed JSON document an agent can author — and stops before
-selection. Registration and selection stay explicit `scene project` operations.
-See [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct-cinematic-worlds.md) and the
-[extension architecture](docs/extension-architecture.md).
+To revise it, the agent changed one label, and the file name for the new
+outputs, in a
+[copy of that file](examples/showcase/diagram/source-to-film-revised.diagram.json):
+
+```diff
+-  "name": "source-to-film",
++  "name": "source-to-film-revised",
+...
+-      "label": "Delivery",
++      "label": "Social delivery",
+```
+
+```sh
+slopcamera diagram render source-to-film-revised.diagram.json
+```
+
+That two-line change produced a new `.tldr` file, both SVGs, and both PNGs,
+including the
+[revised light PNG](apps/web/media/source-to-film-revised-light-png-9ad9767c2bdf.png).
+[Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) walks
+through the same edit.
+
+## What SlopCamera does
+
+Each technique pairs a short source file the agent writes with commands that
+render and check it. The
+[techniques reference](https://slopcamera.com/docs/reference/techniques) lists
+them all with their requirements.
+
+| Technique | The agent writes | SlopCamera renders | Example |
+| --- | --- | --- | --- |
+| Diagrams | Diagram JSON | `.tldr`, light and dark SVG and PNG, after a strict check | [Pipeline](https://slopcamera.com/docs/tutorials/first-diagram#stack-layout) |
+| Vector tracing | A path to a raster image | SVG traced locally with VTracer (macOS and Linux) | [Color and duotone](https://slopcamera.com/docs/how-to/vectorize-images#inspect-a-reproducible-example) |
+| Motion graphics | An HTML scene in one of seven profiles: plain, Motion, p5, Two, Paper Shaders, Three.js, vgpu (WGSL) | H.264 MP4 with optional local audio | [Kinetic type](https://slopcamera.com/docs/how-to/render-motion-graphics#animate-type-with-motion) |
+| Music-timed motion | An HTML scene, a local track, and its tempo in BPM | Motion timed to the declared tempo; beats are not detected from the audio | [Island Pulse](https://slopcamera.com/docs/how-to/music-video#inspect-the-island-example) |
+| 3D scenes | Scene JSON with parts, media, and named cameras | Stills, contact sheets, and video, with orbit, dolly, crane, and rail moves | [Camera orbit](https://slopcamera.com/docs/how-to/direct-scenes#orbit-around-live-media) |
+| Parametric design | Named dimensions and constraints | Geometry and a scene you can re-render at new sizes | [Pavilion](https://slopcamera.com/docs/how-to/parametric-design#crescent-pavilion) |
+| Native films | A Blender, CadQuery, or Manim program from a starter | Frames and video from your installed engines | [Product film](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example) |
+| Explainer video | A Manim scene, captions, and a presenter | A lesson video with typeset math | [Geometry lesson](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example) |
+| Footage edits | Cuts, captions, reframes, and color as project decisions | 16:9, 9:16, 1:1, and 4:5 exports from one edit | [Four formats](https://slopcamera.com/docs/how-to/edit-video#landscape-delivery) |
+
+Model-backed generation of images, video, and speech is available through your
+own provider access, and cinematic effects, particles, and character
+performance can be planned from source. The gallery has no rendered examples
+of these yet.
 
 ### Film native worlds and educational animation
 
-Slopcamera can direct Blender for detailed sets, materials,
-lighting, skinned characters, cloth and liquid caches; CadQuery for parametric
-solids and STEP; and Manim Community for mathematical animation. Seven editable
-starters include a product, character, shaded street, cloth, liquid, CAD bracket,
-and educational presenter.
+SlopCamera can direct Blender for sets, materials, lighting, skinned
+characters, cloth, and liquid caches; CadQuery for parametric solids and STEP;
+and Manim Community for mathematical animation. Seven editable starters
+include a product, character, shaded street, cloth, liquid, CAD bracket, and
+educational presenter. Watch the
+[six-second product film](https://slopcamera.com/docs/tutorials/first-native-film),
+then change its [geometry, materials, and camera](examples/showcase/native/product).
+For 2D motion, try the
+[editable editorial animation](https://slopcamera.com/docs/tutorials/first-animation).
+The [portrait geometry lesson](https://slopcamera.com/docs/how-to/educational-video)
+adds mathematical typesetting, a presenter, and captions.
 
-> Build a shaded street with an original presenter. Explain the idea with an
-> animated diagram mounted in the world, then pull the camera back into the
-> city. Keep the native scenes and diagram sources for later edits.
-
-Native source and exact job settings remain retained. Verified frames can become
-an ordinary project clip. `slopcamera scene camera-track` samples an explicit
-camera clock for reuse. Supported GLB derivatives and calibrated cameras can
-cross between native and portable scenes; rigs, solvers, and procedural materials
-remain native. Blender and Python environments are installed separately, and
+Native source runs as the current user. Blender and Python environments install
+separately, and native
 source execution requires explicit current-user trust. See [Native film studio](docs/studio.md)
-and [Make a math explainer video with Manim](docs/how-to/educational-video.md).
+for the starters and engine requirements.
 
-### Build diagrams and motion graphics
+### Generate media
 
-Create editable diagrams with tldraw, SVG, and PNG outputs, or turn raster artwork
-into SVG locally with VTracer. [Compare a color trace and duotone](https://slopcamera.com/docs/how-to/vectorize-images)
-from the same original raster. Animate graphic layers with HTML, SVG, Motion,
-p5, Two, Paper Shaders, or Three.js. Outputs can stand alone or join a video
-project. The optional vgpu example renders programmable WebGPU passes into
-retained raster frames for use on a world-space screen.
-
-[Render motion graphics from HTML](https://slopcamera.com/docs/how-to/render-motion-graphics)
-connects original examples across all seven profiles to editable source and exact
-render requests. Try the [editorial title](examples/showcase/html/editorial.json),
-[kinetic typography](examples/showcase/html/kinetic-title.json), or
-[Three.js island with original music](examples/showcase/html/island-pulse.json).
-These source examples live in the current repository; `html render` ships in v3.2.8.
-
-Use `slopcamera html catalog` to inspect the admitted local creative tools. The
-[creative toolkit reference](docs/html-overlay-creative-toolkit.md) distinguishes
-available profiles from upstream possibilities. vgpu does not enable shared GPU
-textures or a Three WebGPU renderer inside the current WebGL2/Spark profile.
-
-### Generate and direct media
-
-Discover image, video, speech, and transcription models through your own Vercel
-AI Gateway access. Set `AI_GATEWAY_API_KEY` in the local process environment;
-the Vercel CLI is optional. Generate images from text and references, add a voiceover,
-transcribe sound, or create video shots using the selected model's supported
-inputs. Availability and pricing come from the live catalog.
-
-Without a Gateway credential, prepaid Hraness Credits run prompt-only image
-generation through the hosted API: `slopcamera credits topup` prints a hosted
-checkout, `slopcamera credits wait` installs the returned device token, and
-`slopcamera ai image generate --hosted` bills that wallet instead of your own
-Gateway key. A stored token also routes `ai image generate` to the hosted API
-automatically when no Gateway credential is configured.
-
-The released CLI also provides `direct` shot recipes: retain a film
-budget across attempts, review each take before accepting it, and use an accepted
-clip's last decoded frame as the next shot's reference. Changed predecessors
-invalidate affected continuations while earlier paid results remain retained.
-Model continuity is reviewed, not guaranteed. Budget estimates are not a provider
-billing cap.
-
-See [Generate media](docs/how-to/generate-media.md), [Direct short generated clips](docs/directing-video.md),
-and [Gateway configuration](docs/vercel.md). Generation uses caller-owned access;
-uploading local references requires the matching explicit acknowledgement.
+Discover image, video, speech, and transcription models through your own
+Vercel AI Gateway access, with `AI_GATEWAY_API_KEY` set in the local process
+environment. Generate images from text and references, add a voiceover,
+transcribe sound, or create short video shots. Availability and pricing come
+from the live model catalog. Without a Gateway key, prepaid Hraness Credits
+run prompt-only image generation through the hosted API
+(`slopcamera ai image generate --hosted`). See
+[Generate media](docs/how-to/generate-media.md) and
+[Direct short generated clips](docs/directing-video.md).
 
 ### Edit footage and deliver finished videos
 
 Import existing footage or recording bundles. Remove pauses and filler words,
 align sound, reframe speakers, zoom into screen actions, and add captions,
-graphics, color, and audio treatment. Preview candidates before selecting a
-result, then export clean and captioned versions in 16:9, 9:16, 1:1, and 4:5
-from the same edit.
+graphics, color, and audio treatment. Preview a candidate, then export clean
+and captioned versions in each format from the same edit.
 
-> Edit my product demo: cut the pauses, zoom into each important click, keep the
-> speaker framed, add captions and `logo.svg`, and show a preview before export.
+> Edit my product demo: cut the pauses, zoom into each important click, keep
+> the speaker framed, add captions and `logo.svg`, and show a preview before
+> export.
 
-The released and current CLIs edit existing recording bundles; they do not
-capture new recordings. Bundles can carry clicks, cursor movement, key activity,
-and focused-input information. Automatic screen-action zooms need this metadata.
+SlopCamera edits recordings you already have; it does not record the screen,
+camera, or microphone.
 Standalone media imports need an existing project; `html render`, `studio assemble`,
-or `direct assemble` can create one. Read [`PRIVACY.md`](PRIVACY.md) before editing
-sensitive material.
-
-Start with [Edit a video](docs/how-to/edit-video.md) or inspect a reusable recipe:
+or `direct assemble` can create one. Read [`PRIVACY.md`](PRIVACY.md) before
+editing sensitive material. Eight built-in workflows package common jobs such as
+social cuts and talking-head cleanup:
 
 ```sh
 slopcamera workflows list --json
 slopcamera workflows show social-variants --json
 ```
 
-## How Slopcamera works
+Start with [Edit a video](docs/how-to/edit-video.md) or
+[Run workflows](docs/how-to/run-workflows.md).
 
-Keep the source that owns each creative decision. A native scene owns a rig or
-simulation; a portable scene owns supported geometry, cameras, and media surfaces;
-a diagram owns its objects and labels; a video project owns cuts and delivery.
-Slopcamera connects these through explicit assets and rendered derivatives.
+## How SlopCamera works
 
-1. **Prepare the sources.** Import footage and assets or author a scene, diagram,
-   or native program. Inspect available tools before choosing an engine.
+Each kind of work keeps its own source file. A native scene holds a rig or
+simulation; a portable scene holds geometry, cameras, and media placement; a
+diagram holds its shapes and labels; a video project holds cuts and delivery
+settings. SlopCamera connects them through files: a rendered diagram can
+appear on a screen in a 3D scene, and native frames can become a clip in a
+video project.
+
+1. **Prepare the sources.** Import footage and assets, or author a scene,
+   diagram, or native program from a starter.
 2. **Direct the result.** Name cameras, shots, timing, composition, and output
    settings. Generate missing media only when the job calls for it.
 3. **Review a render.** Inspect contact frames, motion, captions, sound, and
-   continuity. Preserve candidates and select the approved result.
-4. **Deliver and revise.** Export the required formats and retain source paths,
-   project decisions, and operation receipts for the next change.
+   continuity, then select the version to keep.
+4. **Deliver and revise.** Export the formats you need. The sources and
+   project decisions stay in place for the next change.
+
+The same system is available four ways: the Bun CLI, the TypeScript SDK, the
+Agent Skill, and an MCP server (`slopcamera mcp`) with a smaller fixed toolset.
 
 ### Instructions for coding agents
 
 Read local project instructions and inspect sources before changing them. Use
-`slopcamera --help`, `slopcamera doctor --json`, `slopcamera operations list --json`, and the
-installed skill to discover the exact local surface. Agree on material output
-requirements, preview substantial changes, inspect the resulting files, and
-report their paths. Do not infer provider access, native trust, or model quality
-from a successful plan.
+`slopcamera --help`, `slopcamera doctor --json`,
+`slopcamera operations list --json`, and the installed skill to discover the
+exact local commands. Agree on output requirements, preview substantial
+changes, inspect the resulting files, and report their paths. A successful
+plan does not show that provider access, native trust, or model quality is in
+place.
 
-[Run agent workflows](docs/how-to/run-workflows.md) covers reusable recipes,
-declarative graphs, approvals, and resuming work.
+## Compared with other tools
+
+Details as of 28 September 2026.
+
+| | Agent writes | License | Cloud rendering | Choose it when |
+| --- | --- | --- | --- | --- |
+| SlopCamera | Diagram JSON, HTML scenes, scene JSON, Blender, CadQuery, or Manim programs, and video edits | MIT | Video renders on your machine; a hosted API checks and renders diagrams and generates images | One agent needs diagrams, 3D, native films, and footage edits in one local project |
+| [Remotion](https://www.remotion.dev/) | React components | Source-available; free for individuals, non-profits, and organizations of up to 3 people | AWS Lambda in your account | Your team writes React and renders at scale |
+| [HyperFrames](https://github.com/heygen-com/hyperframes) | HTML, CSS, and JavaScript animation | Apache 2.0 | HeyGen-hosted rendering or AWS Lambda | You want HTML motion graphics rendered to MP4 |
+
+Remotion and HyperFrames have much larger communities. For a one-off image or
+clip, a hosted app needs no install. Read
+[SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion),
+[SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes),
+[Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents),
+or [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera).
 
 ## Important limitations
 
-- **Runtime support varies.** The CLI uses Bun on macOS, Linux, and Windows.
+- **Runtime support varies.** The CLI runs with Bun on macOS, Linux, and Windows.
   Media, browser, GPU, and native studio profiles
-  have additional requirements. Use the capability reference and `slopcamera doctor`.
-- **Interchange preserves a supported subset.** Native rigs and simulations do
-  not become editable Three scenes by exporting a GLB. An image or video on a
-  plane supplies pixels, not hidden geometry. Calibrated camera exchange does
-  not match lighting, depth of field, or color treatment automatically.
-- **Generated media requires review.** Models may change subject identity,
-  motion, or text. Saved AI worlds are appearance assets, not validated robotics
-  or reinforcement-learning environments.
-- **Trusted code is not sandboxed.** Native Python and caller-authored Bun
-  workflows run with the current user's access. Hashes and receipts identify
-  observed inputs and outputs; they do not make arbitrary code hermetic.
-- **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and audit
-  scenes, and run six bounded operation codes. It does not
-  expose every local CLI operation and never mutates project state.
+  need additional software, and vector tracing does not run on Windows. Run
+  `slopcamera doctor` and see the capability reference.
+- **Checks do not judge quality.** A passing check or finished render shows
+  that the job ran, not that the result looks right. Models may also change a
+  subject's identity, motion, or text; review generated media.
+- **Interchange keeps a supported subset.** Exporting a GLB does not turn a
+  native rig or simulation into an editable scene. An image or video on a
+  plane supplies pixels, not geometry.
+- **Pixels can differ across machines.** Native tools, codecs, GPU drivers, and
+  provider models affect results, so the same source does not promise
+  identical output elsewhere.
+- **Trusted code is not sandboxed.** Native Python and your own Bun workflows
+  run with the current user's access.
+- **MCP is a subset.** Its 17 fixed tools check and render diagrams, plan and
+  audit scenes, and run six operation codes. It does not expose every CLI
+  command and never changes project state.
 
 ## Design and trust
 
-There is no Slopcamera account, hosted project database, or browser generation service.
-Ordinary editing and rendering remain local. Gateway generation and selected
-cloud analysis use credentials from the local process and request explicit
-acknowledgement before uploading named media. The optional hosted API runs each
-paid image call in an ephemeral workspace against a Hraness Credits device token
-and keeps no credentials or projects; the device token lives in owner-only files
-under the CLI state root and never reaches argv or receipts. This website never accepts a
-Gateway credential. Native Python requires separate authorization. Custom Bun
-workflow modules execute when loaded, including during check and plan; review
-their source first. Both have the current user's access, including potential
-network access, outside the normal media-operation boundary.
+There is no SlopCamera account or hosted project database. Video editing and
+rendering run on your machine; the optional hosted API checks and renders
+diagrams and generates images. Gateway generation and cloud
+analysis use credentials from the local process and ask for your
+acknowledgement before uploading named media. The optional hosted image API
+runs each paid call in a short-lived workspace against a Hraness Credits device
+token and keeps no credentials or projects; the token lives in owner-only files
+and never appears in command arguments or operation records. The website never accepts a Gateway
+credential.
 
-Original media remains unchanged by normal edit operations. Projects retain
-explicit revisions, and important operations record their inputs and outputs.
-Native tools, providers, codecs, and GPU drivers can affect results, so retained
-source identity alone does not promise identical pixels on another machine.
+Native Python requires separate authorization. Custom Bun workflow modules run
+when loaded, including during check and plan, so review their source first.
+Both run with the current user's access, including network access. Normal edit
+operations leave original media unchanged, and important operations record
+their inputs and outputs.
 
-See [Architecture](docs/architecture.md), [`SECURITY.md`](SECURITY.md),
-[`PRIVACY.md`](PRIVACY.md), and [`NOTICE.md`](NOTICE.md) for the detailed boundaries.
-
-Your agent renders images, diagrams, scenes, animation, and video from source
-files you keep, and important operations record their inputs and outputs in
-receipts, so a rendered result arrives with the record of how it was made: the
-design every Hraness project shares. [The thread through
-hraness](https://hraness.com/writing/the-thread-through-hraness) follows that
-design across the projects, and the [ALGAL
+Read [Architecture](docs/architecture.md), [`SECURITY.md`](SECURITY.md),
+[`PRIVACY.md`](PRIVACY.md), and [`NOTICE.md`](NOTICE.md) for details. Keeping
+the source beside the result is the design every Hraness project shares; [The
+thread through hraness](https://hraness.com/writing/the-thread-through-hraness)
+follows it across projects, and the [ALGAL
 vision](https://algal.computer/docs/vision/) states the bet behind it.
 
 ## Documentation
 
 - **Learn:** [Your first diagram](docs/tutorials/first-diagram.md) · [Your first native film](docs/tutorials/first-native-film.md).
-- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md) · [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct-cinematic-worlds.md).
-- **Look up support:** [Capabilities and release availability](docs/reference/capabilities.md) · [SDK entrypoints](docs/reference/sdk.md) · [Creative tools](docs/html-overlay-creative-toolkit.md).
+- **Make a result:** [Edit video](docs/how-to/edit-video.md) · [Generate media](docs/how-to/generate-media.md) · [Run workflows](docs/how-to/run-workflows.md) · [Educational video](docs/how-to/educational-video.md) · [Plan camera moves, lighting, and effects for a 3D scene](docs/how-to/direct-cinematic-worlds.md) · [Direct visual styles](docs/how-to/direct-visual-styles.md).
+- **Look up support:** [Techniques](https://slopcamera.com/docs/reference/techniques) · [Capabilities](docs/reference/capabilities.md) · [SDK entrypoints](docs/reference/sdk.md) · [Creative tools](docs/html-overlay-creative-toolkit.md).
 - **Understand the system:** [Architecture](docs/architecture.md) · [Native studio](docs/studio.md) · [Directed scenes](docs/spatial-scenes.md) · [Extension architecture](docs/extension-architecture.md).
 
-The [documentation index](docs/README.md) connects these paths.
+The [documentation index](docs/README.md) connects these paths, and
+[slopcamera.com/docs](https://slopcamera.com/docs) publishes them.
 
-## For software integrations
+### Use the SDK
 
 Run this example with Bun from the source checkout after `bun run build:sdk`.
-The checkout resolves its own `@hraness/slopcamera` package exports.
-
-SDK imports do not start the CLI or inspect local project state. For example,
+SDK imports do not start the CLI or read local project state. For example,
 convert an existing local image into an SVG:
 
 ```ts
@@ -386,9 +372,9 @@ console.log(result.receipt.sourceSha256, result.receipt.svgSha256)
 ```
 
 Use `@hraness/slopcamera/code` for declarative workflow graphs,
-`@hraness/slopcamera/workflow` for trusted Bun workflows, and `@hraness/slopcamera/local/*`
-for the local media engine. See the [SDK reference](docs/reference/sdk.md) for
-entrypoint scope and execution effects.
+`@hraness/slopcamera/workflow` for trusted Bun workflows, and
+`@hraness/slopcamera/local/*` for the local media engine. See the
+[SDK reference](docs/reference/sdk.md).
 
 ## Verification
 
@@ -397,11 +383,11 @@ bun install --frozen-lockfile --ignore-scripts
 bun run check
 ```
 
-The required check covers public SDK boundaries, the local runtime, schemas,
-Agent Skill, generated entrypoints, static site, deterministic and property
-tests, and packed consumers. Native and provider-dependent profiles require
-their corresponding external qualification; a local unit-test pass does not
-establish them. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the complete gates.
+The check covers the public SDK, the local runtime, schemas, the Agent Skill,
+generated entrypoints, the website, deterministic and property tests, and
+installs of the packed package. Native engines and model providers need their
+own runs on real hardware and accounts; a local test pass does not cover them.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for every check.
 
 ## Contributing
 
@@ -415,17 +401,20 @@ changing a package or runtime boundary. Report vulnerabilities through
 
 ## Optional support
 
-All features remain available without payment. `slopcamera support` opens no browser
-and shows an optional way to support continued development. Agents can read
-`slopcamera support protocol --json` at closeout and request `support offer --json`
-once after useful work. A quiet result needs no mention. Unknown callers, including
-PTYs, receive separately throttled stderr discovery without changing task stdout or
-claiming an invitation. Imported CLI functions and SDK/MCP workflows stay quiet.
+Every feature works without payment. `slopcamera support` shows an optional way
+to support development and opens no browser. `support dismiss` opts out across
+the local suite, `support snooze` pauses the notice for 30 days, and
+`HRANESS_SUPPORT_AUDIENCE=off` disables ambient notices. Agents follow the
+[support reference](skills/slopcamera/references/support.md).
 
-Acknowledge with `support shown <id>` only after a persistent human-visible invitation
-has been emitted. In final-only hosts, include it once in the final answer without
-an acknowledgment; the unacknowledged offer expires after ten minutes and does not
-consume the weekly shown cooldown. `support dismiss` opts out across the local suite;
-`support snooze` pauses for 30 days. `HRANESS_SUPPORT_AUDIENCE=off` disables ambient
-notices and claimed offers. Payment is an explicit human choice on the shared support
-page; Slopcamera has no product-updates mailing list or account-status lookup.
+## Former name
+
+<details>
+<summary>Historical Atet release evidence</summary>
+
+SlopCamera was called Atet until September 2026.
+[Atet v3.2.3](https://github.com/hraness/atet/releases/tag/v3.2.3) and its
+[original archive](https://github.com/hraness/atet/releases/download/v3.2.3/hraness-atet-3.2.3.tgz)
+still install Atet, not SlopCamera.
+
+</details>

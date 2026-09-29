@@ -1,8 +1,8 @@
-# Slopcamera documentation
+# SlopCamera documentation
 
-Slopcamera is a media studio for coding agents. It retains editable source, renders local or generated media, and assembles it into inspectable video projects. Choose a guide for the work you want to do.
+Slopcamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it, and a revision is an edit to that file and a new render. Choose a guide for the work you want to do.
 
-Install the [current Slopcamera release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any correction that needs [current source](how-to/use-current-source.md). Some examples import TypeScript from the repository and need a checkout to run. Historical Atet archives retain their original package and commands. The CLI also has an optional unbundled macOS menu-bar companion; the [menu-bar release contract](menubar-release.md) covers its prebuilt binary and LaunchAgent. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [current Slopcamera release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any correction that needs [current source](how-to/use-current-source.md). Some examples import TypeScript from the repository and need a checkout to run. Historical Atet archives retain their original package and commands. The [CLI parity table](cli-parity.md) maps every action of the retired menu-bar companion to a command. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
 
 ## Learn by making something
 
@@ -35,12 +35,14 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 
 - [Capabilities, versions, and platforms](reference/capabilities.md): current Slopcamera capabilities, historical Atet versions, and supported runtime boundaries.
 - [SDK surfaces](reference/sdk.md): portable and local imports, operation projections, and execution contracts.
+- [Techniques catalog](https://slopcamera.com/docs/reference/techniques): every packaged technique by job, with its first command, guide, and a rendered example where one exists.
 - [CLI help](reference/capabilities.md#discover-the-installed-contract): exact grammar and JSON schemas from the installed host.
 
 ## Understand the design
 
 - [Source, representations, and projects](architecture.md): what stays editable, what a receipt proves, and how local and cloud work fit together.
 - [Extension architecture](extension-architecture.md): the closed registry, inert recipe packs, trusted workflows, and where authored code can and cannot go.
+- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera): why the agent keeps a source file and reuses installed techniques, with comparisons to [Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion), [HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes), and [other tools](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents).
 - [Choose an HTML authoring surface](html-overlay-creative-toolkit.md): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs. Its ecosystem research is dated separately from its supported locks.
 
 ## Work with an agent

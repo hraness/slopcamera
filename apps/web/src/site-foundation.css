@@ -24,6 +24,7 @@
 @import "./example-gallery.css" layer(components.slopcamera-legacy);
 @import "./site-ask-ai-compatibility.css";
 @import "./site-footer-compatibility.css";
+@import "../vendor/hraness-forced-colors/marketing-forced-colors.css";
 
 /* Keep the compiled shell paint bridge while letting the canonical material
    own normal, reduced-transparency and forced-color token values. */

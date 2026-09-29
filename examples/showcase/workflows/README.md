@@ -21,7 +21,7 @@ exports per interface stay under ignored `artifacts/showcase/workflows/`.
 It executes local trusted code and local rendering; no model account is used.
 
 A matching PNG does not prove that every CLI command is available through MCP.
-The v3.3.1 release exposes 17 MCP tool names, including 13 scene tools. Use
+The MCP server exposes 17 tool names, including 13 scene tools. Use
 discovery and the capability reference for the installed version.
 
 An independent review of the retained run compared all five exported formats
