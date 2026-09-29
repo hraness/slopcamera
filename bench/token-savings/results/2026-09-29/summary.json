@@ -1,0 +1,844 @@
+{
+  "generatedAt": "2026-09-29T17:54:16.562Z",
+  "spentUsd": 5.6937,
+  "abortedSteps": 0,
+  "perGroup": [
+    {
+      "task": "t1",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 56802.5,
+          "outputTokens": 2072,
+          "costUsd": 0.1276873,
+          "numTurns": 7,
+          "wallSeconds": 24.75
+        },
+        "revise": {
+          "inputSideTokens": 82297.5,
+          "outputTokens": 1605.5,
+          "costUsd": 0.1240727,
+          "numTurns": 9,
+          "wallSeconds": 22.1
+        },
+        "total": {
+          "inputSideTokens": 139100,
+          "outputTokens": 3677.5,
+          "costUsd": 0.25176,
+          "numTurns": 16,
+          "wallSeconds": 46.85
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 56802.5,
+          "outputTokens": 2072,
+          "costUsd": 0.1276873,
+          "numTurns": 7,
+          "wallSeconds": 24.75
+        },
+        "revise": {
+          "inputSideTokens": 82297.5,
+          "outputTokens": 1605.5,
+          "costUsd": 0.1240727,
+          "numTurns": 9,
+          "wallSeconds": 22.1
+        },
+        "total": {
+          "inputSideTokens": 139100,
+          "outputTokens": 3677.5,
+          "costUsd": 0.25176,
+          "numTurns": 16,
+          "wallSeconds": 46.85
+        }
+      }
+    },
+    {
+      "task": "t1",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 166145.5,
+          "outputTokens": 2268.5,
+          "costUsd": 0.2155651,
+          "numTurns": 14,
+          "wallSeconds": 41.7
+        },
+        "revise": {
+          "inputSideTokens": 107756.5,
+          "outputTokens": 1106,
+          "costUsd": 0.0937855,
+          "numTurns": 7,
+          "wallSeconds": 20.5
+        },
+        "total": {
+          "inputSideTokens": 273902,
+          "outputTokens": 3374.5,
+          "costUsd": 0.30935060000000003,
+          "numTurns": 21,
+          "wallSeconds": 62.2
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 166145.5,
+          "outputTokens": 2268.5,
+          "costUsd": 0.2155651,
+          "numTurns": 14,
+          "wallSeconds": 41.7
+        },
+        "revise": {
+          "inputSideTokens": 107756.5,
+          "outputTokens": 1106,
+          "costUsd": 0.0937855,
+          "numTurns": 7,
+          "wallSeconds": 20.5
+        },
+        "total": {
+          "inputSideTokens": 273902,
+          "outputTokens": 3374.5,
+          "costUsd": 0.30935060000000003,
+          "numTurns": 21,
+          "wallSeconds": 62.2
+        }
+      }
+    },
+    {
+      "task": "t2",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 78476.5,
+          "outputTokens": 3579.5,
+          "costUsd": 0.16412179999999998,
+          "numTurns": 8,
+          "wallSeconds": 45.35
+        },
+        "revise": {
+          "inputSideTokens": 35172,
+          "outputTokens": 1126,
+          "costUsd": 0.048792699999999994,
+          "numTurns": 3,
+          "wallSeconds": 17.15
+        },
+        "total": {
+          "inputSideTokens": 113648.5,
+          "outputTokens": 4705.5,
+          "costUsd": 0.2129145,
+          "numTurns": 11,
+          "wallSeconds": 62.5
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 78476.5,
+          "outputTokens": 3579.5,
+          "costUsd": 0.16412179999999998,
+          "numTurns": 8,
+          "wallSeconds": 45.35
+        },
+        "revise": {
+          "inputSideTokens": 35172,
+          "outputTokens": 1126,
+          "costUsd": 0.048792699999999994,
+          "numTurns": 3,
+          "wallSeconds": 17.15
+        },
+        "total": {
+          "inputSideTokens": 113648.5,
+          "outputTokens": 4705.5,
+          "costUsd": 0.2129145,
+          "numTurns": 11,
+          "wallSeconds": 62.5
+        }
+      }
+    },
+    {
+      "task": "t2",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 400501,
+          "outputTokens": 5582.5,
+          "costUsd": 0.42677279999999995,
+          "numTurns": 20.5,
+          "wallSeconds": 444.25
+        },
+        "revise": {
+          "inputSideTokens": 204538,
+          "outputTokens": 1935,
+          "costUsd": 0.14525929999999998,
+          "numTurns": 6,
+          "wallSeconds": 248.5
+        },
+        "total": {
+          "inputSideTokens": 605039,
+          "outputTokens": 7517.5,
+          "costUsd": 0.5720320999999999,
+          "numTurns": 26.5,
+          "wallSeconds": 692.75
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 400501,
+          "outputTokens": 5582.5,
+          "costUsd": 0.42677279999999995,
+          "numTurns": 20.5,
+          "wallSeconds": 444.25
+        },
+        "revise": {
+          "inputSideTokens": 204538,
+          "outputTokens": 1935,
+          "costUsd": 0.14525929999999998,
+          "numTurns": 6,
+          "wallSeconds": 248.5
+        },
+        "total": {
+          "inputSideTokens": 605039,
+          "outputTokens": 7517.5,
+          "costUsd": 0.5720320999999999,
+          "numTurns": 26.5,
+          "wallSeconds": 692.75
+        }
+      }
+    },
+    {
+      "task": "t3",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 217656.5,
+          "outputTokens": 10096.5,
+          "costUsd": 0.4246016,
+          "numTurns": 13,
+          "wallSeconds": 261.5
+        },
+        "revise": {
+          "inputSideTokens": 140864,
+          "outputTokens": 1399,
+          "costUsd": 0.0947424,
+          "numTurns": 6,
+          "wallSeconds": 78.6
+        },
+        "total": {
+          "inputSideTokens": 358520.5,
+          "outputTokens": 11495.5,
+          "costUsd": 0.519344,
+          "numTurns": 19,
+          "wallSeconds": 340.1
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 217656.5,
+          "outputTokens": 10096.5,
+          "costUsd": 0.4246016,
+          "numTurns": 13,
+          "wallSeconds": 261.5
+        },
+        "revise": {
+          "inputSideTokens": 140864,
+          "outputTokens": 1399,
+          "costUsd": 0.0947424,
+          "numTurns": 6,
+          "wallSeconds": 78.6
+        },
+        "total": {
+          "inputSideTokens": 358520.5,
+          "outputTokens": 11495.5,
+          "costUsd": 0.519344,
+          "numTurns": 19,
+          "wallSeconds": 340.1
+        }
+      }
+    },
+    {
+      "task": "t3",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 372085,
+          "outputTokens": 6721.5,
+          "costUsd": 0.45557729999999996,
+          "numTurns": 19,
+          "wallSeconds": 170.2
+        },
+        "revise": {
+          "inputSideTokens": 190977.5,
+          "outputTokens": 1973,
+          "costUsd": 0.1349768,
+          "numTurns": 4.5,
+          "wallSeconds": 53.15
+        },
+        "total": {
+          "inputSideTokens": 563062.5,
+          "outputTokens": 8694.5,
+          "costUsd": 0.5905541000000001,
+          "numTurns": 23.5,
+          "wallSeconds": 223.35000000000002
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 372085,
+          "outputTokens": 6721.5,
+          "costUsd": 0.45557729999999996,
+          "numTurns": 19,
+          "wallSeconds": 170.2
+        },
+        "revise": {
+          "inputSideTokens": 190977.5,
+          "outputTokens": 1973,
+          "costUsd": 0.1349768,
+          "numTurns": 4.5,
+          "wallSeconds": 53.15
+        },
+        "total": {
+          "inputSideTokens": 563062.5,
+          "outputTokens": 8694.5,
+          "costUsd": 0.5905541000000001,
+          "numTurns": 23.5,
+          "wallSeconds": 223.35000000000002
+        }
+      }
+    },
+    {
+      "task": "t4",
+      "condition": "A",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 74953.5,
+          "outputTokens": 2527.5,
+          "costUsd": 0.1358096,
+          "numTurns": 10.5,
+          "wallSeconds": 31.35
+        },
+        "revise": {
+          "inputSideTokens": 32801.5,
+          "outputTokens": 991.5,
+          "costUsd": 0.040769200000000005,
+          "numTurns": 3,
+          "wallSeconds": 12.7
+        },
+        "total": {
+          "inputSideTokens": 107755,
+          "outputTokens": 3519,
+          "costUsd": 0.1765788,
+          "numTurns": 13.5,
+          "wallSeconds": 44.05
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 74953.5,
+          "outputTokens": 2527.5,
+          "costUsd": 0.1358096,
+          "numTurns": 10.5,
+          "wallSeconds": 31.35
+        },
+        "revise": {
+          "inputSideTokens": 32801.5,
+          "outputTokens": 991.5,
+          "costUsd": 0.040769200000000005,
+          "numTurns": 3,
+          "wallSeconds": 12.7
+        },
+        "total": {
+          "inputSideTokens": 107755,
+          "outputTokens": 3519,
+          "costUsd": 0.1765788,
+          "numTurns": 13.5,
+          "wallSeconds": 44.05
+        }
+      }
+    },
+    {
+      "task": "t4",
+      "condition": "B",
+      "sessions": 2,
+      "successes": 2,
+      "successfulMedians": {
+        "create": {
+          "inputSideTokens": 88797,
+          "outputTokens": 2076.5,
+          "costUsd": 0.15082109999999999,
+          "numTurns": 9.5,
+          "wallSeconds": 27.950000000000003
+        },
+        "revise": {
+          "inputSideTokens": 59650,
+          "outputTokens": 1132,
+          "costUsd": 0.0635152,
+          "numTurns": 3.5,
+          "wallSeconds": 16.1
+        },
+        "total": {
+          "inputSideTokens": 148447,
+          "outputTokens": 3208.5,
+          "costUsd": 0.21433629999999998,
+          "numTurns": 13,
+          "wallSeconds": 44.05
+        }
+      },
+      "allCompletedMedians": {
+        "create": {
+          "inputSideTokens": 88797,
+          "outputTokens": 2076.5,
+          "costUsd": 0.15082109999999999,
+          "numTurns": 9.5,
+          "wallSeconds": 27.950000000000003
+        },
+        "revise": {
+          "inputSideTokens": 59650,
+          "outputTokens": 1132,
+          "costUsd": 0.0635152,
+          "numTurns": 3.5,
+          "wallSeconds": 16.1
+        },
+        "total": {
+          "inputSideTokens": 148447,
+          "outputTokens": 3208.5,
+          "costUsd": 0.21433629999999998,
+          "numTurns": 13,
+          "wallSeconds": 44.05
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "task": "t1",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 1.095,
+      "create.costUsd.ratioBoverA": 1.688,
+      "revise.outputTokens.ratioBoverA": 0.689,
+      "revise.costUsd.ratioBoverA": 0.756,
+      "total.outputTokens.ratioBoverA": 0.918,
+      "total.costUsd.ratioBoverA": 1.229
+    },
+    {
+      "task": "t2",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 1.56,
+      "create.costUsd.ratioBoverA": 2.6,
+      "revise.outputTokens.ratioBoverA": 1.718,
+      "revise.costUsd.ratioBoverA": 2.977,
+      "total.outputTokens.ratioBoverA": 1.598,
+      "total.costUsd.ratioBoverA": 2.687
+    },
+    {
+      "task": "t3",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 0.666,
+      "create.costUsd.ratioBoverA": 1.073,
+      "revise.outputTokens.ratioBoverA": 1.41,
+      "revise.costUsd.ratioBoverA": 1.425,
+      "total.outputTokens.ratioBoverA": 0.756,
+      "total.costUsd.ratioBoverA": 1.137
+    },
+    {
+      "task": "t4",
+      "successesA": 2,
+      "successesB": 2,
+      "create.outputTokens.ratioBoverA": 0.822,
+      "create.costUsd.ratioBoverA": 1.111,
+      "revise.outputTokens.ratioBoverA": 1.142,
+      "revise.costUsd.ratioBoverA": 1.558,
+      "total.outputTokens.ratioBoverA": 0.912,
+      "total.costUsd.ratioBoverA": 1.214
+    }
+  ],
+  "failures": [],
+  "sessionTotals": [
+    {
+      "key": "t1-A-r1",
+      "task": "t1",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 3303,
+      "costUsd": 0.20212,
+      "inputSideTokens": 110791,
+      "wallSeconds": 38,
+      "apiSeconds": 33.309,
+      "outsideApiSeconds": 4.6910000000000025,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t1-A-r2",
+      "task": "t1",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 4052,
+      "costUsd": 0.3014,
+      "inputSideTokens": 167409,
+      "wallSeconds": 55.7,
+      "apiSeconds": 51.222,
+      "outsideApiSeconds": 4.4780000000000015,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t1-B-r1",
+      "task": "t1",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 3346,
+      "costUsd": 0.3196664,
+      "inputSideTokens": 279971,
+      "wallSeconds": 64.5,
+      "apiSeconds": 49.886,
+      "outsideApiSeconds": 14.613999999999997,
+      "slopcameraCommands": 5,
+      "skillLoaded": true
+    },
+    {
+      "key": "t1-B-r2",
+      "task": "t1",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 3403,
+      "costUsd": 0.2990348,
+      "inputSideTokens": 267833,
+      "wallSeconds": 59.900000000000006,
+      "apiSeconds": 39.424,
+      "outsideApiSeconds": 20.476000000000006,
+      "slopcameraCommands": 5,
+      "skillLoaded": true
+    },
+    {
+      "key": "t2-A-r1",
+      "task": "t2",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 5183,
+      "costUsd": 0.2229138,
+      "inputSideTokens": 118606,
+      "wallSeconds": 77.5,
+      "apiSeconds": 54.934,
+      "outsideApiSeconds": 22.566000000000003,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t2-A-r2",
+      "task": "t2",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 4228,
+      "costUsd": 0.2029152,
+      "inputSideTokens": 108691,
+      "wallSeconds": 47.5,
+      "apiSeconds": 40.547,
+      "outsideApiSeconds": 6.953000000000003,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t2-B-r1",
+      "task": "t2",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 9259,
+      "costUsd": 0.7795128,
+      "inputSideTokens": 897786,
+      "wallSeconds": 851.1999999999999,
+      "apiSeconds": 93.655,
+      "outsideApiSeconds": 757.545,
+      "slopcameraCommands": 8,
+      "skillLoaded": true
+    },
+    {
+      "key": "t2-B-r2",
+      "task": "t2",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 5776,
+      "costUsd": 0.36455139999999997,
+      "inputSideTokens": 312292,
+      "wallSeconds": 534.3,
+      "apiSeconds": 60.132,
+      "outsideApiSeconds": 474.16799999999995,
+      "slopcameraCommands": 6,
+      "skillLoaded": true
+    },
+    {
+      "key": "t3-A-r1",
+      "task": "t3",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 12798,
+      "costUsd": 0.5652128,
+      "inputSideTokens": 392232,
+      "wallSeconds": 324.3,
+      "apiSeconds": 121.19,
+      "outsideApiSeconds": 203.11,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t3-A-r2",
+      "task": "t3",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 10193,
+      "costUsd": 0.4734752,
+      "inputSideTokens": 324809,
+      "wallSeconds": 355.9,
+      "apiSeconds": 94.935,
+      "outsideApiSeconds": 260.965,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t3-B-r1",
+      "task": "t3",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 8502,
+      "costUsd": 0.5793842,
+      "inputSideTokens": 570592,
+      "wallSeconds": 244.6,
+      "apiSeconds": 87.464,
+      "outsideApiSeconds": 157.136,
+      "slopcameraCommands": 7,
+      "skillLoaded": true
+    },
+    {
+      "key": "t3-B-r2",
+      "task": "t3",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 8887,
+      "costUsd": 0.601724,
+      "inputSideTokens": 555533,
+      "wallSeconds": 202.10000000000002,
+      "apiSeconds": 100.547,
+      "outsideApiSeconds": 101.55300000000003,
+      "slopcameraCommands": 7,
+      "skillLoaded": true
+    },
+    {
+      "key": "t4-A-r1",
+      "task": "t4",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 3739,
+      "costUsd": 0.195301,
+      "inputSideTokens": 119404,
+      "wallSeconds": 46.3,
+      "apiSeconds": 39.339,
+      "outsideApiSeconds": 6.9609999999999985,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t4-A-r2",
+      "task": "t4",
+      "condition": "A",
+      "success": true,
+      "outputTokens": 3299,
+      "costUsd": 0.1578566,
+      "inputSideTokens": 96106,
+      "wallSeconds": 41.8,
+      "apiSeconds": 33.368,
+      "outsideApiSeconds": 8.431999999999995,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t4-B-r1",
+      "task": "t4",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 2904,
+      "costUsd": 0.18709979999999998,
+      "inputSideTokens": 119739,
+      "wallSeconds": 41.8,
+      "apiSeconds": 30.585,
+      "outsideApiSeconds": 11.214999999999996,
+      "slopcameraCommands": 0,
+      "skillLoaded": false
+    },
+    {
+      "key": "t4-B-r2",
+      "task": "t4",
+      "condition": "B",
+      "success": true,
+      "outputTokens": 3513,
+      "costUsd": 0.2415728,
+      "inputSideTokens": 177155,
+      "wallSeconds": 46.3,
+      "apiSeconds": 35.09,
+      "outsideApiSeconds": 11.209999999999994,
+      "slopcameraCommands": 1,
+      "skillLoaded": true
+    }
+  ],
+  "ranges": [
+    {
+      "task": "t1",
+      "outputTokens": {
+        "a": {
+          "min": 3303,
+          "max": 4052
+        },
+        "b": {
+          "min": 3346,
+          "max": 3403
+        },
+        "relation": "ranges overlap"
+      },
+      "costUsd": {
+        "a": {
+          "min": 0.20212,
+          "max": 0.3014
+        },
+        "b": {
+          "min": 0.2990348,
+          "max": 0.3196664
+        },
+        "relation": "ranges overlap"
+      }
+    },
+    {
+      "task": "t2",
+      "outputTokens": {
+        "a": {
+          "min": 4228,
+          "max": 5183
+        },
+        "b": {
+          "min": 5776,
+          "max": 9259
+        },
+        "relation": "B higher, ranges do not overlap"
+      },
+      "costUsd": {
+        "a": {
+          "min": 0.2029152,
+          "max": 0.2229138
+        },
+        "b": {
+          "min": 0.36455139999999997,
+          "max": 0.7795128
+        },
+        "relation": "B higher, ranges do not overlap"
+      }
+    },
+    {
+      "task": "t3",
+      "outputTokens": {
+        "a": {
+          "min": 10193,
+          "max": 12798
+        },
+        "b": {
+          "min": 8502,
+          "max": 8887
+        },
+        "relation": "B lower, ranges do not overlap"
+      },
+      "costUsd": {
+        "a": {
+          "min": 0.4734752,
+          "max": 0.5652128
+        },
+        "b": {
+          "min": 0.5793842,
+          "max": 0.601724
+        },
+        "relation": "B higher, ranges do not overlap"
+      }
+    },
+    {
+      "task": "t4",
+      "outputTokens": {
+        "a": {
+          "min": 3299,
+          "max": 3739
+        },
+        "b": {
+          "min": 2904,
+          "max": 3513
+        },
+        "relation": "ranges overlap"
+      },
+      "costUsd": {
+        "a": {
+          "min": 0.1578566,
+          "max": 0.195301
+        },
+        "b": {
+          "min": 0.18709979999999998,
+          "max": 0.2415728
+        },
+        "relation": "ranges overlap"
+      }
+    }
+  ],
+  "costByTokenType": {
+    "pricePerMTok": {
+      "input": 4,
+      "cacheWrite": 8,
+      "cacheRead": 0.2,
+      "output": 20
+    },
+    "maxPriceResidualUsd": 5.551115123125783e-17,
+    "byCondition": [
+      {
+        "condition": "A",
+        "steps": 16,
+        "tokens": {
+          "input": 168,
+          "cacheWrite": 140647,
+          "cacheRead": 1297233,
+          "output": 46795
+        },
+        "costUsd": {
+          "input": 0.0006719999999999999,
+          "cacheWrite": 1.1251760000000002,
+          "cacheRead": 0.2594466,
+          "output": 0.9359000000000001
+        },
+        "reportedCostUsd": 2.3211946
+      },
+      {
+        "condition": "B",
+        "steps": 16,
+        "tokens": {
+          "input": 256,
+          "cacheWrite": 233794,
+          "cacheRead": 2946851,
+          "output": 45590
+        },
+        "costUsd": {
+          "input": 0.001024,
+          "cacheWrite": 1.870352,
+          "cacheRead": 0.5893702000000001,
+          "output": 0.9117999999999999
+        },
+        "reportedCostUsd": 3.3725461999999995
+      }
+    ]
+  },
+  "promptsIdentical": true
+}
