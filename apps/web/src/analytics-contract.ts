@@ -279,6 +279,8 @@ function hasSensitiveLocation(value: unknown, depth = 0, seen = new WeakSet<obje
 }
 
 function sanitizeValue(key: string, value: unknown, sensitive: boolean, depth: number, seen: WeakSet<object>): unknown {
+  // The SDK derives search-engine query text from the original referrer URL.
+  if (/^\$?(?:(?:initial|session_entry|prev_pageview)_)?ph_keyword$/iu.test(key)) return undefined
   const name = baseName(key)
   if (depth === 0 && ["token", "distinct_id", "$raw_user_agent", "$cookieless_mode"].includes(key)) return value
   if (personalProperties.has(name.toLowerCase())) return undefined
