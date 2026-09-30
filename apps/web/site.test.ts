@@ -1677,7 +1677,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.20.4",
+      "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
       "@hraness/posthog": "github:hraness/posthog#v0.3.4",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
@@ -1707,7 +1707,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.35.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.4"',
+      '"@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
