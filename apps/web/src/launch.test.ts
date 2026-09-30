@@ -54,6 +54,9 @@ describe("launch post", () => {
     expect((html.match(/<figure>/gu) ?? []).length).toBe(resolvedLaunchBeats.length + 1)
     expect(html).toContain(`src="/assets/launch/${launchMediaFile("film").file}"`)
     expect(html).toContain(`src="/assets/launch/${launchMediaFile("captions").file}"`)
+    const explainerCaptions = workflowExamples.find(example => example.id === "one-shoot-explainer")?.video?.captions
+    expect(explainerCaptions).toBeDefined()
+    expect(html).toContain(`<track kind="captions" src="/assets/examples/${explainerCaptions?.file}" srclang="en" label="English">`)
     expect(html).not.toMatch(/\{\{|LAUNCHFIGURESENTINEL/u)
   })
 

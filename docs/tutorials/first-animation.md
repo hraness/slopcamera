@@ -1,12 +1,12 @@
 # Create and revise your first animation
 
-Render an eight-second title with animated SVG linework, then change its copy and color using the same HTML source. You will finish with two videos, two retained source requests, and ordinary Slopcamera projects that can be edited further.
+Send a midnight tram toward the moon, then make the moon larger in the same scene. You will finish with two 12-second films, their retained source requests, and ordinary Slopcamera projects you can keep editing.
 
-The `html render` command ships in v3.2.8. [Install Slopcamera](../../README.md#install-slopcamera), Git, and the local browser and FFmpeg/FFprobe runtimes reported by `slopcamera doctor --json`. This lesson uses original local artwork and no paid model, external font, or soundtrack. First-use runtime provisioning may need a network connection.
+Native HTML rendering currently requires macOS. Start with [Slopcamera installed](../../README.md#install-slopcamera), Git, and the browser and FFmpeg runtimes reported by `slopcamera doctor --json`. This lesson uses original local artwork and no paid model. It renders the picture; the scored showcase adds separately authored music and effects. First-use runtime provisioning may need a network connection.
 
 ## Get the supplied scene
 
-The example files were authored after v3.2.8 and live in the repository. Obtain a fresh checkout for the inputs; the installed release CLI can render them without rebuilding Slopcamera:
+The scene lives in the repository and works with the released `html render` command. Get a fresh checkout for these example files:
 
 ```sh
 git clone --branch main https://github.com/hraness/slopcamera.git slopcamera-animation
@@ -15,47 +15,48 @@ git rev-parse HEAD > slopcamera-example-commit.txt
 slopcamera doctor --json
 ```
 
-Keep commands in this directory because the requests resolve paths from the working directory. If you already have the current repository, use its root instead. Keep the commit record with the finished work.
+Keep commands in this directory: the requests resolve their document paths from the working directory. If you already have the current repository, use its root. Keep the commit record with your finished work.
 
-Open [editorial.html](https://github.com/hraness/slopcamera/blob/main/examples/showcase/html/editorial.html) and [editorial.json](https://github.com/hraness/slopcamera/blob/main/examples/showcase/html/editorial.json). The HTML owns the typography and eighteen SVG ellipses. The request selects a 1280 × 720 canvas, eight seconds at 24 frames per second, and no external libraries. Its `document.path` points to that HTML file.
+Open [scene.html](https://github.com/hraness/slopcamera/blob/main/examples/showcase/studio-relaunch/last-tram/scene.html) and [last-tram-original.json](https://github.com/hraness/slopcamera/blob/main/examples/showcase/studio-relaunch/requests/last-tram-original.json). The HTML draws the city, tram, rain, and moon. The request selects a 1280 × 720 canvas, 12 seconds at 24 frames per second, and the `original` composition. It needs no external artwork, font, or animation library.
 
 ## Check the request
 
 ```sh
-slopcamera html render --input examples/showcase/html/editorial.json --dry-run --json
+slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-original.json --dry-run --json
 ```
 
-The plan should describe 192 frames. It checks the declared source and timing; it does not prove that the animation looks right or that a render has completed. If a runtime is missing, resolve the specific finding from `doctor` before continuing.
+The plan should describe 288 frames. It checks the declared source and timing. If a runtime is missing, resolve the specific finding from `doctor` before rendering.
 
-## Render and inspect the title
+## Render the journey
+
+[Watch the original film](https://slopcamera.com/docs/tutorials/first-animation#render-the-journey).
 
 ```sh
-slopcamera html render --input examples/showcase/html/editorial.json --json
+slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-original.json --json
 ```
 
-This writes a local H.264 video, retains the HTML and request, and creates an ordinary project. The JSON result gives `output.path`, `source.path`, `receipt.path`, and `projectId`; keep those exact values instead of guessing the generated directory.
+The result gives `output.path`, `source.path`, `receipt.path`, and `projectId`. Open the returned video and retain those exact values with your request.
 
-Open the returned video. Look for the title “Form follows a frame.” and the ellipse field moving around it. Inspect the beginning, middle, and ending: the text should stay readable and the linework should move without a jump inside the clip. This scene is silent.
+Watch the full sequence. The destination changes from CITY to MOON before departure; the copper tram follows the rising track; the ending gives you time to see its destination. Check the wheel contact during the climb and the readability of the final composition. Your tutorial render is silent.
 
 ## Revise the same source
 
-[Watch the revised animation](https://slopcamera.com/docs/tutorials/first-animation#revise-the-same-source).
+[Watch the revised film](https://slopcamera.com/docs/tutorials/first-animation#revise-the-same-source).
 
-Open [editorial-revised.json](https://github.com/hraness/slopcamera/blob/main/examples/showcase/html/editorial-revised.json). Its document path and timing are unchanged. The request passes these parameters to the same HTML:
+Give your agent this direction:
 
-```json
-{
-  "variant": "revision",
-  "accent": "#ffa775"
-}
-```
+> Make the moon larger so it dominates the destination. Keep the journey, palette, and timing.
 
-Render that revision:
+The supplied [last-tram-moonrise.json](https://github.com/hraness/slopcamera/blob/main/examples/showcase/studio-relaunch/requests/last-tram-moonrise.json) already expresses that revision. Its document and timing match the first request; its `parameters.variant` changes from `original` to `moonrise`.
 
 ```sh
-slopcamera html render --input examples/showcase/html/editorial-revised.json --json
+slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-moonrise.json --json
 ```
 
-Open its returned `output.path`. The title now reads “Form follows your idea.” with a warm accent. Compare it with the first output: both use the same composition and duration, and each render retains its own request and source. Further changes can live in a copied request or an edited HTML document; preserve the originals when making a new variant.
+Open the returned `output.path` and compare the same moment in both films. The larger moon changes the balance of the picture. Watch both endings too: a composition needs to work throughout the motion.
 
-Use the returned `projectId` with `slopcamera project inspect <project-id> --json` when you want to inspect the composition. Follow [Edit and deliver video](../how-to/edit-video.md) to add footage or export another aspect ratio, or [Render motion graphics from HTML](../how-to/render-motion-graphics.md) to choose a different animation technique.
+You now have two rendered versions and the source that produced each one. For another change, copy a request or edit the HTML while preserving your originals. Ask for a concrete decision about color, camera, scale, or timing using [Direct a film](../how-to/direct-a-film.md).
+
+## Keep editing
+
+Use the returned project ID with `slopcamera project inspect <project-id> --json` to inspect the composition. Add a local soundtrack with [Make a music video](../how-to/music-video.md), or follow [Edit and deliver video](../how-to/edit-video.md) to combine footage and export another aspect ratio. [Render motion graphics from HTML](../how-to/render-motion-graphics.md) covers the request and rendering options.

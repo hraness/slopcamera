@@ -224,7 +224,7 @@ h3 {
   outline-offset: 3px;
 }
 
-[tabindex="-1"]:focus {
+[tabindex="-1"]:not([role="menuitemradio"]):focus {
   outline: 0;
 }
 
@@ -271,34 +271,68 @@ h3 {
 }
 
 .slopcamera-product-hero {
-  align-items: center;
-  gap: clamp(2rem, 4vw, 3.5rem);
-  padding-block: var(--hraness-marketing-hero-space, clamp(2rem, 4vw, 3rem));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2rem, 4vw, 3rem);
+  padding-block: clamp(2.5rem, 5vw, 4.5rem) 0;
 }
 
 .slopcamera-product-hero .hraness-marketing-hero__copy {
-  gap: 1.1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 2rem 4rem;
+  max-inline-size: none;
 }
 
-.slopcamera-product-hero .hraness-marketing-hero__heading {
-  font-size: min(var(--hraness-paper-heading-size), clamp(2.35rem, 1.6rem + 2.6vw, 3.75rem));
+[data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__heading {
+  max-inline-size: 16ch;
+  margin: 0;
+  font-size: clamp(3.25rem, 5.3vw, 5rem);
+  font-weight: 500;
   line-height: 1.02;
-  max-inline-size: 18ch;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
+.slopcamera-hero-intro {
+  display: grid;
+  gap: 1.2rem;
+  max-inline-size: 42ch;
+}
+
+[data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__summary {
+  max-inline-size: none;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.slopcamera-product-hero .hraness-marketing-hero__actions {
+  gap: .5rem 1.5rem;
+}
+
+.slopcamera-product-hero .hraness-marketing-hero__boundary {
+  max-inline-size: 45ch;
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+
 .slopcamera-product-hero .hraness-marketing-hero__frame {
+  inline-size: 100%;
   min-inline-size: 0;
-  margin-block-start: 0;
+  max-inline-size: none;
+  margin: 0;
 }
 
-.slopcamera-product-hero .hraness-marketing-facts {
-  grid-column: 1 / -1;
-}
+@media (max-width: 52rem) {
+  .slopcamera-product-hero .hraness-marketing-hero__copy {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
 
-@media (min-width: 62rem) {
-  .slopcamera-product-hero {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  [data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__heading {
+    max-inline-size: 15ch;
+    font-size: clamp(3rem, 8vw, 4.5rem);
   }
 }
 
@@ -345,60 +379,6 @@ h3 {
   color: var(--hraness-material-muted);
 }
 
-.example-list,
-.hraness-marketing-trust-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.hraness-marketing-interface-grid {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.25rem;
-}
-
-.hraness-marketing-interface {
-  display: grid;
-  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
-  align-items: start;
-  gap: 1.5rem 2rem;
-  min-inline-size: 0;
-  padding-block: 1.25rem;
-  padding-inline: 0;
-  background: transparent;
-  border-block-start: 1px solid var(--line-strong);
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.interface-copy {
-  display: grid;
-  gap: .65rem;
-  min-inline-size: 0;
-  padding-block-start: 2px;
-}
-
-.hraness-marketing-interface .hraness-material-code {
-  border: 1px solid var(--line-strong);
-  border-radius: .75rem;
-  background: color-mix(in oklch, var(--background, Canvas) 70%, var(--hraness-material-plane));
-  box-shadow: none;
-}
-
-/* Editorial display digits for the workflow steps. */
-.hraness-marketing-flow__number {
-  font-family: var(--hraness-marketing-display-font);
-  font-size: 1.75rem;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--muted);
-  padding-block-start: 0;
-}
-
-.hraness-marketing-primitive blockquote p {
-  color: var(--ink);
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
 .quiet-note,
 .trust-links {
   max-width: 62ch;
@@ -414,67 +394,6 @@ h3 {
 
 :where(.trust-links, .origin-note, .hraness-marketing-question__answer) a {
   color: var(--gold);
-}
-
-/* Why install it: three pillars, one line and one link each. */
-.slopcamera-why-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem 2.5rem;
-  margin: 2.5rem 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: why;
-}
-
-.slopcamera-why-list > li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-inline-size: 0;
-  margin: 0;
-  padding-block-start: 1.25rem;
-  border-block-start: 2px solid var(--primary, var(--gold));
-  counter-increment: why;
-}
-
-.slopcamera-why-list > li::before {
-  content: "0" counter(why);
-  color: var(--muted);
-  font: .75rem/1.5 var(--font-mono);
-}
-
-.slopcamera-why-list h3 {
-  margin: 0;
-  font-size: 1.1875rem;
-  line-height: 1.3;
-}
-
-.slopcamera-why-list p {
-  flex: 1;
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.slopcamera-why-list .slopcamera-why-code {
-  border: 1px solid var(--line-strong);
-  border-radius: .5rem;
-  padding: .875rem 1rem;
-  font-size: .8125rem;
-}
-
-.slopcamera-why-list a {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 2.75rem;
-  font-size: 0.9375rem;
-}
-
-@media (max-width: 56rem) {
-  .slopcamera-why-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* Install panel */

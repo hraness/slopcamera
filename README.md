@@ -1,53 +1,44 @@
 # SlopCamera
 
-[![A brass optical instrument rendered in Blender from a SlopCamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
+[![Rain, bottled: a cloud rains inside a glass vessel with brass fittings](apps/web/media/rain-bottled-poster-479a32b54a03.webp)](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)
 
-**SlopCamera is a media studio for coding agents.** SlopCamera lets your coding
+**A multimedia studio for your coding agent.** SlopCamera lets your coding
 agent make images, diagrams, animation, 3D scenes, and video from source files
-it can keep revising. It works with Codex, Claude Code, and other agents.
+it can keep revising. Use it with Codex, Claude Code, or another coding agent.
+Direct the style, timing, camera, and sound, then refine the result.
 
-A frontier model such as Claude Opus can write a video or a graphic from
-scratch in one pass. SlopCamera gives the agent packaged, tested techniques to
-reuse instead, for diagrams, motion graphics, 3D scenes, native Blender,
-CadQuery, and Manim films, and footage edits. The agent writes a short source
-file, and the SlopCamera CLI renders it, checks it, and writes the variants each
-technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a
-video. The source stays beside the output, so a revision is an edit to that
-file and a new render.
+Your agent writes the scene or edit as source. SlopCamera renders it with the
+appropriate engine and keeps the inputs so the agent can change a shot,
+rework a composition, or deliver another format. Combine authored scenes,
+generated media, and your own footage in the same project.
 
-[Install](#install-slopcamera) · [First diagram](#make-your-first-diagram) · [Techniques](https://slopcamera.com/docs/reference/techniques) · [Docs](https://slopcamera.com/docs) · [Compare](#compared-with-other-tools) · [slopcamera.com](https://slopcamera.com)
+[Watch the films](https://slopcamera.com/#examples) · [Install](#install-slopcamera) · [Direct a film](https://slopcamera.com/docs/how-to/direct-a-film) · [Docs](https://slopcamera.com/docs) · [GitHub examples](examples/showcase)
 
-## Why SlopCamera
+## What you can make
 
-- **The agent writes the part that is specific to your request.** A diagram
-  is a JSON file of boxes and arrows, a title animation is an HTML scaffold
-  for one of seven profiles, and a 3D shot is scene JSON with a named camera.
-  The renderer, frame timing, encoding, and export formats are already
-  installed. This does not make it cheaper in tokens: in our
-  [benchmark](https://slopcamera.com/docs/explanation/token-benchmark), the median cost with
-  SlopCamera installed was higher than without it on all four tasks.
-- **Revisions change the source, not the whole result.** Change one label,
-  camera, or cut and render again. Every export comes from the same source, so
-  light and dark versions, or 16:9 and 9:16 cuts, stay in step.
-- **Checks run before the agent reports back.** A strict diagram checker,
-  scene audits, render plans, and `doctor` catch problems the agent can
-  fix before you look. They check structure, not taste; you still review the
-  render.
-- **The techniques match the installed CLI.** The Bun CLI, a TypeScript SDK,
-  and an Agent Skill ship at the same version. The skill sends the agent to
-  the guide for its current job instead of loading every guide at once.
-- **Work stays on your machine.** Projects are local files and there is no
-  SlopCamera account. Generation is optional: it uses your own Vercel AI
-  Gateway access or, for prompt-only images, prepaid Hraness Credits.
+- **Films and animation.** Author motion graphics, illustrated scenes, and
+  native Blender shots. Control camera, materials, lighting, and timing.
+- **Visual explanations.** Make diagrams and educational films with editable
+  labels, mathematics, narration, and graphics.
+- **Images and designs.** Create illustrations, trace raster artwork to SVG,
+  or revise a parametric architectural model.
+- **Edits of your footage.** Compose shots, sound, overlays, and captions,
+  then export horizontal, vertical, square, or portrait versions.
+
+The [techniques catalog](https://slopcamera.com/docs/reference/techniques)
+connects each job to its supported commands and requirements. SlopCamera is
+free and open source. Local editing and rendering need no SlopCamera account.
+Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits
+for prompt-only hosted images; model usage is billed separately.
 
 ## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[SlopCamera v3.9.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.9.0)
+[SlopCamera v3.9.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.9.2)
 and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz
 slopcamera skill install --target agents
 ```
 
@@ -56,8 +47,10 @@ The `agents` target works for agents that read `~/.agents/skills`. Use
 inside a repository for a project-only install. Start a new
 agent session so it loads the skill, then ask for a result:
 
-> Create a two-box diagram showing ingestion flowing into review, render it,
-> and show me the dark PNG.
+> Make a short illustrated film of a late-night tram whose destination
+> changes to the moon. Give it warm windows, a rainy city, and a quiet ending.
+> Start with a frame and a motion test so we can direct it before the final
+> render. Keep the source and sound editable.
 
 Setup guides: [Claude Code](https://slopcamera.com/docs/tutorials/claude-code) ·
 [Codex](https://slopcamera.com/docs/tutorials/codex) ·
@@ -67,16 +60,13 @@ Blender install separately; the
 [capability reference](docs/reference/capabilities.md) lists what each
 technique needs.
 
-From 3.8.0, SlopCamera is a CLI with no menu-bar app or background process.
-`slopcamera status` shows what is running, how the last job ended, your last
-known credits balance, the newest outputs and whether the retired menu-bar
-companion still opens at login. `slopcamera tui` keeps
-that screen open and refreshes it; `slopcamera tui --snapshot` prints it once
-and `--json` returns the data. `slopcamera outputs list|open|reveal` lists the
-newest outputs or opens one on this Mac, `slopcamera commands --json` lists
-every command with what it may change, and `slopcamera legacy retire` stops
-the retired menu-bar companion opening at login by moving its LaunchAgent aside; it
-deletes nothing, and `slopcamera doctor` prints the command that restores it.
+On macOS, start with [your first animation](https://slopcamera.com/docs/tutorials/first-animation)
+for a supplied scene you can render and revise without a model account. It
+needs the browser and FFmpeg runtimes reported by `slopcamera doctor --json`.
+For a first result on macOS, Linux, or Windows with no browser or paid model,
+follow [your first diagram](https://slopcamera.com/docs/tutorials/first-diagram).
+The [directing guide](docs/how-to/direct-a-film.md) explains how to ask for useful
+changes to composition, timing, camera, and sound.
 
 <details>
 <summary>Build from source</summary>
@@ -110,70 +100,28 @@ placement and resuming long runs.
 
 </details>
 
-## Make your first diagram
+## Make a film. Then direct it again.
 
-This local task needs no model account. In a new directory, create the
-included diagram, check it, and render it:
+[Last tram to the moon](https://slopcamera.com/docs/tutorials/first-animation)
+is a complete first project: original illustrated artwork, a twelve-second
+journey, and a visible revision. The tutorial renders locally without a model
+account or downloaded artwork.
 
-```sh
-mkdir slopcamera-first
-cd slopcamera-first
-slopcamera diagram init first.diagram.json
-slopcamera diagram check first.diagram.json --strict
-slopcamera diagram render first.diagram.json
-```
+The two supplied render requests use the same scene. The first sets the city
+and departure; the second enlarges the moon while keeping the journey, palette,
+and timing. Ask your agent:
 
-You now have `example-flow.tldr`, `example-flow.light.svg`,
-`example-flow.dark.svg`, `example-flow.light.png`, and
-`example-flow.dark.png`. The JSON stays editable, and the `.tldr` file opens in
-tldraw. Rendering again replaces those five files.
+> Make the moon dominate the destination. Preserve the copper tram and rainy
+> city. Keep both versions so I can compare their endings.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="apps/web/media/source-to-film-dark-png-b8db55ec6e42.png">
-  <img alt="Diagram export, rendered scene, and footage point into Project, which points to Preview and Delivery." src="apps/web/media/source-to-film-light-png-c3c24c460490.png">
-</picture>
+[Follow the animation tutorial](https://slopcamera.com/docs/tutorials/first-animation),
+then [remix the showcase](https://slopcamera.com/docs/how-to/remix-the-showcase):
+a bottled storm, a paper ocean, a dancing laundromat, a band of harmonics,
+and three edits of the same eclipse footage. Each piece has source,
+production instructions, and a suggested creative revision.
 
-The diagram above was rendered from one
-[JSON file](examples/showcase/diagram/source-to-film.diagram.json). Each box in
-it is a short object the agent writes:
-
-```json
-{
-  "id": "diagram",
-  "type": "rect",
-  "x": 100,
-  "y": 140,
-  "width": 320,
-  "height": 140,
-  "radius": 24,
-  "label": "Diagram export",
-  "labelFontSize": 36,
-  "labelWeight": 500,
-  "tone": "blue"
-}
-```
-
-To revise it, the agent changed one label, and the file name for the new
-outputs, in a
-[copy of that file](examples/showcase/diagram/source-to-film-revised.diagram.json):
-
-```diff
--  "name": "source-to-film",
-+  "name": "source-to-film-revised",
-...
--      "label": "Delivery",
-+      "label": "Social delivery",
-```
-
-```sh
-slopcamera diagram render source-to-film-revised.diagram.json
-```
-
-That two-line change produced a new `.tldr` file, both SVGs, and both PNGs,
-including the
-[revised light PNG](apps/web/media/source-to-film-revised-light-png-9ad9767c2bdf.png).
-[Your first diagram](https://slopcamera.com/docs/tutorials/first-diagram) walks
-through the same edit.
+For a smaller first task, [make a diagram](https://slopcamera.com/docs/tutorials/first-diagram)
+and export its editable tldraw document, light and dark SVGs, and PNGs.
 
 ## What SlopCamera does
 
@@ -210,10 +158,10 @@ characters, cloth, and liquid caches; CadQuery for parametric solids and STEP;
 and Manim Community for mathematical animation. Seven editable starters
 include a product, character, shaded street, cloth, liquid, CAD bracket, and
 educational presenter. Watch the
-[six-second product film](https://slopcamera.com/docs/tutorials/first-native-film),
-then change its [geometry, materials, and camera](examples/showcase/native/product).
+[Rain, bottled](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled),
+then change its [weather, materials, and camera](examples/showcase/studio-relaunch/rain-bottled).
 For 2D motion, try the
-[editable editorial animation](https://slopcamera.com/docs/tutorials/first-animation).
+[illustrated tram film](https://slopcamera.com/docs/tutorials/first-animation).
 The [portrait geometry lesson](https://slopcamera.com/docs/how-to/educational-video)
 adds mathematical typesetting, a presenter, and captions.
 

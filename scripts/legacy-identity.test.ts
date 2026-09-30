@@ -55,6 +55,46 @@ describe("Slopcamera predecessor identity inventory", () => {
     expect(isNativeFilmStudioPath("examples/showcase/native/product/extra/studio_scene.py")).toBe(false);
     expect(isNativeFilmStudioPath("examples/showcase/native/product/./studio_scene.py")).toBe(false);
   });
+  test("relaunch path admission stays exact and never admits changed identity text", () => {
+    const root = "examples/showcase/studio-relaunch/";
+    for (const suffix of [
+      "last-tram/scene.html",
+      "rain-bottled/prepare.ts",
+      "requests/last-tram-original.json",
+      "assets/fonts/nebula-sans/NebulaSans-Book.woff2",
+      "assets/fonts/nebula-sans/LICENSE.txt",
+      "web-preview.ts",
+    ]) {
+      const path = root + suffix;
+      expect(isNativeFilmStudioPath(path)).toBe(true);
+      for (const unreviewed of [
+        `${path}.backup`,
+        `other/${path}`,
+        root + "extra/" + suffix,
+        root + "../" + suffix,
+        root + "./" + suffix,
+        path.replaceAll("/", "\\"),
+        path.replace("studio-relaunch", "studio-relaunch-old"),
+      ]) expect(isNativeFilmStudioPath(unreviewed)).toBe(false);
+    }
+    for (const suffix of ["unreviewed/scene.html", "last-tram/old-studio.ts", "last-tram/hraness.graphics.ts", "requests/new.json", "assets/fonts/new.woff2"]) {
+      expect(isNativeFilmStudioPath(root + suffix)).toBe(false);
+    }
+    const path = root + "requests/last-tram-original.json";
+    const snapshot = legacyIdentitySnapshot(path, `{"path":"${root}last-tram/scene.html"}`)!;
+    expect(compareLegacyIdentityInventory([], [snapshot], new Set())).toEqual([
+      `legacy identity inventory is missing ${path}`,
+    ]);
+    const entry = { ...snapshot, categories: ["native-film-studio"] as const };
+    expect(compareLegacyIdentityInventory([entry], [snapshot], new Set())).toEqual([]);
+    const changed = legacyIdentitySnapshot(path, '{"kind":"studio.old-brand"}')!;
+    expect(compareLegacyIdentityInventory([entry], [changed], new Set())).toEqual([
+      `${path} identity-bearing lines changed`,
+    ]);
+    expect(planLegacyIdentityInventoryUpdate([entry], [changed], new Set()).problems).toEqual([
+      `${path} changed; review and edit its source inventory row explicitly`,
+    ]);
+  });
   test("fingerprints exact predecessor-bearing lines and counts every occurrence", () => {
     expect(legacyIdentitySnapshot("fixture.ts", [
       "const canonical = 'slopcamera.video-project';",

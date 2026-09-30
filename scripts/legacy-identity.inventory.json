@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 87,
-    "identityLinesSha256": "00240a11185c06a6bdbeaeedc4878a9fc125f4bc47cfd8880d070daa5e1eb8bd",
+    "identityLinesSha256": "251728314a90bfd3c5785c8a39ac9f93f4bb9107608704667ee0a3a089b9731b",
     "occurrenceCount": 473,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1467,9 +1467,9 @@
     ]
   },
   {
-    "identityLineCount": 20,
-    "identityLinesSha256": "9e1c102fb9d2c95e8815dc1045b02d5b0c699b049afc70a717f86e4cbf8bbaf6",
-    "occurrenceCount": 20,
+    "identityLineCount": 91,
+    "identityLinesSha256": "08391923c22c23d69ae4f714a538a1ddd54f7da5ddbd9844b69d6fc06934ad5c",
+    "occurrenceCount": 97,
     "path": "apps/web/media/examples.json",
     "categories": [
       "native-film-studio"
@@ -1485,10 +1485,19 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "c17a58206982092f392767543671c27d20fbf439fb452f66ebc01dc45a3a8273",
-    "occurrenceCount": 4,
+    "identityLineCount": 9,
+    "identityLinesSha256": "d214e9ac447f118e65a2910670aace9045965a090cce2d938937284a6084326c",
+    "occurrenceCount": 9,
     "path": "apps/web/scripts/site-copy-content.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "ba19fa241d8c9d658c8c0f90782d14dba21431491ed761635888a970c7a38593",
+    "occurrenceCount": 3,
+    "path": "apps/web/scripts/site-examples-browser-contract.test.ts",
     "categories": [
       "test-fixture"
     ]
@@ -1513,8 +1522,26 @@
     ]
   },
   {
+    "identityLineCount": 15,
+    "identityLinesSha256": "35df9e201edd0afccf656e223729198fe16f6f08b1192326aa26312bb31eaa74",
+    "occurrenceCount": 20,
+    "path": "apps/web/scripts/verify-site-current.mjs",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 11,
+    "identityLinesSha256": "7b9c7f56386a8d1cd730830a5ec2206a7b66d84e504c00149abddc64bb10f32a",
+    "occurrenceCount": 11,
+    "path": "apps/web/scripts/verify-site-current.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
     "identityLineCount": 8,
-    "identityLinesSha256": "fe27c96c327a06db9222b04112d7764c5363f68b1346b555eff7269d6a24ac9e",
+    "identityLinesSha256": "469f2762aedb7b59939425a9c025de469f9ed9eefb4041ccf0b835b1eba2406e",
     "occurrenceCount": 8,
     "path": "apps/web/site.test.ts",
     "categories": [
@@ -1522,18 +1549,18 @@
     ]
   },
   {
-    "identityLineCount": 3,
-    "identityLinesSha256": "3dae63a4e0e44c51aa03ce05dd0a2d105962b6eb2f437fa35777696ca970c69c",
-    "occurrenceCount": 3,
+    "identityLineCount": 4,
+    "identityLinesSha256": "4e3d9811979cd941cb89b56331b3df3e1bbd7255caf6f0bc500621f076ee5a65",
+    "occurrenceCount": 4,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 8,
-    "identityLinesSha256": "33f403d334f420bbd4d8843ea0fbd0c14068a5b5bcb3684908f2ea992725bd17",
-    "occurrenceCount": 9,
+    "identityLineCount": 11,
+    "identityLinesSha256": "4b68a45b84181f7c83398465afa021415ffd9103306df16e237828be57fa0251",
+    "occurrenceCount": 13,
     "path": "apps/web/src/blog-admissions.ts",
     "categories": [
       "native-film-studio"
@@ -1649,6 +1676,15 @@
     ]
   },
   {
+    "identityLineCount": 7,
+    "identityLinesSha256": "9c75304f1b9c98d194c61ac04cce9f47597ae1fedce68986acaabb6f7fa9bd00",
+    "occurrenceCount": 8,
+    "path": "apps/web/src/docs/how-to/remix-the-showcase.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 3,
     "identityLinesSha256": "787d039bf832245360bcca7498f2c5227c655633b5910422ee2e2171377264e3",
     "occurrenceCount": 6,
@@ -1739,6 +1775,15 @@
     ]
   },
   {
+    "identityLineCount": 5,
+    "identityLinesSha256": "b02d61f438cf44900f51f08c5feb8267b644b4e5ac1f791a2178c47e3e09e6b0",
+    "occurrenceCount": 6,
+    "path": "apps/web/src/docs/tutorials/first-animation.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 11,
     "identityLinesSha256": "db82e07fe3261d98eb8e0cc7dc27c8edef582e1ce66b056ba0d191f7c81225c6",
     "occurrenceCount": 15,
@@ -1766,19 +1811,28 @@
     ]
   },
   {
-    "identityLineCount": 3,
-    "identityLinesSha256": "2e8beace1890ab86420e2eac72205cc8764944fb845201247433757d2b07e11c",
-    "occurrenceCount": 3,
-    "path": "apps/web/src/example-gallery.ts",
+    "identityLineCount": 1,
+    "identityLinesSha256": "07265b4c94f8826742b86bed537b3051745bb657282050fc87cc33d7ea93772e",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/example-gallery.css",
     "categories": [
       "native-film-studio"
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "866dfa4e771143ec01e6fcf5b94c747b8cf377e40423abaf17fd665ae299280d",
-    "occurrenceCount": 1,
+    "identityLineCount": 4,
+    "identityLinesSha256": "98ee684ea5d79c3de9a5d6d370004c7ed4e34461beaf44f2a96411d0ae47e104",
+    "occurrenceCount": 4,
     "path": "apps/web/src/index.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "21a90265b0b22b3a9f868dce94c72e3ce29b9177d091cc899dfef94d99d42094",
+    "occurrenceCount": 2,
+    "path": "apps/web/src/launch-beats.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1788,6 +1842,15 @@
     "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "7a8a2deb7cf811995bd27195722ac63fc5a44f6358ad389e391f6af4b1a5b5d0",
+    "occurrenceCount": 1,
+    "path": "apps/web/src/social-image.ts",
     "categories": [
       "native-film-studio"
     ]
@@ -1812,6 +1875,15 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
+    "occurrenceCount": 233,
+    "path": "dist/index-2g26ghvg.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1821,17 +1893,8 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-jmyg6t9c.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
-    "identityLinesSha256": "6c88915097384af252c7fb9245d6fdc8d96e880e95e83368d71603fda4de55e2",
+    "identityLinesSha256": "b461ae64c8acff0048d7268367ab99267a78c04b91a3a9e9e9498d71c413a963",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -1902,6 +1965,15 @@
     ]
   },
   {
+    "identityLineCount": 7,
+    "identityLinesSha256": "19e6a9bd0a9a6c88c40d27e2bd360a5621aed45658ea36811af0c272c60895a2",
+    "occurrenceCount": 8,
+    "path": "docs/how-to/remix-the-showcase.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 3,
     "identityLinesSha256": "826b72e1f2b78e993661857413d450c853535e62e9310774d495c142ddec0691",
     "occurrenceCount": 6,
@@ -1948,7 +2020,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "8d941e77d70bda74ec79e7a1ed7900e08167b2eb3a53aee33b953287944aa891",
+    "identityLinesSha256": "6aca84808aab2e10b5057e5ce69a0520f7a77464a7bce3d343f4aa35fedf5cdf",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [
@@ -1978,6 +2050,15 @@
     "identityLinesSha256": "1b120c43b71ca3bf2690ba15e07d3cedc1f19481d366610d879fdcae40dc0817",
     "occurrenceCount": 55,
     "path": "docs/studio.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "b02d61f438cf44900f51f08c5feb8267b644b4e5ac1f791a2178c47e3e09e6b0",
+    "occurrenceCount": 6,
+    "path": "docs/tutorials/first-animation.md",
     "categories": [
       "native-film-studio"
     ]
@@ -2839,6 +2920,168 @@
     ]
   },
   {
+    "identityLineCount": 7,
+    "identityLinesSha256": "0be68fd4016cfed0551ea1dc97bd1de1b0de8d09cf0ea65456ecc712046b46c6",
+    "occurrenceCount": 10,
+    "path": "examples/showcase/studio-relaunch/jazz-wave/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "06ab55ec2270ab58a7a9ab99951681d3dfc052b0418b0f5cf1939c43c2e2eb6b",
+    "occurrenceCount": 5,
+    "path": "examples/showcase/studio-relaunch/jazz-wave/render.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 9,
+    "identityLinesSha256": "79b5c015f65f8efa1dab420b90cded57069b6609cf8e084fc95ab951fdd2de2a",
+    "occurrenceCount": 9,
+    "path": "examples/showcase/studio-relaunch/last-tram/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5f15fbe21ce47c4b4841b22b4c1028934c664e47cf05b6a73be3fa5b9b9d8233",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/studio-relaunch/last-tram/render.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "f0a559f6f7c36ac66c7d6dfab54905e7869889741222c9fc6edbfa09891e76cc",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/last-tram/scene.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 6,
+    "identityLinesSha256": "1038555f6547865246eb35d1cc9aa30ce1f31e3a86546351d9076afcd1b8c8b4",
+    "occurrenceCount": 6,
+    "path": "examples/showcase/studio-relaunch/laundromat/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "c9c280302883b26f3e74ddcffe58b7b97aeaf05bdfc146afb33a21c28d9631a4",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/laundromat/scene.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 8,
+    "identityLinesSha256": "264ca9673a65169d92611099a9ef5246b5efee1498ea695bb0fbec891e36999c",
+    "occurrenceCount": 8,
+    "path": "examples/showcase/studio-relaunch/one-shoot/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "2a5d11f88b8195f73acc949668b89de3a5c5122dea1d6fe434faddfba152576c",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/studio-relaunch/one-shoot/render.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 6,
+    "identityLinesSha256": "7fbf03ad4229bb23b5bd3f853e7b1d826d6997cfac67f0fd49a0f6f6cd90d863",
+    "occurrenceCount": 6,
+    "path": "examples/showcase/studio-relaunch/paper-ocean/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "bbaa49f90b7fb65beab2f0f72b718c1100d47010a8ca3d2d57e3b849a0b75979",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/paper-ocean/scene.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "f636a579acdd2f0df703e4a7d559a9637c52b216ab025c02033b0ba02f0bcf17",
+    "occurrenceCount": 5,
+    "path": "examples/showcase/studio-relaunch/rain-bottled/finish.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "4ce588caea7f04a0b3be7ba03286289e1cd89d2b1b180118b1d9a84081b17b55",
+    "occurrenceCount": 7,
+    "path": "examples/showcase/studio-relaunch/rain-bottled/prepare.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 11,
+    "identityLinesSha256": "bfa12ae1c3b0e45b5b02ddbcd832d74dde3003d6179dd1b96c0250e793e6397f",
+    "occurrenceCount": 12,
+    "path": "examples/showcase/studio-relaunch/rain-bottled/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "5bda186136205a8e41143d72d4797064f9ff38511a7b766a0203f079766505e9",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/rain-bottled/scene.py",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "099dfccf71daeead65bb6339deeca113d05dc30a56910df1ee77072c94cdeffa",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/requests/last-tram-moonrise.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "099dfccf71daeead65bb6339deeca113d05dc30a56910df1ee77072c94cdeffa",
+    "occurrenceCount": 1,
+    "path": "examples/showcase/studio-relaunch/requests/last-tram-original.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 2,
+    "identityLinesSha256": "e8f14bc0c05d5cce81f1438ff3776613ece28f7e7fe5e749fd5b355c4c2a5fd1",
+    "occurrenceCount": 2,
+    "path": "examples/showcase/studio-relaunch/web-preview.ts",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "144ed7be2d36ec904c0215787c4f35d680a4f6ce488f184c0b105dc0f1f9e604",
     "occurrenceCount": 1,
@@ -2992,9 +3235,9 @@
     ]
   },
   {
-    "identityLineCount": 5,
-    "identityLinesSha256": "e57b38c97c0f0e3bdd5047e1e816b3d9c139220440cdd5d5234553122d373ac8",
-    "occurrenceCount": 7,
+    "identityLineCount": 6,
+    "identityLinesSha256": "1cfd91c6127c0aa7bee042e4c31cff5889c7d17e9bcaf5044696e941786230ca",
+    "occurrenceCount": 8,
     "path": "README.md",
     "categories": [
       "native-film-studio"

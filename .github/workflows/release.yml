@@ -937,7 +937,8 @@ jobs:
           bun-version: "1.3.14"
       - run: npm install --global --ignore-scripts npm@11.19.0 --registry=https://registry.npmjs.org
       - run: bun install --frozen-lockfile --ignore-scripts
-      - name: Verify the public registry archive, signatures and provenance against the canonical asset
+      - name: Verify the public registry archive against the canonical asset
+        id: registry
         run: |
           set -euo pipefail
           package_version="$(node -p 'require("./package.json").version')"
@@ -956,6 +957,43 @@ jobs:
           npm view "@hraness/slopcamera@$package_version" --json --registry=https://registry.npmjs.org > "$work/registry/npm-view.json"
           (cd "$work/registry" && npm pack "@hraness/slopcamera@$package_version" --ignore-scripts --json --registry=https://registry.npmjs.org > "$work/registry/npm-pack.json")
           registry_archive="$(node -e 'const r = require(process.argv[1]); if (!Array.isArray(r) || r.length !== 1 || typeof r[0].filename !== "string" || !/^hraness-slopcamera-[0-9.]+\.tgz$/u.test(r[0].filename)) process.exit(1); process.stdout.write(r[0].filename)' "$work/registry/npm-pack.json")"
+          bun run scripts/npm-package-identity.ts \
+            "$work/canonical/npm-pack.json" "$work/canonical/$EXPECTED_ARCHIVE_NAME" \
+            "$work/registry/npm-pack.json" "$work/registry/$registry_archive" "$work/registry/npm-view.json" \
+            @hraness/slopcamera "$package_version" "$EXPECTED_ARCHIVE_NAME"
+          WORK_DIRECTORY="$work" PACKAGE_VERSION="$package_version" REGISTRY_ARCHIVE="$registry_archive" node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const { WORK_DIRECTORY: work, PACKAGE_VERSION: version, REGISTRY_ARCHIVE: archive, GITHUB_OUTPUT: output } = process.env;
+          if (!work || /[\r\n]/u.test(work) || !output
+            || !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(version ?? '')
+            || archive !== `hraness-slopcamera-${version}.tgz`) throw new Error('Invalid verified registry handoff');
+          // Package identity has been checked above; npm can re-encode the archive.
+          const integrity = `sha512-${createHash('sha512').update(readFileSync(join(work, 'registry', archive))).digest('base64')}`;
+          appendFileSync(output, `version=${version}\nintegrity=${integrity}\nwork=${work}\narchive=${archive}\n`);
+          NODE
+      - name: Wait for npm install metadata and provenance
+        uses: hraness/.github/actions/npm-visible@9ddbd8f7187e4528278cf078159702ea333418ce
+        with:
+          package: '@hraness/slopcamera'
+          version: ${{ steps.registry.outputs.version }}
+          integrity: ${{ steps.registry.outputs.integrity }}
+          tag: latest
+          timeout-seconds: '300'
+      - name: Verify npm signatures, provenance and isolated installation
+        env:
+          WORK_DIRECTORY: ${{ steps.registry.outputs.work }}
+          PACKAGE_VERSION: ${{ steps.registry.outputs.version }}
+          REGISTRY_ARCHIVE: ${{ steps.registry.outputs.archive }}
+        run: |
+          set -euo pipefail
+          work="$WORK_DIRECTORY"
+          package_version="$PACKAGE_VERSION"
+          registry_archive="$REGISTRY_ARCHIVE"
+          # Refresh the view after propagation and bind it to the retained bytes.
+          [[ "$(sha256sum "$work/canonical/$EXPECTED_ARCHIVE_NAME" | cut -d ' ' -f 1)" == "$EXPECTED_ARCHIVE_SHA256" ]]
+          npm view "@hraness/slopcamera@$package_version" --json --registry=https://registry.npmjs.org > "$work/registry/npm-view.json"
           bun run scripts/npm-package-identity.ts \
             "$work/canonical/npm-pack.json" "$work/canonical/$EXPECTED_ARCHIVE_NAME" \
             "$work/registry/npm-pack.json" "$work/registry/$registry_archive" "$work/registry/npm-view.json" \

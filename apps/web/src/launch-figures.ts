@@ -16,13 +16,14 @@ export const launchFigures: Readonly<Record<string, LaunchFigure>> = Object.free
 ))
 
 /** The launch film is the one figure that is not a workflow example. */
-const filmCaption = "The launch film, rendered by SlopCamera from its own launch-film template. Captions are on the video."
-const filmAlt = "A short film: title, four steps, a proof card and the limits, each built from real SlopCamera renders."
+const filmCaption = "The original launch film, rendered from SlopCamera's launch-film template. Its example count records the collection at the time of filming. Captions are included."
+const filmAlt = "The original SlopCamera launch film, showing an earlier diagram-led introduction and its historical example count."
 
 /**
  * Expand `{{LAUNCH_BEATS}}` into one section per beat: headline, post, figure
- * and an optional link. The beats module is the single source; the post, the
- * social kit and the film all read the same text.
+ * and an optional link. The beats module is the single source; the post
+ * and the generated social kit read the same text. The original launch film
+ * is retained separately as a historical example.
  */
 export function expandLaunchBeats(markdown: string): string {
   return markdown.replace(/^\{\{LAUNCH_BEATS\}\}$/mu, () => resolvedLaunchBeats.map(beat => [
@@ -73,9 +74,13 @@ export function launchFigureHtml(name: string, classes: boolean): string {
   const { figure, example } = figureExample(name)
   const poster = exampleUrl(example.poster)
   const alt = escape(example.poster.alt)
+  const captions = example.video?.captions
+  const track = captions === undefined
+    ? ""
+    : `<track kind="captions" src="${exampleUrl(captions)}" srclang="en" label="English">`
   const media = example.video === undefined
     ? `<img${cls("BLOG_FIGURE_MEDIA_CLASS")} src="${poster}" width="${String(example.poster.width)}" height="${String(example.poster.height)}" alt="${alt}" loading="lazy" decoding="async">`
-    : `<video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${poster}" width="${String(example.video.width)}" height="${String(example.video.height)}" aria-label="${alt}"><source src="${exampleUrl(example.video)}" type="${example.video.mime}"><a href="${exampleUrl(example.video)}">Open the video</a></video>`
+    : `<video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${poster}" width="${String(example.video.width)}" height="${String(example.video.height)}" aria-label="${alt}"><source src="${exampleUrl(example.video)}" type="${example.video.mime}">${track}<a href="${exampleUrl(example.video)}">Open the video</a></video>`
   return `<figure${cls("BLOG_FIGURE_CLASS")}>${media}<figcaption${cls("BLOG_FIGCAPTION_CLASS")}>${escape(figure.caption)}</figcaption></figure>`
 }
 
@@ -96,5 +101,5 @@ function launchFilmHtml(cls: (token: string) => string): string {
   const film = launchMediaFile("film")
   const poster = launchMediaFile("poster")
   const captions = launchMediaFile("captions")
-  return `<figure${cls("BLOG_FIGURE_CLASS")}><video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${launchMediaUrl(poster)}" width="${String(film.width)}" height="${String(film.height)}" aria-label="${escape(filmAlt)}"><source src="${launchMediaUrl(film)}" type="video/mp4"><track kind="captions" srclang="en" label="English" src="${launchMediaUrl(captions)}" default><a href="${launchMediaUrl(film)}">Open the launch film</a></video><figcaption${cls("BLOG_FIGCAPTION_CLASS")}>${escape(filmCaption)} <a href="${launchMediaUrl(launchMediaFile("square"))}">Square cut</a> · <a href="${launchMediaUrl(launchMediaFile("portrait"))}">Portrait cut</a></figcaption></figure>`
+  return `<figure${cls("BLOG_FIGURE_CLASS")}><video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${launchMediaUrl(poster)}" width="${String(film.width)}" height="${String(film.height)}" aria-label="${escape(filmAlt)}"><source src="${launchMediaUrl(film)}" type="video/mp4"><track kind="captions" srclang="en" label="English" src="${launchMediaUrl(captions)}" default><a href="${launchMediaUrl(film)}">Open the original launch film</a></video><figcaption${cls("BLOG_FIGCAPTION_CLASS")}>${escape(filmCaption)} <a href="${launchMediaUrl(launchMediaFile("square"))}">Square cut</a> · <a href="${launchMediaUrl(launchMediaFile("portrait"))}">Portrait cut</a></figcaption></figure>`
 }

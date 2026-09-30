@@ -1085,6 +1085,60 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(admitJob).toContain("bun run scripts/npm-publish-authority.ts")
   expect(admitJob).toContain("bun run scripts/package-smoke.ts")
   expect(admitJob).not.toContain("npm publish")
+  const comparison = admitJob.indexOf("name: Verify the public registry archive against the canonical asset")
+  const visibility = admitJob.indexOf("name: Wait for npm install metadata and provenance")
+  const signatures = admitJob.indexOf("name: Verify npm signatures, provenance and isolated installation")
+  expect(comparison).toBeGreaterThan(-1)
+  expect(visibility).toBeGreaterThan(comparison)
+  expect(signatures).toBeGreaterThan(visibility)
+  expect(admitJob).toContain("hraness/.github/actions/npm-visible@9ddbd8f7187e4528278cf078159702ea333418ce")
+  expect(admitJob).toContain("version: ${{ steps.registry.outputs.version }}")
+  expect(admitJob).toContain("integrity: ${{ steps.registry.outputs.integrity }}")
+  expect(admitJob).toContain("timeout-seconds: '300'")
+  const refreshed = workflowStepScript(workflow, "Verify npm signatures, provenance and isolated installation")
+  expect(refreshed.indexOf("npm view")).toBeLessThan(refreshed.indexOf("bun run scripts/npm-package-identity.ts"))
+  expect(refreshed.indexOf("bun run scripts/npm-package-identity.ts")).toBeLessThan(refreshed.indexOf("npm audit signatures"))
+})
+
+test("npm visibility handoff hashes the verified registry transport and rejects unsafe output fields", async () => {
+  const workflow = await readWorkflow("public-release.yml", "release.yml")
+  const step = workflowStepScript(workflow, "Verify the public registry archive against the canonical asset")
+  const script = /node --input-type=module <<'NODE'\n([\s\S]*?)\nNODE/u.exec(step)?.[1]
+  if (!script) throw new Error("Missing verified registry handoff")
+  expect(step.indexOf("bun run scripts/npm-package-identity.ts")).toBeLessThan(step.indexOf("node --input-type=module"))
+  const root = await mkdtemp(join(tmpdir(), "slopcamera-npm-visibility-"))
+  const entries = [
+    { body: "read me\n", mode: 0o644, path: "README.md" },
+    { body: '{"name":"@hraness/slopcamera","version":"3.2.0"}\n', mode: 0o644, path: "package.json" },
+  ] as const
+  try {
+    const fixture = await writePackageIdentityFixture(root, entries, entries, true)
+    await verifyNpmPackageIdentity(fixture)
+    const output = join(root, "outputs")
+    const environment = { ...process.env, WORK_DIRECTORY: root, PACKAGE_VERSION: fixture.expectedVersion,
+      REGISTRY_ARCHIVE: fixture.expectedFilename, GITHUB_OUTPUT: output }
+    const child = Bun.spawn([process.execPath, "--eval", script], { env: environment, stdout: "pipe", stderr: "pipe" })
+    const [exit, error] = await Promise.all([child.exited, new Response(child.stderr).text()])
+    if (exit !== 0) throw new Error(error)
+    const integrity = `sha512-${createHash("sha512").update(await readFile(fixture.registryArchive)).digest("base64")}`
+    const sourceIntegrity = `sha512-${createHash("sha512").update(await readFile(fixture.sourceArchive)).digest("base64")}`
+    expect(integrity).not.toBe(sourceIntegrity)
+    expect(await readFile(output, "utf8")).toBe(`version=${fixture.expectedVersion}\nintegrity=${integrity}\nwork=${root}\narchive=${fixture.expectedFilename}\n`)
+    for (const [index, invalid] of [
+      { PACKAGE_VERSION: "3.2.0\ninjected=yes" },
+      { REGISTRY_ARCHIVE: "../unrelated.tgz" },
+      { WORK_DIRECTORY: `${root}\ninjected=yes` },
+    ].entries()) {
+      const invalidOutput = join(root, `invalid-${String(index)}`)
+      const rejected = Bun.spawn([process.execPath, "--eval", script], {
+        env: { ...environment, ...invalid, GITHUB_OUTPUT: invalidOutput }, stdout: "ignore", stderr: "ignore",
+      })
+      expect(await rejected.exited).not.toBe(0)
+      expect(await Bun.file(invalidOutput).exists()).toBe(false)
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 test("both tar consumers reject hostile USTAR headers and packed dist-tag overrides", async () => {
@@ -1249,13 +1303,13 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.9.1")
+  expect(manifest.version).toBe("3.9.2")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.9.0")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz")
+  expect(publishedRelease.version).toBe("3.9.2")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }

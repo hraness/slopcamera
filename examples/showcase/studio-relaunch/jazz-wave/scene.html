@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A square wave auditions for jazz</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#10252b}canvas{display:block;width:100%;height:100%}
+</style>
+<canvas id="film" aria-label="Five odd harmonics join a tiny jazz band. Their accurately scaled sine waves add into a square-wave approximation with visible overshoot."></canvas>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('film'),c=canvas.getContext('2d',{alpha:false}),W=1920,H=1080,TAU=2*Math.PI;
+const ink='#10252b',paper='#efe9cf',colors=['#e5b343','#e66e53','#8cbdac','#c69abc','#b3c657'];
+const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*(3-2*x)},lerp=(a,b,p)=>a+(b-a)*p;
+const enter=(t,i)=>i===0?1:ease((t-i*2)/.32),phase=t=>t*TAU*.55;
+function path(d,fill,stroke,width=1){const p=new Path2D(d);if(fill){c.fillStyle=fill;c.fill(p)}if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke(p)}}
+function rect(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
+function ellipse(x,y,rx,ry,col,a=0){c.beginPath();c.ellipse(x,y,rx,ry,a,0,TAU);c.fillStyle=col;c.fill()}
+function line(x,y,x2,y2,col,w=1){c.beginPath();c.moveTo(x,y);c.lineTo(x2,y2);c.strokeStyle=col;c.lineWidth=w;c.stroke()}
+function group(x,y,angle,fn){c.save();c.translate(x,y);c.rotate(angle);fn();c.restore()}
+function type(s,x,y,size,col,font='Jazz Sans',weight=400,align='left'){c.font=`${weight} ${size}px "${font}"`;c.fillStyle=col;c.textAlign=align;c.fillText(s,x,y)}
+function strokeCurve(x,y,width,amplitude,harmonic,t,color,weight=4){c.beginPath();for(let j=0;j<=256;j++){const u=j/256,yy=y-amplitude*Math.sin(TAU*u*harmonic-phase(t)*harmonic);j?c.lineTo(x+u*width,yy):c.moveTo(x,yy)}c.strokeStyle=color;c.lineWidth=weight;c.stroke()}
+function sum(theta,t){let y=0;for(let i=0;i<5;i++)y+=enter(t,i)*Math.sin((2*i+1)*theta)/(2*i+1);return 4/Math.PI*y}
+function shoes(x,y,t,index){const kick=Math.max(0,Math.sin(TAU*t*2-index*.7))*7;path(`M${x-34} ${y-80}Q${x-37} ${y-32} ${x-51} ${y-6} L${x-83} ${y-6}Q${x-90} ${y+8} ${x-69} ${y+11}L${x-31} ${y+8}Q${x-9} ${y-40} ${x-8} ${y-80}Z`,ink);path(`M${x+14} ${y-81}L${x+42} ${y-27-kick}Q${x+50} ${y-13-kick} ${x+81} ${y-14-kick}L${x+81} ${y+1-kick}L${x+31} ${y+3-kick}L${x-15} ${y-72}Z`,ink)}
+function head(x,y,angle,color,hat){group(x,y,angle,()=>{ellipse(0,0,25,31,paper);path('M-24 -5Q-29 -40 2 -35Q35 -30 24 4L14 -4L12 -19Q0 -4 -24 -5',ink);ellipse(14,1,2.7,2.7,ink);path('M21 4L32 12L20 13',paper);line(9,20,19,19,ink,2);if(hat){path('M-34 -23L33 -26L31 -36L-29 -34Z',color);path('M-19 -34L-12 -65L15 -65L25 -37Z',color);line(-16,-40,22,-41,ink,5)}})}
+function player(index,t){const start=enter(t,index),x=244+index*358+(1-start)*125,y=535+(1-start)*140;
+ c.save();c.globalAlpha=start;group(x,y,Math.sin(TAU*t*2-index*.6)*.024,()=>{
+  c.scale(.9,.9);
+  const col=colors[index],b=Math.sin(TAU*t*2-index*.5)*4;
+  ellipse(0,82,133,22,'#10252b25');shoes(0,72,t,index);
+  if(index===0){
+   path('M-68 -147Q-19 -178 21 -146L49 -40L-49 -25Z',ink);path('M-20 -154L-4 -126L-24 -58L-37 -123Z',paper);path('M-24 -126L-14 -126L-8 -81L-22 -68L-29 -79Z',col);
+   head(-16,-195,-.08,col,true);
+   // Double-bass silhouette, carved bouts, bridge and four physical strings.
+   group(52,-54+b,.08,()=>{path('M-25 -207L-8 -207L-4 -57Q29 -66 44 -34Q56 -13 30 8Q17 25 42 39Q78 93 7 118Q-52 126 -59 84Q-63 58 -39 44Q-14 26 -34 8Q-55 -14 -38 -42Q-26 -60 -11 -55Z',col,ink,4);path('M-21 -209L-24 -247Q-10 -266 5 -247L-1 -209Z',col,ink,4);line(-9,-221,6,87,paper,3);line(-15,-220,0,87,ink,2);line(-3,-220,12,87,ink,2);line(-9,71,20,70,ink,5);path('M-30 27q-18 9-7 28m52 -37q21 4 14 26',null,ink,3);line(6,118,7,131,ink,4)});
+   path(`M-54 -128Q-26 -96 59 ${-62+b}`,null,paper,13);path(`M23 -135L61 ${-158+b}`,null,paper,11);ellipse(61,-158+b,9,9,paper);
+  }else if(index===1){
+   path('M-58 -139Q-10 -170 27 -141L57 -49L-40 -29Z',ink);path('M-19 -151L-5 -107L10 -150Z',paper);head(-15,-186,.08,col,false);
+   // A saxophone hook and bell, with moving hands, not a generic waveform glyph.
+   group(44,-79+b,.09,()=>{path('M-44 -86Q-5 -109 3 -74L2 42Q8 73 25 63L36 9L72 15L66 47Q57 103 20 101Q-38 92 -27 37L-10 -55Q-5 -73 -24 -72Z',col,ink,4);ellipse(55,13,31,12,ink,-.3);ellipse(55,9,31,8,col,-.3);for(let j=0;j<5;j++)ellipse(-12,2+j*13,5,5,paper);path('M-40 -86L-55 -91',null,ink,7)});
+   path(`M-46 -119Q1 -81 35 ${-62+b}`,null,paper,12);path(`M21 -134Q66 -98 48 ${-19+b}`,null,paper,12);
+  }else if(index===2){
+   path('M-67 -148Q-19 -171 31 -133L60 -39L-55 -36Z',ink);path('M-18 -151L-4 -126L-13 -87L-37 -128Z',paper);head(-28,-190,-.09,col,true);
+   group(48,-151+b,-.13,()=>{path('M-43 -16L39 -16L77 -45L77 38L40 7L-43 7Z',col,ink,4);ellipse(78,-4,15,42,col,0);ellipse(80,-4,8,34,ink,0);path('M-32 4L-32 31L19 31L19 3',null,col,9);for(let j=0;j<3;j++){line(-9+j*15,-33,-9+j*15,-9,col,5);ellipse(-9+j*15,-35,7,3,paper)}});
+   path(`M-49 -123Q-21 -167 29 ${-164+b}`,null,paper,13);path(`M26 -122Q47 -120 63 ${-153+b}`,null,paper,12);
+  }else if(index===3){
+   path('M-56 -148Q-8 -169 33 -145L52 -37L-54 -29Z',ink);path('M-22 -153L-6 -116L17 -149Z',paper);head(-6,-192,.05,col,false);
+   group(25,-132+b,-.27,()=>{path('M-10 -34L9 -34L13 109L33 133L-31 133L-14 108Z',col,ink,3);for(let j=0;j<7;j++){ellipse(1,-8+j*17,5,5,paper);line(-12,-10+j*17,13,-10+j*17,ink,2)}ellipse(1,136,33,8,ink)});
+   path(`M-49 -119Q-29 -74 24 ${-78+b}`,null,paper,12);path(`M32 -130Q63 -83 38 ${-29+b}`,null,paper,12);
+  }else{
+   head(-1,-194,-.07,col,true);path('M-53 -151Q4 -171 47 -142L48 -68L-46 -65Z',ink);path('M-10 -152L0 -111L16 -150Z',paper);
+   line(-65,-19,-78,94,ink,8);line(86,-19,97,94,ink,8);
+   path('M-119 -47L97 -47L124 -10L-99 -10Z',col,ink,4);for(let j=0;j<11;j++){const xx=-112+j*20;path(`M${xx} -46L${xx+17} -46L${xx+30} -13L${xx+12} -13Z`,j%3===0?paper:col,ink,2)}
+   const left=Math.sin(TAU*t*2+.2)*15,right=Math.sin(TAU*t*2+Math.PI)*15;
+   path(`M-38 -132Q-70 -100 -61 ${-92+left}`,null,paper,12);path(`M36 -129Q68 -94 61 ${-89+right}`,null,paper,12);
+   line(-61,-92+left,-27,-52+left,ink,4);ellipse(-27,-52+left,10,10,paper);line(61,-89+right,25,-49+right,ink,4);ellipse(25,-49+right,10,10,paper);
+  }
+ });c.restore();
+}
+function render(time){if(!Number.isFinite(time)||time<0||time>=12)throw new Error('Time must be in [0,12).');
+ const ww=Math.round(innerWidth*(devicePixelRatio||1)),hh=Math.round(innerHeight*(devicePixelRatio||1));if(ww<1||hh<1||ww>8192||hh>8192||ww*hh>33554432)throw new Error('Invalid canvas.');if(canvas.width!==ww||canvas.height!==hh){canvas.width=ww;canvas.height=hh}
+ const scale=Math.min(ww/W,hh/H);c.setTransform(1,0,0,1,0,0);rect(0,0,ww,hh,ink);c.translate((ww-W*scale)/2,(hh-H*scale)/2);c.scale(scale,scale);c.lineCap='round';c.lineJoin='round';rect(0,0,W,H,paper);
+ // A club-poster composition. Texture is stationary and sparse, not screen noise.
+ for(let k=0;k<1700;k++){const x=((k*1777)%1921),y=((k*937)%1081);rect(x,y,1.1,1.1,'#10252b09')}
+ rect(0,0,W,243,ink);type('A square wave',88,110,112,paper,'Jazz Serif');type('auditions for jazz.',88,213,112,paper,'Jazz Serif');
+ type('TONIGHT ONLY',1817,67,22,paper,'Jazz Sans',700,'right');type('THE ODD',1817,126,49,colors[0],'Jazz Sans',700,'right');type('HARMONICS',1817,181,49,colors[0],'Jazz Sans',700,'right');
+ const count=Math.min(5,1+Math.floor(time/2));
+ type('ONE FUNDAMENTAL. FOUR VERY ODD FRIENDS.',960,287,22,ink,'Jazz Sans',700,'center');
+ type(`${count} / 5 ON STAGE`,1824,287,22,ink,'Jazz Sans',700,'right');
+ for(let i=0;i<5;i++){
+  const n=2*i+1,active=enter(time,i);c.save();c.globalAlpha=lerp(.1,1,active);ellipse(244+i*358,609,146,23,colors[i]);c.restore();
+  player(i,time);
+  type(`${n}f`,244+i*358,666,37,active>.5?ink:'#b6b59f','Jazz Sans',700,'center');
+  const amplitudes=['1','1/3','1/5','1/7','1/9'];type(amplitudes[i],244+i*358,699,20,ink,'Jazz Sans',400,'center');
+  line(112+i*358,735,376+i*358,735,'#10252b29',1);if(active>0){c.save();c.globalAlpha=active;strokeCurve(112+i*358,735,264,28*4/Math.PI/n,n,time,colors[i],4);c.restore()}
+ }
+ rect(0,782,W,298,ink);
+ type('THE SUM',88,834,26,paper,'Jazz Sans',700);type(`${count} ${count===1?'VOICE':'VOICES'}`,88,869,21,'#afc2b9','Jazz Sans');
+ const x0=281,x1=1822,y0=920,A=73;
+ line(x0,y0,x1,y0,'#ffffff28',1);line(x0,y0-A,x1,y0-A,'#ffffff20',1);line(x0,y0+A,x1,y0+A,'#ffffff20',1);
+ type('+1',263,y0-A+7,19,'#afc2b9','Jazz Sans',400,'right');type('−1',263,y0+A+7,19,'#afc2b9','Jazz Sans',400,'right');
+ // 4/pi is the Fourier normalization for a +/-1 square wave. Do not peak-normalize
+ // individual states: preserving their real overshoot is part of the explanation.
+ c.beginPath();for(let j=0;j<=1400;j++){const u=j/1400,theta=TAU*u*2-phase(time),yy=y0-A*sum(theta,time);j?c.lineTo(lerp(x0,x1,u),yy):c.moveTo(x0,yy)}c.strokeStyle=paper;c.lineWidth=5.5;c.stroke();
+ if(time>=8.5){const a=ease((time-8.5)/.5);c.save();c.globalAlpha=a;type('ODD HARMONICS. SHARPER CORNERS. SAME SWING.',1818,818,21,colors[0],'Jazz Sans',700,'right');c.restore()}
+ type('s(θ,t) = (4/π) Σ gₖ(t) sin((2k + 1)θ)/(2k + 1)',88,1052,23,paper,'Jazz Sans');
+ type('k = 0…4   •   gₖ: 0 → 1 on entry   •   overshoot retained',1818,1052,23,'#afc2b9','Jazz Sans',400,'right');
+}
+window.JazzWave=Object.freeze({render,sum,enter,durationSeconds:12});
+const fonts=Promise.all([['sans','Jazz Sans','400','../assets/fonts/nebula-sans/NebulaSans-Book.woff2'],['bold','Jazz Sans','700','../assets/fonts/nebula-sans/NebulaSans-Bold.woff2'],['serif','Jazz Serif','400','../assets/fonts/instrument-serif/instrument-serif-latin-400.woff2']].map(async([name,family,weight,fallback])=>{const url=window.SlopcameraOverlay?SlopcameraOverlay.asset(name):fallback;const face=new FontFace(family,`url("${url}")`,{weight});await face.load();document.fonts.add(face)}));
+if(window.SlopcameraOverlay){const offset=SlopcameraOverlay.parameters.timeOffsetSeconds??0;if(!Number.isFinite(offset)||offset<0||offset>=12)throw new Error('Invalid offset.');SlopcameraOverlay.ready(fonts);SlopcameraOverlay.onFrame(({timeMs})=>render(timeMs/1000+offset))}
+else{const p=new URLSearchParams(location.search),t=Number(p.get('time')??9);fonts.then(()=>render(t))}
+})();
+</script>
+</html>

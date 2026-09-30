@@ -47,7 +47,7 @@ export type ExampleMediaOptions = Readonly<{
   kicker?: string
   /** Homepage cards: the first command for this technique. */
   command?: string
-  /** Homepage cards: short quiet links (Guide, Source, Video) and no duration line. */
+  /** Homepage cards: short links; scored films keep their playback hint. */
   compact?: boolean
   /** Still examples: a dark render of the same image, shown in the dark theme. */
   darkPosterUrl?: string
@@ -94,7 +94,7 @@ export function renderExampleMedia(record: ExampleMediaRecord, options: ExampleM
     // No autoplay attribute: JavaScript may opt in only after observing visibility and preferences.
     media = `<video class="slopcamera-example__media" data-example-player${options.autoplayPreview ? ' data-example-preview="true" muted' : ""} controls playsinline preload="none" poster="${poster}" width="${dimension(video.width)}" height="${dimension(video.height)}" aria-labelledby="${id}-title" aria-describedby="${id}-description"><source src="${url}" type="${video.mime}">${track}<a href="${url}">Open ${title} video</a></video>`
     videoLink = `<a href="${url}">${labels[2]}</a>`
-    if (!options.compact) details = `<p class="slopcamera-example__details">${Number(video.durationSeconds.toFixed(1))}s · ${video.hasAudio ? "Sound available in video controls" : "Silent"}</p>`
+    if (!options.compact || video.hasAudio) details = `<p class="slopcamera-example__details">${Number(video.durationSeconds.toFixed(1))}s · ${video.hasAudio ? "Sound available in video controls" : "Silent"}</p>`
   } else {
     const alt = escapeHtml(record.poster.alt ?? record.title)
     const image = (url: string, variant: string) => `<img class="slopcamera-example__media${variant}" src="${url}" width="${posterWidth}" height="${posterHeight}" alt="${alt}" loading="${options.eagerPoster ? "eager" : "lazy"}"${options.eagerPoster ? ' fetchpriority="high"' : ""} decoding="async">`

@@ -28,7 +28,7 @@ import { siteShellCases, shellAppearanceSteps, checkShellCase, withShellCaseClea
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { assertExamplesBaselineManifest, assertReleaseCopyInputs, buildExamplesDriver, examplesWorkerMinify, projectReleaseCopyMedia } from "./verify-site-examples"
 import { decodeProfiledWorkerJson, encodeProfiledWorkerJson, examplesWorkerProtocolLimit, workerDriverLimit, workerAttachmentMs } from "./preview-browser-protocol"
-import { publishedRelease, archiveInstall } from "../src/published-release"
+import { publishedRelease } from "../src/published-release"
 import type { ShellSnapshot } from "./verify-site-shell"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
@@ -321,7 +321,8 @@ describe("exact release install fragments and unchanged geometry contract", () =
   expect(examplesInstallNote(false, releaseCopyScope)).toBe(releaseCopyBaselineNote)
   expect(projectExamplesBaselineCopyElements(baseline.elements, releaseCopyScope).map(item => item.text)).toEqual(current.elements.map(item => item.text))
   expect(current.elements.filter((item, index) => item.text !== baseline.elements[index]!.text)).toHaveLength(6)
-  expect(refinementInstallCommand).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
+  // Frozen historical profiles do not track the current public release datum.
+  expect(refinementInstallCommand).toBe("bun add --global https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz\nslopcamera skill install --target agents")
   expect(releaseCopyBaselineCommand).toContain("/v3.3.6/hraness-slopcamera-3.3.6.tgz")
   expect(examplesBaselineInstallCommand).toContain("/v3.3.3/hraness-slopcamera-3.3.3.tgz")
   for (const row of [false, true]) {
