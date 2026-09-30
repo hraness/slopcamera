@@ -83,10 +83,6 @@ No. HTML graphics use plain HTML in one of seven profiles: plain (no library), M
 
 Slopcamera is MIT licensed, so there is no company tier. Optional AI generation uses your own Vercel AI Gateway key and bills through that account.
 
-### Does SlopCamera use fewer tokens than Remotion?
-
-Slopcamera has not been measured against Remotion. In Slopcamera's own [benchmark](/docs/explanation/token-benchmark), the median cost with Slopcamera installed was higher than without it on all four media tasks, a small sample of two sessions each. The extra went mostly to reading the skill, command help, and rendered frames. Remotion's Agent Skills serve a similar purpose for React video.
-
 ### Can SlopCamera render in the cloud?
 
 Not video. Video renders run on your machine. The hosted API at `api.slopcamera.com` checks and renders diagrams for free with rate limits and generates images with prepaid Hraness Credits. See [Choose an interface](/docs/explanation/choose-an-interface).

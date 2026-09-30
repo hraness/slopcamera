@@ -2,11 +2,12 @@
 
 import assert from "node:assert/strict"
 import { createHash, randomUUID } from "node:crypto"
-import { constants } from "node:fs"
-import { access, mkdir, mkdtemp, opendir, realpath, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, opendir, realpath, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
+import { createRequire } from "node:module"
 import { dirname, isAbsolute, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { pinnedBrowserExecutable, pinnedChromiumVersion } from "./owned-browser.mjs"
 import { spawnVerificationServer, stopVerificationServer, VerificationServerOutputTimeoutError,
   type ManagedVerificationServer, type VerificationOutputSnapshot, type VerificationStreamSnapshot } from "@hraness/direct/tooling/browser-verification"
 import { inspectPreviewCssResources } from "./preview-css"
@@ -147,17 +148,12 @@ function serve(payload: Payload) {
   return { server, rejected }
 }
 
-async function findChrome(): Promise<string> {
-  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH]) {
-    if (candidate === undefined || candidate === "") continue
-    try {
-      await access(candidate, constants.X_OK)
-      const executable = await realpath(candidate)
-      assert.ok(!executable.includes("/Google Chrome.app/"), "The installed Google Chrome app is not an owned test browser")
-      return executable
-    } catch { /* Reject unavailable or unsupported executables. */ }
-  }
-  throw new Error("Chrome is required; set SLOPCAMERA_CHROME_PATH")
+async function findChrome(): Promise<{ executable: string; expectedVersion: string }> {
+  const { chromium } = createRequire(join(appDirectory, "package.json"))("playwright-core")
+  const pinned = chromium.executablePath()
+  const executable = await pinnedBrowserExecutable(pinned, process.env.SLOPCAMERA_CHROME_PATH || undefined)
+  if (process.env.CHROME_PATH) await pinnedBrowserExecutable(pinned, process.env.CHROME_PATH)
+  return { executable, expectedVersion: pinnedChromiumVersion() }
 }
 
 export function parsePreviewEndpoint(text: string): { port: number; browserPath: string } {
@@ -396,7 +392,8 @@ export async function verifyPreview(args: readonly string[] = []): Promise<void>
     servers.push(currentServer)
     const oldServer = baseline === undefined ? undefined : serve(baseline)
     if (oldServer !== undefined) servers.push(oldServer)
-    const chrome = await cancellation.wait(findChrome)
+    const selectedBrowser = await cancellation.wait(findChrome)
+    const chrome = selectedBrowser.executable
     cancellation.signal.throwIfAborted()
     managed = spawnVerificationServer({ cwd: appDirectory, detachedProcessGroup: true, logLimit: 12_000, command: [
       chrome, "--headless=new", "--disable-features=PaintHolding,MacAppCodeSignClone",
@@ -439,9 +436,10 @@ export async function verifyPreview(args: readonly string[] = []): Promise<void>
     // settlements succeed. A late result can never override cancellation.
     await cancellation.wait(() => bounded(worker!.exited, "Preview worker exit after result", 5_000))
     assert.equal(worker.exitCode(), 0, "Preview worker did not exit successfully")
+    assert.equal(observation.result.browser, selectedBrowser.expectedVersion, "Observed browser differs from app-pinned Chromium")
     for (const server of servers) assert.deepEqual(server.rejected, [], "Server received unadmitted resource requests")
     verificationCompleted = true
-    return { browser: observation.result.browser, node: observation.result.node, playwright: observation.result.playwright,
+    return { browser: observation.result.browser, browserExecutable: chrome, node: observation.result.node, playwright: observation.result.playwright,
       cases: observation.result.cases, nativeBrowserZoom: false, internetRequestsAllowed: false,
       exactHeaders: true, noActions: true, resourceErrors: 0, cspErrors: 0, negativeStylesheetRestored: true,
       currentArtifacts: current.artifacts, baseline: baseline === undefined ? null : { sourceRevision: baselineRevision, artifacts: baseline.artifacts } }

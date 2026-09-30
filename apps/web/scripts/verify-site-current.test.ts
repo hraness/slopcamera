@@ -67,6 +67,10 @@ test("launch merges required features into one switch and preserves actual pinne
 test("live review has one fixed public origin and preserves the local network boundary", () => {
   expect(requestedOrigin([])).toBeNull()
   expect(requestedOrigin(["--production"])).toBe("https://slopcamera.com")
+  expect(requestedOrigin(["--local-origin=http://127.0.0.1:12345"])).toBe("http://127.0.0.1:12345")
+  expect(() => requestedOrigin(["--local-origin=https://example.com"])).toThrow()
+  expect(() => requestedOrigin(["--production", "--local-origin=http://127.0.0.1:12345"])).toThrow()
+  expect(() => requestedOrigin(["--local-origin=http://127.0.0.1:12345", "--local-origin=http://127.0.0.1:12346"])).toThrow()
   expect(() => requestedOrigin(["--origin", "https://example.com"])).toThrow()
   expect(() => requestedOrigin(["--production", "https://example.com"])).toThrow()
   expect(allowsRequest("http://127.0.0.1:1234/assets/site.css", "http://127.0.0.1:1234")).toBe(true)
