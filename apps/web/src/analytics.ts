@@ -1,4 +1,4 @@
-import { getBrowserConsent } from "@hraness/posthog/consent"
+import { getBrowserConsent, installConsentTransport } from "@hraness/posthog/consent"
 import { initHranessCookieConsent } from "@hraness/site-footer/consent"
 import posthog from "posthog-js/dist/module.slim.no-external"
 import { AnalyticsExtensions, ErrorTrackingExtensions } from "posthog-js/dist/extension-bundles"
@@ -24,7 +24,8 @@ const consent = getBrowserConsent()
 let initialized = false
 
 function initializeAnalytics() {
-  if (initialized || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)) return
+  if (initialized || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)
+    || !installConsentTransport(posthog, consent)) return
   initialized = true
   const sanitize = createBeforeSend(token, () => window.location, isNotFound)
   posthog.init(token, {

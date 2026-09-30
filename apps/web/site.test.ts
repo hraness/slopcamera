@@ -1740,7 +1740,8 @@ describe("static Slopcamera site", () => {
     expect(theme).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
     expect(copyCommand).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
     expect(analytics).toContain("...posthogBrowserOptions(")
-    expect(analytics).toContain("before_send: createBeforeSend(")
+    expect(analytics).toContain("const sanitize = createBeforeSend(")
+    expect(analytics).toContain("before_send: event => consent.allowed() ? sanitize(event) : null")
     expect(analytics).not.toMatch(/identify\(|autocapture:\s*true|capture_exceptions:\s*true/)
     const options = posthogBrowserOptions("https://us.i.posthog.com")
     expect(options).toMatchObject({
@@ -2668,6 +2669,10 @@ test("the real analytics entry waits for regional permission and honors acceptan
       ? { initialized: 1, captured: 1 }
       : { initialized: 0, captured: 0 })
     expect(output.afterAccepted).toEqual({ initialized: 1, captured: 1 })
+    expect(output.allowedBeforeRefusal).toBe(true)
     expect(output.blockedAfterRefusal).toBe(true)
+    expect(output.pendingAborted).toBe(true)
+    expect(output.requestsAfterStaleRetry).toBe(1)
+    expect(output.requestsAfterFreshCapture).toBe(2)
   }
 })
