@@ -1674,10 +1674,11 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.32.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
+      "@hraness/site-footer": "github:hraness/site-footer#v0.20.4",
+      "@hraness/posthog": "github:hraness/posthog#v0.3.4",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1704,9 +1705,9 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.32.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.35.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
+      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.4"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
@@ -2229,7 +2230,7 @@ describe("static Slopcamera site", () => {
     const csp = byKey.get("Content-Security-Policy") ?? ""
 
     expect(vercel.headers?.find(entry => entry.source === "/(.*)")).toBeUndefined()
-    expect(csp).toContain("connect-src https://us.i.posthog.com")
+    expect(csp).toContain("connect-src https://us.i.posthog.com https://account.hraness.com")
     expect(csp).toContain("font-src 'self'")
     expect(csp).toContain("form-action 'none'")
     expect(csp).toContain("frame-ancestors 'none'")
@@ -2651,4 +2652,22 @@ describe("static Slopcamera site", () => {
 
 
 
+})
+
+test("the real analytics entry waits for regional permission and honors acceptance and refusal", () => {
+  for (const mode of ["optional", "required", "malformed", "unavailable"]) {
+    const result = Bun.spawnSync([
+      process.execPath,
+      fileURLToPath(new URL("./scripts/analytics-consent-harness.ts", import.meta.url)),
+      mode,
+    ], { stdout: "pipe", stderr: "pipe" })
+    expect(result.exitCode).toBe(0)
+    const output = JSON.parse(new TextDecoder().decode(result.stdout))
+    expect(output.before).toEqual({ initialized: 0, captured: 0 })
+    expect(output.afterRegion).toEqual(mode === "optional"
+      ? { initialized: 1, captured: 1 }
+      : { initialized: 0, captured: 0 })
+    expect(output.afterAccepted).toEqual({ initialized: 1, captured: 1 })
+    expect(output.blockedAfterRefusal).toBe(true)
+  }
 })

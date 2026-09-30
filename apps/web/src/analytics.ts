@@ -1,3 +1,5 @@
+import { getBrowserConsent } from "@hraness/posthog/consent"
+import { initHranessCookieConsent } from "@hraness/site-footer/consent"
 import posthog from "posthog-js/dist/module.slim.no-external"
 import { AnalyticsExtensions, ErrorTrackingExtensions } from "posthog-js/dist/extension-bundles"
 // Bundles the web-vitals callbacks locally, so posthog-js never loads them
@@ -17,14 +19,21 @@ declare const __SLOPCAMERA_POSTHOG_KEY__: string
 const token = __SLOPCAMERA_POSTHOG_KEY__
 const isNotFound = (): boolean => document.documentElement.dataset.pageKind === "not_found"
 
-if (shouldInitializeAnalytics(window.location, token)) {
+initHranessCookieConsent()
+const consent = getBrowserConsent()
+let initialized = false
+
+function initializeAnalytics() {
+  if (initialized || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)) return
+  initialized = true
+  const sanitize = createBeforeSend(token, () => window.location, isNotFound)
   posthog.init(token, {
     ...posthogBrowserOptions(__SLOPCAMERA_POSTHOG_HOST__),
     __extensionClasses: {
       exceptions: ErrorTrackingExtensions.exceptions,
       webVitalsAutocapture: AnalyticsExtensions.webVitalsAutocapture,
     },
-    before_send: createBeforeSend(token, () => window.location, isNotFound),
+    before_send: event => consent.allowed() ? sanitize(event) : null,
   })
 
   if (isNotFound()) {
@@ -49,6 +58,7 @@ if (shouldInitializeAnalytics(window.location, token)) {
               : "inline"
 
   document.addEventListener("click", event => {
+    if (!consent.allowed()) return
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null
     if (link === null) return
     const href = link.getAttribute("href")
@@ -63,6 +73,7 @@ if (shouldInitializeAnalytics(window.location, token)) {
   // data-copy-state="copied"; only copies of install commands count. The
   // command text only selects install_method and is never sent.
   new MutationObserver(records => {
+    if (!consent.allowed()) return
     for (const record of records) {
       const target = record.target
       if (!(target instanceof HTMLButtonElement) || target.dataset.copyState !== "copied" || record.oldValue === "copied") continue
@@ -80,6 +91,7 @@ if (shouldInitializeAnalytics(window.location, token)) {
   const budget = new ExceptionBudget()
   const report = (value: unknown, origin: "window_error" | "unhandled_rejection"): void => {
     try {
+      if (!consent.allowed()) return
       const error = sanitizeError(value)
       const fingerprint = errorFingerprint(error)
       if (!budget.allow(fingerprint)) return
@@ -91,3 +103,5 @@ if (shouldInitializeAnalytics(window.location, token)) {
   window.addEventListener("error", event => report(event.error ?? new Error(event.message || "Script error"), "window_error"))
   window.addEventListener("unhandledrejection", event => report(event.reason, "unhandled_rejection"))
 }
+
+if (shouldInitializeAnalytics(window.location, token)) consent?.subscribe(initializeAnalytics)

@@ -24,8 +24,8 @@ import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
 const packages = [
-  { name: "@hraness/design-kit", version: "0.32.0" },
-  { name: "@hraness/site-footer", version: "0.20.1" },
+  { name: "@hraness/design-kit", version: "0.35.0" },
+  { name: "@hraness/site-footer", version: "0.20.4" },
   { name: "@hraness/ui", version: "0.5.25" },
 ] as const
 const fontFiles = [

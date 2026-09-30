@@ -51,6 +51,13 @@ before committing, sharing, uploading, or publishing them. Keep Gateway
 credentials in the process environment and remove secrets and private media
 from vulnerability reports.
 
+## Website analytics
+
+The site checks the shared regional policy at account.hraness.com. Analytics
+waits for acceptance where that policy requires consent, or when the region is
+unknown. Elsewhere it can run without cookies before a visitor responds.
+Declining stops analytics, and the browser's Do Not Track setting is respected.
+
 Report suspected vulnerabilities through GitHub private vulnerability
 reporting at https://github.com/hraness/slopcamera/security/advisories/new.
 
