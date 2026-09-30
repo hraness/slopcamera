@@ -139,7 +139,7 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
     description: "HTML video versus several engines.",
   },
   "docs/explanation/remotion-alternatives-for-coding-agents.html": { description: "Tools to use instead of or beside Remotion." },
-  "docs/explanation/token-benchmark.html": { description: "No: median cost was higher on all four tasks." },
+  "docs/explanation/token-benchmark.html": { description: "Methods and reports from a controlled study of first-render and revision costs." },
   "docs/explanation/html-authoring.html": { description: "DOM, vector, Three.js, and GPU profiles." },
   "docs/explanation/use-cases.html": { description: "What people make, and where it is the wrong tool." },
   "docs/explanation/choose-an-interface.html": { description: "Agent Skill, CLI, SDK, MCP, or hosted adapter." },

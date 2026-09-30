@@ -10,6 +10,7 @@ import { createRequire } from "node:module"
 import { dirname, extname, join, normalize, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
+import { browserOwner, localVerificationOrigin, ownedChromiumLaunchOptions, pinnedBrowserExecutable, pinnedChromiumDefinition, verifyOwnedChromium } from "./owned-browser.mjs"
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(appDirectory, "dist")
@@ -44,8 +45,9 @@ export const currentShellCases = [390, 1440].flatMap(width => ["ltr", "rtl"].map
 export const productionOrigin = "https://slopcamera.com"
 
 export function requestedOrigin(args) {
-  const { values } = parseArgs({ args, options: { production: { type: "boolean", default: false } } })
-  return values.production ? productionOrigin : null
+  const { values } = parseArgs({ args, options: { production: { type: "boolean", default: false }, "local-origin": { type: "string" } } })
+  assert.equal(args.filter(argument => argument === "--local-origin" || argument.startsWith("--local-origin=")).length, Number(values["local-origin"] !== undefined), "Provide at most one local origin.")
+  return localVerificationOrigin(values["local-origin"], values.production) ?? (values.production ? productionOrigin : null)
 }
 
 export function allowsRequest(url, origin) {
@@ -601,15 +603,39 @@ export async function main(args = process.argv.slice(2)) {
   if (!liveOrigin) assert.ok(existsSync(join(dist, "index.html")), "Build the site before running verify:current")
   const artifacts = process.env.SLOPCAMERA_SITE_ARTIFACTS
   if (artifacts) await mkdir(artifacts, { recursive: true })
+  const definition = pinnedChromiumDefinition()
   const runtime = await currentBrowserIdentity()
-  const launchOptions = currentBrowserLaunchOptions()
-  const { server, origin } = liveOrigin ? { server: null, origin: liveOrigin } : await serve()
+  assert.equal(runtime.browserVersion, definition.expectedVersion, "Browser manifest differs from the admitted Playwright runtime")
+  const executablePath = await pinnedBrowserExecutable(runtime.executable, process.env.SLOPCAMERA_CHROME_PATH)
+  if (process.env.CHROME_PATH !== undefined) await pinnedBrowserExecutable(runtime.executable, process.env.CHROME_PATH)
+  const launchOptions = ownedChromiumLaunchOptions(executablePath, definition.defaultArgs, currentBrowserLaunchOptions().args)
+  let server = null
+  let origin = liveOrigin
   let browser
+  let browserIdentity
+  let interruption
+  const owner = browserOwner({
+    launch: async () => {
+      if (!liveOrigin) ({ server, origin } = await serve())
+      if (interruption) throw interruption
+      return chromium.launch({ ...launchOptions, timeout: 15000,
+        handleSIGHUP: false, handleSIGINT: false, handleSIGTERM: false })
+    },
+    close: async active => { await active.close() },
+    stopServer: async () => { if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) },
+  })
+  const handlers = [129, 130, 143].map((code, index) => ({ signal: ["SIGHUP", "SIGINT", "SIGTERM"][index],
+    handler: () => {
+      interruption ??= new Error(`Browser verification interrupted by ${["SIGHUP", "SIGINT", "SIGTERM"][index]}.`)
+      process.exitCode = code
+      void owner.stop().catch(error => { console.error(error); process.exitCode = 1 })
+    } }))
+  for (const { signal, handler } of handlers) process.once(signal, handler)
   const results = []
   try {
-    browser = await chromium.launch({ executablePath: runtime.executable, ...launchOptions })
-    assert.equal(browser.version(), runtime.browserVersion, "Connected Chromium version differs from pinned Playwright")
-    console.log(`verify:current browser ${runtime.browserVersion} (${runtime.executable}), Playwright ${runtime.playwright}, revision ${runtime.revision}`)
+    browser = await owner.start()
+    browserIdentity = await verifyOwnedChromium(browser, executablePath, definition.expectedVersion)
+    console.log(`verify:current browser ${browserIdentity.browserVersion} (${browserIdentity.executable}), Playwright ${runtime.playwright}, revision ${runtime.revision}`)
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
       results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }
@@ -622,10 +648,11 @@ export async function main(args = process.argv.slice(2)) {
     for (const policy of ["native-controls", "save-data", "failure"]) results.push(await reviewStudioInteractions(browser, origin, policy))
     for (const scenario of currentShellCases) results.push(await reviewCurrentShell(browser, origin, scenario))
   } finally {
-    try { await browser?.close() }
-    finally { if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) }
+    for (const { signal, handler } of handlers) process.off(signal, handler)
+    await owner.stop()
   }
-  if (artifacts) await writeFile(join(artifacts, "browser-evidence.json"), JSON.stringify({ design: currentDesign, origin, runtime, cleanup: server ? "browser and server closed" : "browser closed", results }, null, 2) + "\n")
+  if (interruption) throw interruption
+  if (artifacts) await writeFile(join(artifacts, "browser-evidence.json"), JSON.stringify({ design: currentDesign, origin, runtime, browserIdentity, cleanup: server ? "browser and server closed" : "browser closed", results }, null, 2) + "\n")
   const failed = results.filter(result => result.problems.length > 0)
   for (const result of failed) console.error(`FAIL ${result.label}\n  ${result.problems.join("\n  ")}`)
   console.log(`verify:current ${results.length - failed.length}/${results.length} cases passed`)

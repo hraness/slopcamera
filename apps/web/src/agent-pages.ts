@@ -185,7 +185,7 @@ ${blogPostLinks}
 - [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
 - [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
 - [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
-- [Token benchmark](https://slopcamera.com/docs/explanation/token-benchmark.md): Agent token use and cost on four media tasks with and without Slopcamera installed
+- [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark.md): Methods and reports from a controlled study of first-render and revision costs
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
 - [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
 - [Tutorials](https://slopcamera.com/docs/index.md): First diagram, first animation, first native film, and agent setup
