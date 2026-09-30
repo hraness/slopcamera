@@ -58,7 +58,6 @@ import {
 } from "./src/negotiate-request"
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
-import { SOCIAL_IMAGE_MIN_PALETTE_DISTANCE, socialImagePalette, socialImagePaletteDistance, socialImageSitePalette } from "@hraness/web-discovery/social-image/card"
 import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFitFor, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
@@ -1369,10 +1368,18 @@ describe("static Slopcamera site", () => {
     // One declaration drives every card; pages pass only their own copy.
     expect(slopcameraSocialSite.name).toBe("SlopCamera")
     expect(slopcameraSocialSite.domain).toBe("slopcamera.com")
-    expect(slopcameraSocialSite.icon?.kind).toBe("mark")
-    expect(slopcameraSocialSite.icon?.src).toBe(`data:image/svg+xml;base64,${
+    // The card's header is the site's sticky header: the same foil mask, the
+    // name as the nav shows it, and the palette every page's <html> declares.
+    expect(slopcameraSocialSite.brand).toBe("SlopCamera")
+    expect(slopcameraSocialSite.brandMark).toBe(`data:image/svg+xml;base64,${
       Buffer.from(await readSource("marks/slopcamera.svg")).toString("base64")}`)
-    expect(slopcameraSocialSite.theme).toEqual({ accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85", wash: "#5822C3" })
+    expect(await readSource("site-foil.css")).toContain('--hraness-foil-mask: url("./marks/slopcamera.svg")')
+    expect(slopcameraSocialSite.palette).toBe("catppuccin")
+    for (const template of ["index.html", "doc.html", "blog.html"]) {
+      expect(await readSource(template)).toContain('data-palette="catppuccin"')
+    }
+    expect(slopcameraSocialSite.icon).toBeUndefined()
+    expect(slopcameraSocialSite.theme).toBeUndefined()
     expect(homeSocialImage).toMatchObject({ file: "og.png", url: "https://slopcamera.com/og.png", width: 1200, height: 630 })
     expect(homeSocialImage.page).toBeUndefined()
     expect(socialImages).toHaveLength(1 + 1 + blogPosts.length + docPages.length)
@@ -1414,17 +1421,6 @@ describe("static Slopcamera site", () => {
       expect(fit.headline).toMatchObject({ reduced: false, threeLine: false, truncated: false })
       expect(fit.removed).toEqual([])
     }
-  })
-
-  test("keeps the share-card palette apart from the periwinkle portfolio cards", () => {
-    // Soulscrape and hraness.com (before its wash) share this Paper theme with a
-    // blue accent; without the violet wash this card read as the same color.
-    const periwinkle = socialImagePalette({ accent: "#1E5AE1", background: "#F8F7F4", foreground: "#1C1917", muted: "#6C665F" })
-    const { wash: _wash, ...unwashedTheme } = slopcameraSocialSite.theme ?? {}
-    const unwashed = socialImagePalette(unwashedTheme)
-    expect(socialImagePaletteDistance(unwashed, periwinkle)).toBeLessThan(SOCIAL_IMAGE_MIN_PALETTE_DISTANCE)
-    expect(socialImagePaletteDistance(socialImageSitePalette(slopcameraSocialSite), periwinkle))
-      .toBeGreaterThanOrEqual(SOCIAL_IMAGE_MIN_PALETTE_DISTANCE)
   })
 
   test("points every docs and blog page at its own shared-template card", async () => {
@@ -1502,7 +1498,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1533,7 +1529,7 @@ describe("static Slopcamera site", () => {
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
