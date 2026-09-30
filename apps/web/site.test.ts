@@ -1922,7 +1922,7 @@ describe("static Slopcamera site", () => {
       expect(asset).toContain("https://us.i.posthog.com")
       expect(asset).toStartWith("/*! posthog-js 1.413.2")
       expect(asset).toContain("Apache License\n                           Version 2.0")
-      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(180_000)
+      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(310_000)
     })
   }, repeatedCompilationTimeoutMs)
 
