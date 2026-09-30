@@ -28,6 +28,7 @@
   },
   "include": [
     "site.test.ts",
+    "scripts/analytics-posthog-harness.ts",
     "src/blog.test.ts",
     "scripts/build-site.ts",
     "scripts/site-contract.ts",
