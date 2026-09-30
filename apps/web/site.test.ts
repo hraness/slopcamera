@@ -39,6 +39,7 @@ import {
   sanitizeError,
   sanitizeEvent,
   shouldInitializeAnalytics,
+  doNotTrackEnabled,
 } from "./src/analytics-contract"
 import {
   homeMarkdown,
@@ -1793,6 +1794,28 @@ describe("static Slopcamera site", () => {
     expect(build).toContain('environment.VERCEL_ENV !== "production"')
     expect(build).not.toContain("docsTemplate")
     expect(build).not.toContain('outputDirectory, "docs"')
+  })
+
+  test("honors current and legacy Do Not Track preferences before the cookieless bootstrap", async () => {
+    for (const enabled of ["1", "yes", "true", " YES "]) {
+      expect(doNotTrackEnabled({ doNotTrack: enabled }, {})).toBe(true)
+      expect(doNotTrackEnabled({ msDoNotTrack: enabled }, {})).toBe(true)
+      expect(doNotTrackEnabled({}, { doNotTrack: enabled })).toBe(true)
+    }
+    for (const disabled of [undefined, null, "0", "no", "false", "unspecified"]) {
+      expect(doNotTrackEnabled({ doNotTrack: disabled, msDoNotTrack: disabled }, { doNotTrack: disabled })).toBe(false)
+    }
+    let enabled = false
+    const beforeSend = createBeforeSend("phc_testtoken", () => new URL("https://slopcamera.com/"), () => false, () => enabled)
+    const event = { event: "$pageview", properties: { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true, $raw_user_agent: "test", $current_url: "https://slopcamera.com/" }, uuid: "0198c6a7-7c00-7000-8000-000000000000" }
+    expect(beforeSend(event)).not.toBeNull()
+    enabled = true
+    expect(beforeSend(event)).toBeNull()
+    const bootstrap = await readSource("analytics.ts")
+    expect(bootstrap).toContain("createBeforeSend(token, () => window.location, isNotFound, dntEnabled)")
+    expect(bootstrap).toContain("if (!dntEnabled()")
+    expect(bootstrap.indexOf("if (!dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
+    expect(bootstrap).toContain("if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {")
   })
 
   test("classifies every public route and scrubs values without rebuilding the property set", () => {
