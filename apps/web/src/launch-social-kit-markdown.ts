@@ -1,5 +1,6 @@
 // The launch social kit as Markdown, for kb/launch/social-kit.md.
 // Every line comes from ./launch-beats and ./launch-facts; edit those, not the output.
+import { socialBeats } from "@hraness/design-kit/launch"
 import { launchBeatFacts, launchSocialKit, launchStatus, resolvedLaunchBeats } from "./launch-beats"
 
 const block = (text: string): string => ["```text", text, "```"].join("\n")
@@ -40,7 +41,7 @@ export function renderSocialKitMarkdown(): string {
     "",
     "## Beats and their visuals",
     "",
-    ...resolvedLaunchBeats.map((beat, index) => `${String(index + 1)}. ${beat.headline} (example \`${beat.visual.scene}\`)`),
+    ...socialBeats(resolvedLaunchBeats).map((beat, index) => `${String(index + 1)}. ${beat.headline} (example \`${beat.visual.scene}\`)`),
     "",
     "## Facts and their records",
     "",
