@@ -57,6 +57,7 @@ import {
 } from "./src/negotiate-request"
 import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
+import { SOCIAL_IMAGE_MIN_PALETTE_DISTANCE, socialImagePalette, socialImagePaletteDistance, socialImageSitePalette } from "@hraness/web-discovery/social-image/card"
 import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFitFor, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
@@ -1334,17 +1335,18 @@ describe("static Slopcamera site", () => {
     expect(slopcameraSocialSite.icon?.kind).toBe("mark")
     expect(slopcameraSocialSite.icon?.src).toBe(`data:image/svg+xml;base64,${
       Buffer.from(await readSource("marks/slopcamera.svg")).toString("base64")}`)
-    expect(slopcameraSocialSite.theme).toEqual({ accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85" })
+    expect(slopcameraSocialSite.theme).toEqual({ accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85", wash: "#5822C3" })
     expect(homeSocialImage).toMatchObject({ file: "og.png", url: "https://slopcamera.com/og.png", width: 1200, height: 630 })
     expect(homeSocialImage.page).toBeUndefined()
     expect(socialImages).toHaveLength(1 + 1 + blogPosts.length + docPages.length)
     expect(new Set(socialImages.map(image => image.file)).size).toBe(socialImages.length)
     for (const image of socialImages.slice(1)) {
       expect(image.file).toMatch(/^og\/(?:blog|docs)(?:\/[a-z0-9/-]+)?\.png$/u)
-      expect(Object.keys(image.page ?? {}).sort()).toEqual(["description", "eyebrow", "headline"])
+      expect(Object.keys(image.page ?? {}).sort()).toEqual(["description", "eyebrow", "headline", "path"])
+      expect(image.page?.eyebrow).toMatch(/^(?:Blog|Documentation|Tutorial|Guide|Reference|Explanation|Comparison|Release|Integration|Native engines|Frameworks and agents)$/u)
     }
     const doc = socialImageForDocument("docs/how-to/edit-video.html")
-    expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "How-to guides" } })
+    expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "Guide", path: "/docs/how-to/edit-video" } })
     expect(doc.alt).toBe("Edit and deliver video, from SlopCamera")
     for (const image of [homeSocialImage, doc]) {
       const png = await renderSocialImage(image)
@@ -1358,14 +1360,28 @@ describe("static Slopcamera site", () => {
 
   test("fits every declared share card as written", () => {
     // Each card keeps its own headline and description whole: no clause cut,
-    // no smaller or three-line headline, nothing stripped.
+    // no smaller or three-line headline, nothing stripped, and no finding of
+    // any kind from web-discovery's fit review (not strict, so the v0.12
+    // description and eyebrow codes count too).
     for (const image of socialImages) {
       const fit = socialImageFitFor(image)
+      expect({ file: image.file, findings: fit.findings.map(finding => finding.code) }).toEqual({ file: image.file, findings: [] })
       expect({ file: image.file, issues: fit.issues }).toEqual({ file: image.file, issues: [] })
       expect(fit.description?.cut ?? "none").toBe("none")
       expect(fit.headline).toMatchObject({ reduced: false, threeLine: false, truncated: false })
       expect(fit.removed).toEqual([])
     }
+  })
+
+  test("keeps the share-card palette apart from the periwinkle portfolio cards", () => {
+    // Soulscrape and hraness.com (before its wash) share this Paper theme with a
+    // blue accent; without the violet wash this card read as the same color.
+    const periwinkle = socialImagePalette({ accent: "#1E5AE1", background: "#F8F7F4", foreground: "#1C1917", muted: "#6C665F" })
+    const { wash: _wash, ...unwashedTheme } = slopcameraSocialSite.theme ?? {}
+    const unwashed = socialImagePalette(unwashedTheme)
+    expect(socialImagePaletteDistance(unwashed, periwinkle)).toBeLessThan(SOCIAL_IMAGE_MIN_PALETTE_DISTANCE)
+    expect(socialImagePaletteDistance(socialImageSitePalette(slopcameraSocialSite), periwinkle))
+      .toBeGreaterThanOrEqual(SOCIAL_IMAGE_MIN_PALETTE_DISTANCE)
   })
 
   test("points every docs and blog page at its own shared-template card", async () => {
@@ -1443,7 +1459,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
       "@hraness/ui": "github:hraness/ui#v0.5.16",
-      "@hraness/web-discovery": "github:hraness/web-discovery#v0.11.0",
+      "@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
       "react": "19.2.3",
@@ -1474,7 +1490,7 @@ describe("static Slopcamera site", () => {
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
-    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.11.0"')
+    expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.413.2"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
