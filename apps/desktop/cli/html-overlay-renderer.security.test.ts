@@ -41,10 +41,10 @@ afterEach(async () => {
     await rm(root, { force: true, recursive: true })));
 });
 
-async function setup() {
+async function setup(filename = "fixture-browser") {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-browser-snapshot-"));
   roots.push(root);
-  const source = join(root, "fixture-browser");
+  const source = join(root, filename);
   const original = Buffer.from("#!/bin/sh\nexit 0\n");
   await writeFile(source, original, { mode: 0o755 });
   await chmod(source, 0o755);
@@ -486,6 +486,59 @@ describe("private HTML-overlay browser runtime launch", () => {
       expect(newContextCalls).toBe(0);
     },
   );
+
+  test.skipIf(process.platform !== "darwin")("a write and restore during the baseline is rejected by the saved identity", async () => {
+    const filename = `baseline-${crypto.randomUUID()}`;
+    const item = await setup(filename);
+    item.original = Buffer.from(`#!/bin/sh\n# ${filename}\nexit 0\n`);
+    await writeFile(item.source, item.original);
+    item.browserRuntime = await bindHtmlOverlayBrowserRuntime(await bindExactCapability({
+      available: true, command: item.source, name: "html-browser", version: "baseline fixture",
+    }), undefined, { allowUnverifiedRuntimeForTesting: true });
+    await mkdir(item.frames, { mode: 0o700 });
+    let launchCalls = 0;
+    const controller = new AbortController();
+    const renderer = new PlaywrightHtmlOverlayRenderer({ cacheRoot: item.cache, launch: () => {
+      launchCalls += 1;
+      return Promise.reject(new Error("must not launch a changed baseline"));
+    } });
+    let renderFailure: unknown;
+    const rendering = renderer.renderFrames({ authoring: item.authoring,
+      browserRuntime: item.browserRuntime, outputDirectory: item.frames, resources: [],
+    }, controller.signal).catch((error: unknown) => { renderFailure = error; return error; });
+    let changed = false;
+    try {
+      for (let attempt = 0; attempt < 200 && !changed; attempt += 1) {
+        for (const name of await readdir("/private/tmp")) {
+          if (!name.startsWith(".slopcamera-browser-runtime-")) continue;
+          const target = join("/private/tmp", name, "browser");
+          const details = await lstat(target).catch(() => undefined);
+          if (details === undefined) continue;
+          const bytes = await readFile(target).catch(() => undefined);
+          if (bytes === undefined || !bytes.equals(item.original)) continue;
+          // The single-file fixture has no native process. Let preparation
+          // finish and enter its two-second FSEvents quiet baseline.
+          await new Promise<void>(resolve => setTimeout(resolve, 250));
+          const originalMode = (await lstat(target)).mode & 0o777;
+          await chmod(target, 0o700);
+          await writeFile(target, "substitute baseline bytes");
+          await writeFile(target, item.original);
+          await chmod(target, originalMode);
+          changed = true;
+          break;
+        }
+        if (!changed) await new Promise<void>(resolve => setTimeout(resolve, 10));
+      }
+      if (!changed) throw new Error("The baseline fixture did not find and mutate its exact private runtime.", { cause: renderFailure });
+      const failure = await rendering;
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as Error).message).toMatch(/snapshot identity changed immediately before launch/u);
+      expect(launchCalls).toBe(0);
+    } finally {
+      controller.abort(new Error("baseline fixture finished"));
+      await rendering;
+    }
+  });
 
   test("cancellation during snapshot copying stops before launch and removes the private tree", async () => {
     const root = await mkdtemp(join(tmpdir(), "slopcamera-browser-cancel-snapshot-"));
