@@ -6,7 +6,7 @@ Each released version has a section headed with its version, such as `## 3.4.0 -
 
 SlopCamera handles delayed macOS filesystem notifications while preparing a browser for HTML rendering.
 
-- Wait for a bounded quiet period before rechecking every saved browser file and directory identity, preventing stale preparation events from rejecting an unchanged runtime.
+- Wait for a bounded quiet period, then recheck every saved browser file and directory identity before accepting preparation notifications.
 - Keep watcher errors, mutations during preparation, and changes during execution fail-closed.
 
 ## 3.10.0 - 2026-09-30
