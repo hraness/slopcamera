@@ -4,9 +4,9 @@ This reference describes the current Slopcamera CLI and its runtime requirements
 
 ## Current SlopCamera and historical Atet
 
-Slopcamera v3.9.2 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
+Slopcamera v3.10.0 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.10.0/hraness-slopcamera-3.10.0.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
 
-| Surface | Historical Atet v3.2.3 | Slopcamera v3.9.2 |
+| Surface | Historical Atet v3.2.3 | Slopcamera v3.10.0 |
 | --- | --- | --- |
 | Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
 | Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
@@ -23,9 +23,9 @@ Use the Slopcamera release installation or a source build for the commands below
 
 ## Verified release contents
 
-The immutable [v3.9.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.9.2), published on September 30, 2026, contains the following command families. Its canonical archive is built from `424190a59953290d5f18f4ca9782816ade97d395`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The immutable [v3.10.0 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.0), published on September 30, 2026, contains the following command families. Its canonical archive is built from `c7d3ef794ba9e4baefb7af8d3a53124a58c0fb13`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
 
-| Capability | Slopcamera v3.9.2 |
+| Capability | Slopcamera v3.10.0 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -46,7 +46,7 @@ This release includes the three renderer corrections introduced in v3.3.4 that v
 
 ## Parametric architectural designs
 
-Slopcamera v3.9.2 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+Slopcamera v3.10.0 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 Wall openings use corrected elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
 
@@ -141,8 +141,8 @@ The renderer emits one `--disable-features` argument that combines its disabled 
 
 ## CLI updates
 
-Automatic updates require SlopCamera 3.10.0 or newer. After that release is
-published, upgrade an older installation once through its package manager.
+Automatic updates require SlopCamera 3.10.0 or newer. Upgrade an older
+installation once through its package manager.
 
 Supported Bun and npm global installations on macOS and Linux check for a
 newer release at most once a day before a command starts. Automatic updates are
