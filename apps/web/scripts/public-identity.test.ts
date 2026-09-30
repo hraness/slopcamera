@@ -36,7 +36,7 @@ test("the public Slopcamera mark identity admits only its exact PNG derivatives"
   }
 })
 
-test("any sampled single-bit change rejects while restoring the exact handoff re-admits", async () => {
+test("any sampled single-bit change rejects while restoring the exact derivative re-admits", async () => {
   const { root, icons } = await fixture()
   let seed = 0x1f4f8
   for (let trial = 0; trial < 32; trial += 1) {
@@ -46,7 +46,7 @@ test("any sampled single-bit change rejects while restoring the exact handoff re
     const offset = seed % changed.length
     changed[offset] = changed[offset]! ^ (1 << (trial % 8))
     await writeFile(join(root, "src", icon.path), changed)
-    await expect(readPublicIcons(root)).rejects.toThrow("differs from the reviewed identity handoff")
+    await expect(readPublicIcons(root)).rejects.toThrow("differs from the reviewed header favicon")
     await writeFile(join(root, "src", icon.path), icon.bytes)
     expect((await readPublicIcons(root)).map(value => value.bytes)).toEqual(icons.map(value => value.bytes))
   }
