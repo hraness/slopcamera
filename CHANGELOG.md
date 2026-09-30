@@ -2,11 +2,11 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
-## Unreleased
+## 3.10.1 - 2026-09-30
 
 SlopCamera handles delayed macOS filesystem notifications while preparing a browser for HTML rendering.
 
-- Wait for a bounded quiet period before rechecking every saved browser file and directory identity, preventing stale preparation events from rejecting an unchanged runtime.
+- Wait for a bounded quiet period, then recheck every saved browser file and directory identity before accepting preparation notifications.
 - Keep watcher errors, mutations during preparation, and changes during execution fail-closed.
 
 ## 3.10.0 - 2026-09-30
