@@ -1,3 +1,5 @@
+import { homepageMarketingSlots, shellProductNameSlot } from "../src/messaging"
+import { replaceSiteSlot } from "../src/site-template"
 import { describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -648,7 +650,10 @@ describe("examples-only finite worker protocol", () => {
 
 describe("workflow-examples-v1 independent native contract", () => {
  test("current hero and trust literals match authored content before reduced-motion enhancement", async () => {
-  const source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
+  let source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
+  for (const [token, value, count] of [shellProductNameSlot("index.html"), ...homepageMarketingSlots]) {
+   source = replaceSiteSlot(source, token, value, count)
+  }
   expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
   // The quiet hero keeps its real media proof without the retired decorative backdrop.
   expect(source).not.toContain("{{HERO_BACKDROP}}")
@@ -663,7 +668,7 @@ describe("workflow-examples-v1 independent native contract", () => {
     ? node.attrs.some(attribute => attribute.name === "class" && attribute.value.split(" ").includes(selector.slice(1)))
     : node.attrs.some(attribute => attribute.name === "id" && attribute.value === selector.slice(1)))
    expect(actual).toHaveLength(1)
-   // Independent literal stays authored in the profile. This source-rendered
+   // The profile independently retains DOM structure and resolves current canonical copy. This source-rendered
    // regression does not prove native layout or automatic-player behavior.
    expect(serializeOuter(actual[0]!)).toBe(examplesIslands.find(item => item.selector === selector)!.current)
    if (selector === ".hraness-marketing-hero") {

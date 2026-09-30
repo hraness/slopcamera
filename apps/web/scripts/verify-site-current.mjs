@@ -10,6 +10,7 @@ import { createRequire } from "node:module"
 import { dirname, extname, join, normalize, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
+import { ownedChromiumOptions } from "./owned-chromium.mjs"
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(appDirectory, "dist")
@@ -46,8 +47,7 @@ export function resolveBuilt(root, pathname) {
 }
 
 function findChrome() {
-  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH, process.env.CHROME_PATH, chromium.executablePath(),
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"]) {
+  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH, chromium.executablePath()]) {
     if (candidate && existsSync(candidate)) return candidate
   }
   throw new Error("Chrome is required; set SLOPCAMERA_CHROME_PATH")
@@ -162,8 +162,9 @@ export async function main(args = process.argv.slice(2)) {
   let browser
   const results = []
   try {
-    browser = await chromium.launch({ executablePath: findChrome(), headless: true,
-      args: ["--disable-features=PaintHolding,MacAppCodeSignClone", "--mute-audio"] })
+    const owned = ownedChromiumOptions(findChrome())
+    browser = await chromium.launch({ ...owned, headless: true })
+    console.log(`Owned Chromium: ${owned.executablePath} (${browser.version()})`)
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
       results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }

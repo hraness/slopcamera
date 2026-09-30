@@ -1,3 +1,4 @@
+import { productMessaging, productName } from "./messaging"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
@@ -19,8 +20,8 @@ const markSvg = readFileSync(fileURLToPath(new URL("./marks/slopcamera.svg", imp
 
 /** Slopcamera's one social-image declaration. Every share card comes from it. */
 export const slopcameraSocialSite = defineSocialImageSite({
-  name: "SlopCamera",
-  description: "Images, diagrams, 3D and video your agent can keep revising.",
+  name: productName,
+  description: productMessaging.short,
   domain: "slopcamera.com",
   // Multi-word names the headline and description never split across lines.
   keepTogether: ["Agent Skill", "Claude Code", "Hraness Credits", "Vercel AI Gateway"],

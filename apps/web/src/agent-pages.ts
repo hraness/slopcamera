@@ -1,3 +1,4 @@
+import { productMessaging, productName } from "./messaging"
 import { homepageExampleMarkdown, homepageHeroMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
@@ -8,9 +9,9 @@ const blogPostLinks = indexableBlogPosts
   .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
   .join("\n")
 
-export const homeMarkdown = `# Slopcamera is a domain-specific harness for visual creation.
+export const homeMarkdown = `# ${productMessaging.hero.heading}
 
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. A media studio and standard library for agentic multimedia, it bundles documented techniques so your agent writes a short source file and revises it by editing that file. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
+${productMessaging.meta} A media studio and standard library for agentic multimedia, it bundles documented techniques so your agent writes a short source file and revises it by editing that file. It writes scenes, diagrams, and video edits as files and mixes in generated media or your own footage. Because the files stay editable, it can change one detail and render again.
 
 Free and open source under the MIT license. Requires Bun 1.3.14 or newer. Blender, CadQuery, and Manim install separately.
 
@@ -34,7 +35,7 @@ Slopcamera covers four output families: images, diagrams, animated loops, and vi
 - Compose rendered shots with generated media and real footage. Add world-space screens, narration, captions, graphics, and sound.
 - Deliver the required formats and retain the sources and project decisions for the next revision.
 
-## Install
+## ${productMessaging.headings["home-install"].replace(/\.$/u, "")}
 
 Tell your agent: “install Slopcamera and its skill.” Or install the verified Slopcamera v${publishedRelease.version} release yourself with Bun 1.3.14 or newer:
 
@@ -54,7 +55,7 @@ Start a new agent session. Use \`--target claude\` for Claude Code or omit the t
 
 For repository example helpers or development, follow the [complete source-install guide](${sourceInstall.guideUrl}). It records the commit, installs locked dependencies, builds the SDK and CLI, and installs the guide from that same checkout. Native engines install separately.
 
-## Why install it
+## ${productMessaging.headings["home-why"].replace(/\.$/u, "")}
 
 A one-shot reply writes the renderer, export code, and checks along with the scene, and the next request writes them all again. Here the agent writes only the source.
 
@@ -62,7 +63,7 @@ A one-shot reply writes the renderer, export code, and checks along with the sce
 - Check before you render. A strict check names labels that overflow their boxes, shapes outside the canvas, and arrows too short to read. Scene checks validate the scene file, and scene audits sample what a named camera sees over time. The agent fixes the source before it renders. [Check a first diagram](https://slopcamera.com/docs/tutorials/first-diagram.md).
 - Revise by editing, then render again. The source stays beside every output. A change is an edit to that file and one command, such as changing a diagram label from \"Delivery\" to \"Social delivery\" and running \`slopcamera diagram render source-to-film.diagram.json\`. [See the revised render](https://slopcamera.com/docs/tutorials/first-diagram.md).
 
-## Examples
+## ${productMessaging.headings["home-examples"].replace(/\.$/u, "")}
 
 Each technique ships with a starter source, the command that renders it, its checks, and a guide. Choose an example below, open its source, and ask your agent to adapt it. Browse [all techniques](https://slopcamera.com/docs/reference/techniques.md).
 
@@ -72,7 +73,7 @@ The v${publishedRelease.version} release covers local diagrams, all seven HTML m
 
 Explore [motion graphics](https://slopcamera.com/docs/how-to/render-motion-graphics.md), [music videos](https://slopcamera.com/docs/how-to/music-video.md), [spatial scenes](https://slopcamera.com/docs/how-to/direct-scenes.md), [parametric design](https://slopcamera.com/docs/how-to/parametric-design.md), [native films](https://slopcamera.com/docs/how-to/native-films.md), [educational video](https://slopcamera.com/docs/how-to/educational-video.md), [editing](https://slopcamera.com/docs/how-to/edit-video.md), [AI media](https://slopcamera.com/docs/how-to/generate-media.md), and [reusable workflows](https://slopcamera.com/docs/how-to/run-workflows.md). Browse the [use cases](https://slopcamera.com/docs/explanation/use-cases.md) by job, or look up a format or tool: [.diagram.json](https://slopcamera.com/docs/reference/diagram-format.md), [HTML render profiles](https://slopcamera.com/docs/reference/html-profiles.md), [spatial scenes](https://slopcamera.com/docs/reference/spatial-scenes.md), [vectorization](https://slopcamera.com/docs/reference/vectorization.md), [Gateway generation](https://slopcamera.com/docs/reference/gateway-generation.md), [the video pipeline](https://slopcamera.com/docs/reference/video-pipeline.md), [native engines](https://slopcamera.com/docs/reference/native-engines.md), or [the MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md).
 
-## From source to a finished film
+## ${productMessaging.headings["home-workflow"].replace(/\.$/u, "")}
 
 Keep native rigs and simulations, portable geometry and cameras, diagram objects and labels, and video edits in their respective sources.
 
@@ -84,14 +85,14 @@ Keep native rigs and simulations, portable geometry and cameras, diagram objects
 
 Share supported geometry and calibrated cameras, or mount images and video in world space. An image passed from one renderer to another keeps its pixels, not its geometry or rig. [Understand scene interchange](https://slopcamera.com/docs/how-to/native-films.md).
 
-## Choose how your agent works
+## ${productMessaging.headings["home-interfaces"].replace(/\.$/u, "")}
 
 - Agent Skill: start here. It teaches your agent which commands fit each job and what to check before it renders.
 - CLI: human-readable commands and stable JSON for the broad local workflow. Start with \`slopcamera workflows list --json\`.
 - TypeScript SDK: declarative or imperative media work in Bun. For example, import \`vectorizeImage\` from \`@hraness/slopcamera\`.
 - MCP: a fixed set of 21 tools for checking and rendering diagrams, inspecting and planning scenes, making images, and composing icon scenes and soundtrack beat grids in one selected folder. Run \`slopcamera mcp --root /absolute/path/to/workspace\`. It does not expose every CLI command.
 
-## What stays on your machine
+## ${productMessaging.headings["home-design"].replace(/\.$/u, "")}
 
 Source media stays unchanged under normal edit operations. Slopcamera keeps authored sources, editing decisions, previews, and final renders in storage you control. There is no Slopcamera account or hosted project database. Native scenes and portable assets keep their own capabilities; rendered derivatives connect them.
 
@@ -111,7 +112,7 @@ The [documentation index](https://slopcamera.com/docs) connects learning, task g
 - [The engine stack](https://slopcamera.com/docs/reference/engines)
 - [Architecture](https://slopcamera.com/docs/explanation/architecture)
 
-## Before you install
+## ${productMessaging.headings["home-questions"].replace(/\.$/u, "")}
 
 ### How is Slopcamera different from Remotion or HyperFrames?
 
@@ -172,15 +173,15 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 - [XML sitemap](https://slopcamera.com/sitemap.xml)
 `
 
-export const llmsTxt = `# SlopCamera
+export const llmsTxt = `# ${productName}
 
-> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
+> ${productMessaging.meta}
 
-Slopcamera is a domain-specific harness for visual creation: it lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
+${productMessaging.hero.heading.replace(/\.$/u, ":")} ${productMessaging.meta.replace(`${productName} lets`, "it lets")} Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
 
 Use the Agent Skill and CLI for the broad local workflow. The TypeScript SDK supports integrations; MCP exposes a fixed set of 21 tools and ten operation codes, including scene inspection and planning. It does not expose every CLI command. There is no Slopcamera account or hosted project database.
 
-## When to use Slopcamera
+## When to use ${productName}
 
 Use Slopcamera to author portable scenes and direct cameras; film saved worlds; create diagrams and motion graphics; edit footage and deliver multiple formats; or generate images, video, speech, and transcripts through your own Vercel AI Gateway access. Prompt-only images can also run on the hosted API at api.slopcamera.com, paid with prepaid Hraness Credits (\`slopcamera credits topup\`, then \`slopcamera credits wait\` after payment, then \`slopcamera ai image generate --hosted\`). Native Blender, CadQuery, and Manim workflows add detailed worlds and educational films in the current release; engines install separately.
 
@@ -266,7 +267,7 @@ export const sitemapMarkdown = `# Sitemap
 - [Slopcamera home](https://slopcamera.com/index.md): Product, installation, examples, and workflows
 - [Documentation](https://slopcamera.com/docs/index.md): Tutorials, how-to guides, reference, and explanation
 - [Blog](https://slopcamera.com/blog/index.md): ${blogIndex.description}
-- [Machine-readable site guide](https://slopcamera.com/llms.txt): When to use Slopcamera
+- [Machine-readable site guide](https://slopcamera.com/llms.txt): When to use ${productName}
 
 ${docsSectionOrder.map(section => `## ${docsSectionLabels[section]}\n\n${docPages.filter(page => page.section === section).map(page => `- [${page.title}](https://slopcamera.com${docsMarkdownUrl(page)}): ${page.description}`).join("\n")}`).join("\n\n")}
 

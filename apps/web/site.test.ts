@@ -1,3 +1,4 @@
+import { homeSocialImageAlt } from "./src/messaging"
 import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
@@ -65,6 +66,7 @@ import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/examp
 import { homepageExampleName, homepageExamples, homepageTechniqueGroups } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
+import { homepageMarketingSlots, productMessaging, productName, shellProductNameSlot } from "./src/messaging"
 import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
@@ -156,7 +158,17 @@ afterEach(collectCompilation, repeatedCompilationTimeoutMs)
 afterAll(collectCompilation, repeatedCompilationTimeoutMs)
 
 async function readSource(path: string): Promise<string> {
-  return await readFile(join(appDirectory, "src", path), "utf8")
+  let source = await readFile(join(appDirectory, "src", path), "utf8")
+  const document = path === "doc.html" ? "docs/index.html" : path === "blog.html" ? "blog/index.html" : path
+  if (["index.html", "404.html", "doc.html", "blog.html"].includes(path)) {
+    const [token, value, count] = shellProductNameSlot(document)
+    source = replaceSiteSlot(source, token, value, count)
+  }
+  if (path === "index.html") {
+    for (const [token, value, count] of homepageMarketingSlots) source = replaceSiteSlot(source, token, value, count)
+    source = replaceSiteSlot(source, "{{HOME_IMAGE_ALT}}", homeSocialImage.alt, 2)
+  }
+  return source
 }
 
 async function readBuilt(path: string): Promise<string> {
@@ -305,7 +317,7 @@ test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceil
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
-  const template = await readSource("index.html")
+  const template = await readFile(join(appDirectory, "src/index.html"), "utf8")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
   expect(bytes).toBeLessThan(46_600)
@@ -1343,7 +1355,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".transcript")
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
-    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Slopcamera is a domain-specific harness for visual creation.</h1>')
+    expect(html).toContain(`<h1 class="hraness-marketing-hero__heading" id="page-title">${productMessaging.hero.heading}</h1>`)
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
@@ -1543,7 +1555,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(46_600)
+    expect(assertAuthoredShellBudget(await readFile(join(appDirectory, "src/index.html"), "utf8"))).toBeLessThan(46_600)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
@@ -1851,7 +1863,7 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain(builtAssets.statusPagePath)
     expect(notFound).toContain('<main id="main" tabindex="-1">\n      <div class="hraness-status-page" data-hraness-status-routes="')
     expect(notFound).toContain('<h1 class="hraness-status-page__title">We can’t find that page</h1>')
-    expect(notFound).toContain('data-emphasis="primary" data-foil="" href="/#install">Install Slopcamera</a>')
+    expect(notFound).toContain(`data-emphasis="primary" data-foil="" href="/#install">${productMessaging.hero.primaryAction}</a>`)
     expect(notFound.match(/class="hraness-status-page__next-link"/gu)).toHaveLength(3)
     expect(notFound).toContain('<p class="hraness-status-page__agent">')
     expect(notFound).toContain("[&quot;/docs/tutorials/first-diagram&quot;,&quot;Create and revise your first diagram&quot;]")
@@ -1977,7 +1989,7 @@ describe("static Slopcamera site", () => {
     for (const route of ["docs/reference/techniques", "docs/explanation/slopcamera-vs-remotion", "docs/explanation/slopcamera-vs-hyperframes", "docs/explanation/remotion-alternatives-for-coding-agents"]) {
       expect(llmsTxt).toContain(`(https://slopcamera.com/${route}.md)`)
     }
-    expect(llmsTxt).toContain("## When to use Slopcamera")
+    expect(llmsTxt).toContain(`## When to use ${productName}`)
     expect(llmsTxt).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)
     expect(sitemapMarkdown).toContain("https://slopcamera.com/index.md")
@@ -2498,4 +2510,14 @@ describe("static Slopcamera site", () => {
 
 
 
+})
+
+
+test("dry homepage slots match the actual shared social-image declaration", () => {
+  expect(homeSocialImageAlt).toBe(homeSocialImage.alt)
+  const assets = { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null } as const
+  const dry = siteContentSlots("index.html", assets).find(([slot]) => slot === "{{HOME_IMAGE_ALT}}")
+  const sealed = siteContentSlots("index.html", { ...assets, socialImages: { "index.html": homeSocialImage } }).find(([slot]) => slot === "{{HOME_IMAGE_ALT}}")
+  expect(dry).toEqual(sealed)
+  expect(dry?.[2]).toBe(2)
 })

@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url"
 import { createStylexTransformCollector, type StylexTransformResult } from "@hraness/ui/stylex-build"
 import { docPages, renderDocsNav } from "../src/docs"
 import { assertCompiledSiteClass, replaceSiteSlot } from "../src/site-template"
+import { serializeMarketingJson } from "../src/messaging"
+
+test("canonical marketing JSON cannot close its script text boundary", () => {
+  const copy = '</script><script>alert("copy")</script> & "quoted"'
+  const encoded = serializeMarketingJson(copy)
+  expect(encoded).not.toContain("<")
+  expect(JSON.parse(encoded)).toBe(copy)
+})
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 

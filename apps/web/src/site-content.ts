@@ -1,3 +1,4 @@
+import { homepageMarketingSlots, homeSocialImageAlt, productName, shellProductNameSlot } from "./messaging"
 import { renderHranessSiteFooter } from "@hraness/site-footer"
 import { AskAiAboutThis } from "@hraness/ui"
 import { PlatformInstall, type PlatformInstallTarget } from "@hraness/design-kit/react/platform-install"
@@ -177,9 +178,10 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     throw new Error("Site content requires exact local fingerprinted script paths")
   }
   const common: ReadonlyArray<readonly [string, string, number]> = [
+    shellProductNameSlot(document),
     ["{{APPEARANCE_MENU}}", renderAppearanceMenu(), 1],
     ["{{HRANESS_SITE_FOOTER}}", `${renderSiteContentFooter()}\n    ${renderHranessSiteFooter({ mailingList: { kind: "none" }, support: {
-      id: "slopcamera", name: "SlopCamera", updates: false,
+      id: "slopcamera", name: productName, updates: false,
       valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
@@ -229,7 +231,8 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       ["{{DOC_FOOTER}}", renderDocsFooter(docsPage.slug), 1],
     ]
   }
-  return [...common,
+  return [...common, ...homepageMarketingSlots,
+    ["{{HOME_IMAGE_ALT}}", escapeHtml(assets.socialImages?.[document]?.alt ?? homeSocialImageAlt), 2],
     ["{{ASK_AI_ABOUT_THIS}}", renderAskAiAboutThis("https://slopcamera.com/"), 1],
     ["{{RELEASE_VERSION}}", publishedRelease.version, 1],
     ["{{RELEASE_URL}}", publishedRelease.releaseUrl, 1],

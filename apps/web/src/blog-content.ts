@@ -1,3 +1,4 @@
+import { productMessaging, productName } from "./messaging"
 import {
   articleProvenanceFromAdmission, articleProvenanceSentence, assertArticleAdmissions, escapeArticleHtml,
   renderArticleHtml, renderArticleIndexHtml, renderArticleRelatedHtml, renderArticleSourcesHtml,
@@ -28,9 +29,9 @@ import { launchFigureSentinels, launchFiguresInMarkdown, replaceLaunchFigureSent
 assertArticleAdmissions(blogAdmissions)
 
 export const blogSite: SearchSite = {
-  name: "SlopCamera",
-  title: "SlopCamera",
-  description: "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+  name: productName,
+  title: productName,
+  description: productMessaging.meta,
   origin: "https://slopcamera.com",
   language: "en",
 }

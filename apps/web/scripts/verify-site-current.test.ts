@@ -4,6 +4,21 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { allowsRequest, currentRoutes, missingRoute, requestedOrigin, resolveBuilt } from "./verify-site-current.mjs"
+import { ownedChromiumOptions } from "./owned-chromium.mjs"
+
+test("owned Chromium preserves the pinned defaults in one safe feature switch", () => {
+  const options = ownedChromiumOptions(process.execPath)
+  expect(options.args).toContain("--mute-audio")
+  const switches = options.args.filter((argument: string) => argument.startsWith("--disable-features="))
+  expect(switches).toHaveLength(1)
+  const features = switches[0]!.slice("--disable-features=".length).split(",")
+  for (const feature of ["PaintHolding", "MacAppCodeSignClone", "MediaRouter", "ThirdPartyStoragePartitioning"]) {
+    expect(features).toContain(feature)
+  }
+  expect(new Set(features).size).toBe(features.length)
+  expect(options.ignoreDefaultArgs).toHaveLength(1)
+  expect(options.ignoreDefaultArgs[0]).toStartWith("--disable-features=")
+})
 
 test("live review has one fixed public origin and preserves the local network boundary", () => {
   expect(requestedOrigin([])).toBeNull()
