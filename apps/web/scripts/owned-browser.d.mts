@@ -3,6 +3,7 @@ import type { Browser, LaunchOptions } from 'playwright-core';
 export function pinnedBrowserExecutable(pinned: string, override?: string): Promise<string>;
 export function pinnedChromiumVersion(): string;
 export function pinnedChromiumDefinition(): { defaultArgs: string[]; expectedVersion: string };
+export function localVerificationOrigin(value: unknown, production?: boolean): string | undefined;
 export function ownedChromiumLaunchOptions(executablePath: string, defaultArgs: readonly string[], args?: readonly string[]): LaunchOptions & {
   executablePath: string;
   headless: true;

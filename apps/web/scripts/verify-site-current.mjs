@@ -10,7 +10,7 @@ import { createRequire } from "node:module"
 import { dirname, extname, join, normalize, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
-import { browserOwner, ownedChromiumLaunchOptions, pinnedBrowserExecutable, pinnedChromiumDefinition, verifyOwnedChromium } from "./owned-browser.mjs"
+import { browserOwner, localVerificationOrigin, ownedChromiumLaunchOptions, pinnedBrowserExecutable, pinnedChromiumDefinition, verifyOwnedChromium } from "./owned-browser.mjs"
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(appDirectory, "dist")
@@ -45,8 +45,9 @@ export const currentShellCases = [390, 1440].flatMap(width => ["ltr", "rtl"].map
 export const productionOrigin = "https://slopcamera.com"
 
 export function requestedOrigin(args) {
-  const { values } = parseArgs({ args, options: { production: { type: "boolean", default: false } } })
-  return values.production ? productionOrigin : null
+  const { values } = parseArgs({ args, options: { production: { type: "boolean", default: false }, "local-origin": { type: "string" } } })
+  assert.equal(args.filter(argument => argument === "--local-origin" || argument.startsWith("--local-origin=")).length, Number(values["local-origin"] !== undefined), "Provide at most one local origin.")
+  return localVerificationOrigin(values["local-origin"], values.production) ?? (values.production ? productionOrigin : null)
 }
 
 export function allowsRequest(url, origin) {
@@ -607,7 +608,7 @@ export async function main(args = process.argv.slice(2)) {
   assert.equal(runtime.browserVersion, definition.expectedVersion, "Browser manifest differs from the admitted Playwright runtime")
   const executablePath = await pinnedBrowserExecutable(runtime.executable, process.env.SLOPCAMERA_CHROME_PATH)
   if (process.env.CHROME_PATH !== undefined) await pinnedBrowserExecutable(runtime.executable, process.env.CHROME_PATH)
-  const launchOptions = ownedChromiumLaunchOptions(executablePath, definition.defaultArgs, currentBrowserLaunchOptions())
+  const launchOptions = ownedChromiumLaunchOptions(executablePath, definition.defaultArgs, currentBrowserLaunchOptions().args)
   let server = null
   let origin = liveOrigin
   let browser
