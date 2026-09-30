@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Oracle of the Latent Temple</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      *, *::before, *::after { box-sizing: border-box; }
+      .effect { display: block; width: 100%; height: 100%; contain: strict; }
+      .caption { position: absolute; left: 5.5%; bottom: 6.5%; font: 600 1.05vw/1.4 Georgia, serif; letter-spacing: .32em; text-transform: uppercase; color: #f1efe5; opacity: .72; text-shadow: 0 1px 2px rgba(0, 0, 0, .95), 0 0 14px rgba(0, 0, 0, .85); }
+      /* The light pool reaches the caption in the last second of the dolly; the shadow keeps the caption legible over it. */
+    </style>
+    <script type="importmap">{"imports":{"vgpu":"/.slopcamera-overlay/libraries/f7ef874ca3dd29b165beaaf77297d64e06b65db1c48819ac472446da46f2cc9f.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="effect" aria-label="A dolly down a dark colonnade toward a pool of light where smoke briefly resolves into a lattice"></canvas>
+    <div class="caption">Myth III &nbsp;·&nbsp; Oracle &nbsp;·&nbsp; The Oracle of the Latent Temple</div>
+    <script type="module">
+      import { effect, frame, init, surface, target } from "vgpu";
+
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const styleFrame = (timeMs) => {
+        const frameIndex = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return EXPOSURE[frameIndex] / 1e6;
+      };
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+      // One authored WGSL pass: raymarched colonnade, oculus spot light with soft
+      // shadows, and a single-scattering smoke volume inside the light cone.
+      const shaderSource = `
+        struct Params { time: f32, resolution: vec2f, lattice: f32, dolly: f32, seed: f32 }
+        @group(0) @binding(0) var<uniform> params: Params;
+
+        const LIGHT = vec3f(0.0, 9.0, 6.0);
+        fn hash3(p: vec3f) -> f32 { return fract(sin(dot(p, vec3f(127.1, 311.7, 74.7)) + params.seed) * 43758.5453); }
+        fn noise(p: vec3f) -> f32 {
+          let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(hash3(i), hash3(i + vec3f(1.0, 0.0, 0.0)), u.x), mix(hash3(i + vec3f(0.0, 1.0, 0.0)), hash3(i + vec3f(1.0, 1.0, 0.0)), u.x), u.y),
+                     mix(mix(hash3(i + vec3f(0.0, 0.0, 1.0)), hash3(i + vec3f(1.0, 0.0, 1.0)), u.x), mix(hash3(i + vec3f(0.0, 1.0, 1.0)), hash3(i + vec3f(1.0, 1.0, 1.0)), u.x), u.y), u.z);
+        }
+        fn fbm(p: vec3f) -> f32 {
+          var v = 0.0; var a = 0.5; var q = p;
+          for (var i = 0; i < 4; i++) { v += a * noise(q); q = q * 2.03 + vec3f(1.7, 9.2, 3.1); a *= 0.5; }
+          return v;
+        }
+        fn scene(p: vec3f) -> f32 {
+          let floorD = p.y;
+          let ceilD = max(4.2 - p.y, 1.0 - length(p.xz - vec2f(0.0, 6.0)));
+          var q = p; q.x = abs(q.x) - 2.3; q.z = q.z - 2.0 * round(q.z / 2.0);
+          let ang = atan2(q.z, q.x);
+          var col = length(q.xz) - (0.31 + 0.014 * cos(ang * 18.0));
+          let base = max(abs(q.y - 0.14) - 0.14, max(abs(q.x), abs(q.z)) - 0.46);
+          let cap = max(abs(q.y - 3.93) - 0.16, max(abs(q.x), abs(q.z)) - 0.5);
+          col = min(col, min(base, cap));
+          let back = 13.0 - p.z;
+          let door = max(max(abs(p.x) - 0.75, p.y - 2.7), -(p.z - 12.6));
+          let sideW = 4.2 - abs(p.x);
+          return min(min(floorD, ceilD), min(col, min(max(back, -door), sideW)));
+        }
+        fn normalAt(p: vec3f) -> vec3f {
+          let e = vec2f(0.002, 0.0);
+          return normalize(vec3f(scene(p + e.xyy) - scene(p - e.xyy), scene(p + e.yxy) - scene(p - e.yxy), scene(p + e.yyx) - scene(p - e.yyx)));
+        }
+        fn cone(p: vec3f) -> f32 {
+          let d = normalize(p - LIGHT);
+          return smoothstep(0.978, 0.990, dot(d, vec3f(0.0, -1.0, 0.0)));
+        }
+        fn shadow(p: vec3f) -> f32 {
+          let l = normalize(LIGHT - p); var t = 0.03; var res = 1.0;
+          for (var i = 0; i < 32; i++) {
+            let h = scene(p + l * t);
+            res = min(res, 10.0 * h / t);
+            t += clamp(h, 0.03, 0.4);
+            if (res < 0.002 || t > 4.3) { break; }
+          }
+          return clamp(res, 0.0, 1.0);
+        }
+        fn smoke(p: vec3f) -> f32 {
+          let r = length(p.xz - vec2f(0.0, 6.0));
+          let shape = smoothstep(1.3, 0.2, r) * smoothstep(3.4, 0.4, p.y);
+          let f = fbm(p * 1.6 + vec3f(0.0, -params.time * 0.45, params.time * 0.12));
+          let lat = abs(sin(p.x * 7.0) * sin((p.y - params.time * 0.2) * 7.0) * sin(p.z * 7.0));
+          let lattice = smoothstep(0.55, 0.9, pow(lat, 0.35));
+          return shape * mix(smoothstep(0.38, 0.8, f), lattice * 0.9 + 0.1 * f, params.lattice);
+        }
+        @fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+          let aspect = params.resolution.x / max(params.resolution.y, 1.0);
+          let s = (vec2f(uv.x, 1.0 - uv.y) - vec2f(0.5)) * vec2f(aspect, 1.0);
+          let ro = vec3f(0.35 - 0.3 * params.dolly, 1.25 - 0.1 * params.dolly, -4.5 + 5.0 * params.dolly);
+          let ta = vec3f(0.0, 1.35, 7.0);
+          let fw = normalize(ta - ro); let rt = normalize(cross(fw, vec3f(0.0, 1.0, 0.0))); let up = cross(rt, fw);
+          let rd = normalize(fw * 1.55 + rt * s.x + up * s.y);
+          var t = 0.0; var hit = false;
+          for (var i = 0; i < 140; i++) {
+            let h = scene(ro + rd * t);
+            if (h < 0.0008 * t) { hit = true; break; }
+            t += h * 0.9;
+            if (t > 30.0) { break; }
+          }
+          var c = 0.0;
+          if (hit) {
+            let p = ro + rd * t; let n = normalAt(p); let l = normalize(LIGHT - p);
+            let spot = cone(p) * max(dot(n, l), 0.0) * shadow(p);
+            let pool = exp(-0.35 * length(p.xz - vec2f(0.0, 6.0)));
+            let doorway = smoothstep(12.6, 13.0, p.z) * step(abs(p.x), 0.74) * step(p.y, 2.68);
+            let grain = 0.85 + 0.15 * noise(p * 14.0);
+            c = (3.2 * spot + 0.05 * pool * (0.5 + 0.5 * n.y) + 0.01) * grain + doorway * 0.42;
+          }
+          // Single scattering inside the oculus cone.
+          var fog = 0.0; let steps = 36; let end = min(t, 16.0);
+          for (var k = 0; k < steps; k++) {
+            let tk = (f32(k) + 0.5) / f32(steps) * end;
+            let q = ro + rd * tk;
+            let cq = cone(q);
+            if (cq > 0.0) { fog += cq * (0.035 + 0.5 * smoke(q)) * end / f32(steps); }
+          }
+          c += fog * 0.9;
+          let v = 1.0 - exp(-c * 1.15);
+          let g = pow(v, 1.0 / 2.2);
+          return vec4f(vec3f(g * 0.97, g * 0.985, g), 1.0);
+        }
+      `;
+      const initialization = (async () => {
+        if (navigator.gpu === undefined) throw new Error("This film requires WebGPU in the selected browser runtime.");
+        const gpu = await init({ powerPreference: "high-performance" });
+        let asynchronousError = null;
+        const releaseErrorListener = gpu.onError((error) => { asynchronousError ??= error; });
+        const canvas = document.querySelector(".effect");
+        const output = surface(gpu, canvas, { alphaMode: "premultiplied", autoResize: false, clearColor: [0, 0, 0, 1], dpr: devicePixelRatio });
+        const shader = effect(gpu, shaderSource, { set: { params: { time: 0, resolution: output.size, lattice: 0, dolly: 0, seed: (SlopcameraOverlay.seed % 997) / 97 } } });
+        const probe = target(gpu, { format: output.format, size: [1, 1] });
+        try { await shader.compile(probe); } finally { probe.destroy(); }
+        await gpu.settled();
+        if (asynchronousError !== null) throw asynchronousError;
+        return { gpu, output, shader, releaseErrorListener, takeError() { const e = asynchronousError; asynchronousError = null; return e; } };
+      })();
+      SlopcameraOverlay.ready(initialization);
+      SlopcameraOverlay.onFrame(async ({ timeMs }) => {
+        const state = await initialization;
+        const t = styleFrame(timeMs);
+        const dolly = smooth(0, 8, t) * 0.8 + t / 8 * 0.2;
+        const lattice = smooth(3.2, 4.4, t) * (1 - smooth(5.8, 7.2, t));
+        state.shader.set({ params: { time: t, resolution: state.output.size, lattice, dolly, seed: (SlopcameraOverlay.seed % 997) / 97 } });
+        const submitted = frame(state.gpu, (current) => { current.pass({ clear: [0, 0, 0, 1], target: state.output }, state.shader); });
+        await submitted.done;
+        await state.gpu.settled();
+        const error = state.takeError();
+        if (error !== null) throw error;
+      });
+      addEventListener("pagehide", () => { void initialization.then((s) => { s.releaseErrorListener(); s.gpu.dispose(); }).catch(() => undefined); }, { once: true });
+    </script>
+  </body>
+</html>

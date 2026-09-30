@@ -98,10 +98,13 @@ async function command(argv: string[], timeoutMs = 600_000) {
   } finally { clearTimeout(timer); }
 }
 
+// Counting frames decodes the whole film: up to 3600 admitted frames at up to
+// 4096 × 4320, so that probe gets a deadline sized for the bound, not the header read.
 async function probe(path: string, countFrames = false): Promise<unknown> {
   return JSON.parse(await command(["ffprobe", "-v", "error", "-protocol_whitelist", "file",
     ...(countFrames ? ["-count_frames"] : []), "-show_entries",
-    "stream=index,codec_type,width,height,avg_frame_rate,nb_read_frames:format=duration", "-of", "json", path], 30_000)) as unknown;
+    "stream=index,codec_type,width,height,avg_frame_rate,nb_read_frames:format=duration", "-of", "json", path],
+  countFrames ? 300_000 : 30_000)) as unknown;
 }
 
 export async function finishFilm(args: readonly string[], workspaceRoot = root, log: (message: string) => void = console.log): Promise<void> {

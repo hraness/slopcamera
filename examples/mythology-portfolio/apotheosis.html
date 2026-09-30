@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Apotheosis of the Model</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--background, #e8dfc8) !important; }
+      .rays { position: absolute; inset: 0; }
+      svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .caption { position: absolute; left: 5.5%; bottom: 6.5%; font: 600 1.05vw/1.4 Georgia, serif; letter-spacing: .32em; text-transform: uppercase; color: var(--ink, #25322f); opacity: .85; }
+      .title { position: absolute; left: 5.5%; top: 7%; font: italic 400 3.1vw/1.1 Georgia, serif; color: var(--ink, #25322f); }
+    </style>
+    <script type="importmap">{"imports":{"@paper-design/shaders":"/.slopcamera-overlay/libraries/4b7f8d053f6c91b4d3ec6abdcfd4b07b9fce7ec2b8086a0f0781f485c59d097e.mjs"}}</script>
+  </head>
+  <body>
+    <div class="rays"></div>
+    <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-label="An engraved figure of stacked layers rises through god rays and sheds its layers as rings while a loss curve falls to zero">
+      <defs>
+        <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#25322f" stroke-width="1.6" />
+        </pattern>
+        <pattern id="cross" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)">
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#25322f" stroke-width="1.1" />
+        </pattern>
+      </defs>
+      <g id="rings"></g>
+      <g id="figure"></g>
+      <g id="loss">
+        <line x1="1180" y1="930" x2="1780" y2="930" stroke="#25322f" stroke-width="2" />
+        <line x1="1180" y1="930" x2="1180" y2="760" stroke="#25322f" stroke-width="2" />
+        <path id="curve" fill="none" stroke="#9b653d" stroke-width="4" stroke-linecap="round" />
+        <text x="1785" y="938" font-family="Georgia, serif" font-size="22" fill="#25322f">epoch</text>
+        <text x="1172" y="752" font-family="Georgia, serif" font-size="22" fill="#25322f" text-anchor="middle">loss</text>
+        <text id="lossValue" x="1780" y="900" font-family="Georgia, serif" font-style="italic" font-size="26" fill="#25322f" text-anchor="end"></text>
+      </g>
+    </svg>
+    <div class="title">The Apotheosis of the Model</div>
+    <div class="caption">Myth IX &nbsp;·&nbsp; Apotheosis &nbsp;·&nbsp; It rose out of its own loss curve</div>
+    <script type="module">
+      import { ShaderFitOptions, ShaderMount, getShaderColorFromString, getShaderNoiseTexture, godRaysFragmentShader } from "@paper-design/shaders";
+
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const styleFrame = (timeMs) => {
+        const frame = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return { frame, t: EXPOSURE[frame] / 1e6 };
+      };
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+      const pal = P.palette;
+      for (const [key, value] of Object.entries(pal)) document.documentElement.style.setProperty("--" + key, value);
+      const W = SlopcameraOverlay.width, H = SlopcameraOverlay.height;
+      const NS = "http://www.w3.org/2000/svg";
+      const el = (name, attrs, parent) => { const n = document.createElementNS(NS, name); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); parent.append(n); return n; };
+
+      let shader = null;
+      SlopcameraOverlay.ready((async () => {
+        const noise = getShaderNoiseTexture();
+        if (noise && !noise.complete) await new Promise((resolve, reject) => { noise.onload = resolve; noise.onerror = reject; });
+        shader = new ShaderMount(document.querySelector(".rays"), godRaysFragmentShader, {
+          u_colorBack: getShaderColorFromString(pal.background),
+          u_colorBloom: getShaderColorFromString(pal.paper),
+          u_colors: [pal.paper, pal.secondary, "#d9b98a"].map(getShaderColorFromString),
+          u_colorsCount: 3,
+          u_spotty: 0.3, u_midSize: 0.2, u_midIntensity: 0.6, u_density: 0.35, u_intensity: 0.7, u_bloom: 0.35,
+          u_noiseTexture: noise,
+          u_fit: ShaderFitOptions.cover, u_worldWidth: W, u_worldHeight: H,
+          u_originX: 0.5, u_originY: 0.5, u_offsetX: 0, u_offsetY: -0.55, u_rotation: 0, u_scale: 1,
+        }, { alpha: true, premultipliedAlpha: false }, 0);
+      })());
+
+      // The figure: six stacked layers, widest at the base, like an engraved column of a network.
+      const CX = 780, LAYERS = 6;
+      const figure = document.getElementById("figure"), rings = document.getElementById("rings");
+      const layers = Array.from({ length: LAYERS }, (_, i) => {
+        const w = 300 - i * 34, h = 58;
+        const g = el("g", {}, figure);
+        el("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 12, fill: pal.paper }, g);
+        el("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 12, fill: i % 2 ? "url(#cross)" : "url(#hatch)", opacity: 0.55 }, g);
+        el("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 12, fill: "none", stroke: pal.ink, "stroke-width": 3 }, g);
+        for (let k = 0; k < 5; k++) el("circle", { cx: -w / 2 + (k + 0.5) * w / 5, cy: 0, r: 7, fill: pal.ink }, g);
+        const ring = el("g", {}, rings);
+        el("ellipse", { cx: 0, cy: 0, rx: w / 2, ry: 26, fill: "none", stroke: pal.ink, "stroke-width": 3 }, ring);
+        el("ellipse", { cx: 0, cy: 0, rx: w / 2 - 12, ry: 18, fill: "none", stroke: "url(#hatch)", "stroke-width": 12 }, ring);
+        return { g, ring, w, h };
+      });
+      const head = el("circle", { cx: 0, cy: 0, r: 44, fill: pal.paper, stroke: pal.ink, "stroke-width": 3 }, figure);
+      const curve = document.getElementById("curve"), lossValue = document.getElementById("lossValue");
+      const loss = (u) => 2.4 * Math.exp(-4.2 * u) * (1 + 0.08 * Math.sin(u * 40)) * (1 - u) ;
+
+      const title = document.querySelector(".title");
+      SlopcameraOverlay.onFrame(({ timeMs }) => {
+        const { t } = styleFrame(timeMs);
+        shader?.setFrame(t * 1000);
+        const rise = smooth(0.6, 7.6, t);
+        // The figure rises through the title's band; the title yields before the rings reach it.
+        title.style.opacity = String(1 - smooth(4.6, 5.6, t));
+        const baseY = 860 - rise * 360;
+        layers.forEach((layer, i) => {
+          const start = 1.6 + i * 0.85;
+          const shed = smooth(start, start + 1.1, t);
+          const y = baseY - i * 64;
+          layer.g.setAttribute("transform", `translate(${CX} ${y})`);
+          layer.g.setAttribute("opacity", String(1 - shed));
+          const up = smooth(start, start + 3.2, t);
+          layer.ring.setAttribute("transform", `translate(${CX} ${y - up * 260}) scale(${1 + up * 1.6} ${1 + up * 0.9})`);
+          layer.ring.setAttribute("opacity", String(shed * (1 - smooth(start + 2.2, start + 3.4, t))));
+        });
+        const headY = baseY - LAYERS * 64 - 20;
+        head.setAttribute("transform", `translate(${CX} ${headY})`);
+        const glow = smooth(6.4, 7.8, t);
+        head.setAttribute("fill", glow > 0 ? `color-mix(in srgb, ${pal.paper} ${Math.round(100 - glow * 60)}%, #fffbe8)` : pal.paper);
+        head.setAttribute("stroke-opacity", String(1 - glow * 0.8));
+        const u = smooth(0.3, 7.2, t);
+        const points = [];
+        for (let k = 0; k <= 80; k++) {
+          const s = (k / 80) * u;
+          points.push(`${k ? "L" : "M"}${(1180 + s * 600).toFixed(1)} ${(930 - loss(s) * 68).toFixed(1)}`);
+        }
+        curve.setAttribute("d", points.join(" "));
+        lossValue.textContent = `loss ${loss(u).toFixed(3)}`;
+      });
+    </script>
+  </body>
+</html>
