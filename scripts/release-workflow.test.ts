@@ -88,9 +88,10 @@ function requireOwnerReleaseAuthorization(workflow: string): void {
 async function runWorkflowScript(
   script: string,
   environment: Readonly<Record<string, string>>,
+  cwd = fileURLToPath(new URL("../", import.meta.url)),
 ): Promise<Readonly<{ exitCode: number; stderr: string; stdout: string }>> {
   const child = Bun.spawn(["/bin/bash", "-c", script], {
-    cwd: fileURLToPath(new URL("../", import.meta.url)),
+    cwd,
     env: { ...process.env, ...environment },
     stderr: "pipe",
     stdout: "pipe",
@@ -143,6 +144,15 @@ test("public CI routes independent Slopcamera SDK, local-runtime, site, and pack
 
 function requireCompleteSourceCoverage(workflow: string): void {
   let priorWorkflow = workflow
+  const dispatchTrigger = "  workflow_dispatch:\n"
+  const dispatchCondition = '[[ "$GITHUB_EVENT_NAME" == workflow_dispatch || '
+  if (priorWorkflow.split(dispatchTrigger).length !== 2
+    || priorWorkflow.split(dispatchCondition).length !== 2) {
+    throw new Error("CI must retain the complete manual CI trigger and explicit event route")
+  }
+  // These two additions only admit a complete manual run. Removing them here
+  // compares every existing job, route and guard to the same reviewed digest.
+  priorWorkflow = priorWorkflow.replace(dispatchTrigger, "").replace(dispatchCondition, "[[ ")
   for (const [job, phases, label] of [
     ["sdk", ["check:sdk"], "SDK"],
     ["desktop", ["build:desktop", "test:desktop:${{ matrix.shard }}"], "desktop"],
@@ -180,6 +190,9 @@ function requireCompleteSourceCoverage(workflow: string): void {
   // need and its result check were removed with the companion. The desktop
   // shards, site parts, concurrency groups and every other job, command,
   // condition, deadline and boundary are unchanged.
+  // Reviewed 2026-09-30 (complete manual CI): workflow_dispatch and its
+  // explicit all-phase route were added. The additions are checked above;
+  // every prior trigger, route, job, command and guard stays digest-bound.
   const priorDigest = createHash("sha256").update(priorWorkflow).digest("hex")
   if (priorDigest !== "ad141bdd45a5c699fb1480e364c75ad93c5ba75b68fe80b569c1e405916a0135") {
     throw new Error(`CI differs from the independently reviewed prior coverage (${priorDigest})`)
@@ -254,6 +267,74 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
   expect(() => requireCompleteSourceCoverage(workflow.replace(
     "        run: bun run test:desktop:${{ matrix.shard }}\n", "        run: bun run test:desktop:${{ matrix.shard }}\n        continue-on-error: true\n",
   ))).toThrow("prior coverage")
+  expect(() => requireCompleteSourceCoverage(workflow.replace("  workflow_dispatch:\n", "")))
+    .toThrow("complete manual CI")
+  expect(() => requireCompleteSourceCoverage(workflow.replace(
+    '[[ "$GITHUB_EVENT_NAME" == workflow_dispatch || ', "[[ ",
+  ))).toThrow("complete manual CI")
+})
+
+test("manual CI routes all phases with a valid nonempty base and preserves normal path routing", async () => {
+  const workflow = await readWorkflow("public-ci.yml", "ci.yml")
+  const script = workflowStepScript(workflow, "Route changed paths")
+  const fixture = await mkdtemp(join(tmpdir(), "slopcamera-ci-routing-"))
+  const git = async (...argv: string[]): Promise<string> => {
+    const child = Bun.spawn(["git", "-c", "user.name=CI routing fixture", "-c", "user.email=ci-routing@example.invalid", ...argv], {
+      cwd: fixture,
+      env: process.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    })
+    const [exitCode, stderr, stdout] = await Promise.all([
+      child.exited, new Response(child.stderr).text(), new Response(child.stdout).text(),
+    ])
+    if (exitCode !== 0) throw new Error(`CI fixture git failed: ${stderr}`)
+    return stdout.trim()
+  }
+  const all = { api: "true", sdk: "true", desktop: "true", package: "true", site: "true" }
+  const none = { api: "false", sdk: "false", desktop: "false", package: "false", site: "false" }
+  try {
+    await git("init", "-q")
+    await writeFile(join(fixture, "README.md"), "CI fixture\n")
+    await git("add", "README.md")
+    await git("commit", "-qm", "CI fixture base")
+    const base = await git("rev-parse", "HEAD")
+    const route = async (event: string, baseSHA: string, headSHA: string): Promise<Record<string, string>> => {
+      const output = join(fixture, "route-output")
+      await writeFile(output, "")
+      const result = await runWorkflowScript(script, {
+        GITHUB_EVENT_NAME: event, BASE_SHA: baseSHA, HEAD_SHA: headSHA, GITHUB_OUTPUT: output,
+      }, fixture)
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe("")
+      return Object.fromEntries((await readFile(output, "utf8")).trim().split("\n").map(line => line.split("=")))
+    }
+    // Manual runs must cover all phases even when a real base makes the diff empty.
+    expect(await route("workflow_dispatch", base, base)).toEqual(all)
+    expect(await route("pull_request", base, base)).toEqual(none)
+    expect(await route("push", base, base)).toEqual(none)
+    for (const [path, expected] of [
+      ["README.md", { ...none, sdk: "true", package: "true" }],
+      ["apps/api/fixture.ts", { ...none, api: "true" }],
+      ["apps/desktop/fixture.ts", { ...none, desktop: "true", package: "true" }],
+      ["apps/web/fixture.ts", { ...none, site: "true" }],
+      ["scripts/fixture.ts", all],
+    ] as const) {
+      await git("reset", "--hard", base)
+      await mkdir(join(fixture, path, ".."), { recursive: true })
+      await writeFile(join(fixture, path), "changed CI fixture\n")
+      await git("add", path)
+      await git("commit", "-qm", "CI fixture path change")
+      const head = await git("rev-parse", "HEAD")
+      expect(await route("pull_request", base, head)).toEqual(expected)
+      expect(await route("push", base, head)).toEqual(expected)
+      expect(await route("workflow_dispatch", base, head)).toEqual(all)
+    }
+    expect(await route("push", "", base)).toEqual(all)
+    expect(await route("push", "0000000000000000000000000000000000000000", base)).toEqual(all)
+  } finally {
+    await rm(fixture, { recursive: true, force: true })
+  }
 })
 
 test("site CI installs app-pinned Chromium in runner temp before the site check", async () => {
@@ -1168,7 +1249,7 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.9.0")
+  expect(manifest.version).toBe("3.9.1")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })

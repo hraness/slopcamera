@@ -20,6 +20,7 @@ import type { Browser, LaunchOptions } from "playwright-core";
 
 import { bindExactCapability } from "../application/capability-binding";
 import { bindHtmlOverlayBrowserRuntime } from "../application/html-overlay-browser-runtime";
+import { htmlOverlayRendererContract } from "../application/html-overlay-integrity";
 import {
   HtmlOverlayAuthoringInputSchema,
   createHtmlOverlayScaffold,
@@ -27,6 +28,7 @@ import {
 import {
   PlaywrightHtmlOverlayRenderer,
   createHtmlOverlayBrowserLaunchArgs,
+  createHtmlOverlayBrowserLaunchOptions,
   HtmlOverlayBrowserCleanupError,
 } from "./html-overlay-renderer";
 
@@ -87,6 +89,26 @@ function failingBrowser(onClose: () => void): Browser {
 }
 
 describe("private HTML-overlay browser runtime launch", () => {
+  test("production rendering dispatches only the receipt-bound merged default-argument policy", async () => {
+    const item = await setup();
+    await mkdir(item.frames, { mode: 0o700 });
+    let observed: LaunchOptions | undefined;
+    const renderer = new PlaywrightHtmlOverlayRenderer({ cacheRoot: item.cache, launch: async options => {
+      observed = options;
+      return failingBrowser(() => undefined);
+    } });
+    await expect(renderer.renderFrames({
+      authoring: item.authoring, browserRuntime: item.browserRuntime,
+      outputDirectory: item.frames, resources: [],
+    }, new AbortController().signal)).rejects.toThrow(/browser rendering failed/u);
+    const expected = createHtmlOverlayBrowserLaunchOptions(item.authoring.libraries);
+    expect(observed?.args).toEqual(expected.args);
+    expect(observed?.ignoreDefaultArgs).toEqual(expected.ignoreDefaultArgs);
+    expect(observed?.ignoreDefaultArgs).not.toBe(true);
+    expect(observed?.args?.filter(arg => arg.startsWith("--disable-features="))).toHaveLength(1);
+    expect(htmlOverlayRendererContract().schemaVersion).toBe(5);
+  });
+
   test("unsettled browser launch retains its runtime after the cleanup deadline", async () => {
     const item = await setup();
     await mkdir(item.frames, { mode: 0o700 });

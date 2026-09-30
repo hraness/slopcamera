@@ -24,7 +24,7 @@ import {
 } from "./html-overlay-browser-runtime";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u);
-const ExecutionContractVersionSchema = z.union([z.literal(1), z.literal(2)]);
+const ExecutionContractVersionSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 export type HtmlOverlayExecutionContractVersion = z.infer<typeof ExecutionContractVersionSchema>;
 
 const IntegrityLeafSchema = z.strictObject({
@@ -207,14 +207,12 @@ function historicalHtmlOverlayRendererContract(
   });
 }
 
-/** Historical receipts select v1 explicitly; all new execution binds clone prevention. */
-export function htmlOverlayRendererContract(
+/** Version 2 stays byte-identical for completed clone-prevention receipts. */
+function clonePreventionHtmlOverlayRendererContract(
   profileInput?: HtmlOverlayExecutionProfile,
   resourcesInput: readonly HtmlOverlayDeclaredResource[] = [],
-  version: HtmlOverlayExecutionContractVersion = 2,
 ) {
   const contract = historicalHtmlOverlayRendererContract(profileInput, resourcesInput);
-  if (ExecutionContractVersionSchema.parse(version) === 1) return contract;
   return Object.freeze({
     ...contract,
     launch: Object.freeze({
@@ -223,6 +221,58 @@ export function htmlOverlayRendererContract(
         ? `${argument},PaintHolding,MacAppCodeSignClone` : argument)),
     }),
     schemaVersion: 4,
+  });
+}
+
+// Qualified against playwright-core 1.62.0's chromiumSwitches(). Keep every
+// default disabled feature when replacing this one exact default switch.
+const QUALIFIED_PLAYWRIGHT_VERSION = "1.62.0";
+const QUALIFIED_PLAYWRIGHT_DISABLED_FEATURES = Object.freeze([
+  "AvoidUnnecessaryBeforeUnloadCheckSync",
+  "BoundaryEventDispatchTracksNodeRemoval",
+  "DestroyProfileOnBrowserClose",
+  "DialMediaRouteProvider",
+  "GlobalMediaControls",
+  "HttpsUpgrades",
+  "LensOverlay",
+  "MediaRouter",
+  "PaintHolding",
+  "ThirdPartyStoragePartitioning",
+  "BlockOriginHeaderModificationOnRedirect",
+  "Translate",
+  "AutoDeElevate",
+  "OptimizationHints",
+  "msForceBrowserSignIn",
+  "msEdgeUpdateLaunchServicesPreferredVersion",
+]);
+const QUALIFIED_PLAYWRIGHT_DISABLE_FEATURES_ARGUMENT =
+  `--disable-features=${QUALIFIED_PLAYWRIGHT_DISABLED_FEATURES.join(",")}`;
+
+/** Historical versions remain immutable; new launches bind one merged switch. */
+export function htmlOverlayRendererContract(
+  profileInput?: HtmlOverlayExecutionProfile,
+  resourcesInput: readonly HtmlOverlayDeclaredResource[] = [],
+  version: HtmlOverlayExecutionContractVersion = 3,
+) {
+  const parsedVersion = ExecutionContractVersionSchema.parse(version);
+  if (parsedVersion === 1) return historicalHtmlOverlayRendererContract(profileInput, resourcesInput);
+  const contract = clonePreventionHtmlOverlayRendererContract(profileInput, resourcesInput);
+  if (parsedVersion === 2) return contract;
+  if (playwrightCorePackage.version !== QUALIFIED_PLAYWRIGHT_VERSION) {
+    throw new Error("The merged HTML-overlay launch policy requires qualified playwright-core 1.62.0 defaults.");
+  }
+  return Object.freeze({
+    ...contract,
+    launch: Object.freeze({
+      ...contract.launch,
+      args: Object.freeze(contract.launch.args.map(argument => argument.startsWith("--disable-features=")
+        ? `--disable-features=${[...new Set([
+          ...QUALIFIED_PLAYWRIGHT_DISABLED_FEATURES,
+          ...argument.slice("--disable-features=".length).split(","),
+        ])].join(",")}` : argument)),
+      ignoreDefaultArgs: Object.freeze([QUALIFIED_PLAYWRIGHT_DISABLE_FEATURES_ARGUMENT]),
+    }),
+    schemaVersion: 5,
   });
 }
 
@@ -280,7 +330,7 @@ export function createHtmlOverlayExecutionBundle(
   authoringInput: HtmlOverlayAuthoringInput,
   browserRuntimeInput: HtmlOverlayBrowserRuntimeBinding,
   executionProfile?: HtmlOverlayExecutionProfile,
-  contractVersion: HtmlOverlayExecutionContractVersion = 2,
+  contractVersion: HtmlOverlayExecutionContractVersion = 3,
 ): HtmlOverlayExecutionBundle {
   const authoring = HtmlOverlayAuthoringInputSchema.parse(authoringInput);
   assertHtmlOverlayExecutionProfileLibraries(authoring.libraries, executionProfile);

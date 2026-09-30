@@ -81,18 +81,32 @@ function maximumLibraryBytes(lock: HtmlOverlayActiveLibraryLock): number {
 const DEFAULT_BROWSER_STEP_TIMEOUT_MS = 60_000;
 const MAXIMUM_BROWSER_STEP_TIMEOUT_MS = 5 * 60_000;
 
+export function createHtmlOverlayBrowserLaunchOptions(
+  libraries: readonly HtmlOverlayLibrarySpecifier[],
+  executionProfile?: HtmlOverlayExecutionProfile,
+): { args: string[]; ignoreDefaultArgs: string[] } {
+  assertHtmlOverlayExecutionProfileLibraries(libraries, executionProfile);
+  const contract = htmlOverlayRendererContract(executionProfile);
+  // Both the replacement and exact selective suppression are receipt-bound.
+  if (!("ignoreDefaultArgs" in contract.launch)) {
+    throw new Error("The current HTML-overlay launch contract lacks its selective default-argument policy.");
+  }
+  return {
+    args: [
+      ...contract.launch.args,
+      ...(libraries.includes("vgpu")
+        ? HTML_OVERLAY_RENDERER_CONTRACT.launch.libraryArgs.vgpu
+        : []),
+    ],
+    ignoreDefaultArgs: [...contract.launch.ignoreDefaultArgs],
+  };
+}
+
 export function createHtmlOverlayBrowserLaunchArgs(
   libraries: readonly HtmlOverlayLibrarySpecifier[],
   executionProfile?: HtmlOverlayExecutionProfile,
 ): string[] {
-  assertHtmlOverlayExecutionProfileLibraries(libraries, executionProfile);
-  const contract = htmlOverlayRendererContract(executionProfile);
-  return [
-    ...contract.launch.args,
-    ...(libraries.includes("vgpu")
-      ? HTML_OVERLAY_RENDERER_CONTRACT.launch.libraryArgs.vgpu
-      : []),
-  ];
+  return createHtmlOverlayBrowserLaunchOptions(libraries, executionProfile).args;
 }
 const BROWSER_CLEANUP_TIMEOUT_MS = 30_000;
 const BROWSER_RUNTIME_FLAGS_TIMEOUT_MS = 60_000;
@@ -2107,7 +2121,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
             browserShutdownRequired = true;
             try {
               return await this.#launch({
-                args: createHtmlOverlayBrowserLaunchArgs(
+                ...createHtmlOverlayBrowserLaunchOptions(
                   request.authoring.libraries,
                   request.executionProfile,
                 ),
