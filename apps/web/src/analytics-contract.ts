@@ -83,6 +83,16 @@ export function isAllowedAnalyticsHost(hostname: string): boolean {
   return allowedAnalyticsHosts.includes(normalized)
 }
 
+/** Cookieless PostHog ignores respect_dnt, so the bootstrap must honor it first. */
+export function doNotTrackEnabled(
+  navigatorValue: Readonly<{ doNotTrack?: string | null | undefined; msDoNotTrack?: string | null | undefined }>,
+  windowValue: Readonly<{ doNotTrack?: string | null | undefined }>,
+): boolean {
+  return [navigatorValue.doNotTrack, navigatorValue.msDoNotTrack, windowValue.doNotTrack].some(
+    value => typeof value === "string" && ["1", "yes", "true"].includes(value.trim().toLowerCase()),
+  )
+}
+
 /** Initialize only over HTTPS on an allowed production host with a public project token. */
 export function shouldInitializeAnalytics(location: Readonly<Pick<Location, "protocol" | "hostname">>, token: string): boolean {
   return location.protocol === "https:" && isAllowedAnalyticsHost(location.hostname) && /^phc_[A-Za-z0-9_-]+$/u.test(token)
@@ -501,10 +511,11 @@ export function createBeforeSend(
   token: string,
   currentLocation: () => Readonly<Pick<Location, "protocol" | "hostname" | "pathname">>,
   notFound: () => boolean,
+  isDoNotTrackEnabled: () => boolean = () => false,
 ): (event: CaptureResult | null) => CaptureResult | null {
   return event => {
     const location = currentLocation()
-    return shouldInitializeAnalytics(location, token)
+    return !isDoNotTrackEnabled() && shouldInitializeAnalytics(location, token)
       ? sanitizeEvent(event, token, { notFound, currentPathname: location.pathname })
       : null
   }
