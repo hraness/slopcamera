@@ -1,3 +1,4 @@
+import { productMessaging } from "./messaging"
 import { exampleMarkdown, exampleMediaRecord } from "./example-content"
 import { renderExampleMedia } from "./example-media"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "./example-registry"
@@ -78,7 +79,7 @@ export function renderExampleRevision(examples: readonly WorkflowExample[] = wor
   const description = tram
     ? "The same miniature world, with a larger moon. Ask for a specific change; your agent edits the retained source and renders another version."
     : "The same diagram, with one label changed. Ask for a specific change; your agent edits the retained source and renders another version."
-  return `<header class="slopcamera-section-heading"><h2 id="revision-title">The next version starts with a sentence.</h2><p>${description}</p></header><blockquote class="slopcamera-direction"><p>“${request}”</p></blockquote><div class="slopcamera-revision-pair"><div><h3>Original</h3>${renderFilm(original)}</div><div><h3>Revised</h3>${renderFilm(revised)}</div></div><p class="slopcamera-revision-note">Both renders keep their own source. <a href="/docs/how-to/direct-a-film">Learn to direct a film</a>.</p>`
+  return `<header class="slopcamera-section-heading"><h2 id="revision-title">${escapeText(productMessaging.headings["home-revision"])}</h2><p>${description}</p></header><blockquote class="slopcamera-direction"><p>“${request}”</p></blockquote><div class="slopcamera-revision-pair"><div><h3>${escapeText(productMessaging.headings["home-revision-original"])}</h3>${renderFilm(original)}</div><div><h3>${escapeText(productMessaging.headings["home-revision-revised"])}</h3>${renderFilm(revised)}</div></div><p class="slopcamera-revision-note">Both renders keep their own source. <a href="/docs/how-to/direct-a-film">Learn to direct a film</a>.</p>`
 }
 
 export function homepageHeroMarkdown(examples: readonly WorkflowExample[] = workflowExamples): string {
@@ -96,10 +97,10 @@ export function homepageRevisionMarkdown(examples: readonly WorkflowExample[] = 
   const [original, revised] = revisionExamples(examples)
   const request = original.id === "last-tram" ? "Make the moon larger." : "Change Delivery to Social delivery."
   return [
-    "## The next version starts with a sentence",
+    `## ${productMessaging.headings["home-revision"].replace(/\.$/u, "")}`,
     `> ${request}`,
     "Ask for a specific change; your agent edits the retained source and renders another version.",
-    "### Original", exampleMarkdown(original), "### Revised", exampleMarkdown(revised),
+    `### ${productMessaging.headings["home-revision-original"]}`, exampleMarkdown(original), `### ${productMessaging.headings["home-revision-revised"]}`, exampleMarkdown(revised),
     "[Learn to direct a film](https://slopcamera.com/docs/how-to/direct-a-film.md).",
   ].join("\n\n")
 }

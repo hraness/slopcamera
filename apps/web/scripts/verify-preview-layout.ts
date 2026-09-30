@@ -148,11 +148,14 @@ function serve(payload: Payload) {
 }
 
 async function findChrome(): Promise<string> {
-  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH, process.env.CHROME_PATH, "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser",
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]) {
+  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH]) {
     if (candidate === undefined || candidate === "") continue
-    try { await access(candidate, constants.X_OK); return candidate } catch { /* Try the next explicit executable. */ }
+    try {
+      await access(candidate, constants.X_OK)
+      const executable = await realpath(candidate)
+      assert.ok(!executable.includes("/Google Chrome.app/"), "The installed Google Chrome app is not an owned test browser")
+      return executable
+    } catch { /* Reject unavailable or unsupported executables. */ }
   }
   throw new Error("Chrome is required; set SLOPCAMERA_CHROME_PATH")
 }

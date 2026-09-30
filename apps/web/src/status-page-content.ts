@@ -1,3 +1,4 @@
+import { productMessaging, productName } from "./messaging"
 import { renderStatusPageHtml, type StatusPageLink } from "@hraness/design-kit-status"
 
 import { blogIndex, blogPath, blogPostPath, indexableBlogPosts } from "./blog-registry"
@@ -19,7 +20,7 @@ function routeLabel(title: string): string {
 /** Every known page, for "Did you mean": home, docs, the blog, and listed posts. */
 export function statusPageRoutes(): StatusPageLink[] {
   return [
-    { href: "/", label: "SlopCamera" },
+    { href: "/", label: productName },
     ...docPages.map(page => ({ href: docsCanonicalUrl(page).slice(docsOrigin.length), label: routeLabel(page.title) })),
     { href: blogPath, label: routeLabel(blogIndex.heading) },
     ...indexableBlogPosts.map(post => ({ href: blogPostPath(post), label: routeLabel(post.title) })),
@@ -46,9 +47,9 @@ export function renderStatusPage(): string {
         label: "Documentation",
       },
     ],
-    primaryAction: { href: "/#install", label: "Install Slopcamera" },
+    primaryAction: { href: "/#install", label: productMessaging.hero.primaryAction },
     rootElement: "div",
     routes: statusPageRoutes(),
-    siteName: "SlopCamera",
+    siteName: productName,
   })
 }

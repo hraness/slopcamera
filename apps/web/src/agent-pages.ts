@@ -1,3 +1,4 @@
+import { productMessaging, productName } from "./messaging"
 import { homepageExampleMarkdown, homepageHeroMarkdown, homepageRevisionMarkdown } from "./example-gallery"
 import { docPages, docsSectionLabels, docsSectionOrder, docsMarkdownUrl } from "./docs-registry"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
@@ -8,21 +9,21 @@ const blogPostLinks = indexableBlogPosts
   .map(post => `- [${post.title}](https://slopcamera.com${blogMarkdownPath(post)}): ${post.description}`)
   .join("\n")
 
-export const homeMarkdown = `# Give your agent a multimedia studio.
+export const homeMarkdown = `# ${productMessaging.hero.heading}
 
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. Direct the style, timing, camera, and sound, then refine the result.
+${productMessaging.meta} Direct the style, timing, camera, and sound, then refine the result.
 
 Slopcamera is free and open source. Use it with Codex, Claude Code, or another agent that can run shell commands. The Agent Skill teaches the workflows; the CLI renders the source your agent writes.
 
 ${homepageHeroMarkdown()}
 
-## See what you can make
+## ${productMessaging.headings["agent-home-examples"]}
 
 Finished pieces connect the creative brief to editable source. Each guide explains the tools and inputs it needs.
 
 ${homepageExampleMarkdown()}
 
-## Direct it again
+## ${productMessaging.headings["agent-home-revision"]}
 
 A render is a starting point for the next decision. Keep the scene and its request, change a specific part, and compare the results.
 
@@ -30,7 +31,7 @@ ${homepageRevisionMarkdown()}
 
 [Learn how to direct a film](https://slopcamera.com/docs/how-to/direct-a-film.md).
 
-## From an idea to a finished piece
+## ${productMessaging.headings["agent-home-workflow"]}
 
 1. Describe the result. Give your agent a subject, visual treatment, duration, and final moment.
 2. Make and inspect it. The agent writes source, renders a test, and checks the picture and sound.
@@ -38,7 +39,7 @@ ${homepageRevisionMarkdown()}
 
 Make illustrations and diagrams, authored animation and 3D films, educational videos, or edits of your own footage. Combine rendered and generated media in a project. Deliver video in 16:9, 9:16, 1:1, or 4:5 from the same edit.
 
-## Install Slopcamera
+## ${productMessaging.headings["agent-home-install"]}
 
 Tell your agent: “Install Slopcamera and its skill.” Or install the verified v${publishedRelease.version} release with Bun 1.3.14 or newer:
 
@@ -58,19 +59,19 @@ Start a new agent session. Use \`--target claude\` for Claude Code or omit the t
 
 [Make your first animation](https://slopcamera.com/docs/tutorials/first-animation.md) on macOS with the browser and FFmpeg runtimes reported by \`slopcamera doctor --json\`. [Create a diagram](https://slopcamera.com/docs/tutorials/first-diagram.md) on macOS, Linux, or Windows without a browser or paid model. Follow the [source-install guide](${sourceInstall.guideUrl}) to develop Slopcamera.
 
-## Choose your tools
+## ${productMessaging.headings["agent-home-tools"]}
 
 Start with the Agent Skill and CLI. The [TypeScript SDK](https://slopcamera.com/docs/reference/sdk.md) supports integrations. The [fixed MCP toolset](https://slopcamera.com/docs/reference/mcp-tools.md) exposes a documented subset for compatible clients.
 
 The CLI runs on macOS, Linux, and Windows with Bun 1.3.14+. Browser, GPU, codec, and native engine requirements depend on the project. Blender, CadQuery, and Manim install separately. [Check capabilities and requirements](https://slopcamera.com/docs/reference/capabilities.md).
 
-## Cost and privacy
+## ${productMessaging.headings["agent-home-privacy"]}
 
 Slopcamera has no account or subscription. Local editing and rendering are free. Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits for prompt-only hosted images; model usage is billed separately.
 
 The website displays work and documentation. Creation happens in the CLI and SDK. Normal edits retain original media, while sources, project decisions, and renders stay in storage you control. Cloud generation and selected analysis upload named media with acknowledgement. Trusted native source and custom workflows run as your current user. Read the [privacy guide](https://github.com/hraness/slopcamera/blob/main/PRIVACY.md) and [security policy](https://github.com/hraness/slopcamera/blob/main/SECURITY.md).
 
-## Common questions
+## ${productMessaging.headings["home-questions"]}
 
 ### How is Slopcamera different from Remotion or HyperFrames?
 
@@ -80,7 +81,7 @@ Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines H
 
 Yes. Atet was renamed Slopcamera in September 2026, and atet.sh now redirects here. Old Atet releases still install Atet, not Slopcamera.
 
-## Explore
+## ${productMessaging.headings["agent-home-explore"]}
 
 - [Documentation](https://slopcamera.com/docs/index.md)
 - [Direct a film](https://slopcamera.com/docs/how-to/direct-a-film.md)
@@ -103,9 +104,9 @@ The requested Slopcamera resource does not exist. Use one of these public indexe
 - [XML sitemap](https://slopcamera.com/sitemap.xml)
 `
 
-export const llmsTxt = `# SlopCamera
+export const llmsTxt = `# ${productName}
 
-> SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
+> ${productMessaging.meta}
 
 Slopcamera is a multimedia studio for coding agents. It makes images, diagrams, animation, 3D scenes, and video from source files the agent can keep revising. Codex, Claude Code, and other coding agents that can run shell commands drive it through the CLI and Agent Skill. Slopcamera is free and open source.
 

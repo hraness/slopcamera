@@ -1,3 +1,5 @@
+import { homepageMarketingSlots, shellProductNameSlot } from "../src/messaging"
+import { replaceSiteSlot } from "../src/site-template"
 import { describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -648,7 +650,10 @@ describe("examples-only finite worker protocol", () => {
 
 describe("workflow-examples-v1 independent native contract", () => {
  test("current studio hero and trust keep semantic media and explicit runtime boundaries", async () => {
-  const source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
+  let source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
+  for (const [token, value, count] of [shellProductNameSlot("index.html"), ...homepageMarketingSlots]) {
+   source = replaceSiteSlot(source, token, value, count)
+  }
   expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
   // The quiet hero keeps its real media proof without the retired decorative backdrop.
   expect(source).not.toContain("{{HERO_BACKDROP}}")

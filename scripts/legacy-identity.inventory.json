@@ -1549,9 +1549,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "4e3d9811979cd941cb89b56331b3df3e1bbd7255caf6f0bc500621f076ee5a65",
-    "occurrenceCount": 4,
+    "identityLineCount": 3,
+    "identityLinesSha256": "45b481fd1ef0b8dc52fdf9d326a2ff43aab0f53bc943e9369137377a8ecbd47c",
+    "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
@@ -1820,9 +1820,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "98ee684ea5d79c3de9a5d6d370004c7ed4e34461beaf44f2a96411d0ae47e104",
-    "occurrenceCount": 4,
+    "identityLineCount": 1,
+    "identityLinesSha256": "2c730a3e6b717a1e3a67803b7ab2725d25caf15af78ec15cd5975dcd4351a33c",
+    "occurrenceCount": 1,
     "path": "apps/web/src/index.html",
     "categories": [
       "native-film-studio"
@@ -1838,19 +1838,19 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
-    "occurrenceCount": 1,
-    "path": "apps/web/src/preview.html",
+    "identityLineCount": 6,
+    "identityLinesSha256": "1f7625cf63d5fd0fb2a1b5b22cdb8fef2d39e4f1e9fc1c5d24f4ba7f07519ec9",
+    "occurrenceCount": 6,
+    "path": "apps/web/src/portfolio-messaging.generated.json",
     "categories": [
       "native-film-studio"
     ]
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "7a8a2deb7cf811995bd27195722ac63fc5a44f6358ad389e391f6af4b1a5b5d0",
+    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
-    "path": "apps/web/src/social-image.ts",
+    "path": "apps/web/src/preview.html",
     "categories": [
       "native-film-studio"
     ]

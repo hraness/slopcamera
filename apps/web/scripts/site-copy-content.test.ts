@@ -1,3 +1,5 @@
+import { homepageMarketingSlots, shellProductNameSlot } from "../src/messaging"
+import { replaceSiteSlot } from "../src/site-template"
 import { describe, expect, test } from "bun:test"
 import { readFile } from "node:fs/promises"
 import { homeMarkdown, llmsTxt, sitemapMarkdown } from "../src/agent-pages"
@@ -7,7 +9,15 @@ import { homepageExamples, renderExampleHero, renderExampleGallery, renderExampl
 import { exampleUrl, exampleGuideUrl } from "../src/example-registry"
 import { renderSlopcameraIcons } from "./generate-icons"
 
-const read = (path: string) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
+const read = async (path: string) => {
+  let source = await readFile(new URL(`../../../${path}`, import.meta.url), "utf8")
+  if (path === "apps/web/src/index.html") {
+    for (const [token, value, count] of [shellProductNameSlot("index.html"), ...homepageMarketingSlots]) {
+      source = replaceSiteSlot(source, token, value, count)
+    }
+  }
+  return source
+}
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
 const definition = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 

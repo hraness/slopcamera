@@ -1,0 +1,61 @@
+{
+  "contract": "hraness.product-messaging/v1",
+  "productId": "slopcamera",
+  "canonicalUrl": "https://slopcamera.com",
+  "portfolio": {
+    "contract": "hraness.portfolio-public/v1",
+    "url": "https://hraness.com/portfolio.json",
+    "digest": "sha256:3e82dac495694ca14dbdea88c58d6781f23725a4005231eb0b5eb4e68d4e4907"
+  },
+  "messaging": {
+    "formatVersion": 1,
+    "product": "slopcamera",
+    "names": {
+      "name": "SlopCamera",
+      "command": "slopcamera",
+      "formerly": [
+        "Atet",
+        "Graphics"
+      ]
+    },
+    "category": "Media studio for agents",
+    "tagline": "A multimedia studio for your coding agent.",
+    "short": "A multimedia studio for your coding agent",
+    "meta": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+    "medium": "SlopCamera is a media studio for coding agents. Codex, Claude Code, and other agents make images, diagrams, animation, 3D scenes, and edited video from source files they can keep revising.",
+    "long": "Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. SlopCamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. SlopCamera is free and open source.",
+    "hero": {
+      "heading": "Give your agent a multimedia studio.",
+      "summary": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source.",
+      "primaryAction": "Install Slopcamera",
+      "secondaryAction": "Watch the films"
+    },
+    "headings": {
+      "home-examples": "Take an idea somewhere strange.",
+      "home-revision": "The next version starts with a sentence.",
+      "home-revision-original": "Original",
+      "home-revision-revised": "Revised",
+      "home-start": "What will you make first?",
+      "home-start-animation": "Make an animated film",
+      "home-start-world": "Build a little world",
+      "home-start-footage": "Give footage a new life",
+      "home-install": "Install Slopcamera for your agent.",
+      "home-design": "Your tools. Your files.",
+      "home-questions": "Common questions",
+      "home-cta": "Make something worth replaying.",
+      "home-search-title": "SlopCamera: video, diagrams and 3D your coding agent can revise",
+      "agent-home-examples": "See what you can make",
+      "agent-home-revision": "Direct it again",
+      "agent-home-workflow": "From an idea to a finished piece",
+      "agent-home-install": "Install Slopcamera",
+      "agent-home-tools": "Choose your tools",
+      "agent-home-privacy": "Cost and privacy",
+      "agent-home-explore": "Explore"
+    },
+    "status": {
+      "default": "proposed"
+    },
+    "reviewedOn": "2026-09-30"
+  },
+  "scope": "product"
+}

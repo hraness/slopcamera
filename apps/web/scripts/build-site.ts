@@ -19,7 +19,7 @@ import { snapshotLanternMaterial } from "./lantern-material"
 import { docsDocumentForPage, docPages } from "../src/docs-registry"
 import { blogDocumentForPost, blogIndexDocument, blogPostForDocument, blogPosts } from "../src/blog-registry"
 import { blogIndexSlots, blogPostSlots } from "../src/blog-content"
-import { socialImagesByDocument } from "../src/social-image"
+import { homeSocialImage, socialImagesByDocument } from "../src/social-image"
 import { renderStatusPage } from "../src/status-page-content"
 import type { BlogPageContent, SiteAssets } from "../src/site-content"
 
@@ -48,7 +48,7 @@ const sourceFiles = [
   "package.json", "bun.lock", "src/index.html", "src/404.html", "src/doc.html", "src/site-shell.stylex.ts", "src/site-install.stylex.ts",
   "src/site-docs.stylex.ts", "src/docs-markdown.ts", "src/docs-registry.ts", "src/docs.ts",
   "src/blog.html", "src/blog-admissions.ts", "src/blog-registry.ts", "src/blog-content.ts", "src/site-blog.stylex.ts",
-  "src/social-image.ts", "src/marks/slopcamera.svg",
+  "src/social-image.ts", "src/messaging.ts", "src/portfolio-messaging.generated.json", "src/marks/slopcamera.svg",
   "src/status-page-content.ts", "src/status-page.ts",
   "src/example-registry.ts", "src/example-content.ts", "src/example-media.ts", "src/example-player.ts", "src/example-player.css", "src/example-gallery.ts", "src/example-gallery.css", "media/examples.json", "scripts/example-assets.ts",
   "src/site-renderer.ts", "src/site-template.ts", "src/site-content.ts", "src/site-code-examples.ts", "src/published-release.ts", "src/launch-facts.ts", "src/launch-beats.ts", "src/launch-figures.ts", "src/launch-media.ts", "launch-media/launch-media.json", "media/source-to-film-source-ad4ec8806384.json", "media/source-to-film-revised-source-822a690049ca.json",
@@ -188,7 +188,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     for (const item of renderer.outputs) assert.deepEqual(await artifactForFile(rendererRoot, item.path), item)
     const module: unknown = await import(pathToFileURL(join(rendererRoot, entries[0]!.path)).href)
     assert.ok(module !== null && typeof module === "object" && "renderSiteDocument" in module && typeof module.renderSiteDocument === "function")
-    const socialImages = Object.fromEntries(Object.entries(socialImagesByDocument)
+    const socialImages = Object.fromEntries(Object.entries({ "index.html": homeSocialImage, ...socialImagesByDocument })
       .map(([document, { url, alt, width, height }]) => [document, { url, alt, width, height }]))
     const sealedAssets: SiteAssets = { ...assets, docBodies, blogPages, socialImages, statusPage: renderStatusPage() }
     for (const document of documents) {
