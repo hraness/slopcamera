@@ -39,7 +39,7 @@ function completeFixture() {
   const packages = [
     { manifestSha256: "8".repeat(64), name: "@hraness/design-kit", version: "0.32.0" },
     { manifestSha256: "e".repeat(64), name: "@hraness/site-footer", version: "0.20.1" },
-    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.16" },
+    { manifestSha256: "a".repeat(64), name: "@hraness/ui", version: "0.5.25" },
   ]
   const complete = {
     artifacts: [artifact("404.html", "<!doctype html><title>404</title>"), artifact("index.html", "<!doctype html><title>Slopcamera</title>"),

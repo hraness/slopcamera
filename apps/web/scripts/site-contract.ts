@@ -17,7 +17,7 @@ const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
   { name: "@hraness/design-kit", version: "0.32.0" },
   { name: "@hraness/site-footer", version: "0.20.1" },
-  { name: "@hraness/ui", version: "0.5.16" },
+  { name: "@hraness/ui", version: "0.5.25" },
 ] as const
 
 function record(value: unknown): Record<string, unknown> {
