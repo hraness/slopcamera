@@ -1028,8 +1028,8 @@
     "techniques": [
       "html.plain"
     ],
-    "guideSlug": "tutorials/first-animation",
-    "guideAnchor": "render-and-inspect-the-title",
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "render-and-retain-the-result",
     "featured": false,
     "requirements": "Slopcamera 3.2.8 or later, Bun, a local browser and FFmpeg. No model account.",
     "source": {
@@ -1326,8 +1326,8 @@
     "techniques": [
       "html.plain"
     ],
-    "guideSlug": "tutorials/first-animation",
-    "guideAnchor": "revise-the-same-source",
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "revise-the-same-composition",
     "featured": false,
     "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {

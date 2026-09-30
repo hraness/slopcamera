@@ -1,5 +1,3 @@
-# Remix the showcase
-
 Start with a finished piece, open its source, and change a creative decision. Each film below has its own brief, production recipe, and suggested revision. The illustrations, geometry, animation, and music are original; the eclipse edits use credited NASA footage.
 
 For a first project, follow [Create and revise your first animation](/docs/tutorials/first-animation). The complete showcase recipes use a [source checkout](/docs/how-to/install-from-source), Bun, and the runtimes named in each recipe. Rendering happens locally. The illustrated and 3D pieces need no paid model; the eclipse explainer can use your own recording or generated narration.

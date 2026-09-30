@@ -70,6 +70,16 @@ Slopcamera has no account or subscription. Local editing and rendering are free.
 
 The website displays work and documentation. Creation happens in the CLI and SDK. Normal edits retain original media, while sources, project decisions, and renders stay in storage you control. Cloud generation and selected analysis upload named media with acknowledgement. Trusted native source and custom workflows run as your current user. Read the [privacy guide](https://github.com/hraness/slopcamera/blob/main/PRIVACY.md) and [security policy](https://github.com/hraness/slopcamera/blob/main/SECURITY.md).
 
+## Common questions
+
+### How is Slopcamera different from Remotion or HyperFrames?
+
+Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. [Compare their workflows and licensing](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md) and [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md).
+
+### Is Slopcamera the same as Atet?
+
+Yes. Atet was renamed Slopcamera in September 2026, and atet.sh now redirects here. Old Atet releases still install Atet, not Slopcamera.
+
 ## Explore
 
 - [Documentation](https://slopcamera.com/docs/index.md)

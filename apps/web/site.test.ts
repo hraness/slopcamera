@@ -68,7 +68,6 @@ import { replaceSiteSlot } from "./src/site-template"
 import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
-const brandDescription = "SlopCamera is a media studio for coding agents."
 const searchDescription = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
@@ -663,34 +662,23 @@ describe("static Slopcamera site", () => {
       .replace(/\s+/gu, " ")
       .toLowerCase()
 
-    for (const heading of [
-      "## Why SlopCamera",
-      "## Install SlopCamera",
-      "## Make your first diagram",
-      "### Instructions for coding agents",
-      "## What SlopCamera does",
-      "## How SlopCamera works",
-      "## Important limitations",
-      "## Design and trust",
-      "## Verification",
-      "## Contributing",
-    ]) {
-      expect(readme).toContain(heading)
-    }
-
+    // Follow capabilities, installation, a first project, reference, trust and
+    // contribution through their content instead of pinning editorial headings.
+    const sections = readme.split(/^## /mu)
     const readerPath = [
-      "## Why SlopCamera",
-      "## Install SlopCamera",
-      "## Make your first diagram",
-      "## What SlopCamera does",
-      "## How SlopCamera works",
-      "## Important limitations",
-      "## Design and trust",
-      "## Verification",
-      "## Contributing",
-    ].map(heading => readme.indexOf(heading))
+      "https://slopcamera.com/docs/reference/techniques",
+      archiveInstall.command,
+      "(https://slopcamera.com/docs/how-to/remix-the-showcase)",
+      "| Diagrams |",
+      "`slopcamera mcp`",
+      "21 fixed tools",
+      "(SECURITY.md)",
+      "\nbun run check\n",
+      "nearest `AGENTS.md`",
+    ].map(content => sections.findIndex(section => section.includes(content)))
     expect(readerPath.every(position => position >= 0)).toBe(true)
     expect(readerPath).toEqual([...readerPath].sort((left, right) => left - right))
+    expect(new Set(readerPath).size).toBe(readerPath.length)
 
     for (const term of [
       "TypeScript SDK",
@@ -698,7 +686,7 @@ describe("static Slopcamera site", () => {
       "Agent Skill",
       "MCP server",
       "Vercel AI Gateway",
-      "media studio for coding agents",
+      "multimedia studio for your coding agent",
       "import existing footage or recording bundles",
       "image, video, speech, and transcription models",
       "clean and captioned versions",
@@ -706,7 +694,7 @@ describe("static Slopcamera site", () => {
       expect(searchableReadme).toContain(term.toLowerCase())
     }
 
-    expect(searchableReadme).toContain(brandDescription.toLowerCase())
+    expect(searchableReadme).toContain(searchDescription.toLowerCase())
 
     expect(readme).toContain(sourceInstall.checkoutCommand)
     expect(readme).toContain("bun run build:sdk")
@@ -722,7 +710,10 @@ describe("static Slopcamera site", () => {
     for (const route of ["tutorials/first-native-film", "tutorials/first-animation", "how-to/educational-video"]) {
       expect(readme).toContain(`https://slopcamera.com/docs/${route}`)
     }
-    expect(readme).toMatch(/apps\/web\/media\/native-product-poster-[a-f0-9]{12}\.webp/u)
+    const readmeHero = workflowExamples.find(example => example.id === "rain-bottled")
+    expect(readmeHero).toBeDefined()
+    expect(readme).toContain(`](apps/web/media/${readmeHero!.poster.file})](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)`)
+    expect(readme).toContain("https://slopcamera.com/docs/tutorials/first-diagram")
   })
 
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
@@ -1962,8 +1953,9 @@ describe("static Slopcamera site", () => {
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)
     expect(sitemapMarkdown).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toContain("https://slopcamera.com/llms.txt")
-    expect(homeMarkdown).toContain("## Sitemap")
     expect(homeMarkdown).toContain("https://slopcamera.com/sitemap.md")
+    expect(homeMarkdown).toContain("https://slopcamera.com/sitemap.xml")
+    expect(homeMarkdown).toContain("https://slopcamera.com/llms.txt")
     expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
     expect(notFoundMarkdown).toContain("https://slopcamera.com/llms.txt")
     expect(notFoundMarkdown).toContain("https://slopcamera.com/sitemap.xml")

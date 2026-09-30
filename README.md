@@ -1,6 +1,6 @@
 # SlopCamera
 
-[![A brass optical instrument rendered in Blender from a SlopCamera native starter](apps/web/media/native-product-poster-51b1658c46d3.webp)](https://slopcamera.com/docs/tutorials/first-native-film#inspect-the-finished-example)
+[![Rain, bottled: a cloud rains inside a glass vessel with brass fittings](apps/web/media/rain-bottled-poster-479a32b54a03.webp)](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)
 
 **A multimedia studio for your coding agent.** SlopCamera lets your coding
 agent make images, diagrams, animation, 3D scenes, and video from source files
