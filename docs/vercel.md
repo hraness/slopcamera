@@ -31,10 +31,12 @@ key. `NEXT_PUBLIC_POSTHOG_HOST` may be omitted; when present it must equal
 `https://us.i.posthog.com`.
 
 The build emits no analytics asset when the token is missing or `VERCEL_ENV`
-is not `production`. The bundled client also checks for the exact
-`https://slopcamera.com/` page before it initializes or sends an event. Built-in
-Preview deployments, predecessor hosts, and `404.html` remain inert. Keep
-PostHog's cookieless server hash mode enabled.
+is not `production`. The bundled client initializes only at the canonical
+`https://slopcamera.com` origin and respects Do Not Track. Built-in Preview
+deployments and predecessor hosts remain inert. Ordinary Production 404 pages
+report a bounded requested path through the schema-v2 privacy filter; the
+`/preview` document remains inert. Keep PostHog's cookieless server hash mode
+enabled.
 
 ## Private reference hosting
 
