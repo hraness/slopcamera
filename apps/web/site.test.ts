@@ -1360,8 +1360,14 @@ describe("static Slopcamera site", () => {
     for (const image of socialImages.slice(1)) {
       expect(image.file).toMatch(/^og\/(?:blog|docs)(?:\/[a-z0-9/-]+)?\.png$/u)
       expect(Object.keys(image.page ?? {}).sort()).toEqual(["description", "eyebrow", "headline", "path"])
-      expect(image.page?.eyebrow).toMatch(/^(?:Blog|Documentation|Tutorial|Guide|Reference|Explanation|Comparison|Release|Integration|Native engines|Frameworks and agents)$/u)
+      expect(image.page?.eyebrow).toMatch(/^(?:Blog|Documentation|Tutorial|Guide|Reference|Explanation|Comparison|Release|Integration|Native engines)$/u)
     }
+    // The one-shot post compares two routes, so its card reads as a comparison.
+    expect(socialImageForDocument("blog/one-shot-render-vs-installed-techniques.html").page).toMatchObject({
+      headline: "What the second render takes",
+      eyebrow: "Comparison",
+      path: "/blog/one-shot-render-vs-installed-techniques",
+    })
     const doc = socialImageForDocument("docs/how-to/edit-video.html")
     expect(doc).toMatchObject({ file: "og/docs/how-to/edit-video.png", page: { headline: "Edit and deliver video", eyebrow: "Guide", path: "/docs/how-to/edit-video" } })
     expect(doc.alt).toBe("Edit and deliver video, from SlopCamera")
