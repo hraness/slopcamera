@@ -2766,13 +2766,16 @@ describe("ai scene gallery", () => {
     let active = 0;
     let maximumActive = 0;
     let renderIndex = 0;
+    const firstWaveStarted = deferred<void>();
     const fixture = await createFixture({
       renderGalleryScene: async input => {
         const index = ++renderIndex;
         active += 1;
         maximumActive = Math.max(maximumActive, active);
-        await Bun.sleep(40);
-        active -= 1;
+        // Input preparation can outlast a timer on a busy host. Hold the first
+        // renders until all four workers have reached the renderer boundary.
+        if (active === 4) firstWaveStarted.resolve();
+        await firstWaveStarted.promise;
         const still = new Uint8Array(await sharp({
           create: {
             background: { alpha: 255, b: index * 10, g: 20, r: 30 },
@@ -2786,6 +2789,7 @@ describe("ai scene gallery", () => {
           recursive: true,
         });
         await writeFile(resolve(input.application.paths.repositoryRoot, path), still);
+        active -= 1;
         return {
           artifact: {
             bytes: still.byteLength,
