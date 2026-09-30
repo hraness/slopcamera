@@ -23,6 +23,8 @@ import { basename, dirname, join } from "node:path";
 
 import { z } from "zod";
 
+import { verifyStableBrowserWatcherBaseline } from "./html-overlay-watcher-baseline";
+
 import {
   chromium,
   type Browser,
@@ -2020,6 +2022,8 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         signal,
       );
       browserRuntimeSnapshot = preparedBrowserRuntime;
+      let watcherVersion = 0;
+      let watcherFailure: Error | undefined;
       const runtimeName = basename(preparedBrowserRuntime.runtimeRoot);
       const snapshotName = basename(preparedBrowserRuntime.directory);
       const anchorWatcher = watch(
@@ -2028,11 +2032,13 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         (eventType, filename) => {
           const path = filename?.toString() ?? "<snapshot-anchor>";
           if (path === snapshotName) {
+            watcherVersion += 1;
             browserRuntimeMutations.add(`anchor-${eventType}:${path}`);
           }
         },
       );
       anchorWatcher.on("error", error => {
+        watcherFailure = error;
         browserRuntimeMutations.add(`anchor-watch-error:${error.message}`);
       });
       browserRuntimeWatchers.push(anchorWatcher);
@@ -2065,6 +2071,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
             // its exact path identity still detects fixture substitution.
             return;
           }
+          watcherVersion += 1;
           if (path === runtimeName || path.startsWith(`${runtimeName}/`)) {
             browserRuntimeMutations.add(`${eventType}:${path}`);
             return;
@@ -2073,41 +2080,48 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         },
       );
       containerWatcher.on("error", error => {
+        watcherFailure = error;
         browserRuntimeMutations.add(`watch-error:${error.message}`);
       });
       browserRuntimeWatchers.push(containerWatcher);
-      await new Promise<void>(resolve => setTimeout(resolve, 25));
-      if (signal.aborted) throw cancellationReason(signal);
-      // FSEvents can deliver the just-created direct-child notification after
-      // both watches attach. Clear that bounded baseline before re-verifying
-      // every manifest and path identity. A swap during this window changes
-      // the already-captured container ctime and therefore fails below.
-      browserRuntimeMutations.clear();
       let browser: Browser | undefined;
       let browserFailure: Readonly<{ error: unknown }> | undefined;
       try {
-        await verifyBrowserRuntimeSnapshot(
-          preparedBrowserRuntime,
-          request.browserRuntime,
-          "immediately before launch",
+        // Delayed preparation notifications can arrive during full verification.
+        // Recheck the SAME pre-wait identities until one pass is stable. Nothing
+        // after the synchronous baseline commit is discarded.
+        await verifyStableBrowserWatcherBaseline({
           signal,
-        );
-        await assertBrowserRuntimeSnapshotIdentity(
-          preparedBrowserRuntime,
-          request.browserRuntime.manifest.entries,
-          "immediately before launch",
-          signal,
-        );
-        await assertBrowserRuntimeSnapshotContainerIdentity(
-          preparedBrowserRuntime,
-          "immediately before launch",
-          signal,
-        );
-        await assertBrowserRuntimeSnapshotAnchorIdentity(
-          preparedBrowserRuntime,
-          "immediately before launch",
-          signal,
-        );
+          version: () => watcherVersion,
+          failure: () => watcherFailure,
+          quietMs: process.platform === "darwin" ? 2_000 : 25,
+          deadlineMs: 10_000,
+          verify: async () => {
+            await verifyBrowserRuntimeSnapshot(
+              preparedBrowserRuntime,
+              request.browserRuntime,
+              "immediately before launch",
+              signal,
+            );
+            await assertBrowserRuntimeSnapshotIdentity(
+              preparedBrowserRuntime,
+              request.browserRuntime.manifest.entries,
+              "immediately before launch",
+              signal,
+            );
+            await assertBrowserRuntimeSnapshotContainerIdentity(
+              preparedBrowserRuntime,
+              "immediately before launch",
+              signal,
+            );
+            await assertBrowserRuntimeSnapshotAnchorIdentity(
+              preparedBrowserRuntime,
+              "immediately before launch",
+              signal,
+            );
+          },
+          commit: () => { browserRuntimeMutations.clear(); },
+        });
         discardProvenLaunchManagedRootMetadataEvent(
           browserRuntimeMutations,
           runtimeName,
