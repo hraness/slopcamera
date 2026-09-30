@@ -14,12 +14,12 @@
       },
       "note": "Local user-managed files in fresh workspace directories; no provider meter or automatic deletion. Completion receipt follows durable asset publication."
     },
-    "posthog:$pageview": {
+    "posthog:site-events": {
       "kind": "telemetry",
       "retention": "ttl:P365D",
       "owner": "apps/web/src/analytics.ts",
-      "maxBytesPerEvent": 512,
-      "note": "cookieless canonical-production-only"
+      "maxBytesPerEvent": 16384,
+      "note": "Schema v2 cookieless canonical-production-only: pageview, pageleave, web vitals, budgeted redacted exceptions, CTA, install copy, outbound links and 404; no persons or replay."
     },
     "static:workflow-examples": {
       "kind": "served",
