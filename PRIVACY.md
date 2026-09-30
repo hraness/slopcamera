@@ -53,3 +53,11 @@ from vulnerability reports.
 
 Report suspected vulnerabilities through GitHub private vulnerability
 reporting at https://github.com/hraness/slopcamera/security/advisories/new.
+
+The public slopcamera.com website sends cookieless page views, page exits,
+performance measurements, explicit link and install-copy actions, missing-page
+reports, and rate-limited redacted client errors to PostHog. It keeps no person
+profiles, analytics cookies, or session recordings and respects Do Not Track.
+Public campaign parameters are retained; other query values and credentials
+are removed. Sensitive paths collapse to `/private` and their campaign
+attribution is removed. Preview builds and the inert preview page send nothing.

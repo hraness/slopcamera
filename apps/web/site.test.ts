@@ -18,14 +18,27 @@ import {
   hranessSocialLinks,
 } from "@hraness/site-footer"
 
+import { posthogBrowserOptions } from "./src/analytics-options"
 import {
-  isCanonicalAnalyticsPage,
+  ExceptionBudget,
+  POSTHOG_SCHEMA_VERSION,
+  classifyRoute,
+  createBeforeSend,
   ctaClickedEvent,
   ctaProperties,
+  customEvents,
+  errorFingerprint,
   installCommandCopiedEvent,
+  installMethodFor,
+  isSensitivePath,
+  outboundLinkOpenedEvent,
+  outboundProperties,
+  pageNotFoundEvent,
   posthogCookielessDistinctId,
+  requestedPath,
+  sanitizeError,
   sanitizeEvent,
-  sanitizePageview,
+  shouldInitializeAnalytics,
 } from "./src/analytics-contract"
 import {
   homeMarkdown,
@@ -540,10 +553,10 @@ describe("compilation fixture ownership (controlled promises, no compiler)", () 
 
 test("analytics preserves an optional timestamp without manufacturing an undefined field", () => {
   for (const timestamp of [undefined, new Date("2026-09-08T00:00:00.000Z")]) {
-    const sanitized = sanitizePageview({
+    const sanitized = sanitizeEvent({
       event: "$pageview",
       properties: { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId,
-        $cookieless_mode: true, $raw_user_agent: "native test user agent" },
+        $current_url: "https://slopcamera.com/", $cookieless_mode: true, $raw_user_agent: "native test user agent" },
       uuid: "0198c6a7-7c00-7000-8000-000000000000",
       ...(timestamp === undefined ? {} : { timestamp }),
     }, "phc_testtoken")
@@ -553,50 +566,215 @@ test("analytics preserves an optional timestamp without manufacturing an undefin
   }
 })
 
-test("the pinned posthog-js cookieless $pageview survives before_send with the host PostHog ingestion requires", () => {
+test("analytics removes nested personal fields and private historical attribution", () => {
+  const base = { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
+    $current_url: "https://slopcamera.com/docs?utm_source=public", $raw_user_agent: "test browser" }
+  for (const path of ["/account/private-person", "/%61ccount/private-person", "/%41ccount/private-person", "/%invalid"]) {
+    const sanitized = sanitizeEvent({ event: "$pageview", uuid: "0198c6a7-7c00-7000-8000-000000000000",
+      properties: { ...base, $initial_current_url: `https://slopcamera.com${path}?utm_campaign=private-campaign`,
+        $initial_utm_source: "private-source", $email: "private-person", $diagnostic: { token: "private-token",
+          email: "private-person", rows: [{ $password: "private-password", $current_url: "https://slopcamera.com/docs?gclid=private-click" }] } },
+    }, "phc_testtoken")
+    expect(sanitized?.properties).toMatchObject({ ...base, $current_url: "https://slopcamera.com/docs",
+      $initial_current_url: "https://slopcamera.com/private", canonical_path: "/docs" })
+    expect(JSON.stringify(sanitized)).not.toMatch(/private-person|private-token|private-password|private-campaign|private-source|private-click|utm_source|utm_campaign|gclid/u)
+  }
+  const nested = sanitizeEvent({ event: "$pageview", uuid: "0198c6a7-7c00-7000-8000-000000000000",
+    properties: { ...base, $diagnostic: { $current_url: "https://slopcamera.com/account/person?utm_source=private" } },
+  }, "phc_testtoken")
+  expect(JSON.stringify(nested)).not.toMatch(/utm_source|\/account|person\?/u)
+})
+
+test("analytics recognizes the current portfolio domains", () => {
+  for (const host of ["gobstopper.sh", "botfilter.io", "icon.place", "textbutler.app", "peopleblade.com", "sponge.computer", "swft.io", "lifecharts.io"]) {
+    expect(outboundProperties(`https://${host}/`, "footer")).toMatchObject({ target_host: host, link_kind: "portfolio" })
+  }
+})
+
+test("analytics rejects events beyond the registered complete UTF-8 byte budget", () => {
+  const sanitized = sanitizeEvent({ event: "$pageview", uuid: "0198c6a7-7c00-7000-8000-000000000000",
+    properties: { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
+      $current_url: "https://slopcamera.com/", $raw_user_agent: "test browser", $diagnostic: Array(64).fill("é".repeat(2048)) },
+  }, "phc_testtoken")
+  expect(sanitized).toBeNull()
+})
+
+type HarnessEvent = { event: string, properties: Record<string, unknown> }
+type HarnessScenario = { bodies: unknown[], received: HarnessEvent[], returned: (HarnessEvent | null)[] }
+
+function sentEvents(scenario: HarnessScenario): HarnessEvent[] {
+  return scenario.bodies.flatMap(body => {
+    if (Array.isArray(body)) return body as HarnessEvent[]
+    const batch = (body as { batch?: HarnessEvent[] }).batch
+    return batch ?? [body as HarnessEvent]
+  })
+}
+
+describe("the pinned posthog-js through the production before_send (observability test contract)", () => {
   // Regression: the sanitizer once dropped `$host`, and PostHog ingestion rejects
   // every cookieless event without it (`cookieless_missing_host`), so production
   // sent pageviews that were never stored. The harness runs the real pinned
-  // bundle in a child process so its browser globals stay out of this process.
-  const harness = Bun.spawnSync([process.execPath, fileURLToPath(new URL("./scripts/analytics-posthog-harness.ts", import.meta.url))], {
-    cwd: dirname(fileURLToPath(import.meta.url)), stderr: "pipe", stdout: "pipe", timeout: 30_000,
+  // bundle with the shipped options and before_send in a child process, so its
+  // browser globals stay out of this process, and returns the decoded requests.
+  let scenarios: Record<string, HarnessScenario>
+  beforeAll(() => {
+    const harness = Bun.spawnSync([process.execPath, fileURLToPath(new URL("./scripts/analytics-posthog-harness.ts", import.meta.url))], {
+      cwd: dirname(fileURLToPath(import.meta.url)), stderr: "pipe", stdout: "pipe", timeout: 60_000,
+    })
+    expect(harness.stderr.toString()).toBe("")
+    expect(harness.exitCode).toBe(0)
+    scenarios = JSON.parse(harness.stdout.toString()) as Record<string, HarnessScenario>
   })
-  expect(harness.stderr.toString()).toBe("")
-  expect(harness.exitCode).toBe(0)
-  const { bodies, received, returned } = JSON.parse(harness.stdout.toString()) as {
-    bodies: { api_key: string, batch: { event: string, properties: Record<string, unknown> }[] }[]
-    received: { event: string, properties: Record<string, unknown> }[]
-    returned: ({ event: string, properties: Record<string, unknown> } | null)[]
+
+  const allowedEvents = ["$pageview", "$web_vitals", ctaClickedEvent, outboundLinkOpenedEvent, installCommandCopiedEvent, "$exception", "$pageleave"]
+
+  test("sends every allowed built-in and custom event and drops everything else", () => {
+    const attributed = scenarios.attributed!
+    expect(attributed.returned.map(event => event?.event ?? null)).toEqual([...allowedEvents.slice(0, 6), null, null, "$pageleave"])
+    expect(sentEvents(attributed).map(event => event.event).sort()).toEqual([...allowedEvents].sort())
+    expect(sentEvents(scenarios["not-found"]!).map(event => event.event).sort())
+      .toEqual([...allowedEvents, pageNotFoundEvent].sort())
+    for (const name of [...customEvents]) {
+      expect(name).toMatch(/^[a-z]+(?: [a-z]+)+$/u)
+    }
+    expect(customEvents).toEqual([ctaClickedEvent, installCommandCopiedEvent, outboundLinkOpenedEvent, pageNotFoundEvent])
+  })
+
+  test("keeps the cookieless hash inputs, identity, page, referrer and attribution on every event", () => {
+    for (const event of sentEvents(scenarios.attributed!)) {
+      const sent = event.properties
+      expect(sent.$host).toBe("slopcamera.com")
+      expect(String(sent.$raw_user_agent).trim()).not.toBe("")
+      expect(sent).toMatchObject({
+        $cookieless_mode: true,
+        $current_url: "https://slopcamera.com/docs/how-to/music-video?utm_source=newsletter&gclid=abc123",
+        $pathname: "/docs/how-to/music-video",
+        $process_person_profile: false,
+        $referrer: "https://news.ycombinator.com",
+        $referring_domain: "news.ycombinator.com",
+        analytics_schema_version: POSTHOG_SCHEMA_VERSION,
+        canonical_domain: "slopcamera.com",
+        canonical_path: "/docs/how-to/music-video",
+        distinct_id: posthogCookielessDistinctId,
+        gclid: "abc123",
+        page_kind: "docs",
+        site_id: "slopcamera",
+        token: "phc_harnesstoken",
+        traffic_channel: "referral",
+        utm_source: "newsletter",
+      })
+      for (const key of ["$lib", "$lib_version", "$browser", "$os", "$device_type", "$screen_width", "$viewport_width", "$pageview_id"]) {
+        expect(sent).toHaveProperty(key)
+      }
+      // Email, OAuth code, stray parameters, the fragment and the referrer path never leave.
+      expect(JSON.stringify(sent)).not.toMatch(/someone|example\.com|oauth-secret|partner|other=1|#section|item\?id|token=secret|personal-marker/u)
+      expect(sent).not.toHaveProperty("code")
+      expect(sent).not.toHaveProperty("ref")
+      expect(sent).not.toHaveProperty("command")
+    }
+  })
+
+  test("sends provider fields posthog-js produces for $web_vitals, $pageleave and $exception", () => {
+    const events = new Map(sentEvents(scenarios.attributed!).map(event => [event.event, event.properties]))
+    expect(events.get("$web_vitals")).toMatchObject({ $web_vitals_LCP_value: 1234.5 })
+    expect(events.get("$pageleave")).toHaveProperty("$prev_pageview_pathname", "/docs/how-to/music-video")
+    const exception = events.get("$exception")!
+    expect(exception).toMatchObject({ error_surface: "client", error_origin: "window_error" })
+    expect(String(exception.error_fingerprint)).toMatch(/^e_[0-9a-f]{8}$/u)
+    expect(JSON.stringify(exception.$exception_list)).toContain("[email]")
+    expect(JSON.stringify(exception.$exception_list)).not.toMatch(/someone@|utm_source/u)
+    expect(events.get(installCommandCopiedEvent)).toMatchObject({ install_method: "bun", placement: "inline" })
+    expect(events.get(ctaClickedEvent)).toMatchObject({ cta: "install", placement: "hero" })
+    expect(events.get(outboundLinkOpenedEvent)).toMatchObject({ target_host: "github.com", link_kind: "github", placement: "nav" })
+  })
+
+  test("drops the whole query on a sensitive path", () => {
+    for (const event of [...sentEvents(scenarios.sensitive!), ...sentEvents(scenarios["sensitive-encoded"]!)]) {
+      expect(event.properties.$current_url).toBe("https://slopcamera.com/private")
+      expect(event.properties).not.toHaveProperty("utm_source")
+      expect(event.properties).not.toHaveProperty("gclid")
+      expect(JSON.stringify(event.properties)).not.toMatch(/oauth-secret|newsletter|abc123/u)
+    }
+  })
+
+  test("strips attribution from actual wire payloads with a private historical location", () => {
+    const event = sentEvents(scenarios["sensitive-history"]!).find(event => event.event === "$pageview")!
+    expect(event.properties.$current_url).toBe("https://slopcamera.com/docs")
+    expect(event.properties.$initial_current_url).toBe("https://slopcamera.com/private")
+    expect(JSON.stringify(event)).not.toMatch(/utm_source|newsletter|private-campaign|private-person|personal-marker/u)
+  })
+
+  test("reports the 404 with the requested path and the own-host referrer path", () => {
+    const events = sentEvents(scenarios["not-found"]!)
+    const notFound = events.find(event => event.event === pageNotFoundEvent)!.properties
+    expect(notFound).toMatchObject({ requested_path: "/missing/page", referrer_host: "slopcamera.com", page_kind: "not_found", canonical_path: "/404" })
+    for (const event of events) {
+      expect(event.properties.$referrer).toBe("https://slopcamera.com/docs")
+      expect(event.properties.page_kind).toBe("not_found")
+      expect(JSON.stringify(event.properties)).not.toContain("secret")
+    }
+  })
+
+  test("sends nothing from a preview, *.vercel.app or localhost host", () => {
+    for (const name of ["preview", "vercel", "localhost"]) {
+      expect(scenarios[name]!.received.length).toBeGreaterThan(0)
+      expect(scenarios[name]!.returned.every(event => event === null)).toBe(true)
+      expect(scenarios[name]!.bodies).toEqual([])
+    }
+  })
+})
+
+test("before_send keeps server session and window identifiers when posthog-js supplies them", () => {
+  // Cookieless mode has no client session manager; PostHog assigns sessions at
+  // ingestion. If a later posthog-js sends them, they must pass unchanged.
+  const sanitized = sanitizeEvent({
+    event: "$pageview",
+    properties: {
+      $cookieless_mode: true, $current_url: "https://slopcamera.com/", $raw_user_agent: "ua",
+      $session_id: "0198c6a7-7c00-7000-8000-00000000000a", $window_id: "0198c6a7-7c00-7000-8000-00000000000b",
+      distinct_id: posthogCookielessDistinctId, token: "phc_testtoken",
+    },
+    uuid: "0198c6a7-7c00-7000-8000-000000000000",
+  }, "phc_testtoken")
+  expect(sanitized?.properties).toMatchObject({
+    $session_id: "0198c6a7-7c00-7000-8000-00000000000a",
+    $window_id: "0198c6a7-7c00-7000-8000-00000000000b",
+  })
+})
+describe("analytics private-route guards", () => {
+  const token = "phc_testtoken"
+  const event = {
+    event: "$pageview",
+    uuid: "0198c6a7-7c00-7000-8000-000000000010",
+    properties: {
+      $cookieless_mode: true,
+      $current_url: "https://slopcamera.com/docs?utm_campaign=launch",
+      $raw_user_agent: "ua",
+      distinct_id: posthogCookielessDistinctId,
+      token,
+      utm_campaign: "launch",
+    },
   }
-  expect(received.map(event => event.event)).toEqual(["$pageview"])
-  expect(received[0]!.properties).toMatchObject({
-    $cookieless_mode: true,
-    $host: "slopcamera.com",
-    distinct_id: posthogCookielessDistinctId,
-    token: "phc_harnesstoken",
+
+  test("normalizes encoded separators and dot segments before private-route classification", () => {
+    for (const path of ["/public%2f..%2fauth/callback", "/public/%2e%2e%2fauth/callback", "/public%5c..%5cauth/callback", "/%2fauth/callback", "/bad%ZZ"]) {
+      expect(isSensitivePath(path)).toBe(true)
+      const result = sanitizeEvent({ ...event, properties: { ...event.properties, $current_url: `https://slopcamera.com${path}?utm_campaign=launch` } }, token)
+      expect(result?.properties.$current_url).toBe("https://slopcamera.com/private")
+      expect(result?.properties).not.toHaveProperty("utm_campaign")
+    }
+    expect(isSensitivePath("/docs/authentication")).toBe(false)
   })
-  expect(returned).toHaveLength(1)
-  expect(returned[0]).not.toBeNull()
-  expect(bodies).toHaveLength(1)
-  expect(bodies[0]!.api_key).toBe("phc_harnesstoken")
-  expect(bodies[0]!.batch.map(event => event.event)).toEqual(["$pageview"])
-  const sent = bodies[0]!.batch[0]!.properties
-  // Every cookieless hash input PostHog ingestion checks besides the request IP.
-  expect(sent.$host).toBe("slopcamera.com")
-  expect(typeof sent.$raw_user_agent).toBe("string")
-  expect(String(sent.$raw_user_agent).trim()).not.toBe("")
-  expect(sent).toMatchObject({
-    $cookieless_mode: true,
-    $process_person_profile: false,
-    analytics_schema_version: 1,
-    distinct_id: posthogCookielessDistinctId,
-    site_id: "slopcamera",
-    token: "phc_harnesstoken",
+
+  test("strips queued public attribution after navigation to a private path", () => {
+    const location = { protocol: "https:", hostname: "slopcamera.com", pathname: "/docs" }
+    const beforeSend = createBeforeSend(token, () => location, () => false)
+    expect(beforeSend(event)?.properties.utm_campaign).toBe("launch")
+    location.pathname = "/public%2f..%2fauth/callback"
+    const result = beforeSend(event)
+    expect(result?.properties.$current_url).toBe("https://slopcamera.com/docs")
+    expect(result?.properties).not.toHaveProperty("utm_campaign")
   })
-  expect(Object.keys(sent).sort()).toEqual([
-    "$cookieless_mode", "$host", "$process_person_profile", "$raw_user_agent",
-    "analytics_schema_version", "distinct_id", "site_id", "token",
-  ])
 })
 
 describe("static Slopcamera site", () => {
@@ -1560,15 +1738,29 @@ describe("static Slopcamera site", () => {
     expect(theme).toContain('import { installCopyCommands } from "./copy-command"')
     expect(theme).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
     expect(copyCommand).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
-    expect(analytics).toContain('cookieless_mode: "always"')
-    expect(analytics).toContain('person_profiles: "never"')
-    expect(analytics).toContain("disable_external_dependency_loading: true")
-    expect(analytics).toContain("disable_persistence: true")
-    expect(analytics).toContain("disable_surveys: true")
-    expect(analytics).toContain("disableDeviceModel: true")
-    expect(analytics).toContain("advanced_disable_flags: true")
-    expect(analytics).toContain('posthog.capture("$pageview"')
-    expect(analytics).not.toMatch(/identify\(|autocapture:\s*true|capture_pageleave:\s*true/)
+    expect(analytics).toContain("...posthogBrowserOptions(")
+    expect(analytics).toContain("before_send: createBeforeSend(")
+    expect(analytics).not.toMatch(/identify\(|autocapture:\s*true|capture_exceptions:\s*true/)
+    const options = posthogBrowserOptions("https://us.i.posthog.com")
+    expect(options).toMatchObject({
+      advanced_disable_flags: true,
+      autocapture: false,
+      capture_exceptions: false,
+      capture_pageleave: true,
+      capture_pageview: true,
+      capture_performance: { web_vitals: true, web_vitals_allowed_metrics: ["LCP", "CLS", "FCP", "INP"], web_vitals_attribution: false },
+      cookieless_mode: "always",
+      defaults: "2026-05-30",
+      disable_external_dependency_loading: true,
+      disable_session_recording: true,
+      disable_surveys: true,
+      disableDeviceModel: true,
+      mask_personal_data_properties: false,
+      persistence: "memory",
+      person_profiles: "never",
+      rate_limiting: { events_per_second: 2, events_burst_limit: 12 },
+      respect_dnt: true,
+    })
     expect(build).toContain('createHash("sha256")')
     expect(build).toContain("Bun.build")
     expect(build).toContain('format: "iife"')
@@ -1583,148 +1775,111 @@ describe("static Slopcamera site", () => {
     expect(build).not.toContain('outputDirectory, "docs"')
   })
 
-  test("allows only a canonical cookieless Slopcamera pageview", () => {
-    expect(isCanonicalAnalyticsPage({ origin: "https://slopcamera.com", pathname: "/" })).toBe(true)
-    expect(isCanonicalAnalyticsPage({ origin: "https://preview.slopcamera.com", pathname: "/" })).toBe(false)
-    expect(isCanonicalAnalyticsPage({ origin: "https://slopcamera.com", pathname: "/404" })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/draw-faces-with-javascript",
-    })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/feynobg",
-    })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/painting-with-gaussians",
-    })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/gemini-omni",
-    })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/paint-with-code",
-    })).toBe(false)
-    expect(isCanonicalAnalyticsPage({
-      origin: "https://slopcamera.com",
-      pathname: "/reading/how-i-design-with-ai",
-    })).toBe(false)
+  test("classifies every public route and scrubs values without rebuilding the property set", () => {
+    expect(shouldInitializeAnalytics({ protocol: "https:", hostname: "slopcamera.com" }, "phc_testtoken")).toBe(true)
+    expect(shouldInitializeAnalytics({ protocol: "https:", hostname: "www.slopcamera.com" }, "phc_testtoken")).toBe(true)
+    expect(shouldInitializeAnalytics({ protocol: "https:", hostname: "preview.slopcamera.com" }, "phc_testtoken")).toBe(false)
+    expect(shouldInitializeAnalytics({ protocol: "https:", hostname: "slopcamera.com" }, "not-a-token")).toBe(false)
+    expect(classifyRoute("/", false)).toMatchObject({ canonical_path: "/", page_kind: "home" })
+    expect(classifyRoute("/docs/how-to/music-video/", false)).toMatchObject({ canonical_path: "/docs/how-to/music-video", page_kind: "docs" })
+    expect(classifyRoute("/blog/feynobg", false)).toMatchObject({ page_kind: "article", content_group: "blog" })
+    expect(classifyRoute("/anything", true)).toEqual({ canonical_path: "/404", page_kind: "not_found" })
 
     const timestamp = new Date("2026-08-19T12:00:00.000Z")
-    const sanitized = sanitizePageview({
+    const sanitized = sanitizeEvent({
       event: "$pageview",
       properties: {
+        $browser: "Chrome",
         $cookieless_mode: true,
-        $current_url: "https://slopcamera.com/?private=value#fragment",
-        $device_id: "device",
+        $current_url: "https://www.slopcamera.com/?private=value&utm_campaign=launch#fragment",
         $pathname: "/",
         $raw_user_agent: "Slopcamera test browser",
-        $referrer: "https://example.com/private",
+        $referrer: "https://example.com/private?q=1",
+        $referring_domain: "example.com",
         analytics_schema_version: 99,
         distinct_id: posthogCookielessDistinctId,
+        email: "someone@example.com",
         site_id: "wrong",
         token: "phc_testtoken",
       },
       timestamp,
       uuid: "0198c6a7-7c00-7000-8000-000000000000",
     }, "phc_testtoken")
-
-    expect(sanitized).toEqual({
-      event: "$pageview",
-      properties: {
-        $cookieless_mode: true,
-        $host: "slopcamera.com",
-        $process_person_profile: false,
-        $raw_user_agent: "Slopcamera test browser",
-        analytics_schema_version: 1,
-        distinct_id: posthogCookielessDistinctId,
-        site_id: "slopcamera",
-        token: "phc_testtoken",
-      },
-      timestamp,
-      uuid: "0198c6a7-7c00-7000-8000-000000000000",
+    expect(sanitized?.timestamp).toBe(timestamp)
+    expect(sanitized?.properties).toMatchObject({
+      $browser: "Chrome",
+      $current_url: "https://slopcamera.com/?utm_campaign=launch",
+      $host: "slopcamera.com",
+      $referrer: "https://example.com",
+      $referring_domain: "example.com",
+      analytics_schema_version: POSTHOG_SCHEMA_VERSION,
+      site_id: "slopcamera",
+      traffic_channel: "referral",
+      utm_campaign: "launch",
     })
-    expect(sanitizePageview({
-      event: "$autocapture",
-      properties: { distinct_id: posthogCookielessDistinctId, token: "phc_testtoken" },
-      uuid: "0198c6a7-7c00-7000-8000-000000000001",
-    }, "phc_testtoken")).toBeNull()
-    expect(sanitizePageview({
-      event: "$pageview",
-      properties: { distinct_id: "persisted-id", token: "phc_testtoken" },
-      uuid: "0198c6a7-7c00-7000-8000-000000000002",
-    }, "phc_testtoken")).toBeNull()
-    expect(sanitizePageview({
-      event: "$pageview",
-      properties: {
-        distinct_id: posthogCookielessDistinctId,
-        token: "phc_testtoken",
-      },
-      uuid: "0198c6a7-7c00-7000-8000-000000000003",
-    }, "phc_testtoken")).toBeNull()
-    expect(sanitizePageview({
-      event: "$pageview",
-      properties: {
-        $cookieless_mode: false,
-        $raw_user_agent: "Slopcamera test browser",
-        distinct_id: posthogCookielessDistinctId,
-        token: "phc_testtoken",
-      },
-      uuid: "0198c6a7-7c00-7000-8000-000000000004",
-    }, "phc_testtoken")).toBeNull()
-    expect(sanitizePageview({
-      event: "$pageview",
-      properties: {
-        $cookieless_mode: true,
-        distinct_id: posthogCookielessDistinctId,
-        token: "phc_testtoken",
-      },
-      uuid: "0198c6a7-7c00-7000-8000-000000000005",
-    }, "phc_testtoken")).toBeNull()
+    expect(sanitized?.properties).not.toHaveProperty("email")
+
+    const base = { $cookieless_mode: true, $current_url: "https://slopcamera.com/", $raw_user_agent: "ua", distinct_id: posthogCookielessDistinctId, token: "phc_testtoken" }
+    const uuid = "0198c6a7-7c00-7000-8000-000000000001"
+    expect(sanitizeEvent({ event: "$autocapture", properties: base, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$pageview", properties: { ...base, distinct_id: "persisted-id" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$pageview", properties: { ...base, $cookieless_mode: false }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$pageview", properties: { ...base, $current_url: "https://slopcamera-git-x.vercel.app/" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: "$pageview", properties: { ...base, token: "phc_other" }, uuid }, "phc_testtoken")).toBeNull()
   })
 
-  test("allows only allowlisted cookieless CTA and install-copy events", () => {
+  test("allows only the standard's CTA, outbound, install-copy and 404 shapes", () => {
     const base = {
       $cookieless_mode: true,
+      $current_url: "https://slopcamera.com/",
       $raw_user_agent: "Mozilla/5.0 Test",
       distinct_id: posthogCookielessDistinctId,
       token: "phc_testtoken",
     }
     const uuid = "0198c6a7-7c00-7000-8000-000000000009"
     expect(ctaProperties("#install", "hero")).toEqual({ cta: "install", placement: "hero" })
-    expect(ctaProperties("https://github.com/hraness/slopcamera", "nav")).toEqual({ cta: "github", placement: "nav" })
+    expect(ctaProperties("https://github.com/hraness/slopcamera", "nav")).toEqual({ cta: "github", placement: "nav", target_host: "github.com" })
     expect(ctaProperties("/docs/how-to/music-video", "hero")).toBeNull()
     expect(ctaProperties("#install", null)).toBeNull()
+    expect(outboundProperties("https://github.com/hraness/slopcamera", "nav")).toEqual({ target_host: "github.com", placement: "nav", link_kind: "github" })
+    expect(outboundProperties("/docs", "nav")).toBeNull()
+    expect(outboundProperties("https://slopcamera.com/docs", "nav")).toBeNull()
+    expect(installMethodFor("bun add --global @hraness/slopcamera")).toBe("bun")
+    expect(installMethodFor("npm install -g @hraness/slopcamera")).toBe("npm")
+    expect(requestedPath(`/${"a".repeat(400)}`)).toHaveLength(256)
 
     const cta = sanitizeEvent({
       event: ctaClickedEvent,
-      properties: { ...base, cta: "install", placement: "closing", $current_url: "https://slopcamera.com/?ref=x", email: "a@b.c" },
+      properties: { ...base, cta: "install", placement: "hero", place: "legacy", email: "a@b.c" },
       uuid,
     }, "phc_testtoken")
-    expect(cta?.event).toBe("cta clicked")
-    expect(cta?.properties).toEqual({
-      cta: "install",
-      placement: "closing",
-      $process_person_profile: false,
-      $cookieless_mode: true,
-      $host: "slopcamera.com",
-      $raw_user_agent: "Mozilla/5.0 Test",
-      analytics_schema_version: 1,
-      distinct_id: posthogCookielessDistinctId,
-      site_id: "slopcamera",
-      token: "phc_testtoken",
-    })
+    expect(cta?.properties).toMatchObject({ cta: "install", placement: "hero" })
+    expect(cta?.properties).not.toHaveProperty("place")
+    expect(cta?.properties).not.toHaveProperty("email")
     expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "pricing", placement: "hero" }, uuid }, "phc_testtoken")).toBeNull()
-    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "install", placement: "footer" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: ctaClickedEvent, properties: { ...base, cta: "install", placement: "closing" }, uuid }, "phc_testtoken")).toBeNull()
 
-    const copied = sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, command: "secret" }, uuid }, "phc_testtoken")
-    expect(copied?.event).toBe("install command copied")
+    const copied = sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, install_method: "curl", placement: "inline", command: "secret" }, uuid }, "phc_testtoken")
+    expect(copied?.properties).toMatchObject({ install_method: "curl", placement: "inline" })
     expect(copied?.properties).not.toHaveProperty("command")
-    expect(sanitizeEvent({ event: installCommandCopiedEvent, properties: { ...base, token: "phc_other" }, uuid }, "phc_testtoken")).toBeNull()
-    expect(sanitizeEvent({ event: "$autocapture", properties: base, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: installCommandCopiedEvent, properties: base, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: outboundLinkOpenedEvent, properties: { ...base, target_host: "slopcamera.com", placement: "nav" }, uuid }, "phc_testtoken")).toBeNull()
+    expect(sanitizeEvent({ event: pageNotFoundEvent, properties: { ...base, requested_path: "/missing?x=1" }, uuid }, "phc_testtoken", { notFound: () => true })?.properties)
+      .toMatchObject({ requested_path: "/missing", page_kind: "not_found" })
     expect(sanitizeEvent({ event: "checkout started", properties: base, uuid }, "phc_testtoken")).toBeNull()
+  })
+
+  test("budgets exceptions per fingerprint and per minute", () => {
+    const budget = new ExceptionBudget()
+    expect(budget.allow("e_00000001", 0)).toBe(true)
+    expect(budget.allow("e_00000001", 1)).toBe(true)
+    expect(budget.allow("e_00000001", 2)).toBe(false)
+    const results = Array.from({ length: 30 }, (_unused, index) => budget.allow(`e_${String(index + 2).padStart(8, "0")}`, 3))
+    expect(results.filter(Boolean)).toHaveLength(18)
+    expect(budget.allow("e_00000001", 60_002)).toBe(true)
+    expect(sanitizeError(new Error("at https://slopcamera.com/?utm_source=x for a@b.co")).message).toBe("at https://slopcamera.com/ for [email]")
+    expect(sanitizeError("not an error").message).toBe("Non-Error rejection")
+    expect(errorFingerprint(new Error("same"))).toMatch(/^e_[0-9a-f]{8}$/u)
   })
 
   test("emits analytics only for a configured Production build", async () => {
@@ -1760,13 +1915,14 @@ describe("static Slopcamera site", () => {
         readFile(join(productionDirectory, first.analyticsPath?.slice(1) ?? "missing"), "utf8"),
       ])
       expect(html).toContain(`<script src="${first.analyticsPath}" type="module"></script>`)
-      expect(notFound).not.toMatch(/analytics-|posthog|phc_test-token_value/i)
+      expect(notFound).toContain(`<script src="${first.analyticsPath}" type="module"></script>`)
+      expect(notFound).toContain('data-page-kind="not_found"')
       expect(preview).not.toMatch(/<script\b|analytics-|posthog|phc_test-token_value/iu)
       expect(asset).toContain("phc_test-token_value")
       expect(asset).toContain("https://us.i.posthog.com")
       expect(asset).toStartWith("/*! posthog-js 1.413.2")
       expect(asset).toContain("Apache License\n                           Version 2.0")
-      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(180_000)
+      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(310_000)
     })
   }, repeatedCompilationTimeoutMs)
 
