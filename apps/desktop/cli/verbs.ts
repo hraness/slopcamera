@@ -21,6 +21,11 @@ export interface VerbRow {
 const row = (words: string, opClass: OpClass, summary: string): VerbRow => ({ path: words.split(" "), opClass, summary });
 
 export const CLI_VERBS: readonly VerbRow[] = [
+  row("update", "operate", "Install a verified newer CLI release"),
+  row("update check", "operate", "Check release availability and save the check time"),
+  row("update status", "read", "Show installation support and update preferences"),
+  row("update enable", "operate", "Enable automatic CLI updates"),
+  row("update disable", "operate", "Keep the installed CLI version"),
   row("capabilities", "read", "List what this build can do and how well each part is tested"),
   row("doctor", "read", "Check local render tools, asset caches and old login items"),
   row("operations list", "read", "List the operations agents can run and their limits"),

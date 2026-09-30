@@ -94,6 +94,37 @@
         "maximumPdfBytes": 33554432
       },
       "note": "Local replaceable vector PDF and SVG outputs with a source-and-output hash receipt; caller-managed retention, no provider calls or metering."
+    },
+    "local:cli-update-preference": {
+      "kind": "authoritative",
+      "retention": "persistent",
+      "owner": "apps/desktop/cli/entry.ts",
+      "deletion": "apps/desktop/cli/entry.ts",
+      "budget": {
+        "bytesPerFile": 16384
+      },
+      "notes": "Per-product update preference and installation identity; cli-update owns private state validation and preference changes."
+    },
+    "local:cli-update-coordination": {
+      "kind": "derived",
+      "retention": "ephemeral",
+      "owner": "apps/desktop/cli/entry.ts",
+      "source": "Active CLI and package-manager processes",
+      "budget": {
+        "bytesPerFile": 16384,
+        "maximumLockContenders": 4096
+      },
+      "notes": "Process leases and interrupted-install recovery records; uncertain installs remain blocked until verified recovery."
+    },
+    "local:cli-update-archives": {
+      "kind": "derived",
+      "retention": "persistent",
+      "owner": "apps/desktop/cli/entry.ts",
+      "source": "Verified release archives",
+      "budget": {
+        "maximumBytesPerArchive": 536870912
+      },
+      "notes": "Private verified archives beside the global installation. Package managers may reference them; retain each archive while referenced, never remove it as a disposable cache."
     }
   },
   "exempt": []

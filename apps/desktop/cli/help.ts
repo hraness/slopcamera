@@ -33,6 +33,7 @@ Commands:
   runs list|show|resume|approve|cancel
                                  Inspect and control durable workflow runs
   doctor                         Check local render and asset capabilities
+  update                         Update the CLI or manage automatic updates
   ai models|image|video|speech|transcribe
                                  Discover and run Vercel AI Gateway media models
   credits status|topup|wait|forget
@@ -719,6 +720,13 @@ compiles a bounded set of single-axis candidate plans under cinema/galleries/, e
 re-hashed through the canonical composition digest; it never selects a candidate.
 
 Imported media starts unverified. Align its audio before relying on synchronization. Structural edits are project-time operations and affect every placement. Camera moves address any placed video stream; metadata-driven screen zooms still require a recording-backed source placement. Face analysis and geometry tracks remain local. --select largest follows the largest currently visible prepared-layer face per frame. --require-all-selected makes a missing explicit/all-selected face invoke the chosen gap policy.`,
+  update: `Usage: slopcamera update [check|status|enable|disable] [--json]
+
+Supported Bun and npm global installations on macOS and Linux check the immutable
+GitHub release before work starts, at most once a day. Verification needs GitHub CLI.
+Use slopcamera update disable to keep this version, or HRANESS_NO_UPDATE=1 for one
+invocation. Exact Bun version pins require slopcamera update enable. Local image
+vectorization, SDK imports, and the private compiled binary do not update automatically.`,
   render: `Usage: slopcamera render <plan|run> <recording> [--display <id|primary>] [--output <path>] [--dry-run] [--keep-inactivity] [--json]
 
 Long inactivity is analyzed and removed by default; use --keep-inactivity to opt out.`,
@@ -731,10 +739,11 @@ export function commandHelp(topic: readonly string[]): string {
 
 export function completions(words: readonly string[]): readonly string[] {
   const topLevel = [
-    "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
+    "update", "capabilities", "operations", "diagram", "direct", "studio", "image", "html", "style", "workflows", "code", "runs", "doctor", "ai", "credits", "media", "support", "outputs", "status", "tui", "commands", "legacy", "recordings", "projects", "project", "scene", "inspect", "events", "edit", "analyze", "align", "faces", "fillers", "render", "assets",
   ];
   if (words.length <= 1) return topLevel;
   const command = words[0];
+  if (command === "update") return ["check", "status", "enable", "disable"];
   if (command === "support") return ["protocol", "offer", "shown", "release", "dismiss", "snooze", "enable", "status"];
   if (command === "html") return ["catalog", "scaffold", "init", "render", "still", "preview", "deliver"];
   if (command === "style") return ["list", "show"];

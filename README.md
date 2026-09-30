@@ -100,6 +100,10 @@ placement and resuming long runs.
 
 </details>
 
+CLI updates in SlopCamera 3.10.0 and newer are enabled by default for supported
+Bun and npm global installations. See [update controls](docs/reference/capabilities.md#cli-updates)
+to keep a version or check for a release.
+
 ## Make a film. Then direct it again.
 
 [Last tram to the moon](https://slopcamera.com/docs/tutorials/first-animation)
