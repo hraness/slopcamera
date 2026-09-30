@@ -20,7 +20,7 @@ const markSvg = readFileSync(fileURLToPath(new URL("./marks/slopcamera.svg", imp
 /** Slopcamera's one social-image declaration. Every share card comes from it. */
 export const slopcameraSocialSite = defineSocialImageSite({
   name: "SlopCamera",
-  description: "Images, diagrams, 3D and video your agent can keep revising.",
+  description: "A multimedia studio for your coding agent.",
   domain: "slopcamera.com",
   // Multi-word names the headline and description never split across lines.
   keepTogether: ["Agent Skill", "Claude Code", "Hraness Credits", "Vercel AI Gateway"],
@@ -81,12 +81,13 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
   },
   "docs/index.html": { description: "Install it, set up your agent, follow the guides." },
   "docs/tutorials/first-diagram.html": { description: "Make a two-node flow, then edit its source." },
-  "docs/tutorials/first-animation.html": { description: "Render an HTML title, then change it." },
+  "docs/tutorials/first-animation.html": { description: "Send a midnight tram to the moon. Then revise it." },
   "docs/tutorials/first-native-film.html": { description: "Render a small shot from Blender source." },
   "docs/tutorials/claude-code.html": { description: "Ask for a first diagram and short video." },
   "docs/tutorials/codex.html": { description: "Ask for a diagram and video in a repository." },
   "docs/tutorials/mcp.html": { description: "Fixed tools for diagrams, images, and scenes." },
   "docs/tutorials/other-agents.html": { description: "Use the portable Agent Skill or the plain CLI." },
+  "docs/how-to/direct-a-film.html": { description: "Brief, picture, movement, sound, and revision." },
   "docs/how-to/install-from-source.html": { description: "Install locked dependencies, then build the CLI." },
   "docs/how-to/render-motion-graphics.html": { description: "HTML, SVG, shaders, or Three.js to video." },
   "docs/how-to/vectorize-images.html": { description: "Trace a raster locally and check the SVG." },

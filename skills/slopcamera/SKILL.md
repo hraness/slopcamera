@@ -8,6 +8,8 @@ description: Create, inspect, edit and render visual media with the SlopCamera C
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
 
 For creative film and animation, choose coherent art direction before rendering.
+Use [creative direction](references/creative-direction.md) to turn a brief into
+staging, a hardest-shot test, deliberate sound, and a visible source revision.
 Use [visual style direction](references/visual-style-direction.md) for historical
 footage, animation families, resolution, and visual review. Default to native 4K
 for an unspecified creative master when the renderer and source support it;
@@ -25,6 +27,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 
 | Requested result | Read |
 | --- | --- |
+| Creative brief, polished showcase, or a meaningful visual revision | [Creative direction](references/creative-direction.md) |
 | Historical film, cel animation, pixel art, classic animation styles, or a demo portfolio | [Visual style direction](references/visual-style-direction.md) |
 | Editable diagram, flowchart or visual explanation | [Diagrams](references/diagrams.md) and [visual communication](references/visual-communication.md) |
 | Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md) |

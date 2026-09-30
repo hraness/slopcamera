@@ -41,10 +41,10 @@ describe("blog admissions", () => {
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai-from-source")
       const reviewedOn = ({
-        "/blog/introducing-slopcamera": "2026-09-27",
+        "/blog/introducing-slopcamera": "2026-09-30",
         "/blog/how-slopcamera-uses-algal": "2026-09-26",
       } as Readonly<Partial<Record<string, typeof record.review.reviewedOn>>>)[record.href] ?? "2026-09-28"
-      expect(record.review).toEqual({ reviewer, reviewerType: "ai", reviewedOn })
+      expect(record.review).toEqual({ reviewer: record.href === "/blog/introducing-slopcamera" ? "Codex (GPT-6)" : reviewer, reviewerType: "ai", reviewedOn })
       expect(record.humanReview).toBeNull()
       expect(record.review.reviewer).not.toMatch(/human/iu)
       const total = Object.values(record.scores).reduce((sum, score) => sum + score, 0)
@@ -77,7 +77,7 @@ describe("blog pages", () => {
     for (const post of blogPosts) {
       const slots = blogPostSlots(post, bodies[post.slug]!)
       const sentence = articleProvenanceSentence(articleProvenanceFromAdmission(admissionForPost(post)))
-      expect(sentence).toBe(`Drafted with AI from the source code and reviewed by ${reviewer}.`)
+      expect(sentence).toBe(`Drafted with AI from the source code and reviewed by ${post.slug === "introducing-slopcamera" ? "Codex (GPT-6)" : reviewer}.`)
       expect(slots.main).toContain(">By Hraness</span>")
       expect(slots.main).toContain(sentence)
       expect(slots.main).toContain('data-reviewer-type="ai"')

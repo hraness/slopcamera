@@ -44,7 +44,7 @@ test("retained illustrative commands stay valid while the homepage shows actual 
   for (const suffix of ["tldr", "light.svg", "dark.svg", "light.png", "dark.png"]) expect(diagramSession).toContain(`example-flow.${suffix}`)
   expect(diagramSession).toContain("Valid diagram.")
   expect(interfaceExamples.mcp).toBe("slopcamera mcp --root /absolute/path/to/workspace")
-  expect(home).toContain("It does not expose every CLI command.")
+  expect(home).toContain("MCP does not expose every CLI command.")
 })
 
 test("highlighted source preserves arbitrary text and never creates executable markup", () => {
@@ -67,15 +67,14 @@ test("highlighted source preserves arbitrary text and never creates executable m
   }
 })
 
-test("ordinary code uses the local theme and intact lines in wide interface rows", async () => {
+test("install code keeps the local theme and intact lines while command demos stay in docs", async () => {
   const [css, recipe, home] = await Promise.all([read("src/styles.css"), read("src/site-install.stylex.ts"), read("src/index.html")])
   const code = css.match(/\.hraness-marketing-page \.hraness-material-code \{([^}]+)\}/u)?.[1] ?? ""
   for (const declaration of ["background: var(--hraness-material-plane)", "color: var(--hraness-material-ink)", "white-space: pre", "overflow: auto", "overflow-wrap: normal", "word-break: normal"]) expect(code).toContain(declaration)
   expect(css).not.toContain("repeat(4, minmax(0, 1fr))")
-  expect(css).toContain("grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr)")
   expect(css).toContain("--night: var(--hraness-marketing-terminal-background)")
   expect(recipe).toContain('whiteSpace: "pre", overflowWrap: "normal", wordBreak: "normal"')
-  expect(home.match(/class="hraness-material-code" tabindex="0"/gu)).toHaveLength(4)
+  expect(home).not.toMatch(/\{\{(?:SKILL|CLI|SDK|MCP)_EXAMPLE\}\}/u)
   const advanced = home.match(/<details class="source-install[^>]*>([\s\S]*?)<\/details>/u)?.[1] ?? ""
   expect(advanced).toContain("{{SOURCE_INSTALL_URL}}")
   expect(home).not.toMatch(/SOURCE_(?:CHECKOUT|ENTER)_COMMAND|After the source build/u)

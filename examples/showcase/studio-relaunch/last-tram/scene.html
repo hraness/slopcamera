@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last tram to the moon</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071d29}canvas{display:block;width:100%;height:100%}</style>
+<canvas id="film" aria-label="A copper tram leaves a rainy city along a railway toward the moon."></canvas>
+<script>
+(() => {
+'use strict';
+const canvas=document.getElementById('film'), c=canvas.getContext('2d',{alpha:false});
+const W=1920,H=1080,TAU=Math.PI*2;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
+const ease=x=>{x=clamp(x);return x*x*(3-2*x)};
+const hash=n=>{const q=Math.sin(n*127.1+311.7)*43758.5453;return q-Math.floor(q)};
+const rect=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+function ellipse(x,y,rx,ry,col,a=0){c.beginPath();c.ellipse(x,y,rx,ry,a,0,TAU);c.fillStyle=col;c.fill()}
+function path(d,fill,stroke,width=1){const p=new Path2D(d);if(fill){c.fillStyle=fill;c.fill(p)}if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke(p)}}
+function line(x,y,x2,y2,col,w=1){c.beginPath();c.moveTo(x,y);c.lineTo(x2,y2);c.strokeStyle=col;c.lineWidth=w;c.stroke()}
+function group(x,y,s,a,fn){c.save();c.translate(x,y);c.scale(s,s);c.rotate(a);fn();c.restore()}
+function grad(x,y,x2,y2,stops){const g=c.createLinearGradient(x,y,x2,y2);stops.forEach(([p,col])=>g.addColorStop(p,col));return g}
+function glow(x,y,r,col){const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,col);g.addColorStop(1,'transparent');ellipse(x,y,r,r,g)}
+function railPoint(x){
+  const points=x<=1115?[[-150,954],[369,891],[807,807],[1115,596]]:[[1115,596],[1268,486],[1423,346],[1580,218]];
+  const bez=(u,k)=>{const v=1-u;return v*v*v*points[0][k]+3*v*v*u*points[1][k]+3*v*u*u*points[2][k]+u*u*u*points[3][k]};
+  let a=0,b=1;for(let i=0;i<22;i++){const u=(a+b)/2;if(bez(u,0)<x)a=u;else b=u}const u=(a+b)/2,v=1-u;
+  const dx=3*v*v*(points[1][0]-points[0][0])+6*v*u*(points[2][0]-points[1][0])+3*u*u*(points[3][0]-points[2][0]);
+  const dy=3*v*v*(points[1][1]-points[0][1])+6*v*u*(points[2][1]-points[1][1])+3*u*u*(points[3][1]-points[2][1]);
+  return {x:bez(u,0),y:bez(u,1),angle:Math.atan2(dy,dx)};
+}
+function text(s,x,y,size,col,font='sans-serif',align='left'){c.fillStyle=col;c.font=`${size}px ${font}`;c.textAlign=align;c.fillText(s,x,y)}
+function building(x,y,w,h,seed,near=false){
+  const face=near?'#12323c':'#284b53';
+  rect(x,y,w,h,grad(x,y,x+w,y,[[0,face],[.72,near?'#0c2733':'#203f49'],[1,near?'#081e2b':'#18343f']]));
+  path(`M${x} ${y} l18 -13 h${w} l-18 13Z`,near?'#45605e':'#56706b');
+  rect(x-5,y+7,w+9,6,near?'#29474b':'#3b5a5b');rect(x+w-24,y,24,h,'#071e291f');
+  for(let row=0;row<Math.ceil(h/58);row++)for(let col=0;col<Math.floor((w-24)/39);col++){
+    const wx=x+20+col*39,wy=y+29+row*58,lit=hash(seed+row*17+col*7)>.47;
+    rect(wx-3,wy-3,24,32,near?'#051b28':'#183641');
+    rect(wx,wy,18,25,lit?grad(wx,wy,wx,wy+25,[[0,'#ab9672'],[1,near?'#edbe79':'#bba982']]):'#35565c');
+    line(wx+9,wy,wx+9,wy+25,'#17343f',2);line(wx,wy+11,wx+18,wy+11,'#17343f',2);
+    if(lit){rect(wx-4,wy+28,26,2,'#789080');if(hash(seed+row+col*22)>.65)path(`M${wx+2} ${wy+2} h5 l-2 21 h-3Z`,'#594f40');}
+  }
+  for(let row=0;row<Math.ceil(h/58);row++)line(x,y+row*58+16,x+w,y+row*58+16,'#75918012',1);
+  line(x+8,y+9,x+8,y+h,'#56706b38',2);
+  if(near){
+    const sx=x+w-26;
+    for(let k=0;k<4;k++){const yy=y+89+k*91;line(sx-22,yy,sx+14,yy,'#061c29',6);line(sx-22,yy-19,sx+14,yy-19,'#718278',1);line(sx+11,yy,sx-18,yy+67,'#0b252f',4);for(let j=0;j<7;j++)line(sx+9-j*4,yy+j*9,sx+21-j*4,yy+j*9,'#5a726d',1);}
+    for(let i=0;i<75;i++){const xx=x+hash(seed+i)*w,yy=y+hash(seed+i+900)*h;line(xx,yy,xx,yy+9+hash(i)*26,'#94b29809',2);}
+  }
+}
+function city(t,leave){
+  const drift=t*4,drop=leave*210;
+  group(-drift*.12,drop*.25,1,0,()=>{for(let i=0;i<32;i++){const x=i*69-30,h=130+hash(i+400)*270;building(x,774-h,52+hash(i+280)*31,h,250+i*13)}});
+  rect(0,380,W,500,grad(0,380,0,880,[[0,'#72938500'],[.6,'#749b9128'],[1,'#467e7738']]));
+  rect(0,558+drop*.25,W,250,grad(0,558,0,810,[[0,'#69877b00'],[1,'#70978e22']]));
+  group(-drift*.28,drop*.48,1,0,()=>{
+    for(const b of [[-70,438,237,650,4],[186,507,180,540,17],[390,595,170,550,27],[1312,548,182,520,37],[1531,403,231,700,51],[1796,519,228,600,79]])building(...b,true);
+    // Water towers, laundry lines and aerials give the roofline irregular scale.
+    group(1650,356,1,0,()=>{line(-35,24,-47,59,'#0c2833',5);line(35,24,44,59,'#0c2833',5);rect(-45,-65,90,91,grad(-45,0,45,0,[[0,'#647a6b'],[.25,'#37534e'],[1,'#183943']]));ellipse(0,-65,45,11,'#738b78');ellipse(0,26,45,9,'#16333d');path('M-52 -70 L0 -94 L53 -70Z','#344f50');for(let j=0;j<11;j++)line(-40+j*8,-62,-40+j*8,24,'#8ba18829',1);line(-45,-40,45,-40,'#183a42',3);line(-45,8,45,8,'#183a42',3)});
+    line(119,441,119,313,'#12323e',3);line(64,340,173,322,'#27494f',2);line(117,357,159,347,'#315359',2);
+    path('M365 561 Q450 600 529 584',null,'#142f37',2);
+    for(let j=0;j<5;j++){const x=387+j*23;path(`M${x} ${576+j*2} l16 2 l-3 23 l-14 -2Z`,j%2?'#51706a':'#b9a986');}
+    group(1549,652,1,0,()=>{rect(0,0,159,57,'#092932');rect(5,5,149,47,'#123e43');text('LUNA',79,37,30,'#a8d0b4','serif','center');glow(82,25,112,'#75be8f14')});
+  });
+}
+function tram(t,x,y,s,angle,moon){
+  group(x,y,s,angle,()=>{
+    // The body and three-quarter nose are hand-drawn perspective, not a 3D mesh.
+    ellipse(0,134,312,24,'#04172162');
+    path('M-317 -85 Q-323 -110 -286 -115 L210 -115 Q235 -114 246 -92 L273 58 L256 110 L-313 110Z',grad(0,-111,0,114,[[0,'#496a60'],[.14,'#294d4d'],[.57,'#264247'],[.58,'#ac563d'],[1,'#672d27']]),'#071d29',4);
+    path('M246 -91 Q306 -74 314 -42 L316 87 L256 110 L273 58Z',grad(250,0,315,0,[[0,'#c8754f'],[1,'#5c3b32']]),'#071d29',4);
+    path('M-327 -85 Q-322 -109 -297 -119 L206 -124 Q244 -123 257 -99 L246 -91 L-315 -87Z','#779181','#152f34',3);
+    line(-310,-87,239,-92,'#d3c69a',2);
+    for(let i=0;i<8;i++){
+      const xx=-294+i*65;
+      path(`M${xx} -70 h51 l4 80 h-56Z`,'#101f29','#b98c5c',2);
+      rect(xx+4,-66,43,70,grad(0,-65,0,4,[[0,'#f8deb0'],[.52,'#dba96d'],[1,'#87684a']]));
+      const person=hash(i+21)>.3;
+      if(person){ellipse(xx+23,-22,7,9,'#4b5147');path(`M${xx+10} 4 Q${xx+10} -15 ${xx+23} -13 Q${xx+37} -12 ${xx+39} 4Z`,'#434d43');}
+      line(xx+25,-66,xx+25,4,'#51605a',3);line(xx+4,-41,xx+47,-41,'#66746a',2);
+      line(xx+7,-61,xx+18,-55,'#fff5c765',2);
+    }
+    path('M269 -64 L299 -42 L301 11 L277 25Z',grad(270,-60,300,20,[[0,'#e8c58c'],[1,'#6a7762']]),'#283d3b',3);
+    line(283,-54,286,16,'#223a3b',3);
+    for(const dx of [-248,118]){rect(dx,17,50,87,'#763c2f');rect(dx+5,25,39,66,'#b76644');line(dx+23,27,dx+23,93,'#4f322b',2);ellipse(dx+18,62,2,3,'#dcc093');ellipse(dx+28,62,2,3,'#dcc093');}
+    line(-310,19,264,19,'#e1aa6b',3);line(-310,30,263,30,'#cd8b57',2);line(-310,95,258,95,'#d8a576',2);
+    for(let i=0;i<25;i++)ellipse(-301+i*22,86,1.2,1.2,'#da9b657b');
+    text('LUNAR LINE',-72,66,18,'#e6c291','serif','center');text('07',224,72,25,'#ead1a6','serif','center');
+    path('M-309 110 L254 110 L249 132 L-293 132Z','#08212d');
+    for(const wx of [-223,-183,157,196]){
+      let wy=133;
+      for(let k=0;k<8;k++){const contactX=x+Math.cos(angle)*wx*s-Math.sin(angle)*(wy+19)*s,contactY=y+Math.sin(angle)*wx*s+Math.cos(angle)*(wy+19)*s;wy+=(railPoint(contactX).y-contactY)/(Math.cos(angle)*s)}
+      line(wx,113,wx,wy,'#102c35',11);ellipse(wx,wy,19,19,'#081c29');ellipse(wx,wy,11,11,'#54716c');ellipse(wx,wy,4,4,'#0d2c36');const a=t*3;line(wx+Math.cos(a)*10,wy+Math.sin(a)*10,wx-Math.cos(a)*10,wy-Math.sin(a)*10,'#1e4047',3);
+    }
+    line(-253,117,-153,117,'#718178',5);line(131,117,222,117,'#718178',5);
+    path('M-112 -120 L-99 -138 L33 -138 L47 -122Z','#233e42');for(let i=0;i<9;i++)line(-89+i*12,-128,-83+i*12,-137,'#9fae8c',1);
+    path('M-10 -139 L32 -191 L80 -139',null,'#8f9e85',4);line(32,-191,72,-194,'#203d42',6);
+    path('M269 47 L307 39 L308 87 L267 99Z','#713b2d');ellipse(294,61,11,9,'#ffe5a8');glow(297,61,98,'#f7c16d32');
+    path('M-311 105 L254 105',null,'#191f26',7);
+    if(moon){glow(295,61,48,'#f7c16d14');}
+  });
+}
+function station(t,leave,reveal){
+  const yy=leave*290;
+  group(0,yy,1,0,()=>{
+    path('M0 982 L1090 881 L1328 909 L0 1080Z','#102e39');
+    path('M0 975 L1046 876 L1074 886 L0 991Z','#d1bc85');
+    for(let i=0;i<30;i++)line(i*43,979-i*4,i*43+19,987-i*4,'#384e4c',2);
+    for(let i=0;i<100;i++){const x=hash(i+119)*1090,y=999+hash(i+407)*95-x*.087;line(x,y,x+20+hash(i+519)*85,y-1,i%4?'#73918616':'#df9e4e2a',1+hash(i)*2)}
+    // Near timber sign: its destination is a readable narrative event.
+    line(171,249,177,1023,'#0a222f',17);line(184,249,190,1020,'#54716b40',3);
+    line(178,278,501,260,'#09222d',12);line(178,321,311,271,'#09222d',7);
+    group(324,319,1,-.02,()=>{
+      rect(-121,-35,257,103,'#0b202b');rect(-115,-30,245,92,'#839078');rect(-109,-24,233,80,'#0a252f');
+      text('LAST DEPARTURE',7,-7,12,'#a2b39b','sans-serif','center');
+      const flip=clamp((t-reveal)/.45),word=t<reveal?'CITY':t<reveal+.12?'M O N':'MOON';
+      c.save();c.beginPath();c.rect(-96,2,206,45);c.clip();text(word,7,35,35,'#f8dc9c','serif','center');if(flip>0&&flip<1)rect(-100,3+flip*43,210,6,'#0a252f');c.restore();
+      line(-103,21,118,21,'#0a252f42',1);ellipse(-116,-17,2,2,'#f2d2a0');ellipse(128,52,2,2,'#f2d2a0');
+      glow(0,20,135,'#dcad4610');
+    });
+    group(927,865,1,0,()=>{
+      // One quiet passenger supplies scale, with scarf follow-through only at departure.
+      ellipse(0,-55,15,19,'#0a202c');path('M-13 -36 Q-28 -10 -25 47 L-11 63 L27 60 L13 -33Z','#173440','#081f2a',2);
+      path('M-13 57 L-13 105 L-4 105 L4 61 L14 104 L24 104 L22 57Z','#09222f');ellipse(-9,108,14,4,'#081c29');ellipse(22,107,12,4,'#081c29');
+      path(`M-13 -32 Q9 -25 17 -34 L${38+leave*29} ${-27-Math.sin(t*3)*leave*7} L${31+leave*28} ${-20-Math.sin(t*3)*leave*7} L9 -24Z`,'#c87c51');
+      path('M-14 -30 L-35 10 L-28 15 L-6 -12Z','#173440');path('M14 -28 L33 8 L27 13 L6 -7Z','#173440');
+      path('M-40 20 L-26 18 L-22 43 L-38 46Z','#ac7350','#102b34',2);
+    });
+  });
+}
+function render(time,variant='moonrise'){
+  if(!Number.isFinite(time)||time<0||time>12)throw new Error('Film time must be within 0–12 seconds.');
+  if(!['original','moonrise'].includes(variant))throw new Error('Unknown film variant.');
+  const ww=Math.round(window.innerWidth*(window.devicePixelRatio||1)),hh=Math.round(window.innerHeight*(window.devicePixelRatio||1));
+  if(ww<1||hh<1||ww>8192||hh>8192||ww*hh>33554432)throw new Error('Unsupported film canvas.');
+  if(canvas.width!==ww||canvas.height!==hh){canvas.width=ww;canvas.height=hh}
+  const scale=Math.min(ww/W,hh/H);c.setTransform(1,0,0,1,0,0);rect(0,0,ww,hh,'#071d29');c.translate((ww-W*scale)/2,(hh-H*scale)/2);c.scale(scale,scale);
+  const t=time,reveal=1.55,depart=3.25;
+  const flight=ease((t-depart)/7.4),leave=ease((t-4)/7.2),moonR=variant==='moonrise'?262:173;
+  rect(0,0,W,H,grad(0,0,0,H,[[0,'#061a28'],[.42,'#143947'],[.75,'#2b5559'],[1,'#102a36']]));
+  glow(1390,327,600,'#a2b99919');
+  for(let i=0;i<175;i++){const x=hash(i+818)*W,y=hash(i+316)*710;c.globalAlpha=(.12+.42*hash(i+118))*ease((t-2)/5);ellipse(x,y,.6+hash(i+531)*1.2,.6+hash(i+531)*1.2,'#e9dfb6')}c.globalAlpha=1;
+  const mx=1412,my=342;
+  ellipse(mx,my,moonR,moonR,grad(mx-moonR,my-moonR,mx+moonR,my+moonR,[[0,'#f8e6b8'],[.48,'#d9d6a6'],[1,'#91b0a0']]));
+  c.save();c.beginPath();c.arc(mx,my,moonR-1,0,TAU);c.clip();
+  for(let i=0;i<53;i++){const x=mx+(hash(i+847)-.5)*moonR*2,y=my+(hash(i+19)-.5)*moonR*2,r=7+hash(i+942)*34;ellipse(x,y,r,r*.75,i%3?'#6f947a0d':'#fff2cc13',hash(i)*2)}
+  path(`M${mx-moonR} ${my+75} Q${mx-102} ${my+25} ${mx+31} ${my+121} T${mx+moonR} ${my+148}`,null,'#e7e4b929',15);c.restore();
+  // Long brush silhouettes move at different depths rather than covering the picture in noise.
+  for(let i=0;i<5;i++){const y=170+i*117,x=-220+t*(2+i*.6);group(x,y,1,0,()=>path(`M0 0 C170 -29 270 28 390 -4 C510 -31 641 -17 751 2 C903 34 1056 -26 1165 -9 C1310 12 1450 49 1630 16 C1740 0 1880 18 2250 -8 L2250 24 C1980 65 1860 39 1670 64 C1500 72 1390 35 1215 52 C995 68 854 36 691 58 C421 79 197 40 0 41Z`,i%2?'#6c969624':'#b0b9910e'));}
+  city(t,leave);
+  // Twin rails describe the impossible journey before the tram takes it.
+  for(let i=0;i<155;i++){
+    const u=i/155,a=railPoint(mix(-150,1580,u)),b=railPoint(mix(-150,1580,(i+1)/155)),thick=2+18*Math.pow(1-u,1.4),gauge=4+26*Math.pow(1-u,1.2);
+    c.globalAlpha=1-ease((u-.91)/.09);
+    line(a.x,a.y,b.x,b.y,'#0a2431',thick);line(a.x,a.y-thick*.27,b.x,b.y-thick*.27,'#b3c2a395',Math.max(.8,thick*.12));
+    line(a.x,a.y+gauge,b.x,b.y+gauge,'#102d38',thick*.65);line(a.x,a.y+gauge-thick*.16,b.x,b.y+gauge-thick*.16,'#809f9495',Math.max(.6,thick*.1));
+    if(i%4===0)line(a.x-2,a.y,a.x+2,a.y+gauge,'#25444a',Math.max(1,thick*.2));
+  }c.globalAlpha=1;
+  // A small lunar terminus makes the arrival legible without a title card.
+  group(1520,263,.4,-.65,()=>{
+    path('M-120 18 H146 L138 37 H-129Z','#415f62');rect(63,-81,51,96,'#3e5a5b');path('M53 -81 L89 -104 L124 -81Z','#294a52');rect(74,-62,13,22,'#f8db97');rect(95,-62,11,22,'#ddc992');rect(78,-27,20,41,'#193c48');line(-109,16,-109,-67,'#456165',4);path('M-139 -60 H-78 V-37 H-139Z','#456165');text('MOON',-109,-44,11,'#e2d5ad','serif','center');
+  });
+  const ts=mix(.94,.26,flight),track=railPoint(mix(588,1460,flight)),angle=track.angle;
+  const tx=track.x+Math.sin(angle)*151*ts,ty=track.y-Math.cos(angle)*151*ts;
+  tram(Math.floor(t*12)/12,tx,ty,ts,angle,true);
+  station(t,leave,reveal);
+  c.save();c.globalAlpha=.20*(1-ease((t-4)/5));for(let i=0;i<170;i++){const x=(hash(i+700)*W+t*73)%W,y=(hash(i+301)*H+t*705)%H;line(x,y,x-8,y+27,'#bdd2ca',1)}c.restore();
+  // The final hold leaves room to read the scene, then its name.
+  const caption=ease((t-8.6)/1.2);c.globalAlpha=caption;
+  text('Last tram',109,211,82,'#f0e4be','Georgia');text('to the moon',111,292,82,'#f0e4be','Georgia');
+  text('A LITTLE FURTHER THAN HOME.',115,340,15,'#b5c5af');c.globalAlpha=1;
+  const vg=c.createRadialGradient(1000,465,260,960,540,1180);vg.addColorStop(0,'transparent');vg.addColorStop(1,'#00101c71');rect(0,0,W,H,vg);
+}
+window.StudioFilm={render,duration:12,variants:['original','moonrise']};
+if(window.SlopcameraOverlay){const p=SlopcameraOverlay.parameters||{},variant=p.variant||'moonrise',offset=p.timeOffsetSeconds||0;SlopcameraOverlay.onFrame(({timeMs})=>render(timeMs/1000+offset,variant));}
+else{const q=new URLSearchParams(location.search),fixed=q.has('time')?Number(q.get('time')):null,variant=q.get('variant')||'moonrise';if(fixed!==null)render(fixed,variant);else{const start=performance.now();const tick=now=>{render((now-start)/1000%12,variant);requestAnimationFrame(tick)};requestAnimationFrame(tick)}}
+})();
+</script></html>

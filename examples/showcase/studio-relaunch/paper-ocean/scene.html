@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>An ocean folded from paper</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#e9e0cc}canvas{display:block;width:100%;height:100%}</style>
+<canvas id="film" aria-label="An envelope unfolds into layers of paper waves, a whale and flying seabirds."></canvas>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('film'),c=canvas.getContext('2d',{alpha:false}),W=1920,H=1080,TAU=Math.PI*2;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,ease=x=>{x=clamp(x);return x*x*(3-2*x)},hash=n=>{let v=Math.sin(n*127.1+88.13)*43758.5453;return v-Math.floor(v)};
+function path(d,fill,stroke,width=1){const p=new Path2D(d);if(fill){c.fillStyle=fill;c.fill(p)}if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke(p)}}
+function rect(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
+function ellipse(x,y,rx,ry,col,a=0){c.beginPath();c.ellipse(x,y,rx,ry,a,0,TAU);c.fillStyle=col;c.fill()}
+function line(x,y,x2,y2,col,w=1){c.beginPath();c.moveTo(x,y);c.lineTo(x2,y2);c.strokeStyle=col;c.lineWidth=w;c.stroke()}
+function group(x,y,s,a,fn){c.save();c.translate(x,y);c.scale(s,s);c.rotate(a);fn();c.restore()}
+function grad(x,y,x2,y2,stops){const g=c.createLinearGradient(x,y,x2,y2);stops.forEach(([p,v])=>g.addColorStop(p,v));return g}
+function type(s,x,y,size,col,font='Georgia',align='left'){c.font=`${size}px ${font}`;c.fillStyle=col;c.textAlign=align;c.fillText(s,x,y)}
+function shadow(amount=1){c.shadowColor=`rgba(19,42,48,${.22*amount})`;c.shadowBlur=16*amount;c.shadowOffsetX=3*amount;c.shadowOffsetY=9*amount}
+function paper(d,color,crease){c.save();shadow();path(d,color);c.restore();if(crease)path(crease,null,'#f4f0de69',1.6)}
+function wave(y,i,t,unfold){
+  const amp=28+i*6,off=t*(9+i*3)*(i%2?1:-1),col=['#d4deca','#8fbab1','#669f9e','#388387','#267279','#1c5e68','#12424f'][i];
+  let d=`M-110 1000 L-110 ${y}`;
+  for(let j=0;j<9;j++){
+    const x=-160+j*245+off%180;
+    d+=` C${x+66} ${y-amp*1.5} ${x+143} ${y-amp} ${x+178} ${y-16} C${x+201} ${y+10} ${x+226} ${y+15} ${x+245} ${y}`;
+  }
+  d+=' L1950 1000Z';
+  c.save();shadow(.85);path(d,col);c.restore();path(d,null,'#f9f0d745',1.5);
+  c.save();c.clip(new Path2D(d));
+  for(let j=0;j<24;j++){const x=-80+j*86+(off*.55)%70;path(`M${x} ${y+42} q29 -11 59 0`,null,'#e7e9c825',1)}
+  const foldX=220+i*153;path(`M${foldX} ${y-35} l-39 189 l54 151`,null,'#031e2711',1);path(`M${foldX+2} ${y-35} l-39 189 l54 151`,null,'#e3eee41b',1);
+  for(let k=0;k<550;k++){const x=hash(k+i*777)*W,y2=y+hash(k+i*119)*420;rect(x,y2,.8+hash(k)*1.8,1,k%2?'#e9f4da12':'#092c3311')}
+  c.restore();
+}
+function bird(x,y,s,phase){
+  group(x,y,s,-.06,()=>{
+    const flap=Math.sin(phase)*11;
+    paper(`M-75 ${-22-flap} L-12 -4 L4 -14 L16 -5 L66 ${-33-flap*.6} L28 13 L10 5 L-6 20Z`,'#fff6db','M-75 -22 L-6 20 L-12 -4 M16 -5 L28 13');
+    path('M4 -14 L16 -5 L24 -8 L18 -1 L10 5Z','#29444a');
+  });
+}
+function whale(x,y,s,a,t){
+  group(x,y,s,a,()=>{
+    const tail=Math.sin(t*2.6)*12;
+    paper(`M-254 -24 C-171 -74 -81 -88 38 -67 C102 -56 149 -33 204 -10 L267 -31 L${319} ${-77+tail} L${314} ${-7+tail*.3} L359 29 L285 17 L254 5 C183 43 125 65 31 66 C-96 84 -204 61 -249 16 Q-266 0 -254 -24Z`,'#143f4e','M-239 -21 L-90 22 L93 -29 L253 -2 M-90 22 L-43 65');
+    path('M-254 3 C-166 35 -72 47 40 41 Q114 44 193 16 C113 66 20 73 -74 65 Q-217 60 -254 3Z','#d7dfc4');
+    path('M-236 -24 C-197 -44 -132 -58 -84 -62 L-98 -37 L-225 -5Z','#3d6871');
+    path('M-179 7 Q-75 32 63 32',null,'#263e46',1.5);
+    for(let i=0;i<11;i++)path(`M${-163+i*15} 28 q24 15 ${32+i} 29`,null,'#889f98',1);
+    paper('M-58 24 L43 54 L-4 134 L-45 74Z','#285965','M-58 24 L-4 134 L-45 74');
+    ellipse(-180,-14,4.3,4.3,'#f6edcd');ellipse(-181,-14,2.4,2.4,'#122f3c');line(-241,-2,-198,4,'#0a2c37',2);
+    // Two scored creases make the tail read as folded stock.
+    path(`M253 0 L319 ${-77+tail} M283 7 L359 29`,null,'#8eb6ae70',1.3);
+  });
+}
+function render(time,variant='whale'){
+  if(!Number.isFinite(time)||time<0||time>12)throw new Error('Film time must be within 0–12 seconds.');
+  if(!['whale','quiet'].includes(variant))throw new Error('Unknown film variant.');
+  const ww=Math.round(innerWidth*(devicePixelRatio||1)),hh=Math.round(innerHeight*(devicePixelRatio||1));
+  if(ww<1||hh<1||ww>8192||hh>8192||ww*hh>33554432)throw new Error('Unsupported film canvas.');
+  if(canvas.width!==ww||canvas.height!==hh){canvas.width=ww;canvas.height=hh}
+  const scale=Math.min(ww/W,hh/H);c.setTransform(1,0,0,1,0,0);rect(0,0,ww,hh,'#e9e0cc');c.translate((ww-W*scale)/2,(hh-H*scale)/2);c.scale(scale,scale);
+  const t=time,open=ease((t-.7)/2.6),rise=ease((t-1.9)/2),pull=ease((t-8.4)/2.5);
+  rect(0,0,W,H,grad(0,0,W,H,[[0,'#f3eddc'],[.6,'#e6ddc8'],[1,'#d1c9b6']]));
+  for(let i=0;i<1800;i++)rect(hash(i+888)*W,hash(i+998)*H,.7+hash(i)*2,1,i%2?'#ffffff37':'#4352540b');
+  // From an envelope-sized object, the world expands into a finished print.
+  const pw=mix(660,1548,open)*(1-pull*.08),ph=mix(432,814,open)*(1-pull*.08),px=(W-pw)/2,py=mix(311,125,open)+pull*13;
+  c.save();shadow(2);rect(px,py,pw,ph,'#f8f2df');c.restore();
+  c.save();c.beginPath();c.rect(px,py,pw,ph);c.clip();
+  c.translate(px,py);c.scale(pw/1548,ph/814);
+  rect(0,0,1548,814,grad(0,0,0,814,[[0,'#f9f0d7'],[1,'#d6d7bc']]));
+  for(let i=0;i<1700;i++)rect(hash(i+982)*1548,hash(i+832)*814,1,1.2,i%2?'#fff5d529':'#3f655c0b');
+  const sunX=variant==='whale'?1172:988,sunY=mix(491,252,rise);
+  c.save();shadow(.5);ellipse(sunX,sunY,149,149,'#d1a54f');c.restore();
+  path(`M${sunX-139} ${sunY-55} L${sunX+34} ${sunY+46} L${sunX-80} ${sunY+126}`,null,'#9e753741',1);
+  path(`M${sunX+38} ${sunY-144} L${sunX+34} ${sunY+46} L${sunX+124} ${sunY+80}`,null,'#f7d88e49',2);
+  for(let i=0;i<3;i++){const x=130+i*311+t*(3+i),y=130+i*28;paper(`M${x} ${y} l46 -16 l66 8 l23 -11 l77 20 l-61 2 l-46 -7 l-42 8Z`,'#fcf7e7')}
+  for(let i=0;i<3;i++)wave(432+i*52+(1-rise)*360,i,t,rise);
+  // The whale enters head-first, arcs above the sea, then settles behind it.
+  const leap=clamp((t-4.0)/4.0),leapArc=Math.sin(leap*Math.PI),whaleX=mix(1100,629,leap),whaleY=680-leapArc*327;
+  if(t>=4&&t<8.05)whale(whaleX,whaleY,variant==='whale'?1.05:.68,mix(.62,-.45,leap),t);
+  for(let i=3;i<7;i++)wave(432+i*52+(1-rise)*360,i,t,rise);
+  // Small fold-shaped splashes retain the paper language at both contacts.
+  for(const impact of [4.18,7.52]){
+    const q=clamp((t-impact)/.72);if(q>0&&q<1)for(let j=0;j<9;j++){
+      const x=(impact<5?1007:621)+(j-4)*29*Math.sin(q*Math.PI/2),y=614-Math.sin(q*Math.PI)*(.6+hash(j)*.8)*98;
+      c.globalAlpha=1-q;group(x,y,1,hash(j)*2,()=>path('M-4 8 L0 -8 L6 5Z','#f6edd4'));c.globalAlpha=1;
+    }
+  }
+  if(rise>.35){bird(mix(289,484,ease((t-3)/8)),260+Math.sin(t*.7)*9,.62,t*2);bird(355+t*16,207+Math.sin(t*.5)*7,.38,t*2+.7);bird(190+t*26,280+Math.sin(t*.7)*8,.26,t*2+1.2)}
+  // Poster text sits in the pale sky and remains clean at phone size.
+  const title=ease((t-8.2)/1.0);c.globalAlpha=title;
+  type('An ocean',91,135,65,'#20444d');type('folded from paper.',93,198,53,'#20444d');
+  type('A STUDY IN CUTS, CREASES & CURRENTS',97,239,12,'#5c746c','sans-serif');c.globalAlpha=1;
+  // Foreground paper gets an edge and an intentional crop, like a physical print.
+  rect(0,776,1548,38,'#f8f2df');type('PAPER PACIFIC',36,800,12,'#46646a','sans-serif');
+  c.restore();
+  // Envelope wings lift away, revealing the sea inside.
+  if(open<1){
+    const fold=1-open;c.save();c.translate(W/2,H/2);c.scale(1+open*.3,1);c.globalAlpha=clamp(fold*1.8);
+    paper(`M-330 -216 L0 ${mix(42,-260,open)} L330 -216Z`,grad(0,-216,0,42,[[0,'#e9dfc5'],[1,'#f7efd9']]),'M-330 -216 L0 42 L330 -216');
+    paper(`M-330 -216 L${mix(44,-360,open)} 0 L-330 216Z`,'#eee6cf');
+    paper(`M330 -216 L${mix(-44,360,open)} 0 L330 216Z`,'#e5dbc1');
+    paper(`M-330 216 L0 ${mix(-42,284,open)} L330 216Z`,'#f6edda');
+    c.globalAlpha=clamp(1-open*4);group(0,80,1,.06,()=>{ellipse(0,0,32,32,'#b96747');ellipse(0,0,25,25,'#bf7253');path('M-15 4 Q0 -12 15 4 M-15 11 Q0 -5 15 11',null,'#f2c39a',2)});c.restore();
+  }
+}
+window.StudioFilm={render,duration:12,variants:['quiet','whale']};
+if(window.SlopcameraOverlay){const p=SlopcameraOverlay.parameters||{};SlopcameraOverlay.onFrame(({timeMs})=>render(timeMs/1000+(p.timeOffsetSeconds||0),p.variant||'whale'));}
+else{const q=new URLSearchParams(location.search),fixed=q.has('time')?Number(q.get('time')):null,variant=q.get('variant')||'whale';if(fixed!==null)render(fixed,variant);else{const start=performance.now();requestAnimationFrame(function tick(now){render((now-start)/1000%12,variant);requestAnimationFrame(tick)})}}
+})();
+</script></html>

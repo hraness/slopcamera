@@ -647,7 +647,7 @@ describe("examples-only finite worker protocol", () => {
 })
 
 describe("workflow-examples-v1 independent native contract", () => {
- test("current hero and trust literals match authored content before reduced-motion enhancement", async () => {
+ test("current studio hero and trust keep semantic media and explicit runtime boundaries", async () => {
   const source = await readFile(new URL("../src/index.html", import.meta.url), "utf8")
   expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
   // The quiet hero keeps its real media proof without the retired decorative backdrop.
@@ -663,13 +663,22 @@ describe("workflow-examples-v1 independent native contract", () => {
     ? node.attrs.some(attribute => attribute.name === "class" && attribute.value.split(" ").includes(selector.slice(1)))
     : node.attrs.some(attribute => attribute.name === "id" && attribute.value === selector.slice(1)))
    expect(actual).toHaveLength(1)
-   // Independent literal stays authored in the profile. This source-rendered
-   // regression does not prove native layout or automatic-player behavior.
-   expect(serializeOuter(actual[0]!)).toBe(examplesIslands.find(item => item.selector === selector)!.current)
+   // Historical islands above stay frozen. Current source belongs to the
+   // studio-screening-v1 contract, whose geometry is checked by verify:current.
+   const html = serializeOuter(actual[0]!)
+   if (selector === "#design") {
+    expect(html).toContain("Native engines install separately.")
+    expect(html).toContain("without an operating-system sandbox")
+    expect(html).toContain("Media uploads require acknowledgement.")
+   }
    if (selector === ".hraness-marketing-hero") {
     const videos = descendants(actual[0]!).filter(node => node.tagName === "video")
     expect(videos).toHaveLength(1)
     expect(videos[0]!.attrs.some(attribute => attribute.name === "loop")).toBe(false)
+    expect(videos[0]!.attrs.some(attribute => attribute.name === "autoplay")).toBe(false)
+    expect(videos[0]!.attrs.some(attribute => attribute.name === "controls")).toBe(true)
+    expect(videos[0]!.attrs.some(attribute => attribute.name === "preload" && attribute.value === "none")).toBe(true)
+    expect(html).toContain("Give your agent a multimedia studio.")
    }
   }
  })

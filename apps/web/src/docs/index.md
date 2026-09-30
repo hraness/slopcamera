@@ -16,8 +16,8 @@ Then give your coding agent the matching guidance:
 
 ## Learn by making something
 
+- [Create and revise your first animation](/docs/tutorials/first-animation): send a midnight tram toward the moon, enlarge the moon, and keep both films.
 - [Create and revise your first diagram](/docs/tutorials/first-diagram): make a two-node flow, inspect its five exports, then change a label by editing the source.
-- [Create and revise your first animation](/docs/tutorials/first-animation): render an eight-second title, change its copy and color, and keep both sources.
 - [Render your first native film](/docs/tutorials/first-native-film): retain a Blender source, render a small shot, and export an ordinary project.
 
 ## Set up your coding agent
@@ -29,6 +29,8 @@ Then give your coding agent the matching guidance:
 
 ## Complete a task
 
+- [Remix the showcase](/docs/how-to/remix-the-showcase): open the finished films, study the creative decisions, and make your own version.
+- [Direct a film](/docs/how-to/direct-a-film): write a useful brief, test the hardest shot, and refine composition, movement, and sound.
 - [Build Slopcamera from source](/docs/how-to/install-from-source): record the commit, install locked dependencies, and build the SDK and CLI.
 - [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.

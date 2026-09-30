@@ -1,12 +1,20 @@
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from source files it can keep revising. Here it is in short pieces, each with a real render from the site's examples.
-
-{{LAUNCH_FIGURE_FILM}}
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from source files it can keep revising. Bottle a storm, send a tram toward the moon, or give existing footage a different purpose. Then ask for a specific change and render the next version from the same source.
 
 {{LAUNCH_BEATS}}
 
-## Make a first diagram without a model
+## Make your first revision
 
-The first task needs no AI account. After installing, run this in an empty directory:
+On macOS, follow [your first animation](/docs/tutorials/first-animation) to render the tram and its larger-moon revision. Start with [SlopCamera and its Agent Skill installed](/docs), Git, and the browser and FFmpeg runtimes reported by `slopcamera doctor --json`. The tutorial supplies the original local artwork and needs no paid model. It renders silent picture; the tram films on this page add a separately authored score.
+
+Give your agent a concrete direction:
+
+> Make the moon larger so it dominates the destination. Keep the route, palette and timing. Keep both versions so I can compare.
+
+The [remix guide](/docs/how-to/remix-the-showcase) links each film's source, requirements, score and production recipe. Use it to make another version of the storm, paper ocean, laundromat or jazz piece, or to compare the eclipse edits.
+
+## Start with a diagram on macOS, Linux or Windows
+
+The diagram starter needs no browser or paid model. After installing, run this in an empty directory:
 
 ```sh
 slopcamera diagram init first.diagram.json
@@ -29,8 +37,20 @@ If you would rather not set up a key, you can buy prepaid credits through a host
 
 ## Where SlopCamera images already appear
 
-Every live note on the aicharts blog carries a figure generated with SlopCamera, and GhostGet's WebMCP page uses a SlopCamera illustration whose prompt, job and receipt files sit next to the site code. SlopCamera used to be called Atet, and older records that credit Atet stay as they were recorded.
+SlopCamera has supplied editorial figures for the aicharts blog and an illustration for GhostGet's WebMCP page, with prompt, job and receipt files kept beside the site code. SlopCamera used to be called Atet, and older records that credit Atet stay as they were recorded.
 
 A character in a portable 3D scene can also be given a behavior written as a small [ALGAL]({{PRODUCT_URL_ALGAL}}) program, which SlopCamera runs with no model calls, tools or other side effects. The post on [how SlopCamera uses ALGAL](/blog/how-slopcamera-uses-algal) covers the details.
 
 The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+
+## Go deeper
+
+- [Remix a film and inspect its source](/docs/how-to/remix-the-showcase).
+- [Direct another film](/docs/how-to/direct-a-film).
+- [Check formats, platforms and limits](/docs/reference/capabilities).
+
+## Original launch film
+
+This earlier introduction is retained as an example of SlopCamera's launch-film template. Its diagrams and example count describe the collection when the film was made.
+
+{{LAUNCH_FIGURE_FILM}}
