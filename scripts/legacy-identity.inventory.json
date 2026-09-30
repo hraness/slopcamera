@@ -1495,7 +1495,7 @@
   },
   {
     "identityLineCount": 5,
-    "identityLinesSha256": "98de322af7fca9e31f4e74c1631042d59191f1d0aa60df078e992f27c695c13e",
+    "identityLinesSha256": "9edc3699c7200554405be280f523158473053bc39f6768441805e3dcd18d7015",
     "occurrenceCount": 9,
     "path": "apps/web/scripts/site-examples-profile.ts",
     "categories": [
@@ -1523,7 +1523,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "3dae63a4e0e44c51aa03ce05dd0a2d105962b6eb2f437fa35777696ca970c69c",
+    "identityLinesSha256": "ed72b45e5f086372bfd8be5de4ec5e0e19968cbc1c66343c2d85c347b553700a",
     "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1779,6 +1779,15 @@
     "identityLinesSha256": "866dfa4e771143ec01e6fcf5b94c747b8cf377e40423abaf17fd665ae299280d",
     "occurrenceCount": 1,
     "path": "apps/web/src/index.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "f325bc22a8785c68f8e188ad20a62aa61e997ff505b7c17f19780bd841f7f7f1",
+    "occurrenceCount": 4,
+    "path": "apps/web/src/portfolio-messaging.generated.json",
     "categories": [
       "native-film-studio"
     ]
