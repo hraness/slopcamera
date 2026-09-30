@@ -535,6 +535,52 @@ test("analytics preserves an optional timestamp without manufacturing an undefin
   }
 })
 
+test("the pinned posthog-js cookieless $pageview survives before_send with the host PostHog ingestion requires", () => {
+  // Regression: the sanitizer once dropped `$host`, and PostHog ingestion rejects
+  // every cookieless event without it (`cookieless_missing_host`), so production
+  // sent pageviews that were never stored. The harness runs the real pinned
+  // bundle in a child process so its browser globals stay out of this process.
+  const harness = Bun.spawnSync([process.execPath, fileURLToPath(new URL("./scripts/analytics-posthog-harness.ts", import.meta.url))], {
+    cwd: dirname(fileURLToPath(import.meta.url)), stderr: "pipe", stdout: "pipe", timeout: 30_000,
+  })
+  expect(harness.stderr.toString()).toBe("")
+  expect(harness.exitCode).toBe(0)
+  const { bodies, received, returned } = JSON.parse(harness.stdout.toString()) as {
+    bodies: { api_key: string, batch: { event: string, properties: Record<string, unknown> }[] }[]
+    received: { event: string, properties: Record<string, unknown> }[]
+    returned: ({ event: string, properties: Record<string, unknown> } | null)[]
+  }
+  expect(received.map(event => event.event)).toEqual(["$pageview"])
+  expect(received[0]!.properties).toMatchObject({
+    $cookieless_mode: true,
+    $host: "slopcamera.com",
+    distinct_id: posthogCookielessDistinctId,
+    token: "phc_harnesstoken",
+  })
+  expect(returned).toHaveLength(1)
+  expect(returned[0]).not.toBeNull()
+  expect(bodies).toHaveLength(1)
+  expect(bodies[0]!.api_key).toBe("phc_harnesstoken")
+  expect(bodies[0]!.batch.map(event => event.event)).toEqual(["$pageview"])
+  const sent = bodies[0]!.batch[0]!.properties
+  // Every cookieless hash input PostHog ingestion checks besides the request IP.
+  expect(sent.$host).toBe("slopcamera.com")
+  expect(typeof sent.$raw_user_agent).toBe("string")
+  expect(String(sent.$raw_user_agent).trim()).not.toBe("")
+  expect(sent).toMatchObject({
+    $cookieless_mode: true,
+    $process_person_profile: false,
+    analytics_schema_version: 1,
+    distinct_id: posthogCookielessDistinctId,
+    site_id: "slopcamera",
+    token: "phc_harnesstoken",
+  })
+  expect(Object.keys(sent).sort()).toEqual([
+    "$cookieless_mode", "$host", "$process_person_profile", "$raw_user_agent",
+    "analytics_schema_version", "distinct_id", "site_id", "token",
+  ])
+})
+
 describe("static Slopcamera site", () => {
   beforeAll(async () => {
     try {
@@ -1593,6 +1639,7 @@ describe("static Slopcamera site", () => {
       event: "$pageview",
       properties: {
         $cookieless_mode: true,
+        $host: "slopcamera.com",
         $process_person_profile: false,
         $raw_user_agent: "Slopcamera test browser",
         analytics_schema_version: 1,
@@ -1666,6 +1713,7 @@ describe("static Slopcamera site", () => {
       placement: "closing",
       $process_person_profile: false,
       $cookieless_mode: true,
+      $host: "slopcamera.com",
       $raw_user_agent: "Mozilla/5.0 Test",
       analytics_schema_version: 1,
       distinct_id: posthogCookielessDistinctId,

@@ -2,6 +2,12 @@ import type { CaptureResult } from "posthog-js/dist/module.slim.no-external"
 
 export const analyticsSchemaVersion = 1
 export const canonicalAnalyticsOrigin = "https://slopcamera.com"
+/**
+ * PostHog's cookieless server hash needs `$host`; ingestion drops a cookieless
+ * event without it (`cookieless_missing_host`). It is fixed to the canonical
+ * host, never copied from the event, so no URL, path, query, or hash leaves.
+ */
+export const canonicalAnalyticsHost = new URL(canonicalAnalyticsOrigin).host
 export const posthogCookielessDistinctId = "$posthog_cookieless"
 export const siteId = "slopcamera"
 
@@ -73,6 +79,7 @@ function rebuild(event: CaptureResult, publicKey: string, extra: Readonly<Record
       ...extra,
       $process_person_profile: false,
       $cookieless_mode: true,
+      $host: canonicalAnalyticsHost,
       $raw_user_agent: rawUserAgent.slice(0, rawUserAgentLimit),
       analytics_schema_version: analyticsSchemaVersion,
       distinct_id: posthogCookielessDistinctId,
