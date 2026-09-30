@@ -1,4 +1,4 @@
-import { homepageMarketingSlots, shellProductNameSlot } from "./src/messaging"
+import { homepageMarketingSlots, productMessaging, shellProductNameSlot } from "./src/messaging"
 import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
@@ -1381,7 +1381,10 @@ describe("static Slopcamera site", () => {
     expect(slopcameraSocialSite.icon).toBeUndefined()
     expect(slopcameraSocialSite.theme).toBeUndefined()
     expect(homeSocialImage).toMatchObject({ file: "og.png", url: "https://slopcamera.com/og.png", width: 1200, height: 630 })
-    expect(homeSocialImage.page).toBeUndefined()
+    // The home card is the header over the hero: the hero H1, no eyebrow
+    // (the hero has none), and no tagline repeated beneath it.
+    expect(homeSocialImage.page).toEqual({ headline: productMessaging.hero.heading, description: "", layout: "product" })
+    expect(homeSocialImage.alt).toBe(`SlopCamera: ${productMessaging.hero.heading}`)
     expect(socialImages).toHaveLength(1 + 1 + blogPosts.length + docPages.length)
     expect(new Set(socialImages.map(image => image.file)).size).toBe(socialImages.length)
     for (const image of socialImages.slice(1)) {
