@@ -155,8 +155,12 @@ beforeEach(() => {
 afterEach(collectCompilation, repeatedCompilationTimeoutMs)
 afterAll(collectCompilation, repeatedCompilationTimeoutMs)
 
+async function readAuthoredSource(path: string): Promise<string> {
+  return await readFile(join(appDirectory, "src", path), "utf8")
+}
+
 async function readSource(path: string): Promise<string> {
-  let source = await readFile(join(appDirectory, "src", path), "utf8")
+  let source = await readAuthoredSource(path)
   const document = path === "doc.html" ? "docs/index.html" : path === "blog.html" ? "blog/index.html" : path
   if (["index.html", "404.html", "doc.html", "blog.html"].includes(path)) {
     const [token, value, count] = shellProductNameSlot(document)
@@ -315,7 +319,7 @@ test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceil
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
-  const template = await readSource("index.html")
+  const template = await readAuthoredSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
   expect(bytes).toBeLessThan(46_600)
@@ -1525,7 +1529,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(html)).toBeLessThan(46_600)
+    expect(assertAuthoredShellBudget(await readAuthoredSource("index.html"))).toBeLessThan(46_600)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
