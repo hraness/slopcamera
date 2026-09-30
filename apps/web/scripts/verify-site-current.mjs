@@ -10,6 +10,7 @@ import { createRequire } from "node:module"
 import { dirname, extname, join, normalize, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
+import { browserOwner, ownedChromiumLaunchOptions, pinnedBrowserExecutable, pinnedChromiumDefinition, verifyOwnedChromium } from "./owned-browser.mjs"
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const dist = join(appDirectory, "dist")
@@ -45,12 +46,11 @@ export function resolveBuilt(root, pathname) {
   return null
 }
 
-function findChrome() {
-  for (const candidate of [process.env.SLOPCAMERA_CHROME_PATH, process.env.CHROME_PATH, chromium.executablePath(),
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"]) {
-    if (candidate && existsSync(candidate)) return candidate
-  }
-  throw new Error("Chrome is required; set SLOPCAMERA_CHROME_PATH")
+async function findChrome() {
+  const pinned = chromium.executablePath()
+  const executable = await pinnedBrowserExecutable(pinned, process.env.SLOPCAMERA_CHROME_PATH || undefined)
+  if (process.env.CHROME_PATH) await pinnedBrowserExecutable(pinned, process.env.CHROME_PATH)
+  return executable
 }
 
 async function serve() {
@@ -158,12 +158,25 @@ export async function main(args = process.argv.slice(2)) {
   if (!liveOrigin) assert.ok(existsSync(join(dist, "index.html")), "Build the site before running verify:current")
   const artifacts = process.env.SLOPCAMERA_SITE_ARTIFACTS
   if (artifacts) await mkdir(artifacts, { recursive: true })
+  const definition = pinnedChromiumDefinition()
+  const executablePath = await findChrome()
+  const launchOptions = ownedChromiumLaunchOptions(executablePath, definition.defaultArgs)
   const { server, origin } = liveOrigin ? { server: null, origin: liveOrigin } : await serve()
   let browser
+  let browserIdentity
+  const owner = browserOwner({
+    launch: () => chromium.launch({ ...launchOptions, timeout: 15000,
+      handleSIGHUP: false, handleSIGINT: false, handleSIGTERM: false }),
+    close: async active => { await active.close() },
+    stopServer: async () => { if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) },
+  })
+  const handlers = [129, 130, 143].map((code, index) => ({ signal: ["SIGHUP", "SIGINT", "SIGTERM"][index],
+    handler: () => { void owner.stop().then(() => process.exit(code), () => process.exit(1)) } }))
+  for (const { signal, handler } of handlers) process.once(signal, handler)
   const results = []
   try {
-    browser = await chromium.launch({ executablePath: findChrome(), headless: true,
-      args: ["--disable-features=PaintHolding,MacAppCodeSignClone", "--mute-audio"] })
+    browser = await owner.start()
+    browserIdentity = await verifyOwnedChromium(browser, executablePath, definition.expectedVersion)
     for (const path of [...currentRoutes, missingRoute]) for (const width of widths) for (const scheme of schemes) {
       results.push(await review(browser, origin, path, { width, scheme, artifacts }))
     }
@@ -173,10 +186,11 @@ export async function main(args = process.argv.slice(2)) {
     for (const path of ["/", "/docs"]) results.push(await review(browser, origin, path, { width: 390, javaScript: false }))
     for (const path of ["/", "/blog"]) results.push(await review(browser, origin, path, { width: 1440, forcedColors: true }))
   } finally {
-    try { await browser?.close() }
-    finally { if (server) await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) }
+    for (const { signal, handler } of handlers) process.off(signal, handler)
+    await owner.stop()
   }
-  if (artifacts) await writeFile(join(artifacts, "browser-evidence.json"), JSON.stringify({ origin, cleanup: server ? "browser and server closed" : "browser closed", results }, null, 2) + "\n")
+  if (artifacts) await writeFile(join(artifacts, "browser-evidence.json"), JSON.stringify({ origin, browserExecutable: browserIdentity.executable,
+    browserVersion: browserIdentity.browserVersion, browserIdentity, cleanup: server ? "browser and server closed" : "browser closed", results }, null, 2) + "\n")
   const failed = results.filter(result => result.problems.length > 0)
   for (const result of failed) console.error(`FAIL ${result.label}\n  ${result.problems.join("\n  ")}`)
   console.log(`verify:current ${results.length - failed.length}/${results.length} cases passed`)

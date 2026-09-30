@@ -63,7 +63,7 @@ Then give your coding agent the matching guidance:
 - [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
 - [How Slopcamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
 - [Why Slopcamera](/docs/explanation/why-slopcamera): why the agent writes a short source file and reuses installed techniques instead of a loose toolchain.
-- [Token benchmark](/docs/explanation/token-benchmark): whether an agent spends fewer tokens on media tasks with Slopcamera installed, measured on four tasks.
+- [Agent cost study](/docs/explanation/token-benchmark): methods and reports from a controlled study of first-render and revision costs.
 - [Extend Slopcamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
 - [Choose an HTML authoring surface](/docs/explanation/html-authoring): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs.
 

@@ -106,9 +106,9 @@ An agent skill is not free context. Anthropic's [Agent Skills documentation](htt
 
 Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are SlopCamera's formats, and the agent reads examples or references before writing them.
 
-## What these numbers do not show
+## Reproduce the workflow
 
-Every measurement here comes from work done after a first render: revisions, format variants, and checks. The figures above are file sizes, not model tokens. A [controlled token benchmark](/docs/explanation/token-benchmark) that gave the same agent four media tasks, with and without SlopCamera installed, found no token or cost saving: with two sessions per task, the median cost was higher with SlopCamera on every task, mostly from reading the skill and inspecting rendered frames. The byte-for-byte matches were renders of the same source with the same toolchain; SlopCamera does not promise identical pixels on another machine, because browsers, codecs, and GPU drivers differ. The pavilion comparison is visual and says nothing about structural strength.
+The measurements cover source files for revisions, format variants, and checks after a first render. The byte-for-byte render matches use the same source and toolchain; browser, codec, and GPU versions affect the pixels. The pavilion comparison measures the visual result.
 
 The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
 
