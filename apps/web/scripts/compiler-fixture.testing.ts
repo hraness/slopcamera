@@ -27,6 +27,35 @@ export const compilerFixtureBudgets = Object.freeze({
 export const compilerFixtureHarnessTimeoutMs = Object.values(compilerFixtureBudgets)
   .reduce((total, milliseconds) => total + milliseconds, 0)
 
+/** EPERM can transiently precede the owned child's close on macOS. It is never absence. */
+export async function collectTerminatedCompilerGroup(
+  probe: () => boolean,
+  childClosed: () => boolean,
+  milliseconds: number,
+  clock: () => number = Date.now,
+  pause: (milliseconds: number) => Promise<unknown> = milliseconds => Bun.sleep(milliseconds),
+): Promise<boolean> {
+  const until = clock() + milliseconds
+  let permissionUncertain = false
+  for (;;) {
+    try {
+      const present = probe()
+      if (!present && (!permissionUncertain || childClosed())) return true
+      // A later live group proves existence, not its original identity. After
+      // any permission uncertainty only close plus fresh absence may succeed.
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error
+      permissionUncertain = true
+    }
+    const remaining = until - clock()
+    if (remaining <= 0) {
+      if (permissionUncertain) throw new Error("Compiler fixture group permission remained uncertain during collection")
+      return false
+    }
+    await pause(Math.min(25, remaining))
+  }
+}
+
 /** A single exact length frame is the complete result file; human output never enters it. */
 export function encodeCompilerFrame(value: unknown): Buffer {
   const json = JSON.stringify(value)
@@ -156,7 +185,7 @@ async function compileWithResultFile(input: string, resultPath: string, signal: 
     clearTimeout(timer)
     try {
       send("SIGTERM")
-      if (!await gone(compilerFixtureBudgets.termMs)) { forced = true; send("SIGKILL"); if (!await gone(compilerFixtureBudgets.killMs)) throw new Error("Compiler fixture group survived SIGKILL") }
+      if (!await collectTerminatedCompilerGroup(alive, () => closed, compilerFixtureBudgets.termMs)) { forced = true; send("SIGKILL"); if (!await gone(compilerFixtureBudgets.killMs)) throw new Error("Compiler fixture group survived SIGKILL") }
       await Promise.race([close, Bun.sleep(compilerFixtureBudgets.pipesMs)])
       if (!closed) throw new Error("Compiler fixture pipes did not close")
     } finally {

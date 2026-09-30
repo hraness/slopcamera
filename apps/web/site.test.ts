@@ -3,7 +3,7 @@ import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
-import { assertCompilerResultPath, compilerFixtureBudgets, compilerFixtureHarnessTimeoutMs, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
+import { assertCompilerResultPath, compilerFixtureBudgets, compilerFixtureHarnessTimeoutMs, collectTerminatedCompilerGroup, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { spawn } from "node:child_process"
@@ -422,6 +422,37 @@ test("published release validates exact fields and safe stable versions before r
     "https://github.com.evil.test/hraness/slopcamera/releases/tag/v3.2.0",
     "https://github.com/another/slopcamera/releases/tag/v3.2.0", 42, null,
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
+})
+
+test("compiler fixture TERM collection requires fresh absence after transient permission uncertainty", async () => {
+  let now = 0, closed = false, calls = 0
+  const denied = () => Object.assign(new Error("denied"), { code: "EPERM" })
+  const pause = async (milliseconds: number) => { now += milliseconds; if (now >= 50) closed = true }
+  expect(await collectTerminatedCompilerGroup(() => {
+    calls++
+    if (calls === 1) throw denied()
+    return false
+  }, () => closed, 100, () => now, pause)).toBe(true)
+  expect(now).toBe(50)
+  expect(calls).toBe(3)
+  now = 0
+  await expect(collectTerminatedCompilerGroup(() => { throw denied() }, () => true, 100,
+    () => now, async milliseconds => { now += milliseconds })).rejects.toThrow("permission remained uncertain")
+  expect(now).toBe(100)
+  now = 0
+  let uncertainCalls = 0
+  await expect(collectTerminatedCompilerGroup(() => {
+    if (uncertainCalls++ === 0) throw denied()
+    return true
+  }, () => true, 100, () => now, async milliseconds => { now += milliseconds }))
+    .rejects.toThrow("permission remained uncertain")
+  expect(now).toBe(100)
+  now = 0
+  expect(await collectTerminatedCompilerGroup(() => true, () => false, 100,
+    () => now, async milliseconds => { now += milliseconds })).toBe(false)
+  expect(now).toBe(100)
+  await expect(collectTerminatedCompilerGroup(() => { throw new Error("unexpected") }, () => false, 100))
+    .rejects.toThrow("unexpected")
 })
 
 test("compiler fixture reserves bounded collection after its unchanged work deadline", () => {
