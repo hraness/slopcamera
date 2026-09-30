@@ -14,6 +14,7 @@ import {
   HTML_OVERLAY_RENDERER_CONTRACT,
   createHtmlOverlayExecutionBundle,
   htmlOverlayRendererContract,
+  type HtmlOverlayExecutionContractVersion,
 } from "./html-overlay-integrity";
 
 const browser: ExactCapabilityBinding = {
@@ -92,14 +93,62 @@ describe("HTML-overlay browser execution integrity", () => {
         const old = createHtmlOverlayExecutionBundle(input, browserRuntime, profile, 1);
         const current = createHtmlOverlayExecutionBundle(input, browserRuntime, profile);
         expect(old.integrity.schemaVersion).toBe(1);
-        expect(current.integrity.schemaVersion).toBe(2);
+        expect(current.integrity.schemaVersion).toBe(3);
         expect(current.integrity.leaves.filter(leaf => old.integrity.leaves.find(item => item.key === leaf.key)?.sha256 !== leaf.sha256)
           .map(leaf => leaf.key)).toEqual(["renderer-contract"]);
         expect(current.integrity.rootSha256).not.toBe(old.integrity.rootSha256);
         expect(current.runtimeSource).toBe(old.runtimeSource);
       }
     }
-    expect(() => createHtmlOverlayExecutionBundle(authoring, browserRuntime, undefined, 3 as 2)).toThrow();
+    expect(() => createHtmlOverlayExecutionBundle(authoring, browserRuntime, undefined, 4 as HtmlOverlayExecutionContractVersion)).toThrow();
+  });
+
+  test("version 2 contracts retain every qualified historical hash while merged defaults get a new identity", () => {
+    const resources = [{ ...authoring.resources[0]!, transport: "fetch" as const }];
+    const cases = [
+      [undefined, "6ee1b9a8a0c534bfc7cac20fac50d09bff7e02cdac7ef7f249cb45275c47e182", "4703f02312d441f0433fca9643e52155c5966bab85c31c3062383879abad8951"],
+      ["three-webgl2-hardware-v1", "93b64ef787792a7fcbd50090b67dcfa00c5abfc06288aeee1a26ec1cdb59d327", "f128b747b323a2646637eb5b2b1339f4c9427ca691173bdfaeefe72ae1c66034"],
+      ["three-spark-webgl2-hardware-v1", "84358f35669f6bd0f6a60c1ad11f147e1f06dc3b340c2bd7afdf8fef84e9d5b6", "84358f35669f6bd0f6a60c1ad11f147e1f06dc3b340c2bd7afdf8fef84e9d5b6"],
+    ] as const;
+    for (const [profile, expected, expectedFetch] of cases) {
+      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, [], 2))).toBe(expected);
+      expect(canonicalJsonSha256(htmlOverlayRendererContract(profile, resources, 2))).toBe(expectedFetch);
+      for (const declared of [[], resources]) {
+        const libraries = profile === undefined ? [] : profile === "three-webgl2-hardware-v1"
+          ? ["three"] : ["@sparkjsdev/spark", "three", "three/addons/postprocessing/Pass.js"];
+        const input = HtmlOverlayAuthoringInputSchema.parse({ ...authoring, libraries, resources: declared });
+        const previous = createHtmlOverlayExecutionBundle(input, browserRuntime, profile, 2);
+        const current = createHtmlOverlayExecutionBundle(input, browserRuntime, profile);
+        expect(previous.integrity.schemaVersion).toBe(2);
+        expect(current.integrity.schemaVersion).toBe(3);
+        expect(current.integrity.leaves.filter(leaf => previous.integrity.leaves.find(item => item.key === leaf.key)?.sha256 !== leaf.sha256)
+          .map(leaf => leaf.key)).toEqual(["renderer-contract"]);
+        expect(current.integrity.rootSha256).not.toBe(previous.integrity.rootSha256);
+        expect(current.runtimeSource).toBe(previous.runtimeSource);
+        expect(htmlOverlayRendererContract(profile, declared).schemaVersion).toBe(5);
+      }
+    }
+  });
+
+  test("unqualified Playwright defaults fail closed before a current execution identity can be created", async () => {
+    const script = `
+      Bun.plugin({ name: "unqualified-playwright-fixture", setup(builder) {
+        builder.onLoad({ filter: /playwright-core\\/package\\.json$/ }, () => ({
+          contents: "export default { version: '1.63.0' };", loader: "js",
+        }));
+      }});
+      const { htmlOverlayRendererContract } = await import(${JSON.stringify(import.meta.dir + "/html-overlay-integrity.ts")});
+      htmlOverlayRendererContract(undefined, [], 1);
+      htmlOverlayRendererContract(undefined, [], 2);
+      try { htmlOverlayRendererContract(); process.exit(1); }
+      catch (error) {
+        if (!error.message.includes("requires qualified playwright-core 1.62.0 defaults")) throw error;
+      }
+    `;
+    const child = Bun.spawn([process.execPath, "--eval", script], { stderr: "pipe", stdout: "pipe" });
+    const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
   });
 
   test("fetch opt-in permits only the exact hash-addressed private paths in canonical order", () => {
@@ -110,7 +159,7 @@ describe("HTML-overlay browser execution integrity", () => {
     for (const profile of [undefined, "three-webgl2-hardware-v1"] as const) {
       const legacy = htmlOverlayRendererContract(profile), current = htmlOverlayRendererContract(profile, resources);
       expect(current.contentSecurityPolicy.find(directive => directive.startsWith("connect-src "))).toBe(expected);
-      expect(current.schemaVersion).toBe(4);
+      expect(current.schemaVersion).toBe(5);
       expect(current.contentSecurityPolicy.filter(directive => !directive.startsWith("connect-src ")))
         .toEqual(legacy.contentSecurityPolicy.filter(directive => !directive.startsWith("connect-src ")));
       expect(current.launch).toEqual(legacy.launch);

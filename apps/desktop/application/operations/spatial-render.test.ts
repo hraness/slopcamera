@@ -37,6 +37,7 @@ async function fixture() {
   await writeFile(sourcePath, JSON.stringify(scene, null, 2));
   let renders = 0;
   const historicalIntegrities: HtmlOverlayExecutionIntegrity[] = [];
+  const historicalV2Integrities: HtmlOverlayExecutionIntegrity[] = [];
   const capabilityRequests: string[] = [];
   const application: ApplicationContext = {
     paths: { repositoryRoot: root, privateRoot, artifactRoot: join(root, "artifacts", "slopcamera", "recordings"), desktopRoot: root, projectRoot: join(root, "artifacts", "slopcamera", "projects") },
@@ -51,13 +52,14 @@ async function fixture() {
       for (let index = 0; index < count; index++) await writeFile(join(frames, `frame-${String(index).padStart(8, "0")}.png`), bytes);
       const bundle = createHtmlOverlayExecutionBundle(rendered.authoring, rendered.browserRuntime, rendered.executionProfile);
       historicalIntegrities.push(createHtmlOverlayExecutionBundle(rendered.authoring, rendered.browserRuntime, rendered.executionProfile, 1).integrity);
+      historicalV2Integrities.push(createHtmlOverlayExecutionBundle(rendered.authoring, rendered.browserRuntime, rendered.executionProfile, 2).integrity);
       return { frameCount: count, framePattern: join(frames, "frame-%08d.png"), executionIntegrity: bundle.integrity, libraryLocks: bundle.libraryLocks,
         ...(rendered.executionProfile === undefined ? {} : { gpuEvidence: hardwareEvidenceFixture(rendered.executionProfile) }) };
     } },
   };
   const context: OperationExecutionContext = { application, abortSignal: new AbortController().signal, workflow: { ...identity, workspaceDirectory: workspace, beforePublication: async () => {} } };
   const input = await bindSpatialRenderInput(application, { source: { path: "original.scene.json" }, request }, context.abortSignal, bindRuntime);
-  return { root, sourcePath, scene, input, context, application, workspace, capabilityRequests, historicalIntegrities, renders: () => renders };
+  return { root, sourcePath, scene, input, context, application, workspace, capabilityRequests, historicalIntegrities, historicalV2Integrities, renders: () => renders };
 }
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 async function withFixture(run: (f: Fixture) => Promise<void>) {
@@ -194,17 +196,20 @@ test("recovery rejects foreign output getters before parsing and proves primary 
   await expect(recoverSpatialRenderOutput(f.application, f.input, modified, identity, f.context.abortSignal)).rejects.toThrow("Primary spatial frame");
 }));
 
-test("recovery verifies retained v1 render identities without rendering or accepting mismatched versions", async () => withFixture(async f => {
+test("recovery verifies retained v1 and v2 render identities without rendering or accepting mismatched versions", async () => withFixture(async f => {
   const output = await executeSpatialRender(f.context, f.input, dependencies);
   const original = await receipt(f, output);
   const originalBatch = await json(f, original.batches[0]!) as Record<string, unknown>;
   for (const version of [1, 2] as const) {
-    const batch = { ...originalBatch, executionIntegrity: { ...f.historicalIntegrities[0]!, schemaVersion: version } };
+    const executionIntegrity = version === 1 ? f.historicalIntegrities[0]! : f.historicalV2Integrities[0]!;
+    const batch = { ...originalBatch, executionIntegrity };
     const artifact = await publishJson(f, batch);
     const receiptArtifact = await publishJson(f, { ...original, batches: [artifact], costs: { ...original.costs, actualBatchMetadataBytes: artifact.bytes } });
     const retained = { ...output, receipt: receiptArtifact };
-    if (version === 1) expect(await recoverSpatialRenderOutput(f.application, f.input, retained, identity, f.context.abortSignal)).toEqual(retained);
-    else await expect(recoverSpatialRenderOutput(f.application, f.input, retained, identity, f.context.abortSignal)).rejects.toMatchObject({ code: "incompatible" });
+    expect(await recoverSpatialRenderOutput(f.application, f.input, retained, identity, f.context.abortSignal)).toEqual(retained);
+    const mismatchedArtifact = await publishJson(f, { ...batch, executionIntegrity: { ...executionIntegrity, schemaVersion: version === 1 ? 2 : 1 } });
+    const mismatchedReceipt = await publishJson(f, { ...original, batches: [mismatchedArtifact], costs: { ...original.costs, actualBatchMetadataBytes: mismatchedArtifact.bytes } });
+    await expect(recoverSpatialRenderOutput(f.application, f.input, { ...output, receipt: mismatchedReceipt }, identity, f.context.abortSignal)).rejects.toMatchObject({ code: "incompatible" });
   }
   expect(f.renders()).toBe(1);
 }));
@@ -216,7 +221,7 @@ test("recovery rederives batch metadata, execution integrity, library locks, man
   const changes: readonly { label: string; apply(value: Record<string, unknown>): void }[] = [
     { label: "metadata", apply: value => { const metadata = value.metadata as { frames: { stateSha256: string }[] }; metadata.frames[0]!.stateSha256 = "f".repeat(64); } },
     { label: "contract version mismatch", apply: value => { (value.executionIntegrity as { schemaVersion: number }).schemaVersion = 1; } },
-    { label: "unknown contract version", apply: value => { (value.executionIntegrity as { schemaVersion: number }).schemaVersion = 3; } },
+    { label: "unknown contract version", apply: value => { (value.executionIntegrity as { schemaVersion: number }).schemaVersion = 4; } },
     { label: "integrity", apply: value => { (value.executionIntegrity as { rootSha256: string }).rootSha256 = "f".repeat(64); } },
     { label: "locks", apply: value => { (value.libraryLocks as { version: string }[])[0]!.version = "0.0.0"; } },
     { label: "partition", apply: value => { (value.samples as { sample: { index: number } }[])[0]!.sample.index = 1; } },

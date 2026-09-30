@@ -2,6 +2,13 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.9.1 - 2026-09-29
+
+Slopcamera's native renderer combines its Chrome feature flags with Playwright's defaults so browser app-cloning prevention remains effective during rendering.
+
+- Emit one merged feature flag while retaining every disabled feature from the pinned Playwright version and the native renderer.
+- Record the complete launch policy in new version-3 execution receipts, preserving verification of historical version-1 and version-2 receipts.
+
 ## 3.9.0 - 2026-09-29
 
 SlopCamera can now draw vector icons with icon.place and time music videos from Soundfish scores. Both libraries are bundled at exact versions and run inside SlopCamera's own operations, so agents reach them through the same CLI, SDK and MCP surfaces as everything else.
