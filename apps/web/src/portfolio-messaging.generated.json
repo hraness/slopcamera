@@ -5,7 +5,7 @@
   "portfolio": {
     "contract": "hraness.portfolio-public/v1",
     "url": "https://hraness.com/portfolio.json",
-    "digest": "sha256:f01d45d73a113aac6c7e19581bd9e919e84fdfff6ff41a1688f4ba1b406c74d9"
+    "digest": "sha256:3e82dac495694ca14dbdea88c58d6781f23725a4005231eb0b5eb4e68d4e4907"
   },
   "messaging": {
     "formatVersion": 1,
@@ -19,41 +19,43 @@
       ]
     },
     "category": "Media studio for agents",
-    "tagline": "Visual work your agent can keep revising.",
-    "short": "Media studio for agents: images, 3D, animation, and video to revise",
+    "tagline": "A multimedia studio for your coding agent.",
+    "short": "A multimedia studio for your coding agent",
     "meta": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
     "medium": "SlopCamera is a media studio for coding agents. Codex, Claude Code, and other agents make images, diagrams, animation, 3D scenes, and edited video from source files they can keep revising.",
     "long": "Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. SlopCamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. SlopCamera is free and open source.",
     "hero": {
-      "heading": "SlopCamera is a domain-specific harness for visual creation.",
-      "summary": "Techniques for images, diagrams, animation, 3D scenes, and edited video in one library, each with a guide. Your agent writes a short source file and revises it by editing that file.",
-      "primaryAction": "Install SlopCamera",
-      "secondaryAction": "See what agents made"
+      "heading": "Give your agent a multimedia studio.",
+      "summary": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source.",
+      "primaryAction": "Install Slopcamera",
+      "secondaryAction": "Watch the films"
     },
     "headings": {
-      "home-why": "Write the source. The CLI does the rest.",
-      "home-examples": "Open the source behind each render.",
-      "home-techniques": "Home Depot for multimedia agents.",
-      "home-workflow": "From source to a finished film.",
-      "home-interfaces": "Choose how your agent works.",
+      "home-examples": "Take an idea somewhere strange.",
+      "home-revision": "The next version starts with a sentence.",
+      "home-revision-original": "Original",
+      "home-revision-revised": "Revised",
+      "home-start": "What will you make first?",
+      "home-start-animation": "Make an animated film",
+      "home-start-world": "Build a little world",
+      "home-start-footage": "Give footage a new life",
       "home-install": "Install Slopcamera for your agent.",
-      "home-design": "What stays on your machine",
+      "home-design": "Your tools. Your files.",
       "home-questions": "Common questions",
-      "home-cta": "Ask your agent for a first render.",
+      "home-cta": "Make something worth replaying.",
       "home-search-title": "SlopCamera: video, diagrams and 3D your coding agent can revise",
-      "home-eyebrow": "A standard library for agentic multimedia",
-      "home-why-source": "Write a short source, not a pipeline",
-      "home-why-check": "Check before you render",
-      "home-why-revise": "Revise by editing, then render again",
-      "home-interface-skill": "Agent Skill",
-      "home-interface-cli": "CLI",
-      "home-interface-sdk": "TypeScript SDK",
-      "home-interface-mcp": "MCP"
+      "agent-home-examples": "See what you can make",
+      "agent-home-revision": "Direct it again",
+      "agent-home-workflow": "From an idea to a finished piece",
+      "agent-home-install": "Install Slopcamera",
+      "agent-home-tools": "Choose your tools",
+      "agent-home-privacy": "Cost and privacy",
+      "agent-home-explore": "Explore"
     },
     "status": {
       "default": "proposed"
     },
-    "reviewedOn": "2026-09-24"
+    "reviewedOn": "2026-09-30"
   },
   "scope": "product"
 }

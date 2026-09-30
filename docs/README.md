@@ -6,12 +6,14 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 
 ## Learn by making something
 
+- [Create and revise your first animation](tutorials/first-animation.md): send a midnight tram toward the moon, enlarge the moon, and keep both films.
 - [Create and revise your first diagram](tutorials/first-diagram.md): make a two-node diagram, inspect its five exports, then change its source.
-- [Create and revise your first animation](tutorials/first-animation.md): render an eight-second title, change its copy and color, and keep both sources.
 - [Render your first native film](tutorials/first-native-film.md): retain a Blender source, render a small shot, and export an ordinary Slopcamera project.
 
 ## Complete a task
 
+- [Remix the showcase](how-to/remix-the-showcase.md): open the finished films, study the creative decisions, and make your own version.
+- [Direct a film](how-to/direct-a-film.md): write a useful brief, test the hardest shot, and refine composition, movement, and sound.
 - [Run current-source commands](how-to/use-current-source.md): build an exact checkout of Slopcamera.
 - [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF.
 

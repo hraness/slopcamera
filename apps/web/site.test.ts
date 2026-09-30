@@ -1,4 +1,4 @@
-import { homeSocialImageAlt } from "./src/messaging"
+import { homepageMarketingSlots, shellProductNameSlot } from "./src/messaging"
 import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
@@ -63,14 +63,12 @@ import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFi
 import { htmlText as plainCode } from "./scripts/html-text.testing"
 import { siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
-import { homepageExampleName, homepageExamples, homepageTechniqueGroups } from "./src/example-gallery"
+import { homepageExampleName, homepageExamples } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
 import { replaceSiteSlot } from "./src/site-template"
-import { homepageMarketingSlots, productMessaging, productName, shellProductNameSlot } from "./src/messaging"
 import { statusPageRoutes } from "./src/status-page-content"
 const appDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryDirectory = join(appDirectory, "..", "..")
-const brandDescription = "SlopCamera is a media studio for coding agents."
 const searchDescription = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 
@@ -317,7 +315,7 @@ test("theme bundle budget counts complete UTF-8 bytes and rejects its exact ceil
 })
 
 test("authored shell budget rejects content growth and unapproved slot discounts without compilation", async () => {
-  const template = await readFile(join(appDirectory, "src/index.html"), "utf8")
+  const template = await readSource("index.html")
   const bytes = assertAuthoredShellBudget(template)
   const grow = (suffix: string) => template.replace("</main>", `${suffix}</main>`)
   expect(bytes).toBeLessThan(46_600)
@@ -338,7 +336,7 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   }
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_SKIP_CLASS}}`))
     .toThrow("Site document must contain 1 instance(s) of {{SITE_SKIP_CLASS}}")
-  for (const slot of ["RELEASE_URL", "RELEASE_VERSION", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL", "EXAMPLE_HERO", "EXAMPLE_GALLERY", "SKILL_EXAMPLE", "CLI_EXAMPLE", "SDK_EXAMPLE", "MCP_EXAMPLE"]) {
+  for (const slot of ["RELEASE_URL", "RELEASE_VERSION", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL", "EXAMPLE_HERO", "EXAMPLE_GALLERY", "EXAMPLE_REVISION"]) {
     expect(() => assertAuthoredShellBudget(`${template}{{${slot}}}`))
       .toThrow(`Site document must contain 1 instance(s) of {{${slot}}}`)
   }
@@ -603,9 +601,9 @@ describe("static Slopcamera site", () => {
   }, compilationTimeoutMs)
 
   test("release installation advertises the exact canonical archive beside the source path", async () => {
-    expect(publishedRelease).toEqual({ version: "3.9.0", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.9.0" })
+    expect(publishedRelease).toEqual({ version: "3.9.2", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.9.2" })
     expect(Object.isFrozen(publishedRelease)).toBe(true)
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
     for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
@@ -675,34 +673,23 @@ describe("static Slopcamera site", () => {
       .replace(/\s+/gu, " ")
       .toLowerCase()
 
-    for (const heading of [
-      "## Why SlopCamera",
-      "## Install SlopCamera",
-      "## Make your first diagram",
-      "### Instructions for coding agents",
-      "## What SlopCamera does",
-      "## How SlopCamera works",
-      "## Important limitations",
-      "## Design and trust",
-      "## Verification",
-      "## Contributing",
-    ]) {
-      expect(readme).toContain(heading)
-    }
-
+    // Follow capabilities, installation, a first project, reference, trust and
+    // contribution through their content instead of pinning editorial headings.
+    const sections = readme.split(/^## /mu)
     const readerPath = [
-      "## Why SlopCamera",
-      "## Install SlopCamera",
-      "## Make your first diagram",
-      "## What SlopCamera does",
-      "## How SlopCamera works",
-      "## Important limitations",
-      "## Design and trust",
-      "## Verification",
-      "## Contributing",
-    ].map(heading => readme.indexOf(heading))
+      "https://slopcamera.com/docs/reference/techniques",
+      archiveInstall.command,
+      "(https://slopcamera.com/docs/how-to/remix-the-showcase)",
+      "| Diagrams |",
+      "`slopcamera mcp`",
+      "21 fixed tools",
+      "(SECURITY.md)",
+      "\nbun run check\n",
+      "nearest `AGENTS.md`",
+    ].map(content => sections.findIndex(section => section.includes(content)))
     expect(readerPath.every(position => position >= 0)).toBe(true)
     expect(readerPath).toEqual([...readerPath].sort((left, right) => left - right))
+    expect(new Set(readerPath).size).toBe(readerPath.length)
 
     for (const term of [
       "TypeScript SDK",
@@ -710,7 +697,7 @@ describe("static Slopcamera site", () => {
       "Agent Skill",
       "MCP server",
       "Vercel AI Gateway",
-      "media studio for coding agents",
+      "multimedia studio for your coding agent",
       "import existing footage or recording bundles",
       "image, video, speech, and transcription models",
       "clean and captioned versions",
@@ -718,7 +705,7 @@ describe("static Slopcamera site", () => {
       expect(searchableReadme).toContain(term.toLowerCase())
     }
 
-    expect(searchableReadme).toContain(brandDescription.toLowerCase())
+    expect(searchableReadme).toContain(searchDescription.toLowerCase())
 
     expect(readme).toContain(sourceInstall.checkoutCommand)
     expect(readme).toContain("bun run build:sdk")
@@ -734,7 +721,10 @@ describe("static Slopcamera site", () => {
     for (const route of ["tutorials/first-native-film", "tutorials/first-animation", "how-to/educational-video"]) {
       expect(readme).toContain(`https://slopcamera.com/docs/${route}`)
     }
-    expect(readme).toMatch(/apps\/web\/media\/native-product-poster-[a-f0-9]{12}\.webp/u)
+    const readmeHero = workflowExamples.find(example => example.id === "rain-bottled")
+    expect(readmeHero).toBeDefined()
+    expect(readme).toContain(`](apps/web/media/${readmeHero!.poster.file})](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)`)
+    expect(readme).toContain("https://slopcamera.com/docs/tutorials/first-diagram")
   })
 
   test("publishes one canonical Slopcamera identity across discovery metadata", async () => {
@@ -1139,13 +1129,12 @@ describe("static Slopcamera site", () => {
     expect(client).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
   })
 
-  test("presents the value, techniques and workflow before installation and trust details", async () => {
+  test("presents finished films, revision and starting paths before installation and trust details", async () => {
     const html = await readSource("index.html")
     const sections = [
-      'id="why"',
       'id="examples"',
-      'id="workflow"',
-      'id="interfaces"',
+      'id="revision"',
+      'id="start"',
       'id="install"',
       'id="design"',
       'id="questions"',
@@ -1163,15 +1152,11 @@ describe("static Slopcamera site", () => {
       "https://github.com/hraness/slopcamera",
       "#install",
     ])
-    expect(navigation).toContain('href="#examples">Techniques</a>')
+    expect(navigation).toContain('href="#examples">Films</a>')
     expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install"')
     expect(html).not.toContain('class="docs-index"')
     for (const role of [
       "install",
-      "primitives",
-      "section",
-      "interfaces",
-      "trust",
       "questions",
       "cta",
     ]) {
@@ -1184,18 +1169,13 @@ describe("static Slopcamera site", () => {
   test("states the MCP subset alongside the broader local interfaces", async () => {
     const html = await readBuilt("index.html")
 
-    const examples = [...html.matchAll(/<pre aria-label="([^"]+)" class="hraness-material-code" tabindex="0">([\s\S]*?)<\/pre>/gu)]
-    expect(examples.map(match => match[1])).toEqual(["Agent Skill example", "CLI example", "TypeScript SDK example", "MCP example"])
-    expect(examples.map(match => plainCode(match[2]!))).toEqual([
-      "slopcamera skill install --target agents",
-      "slopcamera workflows list --json",
-      'import { vectorizeImage } from "@hraness/slopcamera"',
-      "slopcamera mcp --root /absolute/path/to/workspace",
-    ])
-    expect(html).toContain("Choose how your agent works.")
-    expect(html).toContain("It does not expose every CLI command.")
+    expect(html).toContain('href="/docs/tutorials/codex">Agent Skill for Codex</a>')
+    expect(html).toContain('href="/docs/explanation/choose-an-interface">CLI</a>')
+    expect(html).toContain('href="/docs/reference/sdk">TypeScript SDK</a>')
+    expect(html).toContain('href="/docs/reference/mcp-tools">fixed MCP toolset</a>')
+    expect(html).toContain("MCP does not expose every CLI command.")
     expect(html).not.toContain("Each one reaches the same project and the same operations.")
-    expect(html).not.toMatch(/hosted (?:project|generation|media) (?:service|surface)/iu)
+    expect(html).not.toMatch(/aria-label="(?:Agent Skill|CLI|TypeScript SDK|MCP) example"/u)
   })
 
   test("teaches through reviewed outputs, editable sources and canonical workflow guides", async () => {
@@ -1213,45 +1193,35 @@ describe("static Slopcamera site", () => {
     expect(figures.length).toBe(homepageExamples().length)
     expect(html.match(/>Guide<\/a>/gu)).toHaveLength(figures.length)
     expect(html.match(/>Source<\/a>/gu)).toHaveLength(figures.length)
-    // Techniques are grouped by job; each names its first command and each group links a guide.
-    const groups = [...html.matchAll(/<section aria-labelledby="techniques-([a-z]+)" class="slopcamera-technique-group">/gu)].map(match => match[1])
-    expect(groups).toEqual(homepageTechniqueGroups.map(group => group.id))
-    for (const group of homepageTechniqueGroups) {
-      expect(html).toContain(`href="${group.guide.href}"`)
-      for (const technique of group.techniques) {
-        expect(html).toContain(`<strong>${technique.name}</strong>`)
-        expect(technique.command.startsWith("slopcamera ")).toBe(true)
-      }
-    }
-    expect(html).toContain('<a href="/docs/reference/techniques">techniques catalog</a>')
+    // Work leads the homepage; detailed command selection lives in the docs.
+    expect(html.match(/class="slopcamera-screening-item"/gu)).toHaveLength(4)
+    expect(html).toContain('class="slopcamera-revision-pair"')
+    expect(html).toContain('<h3>Original</h3>')
+    expect(html).toContain('<h3>Revised</h3>')
+    expect(html).toContain('<a href="/docs/reference/techniques">every technique</a>')
+    expect(html).not.toContain('class="slopcamera-technique-group"')
     expect(html).not.toMatch(/<table\b|class="table-wrap"/)
     expect(html).not.toMatch(/AI_GATEWAY_API_KEY|VERCEL_OIDC_TOKEN|SLOPCAMERA_CACHE_DIR/)
   })
 
-  test("presents one complete creative workflow in order", async () => {
+  test("offers outcome-led starting paths and the next precise revision", async () => {
     const html = await readSource("index.html")
-    const stages = [
-      ">Prepare the sources<",
-      ">Direct the result<",
-      ">Compose the film<",
-      ">Review before final<",
-      ">Deliver and revise<",
-    ]
-    const positions = stages.map(stage => html.indexOf(stage))
-
-    expect(positions.every(position => position >= 0)).toBe(true)
-    expect(positions).toEqual([...positions].sort((left, right) => left - right))
+    for (const path of ["/docs/tutorials/first-animation", "/docs/tutorials/first-native-film", "/docs/how-to/edit-video", "/docs/how-to/generate-media", "/docs/tutorials/first-diagram"]) {
+      expect(html).toContain(`href="${path}"`)
+    }
+    expect(html).toContain("Your agent writes the source and keeps it ready for the next version.")
+    expect(html).toContain("{{EXAMPLE_REVISION}}")
   })
 
   test("explains the architecture and trust boundary in plain language", async () => {
     const html = await readSource("index.html")
     const searchableHtml = html.replace(/\s+/gu, " ")
 
-    for (const claim of ["Source media stays unchanged", "Project state stays on your machine", "Operations leave a record", "inputs and outputs"]) {
-      expect(html).toContain(claim)
-    }
-    expect(searchableHtml).toContain("Native engine jobs run only with <code>--allow-trusted-code</code>")
-    expect(searchableHtml).toContain("your Vercel AI Gateway credential")
+    expect(html).toContain("Original recordings and imported media stay unchanged")
+    expect(html).toContain("Slopcamera keeps editable source beside each render")
+    expect(searchableHtml).toContain("Native Python jobs require <code>--allow-trusted-code</code>")
+    expect(searchableHtml).toContain("your Vercel AI Gateway account")
+    expect(searchableHtml).toContain("prepaid Hraness Credits for hosted image generation")
     expect(searchableHtml).toContain("There is no Slopcamera account or hosted project database")
     expect(searchableHtml).toContain("Media uploads require acknowledgement")
     expect(searchableHtml).toContain("without an operating-system sandbox")
@@ -1355,7 +1325,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".transcript")
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
-    expect(html).toContain(`<h1 class="hraness-marketing-hero__heading" id="page-title">${productMessaging.hero.heading}</h1>`)
+    expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Give your agent a multimedia studio.</h1>')
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
@@ -1367,7 +1337,7 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain("Ben Guo")
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
     expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero" data-align="start"')
-    expect(css).toContain("grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr)")
+    expect(css).toContain("grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)")
     for (const declaration of ["white-space: pre", "overflow-wrap: normal", "word-break: normal", "overflow: auto"]) {
       expect(css).toContain(declaration)
     }
@@ -1555,7 +1525,7 @@ describe("static Slopcamera site", () => {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
     expect(localLockfile).not.toContain("catalog:")
-    expect(assertAuthoredShellBudget(await readFile(join(appDirectory, "src/index.html"), "utf8"))).toBeLessThan(46_600)
+    expect(assertAuthoredShellBudget(html)).toBeLessThan(46_600)
     // Bound the full sealed document separately, including compiled classes and content producers.
     const emittedBytes = assertBuiltHtmlBudget(await readBuilt("index.html"))
     expect(builtAssets.siteArtifacts.find(artifact => artifact.path === "index.html")?.bytes).toBe(emittedBytes)
@@ -1863,7 +1833,7 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain(builtAssets.statusPagePath)
     expect(notFound).toContain('<main id="main" tabindex="-1">\n      <div class="hraness-status-page" data-hraness-status-routes="')
     expect(notFound).toContain('<h1 class="hraness-status-page__title">We can’t find that page</h1>')
-    expect(notFound).toContain(`data-emphasis="primary" data-foil="" href="/#install">${productMessaging.hero.primaryAction}</a>`)
+    expect(notFound).toContain('data-emphasis="primary" data-foil="" href="/#install">Install Slopcamera</a>')
     expect(notFound.match(/class="hraness-status-page__next-link"/gu)).toHaveLength(3)
     expect(notFound).toContain('<p class="hraness-status-page__agent">')
     expect(notFound).toContain("[&quot;/docs/tutorials/first-diagram&quot;,&quot;Create and revise your first diagram&quot;]")
@@ -1989,13 +1959,14 @@ describe("static Slopcamera site", () => {
     for (const route of ["docs/reference/techniques", "docs/explanation/slopcamera-vs-remotion", "docs/explanation/slopcamera-vs-hyperframes", "docs/explanation/remotion-alternatives-for-coding-agents"]) {
       expect(llmsTxt).toContain(`(https://slopcamera.com/${route}.md)`)
     }
-    expect(llmsTxt).toContain(`## When to use ${productName}`)
+    expect(llmsTxt).toContain("## When to use Slopcamera")
     expect(llmsTxt).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toMatch(/^# Sitemap\n/u)
     expect(sitemapMarkdown).toContain("https://slopcamera.com/index.md")
     expect(sitemapMarkdown).toContain("https://slopcamera.com/llms.txt")
-    expect(homeMarkdown).toContain("## Sitemap")
     expect(homeMarkdown).toContain("https://slopcamera.com/sitemap.md")
+    expect(homeMarkdown).toContain("https://slopcamera.com/sitemap.xml")
+    expect(homeMarkdown).toContain("https://slopcamera.com/llms.txt")
     expect(notFound).toContain('<meta name="robots" content="noindex, nofollow">')
     expect(notFoundMarkdown).toContain("https://slopcamera.com/llms.txt")
     expect(notFoundMarkdown).toContain("https://slopcamera.com/sitemap.xml")
@@ -2510,14 +2481,4 @@ describe("static Slopcamera site", () => {
 
 
 
-})
-
-
-test("dry homepage slots match the actual shared social-image declaration", () => {
-  expect(homeSocialImageAlt).toBe(homeSocialImage.alt)
-  const assets = { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null } as const
-  const dry = siteContentSlots("index.html", assets).find(([slot]) => slot === "{{HOME_IMAGE_ALT}}")
-  const sealed = siteContentSlots("index.html", { ...assets, socialImages: { "index.html": homeSocialImage } }).find(([slot]) => slot === "{{HOME_IMAGE_ALT}}")
-  expect(dry).toEqual(sealed)
-  expect(dry?.[2]).toBe(2)
 })

@@ -1,4 +1,3 @@
-import { productMessaging } from "../src/messaging"
 import assert from "node:assert/strict"
 import { lanternHeaderAtoms, lanternPaintReference, observeLanternInteraction, projectLanternPaint, withLanternTransparency, type LanternPaint } from "./site-lantern-browser-contract"
 import { isAbsolute } from "node:path"
@@ -527,7 +526,7 @@ export async function observeMarketingDesign(page: Page, scenario: ShellCase, pa
     }
     assert.equal(heading.styles.visibility, "visible"); assert.equal(heading.styles.opacity, "1")
   }
-  assert.equal(h1.text, productMessaging.hero.heading)
+  assert.equal(h1.text, "Slopcamera is a domain-specific harness for visual creation.")
   assert.equal(await page.evaluate(() => [...document.fonts].some(face => face.family.replaceAll('"', '') === "Instrument Serif" && face.weight === "400" && face.status === "loaded")), true)
   const phone = scenario.width <= 760
   near(hero.styles["padding-top"]!, phone ? 44 : 56, "Hero top rhythm")

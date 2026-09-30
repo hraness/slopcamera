@@ -1,0 +1,25 @@
+{
+  "kind": "slopcamera.html-scene",
+  "schemaVersion": 1,
+  "name": "Last tram to the moon / original",
+  "document": {
+    "path": "examples/showcase/studio-relaunch/last-tram/scene.html"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "deviceScaleFactor": 1
+  },
+  "timing": {
+    "durationUs": 12000000,
+    "fps": 24
+  },
+  "seed": 20260930,
+  "libraries": [],
+  "resources": [],
+  "parameters": {
+    "variant": "original",
+    "timeOffsetSeconds": 0
+  },
+  "background": "#071d29"
+}

@@ -1,5 +1,769 @@
 [
   {
+    "id": "one-shoot-cinematic",
+    "title": "One shoot, three stories",
+    "description": "NASA eclipse footage becomes a quiet monochrome film with a precise title, a restrained score and a held ending. Compare its vertical and narrated cuts in the guide.",
+    "family": "editing",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "one-shoot-cinematic",
+    "featured": true,
+    "requirements": "Source checkout; Bun and FFmpeg on macOS or Linux; the credited NASA input. Supply a short recording for narration or generate one with a paid provider.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/README.md",
+          "sha256": "e718ddc86c58d0df44eae4126662b6bd21d18937c8e204a1da4299f5a117bbb6"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/captions.vtt",
+          "sha256": "ac5996764eabb38a32616f3b59d2f1222a968eae04ca84ac456e0a2ca2a99d33"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/footage-credit.md",
+          "sha256": "7a70348f1020f63b3f2af63688e0e450a5057c9a13c4b3ab5620c7fb1874584f"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/narration.txt",
+          "sha256": "50a97ecda0457a5b7c05acc1990a080a7837336f6dfd39d01e9bb550c4bc58fa"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/render.ts",
+          "sha256": "e9d72662d0e967682168fdc7041cfc2d9001a220176b3164bd73eeafaa4b4eeb"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif-OFL.txt",
+          "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif.ttf",
+          "sha256": "d4f72b329cb69b25ac649a51a5c97232dd11c81f2f3bc3d58424636dea85d066"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/web-preview.ts",
+          "sha256": "8fabc181e769a47786dee5a248a2879fbd68afaf1967a6257864487d1f89f350"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/one-shoot/render.ts artifacts/studio-relaunch/one-shoot/source/nasa-eclipse.mp4 your-edit artifacts/studio-relaunch/one-shoot/narration.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg",
+        "Slopcamera local color operation"
+      ],
+      "license": "NASA footage: NASA media guidelines. Original edit and scores: MIT. Instrument Serif: SIL OFL. Generated narration: OpenAI terms."
+    },
+    "poster": {
+      "file": "one-shoot-cinematic-poster-0c4b63d41f06.webp",
+      "sha256": "0c4b63d41f06f0b90938aea86116dde89943fec34be3656870626c6f9bdc96cb",
+      "bytes": 26644,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "A total solar eclipse with a bright corona, framed as a black-and-white cinematic edit."
+    },
+    "video": {
+      "file": "one-shoot-cinematic-c3b9a6dfcc7d.mp4",
+      "sha256": "c3b9a6dfcc7d918ced5b1ea03bdb4ecf18ccb6e4d2a1916659c56b806330e390",
+      "bytes": 2428780,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "last-tram-revised",
+    "title": "Last tram, a larger moon",
+    "description": "The same journey, palette and timing, with a larger moon that changes the composition. A real rendered revision of the same editable scene.",
+    "family": "illustrated-films",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "last-tram-revised",
+    "featured": false,
+    "requirements": "Source checkout; Bun; macOS with a qualified Slopcamera local HTML runtime and FFmpeg. Original score uses Python 3 with NumPy. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/README.md",
+          "sha256": "b30d3e2600db562e0e30140af86dafe169037fce9f8103c9f14e08617a457f3f"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/render.ts",
+          "sha256": "972a35334d69c284d84b5c3e0a47b1686f3265dbbcb4089b3ee2e26e271da45a"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/scene.html",
+          "sha256": "5767a9cf50b54848f1ea6e865117a202bf65084e651dd0007277e7267d01df7d"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/score.py",
+          "sha256": "fdfe9f80164f2c817bb51b6f345160b5235585a57398d3595302fbff7fcf59b0"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/web-preview.ts",
+          "sha256": "8fabc181e769a47786dee5a248a2879fbd68afaf1967a6257864487d1f89f350"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/last-tram/render.ts --run your-film --variant moonrise --audio artifacts/your-score.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Slopcamera qualified local HTML runtime",
+        "FFmpeg",
+        "Python 3 with NumPy"
+      ],
+      "license": "Original scene and score: MIT. Bundled fonts retain their included licenses."
+    },
+    "poster": {
+      "file": "last-tram-revised-poster-68ce7a2afb5b.webp",
+      "sha256": "68ce7a2afb5b33dea029b9d326a18ff96e9f646b4d8fe83276f5c2aa8f452fd3",
+      "bytes": 107266,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "The copper tram approaches a larger luminous moon above the same midnight city."
+    },
+    "video": {
+      "file": "last-tram-revised-a2764291a22e.mp4",
+      "sha256": "a2764291a22e9878599438d55b49b734a58565b2ff048df7df800f18ccf8f183",
+      "bytes": 3655965,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "last-tram",
+    "title": "Last tram to the moon",
+    "description": "A copper tram changes its destination from CITY to MOON, then follows a rising track out of a rainy midnight city.",
+    "family": "illustrated-films",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "last-tram",
+    "featured": true,
+    "requirements": "Source checkout; Bun; macOS with a qualified Slopcamera local HTML runtime and FFmpeg. Original score uses Python 3 with NumPy. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/README.md",
+          "sha256": "b30d3e2600db562e0e30140af86dafe169037fce9f8103c9f14e08617a457f3f"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/render.ts",
+          "sha256": "972a35334d69c284d84b5c3e0a47b1686f3265dbbcb4089b3ee2e26e271da45a"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/scene.html",
+          "sha256": "5767a9cf50b54848f1ea6e865117a202bf65084e651dd0007277e7267d01df7d"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/score.py",
+          "sha256": "fdfe9f80164f2c817bb51b6f345160b5235585a57398d3595302fbff7fcf59b0"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/web-preview.ts",
+          "sha256": "8fabc181e769a47786dee5a248a2879fbd68afaf1967a6257864487d1f89f350"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/last-tram/render.ts --run your-film --variant original --audio artifacts/your-score.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Slopcamera qualified local HTML runtime",
+        "FFmpeg",
+        "Python 3 with NumPy"
+      ],
+      "license": "Original scene and score: MIT. Bundled fonts retain their included licenses."
+    },
+    "poster": {
+      "file": "last-tram-poster-0e112e4f6a9f.webp",
+      "sha256": "0e112e4f6a9fac107bfebbcbecf4558d86b4eeb69ecdfaa477f458e5c9801ec4",
+      "bytes": 105862,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "A copper tram climbs a winding rail toward the moon above a dark teal city."
+    },
+    "video": {
+      "file": "last-tram-224124564f38.mp4",
+      "sha256": "224124564f38cd5f0c1757f08491fdbe7f51f49eebbd9f5468d7284fb0dac74d",
+      "bytes": 3650980,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "one-shoot-explainer",
+    "title": "The hidden atmosphere",
+    "description": "A narrated visual explanation reveals the Sun\u2019s corona, with a deliberate annotation, a quiet score and English captions.",
+    "family": "editing",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "one-shoot-explainer",
+    "featured": false,
+    "requirements": "Source checkout; Bun and FFmpeg on macOS or Linux; the credited NASA input. Supply a short recording for narration or generate one with a paid provider.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/README.md",
+          "sha256": "e718ddc86c58d0df44eae4126662b6bd21d18937c8e204a1da4299f5a117bbb6"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/captions.vtt",
+          "sha256": "ac5996764eabb38a32616f3b59d2f1222a968eae04ca84ac456e0a2ca2a99d33"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/footage-credit.md",
+          "sha256": "7a70348f1020f63b3f2af63688e0e450a5057c9a13c4b3ab5620c7fb1874584f"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/narration.txt",
+          "sha256": "50a97ecda0457a5b7c05acc1990a080a7837336f6dfd39d01e9bb550c4bc58fa"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/render.ts",
+          "sha256": "e9d72662d0e967682168fdc7041cfc2d9001a220176b3164bd73eeafaa4b4eeb"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif-OFL.txt",
+          "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif.ttf",
+          "sha256": "d4f72b329cb69b25ac649a51a5c97232dd11c81f2f3bc3d58424636dea85d066"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/one-shoot/render.ts artifacts/studio-relaunch/one-shoot/source/nasa-eclipse.mp4 your-edit artifacts/studio-relaunch/one-shoot/narration.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg",
+        "Slopcamera local color operation"
+      ],
+      "license": "NASA footage: NASA media guidelines. Original edit and scores: MIT. Instrument Serif: SIL OFL. Generated narration: OpenAI terms."
+    },
+    "poster": {
+      "file": "one-shoot-explainer-poster-8ac6d378c172.webp",
+      "sha256": "8ac6d378c17203a73366ac70580fd48e286888ea0db5d1b7ab0db0c6b626ac24",
+      "bytes": 22442,
+      "mime": "image/webp",
+      "width": 1280,
+      "height": 720,
+      "alt": "An annotated solar eclipse beside a short explanation of the Sun\u2019s outer atmosphere."
+    },
+    "video": {
+      "file": "one-shoot-explainer-f1956df74bd2.mp4",
+      "sha256": "f1956df74bd2f912eb2f9127f3507573877439549c864f7116e3f6852177fff8",
+      "bytes": 1518992,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true,
+      "captions": {
+        "file": "one-shoot-explainer-captions-ac5996764eab.vtt",
+        "sha256": "ac5996764eabb38a32616f3b59d2f1222a968eae04ca84ac456e0a2ca2a99d33",
+        "bytes": 197,
+        "mime": "text/vtt"
+      }
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "passed"
+    }
+  },
+  {
+    "id": "one-shoot-vertical",
+    "title": "The eclipse, in portrait",
+    "description": "The same NASA time-lapse becomes a vertical edit: a close crop, expressive typography and an original pulsing score.",
+    "family": "editing",
+    "techniques": [
+      "color.grade"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "one-shoot-vertical",
+    "featured": false,
+    "requirements": "Source checkout; Bun and FFmpeg on macOS or Linux; the credited NASA input. Supply a short recording for narration or generate one with a paid provider.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/README.md",
+          "sha256": "e718ddc86c58d0df44eae4126662b6bd21d18937c8e204a1da4299f5a117bbb6"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/captions.vtt",
+          "sha256": "ac5996764eabb38a32616f3b59d2f1222a968eae04ca84ac456e0a2ca2a99d33"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/footage-credit.md",
+          "sha256": "7a70348f1020f63b3f2af63688e0e450a5057c9a13c4b3ab5620c7fb1874584f"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/narration.txt",
+          "sha256": "50a97ecda0457a5b7c05acc1990a080a7837336f6dfd39d01e9bb550c4bc58fa"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/one-shoot/render.ts",
+          "sha256": "e9d72662d0e967682168fdc7041cfc2d9001a220176b3164bd73eeafaa4b4eeb"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif-OFL.txt",
+          "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif.ttf",
+          "sha256": "d4f72b329cb69b25ac649a51a5c97232dd11c81f2f3bc3d58424636dea85d066"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/one-shoot/render.ts artifacts/studio-relaunch/one-shoot/source/nasa-eclipse.mp4 your-edit artifacts/studio-relaunch/one-shoot/narration.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "FFmpeg",
+        "Slopcamera local color operation"
+      ],
+      "license": "NASA footage: NASA media guidelines. Original edit and scores: MIT. Instrument Serif: SIL OFL. Generated narration: OpenAI terms."
+    },
+    "poster": {
+      "file": "one-shoot-vertical-poster-71598d561ab5.webp",
+      "sha256": "71598d561ab52a5e1f6186a19cc49d9012cfb4580a0c346ee39403aa25f81ca2",
+      "bytes": 25172,
+      "mime": "image/webp",
+      "width": 720,
+      "height": 1280,
+      "alt": "A close view of the eclipsed Sun beneath the headline A different kind of daylight."
+    },
+    "video": {
+      "file": "one-shoot-vertical-ceb1d198e5dc.mp4",
+      "sha256": "ceb1d198e5dcd213827aa22f937af93eb334be90056827d2c0ace552f24951e1",
+      "bytes": 1591198,
+      "mime": "video/mp4",
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "rain-bottled",
+    "title": "Rain, bottled",
+    "description": "An imaginary luxury object contains a miniature storm. Four composed shots bring its brass, glass, light and weather to life with an original score.",
+    "family": "product-cinema",
+    "techniques": [
+      "native.product"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "rain-bottled",
+    "featured": true,
+    "requirements": "Source checkout; Bun; a qualified Blender 5.2.2 runtime, Python 3 and FFmpeg. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/README.md",
+          "sha256": "147d0cb8c521f60eb4d78a83cee30f6c26a15291009188ac681668b6504651f3"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif-OFL.txt",
+          "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/assets/instrument-serif.ttf",
+          "sha256": "d4f72b329cb69b25ac649a51a5c97232dd11c81f2f3bc3d58424636dea85d066"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/finish.ts",
+          "sha256": "34cca7f551b4983955a1efd00b550b73cabb5f95a22d7bf51f18e74bb9a292d0"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/prepare.ts",
+          "sha256": "b9146ee4a2f14ed07f1a5925673be2f249f73f41985bdf5a3afc6b6d7637cf84"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/scene.py",
+          "sha256": "23dba40741bad84833b86f6ad153ce8fe9fc5301b2d8c49b112ff15d614189fb"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/sound.py",
+          "sha256": "05adfc78edbc7b78072abbaeda881438ab42198de947f72e35c4985ad5f92c54"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/rain-bottled/source.json",
+          "sha256": "f7954d7e4079897aafe6022f650524f7f4b955166514fc5951e5cbd03079a2c3"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/rain-bottled/prepare.ts webFilm",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Blender 5.2.2",
+        "Python 3",
+        "FFmpeg"
+      ],
+      "license": "Original scene and score: MIT. Instrument Serif: SIL OFL 1.1."
+    },
+    "poster": {
+      "file": "rain-bottled-poster-479a32b54a03.webp",
+      "sha256": "479a32b54a03116e93683fd2df9e8771193340ad17d27bbd4e8499e589ff3a5c",
+      "bytes": 36652,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "A glass storm chamber with a brass lid, a floating cloud and turquoise rain beside the title Rain, bottled."
+    },
+    "video": {
+      "file": "rain-bottled-f5b87152f532.mp4",
+      "sha256": "f5b87152f532f36cdfb307804a061a0a3c82e1e2f04524d999b9caf9a7fd007d",
+      "bytes": 1945014,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 14,
+      "fps": 24,
+      "frames": 336,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "laundromat-after-midnight",
+    "title": "The laundromat after midnight",
+    "description": "A record-shaped dancer brings a midnight laundromat to life, with spinning machines, wayward socks and an original twelve-second score.",
+    "family": "character-animation",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "laundromat-after-midnight",
+    "featured": true,
+    "requirements": "Source checkout; Bun; macOS with a qualified Slopcamera local HTML runtime and FFmpeg. Original score uses Python 3 with NumPy. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/laundromat/README.md",
+          "sha256": "b7a8b0a7fb021390bac14ff3ff12bdb5e29ec319fa70e8f28fc43e11f903d786"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/render.ts",
+          "sha256": "972a35334d69c284d84b5c3e0a47b1686f3265dbbcb4089b3ee2e26e271da45a"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/score.py",
+          "sha256": "fdfe9f80164f2c817bb51b6f345160b5235585a57398d3595302fbff7fcf59b0"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/laundromat/render.ts",
+          "sha256": "c65559a61ea135f16d6391fb93014705f00075fd7648d15f34aff2fcb9b2544c"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/laundromat/scene.html",
+          "sha256": "66dc68075592b507e50a1076668f19f2ef54760df37611e2bd54bf324818be55"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/laundromat/render.ts --run your-film --variant dance --audio artifacts/your-score.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Slopcamera qualified local HTML runtime",
+        "FFmpeg",
+        "Python 3 with NumPy"
+      ],
+      "license": "Original scene and score: MIT. Bundled fonts retain their included licenses."
+    },
+    "poster": {
+      "file": "laundromat-after-midnight-poster-7fbfa5e86472.webp",
+      "sha256": "7fbfa5e86472f0a08f4571e225ea77b436f3f5c9c09f0fb465029bced358b5a0",
+      "bytes": 96540,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "A smiling vinyl-record character dances between four pastel washing machines on a checked floor."
+    },
+    "video": {
+      "file": "laundromat-after-midnight-5409df0d407f.mp4",
+      "sha256": "5409df0d407f8dfd42567b761148864f63122c5fe8d9095073d522a85bfaa4e0",
+      "bytes": 3434605,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini 3.8 Flash audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "square-wave-jazz",
+    "title": "A square wave auditions for jazz",
+    "description": "Five odd harmonics find their swing. Watch and hear their actual Fourier sum approach a square wave in an illustrated jazz miniature.",
+    "family": "visual-explanations",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "square-wave-jazz",
+    "featured": true,
+    "requirements": "Source checkout; Bun; macOS with a qualified Slopcamera local HTML runtime and FFmpeg. Original score uses Python 3 with NumPy. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/README.md",
+          "sha256": "7c2a445f1c2a70141bfe495cad937d4aaac7c136b328a0c548324971f61eac17"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/render.ts",
+          "sha256": "b50837026a147cccc2c3fffea43f938d309651d02581805ab06fa3e086f477b7"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/scene.html",
+          "sha256": "27d6b9d495e674c39c64bab67250eabe309c53b8b903e5890950f31a4f045efa"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/score.py",
+          "sha256": "339146e2ac3f599600aea43bcaec1508fa1c077d27ed21e57bfcbdf539d7dda7"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/transcript.md",
+          "sha256": "e016ec5ac93bb9a068125d2b430b2a7f535786dd5e5fb69b3049908269a1140c"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/jazz-wave/verify.ts",
+          "sha256": "9b1320bdb926b476032b6f08e03535c26f8452691c46b9151fc0f53a8da0c2f7"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/nebula-sans/NebulaSans-Book.woff2",
+          "sha256": "4d396c7c7f93b3f9d8e90d5a8c5e28b29266243946d4320783abc3628d9ef8df"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/nebula-sans/NebulaSans-Bold.woff2",
+          "sha256": "0801b78a64e731db50c2a0badac7bc1e9138a8916e8f4774aeb8de6f86c6f1fd"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/nebula-sans/LICENSE.txt",
+          "sha256": "ceab45a6fcb5cce75ffb7e2a4f49b59dd2daa6ede14fe4b07b9f8e58675f33b8"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/nebula-sans/PROVENANCE.md",
+          "sha256": "433487854002ddff1aa3401c025e53f27464c44f59f1ee27347f1d5f94ff1b29"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/instrument-serif/instrument-serif-latin-400.woff2",
+          "sha256": "60c06664b5a95c7de6cc3e00d1f9034d78bd1e40b564016b241674449a067d4d"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/assets/fonts/instrument-serif/instrument-serif-OFL.txt",
+          "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/jazz-wave/render.ts --run your-jazz --audio artifacts/your-score.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Slopcamera qualified local HTML runtime",
+        "FFmpeg",
+        "Python 3 with NumPy"
+      ],
+      "license": "Original scene and score: MIT. Bundled fonts retain their included licenses."
+    },
+    "poster": {
+      "file": "square-wave-jazz-poster-54cb3dbaaf16.webp",
+      "sha256": "54cb3dbaaf16eb2484cb0785835e34a8a7fef0558ad9c7040b3c5cc6ef780209",
+      "bytes": 105574,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "Five illustrated jazz musicians stand above their odd-harmonic sine waves and their almost-square sum."
+    },
+    "video": {
+      "file": "square-wave-jazz-f80119c66e36.mp4",
+      "sha256": "f80119c66e36ed842ec31f507ccfd976a3ee750312041a0ac6caad287be0f787",
+      "bytes": 3799125,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini 3.8 Flash audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
+    "id": "paper-ocean",
+    "title": "An ocean folded from paper",
+    "description": "An envelope opens into layered waves. A paper whale breaches; the ocean settles into a finished illustrated poster.",
+    "family": "illustration",
+    "techniques": [
+      "html.plain"
+    ],
+    "guideSlug": "how-to/remix-the-showcase",
+    "guideAnchor": "paper-ocean",
+    "featured": true,
+    "requirements": "Source checkout; Bun; macOS with a qualified Slopcamera local HTML runtime and FFmpeg. Original score uses Python 3 with NumPy. No paid model is needed.",
+    "source": {
+      "engineRevision": "ba93c5ec7634cb52037fa64d73869cc56a96faa5",
+      "files": [
+        {
+          "path": "examples/showcase/studio-relaunch/paper-ocean/README.md",
+          "sha256": "5e45dcf29e5280fa69c7b97622bb58685e472c801b4866b7f5ed7d90fcb5b620"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/render.ts",
+          "sha256": "972a35334d69c284d84b5c3e0a47b1686f3265dbbcb4089b3ee2e26e271da45a"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/last-tram/score.py",
+          "sha256": "fdfe9f80164f2c817bb51b6f345160b5235585a57398d3595302fbff7fcf59b0"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/paper-ocean/render.ts",
+          "sha256": "e3582c2ccc047e011796837c38de64f607bf469ad743e0fc03b9043449118431"
+        },
+        {
+          "path": "examples/showcase/studio-relaunch/paper-ocean/scene.html",
+          "sha256": "bffc41d66b0e59c02a075ee1fb3f7439e105bd4e2d9548f42dbd0760a52f1438"
+        }
+      ],
+      "command": "bun examples/showcase/studio-relaunch/paper-ocean/render.ts --run your-film --variant whale --audio artifacts/your-score.wav",
+      "toolVersion": "3.9.1",
+      "runtimes": [
+        "Bun 1.3.14",
+        "Slopcamera qualified local HTML runtime",
+        "FFmpeg",
+        "Python 3 with NumPy"
+      ],
+      "license": "Original scene and score: MIT. Bundled fonts retain their included licenses."
+    },
+    "poster": {
+      "file": "paper-ocean-poster-f608cb395727.webp",
+      "sha256": "f608cb39572773442422d225770a48ddd8d0ae8dcc0661ca1e14107234c1747f",
+      "bytes": 41246,
+      "mime": "image/webp",
+      "width": 1920,
+      "height": 1080,
+      "alt": "A dark paper whale rises above layered teal waves below a golden sun."
+    },
+    "video": {
+      "file": "paper-ocean-01df5e3967eb.mp4",
+      "sha256": "01df5e3967ebc7824d86207088dae969593b27df3ecc48c94d6f07fbe38de51f",
+      "bytes": 2365681,
+      "mime": "video/mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 12,
+      "fps": 24,
+      "frames": 288,
+      "hasAudio": true
+    },
+    "downloads": [],
+    "review": {
+      "agent": "Codex visual/source review; Gemini 3.8 Flash audiovisual review",
+      "date": "2026-09-30",
+      "still": "passed",
+      "motion": "passed",
+      "sound": "listened",
+      "captions": "not-applicable"
+    }
+  },
+  {
     "id": "compute-temple",
     "title": "Compute aisle",
     "description": "A dolly shot down a dark corridor of glowing server racks toward a bright portal, with bloom and tone mapping.",
@@ -11,7 +775,7 @@
     ],
     "guideSlug": "how-to/direct-scenes",
     "guideAnchor": "light-an-emissive-corridor",
-    "featured": true,
+    "featured": false,
     "requirements": "Local Chrome or Chromium and FFmpeg/FFprobe. This retained render used the explicit macOS WebGL2 hardware profile.",
     "source": {
       "engineRevision": "d396d71546fca2d07a0ee40f9d4fb12da750dfc3",
@@ -78,7 +842,7 @@
     ],
     "guideSlug": "tutorials/first-diagram",
     "guideAnchor": "",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8 or later and Bun. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -264,8 +1028,8 @@
     "techniques": [
       "html.plain"
     ],
-    "guideSlug": "tutorials/first-animation",
-    "guideAnchor": "render-and-inspect-the-title",
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "render-and-retain-the-result",
     "featured": false,
     "requirements": "Slopcamera 3.2.8 or later, Bun, a local browser and FFmpeg. No model account.",
     "source": {
@@ -402,7 +1166,7 @@
     ],
     "guideSlug": "tutorials/first-native-film",
     "guideAnchor": "inspect-the-finished-example",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -472,7 +1236,7 @@
   {
     "id": "education-luma",
     "title": "Why the long side is five",
-    "description": "A portrait lesson tiles a 3–4–5 triangle into 25 areas.",
+    "description": "A portrait lesson tiles a 3\u20134\u20135 triangle into 25 areas.",
     "family": "education",
     "techniques": [
       "education.manim-lesson"
@@ -530,7 +1294,7 @@
       "mime": "image/webp",
       "width": 720,
       "height": 1280,
-      "alt": "Luma presents nine green and sixteen blue tiles in a five-by-five square, with the equation 3² + 4² = 5² and authored lesson captions."
+      "alt": "Luma presents nine green and sixteen blue tiles in a five-by-five square, with the equation 3\u00b2 + 4\u00b2 = 5\u00b2 and authored lesson captions."
     },
     "video": {
       "file": "education-luma-video-81d96807cebf.mp4",
@@ -562,8 +1326,8 @@
     "techniques": [
       "html.plain"
     ],
-    "guideSlug": "tutorials/first-animation",
-    "guideAnchor": "revise-the-same-source",
+    "guideSlug": "how-to/render-motion-graphics",
+    "guideAnchor": "revise-the-same-composition",
     "featured": false,
     "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
@@ -889,7 +1653,7 @@
     ],
     "guideSlug": "how-to/render-motion-graphics",
     "guideAnchor": "write-a-wgsl-field",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8 or later, a supported local browser and FFmpeg. No model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -1246,7 +2010,7 @@
     ],
     "guideSlug": "how-to/native-films",
     "guideAnchor": "inspect-the-fluid-cache",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera 3.2.8 or later and Blender 5.2.1 LTS; reproduction helper needs a source checkout. Local rendering; no model account.",
     "source": {
       "engineRevision": "ba231ba8caa15d0ced48be1ec4d60a4124d9c24f",
@@ -3403,7 +4167,7 @@
   {
     "id": "native-import-model-hero",
     "title": "Import a textured packaging mockup",
-    "description": "An original GLB keeps its FIELD / 01 artwork, measured 70 × 45 × 120 mm dimensions and stripe across the front/right seam when staged in Blender.",
+    "description": "An original GLB keeps its FIELD / 01 artwork, measured 70 \u00d7 45 \u00d7 120 mm dimensions and stripe across the front/right seam when staged in Blender.",
     "family": "native",
     "techniques": [
       "native.import-model"
@@ -3819,7 +4583,7 @@
     ],
     "guideSlug": "how-to/edit-video",
     "guideAnchor": "place-overlays-without-clipping",
-    "featured": true,
+    "featured": false,
     "requirements": "Slopcamera CLI, FFmpeg and rsvg-convert.",
     "source": {
       "engineRevision": "0519b9da03c77fe7fe8479ac09b85bd0c234c335",

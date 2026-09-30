@@ -46,6 +46,8 @@ Register the callback when the module starts. Put asynchronous asset preparation
 
 ## Render and retain the result
 
+[Watch the editorial title](https://slopcamera.com/docs/how-to/render-motion-graphics#render-and-retain-the-result).
+
 ```sh
 slopcamera html render --input examples/showcase/html/editorial.json --json
 ```
@@ -53,6 +55,10 @@ slopcamera html render --input examples/showcase/html/editorial.json --json
 The result includes `output.path` for H.264 video, `source.path` for the retained request, `receipt.path`, and `projectId`. Rendering also retains a lossless RGB intermediate and the exact HTML/assets. Each invocation creates its own result; keep the receipt with the source revision you reviewed.
 
 Inspect the output at its intended display size. Check text legibility, edges, first and last frames, motion continuity, and any source-specific details such as shader output or character articulation. A successful receipt records execution; your review decides whether the graphic is useful.
+
+### Revise the same composition
+
+[Watch the revised composition](https://slopcamera.com/docs/how-to/render-motion-graphics#revise-the-same-composition).
 
 To revise copy, palette, or timing, change parameters supported by the document or edit the HTML, then render a new request. [editorial-revised.json](https://github.com/hraness/slopcamera/blob/main/examples/showcase/html/editorial-revised.json) changes copy and accent while retaining the original source. Keep the selected result's `projectId` for [editing and delivery](../how-to/edit-video.md).
 

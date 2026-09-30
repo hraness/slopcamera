@@ -333,7 +333,7 @@ function absoluteLinks(html: string): string {
 /** Atom feed of indexable posts with their full bodies. */
 export function blogAtomFeed(bodies: Readonly<Record<string, string>>): string {
   return createAtomFeed(blogSite, {
-    title: "SlopCamera blog",
+    title: `${productName} blog`,
     description: blogIndex.description,
     homePath: "/blog",
     path: blogFeedPath,
@@ -349,4 +349,3 @@ export function blogAtomFeed(bodies: Readonly<Record<string, string>>): string {
 export function blogSitemapPaths(): readonly SitemapPath[] {
   return createBlogSitemapPaths({ path: "/blog" }, indexableBlogPosts.map(blogArticleDiscovery))
 }
-

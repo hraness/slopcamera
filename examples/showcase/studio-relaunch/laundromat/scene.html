@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The laundromat after midnight</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d9d7b9}canvas{display:block;width:100%;height:100%}</style>
+<canvas id="film" aria-label="A vinyl record dances in a pastel laundromat and catches a pair of striped socks."></canvas>
+<script>
+(()=>{'use strict';
+const cv=document.getElementById('film'),c=cv.getContext('2d',{alpha:false}),W=1920,H=1080,TAU=Math.PI*2;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t,ease=x=>{x=clamp(x);return x*x*(3-2*x)};
+const hash=n=>{const q=Math.sin(n*127.1+83.7)*43758.5453;return q-Math.floor(q)};
+function rect(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
+function path(d,fill,stroke,width=1){const p=new Path2D(d);if(fill){c.fillStyle=fill;c.fill(p)}if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke(p)}}
+function ellipse(x,y,rx,ry,col,a=0){c.beginPath();c.ellipse(x,y,rx,ry,a,0,TAU);c.fillStyle=col;c.fill()}
+function stroke(d,col,w){c.lineCap='round';c.lineJoin='round';path(d,null,col,w)}
+function line(x,y,x2,y2,col,w=1){stroke(`M${x} ${y} L${x2} ${y2}`,col,w)}
+function group(x,y,s,a,fn){c.save();c.translate(x,y);c.scale(s,s);c.rotate(a);fn();c.restore()}
+function grad(x,y,x2,y2,stops){const g=c.createLinearGradient(x,y,x2,y2);stops.forEach(([p,v])=>g.addColorStop(p,v));return g}
+function type(s,x,y,size,col,font='sans-serif',align='left'){c.fillStyle=col;c.font=`${size}px ${font}`;c.textAlign=align;c.fillText(s,x,y)}
+function sock(x,y,s,a){group(x,y,s,a,()=>{
+  path('M-18 -59 H24 L19 24 Q19 38 3 43 L-35 43 Q-57 40 -52 23 Q-49 9 -23 11Z','#f7edd2','#243f44',3);
+  path('M-18 -59 H24 L23 -41 H-19Z','#d96b4f');path('M-19 -28 H22 L21 -18 H-20Z','#d96b4f');path('M-52 20 Q-38 13 -34 30 L-35 43 Q-57 40 -52 20Z','#d96b4f');
+  path('M11 12 Q5 30 18 29 L19 21 L20 12Z','#d96b4f');line(-13,-53,18,-53,'#edac83',2);
+})}
+function glove(x,y,s,angle){group(x,y,s,angle,()=>{
+  path('M-19 20 Q-35 9 -23 -5 L-25 -25 Q-25 -34 -18 -29 L-9 -13 L-12 -36 Q-10 -43 -4 -37 L1 -15 L7 -32 Q13 -38 15 -27 L11 -7 Q30 -19 32 -9 Q31 -2 17 11 L15 25Z','#fcf4da','#233c41',3);
+  path('M-19 20 L17 21 L17 32 L-18 31Z','#fcf4da','#233c41',3);line(-10,1,-5,10,'#b5bdad',1.4);line(0,-1,3,8,'#b5bdad',1.4);
+})}
+function machine(x,y,color,t,index){group(x,y,1,0,()=>{
+  // Enamel front, offset side and inset rubber seal.
+  path('M-172 -199 L164 -199 L192 -178 L192 202 L-151 202 L-172 180Z','#526a64');
+  rect(-171,-199,337,380,grad(-171,-200,172,188,[[0,color],[.7,color],[1,'#b9bcaa']]));
+  rect(-171,-199,337,53,'#f4e8c6');line(-167,-144,160,-144,'#8ca495',3);line(-167,177,162,177,'#71887c',4);
+  type(index<2?'WASH':'DRY',-143,-165,15,'#3c5a58');
+  rect(15,-183,77,23,'#294646');type(t<.8?'00:01':t>10.5?'DONE':'00:00',54,-167,13,'#e8d28c','monospace','center');
+  ellipse(129,-170,13,13,'#667b6c');ellipse(127,-172,8,8,'#fbefd1');line(126,-180,131,-173,'#335452',2);
+  ellipse(-4,20,130,130,'#7b9688');ellipse(-6,17,121,121,'#f4e7c6');ellipse(-6,17,105,105,'#23484d');ellipse(-6,17,93,93,'#102e38');
+  group(-6,17,1,t*(index%2?-.75:.65),()=>{
+    for(let i=0;i<4;i++){const a=i*TAU/4;group(Math.cos(a)*47,Math.sin(a)*47,.48,a+.4,()=>sock(0,0,1,0))}
+    for(let i=0;i<15;i++){const a=i*TAU/15;ellipse(Math.cos(a)*79,Math.sin(a)*79,1.8,1.8,'#8da997')}
+  });
+  path('M-79 -50 Q-44 -88 7 -74 L-41 72 Q-69 47 -79 -50Z','#d5e1c81c');
+  path('M-65 -57 Q-45 -75 -25 -79',null,'#d8ebd46e',5);ellipse(77,21,9,24,'#e1d4b6');ellipse(77,21,4,15,'#607b73');
+  for(let i=0;i<7;i++)line(-145+i*12,149,-141+i*12,149,'#637b70',3);
+  rect(-143,181,29,17,'#254b4b');rect(117,181,29,17,'#254b4b');
+})}
+function render(time,variant='dance'){
+  if(!Number.isFinite(time)||time<0||time>12)throw new Error('Film time must be within0–12seconds.');
+  if(variant!=='dance')throw new Error('Unknown film variant.');
+  const ww=Math.round(innerWidth*(devicePixelRatio||1)),hh=Math.round(innerHeight*(devicePixelRatio||1));
+  if(ww<1||hh<1||ww>8192||hh>8192||ww*hh>33554432)throw new Error('Unsupported film canvas.');
+  if(cv.width!==ww||cv.height!==hh){cv.width=ww;cv.height=hh}
+  const sc=Math.min(ww/W,hh/H);c.setTransform(1,0,0,1,0,0);rect(0,0,ww,hh,'#d9d7b9');c.translate((ww-W*sc)/2,(hh-H*sc)/2);c.scale(sc,sc);
+  const t=time,beat=t*2,active=ease((t-.6)/.8),finish=ease((t-10)/.65),rhythm=Math.sin(beat*Math.PI),swing=Math.sin(beat*Math.PI*.5);
+  rect(0,0,W,H,'#dedcc3');rect(0,0,W,134,'#294c50');rect(0,134,W,34,'#bc6350');rect(0,168,W,12,'#f3d99e');
+  for(let y=183;y<840;y+=79){line(0,y,W,y,'#bac3ac',2);for(let x=(y%2)*89-30;x<W;x+=159)line(x,y,x,y+79,'#c1c8b2',2)}
+  // Midnight beyond the entrance contrasts with the warm interior.
+  rect(702,196,516,622,'#193e45');rect(719,211,480,584,'#0a2735');
+  for(let i=0;i<11;i++){const x=718+i*45,h=75+hash(i+8)*197;rect(x,796-h,40,h,i%2?'#23464a':'#183e44');for(let j=0;j<7;j++)if(hash(i*17+j)>.48)rect(x+9+(j%2)*14,610+Math.floor(j/2)*38,7,13,'#819780')}
+  ellipse(1102,302,45,45,'#dccf97');rect(952,211,13,584,'#426d69');rect(719,608,480,11,'#426d69');
+  rect(763,698,151,59,'#d26b50');type('OPEN',839,738,34,'#f4e5bf','Georgia','center');line(763,698,838,668,'#577c70',2);line(914,698,838,668,'#577c70');
+  // Lettering belongs to the set rather than floating as a caption.
+  type('SPIN CLUB',960,90,69,'#f0ddb5','Georgia','center');type('W A S H   •   D R Y   •   A G A I N',1545,90,17,'#d4cab0','sans-serif','center');
+  type('24',245,84,42,'#e1b571','Georgia','center');type('HOURS',245,111,11,'#e1d5b7','sans-serif','center');
+  rect(0,816,W,264,'#597970');
+  // Perspective checker floor is constructed from one shared vanishing point.
+  const ys=[816,846,886,940,1012,1110];
+  for(let row=0;row<ys.length-1;row++){const ya=ys[row],yb=ys[row+1],da=(ya-640)/176,db=(yb-640)/176;
+    for(let j=-9;j<9;j++){const xa=960+j*129*da,xb=960+(j+1)*129*da,xc=960+(j+1)*129*db,xd=960+j*129*db;
+      path(`M${xa} ${ya} L${xb} ${ya} L${xc} ${yb} L${xd} ${yb}Z`,(j+row)%2?'#d9d2b3':'#769487');
+    }
+  }
+  rect(0,806,W,13,'#22474a');
+  machine(206,421,'#b0c7ac',t,0);machine(552,421,'#e6be82',t,1);machine(1395,421,'#d79079',t,2);machine(1740,421,'#b5c7a4',t,3);
+  // Counter tops and an untidy little stack of towels.
+  rect(19,202,703,17,'#f8e8c8');rect(1208,202,712,17,'#f8e8c8');
+  for(let i=0;i<4;i++){rect(1346-i*3,191-i*17,166+i*3,16,i%2?'#e2bb80':'#dce1c2');line(1348,198-i*17,1508,198-i*17,'#a4b697',1)}
+  // The vinyl character dances on one continuous floor; feet are staged first.
+  const sway=(1-finish)*active*90*swing,bodyX=960+sway,bodyY=664-active*32*Math.abs(rhythm)-finish*23,tilt=(1-finish)*active*.11*swing;
+  const leftLift=(1-finish)*active*Math.max(0,rhythm)*52,rightLift=(1-finish)*active*Math.max(0,-rhythm)*52;
+  // World-space anchors keep a grounded shoe still; only the lifted foot travels.
+  const leftX=861-leftLift*.55,rightX=1065+rightLift*.55,leftY=918-leftLift,rightY=918-rightLift;
+  ellipse(964+sway*.3,937,190,25,'#294f4b36');
+  // Anticipation starts in the hips, then travels through the bent noodle legs.
+  stroke(`M${bodyX-69} ${bodyY+90} Q${bodyX-133} ${823-leftLift*.4} ${leftX} ${leftY-30}`,'#173b43',26);
+  stroke(`M${bodyX+72} ${bodyY+91} Q${bodyX+152} ${824-rightLift*.4} ${rightX} ${rightY-30}`,'#173b43',26);
+  for(const [fx,fy,a,side]of[[leftX,leftY,-.12,-1],[rightX,rightY,.10,1]])group(fx,fy,1,a,()=>{
+    rect(-13,-53,26,37,t>8?'#f8ecd0':'#d99b6d');if(t>8){rect(-13,-49,26,7,'#d9694c');rect(-13,-35,26,7,'#d9694c')}
+    path(side<0?'M-15 -20 Q-59 -13 -55 7 Q-32 24 19 10 L17 -20Z':'M-16 -20 Q31 -28 52 -6 Q67 15 35 19 L-20 11Z','#f5e7c9','#1a3c43',3);line(-39,12,40,12,'#284b4c',3);
+  });
+  const handLX=bodyX-229-active*31*rhythm,handLY=bodyY+mix(25,-89,active)+43*swing*(1-finish),handRX=bodyX+232+active*29*rhythm,handRY=bodyY+mix(38,-84,active)-58*swing*(1-finish);
+  stroke(`M${bodyX-131} ${bodyY+11} Q${bodyX-200} ${bodyY+103} ${handLX} ${handLY}`,'#173b43',23);
+  stroke(`M${bodyX+131} ${bodyY+14} Q${bodyX+202} ${bodyY+67} ${handRX} ${handRY}`,'#173b43',23);
+  glove(handLX,handLY,.98,-.6+rhythm*.18);glove(handRX,handRY,.98,.6-rhythm*.18);
+  group(bodyX,bodyY,1,tilt,()=>{
+    ellipse(6,8,163,163,'#173a4133');ellipse(0,0,159,159,'#133941');
+    for(let r=76;r<151;r+=6){c.beginPath();c.arc(0,0,r,0,TAU);c.strokeStyle=r%12?'#294c50':'#365d5c';c.lineWidth=1;c.stroke()}
+    path('M-136 -41 A142 142 0 0 1 -24 -140 L-39 -91 A99 99 0 0 0 -89 -36Z','#7a9c8024');
+    path('M31 140 A144 144 0 0 0 135 47 L93 33 A98 98 0 0 1 35 91Z','#a7b49b1a');
+    ellipse(0,0,72,72,'#e2a756');ellipse(0,0,63,63,'#efc67a');
+    type('SIDE A',0,-46,9,'#9c6243','sans-serif','center');type('SPIN CLUB',0,51,8,'#9c6243','sans-serif','center');
+    const blink=t<.65||Math.abs(t-6.6)<.08,shock=t>5.7&&t<6.4;
+    if(blink){stroke('M-39 -10 Q-27 -1 -15 -10','#163b43',5);stroke('M15 -10 Q27 -1 39 -10','#163b43',5)}
+    else{ellipse(-26,-15,10,shock?20:15,'#173b43');ellipse(26,-15,10,shock?20:15,'#173b43');ellipse(-28,-20,2,4,'#fff4d4');ellipse(24,-20,2,4,'#fff4d4')}
+    if(shock)ellipse(0,17,11,16,'#173b43');else{path('M-23 14 Q0 27 26 11 Q16 44 -5 35 Q-19 31 -23 14Z','#173b43');path('M-17 18 Q0 26 20 16 L15 25 Q-2 31 -17 18Z','#fff0c8');path('M-7 33 Q5 25 13 32 Q3 39 -7 33Z','#d87858')}
+    ellipse(-48,7,10,5,'#d98b5d8c');ellipse(49,6,10,5,'#d98b5d8c');
+  });
+  // A sock is thrown, overshoots, lands on the face, then becomes a matched pair.
+  if(t>2&&t<3.6){const q=ease((t-2)/1.6);sock(mix(1390,handRX,q),mix(480,handRY,q)-Math.sin(q*Math.PI)*195,.8,mix(-1.7,.5,q))}
+  if(t>=3.6&&t<6.35){const q=clamp((t-3.6)/2.2),sx=mix(handRX,bodyX,q),sy=mix(handRY,bodyY-32,q)-Math.sin(q*Math.PI)*326;sock(sx,sy,.86,mix(.5,7.2,q))}
+  if(t>=6.35&&t<8.1){const q=ease((t-6.35)/1.75);sock(mix(bodyX,leftX,q),mix(bodyY-32,leftY-48,q),mix(.86,.49,q),mix(.92,-.12,q))}
+  if(t>7&&t<8.35){const q=ease((t-7)/1.35);sock(mix(546,rightX,q),mix(460,rightY-45,q)-Math.sin(q*Math.PI)*150,mix(.8,.49,q),mix(-3,.1,q))}
+  if(finish>.2){
+    const a=ease((t-10.5)/.55);c.globalAlpha=a;type('The laundromat',962,395,51,'#f0ddb5','Georgia','center');type('after midnight.',964,454,51,'#f0ddb5','Georgia','center');c.globalAlpha=1;
+  }
+  // Very fine stock texture unifies enamel, wall, paper label and floor.
+  c.globalAlpha=.22;for(let i=0;i<2400;i++)rect(hash(i+715)*W,hash(i+92)*H,1,1,i%2?'#ffefd3':'#1b3d42');c.globalAlpha=1;
+}
+window.StudioFilm={render,duration:12,variants:['dance']};
+if(window.SlopcameraOverlay){const p=SlopcameraOverlay.parameters||{};SlopcameraOverlay.onFrame(({timeMs})=>render(timeMs/1000+(p.timeOffsetSeconds||0),p.variant||'dance'));}
+else{const q=new URLSearchParams(location.search),fixed=q.has('time')?Number(q.get('time')):null,variant=q.get('variant')||'dance';if(fixed!==null)render(fixed,variant);else{const start=performance.now();requestAnimationFrame(function tick(now){render((now-start)/1000%12,variant);requestAnimationFrame(tick)})}}
+})();
+</script></html>
