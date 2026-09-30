@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises"
 import { homeMarkdown, llmsTxt, sitemapMarkdown } from "../src/agent-pages"
 import { archiveInstall, publishedArchiveUrl, sourceInstall } from "../src/published-release"
 import { diagramSession } from "../src/site-code-examples"
-import { homepageExamples, renderExampleHero, renderExampleGallery } from "../src/example-gallery"
+import { homepageExamples, renderExampleHero, renderExampleGallery, renderExampleRevision } from "../src/example-gallery"
 import { exampleUrl, exampleGuideUrl } from "../src/example-registry"
 import { renderSlopcameraIcons } from "./generate-icons"
 
@@ -18,7 +18,8 @@ describe("media studio public copy (pure, process-free)", () => {
     ])
     const steps = [sourceInstall.checkoutCommand, "git rev-parse HEAD", "bun install --frozen-lockfile --ignore-scripts", "bun run build:sdk", "bun run build:desktop:cli", "export SLOPCAMERA_SOURCE_ROOT", 'slopcamera() { bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" "$@"; }', "slopcamera doctor --json"]
     for (const source of [readme, guide]) {
-      const positions = steps.map(step => source.indexOf(step))
+      const installation = source.slice(source.indexOf(sourceInstall.checkoutCommand))
+      const positions = steps.map(step => installation.indexOf(step))
       expect(positions.every(position => position >= 0)).toBe(true)
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
@@ -71,29 +72,64 @@ describe("media studio public copy (pure, process-free)", () => {
     }
   })
 
-  test("first value includes the released starter and names its real five derived outputs", async () => {
-    const [readme, html, cli, artifacts] = await Promise.all([
-      read("README.md"), read("apps/web/src/index.html"), read("src/cli.ts"), read("src/artifacts.ts"),
+  test("first value leads to an animation and retained revision with a portable diagram fallback", async () => {
+    const [readme, html, guide, webGuide, originalJson, revisedJson] = await Promise.all([
+      read("README.md"), read("apps/web/src/index.html"),
+      read("docs/tutorials/first-animation.md"), read("apps/web/src/docs/tutorials/first-animation.md"),
+      read("examples/showcase/studio-relaunch/requests/last-tram-original.json"),
+      read("examples/showcase/studio-relaunch/requests/last-tram-moonrise.json"),
     ])
-    expect(cli).toContain('name: "example-flow"')
-    expect(artifacts).toContain('`${spec.name}.tldr`')
-    const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
     expect(html).toContain("{{EXAMPLE_HERO}}")
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
-    expect(html).toContain('href="/docs/tutorials/first-diagram"')
-    for (const source of [readme, diagramSession, homeMarkdown]) {
+    for (const source of [readme, html, homeMarkdown]) {
+      expect(source).toContain("/docs/tutorials/first-animation")
+      expect(source).toContain("/docs/tutorials/first-diagram")
+      expect(source).toContain("macOS")
+    }
+    const original = JSON.parse(originalJson)
+    const revised = JSON.parse(revisedJson)
+    expect(revised.document).toEqual(original.document)
+    expect(revised.canvas).toEqual(original.canvas)
+    expect(revised.timing).toEqual(original.timing)
+    expect(original.parameters.variant).toBe("original")
+    expect(revised.parameters.variant).toBe("moonrise")
+    expect(await read(original.document.path)).not.toBeEmpty()
+    const commands = [
+      "slopcamera doctor --json",
+      "slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-original.json --dry-run --json",
+      "slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-original.json --json",
+      "slopcamera html render --input examples/showcase/studio-relaunch/requests/last-tram-moonrise.json --json",
+    ]
+    for (const source of [guide, webGuide]) {
       const positions = commands.map(command => source.indexOf(command))
       expect(positions.every(position => position >= 0)).toBe(true)
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
-      expect(source).not.toContain("--input job.json")
-    }
-    for (const suffix of ["tldr", "light.svg", "dark.svg", "light.png", "dark.png"]) {
-      for (const source of [readme, homeMarkdown]) expect(source).toContain(`example-flow.${suffix}`)
+      expect(source).toContain("macOS")
+      expect(source).toContain("FFmpeg")
+      expect(source).toContain(`${original.timing.durationUs / 1_000_000 * original.timing.fps} frames`)
+      for (const field of ["output.path", "source.path", "receipt.path", "projectId"]) expect(source).toContain(field)
     }
     expect(readme).toContain(publishedArchiveUrl)
     expect(homeMarkdown).toContain(publishedArchiveUrl)
     expect(homeMarkdown).toContain(sourceInstall.guideUrl)
     expect(readme).toContain(sourceInstall.checkoutCommand)
+  })
+
+  test("the diagram fallback retains the released commands and five real derived outputs", async () => {
+    const [guide, webGuide, cli, artifacts] = await Promise.all([
+      read("docs/tutorials/first-diagram.md"), read("apps/web/src/docs/tutorials/first-diagram.md"),
+      read("src/cli.ts"), read("src/artifacts.ts"),
+    ])
+    expect(cli).toContain('name: "example-flow"')
+    expect(artifacts).toContain('`${spec.name}.tldr`')
+    const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]
+    for (const source of [guide, webGuide, diagramSession]) {
+      const positions = commands.map(command => source.indexOf(command))
+      expect(positions.every(position => position >= 0)).toBe(true)
+      expect(positions).toEqual([...positions].sort((a, b) => a - b))
+      expect(source).not.toContain("--input job.json")
+      for (const suffix of ["tldr", "light.svg", "dark.svg", "light.png", "dark.png"]) expect(source).toContain(`example-flow.${suffix}`)
+    }
   })
 
   test("release, native trust, and MCP scope remain adjacent to the expanded creation story", async () => {
@@ -112,7 +148,7 @@ describe("media studio public copy (pure, process-free)", () => {
       "slopcamera.diagram.check", "slopcamera.diagram.render", "slopcamera.image.vectorize", "slopcamera.image.generate", "slopcamera.image.icon", "slopcamera.image.gallery",
       "slopcamera.icon.compose", "slopcamera.icon.render", "slopcamera.soundtrack.compose", "slopcamera.soundtrack.grid",
     ])
-    expect(html).toContain("It does not expose every CLI command.")
+    expect(html).toMatch(/(?:It|MCP) does not expose every CLI command\./u)
     expect(readme).toContain("Seven editable")
     expect(llmsTxt).toContain("GPU support required by its selected profile")
     expect(llmsTxt).toContain("`scene camera-track` export")
@@ -143,7 +179,7 @@ describe("media studio public copy (pure, process-free)", () => {
     const allowed = new Set(["README.md", "tutorials/first-diagram.md", "tutorials/first-native-film.md", "spatial-scenes.md", "studio.md", "directing-video.md", "how-to/edit-video.md", "how-to/generate-media.md", "how-to/educational-video.md", "how-to/run-workflows.md", "reference/capabilities.md", "architecture.md", "how-to/use-current-source.md"])
     for (const [, link] of links) expect(allowed.has(link!.split("/docs/")[1]!)).toBe(true)
     expect(html).not.toMatch(/<iframe\b/u)
-    const media = renderExampleHero() + renderExampleGallery()
+    const media = renderExampleHero() + renderExampleGallery() + renderExampleRevision()
     expect(media).not.toMatch(/\sautoplay(?:\s|=|>)/u)
     for (const example of homepageExamples()) {
       expect(media).toContain(`data-example-id="${example.id}"`)

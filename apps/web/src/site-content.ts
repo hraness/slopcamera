@@ -10,8 +10,7 @@ import {
 } from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
-import { interfaceExamples } from "./site-code-examples"
-import { renderExampleGallery, renderExampleHero } from "./example-gallery"
+import { renderExampleGallery, renderExampleHero, renderExampleRevision } from "./example-gallery"
 import { isBlogDocument } from "./blog-registry"
 
 // Existing content producers run within the ordinary page's captured SSR
@@ -236,10 +235,7 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
     ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
     ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
-    ["{{SKILL_EXAMPLE}}", renderHighlightedCode(interfaceExamples.skill, "shell"), 1],
-    ["{{CLI_EXAMPLE}}", renderHighlightedCode(interfaceExamples.cli, "shell"), 1],
-    ["{{SDK_EXAMPLE}}", renderHighlightedCode(interfaceExamples.sdk, "typescript"), 1],
-    ["{{MCP_EXAMPLE}}", renderHighlightedCode(interfaceExamples.mcp, "shell"), 1],
+    ["{{EXAMPLE_REVISION}}", renderExampleRevision(), 1],
     ["{{ANALYTICS_SCRIPT}}", assets.analyticsPath === null ? "" : `<script src="${assets.analyticsPath}" type="module"></script>`, 1],
     ["{{PLATFORM_BADGES}}", renderPlatformBadges(), 1],
     ["{{PLATFORM_INSTALL}}", renderPlatformInstall(), 1],

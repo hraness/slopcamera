@@ -1,115 +1,219 @@
-/* Techniques grouped by job. Each group pairs its technique list with one
-   rendered example; groups alternate sides on wide screens. */
-.slopcamera-technique-groups {
-  display: grid;
-  gap: 0;
-  margin-block-start: 2.5rem;
+/* A studio screening: large finished work, paired films, and a real revision.
+ * These selectors are homepage-only; documentation keeps its manual players. */
+.slopcamera-screening,
+.slopcamera-revision,
+.slopcamera-start,
+.slopcamera-practical {
+  padding-block: clamp(3.5rem, 7vw, 6.5rem) 0;
 }
 
-.slopcamera-technique-group {
+.slopcamera-section-heading {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 1.5rem 3rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1rem 4rem;
   align-items: start;
-  padding-block: 2.5rem;
-  border-block-start: 1px solid var(--hraness-material-seam);
+  margin-block-end: 2.5rem;
 }
 
-.slopcamera-technique-group:nth-child(even) > .slopcamera-technique-group__body {
-  order: 2;
+.slopcamera-section-heading h2 {
+  max-inline-size: 19ch;
 }
 
-.slopcamera-technique-group:nth-child(even) {
-  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
-}
-
-.slopcamera-technique-group__body {
-  min-inline-size: 0;
-}
-
-.slopcamera-technique-group__body > h3 {
-  margin: 0;
-  font-size: 1.375rem;
-  line-height: 1.25;
-}
-
-.slopcamera-technique-group__body > p {
-  max-inline-size: 52ch;
-  margin: 0.5rem 0 0;
+.slopcamera-section-heading > p {
+  max-inline-size: 46ch;
   color: var(--muted);
 }
 
-.slopcamera-technique-list {
+.slopcamera-screening-grid {
   display: grid;
-  gap: 1.125rem;
-  margin: 1.5rem 0 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2.5rem, 5vw, 4.5rem) 2rem;
 }
 
-.slopcamera-technique-list > li {
-  display: grid;
-  gap: 0.25rem;
+.slopcamera-screening-item {
   min-inline-size: 0;
-  margin: 0;
 }
 
-.slopcamera-technique-list strong {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
+.slopcamera-screening-item[data-screening-size="wide"] {
+  grid-column: 1 / -1;
 }
 
-.slopcamera-technique-list span {
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.45;
-}
-
-.slopcamera-technique-list code {
-  display: block;
-  inline-size: fit-content;
-  max-inline-size: 100%;
-  margin-block-start: 0.25rem;
-  padding: 0.3rem 0.55rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
-  background: var(--hraness-material-warm-plane, var(--panel));
-  border: 1px solid var(--hraness-material-seam);
-  border-radius: 0.375rem;
-}
-
-.slopcamera-technique-group__guide {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 2.75rem;
-  margin-block-start: 0.75rem;
-  color: var(--primary, var(--gold));
-  font-weight: 600;
-}
-
-.slopcamera-technique-group__guide::after {
-  content: " \2192";
-  white-space: pre;
-}
-
-/* One shared 16:9 frame for every rendered example. Posters and videos
-   letterbox inside it, so different source ratios do not size the groups. */
-.slopcamera-technique-group .slopcamera-example__media {
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__media {
   inline-size: 100%;
   block-size: auto;
+  max-block-size: none;
   aspect-ratio: 16 / 9;
   object-fit: contain;
-  border-radius: 0.5rem;
+  border: 0;
+  border-radius: 0;
 }
 
-/* Still posters (diagrams and drawings) keep their own ratio, so they show
-   no pillarbox bars. A dark render replaces the light one in the dark theme. */
-.slopcamera-technique-group img.slopcamera-example__media {
-  aspect-ratio: auto;
-  background: var(--paper);
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__caption {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: .35rem;
+  padding-block-start: 1rem;
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__title {
+  order: -1;
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__caption > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__techniques {
+  font-size: .8125rem;
+  font-weight: 400;
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__links {
+  gap: 0 1.25rem;
+  font-size: .875rem;
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__downloads {
+  max-inline-size: 68ch;
+  font-size: .8125rem;
+  color: var(--muted);
+}
+
+:is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__downloads summary {
+  min-block-size: 2.75rem;
+  padding-block: .6rem;
+}
+
+@media (min-width: 52rem) {
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__caption {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    column-gap: 3rem;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__techniques {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__caption > p:not(.slopcamera-example__links, .slopcamera-example__techniques, .slopcamera-example__status, .slopcamera-example__details) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__details {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__links {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-content: end;
+  }
+
+  :is(.slopcamera-product-hero, .slopcamera-screening-item[data-screening-size="wide"]) .slopcamera-example__downloads {
+    grid-column: 1 / -1;
+  }
+}
+
+.slopcamera-direction {
+  max-inline-size: 24ch;
+  margin-block: 2.5rem;
+  color: var(--ink);
+  font-size: clamp(1.75rem, 3.5vw, 3rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.slopcamera-revision-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.5rem 1.5rem;
+}
+
+.slopcamera-revision-pair > div {
+  min-inline-size: 0;
+}
+
+.slopcamera-revision-pair h3 {
+  margin-block-end: .75rem;
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.slopcamera-revision-note,
+.slopcamera-start-more {
+  margin-block-start: 1.5rem;
+  color: var(--muted);
+  font-size: .9375rem;
+}
+
+.slopcamera-start-paths {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem 2rem;
+}
+
+#main .slopcamera-start-paths > a {
+  display: grid;
+  align-content: start;
+  gap: .75rem;
+  min-inline-size: 0;
+  padding-block: 1.25rem;
+  border-block-start: 1px solid var(--line-strong);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.slopcamera-start-paths h3 {
+  max-inline-size: 18ch;
+  font-size: 1.375rem;
+  font-weight: 500;
+}
+
+.slopcamera-start-paths p {
+  color: var(--muted);
+}
+
+.slopcamera-start-paths span {
+  align-self: end;
+  padding-block-start: .5rem;
+  color: var(--primary, var(--gold));
+  font-size: .9375rem;
+  text-decoration: underline dotted;
+  text-underline-offset: .2em;
+}
+
+.slopcamera-start-paths a:hover span {
+  text-decoration-style: solid;
+}
+
+.slopcamera-practical {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 1.5rem 4rem;
+  padding-block-end: 3rem;
+}
+
+.slopcamera-practical-copy {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 66ch;
+  color: var(--muted);
 }
 
 .slopcamera-example__media--dark {
@@ -134,107 +238,36 @@ html[data-theme="dark"] .slopcamera-example__media--dark {
   }
 }
 
-.slopcamera-technique-group .slopcamera-example__caption {
-  padding-block-start: 0.75rem;
-}
-
-.slopcamera-technique-group .slopcamera-example__title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.slopcamera-technique-group .slopcamera-example__caption > p:not(.slopcamera-example__links, .slopcamera-example__status) {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.slopcamera-technique-group .slopcamera-example__links {
-  gap: 0 1rem;
-  font-size: 0.875rem;
-}
-
-@media (max-width: 56rem) {
-  .slopcamera-technique-group,
-  .slopcamera-technique-group:nth-child(even) {
+@media (max-width: 52rem) {
+  .slopcamera-section-heading,
+  .slopcamera-practical {
     grid-template-columns: minmax(0, 1fr);
-    padding-block: 2rem;
   }
 
-  .slopcamera-technique-group:nth-child(even) > .slopcamera-technique-group__body {
-    order: 0;
+  .slopcamera-section-heading {
+    margin-block-end: 2rem;
   }
-}
 
-/* Numbered aisles: one tested guide per technique. */
-.slopcamera-aisles {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .5rem;
-  margin: 2rem 0 1rem;
-  padding: 0;
-  list-style: none;
-}
-
-@media (min-width: 62rem) {
-  .slopcamera-aisles {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .slopcamera-section-heading h2 {
+    max-inline-size: 22ch;
   }
-}
 
-.slopcamera-aisles > li {
-  min-inline-size: 0;
-  margin: 0;
-}
-
-.slopcamera-aisles a {
-  display: grid;
-  align-content: start;
-  gap: .3rem;
-  block-size: 100%;
-  min-block-size: 2.75rem;
-  padding: .8rem .9rem;
-  border: 1px solid var(--hraness-material-seam);
-  border-radius: .5rem;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color .15s ease, transform .15s ease;
-}
-
-.slopcamera-aisles a:hover {
-  border-color: var(--hraness-marketing-accent);
-}
-
-.slopcamera-aisles a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .slopcamera-aisles a:hover {
-    transform: translateY(-1px);
-  }
-}
-
-.slopcamera-aisle__number {
-  color: var(--hraness-marketing-accent);
-  font: .7rem/1.4 var(--font-mono);
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.slopcamera-aisle__name {
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.slopcamera-techniques .quiet-note {
-  margin: 0;
-}
-
-@media (max-width: 48rem) {
-  .slopcamera-work-gallery {
+  .slopcamera-start-paths {
     grid-template-columns: minmax(0, 1fr);
-    gap: 2.5rem;
+    gap: .5rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .slopcamera-screening-grid,
+  .slopcamera-revision-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (forced-colors: active) {
+  :is(.slopcamera-product-hero, .slopcamera-screening, .slopcamera-revision) .slopcamera-example__media {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
   }
 }
