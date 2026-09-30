@@ -83,8 +83,10 @@ integrity exactly.
 `admit_npm` checks out the verified tag read-only, downloads the immutable
 GitHub asset and the registry archive, and compares them with
 `npm-package-identity.ts` (complete content inventory, entry types, modes,
-sizes and hashes; npm may re-encode transport bytes). It installs the exact
-registry version in an isolated consumer, runs
+sizes and hashes; npm may re-encode transport bytes). Using the verified registry
+archive's integrity, it waits for npm's install metadata, `latest` tag, and
+provenance subject to agree. It refreshes the registry view and checks it against
+the retained archives, then installs the exact version in an isolated consumer, runs
 `npm audit signatures --json --include-attestations --omit=dev`, and verifies
 registry signatures plus the npm publish and SLSA attestations with
 `npm-publish-authority.ts`, which binds the provenance to this repository, the
