@@ -39,6 +39,7 @@ import {
   sanitizeError,
   sanitizeEvent,
   shouldInitializeAnalytics,
+  doNotTrackEnabled,
 } from "./src/analytics-contract"
 import {
   homeMarkdown,
@@ -566,6 +567,26 @@ test("analytics preserves an optional timestamp without manufacturing an undefin
   }
 })
 
+test("analytics removes search-referrer keywords at every property depth", () => {
+  const query = "wire-private-search-canary"
+  const keywords = Object.fromEntries([
+    "ph_keyword", "$initial_ph_keyword", "$session_entry_ph_keyword", "$prev_pageview_ph_keyword", "$INITIAL_PH_KEYWORD",
+  ].map(key => [key, query]))
+  const sanitized = sanitizeEvent({
+    event: "$pageview", uuid: "0198c6a7-7c00-7000-8000-000000000000",
+    properties: {
+      token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
+      $raw_user_agent: "native test user agent", $current_url: "https://slopcamera.com/",
+      $referrer: `https://www.google.com/search?q=${query}`, $search_engine: "google",
+      ...keywords, $diagnostic: { ...keywords, safe: 42 },
+    },
+  }, "phc_testtoken")
+  expect(sanitized?.properties).toMatchObject({
+    $referrer: "https://www.google.com", $search_engine: "google", traffic_channel: "organic_search", traffic_source: "google", $diagnostic: { safe: 42 },
+  })
+  expect(JSON.stringify(sanitized)).not.toContain(query)
+})
+
 test("analytics removes nested personal fields and private historical attribution", () => {
   const base = { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
     $current_url: "https://slopcamera.com/docs?utm_source=public", $raw_user_agent: "test browser" }
@@ -787,9 +808,9 @@ describe("static Slopcamera site", () => {
   }, compilationTimeoutMs)
 
   test("release installation advertises the exact canonical archive beside the source path", async () => {
-    expect(publishedRelease).toEqual({ version: "3.9.2", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.9.2" })
+    expect(publishedRelease).toEqual({ version: "3.10.1", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.10.1" })
     expect(Object.isFrozen(publishedRelease)).toBe(true)
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.1/hraness-slopcamera-3.10.1.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
     for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
@@ -1775,6 +1796,28 @@ describe("static Slopcamera site", () => {
     expect(build).toContain('environment.VERCEL_ENV !== "production"')
     expect(build).not.toContain("docsTemplate")
     expect(build).not.toContain('outputDirectory, "docs"')
+  })
+
+  test("honors current and legacy Do Not Track preferences before the cookieless bootstrap", async () => {
+    for (const enabled of ["1", "yes", "true", " YES "]) {
+      expect(doNotTrackEnabled({ doNotTrack: enabled }, {})).toBe(true)
+      expect(doNotTrackEnabled({ msDoNotTrack: enabled }, {})).toBe(true)
+      expect(doNotTrackEnabled({}, { doNotTrack: enabled })).toBe(true)
+    }
+    for (const disabled of [undefined, null, "0", "no", "false", "unspecified"]) {
+      expect(doNotTrackEnabled({ doNotTrack: disabled, msDoNotTrack: disabled }, { doNotTrack: disabled })).toBe(false)
+    }
+    let enabled = false
+    const beforeSend = createBeforeSend("phc_testtoken", () => new URL("https://slopcamera.com/"), () => false, () => enabled)
+    const event = { event: "$pageview", properties: { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true, $raw_user_agent: "test", $current_url: "https://slopcamera.com/" }, uuid: "0198c6a7-7c00-7000-8000-000000000000" }
+    expect(beforeSend(event)).not.toBeNull()
+    enabled = true
+    expect(beforeSend(event)).toBeNull()
+    const bootstrap = await readSource("analytics.ts")
+    expect(bootstrap).toContain("createBeforeSend(token, () => window.location, isNotFound, dntEnabled)")
+    expect(bootstrap).toContain("if (!dntEnabled()")
+    expect(bootstrap.indexOf("if (!dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
+    expect(bootstrap).toContain("if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {")
   })
 
   test("classifies every public route and scrubs values without rebuilding the property set", () => {

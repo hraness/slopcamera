@@ -83,6 +83,16 @@ export function isAllowedAnalyticsHost(hostname: string): boolean {
   return allowedAnalyticsHosts.includes(normalized)
 }
 
+/** Cookieless PostHog ignores respect_dnt, so the bootstrap must honor it first. */
+export function doNotTrackEnabled(
+  navigatorValue: Readonly<{ doNotTrack?: string | null | undefined; msDoNotTrack?: string | null | undefined }>,
+  windowValue: Readonly<{ doNotTrack?: string | null | undefined }>,
+): boolean {
+  return [navigatorValue.doNotTrack, navigatorValue.msDoNotTrack, windowValue.doNotTrack].some(
+    value => typeof value === "string" && ["1", "yes", "true"].includes(value.trim().toLowerCase()),
+  )
+}
+
 /** Initialize only over HTTPS on an allowed production host with a public project token. */
 export function shouldInitializeAnalytics(location: Readonly<Pick<Location, "protocol" | "hostname">>, token: string): boolean {
   return location.protocol === "https:" && isAllowedAnalyticsHost(location.hostname) && /^phc_[A-Za-z0-9_-]+$/u.test(token)
@@ -279,6 +289,8 @@ function hasSensitiveLocation(value: unknown, depth = 0, seen = new WeakSet<obje
 }
 
 function sanitizeValue(key: string, value: unknown, sensitive: boolean, depth: number, seen: WeakSet<object>): unknown {
+  // The SDK derives search-engine query text from the original referrer URL.
+  if (/^\$?(?:(?:initial|session_entry|prev_pageview)_)?ph_keyword$/iu.test(key)) return undefined
   const name = baseName(key)
   if (depth === 0 && ["token", "distinct_id", "$raw_user_agent", "$cookieless_mode"].includes(key)) return value
   if (personalProperties.has(name.toLowerCase())) return undefined
@@ -499,10 +511,11 @@ export function createBeforeSend(
   token: string,
   currentLocation: () => Readonly<Pick<Location, "protocol" | "hostname" | "pathname">>,
   notFound: () => boolean,
+  isDoNotTrackEnabled: () => boolean = () => false,
 ): (event: CaptureResult | null) => CaptureResult | null {
   return event => {
     const location = currentLocation()
-    return shouldInitializeAnalytics(location, token)
+    return !isDoNotTrackEnabled() && shouldInitializeAnalytics(location, token)
       ? sanitizeEvent(event, token, { notFound, currentPathname: location.pathname })
       : null
   }

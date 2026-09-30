@@ -7,7 +7,7 @@ import { AnalyticsExtensions, ErrorTrackingExtensions } from "posthog-js/dist/ex
 import "posthog-js/dist/web-vitals"
 
 import {
-  ExceptionBudget, ctaClickedEvent, ctaProperties, errorFingerprint, installCommandCopiedEvent,
+  ExceptionBudget, doNotTrackEnabled, ctaClickedEvent, ctaProperties, errorFingerprint, installCommandCopiedEvent,
   installMethodFor, outboundLinkOpenedEvent, outboundProperties, pageNotFoundEvent, publicHostname,
   requestedPath, sanitizeError, shouldInitializeAnalytics, createBeforeSend, type CtaPlacement,
 } from "./analytics-contract"
@@ -19,15 +19,20 @@ declare const __SLOPCAMERA_POSTHOG_KEY__: string
 const token = __SLOPCAMERA_POSTHOG_KEY__
 const isNotFound = (): boolean => document.documentElement.dataset.pageKind === "not_found"
 
+const dntEnabled = (): boolean => doNotTrackEnabled(
+  navigator as Navigator & { msDoNotTrack?: string | null },
+  window as Window & { doNotTrack?: string | null },
+)
+
 initHranessCookieConsent()
 const consent = getBrowserConsent()
 let initialized = false
 
 function initializeAnalytics() {
-  if (initialized || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)
+  if (initialized || dntEnabled() || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)
     || !installConsentTransport(posthog, consent)) return
   initialized = true
-  const sanitize = createBeforeSend(token, () => window.location, isNotFound)
+  const sanitize = createBeforeSend(token, () => window.location, isNotFound, dntEnabled)
   posthog.init(token, {
     ...posthogBrowserOptions(__SLOPCAMERA_POSTHOG_HOST__),
     __extensionClasses: {
