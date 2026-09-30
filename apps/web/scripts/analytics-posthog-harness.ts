@@ -60,7 +60,10 @@ posthog.init(token, {
   api_host: "https://us.i.posthog.com",
 })
 posthog.capture("$pageview", { analytics_schema_version: 1, site_id: "slopcamera" }, { send_instantly: true, transport: "fetch" })
-await new Promise(resolve => setTimeout(resolve, 50))
+for (const deadline = Date.now() + 5_000; sent.length === 0 && Date.now() < deadline;) {
+  await new Promise(resolve => setTimeout(resolve, 10))
+}
+await new Promise(resolve => setTimeout(resolve, 20))
 const decoder = new TextDecoder()
 const bodies = sent.map(body => {
   const bytes = typeof body === "string" ? new TextEncoder().encode(body) : new Uint8Array(body as ArrayBuffer)

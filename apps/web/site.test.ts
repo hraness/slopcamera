@@ -540,8 +540,8 @@ test("the pinned posthog-js cookieless $pageview survives before_send with the h
   // every cookieless event without it (`cookieless_missing_host`), so production
   // sent pageviews that were never stored. The harness runs the real pinned
   // bundle in a child process so its browser globals stay out of this process.
-  const harness = Bun.spawnSync(["bun", fileURLToPath(new URL("./scripts/analytics-posthog-harness.ts", import.meta.url))], {
-    cwd: dirname(fileURLToPath(import.meta.url)), stderr: "pipe", stdout: "pipe",
+  const harness = Bun.spawnSync([process.execPath, fileURLToPath(new URL("./scripts/analytics-posthog-harness.ts", import.meta.url))], {
+    cwd: dirname(fileURLToPath(import.meta.url)), stderr: "pipe", stdout: "pipe", timeout: 30_000,
   })
   expect(harness.stderr.toString()).toBe("")
   expect(harness.exitCode).toBe(0)
