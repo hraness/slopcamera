@@ -75,9 +75,18 @@ describe("launch media", () => {
 
 describe("social kit", () => {
   test("is cut from the beats and matches the committed file", () => {
-    expect(launchSocialKit.x.length).toBe(resolvedLaunchBeats.length)
+    const socialBeats = resolvedLaunchBeats.filter(beat => beat.part !== "limits")
+    expect(launchSocialKit.x.length).toBe(socialBeats.length)
     expect(launchSocialKit.linkedin.startsWith(resolvedLaunchBeats[0]?.post ?? "missing")).toBe(true)
     const committed = readFileSync(join(appDirectory, "../../kb/launch/social-kit.md"), "utf8")
     expect(committed).toBe(renderSocialKitMarkdown())
+  })
+
+  test("carries claims only: no limits beat and no who-beat caveat", () => {
+    const all = [...launchSocialKit.x, ...launchSocialKit.bluesky, ...launchSocialKit.threads, launchSocialKit.linkedin, ...launchSocialKit.showHnFacts].join("\n")
+    const limits = resolvedLaunchBeats.find(beat => beat.part === "limits")
+    expect(limits).toBeDefined()
+    expect(all).not.toContain(limits?.post ?? "missing")
+    expect(all).not.toContain("hosted image app")
   })
 })

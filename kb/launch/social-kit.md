@@ -6,61 +6,55 @@ Posts go out from the @hraness account. The status is "Latest release: v3.9.0", 
 
 ## X thread
 
-Post 1 of 10, 165 characters
+Post 1 of 9, 165 characters
 
 ```text
 SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from source files. The next version starts from the recipe, not from scratch.
 ```
 
-Post 2 of 10, 214 characters
+Post 2 of 9, 214 characters
 
 ```text
 Ask for a diagram and your agent writes a short JSON file. One render turns it into light and dark SVG and PNG plus an editable tldraw board: 5 files from one source. The first diagram needs no AI model and no key.
 ```
 
-Post 3 of 10, 211 characters
+Post 3 of 9, 211 characters
 
 ```text
 Want a different label? Edit one line of the source. Here "Delivery" became "Social delivery" and every file rendered again. Nothing was redrawn by hand, and the source still says exactly what the picture shows.
 ```
 
-Post 4 of 10, 202 characters
+Post 4 of 9, 202 characters
 
 ```text
 A 3D scene is a JSON file where every part and camera has a name. Ask your agent to move the camera or change a part, and it patches that one named item and renders the shot again. No timeline to scrub.
 ```
 
-Post 5 of 10, 209 characters
+Post 5 of 9, 209 characters
 
 ```text
 Already have footage? Trims, cuts and speed changes are recorded as edits, not baked into your files. The same timing edit gives wide, tall, square and feed-sized versions, each with its own framing and title.
 ```
 
-Post 6 of 10, 241 characters
+Post 6 of 9, 241 characters
 
 ```text
 Your agent writes a source file, checks it, renders it and shows you the result. The project keeps those sources and settings, and important steps write down what went in and what came out. Come back next month and the recipe is still there.
 ```
 
-Post 7 of 10, 240 characters
+Post 7 of 9, 135 characters
 
 ```text
-SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.
+SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.
 ```
 
-Post 8 of 10, 221 characters
+Post 8 of 9, 221 characters
 
 ```text
 The aim: every image, clip or diagram SlopCamera renders carries the record of how it was made, so an agent can read it and make the next version without guessing. New kinds of visual work join when they fit that pattern.
 ```
 
-Post 9 of 10, 223 characters
-
-```text
-Models can change a face, a motion or the words in a picture. The record says what went in, not whether the result is good. Renders can differ between machines, and native Python runs with your own access, not in a sandbox.
-```
-
-Post 10 of 10, 242 characters
+Post 9 of 9, 242 characters
 
 ```text
 SlopCamera is free and open source under the MIT license, with 47 rendered examples you can copy from. Latest release: v3.9.0. Install it with Bun, then ask your agent for its first diagram.
@@ -70,61 +64,55 @@ https://slopcamera.com/blog/introducing-slopcamera
 
 ## Bluesky thread
 
-Post 1 of 10, 165 characters
+Post 1 of 9, 165 characters
 
 ```text
 SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from source files. The next version starts from the recipe, not from scratch.
 ```
 
-Post 2 of 10, 214 characters
+Post 2 of 9, 214 characters
 
 ```text
 Ask for a diagram and your agent writes a short JSON file. One render turns it into light and dark SVG and PNG plus an editable tldraw board: 5 files from one source. The first diagram needs no AI model and no key.
 ```
 
-Post 3 of 10, 211 characters
+Post 3 of 9, 211 characters
 
 ```text
 Want a different label? Edit one line of the source. Here "Delivery" became "Social delivery" and every file rendered again. Nothing was redrawn by hand, and the source still says exactly what the picture shows.
 ```
 
-Post 4 of 10, 202 characters
+Post 4 of 9, 202 characters
 
 ```text
 A 3D scene is a JSON file where every part and camera has a name. Ask your agent to move the camera or change a part, and it patches that one named item and renders the shot again. No timeline to scrub.
 ```
 
-Post 5 of 10, 209 characters
+Post 5 of 9, 209 characters
 
 ```text
 Already have footage? Trims, cuts and speed changes are recorded as edits, not baked into your files. The same timing edit gives wide, tall, square and feed-sized versions, each with its own framing and title.
 ```
 
-Post 6 of 10, 241 characters
+Post 6 of 9, 241 characters
 
 ```text
 Your agent writes a source file, checks it, renders it and shows you the result. The project keeps those sources and settings, and important steps write down what went in and what came out. Come back next month and the recipe is still there.
 ```
 
-Post 7 of 10, 240 characters
+Post 7 of 9, 135 characters
 
 ```text
-SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.
+SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.
 ```
 
-Post 8 of 10, 221 characters
+Post 8 of 9, 221 characters
 
 ```text
 The aim: every image, clip or diagram SlopCamera renders carries the record of how it was made, so an agent can read it and make the next version without guessing. New kinds of visual work join when they fit that pattern.
 ```
 
-Post 9 of 10, 223 characters
-
-```text
-Models can change a face, a motion or the words in a picture. The record says what went in, not whether the result is good. Renders can differ between machines, and native Python runs with your own access, not in a sandbox.
-```
-
-Post 10 of 10, 242 characters
+Post 9 of 9, 242 characters
 
 ```text
 SlopCamera is free and open source under the MIT license, with 47 rendered examples you can copy from. Latest release: v3.9.0. Install it with Bun, then ask your agent for its first diagram.
@@ -134,61 +122,55 @@ https://slopcamera.com/blog/introducing-slopcamera
 
 ## Threads thread
 
-Post 1 of 10, 165 characters
+Post 1 of 9, 165 characters
 
 ```text
 SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from source files. The next version starts from the recipe, not from scratch.
 ```
 
-Post 2 of 10, 214 characters
+Post 2 of 9, 214 characters
 
 ```text
 Ask for a diagram and your agent writes a short JSON file. One render turns it into light and dark SVG and PNG plus an editable tldraw board: 5 files from one source. The first diagram needs no AI model and no key.
 ```
 
-Post 3 of 10, 211 characters
+Post 3 of 9, 211 characters
 
 ```text
 Want a different label? Edit one line of the source. Here "Delivery" became "Social delivery" and every file rendered again. Nothing was redrawn by hand, and the source still says exactly what the picture shows.
 ```
 
-Post 4 of 10, 202 characters
+Post 4 of 9, 202 characters
 
 ```text
 A 3D scene is a JSON file where every part and camera has a name. Ask your agent to move the camera or change a part, and it patches that one named item and renders the shot again. No timeline to scrub.
 ```
 
-Post 5 of 10, 209 characters
+Post 5 of 9, 209 characters
 
 ```text
 Already have footage? Trims, cuts and speed changes are recorded as edits, not baked into your files. The same timing edit gives wide, tall, square and feed-sized versions, each with its own framing and title.
 ```
 
-Post 6 of 10, 241 characters
+Post 6 of 9, 241 characters
 
 ```text
 Your agent writes a source file, checks it, renders it and shows you the result. The project keeps those sources and settings, and important steps write down what went in and what came out. Come back next month and the recipe is still there.
 ```
 
-Post 7 of 10, 240 characters
+Post 7 of 9, 135 characters
 
 ```text
-SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.
+SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.
 ```
 
-Post 8 of 10, 221 characters
+Post 8 of 9, 221 characters
 
 ```text
 The aim: every image, clip or diagram SlopCamera renders carries the record of how it was made, so an agent can read it and make the next version without guessing. New kinds of visual work join when they fit that pattern.
 ```
 
-Post 9 of 10, 223 characters
-
-```text
-Models can change a face, a motion or the words in a picture. The record says what went in, not whether the result is good. Renders can differ between machines, and native Python runs with your own access, not in a sandbox.
-```
-
-Post 10 of 10, 242 characters
+Post 9 of 9, 242 characters
 
 ```text
 SlopCamera is free and open source under the MIT license, with 47 rendered examples you can copy from. Latest release: v3.9.0. Install it with Bun, then ask your agent for its first diagram.
@@ -211,11 +193,9 @@ Already have footage? Trims, cuts and speed changes are recorded as edits, not b
 
 Your agent writes a source file, checks it, renders it and shows you the result. The project keeps those sources and settings, and important steps write down what went in and what came out. Come back next month and the recipe is still there.
 
-SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.
+SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.
 
 The aim: every image, clip or diagram SlopCamera renders carries the record of how it was made, so an agent can read it and make the next version without guessing. New kinds of visual work join when they fit that pattern.
-
-Models can change a face, a motion or the words in a picture. The record says what went in, not whether the result is good. Renders can differ between machines, and native Python runs with your own access, not in a sandbox.
 
 SlopCamera is free and open source under the MIT license, with 47 rendered examples you can copy from. Latest release: v3.9.0. Install it with Bun, then ask your agent for its first diagram.
 
@@ -229,7 +209,7 @@ Tagline: Visual work your agent can keep revising.
 Description:
 
 ```text
-Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
+SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.
 ```
 
 Topics: Developer Tools, Design Tools, Artificial Intelligence
@@ -243,8 +223,7 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 - A 3D scene is a JSON file where every part and camera has a name. Ask your agent to move the camera or change a part, and it patches that one named item and renders the shot again. No timeline to scrub.
 - Already have footage? Trims, cuts and speed changes are recorded as edits, not baked into your files. The same timing edit gives wide, tall, square and feed-sized versions, each with its own framing and title.
 - Your agent writes a source file, checks it, renders it and shows you the result. The project keeps those sources and settings, and important steps write down what went in and what came out. Come back next month and the recipe is still there.
-- SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.
-- Models can change a face, a motion or the words in a picture. The record says what went in, not whether the result is good. Renders can differ between machines, and native Python runs with your own access, not in a sandbox.
+- SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.
 - SlopCamera is free and open source under the MIT license, with 47 rendered examples you can copy from. Latest release: v3.9.0. Install it with Bun, then ask your agent for its first diagram.
 - Latest release: v3.9.0. https://slopcamera.com/blog/introducing-slopcamera
 
@@ -258,8 +237,7 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 6. Every render keeps its recipe (example `production-pipeline`)
 7. Made for people who already work with a coding agent (example `native-product`)
 8. Every picture should carry how it was made (example `camera-orbit`)
-9. A person still has to look at the result (example `color-mono`)
-10. Free and open source, out now (example `native-character`)
+9. Free and open source, out now (example `native-character`)
 
 ## Facts and their records
 

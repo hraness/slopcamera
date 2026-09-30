@@ -112,6 +112,7 @@ export const launchBeats: readonly SlopcameraLaunchBeat[] = Object.freeze([
     part: "who",
     headline: "Made for people who already work with a coding agent",
     post: "SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers. If you want to type a prompt into a web page and download a picture, a hosted image app will be quicker.",
+    socialPost: "SlopCamera suits site owners who need matching editorial art, people who draw architecture diagrams and anyone making short explainers.",
     visual: { kind: "clip", scene: "native-product" },
     alt: "A brass optical instrument with a ribbed dark housing, a glass lens and five front switches.",
     caption: "A product shot rendered in Blender on your own machine. The Blender scene stays editable.",
