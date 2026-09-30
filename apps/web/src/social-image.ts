@@ -153,8 +153,13 @@ const docsCardEyebrows: Readonly<Record<DocsPage["section"], string>> = Object.f
   explanation: "Explanation",
 })
 
-/** Comparison pages read as comparisons wherever they sit in the docs. */
+/**
+ * Comparison pages read as comparisons wherever they sit in the docs or blog.
+ * A blog post's card takes this eyebrow over its registry label; the post
+ * page keeps its own.
+ */
 const comparisonDocuments: ReadonlySet<string> = new Set([
+  "blog/one-shot-render-vs-installed-techniques.html",
   "docs/explanation/slopcamera-vs-remotion.html",
   "docs/explanation/slopcamera-vs-hyperframes.html",
   "docs/explanation/remotion-alternatives-for-coding-agents.html",
@@ -185,7 +190,11 @@ export const socialImagesByDocument: Readonly<Record<string, SocialImage>> = Obj
     pageCard(blogIndexDocument, { headline: blogIndex.heading, description: blogIndex.description, eyebrow: "Blog" })),
   ...Object.fromEntries(blogPosts.map(post => [blogDocumentForPost(post),
     socialImage(`og/blog/${post.slug}.png`,
-      pageCard(blogDocumentForPost(post), { headline: post.title, description: post.description, eyebrow: post.eyebrow }))])),
+      pageCard(blogDocumentForPost(post), {
+        headline: post.title,
+        description: post.description,
+        eyebrow: comparisonDocuments.has(blogDocumentForPost(post)) ? "Comparison" : post.eyebrow,
+      }))])),
   ...Object.fromEntries(docPages.map(page => [docsDocumentForPage(page),
     socialImage(`og/${docsDocumentForPage(page).replace(/\.html$/u, "")}.png`, docsSocialPage(page))])),
 })
