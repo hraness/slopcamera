@@ -10,7 +10,6 @@ import { parseExamplesRequest, parseExamplesPhase, parseExamplesCaseFailure, exa
 import { siteShellCases, assertFooterKeyboardCoverage, workflowExamplesHomeSelectors, settle, type ShellElement } from "./site-shell-browser-contract"
 import { siteCopyCases, copySteps, copyNegativeControls, type CopyEvidence } from "./site-copy-browser-contract"
 import { refinementCopyElementKeys, refinementInstallCommand } from "./site-refinement-profile"
-import { archiveInstall } from "../src/published-release"
 import { assertExamplesBaselineManifest, assertExamplesHeroTextures, buildExamplesDriver, examplesWorkerMinify } from "./verify-site-examples"
 import { examplesBaselineRevision, examplesBaselineTree, examplesHeroTextures, examplesBaselineInstallCommand, examplesIslands } from "./site-examples-profile"
 import { decodeWorkerJson, encodeWorkerJson, decodeProfiledWorkerJson, encodeProfiledWorkerJson,
@@ -506,7 +505,8 @@ describe("exact per-side released install copy and natural note flow", () => {
   expect(current.elements.filter((item, index) => item.text !== baseline.elements[index]!.text)).toHaveLength(6)
   // The old version-only replacement really does fail on these three owners.
   for (const index of [0, 1, 2]) expect(baseline.elements[index]!.text.replaceAll("3.3.3", /v(\d+\.\d+\.\d+)\//u.exec(refinementInstallCommand)![1]!)).not.toBe(current.elements[index]!.text)
-  expect(refinementInstallCommand).toBe(`${archiveInstall.command}\n${archiveInstall.skillCommand}`)
+  // Frozen historical profiles do not track the current public release datum.
+  expect(refinementInstallCommand).toBe("bun add --global https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz\nslopcamera skill install --target agents")
   expect(examplesBaselineInstallCommand).toContain("/v3.3.3/hraness-slopcamera-3.3.3.tgz")
   expect(() => compare(evidence(true, true), evidence(false))).not.toThrow()
   for (const row of [false, true]) {
