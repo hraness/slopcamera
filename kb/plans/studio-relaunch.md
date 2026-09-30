@@ -37,7 +37,7 @@ Produce Rain, bottled; Last tram to the moon; and An ocean folded from paper. Ea
 
 Acceptance: inspect beginning, reveal, ending, motion continuity, materials, typography, audio, and full playback. Record actual listening accurately. Independent creative review may reject and replace weak work. Sources and render instructions reproduce the admitted outputs.
 
-### 3. Site and learning journey — in progress
+### 3. Site and learning journey — complete
 
 Once the first visual proof exists, site and documentation may run in parallel with remaining films. Replace the homepage's technique inventory with a large film, curated range, an actual original/revision comparison, concise workflow, and install. Add case studies, a worthwhile no-provider first project, task-led documentation entry points, and directing-language examples. Synchronize README, skill guidance, metadata, and machine-readable pages.
 
@@ -70,3 +70,5 @@ If a production spike fails, repair the technique or simplify the shot while pre
 
 - 2026-09-30: Independent source review verified the six non-authored showcase records (47 source entries) and the two illustrated-film sources against retained renders. Corrected the storm command and editing-guide anchors. Rendered and reviewed the paper ocean quiet composition. Launch-copy focused checks passed 8 tests / 65 assertions; refreshed its independent editorial admission. Final browser review also requires a visibly painted keyboard focus indicator and manual appearance paint matching.
 - 2026-09-30: Final integration repairs restored the two legacy editorial examples in the motion-graphics guide, aligned social-image descriptions, shortened the tram share card without changing its fit limit, and restored comparison and rename information in the homepage Markdown. The README now uses the admitted storm poster. All 133 declared publication assets pass source, hash and guide-placement checks. Reconciled stale analytics instructions with the unchanged explicit-event allowlist already on main. Current-head aggregate and live browser validation remain required.
+
+- 2026-09-30: Local site acceptance passed 750 tests / 63,073 assertions, build and preview-layout checks, followed by 81/81 current-design browser cases on pinned Chromium 151.0.7922.34 (Playwright 1.62.0, revision 1234), with browser/server cleanup confirmed. Initial aggregate stopped at an unrelated ambient browser override; the final leaf passed with both overrides removed. Independent metadata review approved the final site. PR #315 opened. Complete CI exposed stale candidate-version constants and the exact legacy-word inventory; repairing these plus the example-verifier CodeQL finding before a fresh current-head run.
