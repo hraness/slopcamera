@@ -267,15 +267,17 @@ test("built site HTML budget counts the complete UTF-8 document and rejects its 
 
 test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its routes are real pages", async () => {
   const { createHash } = await import("node:crypto")
-  const [vendored, installed, provenance] = await Promise.all([
+  const [vendored, installed, foundationStatus, provenance] = await Promise.all([
     readFile(join(appDirectory, "vendor/status-page/status-page.css")),
     readFile(fileURLToPath(import.meta.resolve("@hraness/design-kit-status/status-page.css"))),
+    readFile(fileURLToPath(import.meta.resolve("@hraness/design-kit/status-page.css"))),
     readFile(join(appDirectory, "vendor/status-page/provenance.json"), "utf8").then(text => JSON.parse(text) as {
       source: { commit: string; release: string }
       files: Record<string, { sha256: string }>
     }),
   ])
   expect(vendored.equals(installed)).toBe(true)
+  expect(vendored.equals(foundationStatus)).toBe(true)
   expect(provenance.source).toMatchObject({ commit: "4a5e0b697ed9e4169c4759feccbe4a1305b4d236", release: "v0.21.0" })
   expect(createHash("sha256").update(vendored).digest("hex")).toBe(provenance.files["status-page.css"]!.sha256)
   expect(vendored.toString("utf8")).not.toContain("url(")
@@ -1496,7 +1498,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
-      "@hraness/ui": "github:hraness/ui#v0.5.16",
+      "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0",
       "@resvg/resvg-js": "2.6.2",
       "posthog-js": "1.413.2",
@@ -1526,7 +1528,7 @@ describe("static Slopcamera site", () => {
     expect(localLockfile).toContain(
       '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
     )
-    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.16"')
+    expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
     expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.12.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')

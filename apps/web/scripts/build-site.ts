@@ -26,7 +26,7 @@ import type { BlogPageContent, SiteAssets } from "../src/site-content"
 const packages = [
   { name: "@hraness/design-kit", version: "0.31.0" },
   { name: "@hraness/site-footer", version: "0.20.1" },
-  { name: "@hraness/ui", version: "0.5.16" },
+  { name: "@hraness/ui", version: "0.5.25" },
 ] as const
 const fontFiles = [
   ...["Light", "Book", "Medium", "Semibold", "Bold", "Black"].flatMap(weight =>
