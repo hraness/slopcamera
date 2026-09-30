@@ -9,7 +9,7 @@ export const productMessaging = messaging
 export const productName = productMessaging.names.name
 
 /** Pure planning value; verified against the shared social-image declaration. */
-export const homeSocialImageAlt = `${productName}: ${productMessaging.tagline}`
+export const homeSocialImageAlt = `${productName}: ${productMessaging.hero.heading}`
 
 /** Keep canonical text inside the JSON-LD script's text boundary. */
 export function serializeMarketingJson(value: string): string {

@@ -1,4 +1,4 @@
-import { productMessaging, productName } from "./messaging"
+import { homeSocialImageAlt, productMessaging, productName } from "./messaging"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
@@ -53,7 +53,16 @@ function socialImage(file: string, page?: SocialImagePage): SocialImage {
   }
 }
 
-export const homeSocialImage = socialImage("og.png")
+/**
+ * The home card is the site's header over its hero: the hero H1 as the
+ * headline. The hero shows no eyebrow, so the card has none. The tagline is
+ * the site description, so the card leaves it out rather than repeat it
+ * under the headline.
+ */
+export const homeSocialImage: SocialImage = {
+  ...socialImage("og.png", { headline: productMessaging.hero.heading, description: "", layout: "product" }),
+  alt: homeSocialImageAlt,
+}
 
 /**
  * Card copy for pages whose own title or description does not fit the card as
