@@ -566,6 +566,26 @@ test("analytics preserves an optional timestamp without manufacturing an undefin
   }
 })
 
+test("analytics removes search-referrer keywords at every property depth", () => {
+  const query = "wire-private-search-canary"
+  const keywords = Object.fromEntries([
+    "ph_keyword", "$initial_ph_keyword", "$session_entry_ph_keyword", "$prev_pageview_ph_keyword", "$INITIAL_PH_KEYWORD",
+  ].map(key => [key, query]))
+  const sanitized = sanitizeEvent({
+    event: "$pageview", uuid: "0198c6a7-7c00-7000-8000-000000000000",
+    properties: {
+      token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
+      $raw_user_agent: "native test user agent", $current_url: "https://slopcamera.com/",
+      $referrer: `https://www.google.com/search?q=${query}`, $search_engine: "google",
+      ...keywords, $diagnostic: { ...keywords, safe: 42 },
+    },
+  }, "phc_testtoken")
+  expect(sanitized?.properties).toMatchObject({
+    $referrer: "https://www.google.com", $search_engine: "google", traffic_channel: "organic_search", traffic_source: "google", $diagnostic: { safe: 42 },
+  })
+  expect(JSON.stringify(sanitized)).not.toContain(query)
+})
+
 test("analytics removes nested personal fields and private historical attribution", () => {
   const base = { token: "phc_testtoken", distinct_id: posthogCookielessDistinctId, $cookieless_mode: true,
     $current_url: "https://slopcamera.com/docs?utm_source=public", $raw_user_agent: "test browser" }
