@@ -184,6 +184,8 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
       valueProposition: "Support ongoing development of local media tools for agents.",
     } })}`, 1],
     ["{{THEME_ASSET}}", assets.themePath, 1],
+    // Every ordinary page loads analytics; the 404 page reports itself as not_found.
+    ["{{ANALYTICS_SCRIPT}}", assets.analyticsPath === null ? "" : `<script src="${assets.analyticsPath}" type="module"></script>`, 1],
   ]
   if (document === "404.html") {
     if (assets.statusPage === undefined || assets.statusPagePath === undefined
@@ -239,7 +241,6 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
     ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
     ["{{EXAMPLE_REVISION}}", renderExampleRevision(), 1],
-    ["{{ANALYTICS_SCRIPT}}", assets.analyticsPath === null ? "" : `<script src="${assets.analyticsPath}" type="module"></script>`, 1],
     ["{{PLATFORM_BADGES}}", renderPlatformBadges(), 1],
     ["{{PLATFORM_INSTALL}}", renderPlatformInstall(), 1],
     ["{{RELEASE_INSTALL_COMMANDS}}", renderCopyCommand({
