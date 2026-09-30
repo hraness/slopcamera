@@ -119,3 +119,44 @@ Native studio jobs and custom Bun workflow modules run as the current user witho
 The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera disables Chrome's `MacAppCodeSignClone` feature for that copy, a change introduced in v3.8.1, to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
 
 The renderer emits one `--disable-features` argument that combines its disabled features with the pinned Playwright defaults. New renders bind the merged argument and selective default-argument replacement into execution-integrity version 3. Retained version-1 and version-2 receipts keep their historical contracts for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.
+
+## CLI updates
+
+Automatic updates require SlopCamera 3.10.0 or newer. After that release is
+published, upgrade an older installation once through its package manager.
+
+Supported Bun and npm global installations on macOS and Linux check for a
+newer release at most once a day before a command starts. Automatic updates are
+enabled by default. Help, version output, CI, and commands already running do
+not trigger an update. If another command is using the installation, the
+update waits for a later invocation.
+
+```sh
+slopcamera update status --json
+slopcamera update check
+slopcamera update
+slopcamera update disable
+slopcamera update enable
+```
+
+Set `HRANESS_NO_UPDATE=1` to suppress automatic updates for an invocation.
+Exact Bun version installs stay pinned until `update enable`. Ordinary Bun
+ranges, tags, and GitHub release archive installs track newer releases. npm
+does not reliably retain the original global version constraint; use
+`update disable` to keep an npm global at its installed version.
+
+Source checkouts, local project dependencies, temporary `bunx` or `npx`
+installs, linked copies, and copied skill scripts keep their existing update
+process. On Windows, update through the package manager. Library imports do
+not check for updates or change installed code.
+
+The updater stores its preference, last check time, and installation/process
+records locally. It keeps verified archives beside the global installation
+because the package manager may reference them. Keep an archive while the
+installation references it. Update checks send no application data to the release service.
+
+Updates use immutable GitHub releases. An authenticated
+[GitHub CLI](https://cli.github.com/) (`gh`) checks the archive against its release and verifies its attestation against
+the release tag, source commit, and GitHub-hosted release workflow. Local image
+vectorization, diagrams, local icons, and soundtrack composition stay offline. Private compiled binaries use their native
+installer and do not update automatically.

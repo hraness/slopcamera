@@ -2,6 +2,14 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.10.0 - 2026-09-30
+
+SlopCamera checks for CLI updates before work starts on supported global installations.
+
+- Add automatic daily updates and `update check|status|enable|disable` controls for Bun and npm globals on macOS and Linux.
+- Verify immutable GitHub archives and their hosted-workflow attestation against the annotated release tag and source commit before installation.
+- Keep local vectorization offline, hold installed code while commands run, and leave SDK imports, source installs, and private compiled binaries on their existing update path.
+
 ## 3.9.2 - 2026-09-30
 
 Slopcamera's site and learning path now start with finished films and the source changes that direct them. The Agent Skill gains practical guidance for composition, timing, camera, sound, and revision.

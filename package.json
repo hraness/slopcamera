@@ -1,6 +1,6 @@
 {
   "name": "@hraness/slopcamera",
-  "version": "3.9.2",
+  "version": "3.10.0",
   "description": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
   "license": "MIT",
   "type": "module",
@@ -214,7 +214,7 @@
     "build": "bun run build:sdk && bun run build:desktop && bun run build:web",
     "build:sdk": "bun -e 'await (await import(\"node:fs/promises\")).rm(\"./dist\", { recursive: true, force: true })' && bun build ./src/index.ts ./src/cli.ts ./src/code/index.ts ./src/code/advanced.ts ./src/generate.ts ./src/host-resources.ts ./src/operations.ts ./src/workflow.ts ./src/vectorize/worker.ts --outdir ./dist --root ./src --target bun --format esm --splitting --packages external --minify-whitespace --emit-dce-annotations",
     "build:desktop": "bun run build:desktop:cli",
-    "build:desktop:cli": "bun -e 'await (await import(\"node:fs/promises\")).rm(\"./apps/desktop/dist/cli\", { recursive: true, force: true })' && bun build --target=bun --minify --sourcemap=none --packages external --external @hraness/slopcamera/cli apps/desktop/cli/main.ts --outdir apps/desktop/dist/cli",
+    "build:desktop:cli": "bun -e 'await (await import(\"node:fs/promises\")).rm(\"./apps/desktop/dist/cli\", { recursive: true, force: true })' && bun build --target=bun --minify --sourcemap=none --packages external --external @hraness/slopcamera/cli apps/desktop/cli/entry.ts --entry-naming=main.js --outdir apps/desktop/dist/cli",
     "build:web": "bun run --cwd apps/web build",
     "typecheck": "bun run typecheck:sdk && bun run typecheck:desktop && bun run typecheck:api",
     "typecheck:sdk": "tsc --noEmit -p tsconfig.json",
@@ -290,7 +290,8 @@
     "sharp": "0.35.4",
     "three": "0.183.2",
     "typescript": "^6.0.3",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@hraness/cli-update": "https://github.com/hraness/cli-update/releases/download/v0.1.0/hraness-cli-update-0.1.0.tgz"
   },
   "optionalDependencies": {
     "@img/sharp-darwin-arm64": "0.35.4",

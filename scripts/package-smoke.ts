@@ -1056,6 +1056,15 @@ if (Buffer.from(pngs[0]).equals(Buffer.from(pngs[1]))) throw new Error("Packed S
     join(consumer, "node_modules", ".bin", "slopcamera"),
     "--help",
   ], consumer);
+  const installedBin = join(consumer, "node_modules", ".bin", "slopcamera");
+  if (await runOutput([installedBin, "--version"], consumer, packageEnvironment) !== `${String(packageJson.version)}\n`) {
+    throw new Error("The packed SlopCamera entrypoint must run once with the package version.");
+  }
+  const updateStatus = record(JSON.parse(await runOutput([installedBin, "update", "status", "--json"], consumer, packageEnvironment)) as unknown, "packed updater status");
+  if (updateStatus.schema !== "hraness.cli-update.v1" || updateStatus.currentVersion !== packageJson.version
+    || updateStatus.package !== packageName || updateStatus.status !== "unsupported" || updateStatus.supported !== false) {
+    throw new Error("The packed project installation must keep its update boundary.");
+  }
   const offlineSmokeSource = offlineIconSoundtrackSmokeSource();
   await writeFile(join(consumer, "offline-icon-soundtrack.mjs"), offlineSmokeSource, { flag: "wx" });
   await run([process.execPath, "offline-icon-soundtrack.mjs"], consumer, packageEnvironment);
@@ -1678,10 +1687,11 @@ void [
     "node",
     packageEnvironment,
   );
-  await run([
+  const npmVersion = await runOutput([
     join(npmConsumer, "node_modules", ".bin", "slopcamera"),
     "--version",
   ], npmConsumer, packageEnvironment);
+  if (npmVersion !== `${String(packageJson.version)}\n`) throw new Error("The npm-installed SlopCamera entrypoint must run once.");
   await writeFile(join(npmConsumer, "offline-icon-soundtrack.mjs"), offlineIconSoundtrackSmokeSource(), { flag: "wx" });
   await run(["node", "offline-icon-soundtrack.mjs"], npmConsumer, packageEnvironment);
   console.log(
