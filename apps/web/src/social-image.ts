@@ -25,12 +25,12 @@ export const slopcameraSocialSite = defineSocialImageSite({
   domain: "slopcamera.com",
   // Multi-word names the headline and description never split across lines.
   keepTogether: ["Agent Skill", "Claude Code", "Hraness Credits", "Vercel AI Gateway"],
-  // The camera glyph behind /icon.png, the header mark and the manifest icons.
-  icon: { kind: "mark", src: `data:image/svg+xml;base64,${markSvg.toString("base64")}` },
-  // Light-mode Catppuccin, the palette the site renders by default. The violet
-  // wash is the web-discovery v0.12.0 portfolio pick: the blue accent alone
-  // tinted the card the periwinkle that Soulscrape and hraness.com share.
-  theme: { accent: "#1e66f5", background: "#eff1f5", foreground: "#4c4f69", muted: "#6c6f85", wash: "#5822C3" },
+  // The header's foil mark: the same camera glyph the sticky header masks
+  // (src/site-foil.css) and the name exactly as the header shows it.
+  brand: productName,
+  brandMark: `data:image/svg+xml;base64,${markSvg.toString("base64")}`,
+  // The `data-palette` every page's <html> carries.
+  palette: "catppuccin",
 })
 
 export const socialImageWidth = 1200
