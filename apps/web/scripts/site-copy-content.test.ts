@@ -24,7 +24,7 @@ describe("media studio public copy (pure, process-free)", () => {
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
     expect(readme).toContain("Historical Atet release evidence")
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.0/hraness-slopcamera-3.9.0.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.9.2/hraness-slopcamera-3.9.2.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")
     expect(html).toContain('<summary>Build from source</summary>')

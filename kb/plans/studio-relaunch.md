@@ -1,7 +1,7 @@
 ---
 type: plan
 area: product-presentation
-status: in-progress
+status: complete
 ---
 
 # Slopcamera studio relaunch
@@ -10,7 +10,7 @@ status: in-progress
 
 Rebuild the public introduction around finished multimedia work, useful creative direction, and reproducible revisions. The user approved the six-part proposal and requested parallel production, finely detailed independent review, and delivery through the repository workflow. Inspiration is Impeccable's visible results and useful directing vocabulary; Slopcamera keeps its own multimedia purpose and identity.
 
-Primary audience: people using coding agents who want to create and refine films, illustrations, visual explanations, and edits. Proposed promise: “A multimedia studio for your coding agent.” Public capability claims must match the released CLI and checked examples. Do not claim token or cost savings.
+Primary audience: people using coding agents who want to create and refine films, illustrations, visual explanations, and edits. Public promise: “A multimedia studio for your coding agent.” Public capability claims must match the released CLI and checked examples. Do not claim token or cost savings.
 
 ## Ownership and constraints
 
@@ -49,7 +49,7 @@ Add The laundromat after midnight, A square wave auditions for jazz, and One sho
 
 Acceptance: every featured piece adds a distinct creative or practical capability, receives creative review, and makes dependencies/costs clear where relevant. No placeholder or merely functional technique demo receives flagship treatment.
 
-### 5. Review and delivery — in progress
+### 5. Review and delivery — complete
 
 Run focused checks once per owner, independently review complete impact, then complete the repository source gate and applicable browser/native/installation checks. Correct findings in bounded batches and obtain reviewer verdicts. Publish a current-head PR, resolve required checks/reviews, merge conditionally, complete documented deployment, and verify production identity and relevant pages/media. Release a package only when the final package changes require it.
 
@@ -72,3 +72,7 @@ If a production spike fails, repair the technique or simplify the shot while pre
 - 2026-09-30: Final integration repairs restored the two legacy editorial examples in the motion-graphics guide, aligned social-image descriptions, shortened the tram share card without changing its fit limit, and restored comparison and rename information in the homepage Markdown. The README now uses the admitted storm poster. All 133 declared publication assets pass source, hash and guide-placement checks. Reconciled stale analytics instructions with the unchanged explicit-event allowlist already on main. Current-head aggregate and live browser validation remain required.
 
 - 2026-09-30: Local site acceptance passed 750 tests / 63,073 assertions, build and preview-layout checks, followed by 81/81 current-design browser cases on pinned Chromium 151.0.7922.34 (Playwright 1.62.0, revision 1234), with browser/server cleanup confirmed. Initial aggregate stopped at an unrelated ambient browser override; the final leaf passed with both overrides removed. Independent metadata review approved the final site. PR #315 opened. Complete CI exposed stale candidate-version constants and the exact legacy-word inventory; repairing these plus the example-verifier CodeQL finding before a fresh current-head run.
+- 2026-09-30: Corrected both CLI version constants and their tests, refreshed the exact identity inventory, and replaced the example verifier's script-extraction expression with its existing HTML parser. Independent repair review approved the changes. All 13 source jobs passed in [complete candidate CI](https://github.com/hraness/slopcamera/actions/runs/36685258219) at `892c84b9dacfcbf4b2f7beecb988c5cd5b752a71`; CodeQL, all five VTracer targets and both Vercel previews passed. [PR #315](https://github.com/hraness/slopcamera/pull/315) merged as `424190a59953290d5f18f4ca9782816ade97d395`, with the same Git tree as the reviewed candidate. [Main CI](https://github.com/hraness/slopcamera/actions/runs/36685831262) passed every required source job.
+- 2026-09-30: Verified the Production alias `slopcamera.com` resolves to Ready deployment `dpl_AJhfo4ZExjoHFG7Y2rbxWijeTgeK`, project `prj_RvNXCVvEYKYhW71OA1442SAILmAS`, exact merged source `424190a59953290d5f18f4ca9782816ade97d395`. `bun run --cwd apps/web verify:current` against the fixed public origin passed all 81 browser cases, with owned-browser cleanup. Independent live-media review checked all nine variants, posters, captions, 36 source files and visible download links against admitted bytes. The hosted production verifier also passed. Detailed reports and screenshots remain in `artifacts/studio-relaunch/`.
+- 2026-09-30: The guarded `bun run ./scripts/push-release-tag.ts 3.9.2` published the protected tag from clean current main. The [Release workflow](https://github.com/hraness/slopcamera/actions/runs/36686295442) passed the complete source gate, clean-tree check, canonical package installation, five platform checks, provenance signing and immutable GitHub publication. [v3.9.2](https://github.com/hraness/slopcamera/releases/tag/v3.9.2) has exactly five assets and a source-bound manifest for `424190a59953290d5f18f4ca9782816ade97d395`. Fresh public downloads passed `gh release verify`, `gh release verify-asset`, source/workflow/tag-bound `gh attestation verify`, every provider digest and `SHA256SUMS`, and `bun run ./scripts/package-smoke.ts --archive <downloaded archive> --pack-json <downloaded npm-pack.json>` from that exact tagged source. Isolated Bun/npm consumers verified 562 packed files, 5,035,517 packed bytes, skill installation and offline rendering. The archive SHA-256 is `2e4b3ce75b29f5fefe24d7b84bb421ced35102dcba0fca7264141ad4e5c7cd6e`.
+- 2026-09-30: With canonical release acceptance complete, this follow-up advances the public release datum, README, current capability labels and skill install references to v3.9.2 and regenerates the social kit. Historical introduced-in version notes remain intact. npm publication succeeded; its first downstream admission ran while npm still returned a processing-delay 404. After exact matching metadata appeared, the failed-only retry passed on workflow attempt 2, including registry signatures, provenance and isolated installation. It did not republish or alter immutable GitHub delivery. The canonical release manifest retains its original attempt-1 identity.
