@@ -3,7 +3,7 @@ import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
 import { observeCompilation } from "./scripts/compilation-observer.testing"
-import { assertCompilerResultPath, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
+import { assertCompilerResultPath, compilerFixtureBudgets, compilerFixtureHarnessTimeoutMs, compileWebsiteInChild, decodeCompilerFrame, decodeCompilerResult, encodeCompilerFrame, encodeCompilerOptions } from "./scripts/compiler-fixture.testing"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { spawn } from "node:child_process"
@@ -87,7 +87,7 @@ let builtAssets: Awaited<ReturnType<typeof buildWebsite>>
 // Each build compiles the independent ordinary-site and preview graphs. These
 // are compilation-fixture budgets, not deadlines for production operations or
 // the ordinary content assertions below.
-const compilationTimeoutMs = 60_000
+const compilationTimeoutMs = compilerFixtureHarnessTimeoutMs
 const repeatedCompilationTimeoutMs = 2 * compilationTimeoutMs
 type CompilationFixture = Readonly<{
   build: typeof buildWebsite
@@ -422,6 +422,18 @@ test("published release validates exact fields and safe stable versions before r
     "https://github.com.evil.test/hraness/slopcamera/releases/tag/v3.2.0",
     "https://github.com/another/slopcamera/releases/tag/v3.2.0", 42, null,
   ]) expect(() => parsePublishedRelease({ version: "3.2.0", releaseUrl })).toThrow("exact Slopcamera tag")
+})
+
+test("compiler fixture reserves bounded collection after its unchanged work deadline", () => {
+  expect(compilerFixtureBudgets.workMs).toBe(60_000)
+  // A compile that consumes its whole work budget still fails; only ownership
+  // collection may occupy this remaining interval before the harness cuts off.
+  const collection = compilerFixtureBudgets.exitedGroupMs + compilerFixtureBudgets.termMs
+    + compilerFixtureBudgets.killMs + compilerFixtureBudgets.pipesMs
+  expect(collection).toBe(6500)
+  expect(compilerFixtureHarnessTimeoutMs - compilerFixtureBudgets.workMs).toBe(collection)
+  expect(compilationTimeoutMs).toBe(compilerFixtureHarnessTimeoutMs)
+  expect(repeatedCompilationTimeoutMs).toBe(2 * compilerFixtureHarnessTimeoutMs)
 })
 
 test("compiler fixture result file isolates ordinary and ANSI logs", async () => {

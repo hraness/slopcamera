@@ -15,6 +15,18 @@ const errorLimit = 128 * 1024
 const resultDirectoryPrefix = join(tmpdir(), "slopcamera-web-result-")
 const resultFileName = "result.frame"
 
+// The harness must let the child deadline fail and collect its owned group before
+// Bun terminates the test itself. These are the existing operation/cleanup bounds.
+export const compilerFixtureBudgets = Object.freeze({
+  workMs: 60_000,
+  exitedGroupMs: 500,
+  termMs: 2000,
+  killMs: 3000,
+  pipesMs: 1000,
+})
+export const compilerFixtureHarnessTimeoutMs = Object.values(compilerFixtureBudgets)
+  .reduce((total, milliseconds) => total + milliseconds, 0)
+
 /** A single exact length frame is the complete result file; human output never enters it. */
 export function encodeCompilerFrame(value: unknown): Buffer {
   const json = JSON.stringify(value)
@@ -129,7 +141,7 @@ async function compileWithResultFile(input: string, resultPath: string, signal: 
   child.stdout.on("data", (bytes: Buffer) => { if (stdout.length + bytes.length > outputLimit) stop("Compiler fixture stdout exceeded2MiB"); else stdout = Buffer.concat([stdout, bytes]) })
   child.stderr.on("data", (bytes: Buffer) => { if (stderr.length + bytes.length > errorLimit) stop("Compiler fixture stderr exceeded128KiB"); else stderr = Buffer.concat([stderr, bytes]) })
   for (const stream of [child.stdin, child.stdout, child.stderr]) stream.on("error", error => stop(String(error)))
-  const timer = setTimeout(() => stop("Compiler fixture exceeded60000ms"), 60_000)
+  const timer = setTimeout(() => stop("Compiler fixture exceeded60000ms"), compilerFixtureBudgets.workMs)
   const abort = () => stop("Compiler fixture admission has ended")
   signal.addEventListener("abort", abort, { once: true })
   const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const
@@ -139,13 +151,13 @@ async function compileWithResultFile(input: string, resultPath: string, signal: 
     if (signal.aborted) abort()
     else child.stdin.end(input)
     await Promise.race([close, stopped])
-    if (reason === undefined && alive() && !await gone(500)) stop("Compiler fixture left a live process group")
+    if (reason === undefined && alive() && !await gone(compilerFixtureBudgets.exitedGroupMs)) stop("Compiler fixture left a live process group")
   } finally {
     clearTimeout(timer)
     try {
       send("SIGTERM")
-      if (!await gone(2000)) { forced = true; send("SIGKILL"); if (!await gone(3000)) throw new Error("Compiler fixture group survived SIGKILL") }
-      await Promise.race([close, Bun.sleep(1000)])
+      if (!await gone(compilerFixtureBudgets.termMs)) { forced = true; send("SIGKILL"); if (!await gone(compilerFixtureBudgets.killMs)) throw new Error("Compiler fixture group survived SIGKILL") }
+      await Promise.race([close, Bun.sleep(compilerFixtureBudgets.pipesMs)])
       if (!closed) throw new Error("Compiler fixture pipes did not close")
     } finally {
       if (!closed) { child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy() }
