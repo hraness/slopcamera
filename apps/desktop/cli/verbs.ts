@@ -98,8 +98,12 @@ export const CLI_VERBS: readonly VerbRow[] = [
   row("studio assets import", "operate", "Import planned assets"),
 
   row("image vectorize", "operate", "Trace a raster image into an SVG"),
-  row("image generate", "operate", "Generate an image with Vercel AI Gateway"),
+  row("image generate", "operate", "Generate an image with Gateway or an explicit vendor key"),
   row("image gallery", "operate", "Generate a review gallery of image candidates"),
+  row("image landscape plan", "read", "Plan a tall pixel landscape and its request limits"),
+  row("image landscape run", "operate", "Generate, stitch and judge tall pixel landscapes"),
+  row("image landscape process", "operate", "Convert local landscape panels to a tinted pixel alpha mask"),
+  row("image landscape repair", "operate", "Repair up to two joins in a retained pixel landscape"),
   row("image icon", "operate", "Generate a line-art SVG icon"),
   row("image icon compose", "operate", "Solve a vector icon scene and report its digests"),
   row("image icon render", "operate", "Draw a vector icon scene or recipe to inert SVG"),

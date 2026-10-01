@@ -23,6 +23,7 @@ Install the [current SlopCamera release](../README.md#install-slopcamera) for th
 - [Make a music video from an HTML scene](how-to/music-video.md): render authored visuals with a local track and retain separate sources in an editable project.
 - [Convert raster images to SVG](how-to/vectorize-images.md): trace artwork locally, compare a duotone treatment, and inspect fidelity.
 - [Generate images, video, or narration](how-to/generate-media.md): discover Gateway capabilities, acknowledge selected uploads, and retain the result.
+- [Make a scrolling pixel landscape](how-to/pixel-landscapes.md): compare continuous backgrounds and turn them into palette-checked alpha pixels.
 - [Direct short generated clips](directing-video.md): budget, review takes, preserve endpoint continuity, and recover uncertain work.
 - [Render Blender, CadQuery, and Manim films from source](studio.md): use Blender, CadQuery, or Manim; retain caches; share assets and calibrated cameras.
 - [Build and revise a parametric design](how-to/parametric-design.md): generate architectural models from retained parameters, inspect dependencies and render alternatives.

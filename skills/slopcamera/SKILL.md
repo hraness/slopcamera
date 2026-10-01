@@ -43,6 +43,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Product mark, marketing illustration or topic icon | [Brand illustrations](references/brand-illustrations.md) |
 | Compose an editorial or social banner from generated layers, local type and diagrams | [Social collage banners](references/social-collage-banners.md) |
 | Review alternative textures, skyboxes, backdrops, design candidates or whole-scene variants | [Image galleries](references/image-galleries.md) |
+| Tall scrolling pixel landscapes, linked generated sections, palette-safe alpha art | [Pixel landscapes](references/pixel-landscapes.md) |
 | Budgeted short clips, reviewed takes and continuity | [Directing video](references/directing-video.md) |
 | Editable Three/Spark scene, saved world, named-part edits or shared camera | [Directed scenes](references/directed-scenes.md) |
 | Semantic direction, galleries, bounded effects, temporal audit or the cinematic-world recipe pack | [Directed scenes](references/directed-scenes.md#direct-cinematic-worlds) |

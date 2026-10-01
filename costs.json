@@ -125,6 +125,32 @@
         "maximumBytesPerArchive": 536870912
       },
       "notes": "Private verified archives beside the global installation. Package managers may reference them; retain each archive while referenced, never remove it as a disposable cache."
+    },
+    "local:pixel-landscape": {
+      "kind": "derived",
+      "retention": "persistent",
+      "owner": "src/pixel-landscape-run.ts",
+      "source": "Caller manifest and generated or retained source panels",
+      "budget": {
+        "maximumSourceBytes": 131072,
+        "maximumPanels": 8,
+        "maximumCandidates": 4,
+        "maximumOutputPixels": 64000000,
+        "maximumImageCalls": 24,
+        "maximumJudgeCalls": 12
+      },
+      "note": "Fresh local output directories with no paid retries; images, critiques and digests retained for user review."
+    },
+    "provider:direct-image": {
+      "kind": "served",
+      "retention": "ephemeral",
+      "owner": "src/image-provider.ts",
+      "budget": {
+        "maximumCallsPerDispatch": 1,
+        "maximumResponseBytes": 100663296,
+        "maximumReferenceBytes": 12582912
+      },
+      "note": "Explicit environment-key selection for Vertex express, Google Gemini or OpenAI; user provider billing, no automatic retries or credential persistence."
     }
   },
   "exempt": []

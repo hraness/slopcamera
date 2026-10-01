@@ -21,7 +21,13 @@ than sandboxed input.
 
 Generation and model-backed media analysis can send an explicit prompt and
 caller-selected media to Vercel AI Gateway. Local media upload requires the
-matching command acknowledgement. Local vectorization, face detection,
+matching command acknowledgement. Explicit direct image generation can instead
+send a prompt and selected references to Vertex express, Google's Gemini API,
+or OpenAI. Landscape continuity and judging send only that run's generated
+predecessor panels and review images after the upload acknowledgement. Seam
+repair can upload crops of the caller-selected source after its acknowledgement. Provider
+keys are read from the environment and never retained. Local stitching, pixel
+conversion and palette checks do no provider I/O. Local vectorization, face detection,
 ordinary media editing, and diagram rendering remain local. Slopcamera does
 not provide an account service and does not upload a project to a Slopcamera
 service.

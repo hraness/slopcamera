@@ -48,6 +48,10 @@ import {
   slopcameraIconSceneLimits,
 } from "./icon-scene.js"
 import { slopcameraSoundtrackFormats } from "./soundtrack.js"
+import { readBoundedFile } from "./bounded-file.js"
+import { generateSlopcameraProviderImageFile } from "./image-provider-file.js"
+import { parseSlopcameraPixelLandscapeManifest, planSlopcameraPixelLandscape, runSlopcameraPixelLandscape, processSlopcameraLandscapeFiles } from "./pixel-landscape-run.js"
+import { repairSlopcameraPixelLandscape } from "./pixel-landscape-repair.js"
 import { installSkill, type SkillScope, type SkillTarget } from "./skill-install.js"
 import { pathExists } from "./fs.js"
 import { checkDrawingFile, renderDrawingFile, starterDrawingSource } from "./drawing.js"
@@ -71,6 +75,10 @@ Usage:
   slopcamera diagram sheets render <file.drawing.json> [--out-dir <directory>] [--json]
   slopcamera image vectorize <image> --output <file.svg> [--json] [--duotone <#rgb,#rgb>]
   slopcamera image generate <prompt> --output <file.png|jpg|webp> [--model <provider/model>] [--json]
+    [--provider <gateway|vertex|google|openai>] [--resolution <1K|2K|4K>] [--aspect-ratio <w:h>]
+  slopcamera image landscape plan|run|process|repair <manifest.json> [--output-dir <fresh-directory>]
+    [--source <raster.png>] [--max-images <1|2>] [--max-judges <1>]
+    [--allow-cloud-upload] [--json]
   slopcamera image icon <subject> --output <file.svg> [--purpose <mark|illustration>]
     [--model <provider/model>] [--ink <#rgb|#rrggbb>] [--rounds <1-${slopcameraIconMaximumRounds}>]
     [--context <${slopcameraIconContexts.join("|")}>] [--candidates <1-${slopcameraIconMaximumRounds}>]
@@ -119,9 +127,16 @@ safe path-only SVG (plus an internal vector alpha mask when fidelity requires).
 It is fully local. No source path or bytes are sent to a network endpoint.
 
 Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
+Explicit --provider vertex, google, or openai selects that vendor's API instead.
+Direct image keys are read only from the environment; Gateway remains the default.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- …\` so
 VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
+
+Landscape plan reports the full request cap without network calls. Run compares
+linked portrait panels, refines one finalist, and retains a gallery, source,
+single-ink alpha PNG, neutral mask and local review page. Process uses local
+panels only. Continuity and judging require --allow-cloud-upload.
 
 Icon produces isometric line-art SVG: a style-locked Gateway raster is
 normalized to canonical ink-on-transparent pixels, traced by the local
@@ -398,11 +413,12 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
       subcommand === "vectorize" ||
       subcommand === "generate" ||
       subcommand === "icon" ||
+      subcommand === "landscape" ||
       subcommand === "gallery"
     ) {
       return [subcommand, ...rest]
     }
-    throw new Error("Use slopcamera image vectorize, generate, icon, or gallery")
+    throw new Error("Use slopcamera image vectorize, generate, icon, gallery, or landscape")
   }
   if (
     surface === "init" ||
@@ -724,10 +740,26 @@ export async function main(
     return
   }
 
+  if (command === "landscape") {
+    const [action, ...args] = rest
+    if (action !== "plan" && action !== "run" && action !== "process" && action !== "repair") throw new Error("Use image landscape plan, run, process, or repair.")
+    const parsed = parseArguments(args, new Set(action === "repair" ? ["output-dir", "source", "max-images", "max-judges"] : ["output-dir"]))
+    rejectUnknownCliFlags(parsed, ["json", "allow-cloud-upload"], "landscape")
+    if (parsed.positionals.length !== 1) throw new Error("Landscape accepts one manifest file.")
+    const sourcePath = resolve(requiredPositional(parsed, 0, "manifest"))
+    const manifest = parseSlopcameraPixelLandscapeManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readBoundedFile(sourcePath, 128 * 1024, "Landscape manifest"))) as unknown)
+    const result = action === "plan" ? planSlopcameraPixelLandscape(manifest)
+      : action === "process" ? await processSlopcameraLandscapeFiles(manifest, sourcePath, requiredOption(parsed, "output-dir"))
+      : action === "repair" ? await repairSlopcameraPixelLandscape({ manifest, source: await readBoundedFile(resolve(requiredOption(parsed, "source")), 64 * 1024 * 1024, "Repair raster"), outputDirectory: requiredOption(parsed, "output-dir"), allowCloudUpload: parsed.flags.has("allow-cloud-upload") as true, maxImageCalls: parsed.options["max-images"] === undefined ? 2 : Number(parsed.options["max-images"]), maxJudgeCalls: parsed.options["max-judges"] === undefined ? 1 : Number(parsed.options["max-judges"]) }, { onProgress: message => console.error(message) })
+      : await runSlopcameraPixelLandscape(manifest, requiredOption(parsed, "output-dir"), { allowCloudUpload: parsed.flags.has("allow-cloud-upload") }, { onProgress: message => console.error(message) })
+    ;(dependencies.log ?? console.log)(JSON.stringify(result, null, 2))
+    return
+  }
+
   if (command === "generate") {
     const parsed = parseArguments(
       rest,
-      new Set(["model", "output"]),
+      new Set(["model", "output", "provider", "resolution", "aspect-ratio"]),
     )
     const unknownFlags = [...parsed.flags].filter((flag) => flag !== "json")
     if (unknownFlags.length > 0) {
@@ -736,6 +768,16 @@ export async function main(
     if (parsed.positionals.length !== 1) {
       throw new Error("slopcamera image generate accepts exactly one prompt")
     }
+    if (parsed.options.provider !== undefined && parsed.options.provider !== "gateway") {
+      const provider = parsed.options.provider
+      if (provider !== "vertex" && provider !== "google" && provider !== "openai") throw new Error("--provider must be gateway, vertex, google, or openai.")
+      const resolution = parsed.options.resolution
+      if (resolution !== undefined && resolution !== "1K" && resolution !== "2K" && resolution !== "4K") throw new Error("--resolution must be 1K, 2K, or 4K.")
+      const result = await withSlopcameraOperationHostAdmission("slopcamera.image.generate", () => generateSlopcameraProviderImageFile({ provider, model: requiredOption(parsed, "model"), prompt: requiredPositional(parsed, 0, "prompt"), outputPath: requiredOption(parsed, "output"), ...(resolution === undefined ? {} : { resolution }), ...(parsed.options["aspect-ratio"] === undefined ? {} : { aspectRatio: parsed.options["aspect-ratio"] }) }), hostAdmissionOptions(dependencies))
+      ;(dependencies.log ?? console.log)(parsed.flags.has("json") ? JSON.stringify(result, null, 2) : `Generated ${result.mediaType}: ${result.outputPath}`)
+      return
+    }
+    if (parsed.options.resolution !== undefined || parsed.options["aspect-ratio"] !== undefined) throw new Error("Resolution and aspect ratio on the file command require an explicit direct provider.")
     const model = parsed.options.model ?? slopcameraImageModels[1]
     if (
       model.length > 256 ||

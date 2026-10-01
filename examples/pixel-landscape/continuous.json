@@ -1,0 +1,65 @@
+{
+  "kind": "slopcamera.pixel-landscape",
+  "schemaVersion": 1,
+  "product": "SlopCamera",
+  "brief": "Create a continuous futuristic landscape for a multimedia studio that makes images, diagrams, animation, 3D scenes, and video from revisable source files. Show an invented media atelier as a coherent place: the sky observatory gathers arrangements of geometric forms; suspended workshops stage and revise those forms; the subterranean render garden develops them into varied finished compositions. Tell this story through optical mechanisms, blank layered scene plates, geometric constructions, ordered motion phases, camera rails, and ribbons of image frames. This is conceptual illustration, not a product interface. Draw dark charcoal and black contours on pure white (#ffffff), with sparse controlled hatching, clear planes, and ample blank ground. Keep the central 45% of the image nearly empty throughout the descent so text and media can sit there. Put the largest silhouettes in the outer quarters; vary scale and density along the edges. Detail should be purposeful and legible after area averaging onto a 6-pixel grid, rather than a dense web of vanishing hairlines. Use the same perspective, light from the upper left, contour weight, and scale in every panel. A narrow spiral rail near the left edge and a faceted structural spine near the right edge continue through the world and across both joins. No words, pseudo-lettering, numbers, logos, interface panels, borders, horizontal dividers, neon glow, realistic faces, crowded city skylines, circuit-board patterns, weapons, server racks, or texture-only detail. Do not render pixel art directly; the final grid and monochrome tint are applied locally. This is one unified 4K composition from top to bottom; do not divide it into panels or isolated vignettes. Connect the major left and right structures continuously across all three stages. Bold confident outer contours, fine organized secondary detail, no background fog or large gray fields. Keep central text corridor white.",
+  "theme": {
+    "background": "#eff1f5",
+    "primary": "#1750bf",
+    "secondary": "#dce0e8"
+  },
+  "sections": [
+    {
+      "id": "continuous-media-world",
+      "description": "Draw this entire descent in ONE continuous tall composition. Upper third: sky observatory. Middle third: suspended workshops with visible camera rails, motion phases, layered scene plates and film frames. Lower third: subterranean sculptural render garden. A solid yet elegant spiral rail near the LEFT edge and an angular structural spine near the RIGHT edge continue all the way from the observatory to the foundation, connecting every stage, never breaking or leaving a blank band. Use continuous perspective and common scale. White open central45% throughout. All detailed stage guidance follows; treat prior-panel/overlap instructions as descriptions of continuous spatial connections inside this single image, never as separate panels:\n\nBegin high above a pale open atmosphere. On the outer left, a small inhabited observatory sits inside an incomplete orbital ring, with layered optical plates, a curved camera rail, and measured geometric sculptures. On the outer right, a distant faceted rock island supports a delicate lens pavilion. A few thin bridges and blank suspended scene plates suggest diagrams and composition without showing text. Leave the broad middle as white sky. Descend into suspended workshops: the bottom overlap contains the left spiral rail, a small forked support at its inner edge, and the upper rim of a right-hand hanging stage. Continue these specific anchors into the next panel.\n\nContinue the previous overlap's left spiral rail, forked support, and right hanging-stage rim in the same positions, scale, and perspective. Descend among open scene workshops attached to the edge structures. On the left, a stepped sequence of the same geometric form shows animation phases beside a curved camera track. On the right, shallow theater chambers contain editable-looking wireframe solids, layered blank plates, and an interrupted ribbon of image frames. Each chamber has a distinct purpose and visible spatial depth. Use small connecting walkways only within the side clusters; keep the middle white and open. The lower overlap begins a cutaway entrance to the underground garden: the left rail enters a stone arch while the right faceted spine becomes an exposed terraced root wall.\n\nRepeat the stone arch receiving the left rail and the exposed right terraced root wall at the top join. Open into a spacious subterranean garden along the two edges. Architectural roots support varied faceted sculptures, small frame-shaped pools, and planted forms that develop from wireframe stems into solid finished shapes. A few low plinths hold distinct still-image, diagram, and scene compositions represented without text. The recurring left rail and right spine descend and settle into a quiet foundation. Keep the central passage open, with bright negative space and sparse pale atmosphere. Let side details become calmer near the bottom and fade naturally into white rather than ending on a hard horizontal line.",
+      "heading": "Make media with code.",
+      "body": "Create diagrams, images, video and interactive scenes with SlopCamera. Keep each idea inspectable and ready to revise."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "folded-world",
+      "direction": "Build the entire world from precise folded planes and layered sheets with convincing thickness. The observatory unfolds from large blank plates; suspended workshops use nested sheets as stage wings and curved folded ribbons as frame sequences. Reveal slight alternate positions of matching shapes as a visual metaphor for revision, while keeping each object singular and the overall scene uncluttered. The subterranean garden grows from pleated roots into faceted flowers and small constructed scenes. Use clean edges, a few dashed-free fold contours, and sparse hatch marks only on selected undersides. Keep the spiral rail and faceted spine consistent as folded structural ribbons. Avoid scattered paper scraps, collage noise, book pages, printed diagrams, and visible text."
+    },
+    {
+      "id": "terraced-atelier",
+      "direction": "Use a coherent isometric architectural cutaway made of generous stepped terraces, open-sided theaters, recessed niches, and slender sculptural columns. Large platforms establish the silhouette, then carefully spaced instruments, camera tracks, motion-phase sculptures, and blank scene plates tell the media story. The observatory is an airy terraced ring; the middle hangs like a vertical complex of scene ateliers; the lower garden is a quiet cutaway of planted rendering forms. Preserve one isometric angle and clear object scale throughout. Contours are clean and deliberate, with limited hatching and no broad gray fills. Let each workshop show a different activity through form. Avoid a repetitive voxel city, crowded icon grids, game HUDs, toy factories, and monotonous stairs."
+    }
+  ],
+  "generation": {
+    "provider": "vertex",
+    "model": "gemini-3.1-flash-image",
+    "judgeModel": "gemini-3.1-pro-preview",
+    "resolution": "4K",
+    "rounds": 1,
+    "concurrency": 2,
+    "maxImageCalls": 2,
+    "maxJudgeCalls": 2,
+    "aspectRatio": "1:4"
+  },
+  "processing": {
+    "width": 1536,
+    "panelHeight": 6144,
+    "overlap": 0,
+    "pixelSize": 6,
+    "alphaMax": 1,
+    "gamma": 0.9,
+    "quietCenter": 0.45,
+    "upscale": 1
+  },
+  "rubric": "Act as a demanding independent art director for this long-scroll marketing background. Judge the stitched source and its actual pixel treatment together; give the pixel treatment priority where detail, density, and legibility differ. Return only one JSON object with numeric relevance, continuity, composition, and detail, each from 0 through 10; defects as an array of concrete blocking defects; revision as a concise actionable instruction; and overall as the arithmetic mean of the four scores. Use decimals when useful. Relevance: 9-10 requires a specific visual story about revisable media-making, with purposeful optical, scene, animation, diagram, and geometric motifs; 5-6 is an attractive generic futuristic place; 0-3 contradicts the product or relies on unrelated technology imagery. Continuity: 9-10 requires one coherent world with matching perspective, light, scale, contour language, and identifiable anchors at both joins; 5-6 has a visible join or an inconsistent minor object; 0-3 has disconnected panels, repeated whole scenes, double contours, or broken structures. Composition: 9-10 keeps the central 45% convincingly open across the descent, uses large side silhouettes to frame content, and varies the vertical rhythm; 5-6 has flat repetition or limited central intrusion; 0-3 blocks the content corridor or creates broad dark masses. Detail: 9-10 has intricate organized forms and distinct activities that remain readable on the six-pixel grid; 5-6 loses important contours or turns some regions into repeated texture; 0-3 has blurred mush, meaningless hairlines, pseudo-lettering, or poor object geometry. Do not award a high detail score merely for density. Scores of 8 or more require useful visual evidence in the images rather than inferred success. Identify blocking defects with their location: upper, middle, lower, first join, or second join. Keep defects empty only when no issue prevents use as a quiet marketing background; minor refinements belong in revision. Model acceptance requires all four dimensions at least 8, overall at least 8.5, and no blocking defects. Give revision in at most 120 words, targeting the two weakest dimensions while preserving the strongest forms, shared rail/spine, and open center. If no correction is needed, use an empty revision string. Never infer quality from the deterministic measurements alone.",
+  "content": [
+    {
+      "heading": "Make media with code.",
+      "body": "Create diagrams, images, video and interactive scenes with SlopCamera. Keep each idea inspectable and ready to revise."
+    },
+    {
+      "heading": "Edit the scene. Keep the source.",
+      "body": "Arrange layers, animate objects and refine the timing. Your agent can work with named elements and retained source files."
+    },
+    {
+      "heading": "From a scene to a finished project.",
+      "body": "Render, inspect and export media from the same project. Revise the underlying scene whenever the story changes."
+    }
+  ]
+}
