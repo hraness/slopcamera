@@ -2,12 +2,12 @@ import { expect, test } from "bun:test"
 import { htmlText as text } from "./html-text.testing"
 import { readFile } from "node:fs/promises"
 import { diagramSession, interfaceExamples } from "../src/site-code-examples"
-import { renderHighlightedCode, siteContentSlots } from "../src/site-content"
+import { platformInstallTargets, renderHighlightedCode, siteContentSlots } from "../src/site-content"
 import { archiveInstall, publishedRelease } from "../src/published-release"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
-test("platform tabs install the verified archive before one skill copy target", () => {
+test("one universal command installs the verified archive before one skill copy target", () => {
   const slots = new Map(siteContentSlots("index.html", { themePath: "/assets/theme-0123456789ab.js", analyticsPath: null }).map(([key, value]) => [key, value]))
   const copy = slots.get("{{RELEASE_INSTALL_COMMANDS}}")!
   const value = copy.match(/<code\b[^>]*data-copy-command-value[^>]*>([\s\S]*?)<\/code>/u)?.[1]
@@ -16,12 +16,13 @@ test("platform tabs install the verified archive before one skill copy target", 
   expect(copy).toContain('data-copy-command-value tabindex="0"')
   expect(copy).toContain('aria-label="Copy the Agent Skill install command"')
   const platforms = slots.get("{{PLATFORM_INSTALL}}")!
-  for (const [id, shell] of [["macos", "Terminal"], ["linux", "Terminal"], ["windows", "PowerShell"]] as const) {
-    expect(platforms).toContain(`data-platform="${id}"`)
-    expect(platforms).toContain(shell)
-  }
-  expect([...platforms.matchAll(/role="tab"[^>]*data-platform="([a-z]+)"|data-platform="([a-z]+)"[^>]*role="tab"/gu)].map(match => match[1] ?? match[2]))
-    .toEqual(["macos", "linux", "windows"])
+  expect(platforms).toMatch(/class="[^"]*\bslopcamera-universal-install\b/u)
+  expect(platforms).toContain('aria-label="Install on macOS, Linux, or Windows"')
+  expect(platforms).toContain("Terminal or PowerShell")
+  expect(platformInstallTargets).toEqual([
+    { id: "all", label: "macOS, Linux, and Windows", command: archiveInstall.command, shell: "Terminal or PowerShell", note: "Requires Bun 1.3.14+" },
+  ])
+  expect([...platforms.matchAll(/role="tabpanel"/gu)]).toHaveLength(1)
   expect(text(platforms)).toContain(archiveInstall.command)
   expect(platforms).not.toContain("unavailable")
   expect(slots.get("{{PLATFORM_BADGES}}")).toContain("data-hraness-platform-badges")

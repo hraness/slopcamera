@@ -47,7 +47,7 @@ export function installPlatformInstalls(ownerDocument: Document = document): voi
     const panels = [...root.querySelectorAll<HTMLElement>('[role="tabpanel"][data-platform]')]
     const status = root.querySelector<HTMLElement>('[role="status"]')
     const selectedClass = tabs.find(tab => tab.getAttribute("aria-selected") === "true")?.className
-    const idleClass = tabs.find(tab => tab.getAttribute("aria-selected") !== "true")?.className
+    const idleClass = tabs.find(tab => tab.getAttribute("aria-selected") !== "true")?.className ?? (tabs.length === 1 ? selectedClass : undefined)
     if (tabs.length === 0 || selectedClass === undefined || idleClass === undefined || status === null) continue
 
     const ids = tabs.map(tab => tab.dataset.platform)

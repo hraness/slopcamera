@@ -23,27 +23,27 @@ export function renderAskAiAboutThis(canonicalUrl: string): string {
   }))
 }
 
-/** The CLI is one Bun package, so every platform runs the same archive install. */
+/** The same verified Bun package runs on every supported operating system. */
+export const supportedPlatforms = ["macos", "linux", "windows"] as const
 export const platformInstallTargets: readonly PlatformInstallTarget[] = [
-  { id: "macos", command: archiveInstall.command, shell: "Terminal", note: "Requires Bun 1.3.14+" },
-  { id: "linux", command: archiveInstall.command, shell: "Terminal", note: "Requires Bun 1.3.14+" },
-  { id: "windows", command: archiveInstall.command, shell: "PowerShell", note: "Requires Bun 1.3.14+" },
+  { id: "all", label: "macOS, Linux, and Windows", command: archiveInstall.command, shell: "Terminal or PowerShell", note: "Requires Bun 1.3.14+" },
 ]
 
-/** Server markup for the shared design-kit install tabs. The static site has no
- * React client, so src/platform-install.ts enhances this markup in the browser. */
+/** Keep the shared highlighted command and copy behavior without asking for an
+ * operating system when that choice cannot change the install command. */
 export function renderPlatformInstall(): string {
   return renderToStaticMarkup(createElement(PlatformInstall, {
+    className: "slopcamera-universal-install",
     detect: false,
     id: "cli-install",
-    label: "Operating system",
+    label: "Install on macOS, Linux, or Windows",
     platforms: platformInstallTargets,
   }))
 }
 
 export function renderPlatformBadges(): string {
   return renderToStaticMarkup(createElement(PlatformBadges, {
-    platforms: platformInstallTargets.map(target => target.id),
+    platforms: supportedPlatforms,
   }))
 }
 

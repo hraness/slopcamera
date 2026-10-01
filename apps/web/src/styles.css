@@ -309,6 +309,14 @@ h3 {
   line-height: 1.6;
 }
 
+.slopcamera-product-hero .hraness-marketing-hero__install {
+  margin-block-start: 0;
+}
+
+.slopcamera-universal-install [role="tablist"] {
+  display: none;
+}
+
 .slopcamera-product-hero .hraness-marketing-hero__actions {
   gap: .5rem 1.5rem;
 }
