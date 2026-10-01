@@ -167,7 +167,7 @@ function socialImageFor(document: SiteDocument, assets: SiteAssets): SiteSocialI
 
 function renderDocsFooter(slug: string): string {
   const sourcePath = `apps/web/src/docs/${slug}.md`
-  return `<p>This page's source: <a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}"><code>${sourcePath}</code></a></p>`
+  return `<p><a href="https://github.com/hraness/slopcamera/blob/main/${sourcePath}">View page source</a></p>`
 }
 
 export function siteContentSlots(document: SiteDocument, assets: SiteAssets): ReadonlyArray<readonly [string, string, number]> {

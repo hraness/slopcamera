@@ -33,7 +33,7 @@ const defaultDisabledFeatures = [
 const defaultDisableFeaturesArgument = `--disable-features=${defaultDisabledFeatures.join(",")}`
 
 export const currentDesign = "studio-screening-v1"
-export const currentRoutes = ["/", "/docs", "/docs/tutorials/first-diagram", "/docs/tutorials/first-animation", "/docs/how-to/direct-a-film", "/docs/how-to/remix-the-showcase", "/docs/reference/sdk", "/blog", "/blog/introducing-slopcamera"]
+export const currentRoutes = ["/", "/docs", "/docs/tutorials/first-diagram", "/docs/tutorials/first-animation", "/docs/how-to/direct-a-film", "/docs/how-to/remix-the-showcase", "/docs/reference/sdk", "/docs/reference/capabilities", "/blog", "/blog/introducing-slopcamera"]
 export const missingRoute = "/not-a-page"
 export const widths = [360, 390, 1440]
 export const schemes = ["light", "dark"]
