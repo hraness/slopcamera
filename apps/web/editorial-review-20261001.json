@@ -52,5 +52,22 @@
     },
     "findings": [],
     "limits": "Standalone historical film and nine gallery videos not rerendered or visually requalified by this prose review; worker owns visual evidence."
+  },
+  "integrationReview": {
+    "reviewer": "Codex (GPT-6), independent AI editorial review",
+    "reviewedOn": "2026-10-01",
+    "verdict": "approved",
+    "scope": "Date-free static adapter and Markdown mirrors; article alias v0.35.2; accurate metadata dates; all nine registered figures/caption checks; admission-driven discovery; exact reviewed ALGAL-route noindex removal. No gate weakening found. Installer main integrated without conflicts.",
+    "sha256": {
+      "apps/web/src/blog-content.ts": "fd29ef8e589c27a23ebf0daed697a688127b7082f3f59ba7a66fad2f1af581d7",
+      "apps/web/src/blog.test.ts": "185093e1b3c7bea92e398ec875e0d15f6edfc7b2e7aff147b8507daa09be7b6a",
+      "apps/web/src/launch.test.ts": "1fae90f0ded1830923164468b2008354ec9fb0caf0daa092c240be23e48561dc",
+      "apps/web/src/blog-admissions.ts": "b7e4ce4fac38f864279f77cbca9909e42a85dd105e04a8ebf97edd01434591f3",
+      "apps/web/vercel.json": "5e602b2530a5bea94fcfc66d24b185d93f9cf9dbc01a3393e16f4a3be0cbc1fc",
+      "apps/web/package.json": "adb305c3aea027b1a0334a803008a7b575904efa410ef782f757966f96c60993",
+      "apps/web/bun.lock": "c68c5f16fcdb275ccf6fbd8d2f434164761ff1911e6d44c43fe624fc9c093a95",
+      "apps/web/site.test.ts": "da28abac69ebea6d88bde228db44aec6820393c68688aa9073e1eefec63eca28",
+      "apps/web/scripts/site-copy-content.test.ts": "84124d3619ada7d2b2b00fd6adf7bd15338ed92f7903b269454ee6da1763294b"
+    }
   }
 }
