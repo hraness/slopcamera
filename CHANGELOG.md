@@ -2,6 +2,14 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.10.2 - 2026-10-01
+
+Slopcamera renders HTML scenes on macOS without treating access-time updates from reading immutable browser files as changes to those files.
+
+- Watch each saved browser file and directory through native file descriptors, keeping mutation failures active through browser shutdown.
+- Accept only isolated access-time advances on unchanged immutable regular files; reject other metadata changes, replaced files, and mixed filesystem events.
+- Preserve browser content, signature, identity, and cleanup checks throughout rendering.
+
 ## 3.10.1 - 2026-09-30
 
 SlopCamera handles delayed macOS filesystem notifications while preparing a browser for HTML rendering.
