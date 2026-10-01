@@ -134,9 +134,16 @@ async function inspect(page) {
     const backdrop = document.querySelector("[data-hraness-hero-backdrop]")
     const lastAction = header ? [...header.querySelectorAll("a, button, summary")].at(-1) : null
     const heroMedia = document.querySelector(".slopcamera-product-hero .slopcamera-example__media")?.getBoundingClientRect()
+    const installer = document.querySelector(".hraness-marketing-hero__install [data-hraness-platform-install]")
+    const installBox = installer?.getBoundingClientRect()
     const studio = document.querySelector(".slopcamera-screening") ? {
       hero: heroMedia ? { top: heroMedia.top, width: heroMedia.width, height: heroMedia.height } : null,
       height: innerHeight,
+      installer: { count: document.querySelectorAll("[data-hraness-platform-install]").length,
+        anchors: document.querySelectorAll("#cli-install").length, label: installer?.querySelector("pre")?.getAttribute("aria-label"),
+        beforeFilm: Boolean(installBox && heroMedia && installBox.bottom <= heroMedia.top),
+        inWidth: Boolean(installBox && installBox.left >= -1 && installBox.right <= innerWidth + 1),
+        hasCommands: Boolean(installer?.querySelector("code")?.textContent?.trim()) },
       sections: [...document.querySelectorAll("main > div > section[id]")].map(element => element.id),
       revision: [...document.querySelectorAll(".slopcamera-revision-pair figure")].map(element => element.getAttribute("data-example-id")),
       films: [...document.querySelectorAll("main figure[data-example-id]")].map(figure => {
@@ -181,6 +188,7 @@ async function inspect(page) {
 /** Current acceptance is independent of retained historical DOM profiles. */
 export function assertStudioHomepage(studio, width) {
   assert.ok(studio?.hero, "Missing studio hero film")
+  assert.deepEqual(studio.installer, { count: 1, anchors: 1, label: "macOS, Linux, and Windows install command", beforeFilm: true, inWidth: true, hasCommands: true }, "One readable installer must appear in the hero before the film")
   assert.deepEqual(studio.sections, ["examples", "revision", "start", "install", "design", "questions", "closing"])
   assert.deepEqual(studio.revision, ["last-tram", "last-tram-revised"])
   assert.deepEqual(studio.films.map(film => film.id), ["rain-bottled", "paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"])
@@ -273,7 +281,7 @@ async function reviewStudioInteractions(browser, origin, policy) {
   }
   const page = await context.newPage()
   page.on("pageerror", error => problems.push(`page error: ${error.message}`))
-  const state = { policy, source: null, clipboard: false, keyboardFocus: false, mediaAdvanced: [], errorMessage: null }
+  const state = { policy, source: null, clipboard: false, cliClipboard: false, keyboardFocus: false, mediaAdvanced: [], errorMessage: null }
   try {
     await page.goto(origin, { waitUntil: "networkidle" })
     if (policy === "save-data") {
@@ -322,6 +330,12 @@ async function reviewStudioInteractions(browser, origin, policy) {
         assert.ok(await video.evaluate(video => video.paused))
       }
       await context.grantPermissions(["clipboard-read", "clipboard-write"])
+      const installer = page.locator(".slopcamera-universal-install")
+      const cliCommand = await installer.locator("pre").textContent()
+      await installer.locator("button[data-copy-state]").click()
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), cliCommand)
+      assert.match(cliCommand, /^bun add --global https:\/\/github\.com\/hraness\/slopcamera\/releases\/download\//u)
+      state.cliClipboard = true
       const copy = page.getByRole("button", { name: "Copy the Agent Skill install command", exact: true })
       const expected = await page.locator("[data-copy-command-value]").textContent()
       await copy.click()
