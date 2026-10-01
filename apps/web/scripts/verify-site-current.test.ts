@@ -101,7 +101,7 @@ test("resolves clean URLs the way the static host does and refuses traversal", a
 })
 
 test("covers every ordinary page family and a missing route", () => {
-  expect(currentRoutes).toEqual(expect.arrayContaining(["/", "/docs", "/blog"]))
+  expect(currentRoutes).toEqual(expect.arrayContaining(["/", "/docs", "/docs/reference/capabilities", "/blog"]))
   expect(currentRoutes).not.toContain(missingRoute)
 })
 

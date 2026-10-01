@@ -48,10 +48,10 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 272 characters
+Post 8 of 8, 210 characters
 
 ```text
-SlopCamera is free and open source under the MIT license, with 56 rendered examples and their source. Latest release: v3.10.1. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.
+Latest release: v3.10.1. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -100,10 +100,10 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 272 characters
+Post 8 of 8, 210 characters
 
 ```text
-SlopCamera is free and open source under the MIT license, with 56 rendered examples and their source. Latest release: v3.10.1. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.
+Latest release: v3.10.1. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -152,10 +152,10 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 272 characters
+Post 8 of 8, 210 characters
 
 ```text
-SlopCamera is free and open source under the MIT license, with 56 rendered examples and their source. Latest release: v3.10.1. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.
+Latest release: v3.10.1. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -177,7 +177,7 @@ Make a short explainer, an illustrated story or an edit of your own footage with
 
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 
-SlopCamera is free and open source under the MIT license, with 56 rendered examples and their source. Latest release: v3.10.1. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.
+Latest release: v3.10.1. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -203,7 +203,7 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 - NASA eclipse footage becomes a cinematic film, a vertical edit or a narrated explainer. The same source gets different pacing, framing, typography and sound. Each cut keeps its own recipe and the original footage intact.
 - Build the picture, test its movement, then finish the film. The paper ocean keeps its layered artwork, animation and score in source files; its ending can also be rendered as a print.
 - Make a short explainer, an illustrated story or an edit of your own footage with the coding agent you already use. This jazz miniature makes Fourier synthesis visible and audible through waveforms, labels and sound.
-- SlopCamera is free and open source under the MIT license, with 56 rendered examples and their source. Latest release: v3.10.1. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.
+- Latest release: v3.10.1. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
 - Latest release: v3.10.1. https://slopcamera.com/blog/introducing-slopcamera
 
 ## Beats and their visuals
@@ -215,7 +215,7 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 5. Build the picture, then direct its movement (example `paper-ocean`)
 6. Made for people who already work with a coding agent (example `square-wave-jazz`)
 7. A stranger idea should still have an editable source (example `laundromat-after-midnight`)
-8. Free and open source, out now (example `one-shoot-cinematic`)
+8. Free and open source (example `one-shoot-cinematic`)
 
 ## Facts and their records
 

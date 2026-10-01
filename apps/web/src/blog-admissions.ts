@@ -1,156 +1,269 @@
 import type { ArticleAdmission } from "@hraness/design-kit-articles"
 
-// Editorial admission records for the /blog collection. Each post's lifecycle,
-// review credit and reassessment date come only from here; pages, feeds,
-// sitemaps, llms.txt and robots directives derive from these records. The
-// import above is type-only, so middleware can read this module without
-// loading design-kit at runtime. site.test.ts validates the whole registry with
-// design-kit's assertArticleAdmissions.
-
-const slopcameraRepository = "https://github.com/hraness/slopcamera"
-const introducingCommit = "4b5ede7c8882dd6fe98448d05a54a33beced9b3d"
-const algalPostCommit = "7e7027521f134aaaaa8404efebdc5bac24be6252"
-const releaseRecord = `${slopcameraRepository}/releases/tag/v3.4.0`
-const reviewer = "Claude Opus 5.5"
-const oneShotCommit = "a95e7feef61c65076c3cfd37cc23c0357eb3ecd4"
-const nativeEnginesCommit = "81217777f193718e20351a886516ecae445590a9"
-
+// Current editorial decisions; truthful AI review and source-check dates remain
+// available to discovery while the reading layout omits date labels.
 export const blogAdmissions = [
   {
-    href: "/blog/one-shot-render-vs-installed-techniques",
-    lifecycle: "indexable",
-    readerJob: "Decide whether to install a video and graphics framework for a coding agent or keep asking a frontier model to one-shot each render.",
-    nonObviousAnswer: "The two routes differ on the requests after the first. With Slopcamera installed, a revision is a small source edit plus a re-render: 2 changed lines in a diagram file, a new name and 2 parameters in a scene file, or a 39-byte values file for a pavilion. The CLI then does the rendering, checks, and light, dark, and format variants. Format variants that need custom title frames still take per-format layout work.",
-    originalContribution: "Byte and changed-line measurements of four Slopcamera gallery examples at commit a95e7fe (three original/revision pairs and one set of four format variants), with fresh re-renders of the diagram and title revisions matching the published files byte for byte, the exact commands used, and the check exit codes and refusal message the CLI returns.",
-    hostFit: "A Slopcamera blog post that explains the framework argument with the project's own committed files and links into the techniques reference, the first-animation tutorial, and the editable-diagrams post.",
-    nearestUrls: [
-      { url: "/docs/explanation/why-slopcamera", distinction: "The docs hub for why the framework exists; this post measures specific revisions with committed files rather than explaining the product." },
-      { url: "/docs/reference/techniques", distinction: "Lists which techniques are demonstrated; this post measures what a revision takes for four of them." },
-      { url: "/blog/editable-diagrams-with-coding-agents", distinction: "Walks through the diagram edit-and-render loop in depth; this post compares the second request across four media types and against one-shotting." },
+    "href": "/blog/one-shot-render-vs-installed-techniques",
+    "lifecycle": "indexable",
+    "readerJob": "Choose how to keep media source and rendering reusable across revisions.",
+    "nonObviousAnswer": "A custom pipeline and an installed framework can both be reused. Their maintenance responsibilities differ; source fields and per-format layout work determine what a revision needs.",
+    "originalContribution": "Traces diagram labels, title parameters, pavilion dimensions and aspect-ratio layouts from editable source to rendered outputs.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "/docs/reference/techniques",
+        "distinction": "Catalogs available techniques; this article explains how source changes lead to revisions and variants."
+      },
+      {
+        "url": "/blog/editable-diagrams-with-coding-agents",
+        "distinction": "Teaches the diagram workflow in depth; this article follows several media formats."
+      }
     ],
-    sources: [
-      { title: "Anthropic Agent Skills overview", url: "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview", checkedOn: "2026-09-28" },
-      { title: "Remotion agent skills", url: "https://www.remotion.dev/docs/ai/skills", checkedOn: "2026-09-28" },
-      { title: "HyperFrames skills guide", url: "https://hyperframes.heygen.com/guides/skills", checkedOn: "2026-09-28" },
-      { title: "Slopcamera showcase examples at a95e7fe", url: `${slopcameraRepository}/tree/${oneShotCommit}/examples/showcase`, checkedOn: "2026-09-28" },
-      { title: "Source-to-film diagram README at a95e7fe", url: `${slopcameraRepository}/blob/${oneShotCommit}/examples/showcase/diagram/README.md`, checkedOn: "2026-09-28" },
-      { title: "Crescent pavilion wide README at a95e7fe", url: `${slopcameraRepository}/blob/${oneShotCommit}/examples/showcase/parametric/crescent-pavilion-wide/README.md`, checkedOn: "2026-09-28" },
-      { title: "Four-ratio edit README at a95e7fe", url: `${slopcameraRepository}/blob/${oneShotCommit}/examples/showcase/edit/README.md`, checkedOn: "2026-09-28" },
+    "sources": [
+      {
+        "title": "Anthropic Agent Skills overview",
+        "url": "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Remotion agent skills",
+        "url": "https://www.remotion.dev/docs/ai/skills",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "HyperFrames skills guide",
+        "url": "https://hyperframes.heygen.com/guides/skills",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera showcase examples at a95e7fe",
+        "url": "https://github.com/hraness/slopcamera/tree/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Source-to-film diagram README at a95e7fe",
+        "url": "https://github.com/hraness/slopcamera/blob/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase/diagram/README.md",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Crescent pavilion wide README at a95e7fe",
+        "url": "https://github.com/hraness/slopcamera/blob/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase/parametric/crescent-pavilion-wide/README.md",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Four-ratio edit README at a95e7fe",
+        "url": "https://github.com/hraness/slopcamera/blob/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase/edit/README.md",
+        "checkedOn": "2026-09-28"
+      }
     ],
-    observations: [
-      "Diagram source is 2,497 bytes and 131 lines; the revision is 2 changed lines; the render writes 5 files (tldraw 21,258 B, SVG 198,490/198,489 B, PNG 126,223/125,709 B) whose hashes match the gallery.",
-      "The plain HTML scaffold is 1,148 bytes; the editorial page is 3,032 bytes and 57 lines; the scene file is 386 bytes and 13 lines; the revised MP4 is 2,552,725 bytes at 192 frames and 1280 x 720, and a fresh render matched the gallery byte for byte.",
-      "The pavilion template writes a 102,652-byte design and a 3,317-byte base scene; the values file is 39 bytes; the revision is 3 of 20,127 lines in the formatted design.",
-      "Design compile writes scene.json at 10,971 bytes, a render request, three GLBs of 110,324, 15,808, and 5,944 bytes, one JSON file per GLB with bounding box, materials, and node count, and a JSON record with parameters, part and triangle counts, and hashes (re-checked 2026-09-29).",
-      "scene design set with span 9 is refused with 'Parameter span must be between 4 and 8.' and writes nothing.",
-      "diagram check exits 1 on invalid files such as a stack exceeding its canvas, and exits 2 under --strict for layout findings such as label overflow.",
-      "The four ratio MP4s are 421,148, 320,335, 370,432, and 329,265 bytes; a new format needs a row in ratio-variants.ts plus a hand-laid title frame and aspect label in create-ratio-frames.py and a re-run with Python and fontTools.",
-      "Slopcamera's SKILL.md is 6,834 bytes; Anthropic documents about 100 tokens of metadata per installed skill.",
-      "bun run check:copy passes.",
+    "observations": [
+      "Diagram labels and title parameters change in source while the rendering pipeline stays fixed.",
+      "A new aspect ratio can require its own framing and title layout."
     ],
-    scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 1, hostFit: 2, voiceIntegrity: 1, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-28" },
-    humanReview: null,
-    reassessOn: "2026-11-09",
-    harmIfWrong: "Readers could install Slopcamera expecting measured token or cost savings, or expect a new format or revision to take less work than it does, and lose trust in the project's other claims.",
-    refreshTriggers: [
-      "Any change to the showcase examples, their sources, or rendered outputs after commit a95e7fe",
-      "Changes to diagram check exit codes, scene design set limits, or html render verification",
-      "A change in SKILL.md size or Anthropic's documented per-skill metadata cost",
-      "A controlled token-use comparison becoming available",
-      "Changes to Remotion or HyperFrames skills pages",
-      "Changes to runtime requirements (Bun version, Chrome, FFmpeg)",
-    ],
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "Readers could install Slopcamera expecting measured token or cost savings, or expect a new format or revision to take less work than it does, and lose trust in the project's other claims.",
+    "refreshTriggers": [
+      "Changes to the linked example source formats, command grammar or required runtimes",
+      "Changes to supported output formats or per-format layout requirements"
+    ]
   },
   {
-    href: "/blog/make-video-with-claude-code",
-    lifecycle: "indexable",
-    readerJob: "A Claude Code or Codex user wants their agent to produce a specific kind of video (title, 3D camera move, product film, math lesson, or an edit of existing footage) and needs to know which engine to use, what the agent writes, and which commands render and revise it.",
-    nonObviousAnswer: "The kind of shot decides the engine: HTML for type and motion graphics, a Three.js scene for camera moves, Blender for physical materials, Manim for math, and the project compositor for footage you already have. With a renderer and skill installed, the agent writes only a short source file per video and a revision is a source edit plus a re-render, and all five engines feed one project format.",
-    originalContribution: "A decision table that maps five kinds of shot to an engine, the source file the agent writes, and the starting command, followed by one runnable command block per engine (including the tutorial helper and probe steps), a section on combining engines in one project, and a plain list of limits. It links Anthropic's Agent Skills overview for the pattern of bundled scripts whose code stays out of the context window, and states that model tokens were not measured.",
-    hostFit: "Slopcamera's blog is the place for a task-first guide that ties together the existing tutorials and how-to guides (first animation, direct scenes, first native film, educational video, edit video, workflows) and points Claude Code and Codex readers to their setup tutorials and the comparison pages.",
-    nearestUrls: [
-      { url: "/docs/tutorials/claude-code", distinction: "Sets up Claude Code and a first request; this post chooses an engine per shot and gives a recipe for each." },
-      { url: "/docs/tutorials/codex", distinction: "Sets up Codex; this post is engine selection and per-engine recipes after setup." },
-      { url: "/docs/tutorials/first-animation", distinction: "Full tutorial for the HTML editorial title; the post condenses it to one recipe and links the clone step." },
+    "href": "/blog/make-video-with-claude-code",
+    "lifecycle": "indexable",
+    "readerJob": "Choose an engine and a practical command sequence for a coding agent to make and revise a video.",
+    "nonObviousAnswer": "Choose the engine by the shot, then retain editable source or footage with the project. Bundled scene inputs do not limit the files native Python can read.",
+    "originalContribution": "Maps five kinds of shot to engines, editable inputs and commands, including bundle-digest updates before native jobs.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "/docs/tutorials/claude-code",
+        "distinction": "Sets up Claude Code and a first request; this post chooses an engine per shot and gives a recipe for each."
+      },
+      {
+        "url": "/docs/tutorials/codex",
+        "distinction": "Sets up Codex; this post is engine selection and per-engine recipes after setup."
+      },
+      {
+        "url": "/docs/tutorials/first-animation",
+        "distinction": "Full tutorial for the HTML editorial title; the post condenses it to one recipe and links the clone step."
+      }
     ],
-    sources: [
-      { title: "Agent Skills overview (Anthropic)", url: "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview", checkedOn: "2026-09-28" },
-      { title: "Build skills (Codex skill locations)", url: "https://learn.chatgpt.com/docs/build-skills", checkedOn: "2026-09-28" },
-      { title: "Remotion agent skills", url: "https://www.remotion.dev/docs/ai/skills", checkedOn: "2026-09-28" },
-      { title: "Remotion Lambda", url: "https://www.remotion.dev/docs/lambda", checkedOn: "2026-09-28" },
-      { title: "HyperFrames repository", url: "https://github.com/heygen-com/hyperframes", checkedOn: "2026-09-28" },
-      { title: "HyperFrames README (AWS Lambda rendering and cloud render)", url: "https://github.com/heygen-com/hyperframes/blob/main/README.md", checkedOn: "2026-09-28" },
-      { title: "video-use repository", url: "https://github.com/browser-use/video-use", checkedOn: "2026-09-28" },
+    "sources": [
+      {
+        "title": "Agent Skills overview (Anthropic)",
+        "url": "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Build skills (Codex skill locations)",
+        "url": "https://learn.chatgpt.com/docs/build-skills",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Remotion agent skills",
+        "url": "https://www.remotion.dev/docs/ai/skills",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Remotion Lambda",
+        "url": "https://www.remotion.dev/docs/lambda",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "HyperFrames repository",
+        "url": "https://github.com/heygen-com/hyperframes",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "HyperFrames README (AWS Lambda rendering and cloud render)",
+        "url": "https://github.com/heygen-com/hyperframes/blob/main/README.md",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "video-use repository",
+        "url": "https://github.com/browser-use/video-use",
+        "checkedOn": "2026-09-28"
+      }
     ],
-    observations: [
-      "Every slopcamera command and flag in the post appears in current CLI help: html catalog/scaffold/render --dry-run, scene init/inspect/plan/render/patch, studio init/bundle/plan/probe/run/assemble, project add, edit trim/cut, render plan/run with --allow-unverified-sync, media color --preset/--output, align analyze, workflows list.",
-      "The editorial.json block matches examples/showcase/html/editorial.json byte for byte (13 lines); the post says those example paths exist only in a clone of the repository and links the tutorial's Get the supplied scene step.",
-      "The Blender and Manim blocks include the tutorial helper lines (bun prepare-preview.ts, bun prepare-lesson.ts) that create preview.job.json and current.job.json, and both include a probe step before run, matching the source guides.",
-      "Manim leg limits (at most 12, hypotenuse at most 15, whole-number right triangle) match the educational-video guide and examples/studio/education/README.md; the guide states every length and tile destination derives from those values, so a 6-8-10 change edits lesson.json only.",
-      "render run refuses unverified sync unless aligned or --allow-unverified-sync is passed (apps/desktop/cli/commands.ts).",
-      "The post links Anthropic's Agent Skills overview for scripts running through bash with only their output entering context. Its revision measurements count source bytes and lines, and make no claim about agent token or cost savings.",
-      "Competitor facts: Remotion installs skills with npx skills add remotion-dev/skills and documents Lambda; HyperFrames installs with npx skills add heygen-com/hyperframes and its README lists AWS Lambda rendering and cloud render; video-use needs an ElevenLabs key for transcription.",
-      "Limits section follows the capabilities record: no screen or camera recording, no beat detection, local rendering only, pixel differences across machines, --allow-trusted-code is not an operating-system sandbox, gallery Three.js shots used a macOS WebGL2 profile.",
-      "bun run check:copy passes (238 claims across 102 surfaces).",
+    "observations": [
+      "HTML, Three.js, Blender, Manim and edited footage feed the project workflow.",
+      "Native jobs require a current bundle digest and explicit trusted-code permission."
     ],
-    scores: { readerUtility: 1, originalEvidence: 1, factualConfidence: 2, hostFit: 2, voiceIntegrity: 2, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-28" },
-    humanReview: null,
-    reassessOn: "2026-11-09",
-    harmIfWrong: "A reader copies a command block that fails (missing job file, missing example path, wrong flag) or picks an engine that cannot produce the shot, wasting setup time; overstating capabilities such as recording, beat detection, or cloud rendering would mislead readers choosing between Slopcamera and Remotion or HyperFrames.",
-    refreshTriggers: [
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "A reader copies a command block that fails (missing job file, missing example path, wrong flag) or picks an engine that cannot produce the shot, wasting setup time; overstating capabilities such as recording, beat detection, or cloud rendering would mislead readers choosing between Slopcamera and Remotion or HyperFrames.",
+    "refreshTriggers": [
       "Any change to html, scene, studio, project, media, align, or workflows CLI commands or flags",
       "Changes to the first-animation, first-native-film, or educational-video helper scripts or job file names",
       "Changes to the Manim lesson parameter limits or the editorial.json example",
       "Changes to skill install targets or to where Claude Code or Codex scan for skills",
       "Remotion, HyperFrames, or video-use changing their skill install commands or cloud rendering offers",
-      "Slopcamera adding recording, beat detection, or remote rendering",
-    ],
+      "Slopcamera adding recording, beat detection, or remote rendering"
+    ]
   },
   {
-    href: "/blog/editable-diagrams-with-coding-agents",
-    lifecycle: "indexable",
-    readerJob: "Keep architecture and docs diagrams that a coding agent can revise in place, check in CI, and export in light and dark, and decide when Mermaid is the simpler choice.",
-    nonObviousAnswer: "Make a small .diagram.json the diagram's source. `slopcamera diagram check --strict` exits 1 on invalid files and 2 on any lint finding, so an agent can loop edit, check and fix without opening an image, and CI can fail a pull request on the same findings. A rename is then a one-line source edit that re-renders all five exports (tldraw, light and dark SVG and PNG) with the rest of the layout unchanged. Mermaid stays simpler for diagrams read on GitHub.",
-    originalContribution: "Reproduces the check and render loop on a four-box example with the v3.6.0 CLI. It records the exact stack-overflow error with exit 1, the long-label finding with exit 2 under --strict and exit 0 without it, the five files render writes, byte-identical re-renders on one Mac, a one-line rename that changes all five exports, and export sizes. About 192 KB of each 197 KB SVG is embedded Nebula Sans font. It also states limits the docs do not collect in one place: config discovery, JS/TS configs running as code, MCP tools ignoring config and returning findings instead of an exit code, and the tldraw file being write-only.",
-    hostFit: "Diagram rendering is a core Slopcamera feature. The post covers the agent revision loop, CI use and when to choose Mermaid, and it links to the tutorial and format reference for task steps instead of repeating them.",
-    nearestUrls: [
-      { url: "https://slopcamera.com/docs/tutorials/first-diagram", distinction: "The tutorial walks through a first diagram from `diagram init`. The post covers the strict-check loop for agents and CI, MCP differences, the tldraw one-way limit, export sizes, and when to use Mermaid instead." },
-      { url: "https://slopcamera.com/docs/reference/diagram-format", distinction: "The reference defines every field of .diagram.json. The post uses one small file to show why a source file makes revisions cheap and what the checker does and does not catch." },
-      { url: "https://slopcamera.com/docs/explanation/why-slopcamera", distinction: "The hub explains Slopcamera's approach across all media. The post shows that approach for diagrams only, with reproduced commands and outputs." },
+    "href": "/blog/editable-diagrams-with-coding-agents",
+    "lifecycle": "indexable",
+    "readerJob": "Revise a diagram once and keep its light, dark and editable exports consistent.",
+    "nonObviousAnswer": "The JSON is the lasting source; tldraw edits do not flow back into it, and layout lint does not establish whether a diagram is semantically correct.",
+    "originalContribution": "Explains a concrete source edit, validation exit codes, export formats and the choice between Mermaid and pre-rendered diagrams.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "https://slopcamera.com/docs/tutorials/first-diagram",
+        "distinction": "The tutorial walks through a first diagram from `diagram init`. The post covers the strict-check loop for agents and CI, MCP differences, the tldraw one-way limit, export sizes, and when to use Mermaid instead."
+      },
+      {
+        "url": "https://slopcamera.com/docs/reference/diagram-format",
+        "distinction": "The reference defines every field of .diagram.json. The post uses one small file to show why a source file makes revisions cheap and what the checker does and does not catch."
+      },
+      {
+        "url": "https://slopcamera.com/docs/explanation/why-slopcamera",
+        "distinction": "The hub explains Slopcamera's approach across all media. The post shows that approach for diagrams only, with reproduced commands and outputs."
+      }
     ],
-    sources: [
-      { title: "Slopcamera v3.6.0 release", url: `${slopcameraRepository}/releases/tag/v3.6.0`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera diagram lint rules", url: `${slopcameraRepository}/blob/v3.6.0/src/lint.ts`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera CLI (diagram check exit codes)", url: `${slopcameraRepository}/blob/v3.6.0/src/cli.ts`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera diagram artifacts and config discovery", url: `${slopcameraRepository}/blob/v3.6.0/src/artifacts.ts`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera diagram parser (shape types and tones)", url: `${slopcameraRepository}/blob/v3.6.0/src/parse.ts`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera Agent Skill: diagrams", url: `${slopcameraRepository}/blob/v3.6.0/skills/slopcamera/references/diagrams.md`, checkedOn: "2026-09-28" },
-      { title: "Mermaid", url: "https://mermaid.js.org/", checkedOn: "2026-09-28" },
-      { title: "GitHub Docs: Creating diagrams", url: "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams", checkedOn: "2026-09-28" },
-      { title: "tldraw", url: "https://tldraw.dev", checkedOn: "2026-09-28" },
+    "sources": [
+      {
+        "title": "Slopcamera v3.6.0 release",
+        "url": "https://github.com/hraness/slopcamera/releases/tag/v3.6.0",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera diagram lint rules",
+        "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/lint.ts",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera CLI (diagram check exit codes)",
+        "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/cli.ts",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera diagram artifacts and config discovery",
+        "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/artifacts.ts",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera diagram parser (shape types and tones)",
+        "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/parse.ts",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera Agent Skill: diagrams",
+        "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/skills/slopcamera/references/diagrams.md",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Mermaid",
+        "url": "https://mermaid.js.org/",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "GitHub Docs: Creating diagrams",
+        "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "tldraw",
+        "url": "https://tldraw.dev",
+        "checkedOn": "2026-09-28"
+      }
     ],
-    observations: [
-      "The 762-byte four-box example passes `slopcamera diagram check --strict` with exit 0. On a 1280px canvas with a 120px gap it fails with exit 1 and the two-line message 'slopcamera: Invalid stack layout:' / '- horizontal stack needs 1160px but only 1152px remain inside 64px padding'.",
-      "A 40-character label gives '[long-label] api has a 40-character label; prefer a short noun phrase': exit 2 with --strict, exit 0 without it (src/cli.ts). A tone of 'violet' fails validation with exit 1 (shapes[n].tone must be one of seven names).",
-      "`diagram render` writes five files named from the document's `name`: .tldr plus light and dark SVG and PNG. Two renders of the same source on one Mac gave matching SHA-256 hashes. Changing 'Orders DB' to 'Postgres' changed the hashes of all five.",
-      "Each SVG is about 197 KB, of which about 192 KB is base64 @font-face data for the Nebula Sans Book and Bold fonts. The PNGs are 33 to 34 KB and the .tldr file about 11 KB.",
-      "Config is discovered in the source file's directory or passed with --config. TS/JS configs load by dynamic import, so they run as code. The MCP check_diagram and render_diagram tools use built-in icons and themes only and return findings instead of an exit code.",
-      "resvg is called with loadSystemFonts: true, so bytes can differ across machines.",
+    "observations": [
+      "Strict checks report invalid source separately from layout findings.",
+      "A diagram render writes tldraw plus light and dark SVG and PNG exports."
     ],
-    scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 1, hostFit: 2, voiceIntegrity: 1, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-28" },
-    humanReview: null,
-    reassessOn: "2026-11-09",
-    harmIfWrong: "A reader could wire `diagram check --strict` into CI expecting different exit codes, and pull requests would pass that should fail. They could also expect tldraw edits to flow back into the JSON, or expect byte-identical exports across machines, and lose edits or chase false diffs.",
-    refreshTriggers: [
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "A reader could wire `diagram check --strict` into CI expecting different exit codes, and pull requests would pass that should fail. They could also expect tldraw edits to flow back into the JSON, or expect byte-identical exports across machines, and lose edits or chase false diffs.",
+    "refreshTriggers": [
       "Slopcamera release tag bump",
       "Change to diagram lint codes or thresholds (src/lint.ts)",
       "Change to diagram check exit codes or the --strict flag (src/cli.ts)",
@@ -158,157 +271,293 @@ export const blogAdmissions = [
       "Change to config discovery or the MCP check_diagram/render_diagram tools",
       "Slopcamera starts reading .tldr files back into the source",
       "GitHub or Mermaid changes where Mermaid diagrams render",
-      "The first-diagram tutorial, diagram-format reference, or why-slopcamera hub changes route",
-    ],
+      "The first-diagram tutorial, diagram-format reference, or why-slopcamera hub changes route"
+    ]
   },
   {
-    href: "/blog/headless-blender-manim-cadquery-for-agents",
-    lifecycle: "indexable",
-    readerJob: "Decide how to let a coding agent drive Blender, Manim or CadQuery so that later revisions (a new material, camera, dimension or narration) are cheap and checkable.",
-    nonObviousAnswer: "The two approaches differ most at the second request, not the first render. A live MCP session keeps state in the open .blend and the chat, so a revision a week later means reopening that file or replaying calls. Scene source you keep (a few dozen lines of scene.py plus a job file) lets the agent change one line and render again, with the old render left intact for comparison.",
-    originalContribution: "Side-by-side comparison of a live Blender MCP session against kept scene source, with one worked revision loop per engine taken from Slopcamera's showcase examples: a one-line brass material edit plus bundle/plan/probe/run/inspect/encode (Blender), a widthMm/heightMm variation with STEP round-trip volume check (CadQuery), and silent Manim visuals with narration kept in the video project. States the trust model (no OS sandbox, per-run --allow-trusted-code) and the limits (machine variance, rigs not carried by GLB/MP4, no capture).",
-    hostFit: "Slopcamera blog post that feeds readers into the first native film tutorial, the native film and educational video how-to guides, the parametric design guide, and the native engines reference; it does not repeat their step-by-step content.",
-    nearestUrls: [
-      { url: "/docs/tutorials/first-native-film", distinction: "Tutorial walks one 320x180 CPU preview through the loop; the post compares approaches and shows revisions across three engines." },
-      { url: "/docs/how-to/native-films", distinction: "How-to covers every native film feature (caches, rigs, masters, imports); the post argues when to keep scene source versus using a live session." },
-      { url: "/docs/reference/native-engines", distinction: "Reference lists the full rules; the post summarizes only the trust and version rules a reader needs before letting an agent run commands." },
+    "href": "/blog/headless-blender-manim-cadquery-for-agents",
+    "lifecycle": "indexable",
+    "readerJob": "Choose between interactive scene exploration and a saved scene program, then revise native renders safely.",
+    "nonObviousAnswer": "Live sessions can preserve Blender files and scripts. Saved scene jobs make inputs explicit, and a source change needs a new bundle digest and job ID before rendering.",
+    "originalContribution": "Connects material edits, CAD parameters and silent Manim visuals to the native command sequence and runtime boundaries.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "/docs/tutorials/first-native-film",
+        "distinction": "Tutorial walks one 320x180 CPU preview through the loop; the post compares approaches and shows revisions across three engines."
+      },
+      {
+        "url": "/docs/how-to/native-films",
+        "distinction": "How-to covers every native film feature (caches, rigs, masters, imports); the post argues when to keep scene source versus using a live session."
+      },
+      {
+        "url": "/docs/reference/native-engines",
+        "distinction": "Reference lists the full rules; the post summarizes only the trust and version rules a reader needs before letting an agent run commands."
+      }
     ],
-    sources: [
-      { title: "MCP for Blender (formerly blender-mcp) README", url: "https://github.com/ahujasid/mcp-for-blender", checkedOn: "2026-09-28" },
-      { title: "Blender manual: command-line rendering", url: "https://docs.blender.org/manual/en/latest/advanced/command_line/render.html", checkedOn: "2026-09-28" },
-      { title: "Manim Community: configuration and CLI", url: "https://docs.manim.community/en/stable/guides/configuration.html", checkedOn: "2026-09-28" },
-      { title: "CadQuery introduction", url: "https://cadquery.readthedocs.io/en/latest/intro.html", checkedOn: "2026-09-28" },
-      { title: "Slopcamera product example scene.py", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/product/scene.py`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera product example studio_scene.py", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/product/studio_scene.py`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera product example job.json", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/product/job.json`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera CAD example scene.py (widthMm 50-160 limit)", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/cad/scene.py`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera CAD wide variation job", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/cad/wide.job.json`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera cad-variations.ts (STEP round-trip volume check)", url: `${slopcameraRepository}/blob/${nativeEnginesCommit}/examples/showcase/native/cad-variations.ts`, checkedOn: "2026-09-28" },
-      { title: "Slopcamera education example", url: `${slopcameraRepository}/tree/${nativeEnginesCommit}/examples/showcase/native/education`, checkedOn: "2026-09-28" },
+    "sources": [
+      {
+        "title": "MCP for Blender (formerly blender-mcp) README",
+        "url": "https://github.com/ahujasid/mcp-for-blender",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Blender manual: command-line rendering",
+        "url": "https://docs.blender.org/manual/en/latest/advanced/command_line/render.html",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Manim Community: configuration and CLI",
+        "url": "https://docs.manim.community/en/stable/guides/configuration.html",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "CadQuery introduction",
+        "url": "https://cadquery.readthedocs.io/en/latest/intro.html",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera product example scene.py",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/scene.py",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera product example studio_scene.py",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/studio_scene.py",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera product example job.json",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/job.json",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera CAD example scene.py (widthMm 50-160 limit)",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad/scene.py",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera CAD wide variation job",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad/wide.job.json",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera cad-variations.ts (STEP round-trip volume check)",
+        "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad-variations.ts",
+        "checkedOn": "2026-09-28"
+      },
+      {
+        "title": "Slopcamera education example",
+        "url": "https://github.com/hraness/slopcamera/tree/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/education",
+        "checkedOn": "2026-09-28"
+      }
     ],
-    observations: [
-      "At commit 81217777 (identical to the worktree HEAD for examples/showcase/native), product scene.py is 51 lines, studio_scene.py is 147 lines and source.json is one line; the brass line at scene.py:10 matches the blender-product starter's line exactly.",
-      "The CAD scene.py rejects width outside 50-160 mm; wide.job.json sets widthMm 132 and heightMm 68; cad-variations.ts:38 fails if the relative volume error exceeds 0.00001.",
-      "slopcamera studio init lists seven templates; the blender-product starter's default job ends at frame 72, shorter than the six-second showcase film.",
-      "Reusing a jobId with changed inputs is rejected as a conflict (native-films.md, educational-video.md).",
-      "The MCP for Blender (formerly blender-mcp) README describes execute_blender_code running arbitrary Python, warns users to save work first, and documents BLENDER_MCP_SAFE_MODE=1 blocking file access, subprocesses and network access.",
-      "The live-session drawback is qualified: an agent that saved each script it sent keeps a replayable record; otherwise the .blend file is the only record.",
-      "Native control rigs and IK stay in Blender; a portable GLB export and a rendered MP4 do not carry them (native-films.md), and the post says so without denying the separate rigged/morph GLB profile.",
-      "bun run check:copy passes: 238 claims across 102 surfaces. The body has no em dashes and quantifies no token savings, capture, pixel determinism or cloud rendering.",
+    "observations": [
+      "Source manifests name bundled scene files; trusted Python still runs with the user’s access.",
+      "Scene bundling and job updates precede plan, probe and run."
     ],
-    scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 2, hostFit: 2, voiceIntegrity: 2, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-28" },
-    humanReview: null,
-    reassessOn: "2026-11-09",
-    harmIfWrong: "A reader could let an agent run bundled Python believing it is sandboxed, expect byte-identical renders across machines, expect a GLB export to keep an editable rig, or dismiss a live MCP session as unable to keep scripts. Any of these would cost them time or expose their machine to untrusted code.",
-    refreshTriggers: [
-      "Changes to examples/showcase/native/product, cad or education (line counts, frames, parameter limits, volume tolerance)",
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "A reader could let an agent run bundled Python believing it is sandboxed, expect byte-identical renders across machines, expect a GLB export to keep an editable rig, or dismiss a live MCP session as unable to keep scripts. Any of these would cost them time or expose their machine to untrusted code.",
+    "refreshTriggers": [
       "Adding, removing or renaming studio init templates",
       "Changes to studio command names or flags (bundle, plan, probe, run, inspect, encode, assemble, reconcile, --allow-trusted-code)",
       "Changes to the native trust model, sandboxing or environment scrubbing",
       "New tested engine versions or platforms beyond Blender 5.2.1 LTS, CadQuery 2.8.0, Manim Community 0.21.0 on macOS arm64",
       "Changes to the MCP for Blender README (name, safe mode, execute_blender_code behavior)",
-      "Standalone executable gaining support for durable native workflows",
-    ],
+      "Standalone executable gaining support for durable native workflows"
+    ]
   },
   {
-    href: "/blog/introducing-slopcamera",
-    lifecycle: "indexable",
-    readerJob: "Decide whether Slopcamera fits my creative work by watching finished films and a precise revision, then choose a suitable first project.",
-    nonObviousAnswer: "A specific direction can produce another film from the same editable source: the tram revision enlarges the moon while preserving timing and sound. The first animation is a macOS task; a diagram offers a portable first result, and AI generation has separate paid routes.",
-    originalContribution: "Connects original scored films, a controlled moon-scale revision and three edits of the same NASA footage to practical first-project choices. Each current beat uses a reviewed render with retained editable source. It also distinguishes local creative work from paid generation and retains checked examples of Slopcamera use on other sites.",
-    hostFit: "The product's own introduction on its own site; it links to the tutorials and guides for task steps instead of repeating them.",
-    nearestUrls: [
-      { url: "https://slopcamera.com/", distinction: "The homepage is the screening and installation entry point. This existing launch article connects the films to first-project choices, generation costs and checked use on other sites." },
-      { url: "https://slopcamera.com/docs/tutorials/first-diagram", distinction: "The tutorial teaches the first diagram step by step; the post names the three commands and links there for the task." },
-      { url: "https://slopcamera.com/docs/how-to/generate-media", distinction: "The guide covers both generation routes in full; the post states the hosted route's limits and links there." },
+    "href": "/blog/introducing-slopcamera",
+    "lifecycle": "indexable",
+    "readerJob": "Choose a first SlopCamera project after seeing what editable source can produce.",
+    "nonObviousAnswer": "A precise change can reuse source and timing; diagrams provide a portable first result, while animation and paid generation have their own tool requirements.",
+    "originalContribution": "Connects original gallery films and a controlled moon-scale revision to first-project commands and the generation routes.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "https://slopcamera.com/",
+        "distinction": "The product entry point; this article connects the examples to practical first projects."
+      },
+      {
+        "url": "/docs/tutorials/first-animation",
+        "distinction": "Gives the full animation steps; the article explains what the revision demonstrates."
+      }
     ],
-    sources: [
-      { title: "Reviewed studio films and source hashes", url: `${slopcameraRepository}/blob/main/apps/web/media/examples.json`, checkedOn: "2026-09-30" },
-      { title: "Editable studio showcase sources", url: `${slopcameraRepository}/tree/main/examples/showcase/studio-relaunch`, checkedOn: "2026-09-30" },
-      { title: "First animation and controlled revision", url: "https://slopcamera.com/docs/tutorials/first-animation", checkedOn: "2026-09-30" },
-      { title: "SlopCamera README", url: `${slopcameraRepository}/blob/${introducingCommit}/README.md`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera v3.4.0 release", url: releaseRecord, checkedOn: "2026-09-24" },
-      { title: "SlopCamera scene behavior bake", url: `${slopcameraRepository}/blob/${introducingCommit}/src/spatial-scene/behavior-bake.ts`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera published release file", url: `${slopcameraRepository}/blob/${introducingCommit}/apps/web/published-release.json`, checkedOn: "2026-09-24" },
-      { title: "aicharts editorial image guide", url: "https://github.com/hraness/aicharts/blob/644dc2d4d22b145ae5ba64edf898f4584f9faa8d/editorial/IMAGES.md", checkedOn: "2026-09-24" },
-      { title: "aicharts image records", url: "https://github.com/hraness/aicharts/blob/644dc2d4d22b145ae5ba64edf898f4584f9faa8d/editorial/images.manifest.json", checkedOn: "2026-09-24" },
-      { title: "GhostGet changelog", url: "https://github.com/hraness/ghostget/blob/76a79fc4836436239dff1d6328fdc87b93e01bcb/CHANGELOG.md", checkedOn: "2026-09-24" },
-      { title: "GhostGet WebMCP page", url: "https://ghostget.com/webmcp/", checkedOn: "2026-09-24" },
+    "sources": [
+      {
+        "title": "Reviewed studio films and source hashes",
+        "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/apps/web/media/examples.json",
+        "checkedOn": "2026-10-01"
+      },
+      {
+        "title": "Editable studio showcase sources",
+        "url": "https://github.com/hraness/slopcamera/tree/d2accc8badd991f288bb0c83668efc641aa89981/examples/showcase/studio-relaunch",
+        "checkedOn": "2026-10-01"
+      },
+      {
+        "title": "First animation and controlled revision",
+        "url": "https://slopcamera.com/docs/tutorials/first-animation",
+        "checkedOn": "2026-09-30"
+      },
+      {
+        "title": "SlopCamera README",
+        "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/README.md",
+        "checkedOn": "2026-10-01"
+      },
+      {
+        "title": "SlopCamera scene behavior bake",
+        "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/src/spatial-scene/behavior-bake.ts",
+        "checkedOn": "2026-10-01"
+      }
     ],
-    observations: [
-      "Every live AI Charts note has a Slopcamera figure whose record (size, hashes, prompt digest, Slopcamera version and commit, receipt and job paths) is in aicharts editorial/images.manifest.json, not in the image guide.",
-      "From the CLI, --hosted accepts only a prompt and a model; reference images, video, speech and transcription need the user's own key (apps/desktop/cli/commands.ts at v3.4.0).",
-      "Every current beat uses a registered studio film and resolves numeric facts from launch-facts.ts. The earlier compiled launch film is explicitly historical and its collection count is not presented as current.",
-      "Uploading named local media is a flag, not a prompt: without --allow-cloud-upload the CLI refuses with authorization-required (apps/desktop/cli/directing-service.ts).",
+    "observations": [
+      "The launch beats use the original studio gallery examples and their source recipes.",
+      "The diagram starter runs without a browser or paid model; native animation and AI generation have distinct requirements."
     ],
-    scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 2, hostFit: 2, voiceIntegrity: 1, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer: "Codex (GPT-6)", reviewerType: "ai", reviewedOn: "2026-09-30" },
-    humanReview: null,
-    reassessOn: "2026-11-05",
-    harmIfWrong: "A reader could expect the hosted route to accept reference images or media, or expect Slopcamera to be a hosted app, and install a tool that does not fit their work.",
-    refreshTriggers: [
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "A reader could expect the hosted route to accept reference images or media, or expect Slopcamera to be a hosted app, and install a tool that does not fit their work.",
+    "refreshTriggers": [
       "Changes to a featured film, its source, score, revision parameters or platform requirements",
       "Slopcamera release tag bump",
       "Change to hosted image generation (options accepted with --hosted, credits checkout, upload acknowledgement)",
       "Change to the ALGAL relation detail or the scene behavior bake (behavior.ts, behavior-bake.ts, scene behavior CLI help)",
       "AI Charts or Ghostget replaces or removes its Slopcamera figures or provenance files",
       "Change to the first-diagram commands or their outputs in the README or tutorial",
-      "Slopcamera rename, or the how-slopcamera-uses-algal post changes route or title",
-    ],
+      "Slopcamera rename, or the how-slopcamera-uses-algal post changes route or title"
+    ]
   },
-  // Quarantined: the slopcamera to ALGAL relation and its detail sentence are
-  // not in @hraness/design-kit/portfolio v0.17.0, and the ALGAL dependency is
-  // pinned to a commit that is not on ALGAL main. The page stays readable but
-  // noindex, and out of the sitemap, feed, llms.txt and the blog index, until
-  // the relation is registered and the owner clears the pin.
   {
-    href: "/blog/how-slopcamera-uses-algal",
-    lifecycle: "quarantined",
-    readerJob: "I build 3D scenes with Slopcamera and want to know what ALGAL does inside it, and whether it can change my renders behind my back.",
-    nonObviousAnswer: "ALGAL runs behavior with no tools attached and only Slopcamera's own motion functions; every bake fails on any effect or model call, an undeclared channel, an out-of-range time, a stale scene fingerprint, or a program ID that ALGAL recomputes differently, and editing the scene marks the behavior stale rather than silently keeping it.",
-    originalContribution: "Explains from the bake source and tests which checks run on every bake and which guarantee is held by tests instead, which the scene docs do not cover.",
-    hostFit: "Behavior baking is a Slopcamera scene feature; the post explains why it runs through ALGAL and links to the scene guide for task steps.",
-    nearestUrls: [
-      { url: "https://slopcamera.com/docs/how-to/direct-scenes", distinction: "The how-to covers rendering and editing scenes; it does not explain why behavior runs through ALGAL or what a bake guarantees." },
-      { url: "https://slopcamera.com/docs/reference/spatial-scenes", distinction: "The reference mentions behavior documents in one clause; the post explains the bake's checks and limits." },
-      { url: "https://slopcamera.com/blog/introducing-slopcamera", distinction: "The introduction mentions ALGAL in one paragraph and links here for the details." },
+    "href": "/blog/how-slopcamera-uses-algal",
+    "lifecycle": "indexable",
+    "readerJob": "Understand how to keep character behavior repeatable while revising a rendered scene.",
+    "nonObviousAnswer": "Bake the behavior into a saved timeline before rendering. A mapped channel drives existing performance assets; it does not generate rigs or animation clips.",
+    "originalContribution": "Shows a state-machine example, check/bake/audit commands, input fingerprints and the closed behavior function boundary.",
+    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "nearestUrls": [
+      {
+        "url": "https://slopcamera.com/docs/how-to/direct-scenes",
+        "distinction": "The how-to covers rendering and editing scenes; it does not explain why behavior runs through ALGAL or what a bake guarantees."
+      },
+      {
+        "url": "https://slopcamera.com/docs/reference/spatial-scenes",
+        "distinction": "The reference mentions behavior documents in one clause; the post explains the bake's checks and limits."
+      },
+      {
+        "url": "https://slopcamera.com/blog/introducing-slopcamera",
+        "distinction": "The introduction mentions ALGAL in one paragraph and links here for the details."
+      }
     ],
-    sources: [
-      { title: "SlopCamera behavior bake", url: `${slopcameraRepository}/blob/${algalPostCommit}/src/spatial-scene/behavior-bake.ts`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera behavior bake tests", url: `${slopcameraRepository}/blob/${algalPostCommit}/src/spatial-scene/behavior-bake.test.ts`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera behavior functions", url: `${slopcameraRepository}/blob/${algalPostCommit}/src/spatial-scene/behavior-fns.ts`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera behavior trace and channel map", url: `${slopcameraRepository}/blob/${algalPostCommit}/src/spatial-scene/behavior-trace.ts`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera package manifest (ALGAL dependency)", url: `${slopcameraRepository}/blob/${algalPostCommit}/package.json`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera Agent Skill: directed scenes", url: `${slopcameraRepository}/blob/${algalPostCommit}/skills/slopcamera/references/directed-scenes.md`, checkedOn: "2026-09-24" },
-      { title: "SlopCamera ALGAL character behaviors plan", url: `${slopcameraRepository}/blob/${algalPostCommit}/kb/plans/algal-character-behaviors.md`, checkedOn: "2026-09-24" },
-      { title: "ALGAL README", url: "https://github.com/hraness/algal/blob/1bc117df7e9d18911123e736e28e2c051598a9f3/README.md", checkedOn: "2026-09-24" },
-      { title: "SlopCamera v3.4.0 release", url: releaseRecord, checkedOn: "2026-09-24" },
+    "sources": [
+      {
+        "title": "SlopCamera behavior bake",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.ts",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera behavior bake tests",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.test.ts",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera behavior functions",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-fns.ts",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera behavior trace and channel map",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-trace.ts",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera package manifest (ALGAL dependency)",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/package.json",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera Agent Skill: directed scenes",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/skills/slopcamera/references/directed-scenes.md",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera ALGAL character behaviors plan",
+        "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/kb/plans/algal-character-behaviors.md",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "ALGAL README",
+        "url": "https://github.com/hraness/algal/blob/1bc117df7e9d18911123e736e28e2c051598a9f3/README.md",
+        "checkedOn": "2026-09-24"
+      },
+      {
+        "title": "SlopCamera v3.4.0 release",
+        "url": "https://github.com/hraness/slopcamera/releases/tag/v3.4.0",
+        "checkedOn": "2026-09-24"
+      }
     ],
-    observations: [
-      "bakeSpatialBehavior passes executors: [] and an in-memory store to ALGAL's runOrganism and throws on any recorded effect or agent call (src/spatial-scene/behavior-bake.ts).",
-      "Bit-for-bit replay of a bake is enforced by behavior-bake.test.ts, not re-checked on each bake; an unmapped channel stays trace-only and only a mapped value with no binding becomes an unresolved intent (behavior-trace.ts).",
+    "observations": [
+      "Behavior baking rejects recorded effects and model calls.",
+      "Changing scene inputs requires rebinding and a new bake, while the prior bake remains available for comparison."
     ],
-    scores: { readerUtility: 2, originalEvidence: 2, factualConfidence: 2, hostFit: 2, voiceIntegrity: 2, maintenanceValue: 1 },
-    owner: "hraness/slopcamera",
-    drafting: "ai-from-source",
-    review: { reviewer, reviewerType: "ai", reviewedOn: "2026-09-26" },
-    humanReview: null,
-    reassessOn: "2026-11-05",
-    harmIfWrong: "A reader could trust a bake guarantee that the code does not enforce, or assume behavior can reach tools, models or files.",
-    refreshTriggers: [
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "owner": "hraness/slopcamera",
+    "drafting": "ai",
+    "review": {
+      "reviewer": "Codex independent editorial review (AI)",
+      "reviewerType": "ai",
+      "reviewedOn": "2026-10-01"
+    },
+    "humanReview": null,
+    "reassessOn": "2026-11-12",
+    "harmIfWrong": "A reader could trust a bake guarantee that the code does not enforce, or assume behavior can reach tools, models or files.",
+    "refreshTriggers": [
       "Slopcamera release tag bump",
       "Change to the slopcamera:algal relation detail",
       "ALGAL pin bump in package.json",
       "Change to the scene behavior commands, function catalog, starting programs or bake checks",
       "Rename of Slopcamera or ALGAL",
-      "The introducing-slopcamera post or an ALGAL built-on page goes live or moves",
-    ],
-  },
+      "The introducing-slopcamera post or an ALGAL built-on page goes live or moves"
+    ]
+  }
 ] as const satisfies readonly ArticleAdmission[]
 
 export type BlogAdmission = (typeof blogAdmissions)[number]

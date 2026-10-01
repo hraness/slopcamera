@@ -1,31 +1,16 @@
 # Capabilities, versions, and platforms
 
-This reference describes the current Slopcamera CLI and its runtime requirements. A package's version number alone does not identify a source checkout; inspect its commit and actual command help.
+This reference describes the current SlopCamera CLI and its runtime requirements. A package's version number alone does not identify a source checkout; inspect its commit and actual command help.
 
-## Current SlopCamera and historical Atet
+## Install the release
 
-Slopcamera v3.10.1 installs from its [canonical release archive](https://github.com/hraness/slopcamera/releases/download/v3.10.1/hraness-slopcamera-3.10.1.tgz) or from [source](../how-to/use-current-source.md). The historical **Atet v3.2.3** archive contains `@hraness/atet` and the `atet` command; it does not install Slopcamera.
-
-| Surface | Historical Atet v3.2.3 | Slopcamera v3.10.1 |
-| --- | --- | --- |
-| Diagrams, vectorization, Gateway media, recording-bundle editing, ordinary project edits, local workflows | Available with the relevant local tools and credentials | Available; neither this release nor current source captures new recordings |
-| Editable spatial scenes, calibrated scene cameras, V2 shots, Three hardware and Spark profiles, saved-world import | Available | Available |
-| Paid World Labs world commands | Present in the historical release | Removed; saved-world import and historical provenance replay remain |
-| Retained short-video directing: `direct …` | Absent | Available |
-| Blender, CadQuery, Manim and acquisition: `studio …` | Absent | Available |
-| Native output admission: `studio asset` | Absent | Available |
-| Calibrated camera samples: `scene camera-track` | Absent | Available |
-| Parametric architectural designs: `scene design` | Absent | Available |
-| External vgpu 0.4.1 native example | Absent | Explicit example runtime; not a new registered studio engine |
-| Film and animation direction: `style list`, `style show` | Absent | 17 profiles and SDK direction, exposure, and finishing helpers |
-
-Use the Slopcamera release installation or a source build for the commands below. Do not substitute the renamed package or executable into an old Atet archive URL, silently switch versions, or use historical paid-world commands as a substitute for the current saved-world workflow.
+Install the [current release](https://github.com/hraness/slopcamera/releases/latest) for the CLI, SDK and matching agent instructions. To develop SlopCamera or run a repository example, follow the [source setup guide](../how-to/use-current-source.md).
 
 ## Verified release contents
 
-The immutable [v3.10.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.1), published on September 30, 2026, contains the following command families. Its canonical archive is built from `160006b793ad50ac2d9cea11f99fb62f68f2d55e`. A source checkout can expose later corrections without changing its package version; inspect its commit as well as its help.
+The [published release](https://github.com/hraness/slopcamera/releases/tag/v3.10.1) provides these capabilities. Run `slopcamera --version` and the installed command's help when you need to check a particular installation.
 
-| Capability | Slopcamera v3.10.1 |
+| Capability | SlopCamera v3.10.1 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -42,11 +27,9 @@ The immutable [v3.10.1 release](https://github.com/hraness/slopcamera/releases/t
 
 The static and rigged/morph GLB profiles have separate admission limits within this release. Model, browser, native-engine and hardware availability still require inspection on the machine doing the work; presence in an archive is not a live qualification result.
 
-This release includes the three renderer corrections introduced in v3.3.4 that v3.3.1 lacks: static-overlay duration and positioned-layer RGB blending in project exports, and negative-color handling in saved-splat rendering. Examples that depend on them identify the required revision beside their commands. The project-cinema commands ship in v3.3.1 and later.
-
 ## Parametric architectural designs
 
-Slopcamera v3.10.1 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+SlopCamera v3.10.1 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 Wall openings use corrected elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
 
@@ -69,7 +52,7 @@ apply. A resolution recommendation does not establish visual quality.
 
 ### Patent-style drawing sheets
 
-Slopcamera v3.3.5 added `diagram sheets init|check|render` for version-one
+SlopCamera v3.3.5 added `diagram sheets init|check|render` for version-one
 `.drawing.json` documents. It retains one authored diagram per sheet and produces outlined
 monochrome SVGs, a multipage PDF, and a receipt binding source and output hashes.
 It runs locally with bundled rendering dependencies and needs no browser,
@@ -103,7 +86,7 @@ editing, outputs, and the required visual review.
 | Version-matched packaged agent instructions | `slopcamera skill path` |
 | Optional support closeout protocol (no feature requires payment) | `slopcamera support protocol --json`, `slopcamera help` |
 
-Slopcamera exposes ten operation codes: diagram check/render, image generate/vectorize, image icon/gallery, icon compose/render, and soundtrack compose/grid. Its MCP server has 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits, and `compose_icon`, `render_icon`, `compose_soundtrack`, and `derive_soundtrack_grid`. The icon compose/render and soundtrack compose/grid codes, their MCP tools, and the `image icon compose|render` and `media soundtrack compose|grid` commands were introduced in v3.9.0; they run locally with no model or network request. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
+SlopCamera exposes ten operation codes: diagram check/render, image generate/vectorize, image icon/gallery, icon compose/render, and soundtrack compose/grid. Its MCP server has 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools for inspection, evaluation, direction, effects, behavior, and temporal audits, and `compose_icon`, `render_icon`, `compose_soundtrack`, and `derive_soundtrack_grid`. The icon compose/render and soundtrack compose/grid codes, their MCP tools, and the `image icon compose|render` and `media soundtrack compose|grid` commands were introduced in v3.9.0; they run locally with no model or network request. The complete local host has a separate, larger closed registry. No surface accepts caller-registered operations.
 
 ## Local execution profiles
 
@@ -133,11 +116,9 @@ Gateway model discovery and paid generation, selected cloud analysis, optional p
 
 Directing budgets use catalog estimates, not provider-enforced spending caps. Native supervision and hash receipts provide process control and observed provenance, not an OS sandbox or complete hermetic dependency closure.
 
-## Native browser isolation
+## Native browser requirements
 
-The native HTML renderer verifies a Google-signed macOS Chrome app and renders from a private, immutable copy of its complete runtime. Slopcamera disables Chrome's `MacAppCodeSignClone` feature for that copy, a change introduced in v3.8.1, to prevent an additional app copy for update survival. The launch contract also retains `PaintHolding` and its existing disabled features. Signature verification, runtime hashing, and graceful browser shutdown remain required.
-
-The renderer emits one `--disable-features` argument that combines its disabled features with the pinned Playwright defaults. New renders bind the merged argument and selective default-argument replacement into execution-integrity version 3. Retained version-1 and version-2 receipts keep their historical contracts for verification; they do not select the arguments for a new render. An ad-hoc-signed Chrome for Testing build does not satisfy this native renderer's signature requirements.
+Native HTML rendering uses a private copy of a supported, Google-signed macOS Chrome runtime and checks it before rendering. A Chrome for Testing build with an ad-hoc signature does not meet that native-renderer requirement. Run `slopcamera doctor --json` to inspect the tools available on your machine.
 
 ## CLI updates
 

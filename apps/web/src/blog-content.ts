@@ -165,7 +165,7 @@ export function blogMarkupWithClassTokens(html: string, kind: "article" | "index
     mapped = replaceExactly(mapped, `<h2 id="article-sources">`, `<h2 class="{{DOCS_H3_CLASS}}" id="article-sources">`, 1)
     mapped = replaceExactly(mapped, `</h2><ol><li>`, `</h2><ol class="{{DOCS_LIST_CLASS}}"><li>`, 1)
     mapped = replaceExactly(mapped, `<li><a href=`, `<li class="{{DOCS_LIST_ITEM_CLASS}}"><a class="{{DOCS_LINK_CLASS}}" href=`, sourceCount)
-    mapped = replaceExactly(mapped, `<span>Checked `, `<span class="{{BLOG_SOURCE_CHECKED_CLASS}}">Checked `, sourceCount)
+    mapped = replaceExactly(mapped, `<span>Checked `, `<span class="{{BLOG_SOURCE_CHECKED_CLASS}}">Checked `, 0)
     mapped = replaceExactly(mapped, `<h2 id="article-related-products">`, `<h2 class="{{DOCS_H3_CLASS}}" id="article-related-products">`, 1)
     // Each related product's role sits on its own muted line under the name.
     mapped = replaceExactly(mapped, `</strong><span>`, `</strong><span class="{{BLOG_SOURCE_CHECKED_CLASS}}">`, relatedFor("slopcamera").length)
@@ -223,9 +223,11 @@ export function blogPostSlots(post: BlogPost, markdown: string): BlogPageSlots {
   const admission = admissionForPost(post)
   const provenance = articleProvenanceFromAdmission(admission)
   const sources = renderArticleSourcesHtml({
+    showDates: false,
     sources: admission.sources.map(source => ({ title: source.title, href: source.url, checkedOn: source.checkedOn })),
   })
   const article = renderArticleHtml({
+    showDates: false,
     heading: post.title,
     dek: post.description,
     eyebrow: post.eyebrow,
@@ -258,6 +260,7 @@ export function blogPostSlots(post: BlogPost, markdown: string): BlogPageSlots {
 
 export function blogIndexSlots(): BlogPageSlots {
   const list = renderArticleIndexHtml({
+    showDates: false,
     heading: blogIndex.heading,
     headingId: "blog-title",
     headingLevel: 1,
@@ -286,22 +289,16 @@ export function blogIndexSlots(): BlogPageSlots {
   }
 }
 
-function humanDate(value: string): string {
-  return new Date(`${isoDate(value)}T00:00:00.000Z`).toLocaleDateString("en-US", {
-    day: "numeric", month: "long", timeZone: "UTC", year: "numeric",
-  })
-}
-
 /** The public Markdown mirror of a post: the same text, provenance and sources as its page. */
 export function blogPostMarkdown(post: BlogPost, markdown: string): string {
   const admission = admissionForPost(post)
   const provenance = articleProvenanceSentence(articleProvenanceFromAdmission(admission))
-  const sources = admission.sources.map(source => `- [${source.title}](${source.url}), checked ${source.checkedOn}`).join("\n")
+  const sources = admission.sources.map(source => `- [${source.title}](${source.url})`).join("\n")
   return `# ${post.title}
 
 ${post.description}
 
-By Hraness · Published ${humanDate(post.published)}${post.updated === undefined ? "" : ` · Updated ${humanDate(post.updated)}`}
+By Hraness
 
 ${provenance}
 
@@ -315,7 +312,7 @@ ${sources}
 
 export function blogIndexMarkdown(): string {
   const entries = indexableBlogPosts.map(post =>
-    `- [${post.title}](${blogOrigin}${blogMarkdownPath(post)}): ${post.description} Published ${humanDate(post.published)}.`)
+    `- [${post.title}](${blogOrigin}${blogMarkdownPath(post)}): ${post.description}`)
   return `# ${blogIndex.heading}
 
 ${blogIndex.description}

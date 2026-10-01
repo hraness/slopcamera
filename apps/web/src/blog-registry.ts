@@ -38,10 +38,11 @@ type BlogPostSource = Omit<BlogPost, "lifecycle">
 const sources: readonly BlogPostSource[] = [
   {
     slug: "one-shot-render-vs-installed-techniques",
-    title: "Your model can one-shot a render. What does the second one take?",
-    description: "What revisions, variants, and checks take on four SlopCamera gallery examples, measured in file sizes and changed lines at one commit.",
+    title: "Reusing source across revisions and formats",
+    description: "How diagrams, titles, parametric designs and format variants keep creative changes separate from rendering.",
     eyebrow: "Frameworks and agents",
     published: "2026-09-28",
+    updated: "2026-10-01",
     keywords: [
       "one-shot render", "coding agent video", "agent skills", "video framework for agents", "Claude Code video",
       "editable diagrams", "parametric design", "aspect ratio variants", "Remotion alternative", "HyperFrames alternative",
@@ -53,6 +54,7 @@ const sources: readonly BlogPostSource[] = [
     description: "Match each shot to the engine that draws it (HTML, Three.js, Blender, Manim, or FFmpeg), then have your agent write a short source file and render it.",
     eyebrow: "Guide",
     published: "2026-09-28",
+    updated: "2026-10-01",
     keywords: [
       "make video with Claude Code", "Codex video", "coding agent video", "agent skills video", "HTML to video",
       "Three.js camera move", "headless Blender", "Manim explainer", "FFmpeg edit", "Remotion alternative", "HyperFrames alternative",
@@ -64,6 +66,7 @@ const sources: readonly BlogPostSource[] = [
     description: "Keep a diagram as a short JSON file your agent edits, checks, and re-renders to light and dark SVG, PNG, and tldraw, instead of drawing it again.",
     eyebrow: "Guide",
     published: "2026-09-28",
+    updated: "2026-10-01",
     keywords: [
       "editable diagrams", "diagrams as code", "coding agents", "Claude Code diagrams", "architecture diagrams",
       "tldraw", "light and dark SVG", "Mermaid alternative", "slopcamera",
@@ -75,6 +78,7 @@ const sources: readonly BlogPostSource[] = [
     description: "A live Blender MCP session suits exploring. A scene your agent keeps as a short program is easier to revise, re-render, and check the next day.",
     eyebrow: "Native engines",
     published: "2026-09-28",
+    updated: "2026-10-01",
     keywords: [
       "headless Blender", "Blender MCP", "Blender command-line rendering", "Manim", "CadQuery", "coding agents",
       "Claude Code Blender", "parametric CAD agent", "scene as code", "SlopCamera studio",
@@ -86,6 +90,7 @@ const sources: readonly BlogPostSource[] = [
     description: "SlopCamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
     eyebrow: "Release",
     published: "2026-09-24",
+    updated: "2026-10-01",
     keywords: ["slopcamera", "image generation", "ai images", "diagrams", "coding agents", "editorial images"],
   },
   {
@@ -94,6 +99,7 @@ const sources: readonly BlogPostSource[] = [
     description: "SlopCamera runs a character's behavior as a small ALGAL program with no tools, models, or side effects, so the same scene and seed always bake the same motion.",
     eyebrow: "Integration",
     published: "2026-09-24",
+    updated: "2026-10-01",
     keywords: ["slopcamera", "algal", "character animation", "3d scenes", "deterministic rendering", "coding agents"],
   },
 ]

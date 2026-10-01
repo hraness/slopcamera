@@ -4,7 +4,7 @@ A walking character has to do dozens of small things on time: pause, shift its w
 
 ## Why behavior is baked before rendering
 
-With generated animation, the first render often looks right. You change the lighting, render again, and the character now turns left instead of right, or blinks at a different moment, because something random or hidden was part of the motion. The two versions cannot be compared, and a reviewer cannot tell whether the change you made caused the difference.
+If motion is sampled again during rendering, a lighting revision can also change when a character turns or blinks. To judge the lighting, you need the motion to stay fixed. Saving a behavior timeline makes that comparison straightforward.
 
 SlopCamera keeps the two steps apart. The behavior runs first, once, and its output is saved as data. Rendering reads that saved data. If you want different behavior, you change the program or the seed and bake again to a new file, so the old and new results can be compared.
 
@@ -75,6 +75,4 @@ Because behavior programs are data, your coding agent can write and revise them 
 
 ## Limits
 
-Behavior baking decides when things happen. It does not create animation clips, rigs, or props; the channel map points at ones you already have, and anything you do not map stays in the timeline only. The four starting programs are small, and the function list is closed, so behavior outside what those functions express needs a change to SlopCamera itself. SlopCamera builds on a fixed ALGAL commit, and ALGAL is early software. The check and bake commands wait for free local CPU, so while a render is running, a bake can sit with no output until CPU frees up.
-
-The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
+Behavior baking decides when things happen. It does not create animation clips, rigs, or props; the channel map points at ones you already have, and anything you do not map stays in the timeline only. The four starting programs are small, and the function list is closed, so behavior outside what those functions express needs a change to SlopCamera itself.

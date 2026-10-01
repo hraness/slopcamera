@@ -1,0 +1,73 @@
+{
+  "reviewer": "Codex independent editorial review (AI)",
+  "reviewerType": "ai",
+  "reviewedOn": "2026-10-01",
+  "humanReview": null,
+  "verdict": "approved",
+  "scope": "All six Markdown article bodies read in full; follow-up repairs reviewed; original linked examples and relevant implementation inspected. Current rendered launch beats/film and all docs are outside this body review.",
+  "scores": {
+    "readerUtility": 2,
+    "originalEvidence": 1,
+    "factualConfidence": 2,
+    "hostFit": 2,
+    "voiceIntegrity": 2,
+    "maintenanceValue": 2
+  },
+  "total": 11,
+  "sha256": {
+    "apps/web/src/blog/editable-diagrams-with-coding-agents.md": "ea514f8bf6f91c8a6009d18dc02cf1c075df92dbbff43fbc635a5dbc31d7e0ce",
+    "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md": "83eeb22225b1e2672a7ed32f5de9ac19dcb68ec10f71391038c998c939386e7b",
+    "apps/web/src/blog/how-slopcamera-uses-algal.md": "9d8cf77cde3716483f24a9e2e16dcba54559b796cc9f17eac9386610c43b3114",
+    "apps/web/src/blog/introducing-slopcamera.md": "f185fe01ee58e4d21f652b987587acdacfbc4e6bb8b02de407c2ecdc3af73f0c",
+    "apps/web/src/blog/make-video-with-claude-code.md": "f7854b244d6cd88d4da974b126b21b5a3f4558bfd48bad32d49f8859f327ef39",
+    "apps/web/src/blog/one-shot-render-vs-installed-techniques.md": "32d57f341029a697d86b6b807b06ccf17bcbdef2c608dbac98c1caf48ec6c552",
+    "apps/web/src/blog-registry.ts": "633a364a25267b0c7b992763f090e5c57b04d8e02652f1c6db50b87d58ff8b19"
+  },
+  "resolvedFindings": [
+    "Source manifest describes bundled files, not OS-level read containment.",
+    "Native material revision now updates bundle digest and job ID before plan/probe/run.",
+    "Reusable-renderer article replaces bytes/line counts and old pixel-match bookkeeping with concrete source fields and outputs.",
+    "Video overview retains editable sources/project without claiming every video is one short file."
+  ],
+  "implementationEvidence": [
+    "apps/desktop/cli/studio-encode.ts verifies decoded output framehash against canonical source frames.",
+    "src/spatial-scene/behavior-bake.ts rejects recorded effects and agent calls.",
+    "Current techniques references confirm existing recordings are consumed rather than captured."
+  ],
+  "limits": [
+    "No claim that commands were executed or native examples rerendered during independent prose review.",
+    "Image/film accuracy and layout need separate visual review.",
+    "Prior human or AI reviews must remain distinct from this review."
+  ],
+  "followup": {
+    "reviewedOn": "2026-10-01",
+    "verdict": "approved",
+    "scope": "All9 current introductory launch beats read in full; docs/README, README removal and both capabilities diffs read in full. Follow-up generic source/project opener and correct SlopCamera prose name confirmed.",
+    "sha256": {
+      "README.md": "fa93776f99fdedf32594843a533276096625d33e6767cb347571958c99716178",
+      "docs/README.md": "ad2479bb2db4308b8d36c862d7cb25ed20e7cc862358dbcb6c3f3f10d9922271",
+      "docs/reference/capabilities.md": "91cd3c2b12a314d50e03fedcfaed703c13a871a47f277d5796bb49fa5d1c698b",
+      "apps/web/src/docs/reference/capabilities.md": "6a0c49a0a1634d62c07e1ff2d0113b4adf10b2aa6e760b337aaeab808b6500b6",
+      "apps/web/src/launch-beats.ts": "629e602cb481c4c94fc21ba3152ad14cb760d7dfb53998256a29d4db19cac97d"
+    },
+    "findings": [],
+    "limits": "Standalone historical film and nine gallery videos not rerendered or visually requalified by this prose review; worker owns visual evidence."
+  },
+  "integrationReview": {
+    "reviewer": "Codex (GPT-6), independent AI editorial review",
+    "reviewedOn": "2026-10-01",
+    "verdict": "approved",
+    "scope": "Date-free static adapter and Markdown mirrors; article alias v0.35.2; accurate metadata dates; all nine registered figures/caption checks; admission-driven discovery; exact reviewed ALGAL-route noindex removal. No gate weakening found. Installer main integrated without conflicts.",
+    "sha256": {
+      "apps/web/src/blog-content.ts": "fd29ef8e589c27a23ebf0daed697a688127b7082f3f59ba7a66fad2f1af581d7",
+      "apps/web/src/blog.test.ts": "185093e1b3c7bea92e398ec875e0d15f6edfc7b2e7aff147b8507daa09be7b6a",
+      "apps/web/src/launch.test.ts": "1fae90f0ded1830923164468b2008354ec9fb0caf0daa092c240be23e48561dc",
+      "apps/web/src/blog-admissions.ts": "b7e4ce4fac38f864279f77cbca9909e42a85dd105e04a8ebf97edd01434591f3",
+      "apps/web/vercel.json": "5e602b2530a5bea94fcfc66d24b185d93f9cf9dbc01a3393e16f4a3be0cbc1fc",
+      "apps/web/package.json": "adb305c3aea027b1a0334a803008a7b575904efa410ef782f757966f96c60993",
+      "apps/web/bun.lock": "c68c5f16fcdb275ccf6fbd8d2f434164761ff1911e6d44c43fe624fc9c093a95",
+      "apps/web/site.test.ts": "da28abac69ebea6d88bde228db44aec6820393c68688aa9073e1eefec63eca28",
+      "apps/web/scripts/site-copy-content.test.ts": "84124d3619ada7d2b2b00fd6adf7bd15338ed92f7903b269454ee6da1763294b"
+    }
+  }
+}
