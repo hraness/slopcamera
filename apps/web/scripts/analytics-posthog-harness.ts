@@ -53,8 +53,22 @@ const { ErrorTrackingExtensions } = await import("posthog-js/dist/extension-bund
 const contract = await import("../src/analytics-contract")
 const { posthogBrowserOptions } = await import("../src/analytics-options")
 
-type Scenario = Readonly<{ name: string; url: string; referrer: string; notFound?: boolean }>
+type Scenario = Readonly<{ name: string; url: string; referrer: string; notFound?: boolean; errorText?: string }>
 const scenarios: readonly Scenario[] = [
+  ...[
+    "+@a.aa",
+    "%2B%2540a.aa",
+    "privacycanary%2540example.com",
+    "privacycanary%40%E4%BE%8B%E5%AD%90.com",
+    "Bearer%20credentialcanary",
+    "api_key%3Dcredentialcanary",
+    "https%3A%2F%2Fusercanary%3Acredentialcanary%40example.com",
+    "%70%72%69%76%61%63%79%63%61%6e%61%72%79%40example.com",
+    `${"x".repeat(500)}privacycanary%2540example.com`,
+  ].map((canary, index) => ({
+    name: `encoded-private-${index}`, url: `https://slopcamera.com/docs/${canary}`,
+    referrer: "", notFound: true, errorText: `Failure ${canary} at https://slopcamera.com/docs/${canary}`,
+  })),
   {
     name: "attributed",
     url: "https://www.slopcamera.com/docs/how-to/music-video?utm_source=newsletter&gclid=abc123&email=someone%40example.com&code=oauth-secret&ref=partner&other=1#section",
@@ -62,6 +76,7 @@ const scenarios: readonly Scenario[] = [
   },
   { name: "sensitive", url: "https://slopcamera.com/login?utm_source=newsletter&gclid=abc123&code=oauth-secret", referrer: "" },
   { name: "sensitive-encoded", url: "https://slopcamera.com/%61ccount/private-person?utm_source=newsletter&gclid=abc123", referrer: "" },
+  { name: "sensitive-multiply-encoded", url: "https://slopcamera.com/%2574oken/private-person?utm_source=newsletter&gclid=abc123", referrer: "" },
   { name: "sensitive-history", url: "https://slopcamera.com/docs?utm_source=newsletter", referrer: "" },
   { name: "not-found", url: "https://slopcamera.com/missing/page?utm_source=x&secret=1", referrer: "https://slopcamera.com/docs", notFound: true },
   { name: "preview", url: "https://preview.slopcamera.com/?utm_source=x", referrer: "" },
@@ -119,7 +134,7 @@ for (const scenario of scenarios) {
   if (scenario.notFound === true) {
     instance.capture(contract.pageNotFoundEvent, { requested_path: contract.requestedPath(url.pathname), referrer_host: "slopcamera.com" })
   }
-  const error = contract.sanitizeError(new Error(`Failed for someone@example.com at ${scenario.url}`))
+  const error = contract.sanitizeError(new Error(scenario.errorText ?? `Failed for someone@example.com at ${scenario.url}`))
   instance.captureException(error, { error_surface: "client", error_origin: "window_error", error_fingerprint: contract.errorFingerprint(error) })
   instance.capture("$autocapture", { $event_type: "click" })
   instance.capture("checkout started", { placement: "hero" })
@@ -133,5 +148,7 @@ for (const scenario of scenarios) {
   results[scenario.name] = { received, returned, bodies: sent.slice(start).map(decode) }
 }
 
-process.stdout.write(JSON.stringify(results))
+await new Promise<void>((resolve, reject) => {
+  process.stdout.write(JSON.stringify(results), error => error ? reject(error) : resolve())
+})
 process.exit(0)

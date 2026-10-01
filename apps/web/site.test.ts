@@ -687,6 +687,21 @@ describe("the pinned posthog-js through the production before_send (observabilit
 
   const allowedEvents = ["$pageview", "$web_vitals", ctaClickedEvent, outboundLinkOpenedEvent, installCommandCopiedEvent, "$exception", "$pageleave"]
 
+  test("encoded personal paths and error text stay outside SDK request bodies", () => {
+    const cases = Object.entries(scenarios).filter(([name]) => name.startsWith("encoded-private-"))
+    expect(cases).toHaveLength(9)
+    for (const [, scenario] of cases) {
+      const sent = sentEvents(scenario)
+      for (const event of ["$pageview", pageNotFoundEvent, "$exception"]) {
+        expect(sent.some(capture => capture.event === event)).toBe(true)
+      }
+      const wire = JSON.stringify(sent)
+      for (const marker of ["privacycanary", "credentialcanary", "usercanary", "@a.aa", "%40a.aa", "%2540a.aa", "例子", "%E4%BE%8B", "%70%72%69%76", "x".repeat(32)]) {
+        expect(wire).not.toContain(marker)
+      }
+    }
+  })
+
   test("sends every allowed built-in and custom event and drops everything else", () => {
     const attributed = scenarios.attributed!
     expect(attributed.returned.map(event => event?.event ?? null)).toEqual([...allowedEvents.slice(0, 6), null, null, "$pageleave"])
@@ -748,7 +763,8 @@ describe("the pinned posthog-js through the production before_send (observabilit
   })
 
   test("drops the whole query on a sensitive path", () => {
-    for (const event of [...sentEvents(scenarios.sensitive!), ...sentEvents(scenarios["sensitive-encoded"]!)]) {
+    expect(sentEvents(scenarios["sensitive-multiply-encoded"]!).some(event => event.event === "$pageview")).toBe(true)
+    for (const event of [...sentEvents(scenarios.sensitive!), ...sentEvents(scenarios["sensitive-encoded"]!), ...sentEvents(scenarios["sensitive-multiply-encoded"]!)]) {
       expect(event.properties.$current_url).toBe("https://slopcamera.com/private")
       expect(event.properties).not.toHaveProperty("utm_source")
       expect(event.properties).not.toHaveProperty("gclid")
@@ -816,13 +832,15 @@ describe("analytics private-route guards", () => {
   }
 
   test("normalizes encoded separators and dot segments before private-route classification", () => {
-    for (const path of ["/public%2f..%2fauth/callback", "/public/%2e%2e%2fauth/callback", "/public%5c..%5cauth/callback", "/%2fauth/callback", "/bad%ZZ"]) {
+    const tooDeep = `/${"%25" + "25".repeat(8)}74oken/private-person`
+    for (const path of ["/public%2f..%2fauth/callback", "/public/%2e%2e%2fauth/callback", "/public%5c..%5cauth/callback", "/%2fauth/callback", "/bad%ZZ", "/%2574oken/private-person", "/public%252f..%252fauth/callback", "/public%255c..%255cauth/callback", tooDeep]) {
       expect(isSensitivePath(path)).toBe(true)
       const result = sanitizeEvent({ ...event, properties: { ...event.properties, $current_url: `https://slopcamera.com${path}?utm_campaign=launch` } }, token)
       expect(result?.properties.$current_url).toBe("https://slopcamera.com/private")
       expect(result?.properties).not.toHaveProperty("utm_campaign")
     }
     expect(isSensitivePath("/docs/authentication")).toBe(false)
+    expect(isSensitivePath("/docs/%2561uthentication")).toBe(false)
   })
 
   test("strips queued public attribution after navigation to a private path", () => {

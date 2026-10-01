@@ -1,4 +1,5 @@
 import type { CaptureResult } from "posthog-js/dist/module.slim.no-external"
+import { redactSensitiveText as redactSharedAnalyticsText } from "@hraness/posthog/event"
 
 // This static site intentionally mirrors the framework-neutral PostHog
 // options and before_send contract (version 2 of the portfolio observability
@@ -100,16 +101,24 @@ export function shouldInitializeAnalytics(location: Readonly<Pick<Location, "pro
 
 export function normalizePathname(pathname: string): string {
   const withoutQuery = pathname.split(/[?#]/u, 1)[0] ?? "/"
-  const withSlash = withoutQuery.startsWith("/") ? withoutQuery : `/${withoutQuery}`
+  const redacted = isSensitivePath(withoutQuery) ? "/private" : redactSensitiveText(withoutQuery)
+  const withSlash = redacted.startsWith("/") ? redacted : `/${redacted}`
   const collapsed = withSlash.replace(/\/{2,}/gu, "/").replace(/\.html$/u, "").replace(/\/index$/u, "/")
   const trimmed = collapsed.length > 1 ? collapsed.replace(/\/+$/u, "") : collapsed
-  return isSensitivePath(trimmed) ? "/private" : redactSensitiveText(trimmed.slice(0, maxPathLength)) || "/"
+  return isSensitivePath(trimmed) ? "/private" : trimmed.slice(0, maxPathLength) || "/"
 }
 
 export function isSensitivePath(pathname: string): boolean {
   try {
-    const decoded = decodeURIComponent(pathname).replace(/\\/gu, "/").replace(/\/{2,}/gu, "/")
-    return sensitivePathPattern.test(new URL(decoded, canonicalAnalyticsOrigin).pathname)
+    let decoded = pathname
+    for (let depth = 0; depth < 8; depth += 1) {
+      const normalized = decoded.replace(/\\/gu, "/").replace(/\/{2,}/gu, "/")
+      if (sensitivePathPattern.test(new URL(normalized, canonicalAnalyticsOrigin).pathname)) return true
+      const next = decodeURIComponent(decoded)
+      if (next === decoded) return false
+      decoded = next
+    }
+    return true
   } catch {
     return true
   }
@@ -215,15 +224,7 @@ export function classifyTraffic(referrer: string | null | undefined, currentUrl?
 // --- Property scrubbing ---
 
 export function redactSensitiveText(value: string): string {
-  return value
-    .replace(/\b(?:phc|phx|phs|pha|phr)_[A-Za-z0-9_-]+\b/gu, "[credential]")
-    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+\b/giu, "Bearer [credential]")
-    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/gu, "[credential]")
-    .replace(/([a-z][a-z0-9+.-]*:\/\/)([^/\s?#]+)@/giu, "$1[credential]@")
-    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/giu, "[email]")
-    .replace(/(https?:\/\/[^\s?#)]+)(?:\?[^\s#)]*)?(?:#[^\s)]*)?/giu, "$1")
-    .replace(/([/][^\s?#)]+)\?[^\s#)]*/gu, "$1")
-    .replace(/\b(api[_-]?key|access[_-]?token|auth(?:orization)?|secret|password|code|state|token)=([^\s&]+)/giu, "$1=[redacted]")
+  return redactSharedAnalyticsText(value)
 }
 
 /** Owned URL: canonical origin, normalized path, and only attribution parameters; third-party URL: origin only. */
