@@ -222,15 +222,10 @@ function assertAuthoredShellBudget(template: string): number {
 function assertCombinedSiteCssBudget(styles: string, foundation: string): number {
   // Count both captured artifacts in full, including all three package recipes,
   // the required shared foundation, canonical snapshots, and retained product CSS.
-  // Exact predecessor 347,562 -> portfolio 450,666: foundation +100,572 and
-  // finalized recipes +2,532. The 451,100 ceiling retains 434 bytes of headroom.
-  // design-kit v0.30.2 (shared site shell, container-query install tabs)
-  // measured 502,326; the 503,000 ceiling keeps 674 bytes of headroom.
-  // v0.32.0 adds shared selected-control contrast recipes: its compiled package
-  // CSS grows from 112,231 to 114,769 bytes. This complete site now measures
-  // 504,729 bytes; the 505,500 ceiling keeps 771 bytes of headroom.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 505_500) throw new Error(`Combined site CSS exceeds its 505,500-byte budget: ${bytes}`)
+  // design-kit 0.35.0 and footer 0.20.5 add shared product and consent controls:
+  // measured 516,718 bytes; retain 782 bytes of bounded headroom.
+  if (bytes >= 517_500) throw new Error(`Combined site CSS exceeds its 517,500-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -306,15 +301,15 @@ test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its rout
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(305_499), "x".repeat(200_000))).toBe(505_499)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(305_500), "x".repeat(200_000)))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(305_499), `${"x".repeat(200_000)}é`))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505501")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(505_500), ""))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(505_500)))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
+  expect(assertCombinedSiteCssBudget("x".repeat(317_499), "x".repeat(200_000))).toBe(517_499)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(317_500), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(317_499), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517501")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(517_500), ""))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(517_500)))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -1738,14 +1733,15 @@ describe("static Slopcamera site", () => {
     const localLockfile = await readFile(join(appDirectory, "bun.lock"), "utf8")
 
     expect(manifest.dependencies).toEqual({
-      "@hraness/design-kit": "github:hraness/design-kit#v0.32.0",
+      "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "github:hraness/site-footer#v0.20.1",
+      "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
+      "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.9/hraness-posthog-0.3.9.tgz",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
       "@resvg/resvg-js": "2.6.2",
-      "posthog-js": "1.413.2",
+      "posthog-js": "1.422.5",
       "react": "19.2.3",
       "react-dom": "19.2.3",
       "satori": "0.33.4",
@@ -1768,15 +1764,15 @@ describe("static Slopcamera site", () => {
     })
     expect(rootManifest.workspaces?.catalog?.["posthog-js"]).toBeUndefined()
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
-    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.32.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.35.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "github:hraness/site-footer#v0.20.1"',
+      '"@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
     expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
-    expect(localLockfile).toContain('"posthog-js": "1.413.2"')
+    expect(localLockfile).toContain('"posthog-js": "1.422.5"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
@@ -1803,7 +1799,8 @@ describe("static Slopcamera site", () => {
     expect(theme).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
     expect(copyCommand).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
     expect(analytics).toContain("...posthogBrowserOptions(")
-    expect(analytics).toContain("before_send: createBeforeSend(")
+    expect(analytics).toContain("const sanitize = createBeforeSend(")
+    expect(analytics).toContain("before_send: event => consent.allowed() ? sanitize(event) : null")
     expect(analytics).not.toMatch(/identify\(|autocapture:\s*true|capture_exceptions:\s*true/)
     const options = posthogBrowserOptions("https://us.i.posthog.com")
     expect(options).toMatchObject({
@@ -1856,9 +1853,9 @@ describe("static Slopcamera site", () => {
     expect(beforeSend(event)).toBeNull()
     const bootstrap = await readSource("analytics.ts")
     expect(bootstrap).toContain("createBeforeSend(token, () => window.location, isNotFound, dntEnabled)")
-    expect(bootstrap).toContain("if (!dntEnabled()")
-    expect(bootstrap.indexOf("if (!dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
-    expect(bootstrap).toContain("if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {")
+    expect(bootstrap).toContain("if (initialized || dntEnabled() || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)")
+    expect(bootstrap.indexOf("if (initialized || dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
+    expect(bootstrap).toContain("|| !installConsentTransport(posthog, consent)) return")
   })
 
   test("classifies every public route and scrubs values without rebuilding the property set", () => {
@@ -2006,9 +2003,10 @@ describe("static Slopcamera site", () => {
       expect(preview).not.toMatch(/<script\b|analytics-|posthog|phc_test-token_value/iu)
       expect(asset).toContain("phc_test-token_value")
       expect(asset).toContain("https://us.i.posthog.com")
-      expect(asset).toStartWith("/*! posthog-js 1.413.2")
+      expect(asset).toStartWith("/*! posthog-js 1.422.5")
       expect(asset).toContain("Apache License\n                           Version 2.0")
-      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(310_000)
+      // Qualified PostHog 1.422.5 plus regional preferences and withdrawal transport measure 340,673 B.
+      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(350_000)
     })
   }, repeatedCompilationTimeoutMs)
 
@@ -2131,7 +2129,7 @@ describe("static Slopcamera site", () => {
     // 484,800. Keep
     // a strict ceiling over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(505_500)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(517_500)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
@@ -2315,7 +2313,7 @@ describe("static Slopcamera site", () => {
     const csp = byKey.get("Content-Security-Policy") ?? ""
 
     expect(vercel.headers?.find(entry => entry.source === "/(.*)")).toBeUndefined()
-    expect(csp).toContain("connect-src https://us.i.posthog.com")
+    expect(csp).toContain("connect-src https://us.i.posthog.com https://account.hraness.com")
     expect(csp).toContain("font-src 'self'")
     expect(csp).toContain("form-action 'none'")
     expect(csp).toContain("frame-ancestors 'none'")
@@ -2447,7 +2445,8 @@ describe("static Slopcamera site", () => {
       expect(document.indexOf(`${contentFooter}\n    <footer`)).toBeGreaterThan(-1)
       expect(footer).toContain('data-slot="hraness-site-footer"')
       expect(footer?.match(/data-slot="hraness-mark"/gu)).toHaveLength(1)
-      expect(footer?.match(/data-slot="hraness-support-icon"/gu)).toHaveLength(1)
+      expect(footer?.match(/data-slot="hraness-support-icon"/gu)).toHaveLength(2)
+      expect(footer).toContain('aria-label="About cookies"')
       expect(footer?.match(/data-slot="social-icon"/gu)).toHaveLength(4)
       expect(footer).not.toContain("hraness-site-footer__wordmark")
       expect(
@@ -2737,4 +2736,26 @@ describe("static Slopcamera site", () => {
 
 
 
+})
+
+test("the real analytics entry waits for regional permission and honors acceptance and refusal", () => {
+  for (const mode of ["optional", "required", "malformed", "unavailable"]) {
+    const result = Bun.spawnSync([
+      process.execPath,
+      fileURLToPath(new URL("./scripts/analytics-consent-harness.ts", import.meta.url)),
+      mode,
+    ], { stdout: "pipe", stderr: "pipe" })
+    expect(result.exitCode).toBe(0)
+    const output = JSON.parse(new TextDecoder().decode(result.stdout))
+    expect(output.before).toEqual({ initialized: 0, captured: 0 })
+    expect(output.afterRegion).toEqual(mode === "optional"
+      ? { initialized: 1, captured: 1 }
+      : { initialized: 0, captured: 0 })
+    expect(output.afterAccepted).toEqual({ initialized: 1, captured: 1 })
+    expect(output.allowedBeforeRefusal).toBe(true)
+    expect(output.blockedAfterRefusal).toBe(true)
+    expect(output.pendingAborted).toBe(true)
+    expect(output.requestsAfterStaleRetry).toBe(1)
+    expect(output.requestsAfterFreshCapture).toBe(2)
+  }
 })

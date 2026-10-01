@@ -1,3 +1,5 @@
+import { getBrowserConsent, installConsentTransport } from "@hraness/posthog/consent"
+import { initHranessCookieConsent } from "@hraness/site-footer/consent"
 import posthog from "posthog-js/dist/module.slim.no-external"
 import { AnalyticsExtensions, ErrorTrackingExtensions } from "posthog-js/dist/extension-bundles"
 // Bundles the web-vitals callbacks locally, so posthog-js never loads them
@@ -22,14 +24,22 @@ const dntEnabled = (): boolean => doNotTrackEnabled(
   window as Window & { doNotTrack?: string | null },
 )
 
-if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {
+initHranessCookieConsent()
+const consent = getBrowserConsent()
+let initialized = false
+
+function initializeAnalytics() {
+  if (initialized || dntEnabled() || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)
+    || !installConsentTransport(posthog, consent)) return
+  initialized = true
+  const sanitize = createBeforeSend(token, () => window.location, isNotFound, dntEnabled)
   posthog.init(token, {
     ...posthogBrowserOptions(__SLOPCAMERA_POSTHOG_HOST__),
     __extensionClasses: {
       exceptions: ErrorTrackingExtensions.exceptions,
       webVitalsAutocapture: AnalyticsExtensions.webVitalsAutocapture,
     },
-    before_send: createBeforeSend(token, () => window.location, isNotFound, dntEnabled),
+    before_send: event => consent.allowed() ? sanitize(event) : null,
   })
 
   if (isNotFound()) {
@@ -54,6 +64,7 @@ if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {
               : "inline"
 
   document.addEventListener("click", event => {
+    if (!consent.allowed()) return
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null
     if (link === null) return
     const href = link.getAttribute("href")
@@ -68,6 +79,7 @@ if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {
   // data-copy-state="copied"; only copies of install commands count. The
   // command text only selects install_method and is never sent.
   new MutationObserver(records => {
+    if (!consent.allowed()) return
     for (const record of records) {
       const target = record.target
       if (!(target instanceof HTMLButtonElement) || target.dataset.copyState !== "copied" || record.oldValue === "copied") continue
@@ -85,6 +97,7 @@ if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {
   const budget = new ExceptionBudget()
   const report = (value: unknown, origin: "window_error" | "unhandled_rejection"): void => {
     try {
+      if (!consent.allowed()) return
       const error = sanitizeError(value)
       const fingerprint = errorFingerprint(error)
       if (!budget.allow(fingerprint)) return
@@ -96,3 +109,5 @@ if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {
   window.addEventListener("error", event => report(event.error ?? new Error(event.message || "Script error"), "window_error"))
   window.addEventListener("unhandledrejection", event => report(event.reason, "unhandled_rejection"))
 }
+
+if (shouldInitializeAnalytics(window.location, token)) consent?.subscribe(initializeAnalytics)

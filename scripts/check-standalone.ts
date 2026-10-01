@@ -2,6 +2,7 @@ import { lstat, readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { sourceInstall } from "../apps/web/src/published-release";
 import { standaloneSupportFixtureScanText } from "./standalone-support-fixture";
+import { standaloneAnalyticsPolicyScanText } from "./standalone-analytics-policy";
 import {
   compareLegacyIdentityInventory,
   duplicateIdentityAlternatives,
@@ -277,7 +278,7 @@ for (const file of files) {
   const inventoryEligible = !generatedOutput || trackedPaths.has(rootRelative);
   if (!identityBoundaryFile && rootRelative !== "scripts/package-smoke.ts") {
     for (const rule of FORBIDDEN_SOURCE) {
-      if (rule.pattern.test(rule.label === "hosted account service" ? standaloneSupportFixtureScanText(rootRelative, text) : text)) {
+      if (rule.pattern.test(rule.label === "hosted account service" ? standaloneAnalyticsPolicyScanText(rootRelative, standaloneSupportFixtureScanText(rootRelative, text)) : text)) {
         sourceProblems.push(`${rootRelative} contains ${rule.label}`);
       }
     }
