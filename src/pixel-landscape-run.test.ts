@@ -73,6 +73,9 @@ test("judgement accepts fenced JSON and rejects strings or out-of-range scores",
   expect(parseSlopcameraLandscapeJudgement(`\`\`\`json\n${score(9)}\n\`\`\``).overall).toBe(9)
   expect(() => parseSlopcameraLandscapeJudgement(score(11))).toThrow()
   expect(() => parseSlopcameraLandscapeJudgement('{"relevance":"9"}')).toThrow()
+  expect(parseSlopcameraLandscapeJudgement(score(9).padEnd(65_536, " ")).overall).toBe(9)
+  expect(() => parseSlopcameraLandscapeJudgement(score(9).padEnd(65_537, " "))).toThrow("65536")
+  expect(parseSlopcameraLandscapeJudgement(`\`\`\`json\n${score(9)}${" ".repeat(10_000)}\`\`\``).overall).toBe(9)
 })
 test("qualified artwork outranks a higher mean with a blocking defect; every successful dispatch has a receipt", async () => {
   const root = await mkdtemp(join(tmpdir(), "slopcamera-landscape-"))

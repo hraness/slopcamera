@@ -103,7 +103,14 @@ const judgementSchema = z.object({
   defects: z.array(z.string().max(1000)).max(20), revision: z.string().max(4000),
 }).strip()
 export function parseSlopcameraLandscapeJudgement(value: string) {
-  const raw = value.trim().replace(/^```(?:json)?\s*/u, "").replace(/\s*```$/u, "")
+  if (typeof value !== "string" || value.length > 65_536) throw new Error("Landscape judgement must be a string of at most 65536 characters.")
+  let raw = value.trim()
+  if (raw.startsWith("```")) {
+    raw = raw.slice(3)
+    if (raw.startsWith("json")) raw = raw.slice(4)
+    raw = raw.trimStart()
+  }
+  if (raw.endsWith("```")) raw = raw.slice(0, -3).trimEnd()
   const result = judgementSchema.parse(JSON.parse(raw) as unknown)
   return { ...result, overall: (result.relevance + result.continuity + result.composition + result.detail) / 4 }
 }

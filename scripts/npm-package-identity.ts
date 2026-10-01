@@ -5,7 +5,7 @@ import { gunzipSync } from "node:zlib";
 
 const tarBlockBytes = 512;
 const packagePrefix = "package/";
-const maximumEntries = 570;
+const maximumEntries = 580;
 const maximumArchiveBytes = 5_200_000;
 const maximumContentBytes = 15_000_000;
 // Content and USTAR framing have separate budgets: each bounded entry needs a
