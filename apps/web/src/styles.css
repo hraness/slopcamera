@@ -128,18 +128,20 @@ a {
   text-underline-offset: 0.16em;
 }
 
-/* Canonical link style: primary ink with a dotted underline that solidifies on
-   hover. Navigation, controls, and the shared network footer keep their own
+/* Canonical link style: primary ink with a quiet dotted underline.
+   Navigation, controls, and the shared network footer keep their own
    recipes; content links live inside #main, where only the CTA actions opt out. */
 #main a:not(.hraness-marketing-action) {
   color: var(--primary, var(--gold));
   text-decoration-line: underline;
   text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-underline-offset: 0.18em;
 }
 
 #main a:not(.hraness-marketing-action):hover {
-  text-decoration-style: solid;
+  text-decoration-style: dotted;
 }
 
 /* The homepage header lines up with the marketing content column (70rem plus its 2rem gutter). */
@@ -307,6 +309,14 @@ h3 {
   line-height: 1.6;
 }
 
+.slopcamera-product-hero .hraness-marketing-hero__install {
+  margin-block-start: 0;
+}
+
+.slopcamera-universal-install [role="tablist"] {
+  display: none;
+}
+
 .slopcamera-product-hero .hraness-marketing-hero__actions {
   gap: .5rem 1.5rem;
 }
@@ -325,14 +335,16 @@ h3 {
 }
 
 @media (max-width: 52rem) {
+  .slopcamera-product-hero { gap: 1rem; padding-block-start: 1.25rem; }
+  .slopcamera-hero-intro { gap: .875rem; }
   .slopcamera-product-hero .hraness-marketing-hero__copy {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
   [data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__heading {
     max-inline-size: 15ch;
-    font-size: clamp(3rem, 8vw, 4.5rem);
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
   }
 }
 

@@ -1522,18 +1522,18 @@
     ]
   },
   {
-    "identityLineCount": 15,
-    "identityLinesSha256": "35df9e201edd0afccf656e223729198fe16f6f08b1192326aa26312bb31eaa74",
-    "occurrenceCount": 20,
+    "identityLineCount": 16,
+    "identityLinesSha256": "cae4bd7a2184389e9ce3f1518826dcc1dba49d74bb5d42a6a047ddbca51ed39e",
+    "occurrenceCount": 21,
     "path": "apps/web/scripts/verify-site-current.mjs",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 11,
-    "identityLinesSha256": "7b9c7f56386a8d1cd730830a5ec2206a7b66d84e504c00149abddc64bb10f32a",
-    "occurrenceCount": 11,
+    "identityLineCount": 14,
+    "identityLinesSha256": "928a718f4d6e677581360aef6bef1a8fd60240f0f038317640d130f2c83e5401",
+    "occurrenceCount": 14,
     "path": "apps/web/scripts/verify-site-current.test.ts",
     "categories": [
       "test-fixture"
