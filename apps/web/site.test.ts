@@ -222,15 +222,8 @@ function assertAuthoredShellBudget(template: string): number {
 function assertCombinedSiteCssBudget(styles: string, foundation: string): number {
   // Count both captured artifacts in full, including all three package recipes,
   // the required shared foundation, canonical snapshots, and retained product CSS.
-  // Exact predecessor 347,562 -> portfolio 450,666: foundation +100,572 and
-  // finalized recipes +2,532. The 451,100 ceiling retains 434 bytes of headroom.
-  // design-kit v0.30.2 (shared site shell, container-query install tabs)
-  // measured 502,326; the 503,000 ceiling keeps 674 bytes of headroom.
-  // v0.32.0 adds shared selected-control contrast recipes: its compiled package
-  // CSS grows from 112,231 to 114,769 bytes. This complete site now measures
-  // 504,729 bytes; the 505,500 ceiling keeps 771 bytes of headroom.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  // design-kit 0.35.0 and footer 0.20.5 add shared studio and consent controls:
+  // design-kit 0.35.0 and footer 0.20.5 add shared product and consent controls:
   // measured 516,718 bytes; retain 782 bytes of bounded headroom.
   if (bytes >= 517_500) throw new Error(`Combined site CSS exceeds its 517,500-byte budget: ${bytes}`)
   return bytes

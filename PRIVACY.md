@@ -64,7 +64,7 @@ Public campaign parameters are retained; other query values and credentials
 are removed. Sensitive paths collapse to `/private` and their campaign
 attribution is removed. Preview builds and the inert preview page send nothing.
 
-The site checks the shared regional policy at account.hraness.com. Analytics
+The site checks the shared regional analytics policy service. Analytics
 waits for acceptance where that policy requires consent, or when the region is
 unknown. Elsewhere it can run without cookies before a visitor responds.
 A stored refusal or Do Not Track keeps analytics off.
