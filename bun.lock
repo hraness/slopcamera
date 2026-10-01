@@ -60,7 +60,7 @@
         "@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2",
         "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
         "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.11/hraness-posthog-0.3.11.tgz",
-        "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
+        "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.7/hraness-site-footer-0.20.7.tgz",
         "@hraness/ui": "github:hraness/ui#v0.5.25",
         "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
         "@resvg/resvg-js": "2.6.2",
@@ -210,7 +210,7 @@
 
     "@hraness/posthog": ["@hraness/posthog@https://github.com/hraness/posthog/releases/download/v0.3.11/hraness-posthog-0.3.11.tgz", { "dependencies": { "@posthog/nextjs-config": "1.10.0", "posthog-js": "1.422.5", "posthog-node": "5.51.4" }, "peerDependencies": { "next": ">=16.2.0 <17.0.0", "react": ">=19.2.0 <20.0.0" }, "optionalPeers": ["next", "react"] }, "sha512-XIHWP+tivJOUAw7KVbdPYO3UteM4O0IYf/mD4ZJZugPPJ5ZEHP033Xh/qbAIDv2lSVI245UE4CLpzkznDT/pVg=="],
 
-    "@hraness/site-footer": ["@hraness/site-footer@https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "sha512-TjjjT7cZeg73p9PKzDIJUGvWdV6eYt8IMDI4LtKswwYNzRceedsBnuuRnYb5FcLEyrV3TweEs1eAyqHGYt1XoA=="],
+    "@hraness/site-footer": ["@hraness/site-footer@https://github.com/hraness/site-footer/releases/download/v0.20.7/hraness-site-footer-0.20.7.tgz", { "peerDependencies": { "react": ">=18 <20" }, "optionalPeers": ["react"] }, "sha512-0t2p999hJMoxqYt+kFvNvR0fXkKsLKoF4fQkN6chCiRWFF+Xw18AdP9PxBBFbcFavtedNsgeDlPiFSwQopEAIg=="],
 
     "@hraness/slopcamera-scene": ["@hraness/slopcamera-scene@workspace:packages/scene"],
 

@@ -223,9 +223,10 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // Count both captured artifacts in full, including all three package recipes,
   // the required shared foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  // design-kit 0.35.0 and footer 0.20.5 add shared product and consent controls:
-  // measured 516,718 bytes; retain 782 bytes of bounded headroom.
-  if (bytes >= 517_500) throw new Error(`Combined site CSS exceeds its 517,500-byte budget: ${bytes}`)
+  // Footer 0.20.7 adds in-flow settled preferences and accessible link states:
+  // measured 518,689 bytes, 1,971 above the 516,718-byte predecessor.
+  // Keep both complete artifacts counted with 811 bytes of bounded headroom.
+  if (bytes >= 519_500) throw new Error(`Combined site CSS exceeds its 519,500-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -301,15 +302,15 @@ test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its rout
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(317_499), "x".repeat(200_000))).toBe(517_499)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(317_500), "x".repeat(200_000)))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(317_499), `${"x".repeat(200_000)}é`))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517501")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(517_500), ""))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(517_500)))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(assertCombinedSiteCssBudget("x".repeat(319_499), "x".repeat(200_000))).toBe(519_499)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(319_500), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 519,500-byte budget: 519500")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(319_499), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 519,500-byte budget: 519501")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(519_500), ""))
+    .toThrow("Combined site CSS exceeds its 519,500-byte budget: 519500")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(519_500)))
+    .toThrow("Combined site CSS exceeds its 519,500-byte budget: 519500")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -1759,7 +1760,7 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
-      "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
+      "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.7/hraness-site-footer-0.20.7.tgz",
       "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.11/hraness-posthog-0.3.11.tgz",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
@@ -1789,7 +1790,7 @@ describe("static Slopcamera site", () => {
     expect(rootManifest.workspaces?.catalog?.["@hraness/design-kit"]).toBeUndefined()
     expect(localLockfile).toContain('"@hraness/design-kit": "github:hraness/design-kit#v0.35.0"')
     expect(localLockfile).toContain(
-      '"@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz"',
+      '"@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.7/hraness-site-footer-0.20.7.tgz"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2"')
@@ -2152,7 +2153,7 @@ describe("static Slopcamera site", () => {
     // 484,800. Keep
     // a strict ceiling over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(517_500)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(519_500)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
@@ -2440,8 +2441,8 @@ describe("static Slopcamera site", () => {
     const expectedHrefs = [
       HRANESS_HOME_URL,
       supportHref.replaceAll("&", "&amp;"),
-      "https://hraness.com/privacy",
       ...hranessSocialLinks.map(({ href }) => href),
+      "https://hraness.com/privacy",
     ]
 
     for (const document of documents) {

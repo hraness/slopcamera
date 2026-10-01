@@ -42,7 +42,7 @@ Object.assign(globalThis, {
     },
     removeEventListener() {},
   },
-  document: { addEventListener() {}, querySelectorAll: () => [], body: {}, documentElement: { dataset: {} } },
+  document: { nodeType: 9, defaultView: null, addEventListener() {}, querySelectorAll: () => [], body: {}, documentElement: { dataset: {} } },
   MutationObserver: class { observe() {} },
   fetch: () => region.then(body => Response.json(body, { status: mode === "unavailable" ? 503 : 200 })),
   __SLOPCAMERA_POSTHOG_KEY__: "phc_harnesstoken",

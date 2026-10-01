@@ -136,12 +136,23 @@ a {
   text-decoration-line: underline;
   text-decoration-style: dotted;
   text-decoration-thickness: 1px;
-  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-underline-offset: 0.18em;
 }
 
-#main a:not(.hraness-marketing-action):hover {
-  text-decoration-style: dotted;
+@media (forced-colors: none) {
+  #main a:not(.hraness-marketing-action) {
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+
+  #main a:not(.hraness-marketing-action):is(:hover, :focus-visible) {
+    text-decoration-color: currentColor;
+  }
+}
+
+@media (forced-colors: active) {
+  #main a:not(.hraness-marketing-action) {
+    text-decoration-color: LinkText;
+  }
 }
 
 /* The homepage header lines up with the marketing content column (70rem plus its 2rem gutter). */
