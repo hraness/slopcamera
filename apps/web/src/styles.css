@@ -327,14 +327,16 @@ h3 {
 }
 
 @media (max-width: 52rem) {
+  .slopcamera-product-hero { gap: 1rem; padding-block-start: 1.25rem; }
+  .slopcamera-hero-intro { gap: .875rem; }
   .slopcamera-product-hero .hraness-marketing-hero__copy {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
   [data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__heading {
     max-inline-size: 15ch;
-    font-size: clamp(3rem, 8vw, 4.5rem);
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
   }
 }
 

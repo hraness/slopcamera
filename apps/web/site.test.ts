@@ -203,7 +203,7 @@ function assertAuthoredShellBudget(template: string): number {
   for (const [slot, count] of [
     ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_BRAND_MARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
     ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
-    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 2], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
+    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
     ["INSTALL_COPY_CLASS", 1], ["INSTALL_VALUE_CLASS", 1], ["INSTALL_IDLE_CLASS", 2], ["INSTALL_COPIED_CLASS", 1],
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
@@ -1334,18 +1334,20 @@ describe("static Slopcamera site", () => {
     const html = await readBuilt("index.html")
     const marker = html.indexOf('data-hraness-marketing="install"')
     const installHtml = html.slice(html.lastIndexOf("<section", marker), html.indexOf("</section>", marker))
-    const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(installHtml).indexOf(command))
+    const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(html).indexOf(command))
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
-    expect(installHtml).toContain("Install the CLI</p>")
+    expect(installHtml).toContain('href="#cli-install">Install the CLI</a>')
     expect(installHtml).toContain("Then install its matching Agent Skill")
-    expect(installHtml.match(/data-hraness-platform-install/gu)).toHaveLength(1)
+    expect(html.match(/data-hraness-platform-install/gu)).toHaveLength(1)
+    expect(installHtml).not.toContain("data-hraness-platform-install")
+    expect(html.indexOf("data-hraness-platform-install")).toBeLessThan(html.indexOf('class="hraness-marketing-hero__frame"'))
     expect(installHtml.match(/data-hraness-platform-badges/gu)).toHaveLength(1)
     expect(installHtml).toContain("<summary>Build from source</summary>")
     expect(installHtml).toContain("installs locked dependencies, builds the SDK and CLI")
     expect(installHtml).toContain(sourceInstall.guideUrl)
     expect(installHtml).toContain(archiveInstall.alternateSkillCommand)
-    expect(plainCode(installHtml)).toContain(archiveInstall.command)
+    expect(plainCode(html)).toContain(archiveInstall.command)
     expect(html).not.toContain("{{SITE")
   })
 
@@ -1395,10 +1397,10 @@ describe("static Slopcamera site", () => {
       "/docs",
       "/blog",
       "https://github.com/hraness/slopcamera",
-      "#install",
+      "#cli-install",
     ])
     expect(navigation).toContain('href="#examples">Films</a>')
-    expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install"')
+    expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#cli-install"')
     expect(html).not.toContain('class="docs-index"')
     for (const role of [
       "install",
