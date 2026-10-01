@@ -52,7 +52,8 @@ export function requestedOrigin(args) {
 
 export function allowsRequest(url, origin) {
   const destination = new URL(url).origin
-  return destination === origin || (origin === productionOrigin && destination === "https://us.i.posthog.com")
+  return destination === origin || (origin === productionOrigin
+    && (destination === "https://us.i.posthog.com" || url === "https://account.hraness.com/api/consent/region"))
 }
 
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml",
