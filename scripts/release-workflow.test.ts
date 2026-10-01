@@ -1303,13 +1303,13 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
       readFile(join(packageRoot, "apps", "web", "src", "index.html"), "utf8"),
     ])
 
-  expect(manifest.version).toBe("3.10.2")
+  expect(manifest.version).toBe("3.10.3")
   expect(manifest.bin).toEqual({
     slopcamera: "./apps/desktop/dist/cli/main.js",
   })
   expect(Object.prototype.hasOwnProperty.call(manifest, "contentPolicy")).toBe(false)
-  expect(publishedRelease.version).toBe("3.10.2")
-  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.2/hraness-slopcamera-3.10.2.tgz")
+  expect(publishedRelease.version).toBe("3.10.3")
+  expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.3/hraness-slopcamera-3.10.3.tgz")
   for (const source of [readme, skillInstall]) {
     expect(source).toContain(sourceInstall.checkoutCommand)
   }
@@ -1332,7 +1332,8 @@ test("Slopcamera source installs stay distinct from historical Atet archives", a
   }
   expect(siteContent).toContain("archiveInstall.alternateSkillCommand")
   expect(siteContent).toContain("command: archiveInstall.skillCommand,")
-  expect(siteContent).toContain('{ id: "macos", command: archiveInstall.command, shell: "Terminal"')
+  expect(siteContent).toContain('supportedPlatforms = ["macos", "linux", "windows"] as const')
+  expect(siteContent).toContain('{ id: "all", label: "macOS, Linux, and Windows", command: archiveInstall.command, shell: "Terminal or PowerShell"')
   expect(siteRenderer).toContain('import { siteContentSlots, type SiteAssets, type SiteDocument } from "./site-content"')
   expect(siteRenderer).toContain("for (const [placeholder, value, count] of siteContentSlots(document, assets))")
   expect(siteRenderer).toContain("rendered = replaceSiteSlot(rendered, placeholder, value, count)")

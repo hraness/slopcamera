@@ -21,7 +21,7 @@ const homeSlots = [
   ["{{INSTALL_NOTE_CLASS}}", siteInstallClassNames.note, 1],
   ["{{INSTALL_PANEL_NOTE_CLASS}}", siteInstallClassNames.panelNote, 2],
   ["{{INSTALL_PANEL_LINK_CLASS}}", siteInstallClassNames.panelLink, 2],
-  ["{{INSTALL_LABEL_CLASS}}", siteInstallClassNames.label, 2],
+  ["{{INSTALL_LABEL_CLASS}}", siteInstallClassNames.label, 1],
   ["{{INSTALL_COPY_CLASS}}", siteInstallClassNames.command, 1],
   ["{{INSTALL_VALUE_CLASS}}", siteInstallClassNames.value, 1],
   ["{{INSTALL_IDLE_CLASS}}", siteInstallClassNames.idle, 2],

@@ -74,7 +74,7 @@ import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
 import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFitFor, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
-import { siteContentSlots } from "./src/site-content"
+import { renderPlatformInstall, siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
 import { homepageExampleName, homepageExamples } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
@@ -203,7 +203,7 @@ function assertAuthoredShellBudget(template: string): number {
   for (const [slot, count] of [
     ["SITE_SKIP_CLASS", 1], ["SITE_HEADER_CLASS", 1], ["SITE_WORDMARK_CLASS", 1], ["SITE_BRAND_MARK_CLASS", 1], ["SITE_ACTIONS_CLASS", 1],
     ["SITE_NAVIGATION_CLASS", 1], ["SITE_HOME_NAVIGATION_LINK_CLASS", 4], ["SITE_NAVIGATION_ACTION_CLASS", 1],
-    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 2], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
+    ["INSTALL_NOTE_CLASS", 1], ["INSTALL_LABEL_CLASS", 1], ["INSTALL_PANEL_NOTE_CLASS", 2], ["INSTALL_PANEL_LINK_CLASS", 2],
     ["INSTALL_COPY_CLASS", 1], ["INSTALL_VALUE_CLASS", 1], ["INSTALL_IDLE_CLASS", 2], ["INSTALL_COPIED_CLASS", 1],
     ["INSTALL_FAILED_CLASS", 1], ["INSTALL_COPY_NOTE_CLASS", 1], ["INSTALL_NOTE_CODE_CLASS", 1], ["INSTALL_STATUS_CLASS", 1], ["INSTALL_FALLBACK_CLASS", 1],
   ] as const) authored = replaceSiteSlot(authored, `{{${slot}}}`, "", count)
@@ -687,6 +687,21 @@ describe("the pinned posthog-js through the production before_send (observabilit
 
   const allowedEvents = ["$pageview", "$web_vitals", ctaClickedEvent, outboundLinkOpenedEvent, installCommandCopiedEvent, "$exception", "$pageleave"]
 
+  test("encoded personal paths and error text stay outside SDK request bodies", () => {
+    const cases = Object.entries(scenarios).filter(([name]) => name.startsWith("encoded-private-"))
+    expect(cases).toHaveLength(9)
+    for (const [, scenario] of cases) {
+      const sent = sentEvents(scenario)
+      for (const event of ["$pageview", pageNotFoundEvent, "$exception"]) {
+        expect(sent.some(capture => capture.event === event)).toBe(true)
+      }
+      const wire = JSON.stringify(sent)
+      for (const marker of ["privacycanary", "credentialcanary", "usercanary", "@a.aa", "%40a.aa", "%2540a.aa", "例子", "%E4%BE%8B", "%70%72%69%76", "x".repeat(32)]) {
+        expect(wire).not.toContain(marker)
+      }
+    }
+  })
+
   test("sends every allowed built-in and custom event and drops everything else", () => {
     const attributed = scenarios.attributed!
     expect(attributed.returned.map(event => event?.event ?? null)).toEqual([...allowedEvents.slice(0, 6), null, null, "$pageleave"])
@@ -748,7 +763,8 @@ describe("the pinned posthog-js through the production before_send (observabilit
   })
 
   test("drops the whole query on a sensitive path", () => {
-    for (const event of [...sentEvents(scenarios.sensitive!), ...sentEvents(scenarios["sensitive-encoded"]!)]) {
+    expect(sentEvents(scenarios["sensitive-multiply-encoded"]!).some(event => event.event === "$pageview")).toBe(true)
+    for (const event of [...sentEvents(scenarios.sensitive!), ...sentEvents(scenarios["sensitive-encoded"]!), ...sentEvents(scenarios["sensitive-multiply-encoded"]!)]) {
       expect(event.properties.$current_url).toBe("https://slopcamera.com/private")
       expect(event.properties).not.toHaveProperty("utm_source")
       expect(event.properties).not.toHaveProperty("gclid")
@@ -816,13 +832,15 @@ describe("analytics private-route guards", () => {
   }
 
   test("normalizes encoded separators and dot segments before private-route classification", () => {
-    for (const path of ["/public%2f..%2fauth/callback", "/public/%2e%2e%2fauth/callback", "/public%5c..%5cauth/callback", "/%2fauth/callback", "/bad%ZZ"]) {
+    const tooDeep = `/${"%25" + "25".repeat(8)}74oken/private-person`
+    for (const path of ["/public%2f..%2fauth/callback", "/public/%2e%2e%2fauth/callback", "/public%5c..%5cauth/callback", "/%2fauth/callback", "/bad%ZZ", "/%2574oken/private-person", "/public%252f..%252fauth/callback", "/public%255c..%255cauth/callback", tooDeep]) {
       expect(isSensitivePath(path)).toBe(true)
       const result = sanitizeEvent({ ...event, properties: { ...event.properties, $current_url: `https://slopcamera.com${path}?utm_campaign=launch` } }, token)
       expect(result?.properties.$current_url).toBe("https://slopcamera.com/private")
       expect(result?.properties).not.toHaveProperty("utm_campaign")
     }
     expect(isSensitivePath("/docs/authentication")).toBe(false)
+    expect(isSensitivePath("/docs/%2561uthentication")).toBe(false)
   })
 
   test("strips queued public attribution after navigation to a private path", () => {
@@ -846,9 +864,9 @@ describe("static Slopcamera site", () => {
   }, compilationTimeoutMs)
 
   test("release installation advertises the exact canonical archive beside the source path", async () => {
-    expect(publishedRelease).toEqual({ version: "3.10.2", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.10.2" })
+    expect(publishedRelease).toEqual({ version: "3.10.3", releaseUrl: "https://github.com/hraness/slopcamera/releases/tag/v3.10.3" })
     expect(Object.isFrozen(publishedRelease)).toBe(true)
-    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.2/hraness-slopcamera-3.10.2.tgz")
+    expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.3/hraness-slopcamera-3.10.3.tgz")
     expect(archiveInstall.command).toBe(`bun add --global ${publishedArchiveUrl}`)
     const html = await readBuilt("index.html")
     for (const publicText of [plainCode(html), homeMarkdown, llmsTxt]) {
@@ -1334,18 +1352,20 @@ describe("static Slopcamera site", () => {
     const html = await readBuilt("index.html")
     const marker = html.indexOf('data-hraness-marketing="install"')
     const installHtml = html.slice(html.lastIndexOf("<section", marker), html.indexOf("</section>", marker))
-    const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(installHtml).indexOf(command))
+    const positions = [archiveInstall.command, archiveInstall.skillCommand].map(command => plainCode(html).indexOf(command))
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
-    expect(installHtml).toContain("Install the CLI</p>")
+    expect(installHtml).toContain('href="#cli-install">Install the CLI</a>')
     expect(installHtml).toContain("Then install its matching Agent Skill")
-    expect(installHtml.match(/data-hraness-platform-install/gu)).toHaveLength(1)
+    expect(html.match(/data-hraness-platform-install/gu)).toHaveLength(1)
+    expect(installHtml).not.toContain("data-hraness-platform-install")
+    expect(html.indexOf("data-hraness-platform-install")).toBeLessThan(html.indexOf('class="hraness-marketing-hero__frame"'))
     expect(installHtml.match(/data-hraness-platform-badges/gu)).toHaveLength(1)
     expect(installHtml).toContain("<summary>Build from source</summary>")
     expect(installHtml).toContain("installs locked dependencies, builds the SDK and CLI")
     expect(installHtml).toContain(sourceInstall.guideUrl)
     expect(installHtml).toContain(archiveInstall.alternateSkillCommand)
-    expect(plainCode(installHtml)).toContain(archiveInstall.command)
+    expect(plainCode(html)).toContain(archiveInstall.command)
     expect(html).not.toContain("{{SITE")
   })
 
@@ -1395,10 +1415,10 @@ describe("static Slopcamera site", () => {
       "/docs",
       "/blog",
       "https://github.com/hraness/slopcamera",
-      "#install",
+      "#cli-install",
     ])
     expect(navigation).toContain('href="#examples">Films</a>')
-    expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install"')
+    expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#cli-install"')
     expect(html).not.toContain('class="docs-index"')
     for (const role of [
       "install",
@@ -1487,8 +1507,11 @@ describe("static Slopcamera site", () => {
       readSource("404.html"),
       readSource("styles.css"),
     ])
-    const fragmentLinks = [...html.matchAll(/href="#([^"]+)"/gu)].map(match => match[1])
-    const ids = new Set([...html.matchAll(/\sid="([^"]+)"/gu)].map(match => match[1]))
+    const withInstaller = html.replace("{{PLATFORM_INSTALL}}", renderPlatformInstall())
+    const fragmentLinks = [...withInstaller.matchAll(/href="#([^"]+)"/gu)].map(match => match[1])
+    const idValues = [...withInstaller.matchAll(/\sid="([^"]+)"/gu)].map(match => match[1])
+    const ids = new Set(idValues)
+    expect(ids.size).toBe(idValues.length)
 
     expect(html.match(/<h1\b/gu)).toHaveLength(1)
     expect(html).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
@@ -1734,10 +1757,10 @@ describe("static Slopcamera site", () => {
 
     expect(manifest.dependencies).toEqual({
       "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
-      "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
+      "@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
-      "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.9/hraness-posthog-0.3.9.tgz",
+      "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.11/hraness-posthog-0.3.11.tgz",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
       "@resvg/resvg-js": "2.6.2",
@@ -1769,7 +1792,7 @@ describe("static Slopcamera site", () => {
       '"@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz"',
     )
     expect(localLockfile).toContain('"@hraness/ui": "github:hraness/ui#v0.5.25"')
-    expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
+    expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2"')
     expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
     expect(localLockfile).toContain('"posthog-js": "1.422.5"')

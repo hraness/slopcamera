@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "b4af8e981d508cf2226a1314dd51ab55ba1cb7473d0d640d590d0a2e90d1b8f2",
+    "identityLinesSha256": "b8d6adccb6a340399cc15b5d69127055820d2aec6abbc65dd0501c12de08d281",
     "occurrenceCount": 475,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1467,6 +1467,24 @@
     ]
   },
   {
+    "identityLineCount": 13,
+    "identityLinesSha256": "ac63866de18d21db659543ba7ddfdbb3b5665baf4600a7a348ee6fd8c462df1c",
+    "occurrenceCount": 13,
+    "path": "apps/web/editorial-history-20261001.json",
+    "categories": [
+      "compat-doc"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "9e3a728ad4180784963298d6e587c1435fb08365c27fc0fba689d57cc81ec7a1",
+    "occurrenceCount": 1,
+    "path": "apps/web/editorial-review-20261001.json",
+    "categories": [
+      "compat-doc"
+    ]
+  },
+  {
     "identityLineCount": 91,
     "identityLinesSha256": "08391923c22c23d69ae4f714a538a1ddd54f7da5ddbd9844b69d6fc06934ad5c",
     "occurrenceCount": 97,
@@ -1522,18 +1540,18 @@
     ]
   },
   {
-    "identityLineCount": 15,
-    "identityLinesSha256": "35df9e201edd0afccf656e223729198fe16f6f08b1192326aa26312bb31eaa74",
-    "occurrenceCount": 20,
+    "identityLineCount": 16,
+    "identityLinesSha256": "cae4bd7a2184389e9ce3f1518826dcc1dba49d74bb5d42a6a047ddbca51ed39e",
+    "occurrenceCount": 21,
     "path": "apps/web/scripts/verify-site-current.mjs",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 11,
-    "identityLinesSha256": "7b9c7f56386a8d1cd730830a5ec2206a7b66d84e504c00149abddc64bb10f32a",
-    "occurrenceCount": 11,
+    "identityLineCount": 14,
+    "identityLinesSha256": "928a718f4d6e677581360aef6bef1a8fd60240f0f038317640d130f2c83e5401",
+    "occurrenceCount": 14,
     "path": "apps/web/scripts/verify-site-current.test.ts",
     "categories": [
       "test-fixture"
@@ -1558,9 +1576,9 @@
     ]
   },
   {
-    "identityLineCount": 11,
-    "identityLinesSha256": "4b68a45b84181f7c83398465afa021415ffd9103306df16e237828be57fa0251",
-    "occurrenceCount": 13,
+    "identityLineCount": 9,
+    "identityLinesSha256": "c05e4cd2b5bf695c86fb760140c137e2b3f2fc511cbe52bdf867f0b87a9724df",
+    "occurrenceCount": 9,
     "path": "apps/web/src/blog-admissions.ts",
     "categories": [
       "native-film-studio"
@@ -1577,9 +1595,9 @@
     ]
   },
   {
-    "identityLineCount": 17,
-    "identityLinesSha256": "22e62aee027667d4539587c09a0f1a546eadb56b968fe2810d2dcacc6e31ee83",
-    "occurrenceCount": 22,
+    "identityLineCount": 18,
+    "identityLinesSha256": "c627dd3e83ac91331c11647eef0a0bd4df65b178e4a7caed91bd78605701d5d7",
+    "occurrenceCount": 23,
     "path": "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md",
     "categories": [
       "native-film-studio"
@@ -1587,7 +1605,7 @@
   },
   {
     "identityLineCount": 17,
-    "identityLinesSha256": "73862e5a9859d84c38ae47b3a4563ceced59c0b4fce0d5b855e75e3bcaf96d00",
+    "identityLinesSha256": "a694046e76791f8b9e1c58ab10a7c992dc58ba20c63fe70f3cc64ecb6a16f860",
     "occurrenceCount": 19,
     "path": "apps/web/src/blog/make-video-with-claude-code.md",
     "categories": [
@@ -1703,9 +1721,9 @@
     ]
   },
   {
-    "identityLineCount": 8,
-    "identityLinesSha256": "56470703585b167973e090920fb47695a8469980191818e782186ff9ff026d87",
-    "occurrenceCount": 8,
+    "identityLineCount": 5,
+    "identityLinesSha256": "5b81ceae25470d4eedbc451e0814881612afbc53faaee59fd3c21dd97ddd7172",
+    "occurrenceCount": 5,
     "path": "apps/web/src/docs/reference/capabilities.md",
     "categories": [
       "native-film-studio"
@@ -1875,15 +1893,6 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-6a3k1hvj.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1893,8 +1902,17 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
+    "occurrenceCount": 233,
+    "path": "dist/index-xm1zqhzc.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
-    "identityLinesSha256": "c998529563d53542dc39b5883e514ef3b02eff95fbf2966ddff168001a1ce3c4",
+    "identityLinesSha256": "3ced834301bcb0aac8c1e7ca914631caa3119c00fce5f5d2650a4ac8fa24bf6b",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -2002,7 +2020,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "630579faa19f483165029699530aaf65a35c8281886890e414bbf93f97de22bb",
+    "identityLinesSha256": "8adfc1776ed70eaf4dedbf250d8ce21b64d8f30e3028913fb53b8c1e10c3ca81",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
@@ -2010,9 +2028,9 @@
     ]
   },
   {
-    "identityLineCount": 7,
-    "identityLinesSha256": "904475fbd24f22882464e153a8d6f7487c3613a13b89f5a73981b52a85018b26",
-    "occurrenceCount": 8,
+    "identityLineCount": 4,
+    "identityLinesSha256": "086f9440e5ee1f7288273bbb34edb448e94f7c719e7e66f86067797dbc26469a",
+    "occurrenceCount": 5,
     "path": "docs/reference/capabilities.md",
     "categories": [
       "native-film-studio"
@@ -2020,7 +2038,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "6f2a69a267a9a3aa825787c59e6ac8d4b0b2c82f310f122b22059fe078c5977c",
+    "identityLinesSha256": "98f354db14f012ea67249349e5204ada5b799922c4a3d9ab64eee056ee21edba",
     "occurrenceCount": 12,
     "path": "docs/reference/sdk.md",
     "categories": [

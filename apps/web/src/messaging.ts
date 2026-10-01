@@ -31,7 +31,7 @@ export const homepageMarketingSlots: ReadonlyArray<readonly [string, string, num
   ["{{PRODUCT_DESCRIPTION}}", escapeHtml(productMessaging.meta), 3],
   ["{{PRODUCT_TITLE}}", escapeHtml(productMessaging.headings["home-search-title"]), 3],
   ["{{PRODUCT_NAME}}", escapeHtml(productName), 3],
-  ["{{PRODUCT_PRIMARY_ACTION}}", escapeHtml(productMessaging.hero.primaryAction), 3],
+  ["{{PRODUCT_PRIMARY_ACTION}}", escapeHtml(productMessaging.hero.primaryAction), 2],
   ["{{PRODUCT_SECONDARY_ACTION}}", escapeHtml(productMessaging.hero.secondaryAction ?? ""), 1],
   ["{{PRODUCT_HERO_HEADING}}", escapeHtml(productMessaging.hero.heading), 1],
   ["{{PRODUCT_HERO_SUMMARY}}", escapeHtml(productMessaging.hero.summary), 1],

@@ -104,7 +104,7 @@ const TEXT_EXTENSIONS = new Set([
 const CANONICAL_TEXT_SENTINELS = [
   {
     path: "src/version.ts",
-    values: ['export const SLOPCAMERA_VERSION = "3.10.2" as const'],
+    values: ['export const SLOPCAMERA_VERSION = "3.10.3" as const'],
   },
   {
     path: "src/operations.ts",
@@ -126,7 +126,7 @@ const CANONICAL_TEXT_SENTINELS = [
   {
     path: "apps/desktop/dist/cli/main.js",
     values: [
-      '"3.10.2"',
+      '"3.10.3"',
       '"slopcamera.diagram.check"',
       '"slopcamera.edit-plan"',
       '"slopcamera.video-project"',
@@ -389,8 +389,8 @@ if (
 const packageVersion = rootPackage.version;
 if (typeof packageVersion !== "string") {
   problems.push("package.json version must be a string");
-} else if (packageVersion !== "3.10.2") {
-  problems.push("package.json version must be 3.10.2 for this source candidate; it does not identify a published Slopcamera release");
+} else if (packageVersion !== "3.10.3") {
+  problems.push("package.json version must be 3.10.3 for this source candidate; it does not identify a published Slopcamera release");
 } else {
   const versionContracts = [
     [
@@ -422,7 +422,8 @@ const sourceInstallContracts = [
   ["apps/web/src/index.html", "installs the guide from that same checkout. Native engines install separately."],
   ["apps/web/src/site-content.ts", '["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1]'],
   ["apps/web/src/site-content.ts", "command: archiveInstall.skillCommand,"],
-  ["apps/web/src/site-content.ts", "{ id: \"windows\", command: archiveInstall.command, shell: \"PowerShell\""],
+  ["apps/web/src/site-content.ts", 'supportedPlatforms = ["macos", "linux", "windows"] as const'],
+  ["apps/web/src/site-content.ts", '{ id: "all", label: "macOS, Linux, and Windows", command: archiveInstall.command, shell: "Terminal or PowerShell"'],
   ["README.md", sourceInstall.checkoutCommand],
   ["README.md", "bun install --frozen-lockfile --ignore-scripts"],
   ["README.md", "bun run build:sdk"],

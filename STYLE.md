@@ -1,10 +1,12 @@
 # Public writing style
 
-This guide covers everything written for readers outside a repository: product pages, documentation, READMEs, interface text, metadata, and text a model writes for publication. Apply the voice rules in [`WRITING.md`](WRITING.md) first. The [documentation guidelines](https://github.com/hraness/.github/blob/main/DOCUMENTATION_GUIDELINES.md) choose a document's purpose and shape, and the [README guidelines](https://github.com/hraness/.github/blob/main/README_GUIDELINES.md) cover the repository front door.
+<!-- synced from hraness/.github STYLE.md sha256:77ac89dfba95b5724f1e4001538a2d5f08e222acbb6c712dbb8ac14a78bdee85 -->
+
+This guide covers everything written for readers outside a repository: product pages, documentation, READMEs, interface text, metadata, and text a model writes for publication. Apply the voice rules in [`WRITING.md`](WRITING.md) first. The [documentation guidelines](DOCUMENTATION_GUIDELINES.md) choose a document's purpose and shape, and the [README guidelines](https://github.com/hraness/.github/blob/main/README_GUIDELINES.md) cover the repository front door.
 
 Public prose must be precise, useful, and free of hype. Use a direct, natural voice that reads well aloud.
 
-This is a synced copy of the [Hraness public writing style](https://github.com/hraness/.github/blob/main/STYLE.md), kept here so agents can read it offline. Repository-specific rules appear under “Repository additions” below.
+This is the canonical copy. Repositories keep a synced copy so agents can read it offline; rules that apply to one repository go under “Repository additions” at the end of that copy.
 
 ## Leave the reader with a clearer model
 
@@ -120,11 +122,20 @@ Most Hraness copy is drafted by agents working inside repository guides full of 
 - Use shared foreground and surface pairs for interactive controls. Control text and glyphs must reach at least 4.5:1 contrast in both themes, including selected, hover, and focus states. Never assume white is readable on a brand accent.
 - Review the page as a new visitor at desktop and phone widths. Confirm that the headline, example, and next action make sense before reading the documentation, and that essential limits appear beside the claims they qualify.
 
+## Write evergreen explanations
+
+- Give an educational article one useful question, a clear answer, and a concrete example the reader can reason through or apply. Explain the cause, choice, or tradeoff; a feature list with an introduction is not an explanation.
+- Write about the enduring idea and the public behavior a reader can use. Keep implementation diaries, internal file paths, test totals, task records, deployment history, and plans out of the article body. Link to public reference material when exact syntax or architecture helps the reader go further.
+- Keep release chronology in release notes and current setup requirements beside the relevant command. Do not date an evergreen explanation with “as of”, “recently”, a build number, or the author's review date. Preserve real publication and review dates in their metadata; include a historical date in prose only when the event's timing is part of the explanation.
+- State claims at their supported scope. Remove repeated permissions language, generic disclaimers, and defensive lists of things the article does not establish. Keep a material limitation beside the decision it changes, and link to detailed policy or reference where needed.
+- Check product names, destination links, public behavior, and image credits together. Replace a stale explanation rather than adding a caveat about its age. Never relabel historical evidence or a tool-generated asset as if it came from a different source.
+- Improve the existing collection before adding articles. Add a post for a distinct reader question that existing pages do not answer, with its own example and sources. Do not create thin variations to fill a series or repeat the product's pitch.
+
 ## State each limit once
 
 Readers trust a page that states its limits plainly. They skim a page that repeats them.
 
-- State the product's status once, near the top, with one of these labels: *In development*, *Preview*, *Beta*, *Latest release: vX.Y.Z*, *Paused*, or *Retired*. Follow it with one sentence on how to install or use it today, such as “Install from source; there is no signed release yet.”
+- State release status where it changes how someone can use the product. Keep the current version with installation instructions and explain an unavailable capability beside the affected action. Do not add a release label or status paragraph to every educational page.
 - Put each other limit beside the feature it limits, once. Link to the status or limits page instead of restating the caveat in each section. Never drop a true limit to make the copy read better.
 - Write a claim at its true scope instead of following it with what it does not prove. “Tests cover local networks only” replaces “These are tested local cases, not hosted private networking or evidence about independent devices.”
 - State a privacy or scope rule once, positively (“Only documents you choose to publish become public”), and keep the full list of exclusions on the privacy or security page.
@@ -164,7 +175,7 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 - Put literal input and interface values in `code`.
 - Use an ellipsis glyph (`…`) only when an action opens another input step.
 - Do not use em dashes in authored text: prose, titles, meta descriptions, social text, alt text, captions, image credits, list separators, and the templates that generate them. Rewrite the sentence instead of substituting a spaced hyphen. Quoted third-party titles keep their own punctuation. Use parentheses only for a short, necessary explanation.
-- Use each product's prose name exactly as its messaging record spells it (`names.name`), including case (xcb, Textbutler, AI Charts, Soundfish, Sys1). The all-capitals `names.catalog` form belongs only in designs that set every name in capitals. Do not use the repository slug or the domain as the name in prose, and do not use a product name as a common noun.
+- Use each product's prose name exactly as its messaging record spells it (`names.name`), including case. The all-capitals `names.catalog` form belongs only in designs that set every name in capitals. Do not use the repository slug or the domain as the name in prose, and do not use a product name as a common noun.
 - Give each destination one label across the header, footer, breadcrumbs, and Markdown twins.
 - Make interpolated counts agree with their nouns (“1 check”, “2 checks”), and test zero, one, and several.
 - Spell out zero through nine in prose. Use numerals for 10 or more, measurements, dates, and money.
@@ -176,6 +187,22 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 - Keep accessible descriptions accurate and specific to the rendered state. Use “example” when that distinction matters; it does not require a visible disclaimer.
 - Preserve meaningful evidence captions, legal notices, and actual feature limits. State each once beside the claim it qualifies.
 - Credit tools and models by their current names.
+
+## Keep article illustrations coherent
+
+- Give a product's article collection one authored visual direction: consistent drawing technique, line weight, texture, framing, and degree of abstraction. Start with a reviewed image from the collection and the product's brand palette.
+- Use a quiet neutral ground, one dominant brand color, and at most one supporting accent. Keep the accent subordinate and use tonal variations for depth. Avoid unrelated bright colors, glossy stock-art treatments, and a different style for each topic.
+- Generate editorial artwork through [SlopCamera](https://slopcamera.com). Retain its authored prompt, reference assets, and generation record with the source. Inspect the image at article and card sizes in both page themes before accepting it.
+- Make each illustration explain the article's central idea through one clear visual relationship. Avoid generic technology collages, decorative interface fragments, and text baked into images. A diagram may use labels when those labels carry the explanation.
+- Give every illustrated article a complete, intentional card and lead-image treatment. Preserve the actual generation history when replacing an old asset; credit the tool that made the new image and link its current public site.
+
+## Write social text
+
+- Posts on X, Bluesky, Threads, and LinkedIn follow every rule here, including no em dashes and no exclamation marks.
+- Use no emoji, hashtags, or thread numbering unless a repository addition allows them for one channel.
+- Keep image alt text to 125 characters or fewer.
+- Link the canonical URL without tracking parameters.
+- Launch posts follow the launch beats and social posts addendum in [`GENERATION_STYLE.md`](GENERATION_STYLE.md), and channel limits are in [`MESSAGING.md`](https://github.com/hraness/.github/blob/main/MESSAGING.md).
 
 ## Write focused documentation
 
@@ -196,7 +223,7 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 - Use one literal heading for the object, task, data view, or state.
 - Add supporting text only for a distinct instruction, constraint, status, or scope.
 - Name the action, object, current state, limit, or recovery step.
-- Do not narrate the interface or repeat visible information.
+- Do not narrate the interface or repeat visible information. Omit labels announcing how many cards are on screen or describing an obvious preview; retain counts only when they help navigation, selection, or comparison.
 - Keep normal readiness silent. Show status text for pending work, important results, or problems that the reader can fix.
 - Add search only when the collection is too large or varied for direct selection.
 - Move secondary actions and settings out of persistent primary controls.
@@ -211,7 +238,7 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 - Name the consequence in a confirmation. Repeat the exact verb and object for a destructive action.
 - Use nouns for labels. Use placeholders for a format or example, not a repeated label.
 - State the completed result in past tense in a toast notification.
-- Follow [`CLI_MENU_STYLE.md`](https://github.com/hraness/.github/blob/main/CLI_MENU_STYLE.md) for command-line output, menu bar menus, and macOS permission notices.
+- Follow [`CLI_MENU_STYLE.md`](https://github.com/hraness/.github/blob/main/CLI_MENU_STYLE.md) for command-line output, the shared status and control commands, and macOS permission notices.
 
 ## Vary a generated series
 
@@ -236,7 +263,7 @@ A prompt, skill, or template that makes a model write published text is public c
 - Read a sample of real outputs after every prompt change.
 - Tell the model who reads the output and that the reader has not seen the inputs or the instructions. Name every field that is published, including rationales and labels.
 - Set length limits as maximums. A minimum longer than the evidence forces padding.
-- Include the shared generation block from [`GENERATION_STYLE.md`](https://github.com/hraness/.github/blob/main/GENERATION_STYLE.md) and record its version with the prompt version.
+- Include the shared generation block from [`GENERATION_STYLE.md`](GENERATION_STYLE.md) and record its version with the prompt version.
 - Check the prompt, skill, and examples for the patterns they forbid; a prompt that uses em dashes and staged contrasts produces them.
 
 ## Keep tests and guides from freezing copy
@@ -248,13 +275,25 @@ A prompt, skill, or template that makes a model write published text is public c
 
 ## Say who wrote and who checked
 
-- Show AI-drafting disclosure on hraness.com through its shared disclosure component, on every page with AI-drafted text. Essays and blog posts on any Hraness site also show the provenance note from [`GENERATION_STYLE.md`](https://github.com/hraness/.github/blob/main/GENERATION_STYLE.md), naming the recorded reviewer. Other pages on other Hraness sites and products do not carry AI-drafting disclosures, labels, or badges.
+- Show AI-drafting disclosure on hraness.com through its shared disclosure component, on every page with AI-drafted text. Essays and blog posts on any Hraness site also show the provenance note from [`GENERATION_STYLE.md`](GENERATION_STYLE.md), naming the recorded reviewer. Other pages on other Hraness sites and products do not carry AI-drafting disclosures, labels, or badges.
 - Everywhere, keep a record of who drafted and who reviewed generated or agent-drafted text: the author, an independent human, or an AI agent, by name.
 - Never credit AI-drafted text to a person as its sole author, never describe AI review as human review, and never claim a review that has no record. A page without a review record makes no review claim.
 - Text an agent posts from a person's account does not claim that person wrote AI-drafted work.
 
 ## Repository additions
 
-### Use consistent text conventions
+### Facts public copy must keep
 
-- Do not use em dashes in authored prose. Use parentheses only for a short, necessary explanation.
+- Describe Gobstopper with the README's first sentence or a shortening of it: “Gobstopper is a free, open-source command-line tool that makes long coding sessions smaller.” File commands read Claude Code and Codex sessions; the proxy covers those plus any client of the Anthropic Messages, OpenAI Responses, or OpenAI Chat Completions dialect that accepts a custom provider address (opencode, Crush, Aider, Goose, and more). Claude Code and Codex routing is live-checked; Chat Completions coverage is contract-tested against synthetic histories and unqualified against live third-party sessions.
+- Name the condition on every write. Claude Code and Codex file `apply` and `undo` publish separate copies after retaining the source and candidate bytes. Direct provider-store and in-place writes are disabled. The compatibility settings `auto_apply_inplace` and `auto_apply_store` cannot enable those writes. Released CLI native dispatch is disabled for all providers, even with `auto_compact_closed`; the isolated synthetic-fixture exception exists only in debug builds. A non-dry watch pass can create a source snapshot before refusing native dispatch. Copy preparation does not establish that a provider can resume the copy.
+- `install-hooks` and `uninstall-hooks` require `--output <new-file>` and export private settings candidates without modifying provider settings. MCP uses deterministic built-ins and does not run executable strategies, plugins, model scorers, or model digests. Explicit plugin commands and configured ordinary CLI extensions run trusted code with user permissions, without an OS sandbox.
+- Keep verification claims within their recorded scope. TLA+ models exhaust specified finite state graphs, Kani proves selected production kernels, and Lean proves list laws with finite Rust correspondence checks. Tests and those proofs do not establish whole-system correctness, physical power-loss behavior, live provider compatibility, or preservation of every task fact. Literal retention and observed context reduction are separate from task success and billing savings.
+- Show only commands and config that run on the source or release the page installs. The homepage and README use the current `main` source install to match the behavior they describe; `site/published-release.json` records the latest published tag and the CI run that verified it. The retired flags `--in-place`, `--no-backup`, and `--double-buffer` exit with an error, `watch` has no `--trigger` flag, and a preset `command` is a string that needs `trusted_legacy_command = true`.
+- Label every benchmark with its date, build, and scope. The September 17, 2026 resume trials are historical single-session results on earlier builds. The September 27 and 28, 2026 Terminal-Bench run is labelled with its build caveat (21 of 89 tail-0 trials may have run an earlier build) wherever its setup is described.
+- OOMPA was retired on 2026-09-19 and replaced by xcb. Mention OOMPA only as history.
+- CliffCompaction is a third-party API proxy by Trang Nguyen, Eulrang Cho, Bingqing Chen, and Tim Dettmers ([arXiv:2609.26779](https://arxiv.org/abs/2609.26779), MIT, PyPI `cliffcompaction`). Describe it from its README and paper, attribute its benchmark figures to the authors, and keep them separate from Gobstopper's measurements. `gobstopper proxy` is a Rust port of its request engine for the Anthropic Messages, OpenAI Responses, and OpenAI Chat Completions dialects. Call what the two share the summary rule, and name the port's nine departures as Gobstopper's, never as CliffCompaction's behavior: it can keep older whole turns verbatim beyond the last three while they fit a tail budget (`--keep-tail-percent`, 0 by default since v0.7.3, which keeps the reference tail), counts a run of consecutive assistant messages as one turn in every dialect where the reference does so only for Responses, applies a separate threshold to Anthropic requests that declare a 1M-token window, resends the original when the provider rejects a rewritten request for another reason, raises the threshold when the verbatim head alone approaches it, and carries the human's words and the assistant's visible replies from the turns earlier compactions summarized, up to 24,000 characters, where the reference discards the previous summary (`--carry-max-chars 0` restores the reference rule), and, with calibration on (the default since v0.7.0), divides the threshold by a learned ratio of provider-reported to estimated input tokens, bounded 1.0 to 2.0 (`--no-calibrate` restores the reference), keeps selected original tool results and supported images with their invocation within byte and context limits (`--evidence-max-bytes 0` disables this carry), and accepts scoped temporary context reservations plus optional adaptive rescue within an explicitly configured provider capacity. Seven of the nine are on by default; the tail budget and scoped context controls are opt-in. Explicit hard context capacities also bound initial-message allowances, retries, and original-body fallbacks. Gobstopper's Terminal-Bench arms ran `gobstopper proxy`; never call either Gobstopper arm CliffCompaction. The `cliff` strategy applies the drop rule to a transcript copy, and `auto` does not select it. The two tools have not been tested together; tell readers to run one proxy per client.
+- `gobstopper proxy` binds 127.0.0.1, rewrites Anthropic Messages, OpenAI Responses, and OpenAI Chat Completions requests over its threshold (128,000 estimated tokens by default; 256,000, or `--threshold` if higher, for Anthropic requests whose `anthropic-beta` header declares a 1M-token window; tail 0 by default since v0.7.3), and leaves session files unchanged. It needs `curl` 8.3 or later. Replays of recorded sessions are estimates, not billed tokens. One live Terminal-Bench 2.1 run (89 tasks, one trial per arm, September 27 and 28, 2026, v0.7.2 (21 of 89 tail-0 trials may have run an earlier build), Claude Code 2.1.283 with GLM 5.3 Flash through Vercel AI Gateway, 45,000-token threshold) resolved 61, 59 and 60 tasks with tail 0, tail 40 and no proxy, a difference within single-trial noise, and sent 84.3M, 118.5M and 118.6M provider-reported input tokens. Report its dollars only as provider-reported gateway prices for that model, and never as subscription or billing savings. It does not establish results for other models, agents, thresholds or providers. Name its arms exactly: "Gobstopper, tail 0" (the new default), "Gobstopper, tail 40 (old default)" and "Claude Code, no proxy". A claim that the default tail was cheapest or sent fewer tokens names the 45,000-token threshold in the same sentence, because the default threshold is 128,000.
+
+### Blog posts
+
+- Posts under `/blog` carry the byline “Hraness” and the visible note “Drafted with AI from the source code and reviewed by <reviewer>.”, rendered from the post's review record. This follows the owner's decision of 2026-09-23 that essays and blog posts on every Hraness site show that note; other gobstopper.sh pages carry no AI-drafting labels. A disclosed AI review may admit a post for indexing and is never called human review.

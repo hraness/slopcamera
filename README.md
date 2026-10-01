@@ -34,11 +34,11 @@ for prompt-only hosted images; model usage is billed separately.
 ## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[SlopCamera v3.10.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.2)
+[SlopCamera v3.10.3 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.3)
 and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.10.2/hraness-slopcamera-3.10.2.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.10.3/hraness-slopcamera-3.10.3.tgz
 slopcamera skill install --target agents
 ```
 
@@ -365,15 +365,3 @@ to support development and opens no browser. `support dismiss` opts out across
 the local suite, `support snooze` pauses the notice for 30 days, and
 `HRANESS_SUPPORT_AUDIENCE=off` disables ambient notices. Agents follow the
 [support reference](skills/slopcamera/references/support.md).
-
-## Former name
-
-<details>
-<summary>Historical Atet release evidence</summary>
-
-SlopCamera was called Atet until September 2026.
-[Atet v3.2.3](https://github.com/hraness/atet/releases/tag/v3.2.3) and its
-[original archive](https://github.com/hraness/atet/releases/download/v3.2.3/hraness-atet-3.2.3.tgz)
-still install Atet, not SlopCamera.
-
-</details>
