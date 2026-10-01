@@ -233,6 +233,8 @@ h3 {
 /* Product page */
 
 .hraness-marketing-page {
+  position: relative;
+  z-index: 1;
   padding-block-end: clamp(1rem, 4vw, 2rem);
 }
 
@@ -274,17 +276,17 @@ h3 {
 
 .slopcamera-product-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(2rem, 4vw, 3rem);
+  grid-template-columns: minmax(0, .72fr) minmax(28rem, 1.28fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
   padding-block: clamp(2.5rem, 5vw, 4.5rem) 0;
 }
 
 .slopcamera-product-hero .hraness-marketing-hero__copy {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  align-items: end;
-  gap: 2rem 4rem;
-  max-inline-size: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  max-inline-size: 36rem;
 }
 
 [data-hraness-theme="paper"] .slopcamera-product-hero .hraness-marketing-hero__heading {
@@ -330,8 +332,219 @@ h3 {
 .slopcamera-product-hero .hraness-marketing-hero__frame {
   inline-size: 100%;
   min-inline-size: 0;
-  max-inline-size: none;
+  max-inline-size: 48rem;
+  justify-self: end;
   margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper-raised) 78%, transparent);
+  box-shadow: 0 1rem 3rem color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+main[data-hraness-marketing-preset="editorial"] {
+  position: relative;
+  isolation: isolate;
+}
+
+.slopcamera-studio {
+  min-inline-size: 0;
+  padding: 1.5rem;
+  color: var(--ink);
+}
+.slopcamera-studio__chrome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: -1.5rem -1.5rem 1.75rem;
+  padding: .8rem 1.1rem;
+  border-block-end: 1px solid var(--line);
+  color: var(--muted);
+  font: .65rem/1.4 var(--font-mono);
+}
+.slopcamera-studio__chrome span:first-child { letter-spacing: .2em; opacity: .55; }
+.slopcamera-studio__brief { display: grid; gap: .75rem; }
+.slopcamera-studio__brief > p { font-size: clamp(1.2rem, 2vw, 1.65rem); line-height: 1.35; letter-spacing: -.02em; }
+.slopcamera-studio__flow { display: flex; align-items: center; justify-content: space-between; gap: .3rem; margin-block: 1.75rem; font: .72rem/1.3 var(--font-mono); }
+.slopcamera-studio__flow span { padding: .7rem .6rem; border: 1px solid var(--line-strong); background: var(--paper-raised); }
+.slopcamera-studio__flow b { font-weight: 400; color: var(--muted); }
+.slopcamera-studio__outputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.slopcamera-studio__outputs > div { display: grid; gap: .5rem; font: .65rem/1.4 var(--font-mono); color: var(--muted); min-inline-size: 0; }
+.slopcamera-studio__outputs > div > span:first-child { display: flex; align-items: center; justify-content: center; height: 5.5rem; background: color-mix(in srgb, var(--primary) 7%, var(--paper)); border: 1px solid var(--line); }
+.slopcamera-studio__diagram { color: var(--primary); font-size: 1.1rem; gap: .15rem; }
+.slopcamera-studio__diagram b { font-size: .5rem; font-weight: 400; }
+.slopcamera-studio__scene { position: relative; overflow: hidden; }
+.slopcamera-studio__scene::before { content: ""; position: absolute; inset: 18% 24%; border: 1px solid var(--primary); background: color-mix(in srgb, var(--primary) 17%, var(--paper)); transform: rotate(-15deg) skew(-12deg); box-shadow: .65rem .65rem 0 color-mix(in srgb, var(--primary) 20%, transparent); }
+.slopcamera-studio__edit { flex-direction: column; gap: .4rem; padding: .75rem; }
+.slopcamera-studio__edit i { height: .8rem; width: 100%; background: color-mix(in srgb, var(--primary) 28%, transparent); border-inline: 1px solid var(--primary); }
+.slopcamera-studio__edit i:nth-child(2) { width: 66%; align-self: end; }
+.slopcamera-studio__edit i:nth-child(3) { width: 80%; align-self: start; }
+.slopcamera-studio > figcaption { margin-block-start: 1.25rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+
+.slopcamera-pixel-art {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: .2;
+  mix-blend-mode: multiply;
+}
+
+.slopcamera-pixel-art img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: top center;
+  filter: grayscale(1) contrast(.82);
+}
+html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .14; }
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .14; }
+}
+
+.slopcamera-product-hero,
+.slopcamera-features,
+.slopcamera-screening,
+.slopcamera-revision,
+.slopcamera-start,
+.slopcamera-practical,
+.hraness-marketing-install,
+.hraness-marketing-questions,
+.hraness-marketing-cta {
+  position: relative;
+  z-index: 1;
+}
+
+.slopcamera-features,
+.slopcamera-screening,
+.slopcamera-revision,
+.slopcamera-start,
+.slopcamera-practical,
+.hraness-marketing-install,
+.hraness-marketing-questions,
+.hraness-marketing-cta {
+  margin-block-start: clamp(3rem, 6vw, 5rem);
+}
+
+.slopcamera-features {
+  display: grid;
+  gap: 2rem;
+}
+
+.slopcamera-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .7rem;
+  max-inline-size: 42rem;
+}
+
+.slopcamera-section-heading h2 {
+  max-inline-size: 22ch;
+}
+
+.slopcamera-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.slopcamera-feature-card {
+  display: grid;
+  grid-template-columns: minmax(8rem, .8fr) minmax(0, 1.2fr);
+  gap: 1.25rem;
+  min-inline-size: 0;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: color-mix(in srgb, var(--paper-raised) 88%, transparent);
+}
+
+.slopcamera-feature-card h3 {
+  margin-block-end: .5rem;
+  font-size: 1.1rem;
+}
+
+.slopcamera-feature-card p {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.slopcamera-feature-card a {
+  display: inline-block;
+  margin-block-start: .75rem;
+  font-size: .82rem;
+}
+
+.slopcamera-feature-card__mockup {
+  position: relative;
+  min-block-size: 8rem;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--primary, var(--gold)) 10%, var(--paper));
+}
+
+.slopcamera-feature-card__mockup--image span,
+.slopcamera-feature-card__mockup--image i,
+.slopcamera-feature-card__mockup--image b {
+  position: absolute;
+  display: block;
+  border: 1px solid color-mix(in srgb, var(--primary, var(--gold)) 50%, transparent);
+  background: color-mix(in srgb, var(--primary, var(--gold)) 26%, transparent);
+}
+.slopcamera-feature-card__mockup--image span { inset: 14% 18% 34% 12%; transform: skewY(-10deg); }
+.slopcamera-feature-card__mockup--image i { inset: 42% 9% 15% 30%; transform: skewY(-10deg); }
+.slopcamera-feature-card__mockup--image b { inset: 68% 22% 7% 5%; transform: skewY(-10deg); }
+
+.slopcamera-feature-card__mockup--diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  padding: .5rem;
+  color: var(--ink);
+  font: .65rem/1 var(--font-mono);
+}
+.slopcamera-feature-card__mockup--diagram span { padding: .45rem .35rem; border: 1px solid var(--line-strong); background: var(--paper-raised); }
+.slopcamera-feature-card__mockup--diagram b { color: var(--primary, var(--gold)); }
+
+.slopcamera-feature-card__mockup--world span,
+.slopcamera-feature-card__mockup--world i,
+.slopcamera-feature-card__mockup--world b {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary, var(--gold)) 32%, transparent);
+}
+.slopcamera-feature-card__mockup--world span { inline-size: 5rem; block-size: 5rem; inset: 18% 12% auto auto; }
+.slopcamera-feature-card__mockup--world i { inline-size: 9rem; block-size: 3rem; inset: auto auto 10% 4%; border-radius: 60% 40% 0 0; transform: rotate(-8deg); }
+.slopcamera-feature-card__mockup--world b { inline-size: 3.5rem; block-size: 3.5rem; inset: 48% auto auto 22%; }
+
+.slopcamera-feature-card__mockup--timeline::before,
+.slopcamera-feature-card__mockup--timeline::after {
+  position: absolute;
+  content: "";
+  inset-inline: 10%;
+  block-size: 1.25rem;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--primary, var(--gold)) 28%, transparent);
+}
+.slopcamera-feature-card__mockup--timeline::before { inset-block-start: 22%; inline-size: 65%; }
+.slopcamera-feature-card__mockup--timeline::after { inset-block-start: 54%; inset-inline-start: 30%; inline-size: 55%; }
+
+@media (max-width: 52rem) {
+  .slopcamera-product-hero {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  .slopcamera-product-hero .hraness-marketing-hero__frame {
+    justify-self: stretch;
+    max-inline-size: none;
+  }
+  .slopcamera-feature-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 52rem) {
@@ -346,6 +559,11 @@ h3 {
     max-inline-size: 15ch;
     font-size: clamp(2.5rem, 8vw, 4.5rem);
   }
+}
+
+@media (max-width: 34rem) {
+  .slopcamera-feature-card { grid-template-columns: minmax(0, 1fr); }
+  .slopcamera-feature-card__mockup { min-block-size: 6rem; }
 }
 
 .hraness-marketing-page ::selection {
@@ -434,6 +652,7 @@ h3 {
 }
 
 @media (forced-colors: active) {
+  .slopcamera-pixel-art { display: none; }
   .hraness-platform-install__tab[aria-selected="true"] {
     forced-color-adjust: none;
   }

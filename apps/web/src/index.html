@@ -47,7 +47,7 @@
       <a aria-label="{{PRODUCT_NAME}} home" class="wordmark {{SITE_WORDMARK_CLASS}} hraness-foil-text" data-foil="" href="/"><span aria-hidden="true" class="hraness-foil-mark" data-foil=""><img alt="" aria-hidden="true" class="{{SITE_BRAND_MARK_CLASS}} hraness-foil-mark__image" height="22" src="/marks/slopcamera.svg" width="22"><span aria-hidden="true" class="hraness-foil-mark__paint"></span></span>{{SHELL_PRODUCT_NAME}}</a>
       <div class="topbar-actions {{SITE_ACTIONS_CLASS}}">
         <nav aria-label="Primary" class="{{SITE_NAVIGATION_CLASS}}">
-          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="#examples">Films</a>
+          <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="#features">Features</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/docs">Docs</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/blog">Blog</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="https://github.com/hraness/slopcamera">GitHub</a>
@@ -58,6 +58,10 @@
     </header>
 
     <main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">
+      <picture aria-hidden="true" class="slopcamera-pixel-art">
+        <source media="(max-width: 34rem)" srcset="/media/pixel-landscape-5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca.png">
+        <img alt="" decoding="async" height="6144" src="/media/pixel-landscape-af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44.png" width="1536">
+      </picture>
       <div class="hraness-marketing-page" data-hraness-marketing="page">
         <header aria-labelledby="page-title" class="hraness-marketing-hero slopcamera-product-hero" data-align="start" data-hraness-marketing="hero" data-tone="paper">
           <div class="hraness-marketing-hero__copy">
@@ -66,19 +70,51 @@
               <p class="hraness-marketing-hero__summary">{{PRODUCT_HERO_SUMMARY}}</p>
               <div class="hraness-marketing-hero__install">{{PLATFORM_INSTALL}}</div>
               <div class="hraness-marketing-hero__actions">
-                <a class="slopcamera-text-link" href="#examples">{{PRODUCT_SECONDARY_ACTION}}</a>
+                <a class="slopcamera-text-link" href="#features">{{PRODUCT_SECONDARY_ACTION}}</a>
               </div>
             </div>
           </div>
           <div class="hraness-marketing-hero__frame">
-            {{EXAMPLE_HERO}}
+            <figure aria-labelledby="studio-title" class="slopcamera-studio">
+              <div aria-hidden="true" class="slopcamera-studio__chrome"><span>● ● ●</span><span>launch / studio</span><span>local project</span></div>
+              <div class="slopcamera-studio__brief"><span class="slopcamera-eyebrow">Your direction</span><p>“Draw the workflow. Build the scene.<br>Make a vertical version.”</p></div>
+              <div aria-label="A brief becomes editable source, then a render" class="slopcamera-studio__flow"><span>Brief</span><b aria-hidden="true">→</b><span>Editable source</span><b aria-hidden="true">→</b><span>Render</span></div>
+              <div class="slopcamera-studio__outputs" aria-hidden="true"><div><span class="slopcamera-studio__diagram">○<b>──</b>◇<b>──</b>□</span><span>diagram.svg</span></div><div><span class="slopcamera-studio__scene"></span><span>scene.png</span></div><div><span class="slopcamera-studio__edit"><i></i><i></i><i></i></span><span>delivery.mp4</span></div></div>
+              <figcaption id="studio-title">One brief. Source you can revise. Every format you need.</figcaption>
+            </figure>
           </div>
         </header>
 
+        <section aria-labelledby="features-title" class="slopcamera-features" id="features">
+          <header class="slopcamera-section-heading">
+            <p class="slopcamera-eyebrow">A local visual studio for agents</p>
+            <h2 id="features-title">Direct the whole visual workflow.</h2>
+            <p>Images, diagrams, worlds, edits, and delivery stay in one editable project. Start with a brief, then keep the source beside every render.</p>
+          </header>
+          <div class="slopcamera-feature-grid">
+            <article class="slopcamera-feature-card">
+              <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--image" aria-hidden="true"><span></span><i></i><b></b></div>
+              <div><h3>Images and pixel art</h3><p>Generate images with your own provider key, compare candidates, and build transparent pixel backgrounds from the selected artwork.</p><a href="/docs/how-to/generate-media">Generate an image</a></div>
+            </article>
+            <article class="slopcamera-feature-card">
+              <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--diagram" aria-hidden="true"><span>Brief</span><b>→</b><span>Source</span><b>→</b><span>Render</span></div>
+              <div><h3>Editable diagrams</h3><p>Build positioned diagrams and visual explanations with a retained source, theme, and deterministic export.</p><a href="/docs/tutorials/first-diagram">Draw a diagram</a></div>
+            </article>
+            <article class="slopcamera-feature-card">
+              <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--world" aria-hidden="true"><span></span><i></i><b></b></div>
+              <div><h3>3D scenes and worlds</h3><p>Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief.</p><a href="/docs/tutorials/first-native-film">Build a native film</a></div>
+            </article>
+            <article class="slopcamera-feature-card">
+              <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--timeline" aria-hidden="true"><span></span><i></i><b></b></div>
+              <div><h3>Edit and deliver</h3><p>Cut footage, add captions and overlays, grade the result, then frame landscape, vertical, square, or portrait exports.</p><a href="/docs/how-to/edit-video">Edit a video</a></div>
+            </article>
+          </div>
+        </section>
+
         <section aria-labelledby="examples-title" class="slopcamera-screening" id="examples">
           <header class="slopcamera-section-heading">
-            <h2 id="examples-title">{{PRODUCT_HEADING_EXAMPLES}}</h2>
-            <p>Films, moving illustrations, and little worlds. Every example comes with the source and a guide so you can make it your own.</p>
+            <h2 id="examples-title">Still studies from the studio.</h2>
+            <p>Each study is a poster with its source and guide. Open the docs when you want to make it your own; the homepage stays quick to scan.</p>
           </header>
           <div class="slopcamera-screening-grid">
             {{EXAMPLE_GALLERY}}

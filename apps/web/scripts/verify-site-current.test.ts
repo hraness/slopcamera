@@ -209,16 +209,16 @@ test("stylesheet negative control requires actual paint damage and exact restora
 })
 
 
-test("studio acceptance rejects missing revision, cropped media and hidden first-viewport proof", () => {
-  const films = ["rain-bottled", "paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"].map(id => ({
-    id, source: `/assets/examples/${id}-aaaaaaaaaaaa.mp4`, poster: `/assets/examples/${id}-aaaaaaaaaaaa.webp`,
-    controls: true, preload: "none", paused: true, loop: false, inWidth: true, fit: "contain", guide: true, sourceLink: true,
+test("feature-led homepage acceptance rejects missing revision, overflow and hidden first-viewport proof", () => {
+  const films = ["paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"].map(id => ({
+    id, source: null, poster: `/assets/examples/${id}-aaaaaaaaaaaa.webp`,
+    controls: false, preload: null, paused: true, loop: false, inWidth: true, fit: "cover", guide: true, sourceLink: true,
   }))
   const fixture = () => ({ hero: { top: 300, width: 1100, height: 618 }, height: 900,
     installer: { count: 1, anchors: 1, label: "macOS, Linux, and Windows install command", beforeFilm: true, inWidth: true, hasCommands: true },
-    sections: ["examples", "revision", "start", "install", "design", "questions", "closing"],
-    revision: ["last-tram", "last-tram-revised"], films: structuredClone(films) })
-  expect(currentDesign).toBe("studio-screening-v1")
+    sections: ["features", "examples", "revision", "start", "install", "design", "questions", "closing"],
+    revision: ["last-tram", "last-tram-revised"], hasVideo: false, featureCards: 4, films: structuredClone(films) })
+  expect(currentDesign).toBe("feature-led-pixel-v2")
   expect(() => assertStudioHomepage(fixture(), 1440)).not.toThrow()
   const missingInstall = fixture(); missingInstall.installer.beforeFilm = false
   expect(() => assertStudioHomepage(missingInstall, 1440)).toThrow("installer must appear in the hero")
@@ -228,16 +228,14 @@ test("studio acceptance rejects missing revision, cropped media and hidden first
   expect(() => assertStudioHomepage(unlabelledInstall, 1440)).toThrow()
   const revisions = fixture(); revisions.revision.pop()
   expect(() => assertStudioHomepage(revisions, 1440)).toThrow()
-  const duplicate = fixture(); duplicate.films[6]!.source = duplicate.films[5]!.source
-  expect(() => assertStudioHomepage(duplicate, 1440)).toThrow("own rendered video")
-  const cropped = fixture(); cropped.films[0]!.fit = "cover"
-  expect(() => assertStudioHomepage(cropped, 1440)).toThrow("overflows or crops")
+  const noVideos = fixture(); noVideos.hasVideo = true
+  expect(() => assertStudioHomepage(noVideos, 1440)).toThrow("must stay still")
+  const missingFeature = fixture(); missingFeature.featureCards = 3
+  expect(() => assertStudioHomepage(missingFeature, 1440)).toThrow("four capability cards")
   const overflow = fixture(); overflow.films[3]!.inWidth = false
-  expect(() => assertStudioHomepage(overflow, 1440)).toThrow("overflows or crops")
+  expect(() => assertStudioHomepage(overflow, 1440)).toThrow("overflows")
   const distant = fixture(); distant.hero.top = 821
   expect(() => assertStudioHomepage(distant, 1440)).toThrow("first viewport")
-  const automatic = fixture(); automatic.films[0]!.paused = false
-  expect(() => assertStudioHomepage(automatic, 1440)).toThrow("quiet native controls")
   const opaque = fixture(); opaque.films[0]!.sourceLink = false
   expect(() => assertStudioHomepage(opaque, 1440)).toThrow("editable source")
 })
