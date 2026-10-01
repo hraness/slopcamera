@@ -128,18 +128,20 @@ a {
   text-underline-offset: 0.16em;
 }
 
-/* Canonical link style: primary ink with a dotted underline that solidifies on
-   hover. Navigation, controls, and the shared network footer keep their own
+/* Canonical link style: primary ink with a quiet dotted underline.
+   Navigation, controls, and the shared network footer keep their own
    recipes; content links live inside #main, where only the CTA actions opt out. */
 #main a:not(.hraness-marketing-action) {
   color: var(--primary, var(--gold));
   text-decoration-line: underline;
   text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-underline-offset: 0.18em;
 }
 
 #main a:not(.hraness-marketing-action):hover {
-  text-decoration-style: solid;
+  text-decoration-style: dotted;
 }
 
 /* The homepage header lines up with the marketing content column (70rem plus its 2rem gutter). */

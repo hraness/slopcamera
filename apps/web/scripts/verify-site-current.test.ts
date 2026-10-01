@@ -215,10 +215,13 @@ test("studio acceptance rejects missing revision, cropped media and hidden first
     controls: true, preload: "none", paused: true, loop: false, inWidth: true, fit: "contain", guide: true, sourceLink: true,
   }))
   const fixture = () => ({ hero: { top: 300, width: 1100, height: 618 }, height: 900,
+    installer: { count: 1, beforeFilm: true, inWidth: true, hasCommands: true },
     sections: ["examples", "revision", "start", "install", "design", "questions", "closing"],
     revision: ["last-tram", "last-tram-revised"], films: structuredClone(films) })
   expect(currentDesign).toBe("studio-screening-v1")
   expect(() => assertStudioHomepage(fixture(), 1440)).not.toThrow()
+  const missingInstall = fixture(); missingInstall.installer.beforeFilm = false
+  expect(() => assertStudioHomepage(missingInstall, 1440)).toThrow("installer must appear in the hero")
   const revisions = fixture(); revisions.revision.pop()
   expect(() => assertStudioHomepage(revisions, 1440)).toThrow()
   const duplicate = fixture(); duplicate.films[6]!.source = duplicate.films[5]!.source

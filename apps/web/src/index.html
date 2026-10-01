@@ -51,7 +51,7 @@
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/docs">Docs</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="/blog">Blog</a>
           <a class="{{SITE_HOME_NAVIGATION_LINK_CLASS}}" href="https://github.com/hraness/slopcamera">GitHub</a>
-          <a class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#install">{{PRODUCT_PRIMARY_ACTION}}</a>
+          <a class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#cli-install">{{PRODUCT_PRIMARY_ACTION}}</a>
         </nav>
         {{APPEARANCE_MENU}}
       </div>
@@ -64,8 +64,8 @@
             <h1 class="hraness-marketing-hero__heading" id="page-title">{{PRODUCT_HERO_HEADING}}</h1>
             <div class="slopcamera-hero-intro">
               <p class="hraness-marketing-hero__summary">{{PRODUCT_HERO_SUMMARY}}</p>
+              <div class="hraness-marketing-hero__install" id="cli-install">{{PLATFORM_INSTALL}}</div>
               <div class="hraness-marketing-hero__actions">
-                <a class="hraness-marketing-action" data-emphasis="primary" href="#install">{{PRODUCT_PRIMARY_ACTION}}</a>
                 <a class="slopcamera-text-link" href="#examples">{{PRODUCT_SECONDARY_ACTION}}</a>
               </div>
               <p class="hraness-marketing-hero__boundary">Free and open source.</p>
@@ -106,13 +106,11 @@
         <section aria-labelledby="install-title" class="hraness-marketing-install" data-hraness-marketing="install" id="install">
           <div class="hraness-marketing-install__heading-group">
             <h2 class="hraness-marketing-install__heading" id="install-title">{{PRODUCT_HEADING_INSTALL}}</h2>
-            <p class="install-note {{INSTALL_NOTE_CLASS}}">Tell your agent: “install Slopcamera and its skill.” Or run these two commands. Needs Bun 1.3.14 or newer on macOS, Linux, or Windows. <a href="{{RELEASE_URL}}">Release v{{RELEASE_VERSION}}</a>.</p>
+            <p class="install-note {{INSTALL_NOTE_CLASS}}"><a href="#cli-install">Install the CLI</a>, then add its matching Agent Skill. Needs Bun 1.3.14 or newer on macOS, Linux, or Windows. <a href="{{RELEASE_URL}}">Release v{{RELEASE_VERSION}}</a>.</p>
             {{PLATFORM_BADGES}}
           </div>
           <div class="hraness-marketing-install__commands">
-            <p class="panel-label {{INSTALL_LABEL_CLASS}}">Install the CLI</p>
-            {{PLATFORM_INSTALL}}
-            <p class="panel-label {{INSTALL_LABEL_CLASS}}">Then install its matching Agent Skill</p>
+            <p class="panel-label {{INSTALL_LABEL_CLASS}}">Add the Agent Skill</p>
             {{RELEASE_INSTALL_COMMANDS}}
             <p class="panel-note {{INSTALL_PANEL_NOTE_CLASS}}">Start a new agent session to load the <a class="{{INSTALL_PANEL_LINK_CLASS}}" href="https://github.com/hraness/slopcamera/blob/main/skills/slopcamera/SKILL.md">Agent Skill</a>. Blender, CadQuery, and Manim install separately.</p>
             <details class="source-install hraness-marketing-question hraness-material-disclosure">
@@ -155,7 +153,7 @@
           <h2 class="hraness-marketing-cta__heading" id="cta-title">{{PRODUCT_HEADING_CTA}}</h2>
           <p class="hraness-marketing-cta__summary">Install Slopcamera, give your agent a brief, and start directing.</p>
           <div class="hraness-marketing-cta__actions">
-            <a class="hraness-marketing-action" data-emphasis="primary" href="#install">{{PRODUCT_PRIMARY_ACTION}}</a>
+            <a class="hraness-marketing-action" data-emphasis="primary" href="#cli-install">{{PRODUCT_PRIMARY_ACTION}}</a>
             <a class="slopcamera-text-link" href="/docs">Open the studio guide</a>
           </div>
         </section>

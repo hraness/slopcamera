@@ -134,9 +134,15 @@ async function inspect(page) {
     const backdrop = document.querySelector("[data-hraness-hero-backdrop]")
     const lastAction = header ? [...header.querySelectorAll("a, button, summary")].at(-1) : null
     const heroMedia = document.querySelector(".slopcamera-product-hero .slopcamera-example__media")?.getBoundingClientRect()
+    const installer = document.querySelector(".hraness-marketing-hero__install [data-hraness-platform-install]")
+    const installBox = installer?.getBoundingClientRect()
     const studio = document.querySelector(".slopcamera-screening") ? {
       hero: heroMedia ? { top: heroMedia.top, width: heroMedia.width, height: heroMedia.height } : null,
       height: innerHeight,
+      installer: { count: document.querySelectorAll("[data-hraness-platform-install]").length,
+        beforeFilm: Boolean(installBox && heroMedia && installBox.bottom <= heroMedia.top),
+        inWidth: Boolean(installBox && installBox.left >= -1 && installBox.right <= innerWidth + 1),
+        hasCommands: Boolean(installer?.querySelector("code")?.textContent?.trim()) },
       sections: [...document.querySelectorAll("main > div > section[id]")].map(element => element.id),
       revision: [...document.querySelectorAll(".slopcamera-revision-pair figure")].map(element => element.getAttribute("data-example-id")),
       films: [...document.querySelectorAll("main figure[data-example-id]")].map(figure => {
@@ -181,6 +187,7 @@ async function inspect(page) {
 /** Current acceptance is independent of retained historical DOM profiles. */
 export function assertStudioHomepage(studio, width) {
   assert.ok(studio?.hero, "Missing studio hero film")
+  assert.deepEqual(studio.installer, { count: 1, beforeFilm: true, inWidth: true, hasCommands: true }, "One readable installer must appear in the hero before the film")
   assert.deepEqual(studio.sections, ["examples", "revision", "start", "install", "design", "questions", "closing"])
   assert.deepEqual(studio.revision, ["last-tram", "last-tram-revised"])
   assert.deepEqual(studio.films.map(film => film.id), ["rain-bottled", "paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"])
