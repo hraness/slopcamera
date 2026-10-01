@@ -41,6 +41,9 @@ function dimension(value: number): number {
 
 /** Pure server rendering. Publication admission, rights and byte limits belong to the registry. */
 export type ExampleMediaOptions = Readonly<{
+  /** Render the admitted still poster without adding a player. Docs and
+   * release pages keep the default player; marketing cards can stay quiet. */
+  includeVideo?: boolean
   autoplayPreview?: boolean
   eagerPoster?: boolean
   /** Homepage cards: a job label above the title, replacing the technique tags. */
@@ -73,7 +76,7 @@ export function renderExampleMedia(record: ExampleMediaRecord, options: ExampleM
   const guide = safeUrl(record.guideUrl)
   const posterWidth = dimension(record.poster.width)
   const posterHeight = dimension(record.poster.height)
-  const video = record.video
+  const video = options.includeVideo === false ? undefined : record.video
   if (record.downloads && record.downloads.length > 12) throw new Error("Too many example downloads")
   const requirementText = record.requirements ? `<p>Requires: ${escapeHtml(record.requirements)}</p>` : ""
   const downloadList = record.downloads?.length

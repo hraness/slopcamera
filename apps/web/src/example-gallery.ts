@@ -3,7 +3,7 @@ import { exampleMarkdown, exampleMediaRecord } from "./example-content"
 import { renderExampleMedia } from "./example-media"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "./example-registry"
 
-/** The screening order is editorial. Every slot resolves to admitted media,
+/** The study order is editorial. Every slot resolves to admitted media,
  * including while the next production is being prepared in this source tree. */
 const screening = [
   { id: "rain-bottled", previous: "native-product" },
@@ -32,7 +32,7 @@ function revisionExamples(examples: readonly WorkflowExample[]): readonly [Workf
 
 /** All visible homepage examples, exactly once and in document order. */
 export function homepageExamples(examples: readonly WorkflowExample[] = workflowExamples): readonly WorkflowExample[] {
-  const selected = [...screening.map(slot => registered(slot, examples)), ...revisionExamples(examples)]
+  const selected = [...screening.slice(1).map(slot => registered(slot, examples)), ...revisionExamples(examples)]
   if (new Set(selected.map(example => example.id)).size !== selected.length) throw new Error("Homepage examples must be distinct")
   return selected
 }
@@ -47,22 +47,22 @@ function escapeText(value: string): string {
   return value.replace(/[&<>"]/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character]!)
 }
 
-function renderFilm(example: WorkflowExample, preview = false): string {
-  const darkPoster = example.video === undefined ? example.downloads.find(file => file.label === "Dark PNG") : undefined
+function renderFilm(example: WorkflowExample, _preview = false): string {
+  const darkPoster = example.downloads.find(file => file.label === "Dark PNG")
   return renderExampleMedia(exampleMediaRecord(example, true), {
     compact: true,
-    autoplayPreview: preview && example.video !== undefined && example.video.durationSeconds <= 15,
-    eagerPoster: preview,
+    includeVideo: false,
+    eagerPoster: true,
     ...(darkPoster ? { darkPosterUrl: exampleUrl(darkPoster) } : {}),
   })
 }
 
-/** A single large film leads; playback enhancement still respects preferences. */
+/** A still rendering utility; the homepage hero uses an authored workflow mockup. */
 export function renderExampleHero(examples: readonly WorkflowExample[] = workflowExamples): string {
   return renderFilm(registered(screening[0], examples), true)
 }
 
-/** Vary scale through the screening; titles and requirements come from records. */
+/** Vary scale through the studies; titles and requirements come from records. */
 export function renderExampleGallery(examples: readonly WorkflowExample[] = workflowExamples): string {
   return screening.slice(1).map((slot, index) => {
     const example = registered(slot, examples)
@@ -70,8 +70,7 @@ export function renderExampleGallery(examples: readonly WorkflowExample[] = work
   }).join("\n")
 }
 
-/** Both real versions stay usable without JavaScript. There is no generated
- * playback or decorative simulation of the requested source change. */
+/** Both poster versions stay usable without JavaScript and retain source links. */
 export function renderExampleRevision(examples: readonly WorkflowExample[] = workflowExamples): string {
   const [original, revised] = revisionExamples(examples)
   const tram = original.id === "last-tram"
@@ -82,14 +81,19 @@ export function renderExampleRevision(examples: readonly WorkflowExample[] = wor
   return `<header class="slopcamera-section-heading"><h2 id="revision-title">${escapeText(productMessaging.headings["home-revision"])}</h2><p>${description}</p></header><blockquote class="slopcamera-direction"><p>“${request}”</p></blockquote><div class="slopcamera-revision-pair"><div><h3>${escapeText(productMessaging.headings["home-revision-original"])}</h3>${renderFilm(original)}</div><div><h3>${escapeText(productMessaging.headings["home-revision-revised"])}</h3>${renderFilm(revised)}</div></div><p class="slopcamera-revision-note">Both renders keep their own source. <a href="/docs/how-to/direct-a-film">Learn to direct a film</a>.</p>`
 }
 
-export function homepageHeroMarkdown(examples: readonly WorkflowExample[] = workflowExamples): string {
-  return exampleMarkdown(registered(screening[0], examples))
+function stillMarkdown(example: WorkflowExample): string {
+  const { video, ...still } = example
+  return exampleMarkdown(still)
+}
+
+export function homepageHeroMarkdown(): string {
+  return "Describe a scene to your agent. It writes an editable source file, renders the result, and keeps the source ready for your next change."
 }
 
 export function homepageExampleMarkdown(examples: readonly WorkflowExample[] = workflowExamples): string {
   return screening.slice(1).map(slot => {
     const example = registered(slot, examples)
-    return `### ${escapeText(example.title)}\n\n${exampleMarkdown(example)}`
+    return `### ${escapeText(example.title)}\n\n${stillMarkdown(example)}`
   }).join("\n\n")
 }
 
@@ -100,7 +104,7 @@ export function homepageRevisionMarkdown(examples: readonly WorkflowExample[] = 
     `## ${productMessaging.headings["home-revision"].replace(/\.$/u, "")}`,
     `> ${request}`,
     "Ask for a specific change; your agent edits the retained source and renders another version.",
-    `### ${productMessaging.headings["home-revision-original"]}`, exampleMarkdown(original), `### ${productMessaging.headings["home-revision-revised"]}`, exampleMarkdown(revised),
+    `### ${productMessaging.headings["home-revision-original"]}`, stillMarkdown(original), `### ${productMessaging.headings["home-revision-revised"]}`, stillMarkdown(revised),
     "[Learn to direct a film](https://slopcamera.com/docs/how-to/direct-a-film.md).",
   ].join("\n\n")
 }

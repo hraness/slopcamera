@@ -36,7 +36,7 @@ test("retained illustrative commands stay valid while the homepage shows actual 
   const home = await read("src/index.html")
   expect(home).not.toContain('aria-label="Illustrative Slopcamera terminal session"')
   expect(home).not.toContain("{{DIAGRAM_SESSION}}")
-  expect(home).toContain("{{EXAMPLE_HERO}}")
+  expect(home).toContain('class="slopcamera-studio"')
   expect(home).toContain("{{EXAMPLE_GALLERY}}")
   expect(home).not.toMatch(/transcript__prompt|transcript__note/u)
   const commands = ["slopcamera diagram init first.diagram.json", "slopcamera diagram check first.diagram.json --strict", "slopcamera diagram render first.diagram.json"]

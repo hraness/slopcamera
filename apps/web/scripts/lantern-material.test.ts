@@ -52,7 +52,7 @@ describe("Lantern material admission and scope", () => {
     expect(home).toContain('class="topbar hraness-material-chrome {{SITE_HEADER_CLASS}}"')
     expect(home).not.toContain("hraness-material-wall")
     expect(home).toContain('class="hraness-marketing-hero slopcamera-product-hero"')
-    expect(home).toContain("{{EXAMPLE_HERO}}")
+    expect(home).toContain('class="slopcamera-studio"')
     expect(home).not.toContain("hraness-material-terminal")
     expect(home).not.toContain('class="hraness-marketing-field"')
     for (const other of [missing, preview]) expect(other).not.toMatch(/data-hraness-material|hraness-material-/u)

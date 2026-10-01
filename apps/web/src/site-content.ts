@@ -11,7 +11,7 @@ import {
 } from "./docs"
 import { highlightCode, type SyntaxLanguage } from "@hraness/design-kit/syntax-highlighting"
 import { archiveInstall, publishedRelease, sourceInstall } from "./published-release"
-import { renderExampleGallery, renderExampleHero, renderExampleRevision } from "./example-gallery"
+import { renderExampleGallery, renderExampleRevision } from "./example-gallery"
 import { isBlogDocument } from "./blog-registry"
 
 // Existing content producers run within the ordinary page's captured SSR
@@ -238,7 +238,6 @@ export function siteContentSlots(document: SiteDocument, assets: SiteAssets): Re
     ["{{RELEASE_VERSION}}", publishedRelease.version, 1],
     ["{{RELEASE_URL}}", publishedRelease.releaseUrl, 1],
     ["{{SOURCE_INSTALL_URL}}", sourceInstall.guideUrl, 1],
-    ["{{EXAMPLE_HERO}}", renderExampleHero(), 1],
     ["{{EXAMPLE_GALLERY}}", renderExampleGallery(), 1],
     ["{{EXAMPLE_REVISION}}", renderExampleRevision(), 1],
     ["{{PLATFORM_BADGES}}", renderPlatformBadges(), 1],

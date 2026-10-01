@@ -1503,18 +1503,36 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "d214e9ac447f118e65a2910670aace9045965a090cce2d938937284a6084326c",
-    "occurrenceCount": 9,
+    "identityLineCount": 1,
+    "identityLinesSha256": "a482516fb9b9f2fea9f2d3d79563eb0e5b3a0b41dbfc2ca3754f06d5f12feecf",
+    "occurrenceCount": 1,
+    "path": "apps/web/scripts/lantern-material.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "b828c3f99c9f2e1af05fffbc516cc64e5cff4121660fbc5d83d4b4e217687516",
+    "occurrenceCount": 1,
+    "path": "apps/web/scripts/site-code-examples.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 10,
+    "identityLinesSha256": "bb574fe2ee2f56127ae62b20d425b6a631e474ce9ce5d54df1d290c12093ecd6",
+    "occurrenceCount": 10,
     "path": "apps/web/scripts/site-copy-content.test.ts",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 3,
-    "identityLinesSha256": "ba19fa241d8c9d658c8c0f90782d14dba21431491ed761635888a970c7a38593",
-    "occurrenceCount": 3,
+    "identityLineCount": 4,
+    "identityLinesSha256": "94beb58428fb5c883ee4f11817969f2585278ce9505d51d27d1dbd74ac328b16",
+    "occurrenceCount": 4,
     "path": "apps/web/scripts/site-examples-browser-contract.test.ts",
     "categories": [
       "test-fixture"
@@ -1540,8 +1558,8 @@
     ]
   },
   {
-    "identityLineCount": 16,
-    "identityLinesSha256": "cae4bd7a2184389e9ce3f1518826dcc1dba49d74bb5d42a6a047ddbca51ed39e",
+    "identityLineCount": 17,
+    "identityLinesSha256": "0c47f2d05c8e38aa713a14b74ed35c3d787f8b4c8d0c1ece679b5f8d0e016d0a",
     "occurrenceCount": 21,
     "path": "apps/web/scripts/verify-site-current.mjs",
     "categories": [
@@ -1549,27 +1567,27 @@
     ]
   },
   {
-    "identityLineCount": 14,
-    "identityLinesSha256": "928a718f4d6e677581360aef6bef1a8fd60240f0f038317640d130f2c83e5401",
-    "occurrenceCount": 14,
+    "identityLineCount": 11,
+    "identityLinesSha256": "fb24682851e33d518f9f203d34d865e3dc87f0a12dcb8cb0b65e3838bac2f957",
+    "occurrenceCount": 11,
     "path": "apps/web/scripts/verify-site-current.test.ts",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 8,
-    "identityLinesSha256": "469f2762aedb7b59939425a9c025de469f9ed9eefb4041ccf0b835b1eba2406e",
-    "occurrenceCount": 8,
+    "identityLineCount": 11,
+    "identityLinesSha256": "b1b1d07d437754a460ffc40d4e44ed4fa34d35f6276637c60dcadc1e881922ec",
+    "occurrenceCount": 11,
     "path": "apps/web/site.test.ts",
     "categories": [
       "test-fixture"
     ]
   },
   {
-    "identityLineCount": 3,
-    "identityLinesSha256": "45b481fd1ef0b8dc52fdf9d326a2ff43aab0f53bc943e9369137377a8ecbd47c",
-    "occurrenceCount": 3,
+    "identityLineCount": 4,
+    "identityLinesSha256": "8d0b596ae3de0d515aa4c0761eb08469d805d3563115214e21543abf65aa5dba",
+    "occurrenceCount": 4,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
@@ -1838,9 +1856,9 @@
     ]
   },
   {
-    "identityLineCount": 1,
-    "identityLinesSha256": "2c730a3e6b717a1e3a67803b7ab2725d25caf15af78ec15cd5975dcd4351a33c",
-    "occurrenceCount": 1,
+    "identityLineCount": 9,
+    "identityLinesSha256": "7ab65822ced0c862e5af592ac1d15e77361f79938f7f6b3f6414103eb2dc9e4a",
+    "occurrenceCount": 14,
     "path": "apps/web/src/index.html",
     "categories": [
       "native-film-studio"
@@ -1869,6 +1887,15 @@
     "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 20,
+    "identityLinesSha256": "2e7f3a1442d0c3d84ef4279a93bb696876640ecc231b34a4401ad717b00baef4",
+    "occurrenceCount": 20,
+    "path": "apps/web/src/styles.css",
     "categories": [
       "native-film-studio"
     ]

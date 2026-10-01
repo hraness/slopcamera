@@ -32,7 +32,7 @@ const defaultDisabledFeatures = [
 ]
 const defaultDisableFeaturesArgument = `--disable-features=${defaultDisabledFeatures.join(",")}`
 
-export const currentDesign = "studio-screening-v1"
+export const currentDesign = "feature-led-pixel-v2"
 export const currentRoutes = ["/", "/docs", "/docs/tutorials/first-diagram", "/docs/tutorials/first-animation", "/docs/how-to/direct-a-film", "/docs/how-to/remix-the-showcase", "/docs/reference/sdk", "/docs/reference/capabilities", "/blog", "/blog/introducing-slopcamera"]
 export const missingRoute = "/not-a-page"
 export const widths = [360, 390, 1440]
@@ -133,7 +133,7 @@ async function inspect(page) {
     const menus = [...document.querySelectorAll("[aria-label^='Appearance:']")]
     const backdrop = document.querySelector("[data-hraness-hero-backdrop]")
     const lastAction = header ? [...header.querySelectorAll("a, button, summary")].at(-1) : null
-    const heroMedia = document.querySelector(".slopcamera-product-hero .slopcamera-example__media")?.getBoundingClientRect()
+    const heroMedia = document.querySelector(".slopcamera-product-hero .slopcamera-studio")?.getBoundingClientRect()
     const installer = document.querySelector(".hraness-marketing-hero__install [data-hraness-platform-install]")
     const installBox = installer?.getBoundingClientRect()
     const studio = document.querySelector(".slopcamera-screening") ? {
@@ -141,21 +141,23 @@ async function inspect(page) {
       height: innerHeight,
       installer: { count: document.querySelectorAll("[data-hraness-platform-install]").length,
         anchors: document.querySelectorAll("#cli-install").length, label: installer?.querySelector("pre")?.getAttribute("aria-label"),
-        beforeFilm: Boolean(installBox && heroMedia && installBox.bottom <= heroMedia.top),
+        beforeFilm: Boolean(installBox && heroMedia && (installBox.bottom <= heroMedia.top || installBox.right <= heroMedia.left || installBox.left >= heroMedia.right)),
         inWidth: Boolean(installBox && installBox.left >= -1 && installBox.right <= innerWidth + 1),
         hasCommands: Boolean(installer?.querySelector("code")?.textContent?.trim()) },
       sections: [...document.querySelectorAll("main > div > section[id]")].map(element => element.id),
       revision: [...document.querySelectorAll(".slopcamera-revision-pair figure")].map(element => element.getAttribute("data-example-id")),
+      hasVideo: document.querySelector("video") !== null,
+      featureCards: document.querySelectorAll(".slopcamera-feature-card").length,
       films: [...document.querySelectorAll("main figure[data-example-id]")].map(figure => {
-        const video = figure.querySelector("video")
-        const box = video?.getBoundingClientRect()
-        return { id: figure.getAttribute("data-example-id"), source: video?.querySelector("source")?.getAttribute("src"),
-          poster: video?.getAttribute("poster"), controls: video?.controls, preload: video?.preload,
-          paused: video?.paused, muted: video?.muted, loop: video?.loop,
+        const image = figure.querySelector("img")
+        const box = image?.getBoundingClientRect()
+        return { id: figure.getAttribute("data-example-id"), source: null,
+          poster: image?.getAttribute("src"), controls: false, preload: null,
+          paused: true, muted: true, loop: false,
           guide: [...figure.querySelectorAll("a")].some(link => link.textContent === "Guide" && link.getAttribute("href")?.startsWith("/docs/")),
           sourceLink: [...figure.querySelectorAll("a")].some(link => link.textContent === "Source" && link.getAttribute("href")?.startsWith("https://github.com/hraness/slopcamera/")),
           inWidth: Boolean(box && box.left >= -1 && box.right <= innerWidth + 1),
-          fit: video ? getComputedStyle(video).objectFit : null }
+          fit: image ? getComputedStyle(image).objectFit : null }
       }),
     } : null
     return {
@@ -187,19 +189,18 @@ async function inspect(page) {
 
 /** Current acceptance is independent of retained historical DOM profiles. */
 export function assertStudioHomepage(studio, width) {
-  assert.ok(studio?.hero, "Missing studio hero film")
-  assert.deepEqual(studio.installer, { count: 1, anchors: 1, label: "macOS, Linux, and Windows install command", beforeFilm: true, inWidth: true, hasCommands: true }, "One readable installer must appear in the hero before the film")
-  assert.deepEqual(studio.sections, ["examples", "revision", "start", "install", "design", "questions", "closing"])
+  assert.ok(studio?.hero, "Missing studio hero visual")
+  assert.equal(studio.hasVideo, false, "Homepage marketing must stay still and scanable")
+  assert.equal(studio.featureCards, 4, "Feature-led homepage needs four capability cards")
+  assert.deepEqual(studio.installer, { count: 1, anchors: 1, label: "macOS, Linux, and Windows install command", beforeFilm: true, inWidth: true, hasCommands: true }, "One readable installer must appear in the hero before or beside the visual")
+  assert.deepEqual(studio.sections, ["features", "examples", "revision", "start", "install", "design", "questions", "closing"])
   assert.deepEqual(studio.revision, ["last-tram", "last-tram-revised"])
-  assert.deepEqual(studio.films.map(film => film.id), ["rain-bottled", "paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"])
-  assert.equal(new Set(studio.films.map(film => film.source)).size, studio.films.length, "Each film must retain its own rendered video")
-  assert.ok(studio.hero.top < studio.height - 80, "Hero media must be visible in the first viewport")
-  assert.ok(studio.hero.width >= width * (width < 600 ? .75 : .65), "Hero film is too small to lead the page")
+  assert.deepEqual(studio.films.map(film => film.id), ["paper-ocean", "laundromat-after-midnight", "square-wave-jazz", "one-shoot-cinematic", "last-tram", "last-tram-revised"])
+  assert.ok(studio.hero.top < studio.height - 80, "Hero visual must be visible in the first viewport")
+  assert.ok(studio.hero.width >= width * (width < 600 ? .75 : .35), "Hero visual is too small to lead the page")
   for (const film of studio.films) {
-    assert.ok(film.controls && film.preload === "none" && film.paused && !film.loop, `${film.id}: quiet native controls required`)
-    assert.ok(film.inWidth && film.fit === "contain", `${film.id}: video overflows or crops`)
+    assert.ok(film.poster && film.inWidth, `${film.id}: still visual overflows or is missing`)
     assert.ok(film.guide && film.sourceLink, `${film.id}: missing guide or editable source`)
-    assert.match(film.source, /^\/assets\/examples\/[a-z0-9-]+\.mp4$/u)
     assert.match(film.poster, /^\/assets\/examples\/[a-z0-9-]+\.(?:webp|png)$/u)
   }
 }
@@ -266,11 +267,9 @@ async function reviewStudioInteractions(browser, origin, policy) {
     colorScheme: "light", reducedMotion: policy === "failure" ? "reduce" : "no-preference" })
   const problems = []
   const requests = []
-  let intentionalFailure = null
   await context.route("**/*", route => {
     const url = route.request().url()
     if (!allowsRequest(url, origin)) { problems.push(`external request ${url}`); return route.abort() }
-    if (url === intentionalFailure) return route.abort("failed")
     if (/\.mp4(?:\?|$)/u.test(url)) requests.push(url)
     return route.continue()
   })
@@ -284,51 +283,10 @@ async function reviewStudioInteractions(browser, origin, policy) {
   const state = { policy, source: null, clipboard: false, cliClipboard: false, keyboardFocus: false, mediaAdvanced: [], errorMessage: null }
   try {
     await page.goto(origin, { waitUntil: "networkidle" })
-    if (policy === "save-data") {
-      assert.equal(requests.length, 0, "Save-Data must not request video before a user action")
-      assert.ok(await page.locator("video").evaluateAll(videos => videos.every(video => video.paused && !video.loop)))
-      state.source = "navigator.connection.saveData=true"
-    } else if (policy === "failure") {
-      const figure = page.locator('[data-example-id="last-tram-revised"]')
-      const video = figure.locator("video")
-      intentionalFailure = new URL(await video.locator("source").getAttribute("src"), origin).href
-      await video.scrollIntoViewIfNeeded()
-      await video.focus()
-      await video.press("Space")
-      const status = figure.locator("[data-example-status]")
-      await status.waitFor({ state: "visible", timeout: 10_000 })
-      state.errorMessage = await status.innerText()
-      assert.match(state.errorMessage, /Video could not load/u)
-      assert.equal(await video.getAttribute("controls"), "")
-      assert.equal(new URL(await figure.getByRole("link", { name: "Video", exact: true }).getAttribute("href"), origin).href, intentionalFailure)
-    } else {
-      const hero = page.locator('.slopcamera-product-hero video')
-      await page.waitForFunction(() => {
-        const video = document.querySelector(".slopcamera-product-hero video")
-        return video && !video.paused && video.muted && video.loop && video.currentTime > .15
-      }, null, { timeout: 10_000 })
-      // Native transport receives a real keyboard action; focus alone is passive.
-      await hero.focus()
-      await hero.press("Space")
-      await page.waitForFunction(() => {
-        const video = document.querySelector(".slopcamera-product-hero video")
-        return video?.paused && !video.loop
-      }, null, { timeout: 5_000 })
-      state.keyboardFocus = await hero.evaluate(video => video === document.activeElement && video.matches(":focus-visible") && getComputedStyle(video).outlineStyle !== "none")
-      assert.ok(state.keyboardFocus, "Keyboard media focus must be visible")
-      for (const id of ["last-tram", "last-tram-revised"]) {
-        const video = page.locator(`[data-example-id="${id}"] video`)
-        await video.scrollIntoViewIfNeeded()
-        await video.focus()
-        await video.press("Space")
-        await page.waitForFunction(id => {
-          const video = document.querySelector(`[data-example-id="${id}"] video`)
-          return video && !video.paused && video.currentTime > .15 && !video.loop && video.readyState >= 2
-        }, id, { timeout: 10_000 })
-        state.mediaAdvanced.push(await video.evaluate(video => ({ source: video.currentSrc, time: video.currentTime, readyState: video.readyState, error: video.error?.code ?? null })))
-        await video.press("Space")
-        assert.ok(await video.evaluate(video => video.paused))
-      }
+    assert.equal(await page.locator("video").count(), 0, "Homepage must not render marketing videos")
+    assert.equal(requests.length, 0, "Homepage must not request video assets")
+    state.source = "static-feature-cards"
+    if (policy === "native-controls") {
       await context.grantPermissions(["clipboard-read", "clipboard-write"])
       const installer = page.locator(".slopcamera-universal-install")
       const cliCommand = await installer.locator("pre").textContent()
@@ -343,7 +301,6 @@ async function reviewStudioInteractions(browser, origin, policy) {
       assert.equal(actual, expected)
       assert.match(actual, /^slopcamera skill install/u)
       state.clipboard = true
-      assert.ok(await hero.evaluate(video => video.paused && !video.loop), "Manual pause must survive scrolling and other actions")
     }
   } catch (error) {
     problems.push(error.message)

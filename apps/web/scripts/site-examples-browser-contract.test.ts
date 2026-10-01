@@ -23,7 +23,6 @@ import { collectExamplesFontDiagnostic, encodeExamplesFailureDiagnostic, Example
   examplesFontOwners, retainExamplesFailureDiagnostic } from "./site-examples-font-diagnostic"
 import type { Page } from "playwright-core"
 import { parseFragment, serializeOuter, type DefaultTreeAdapterMap } from "parse5"
-import { renderExampleHero } from "../src/example-gallery"
 import { admitExamplesInstallDom, compareExamplesInstall, examplesInstallLines, examplesInstallNote, parseExamplesInstallReceipt, parseExamplesInstallPair, projectExamplesBaselineCopyElements, type ExamplesInstall } from "./site-examples-install"
 const hash = "a".repeat(64)
 const media = [{ id: "editorial", path: "/assets/examples/editorial-aaaaaaaaaaaa.mp4", sha256: hash,
@@ -654,10 +653,10 @@ describe("workflow-examples-v1 independent native contract", () => {
   for (const [token, value, count] of [shellProductNameSlot("index.html"), ...homepageMarketingSlots]) {
    source = replaceSiteSlot(source, token, value, count)
   }
-  expect(source.split("{{EXAMPLE_HERO}}")).toHaveLength(2)
-  // The quiet hero keeps its real media proof without the retired decorative backdrop.
+  expect(source).not.toContain("{{EXAMPLE_HERO}}")
+  // The feature-led hero is a static workflow study; docs keep their manual players.
   expect(source).not.toContain("{{HERO_BACKDROP}}")
-  const tree = parseFragment(source.replace("{{EXAMPLE_HERO}}", () => renderExampleHero()))
+  const tree = parseFragment(source)
   type Node = DefaultTreeAdapterMap["node"]
   type Element = DefaultTreeAdapterMap["element"]
   const descendants = (node: Node): Element[] => "childNodes" in node
@@ -676,13 +675,10 @@ describe("workflow-examples-v1 independent native contract", () => {
     expect(html).toContain("without an operating-system sandbox")
     expect(html).toContain("Media uploads require acknowledgement.")
    }
-   if (selector === ".hraness-marketing-hero") {
+    if (selector === ".hraness-marketing-hero") {
     const videos = descendants(actual[0]!).filter(node => node.tagName === "video")
-    expect(videos).toHaveLength(1)
-    expect(videos[0]!.attrs.some(attribute => attribute.name === "loop")).toBe(false)
-    expect(videos[0]!.attrs.some(attribute => attribute.name === "autoplay")).toBe(false)
-    expect(videos[0]!.attrs.some(attribute => attribute.name === "controls")).toBe(true)
-    expect(videos[0]!.attrs.some(attribute => attribute.name === "preload" && attribute.value === "none")).toBe(true)
+    expect(videos).toHaveLength(0)
+    expect(html).toContain("slopcamera-studio")
     expect(html).toContain("Give your agent a multimedia studio.")
    }
   }

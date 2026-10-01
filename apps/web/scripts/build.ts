@@ -43,6 +43,10 @@ const generatedTextFiles = {
 } as const
 
 const marketingIconMaxBytes = 128 * 1024
+const pixelArtMedia = [
+  { file: "pixel-landscape-af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44.png", bytes: 1_055_624, sha256: "af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44" },
+  { file: "pixel-landscape-5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca.png", bytes: 710_586, sha256: "5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca" },
+] as const
 
 async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
   const directory = join(sourceDirectory, "icons")
@@ -56,6 +60,19 @@ async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uin
     icons.push({ path: `icons/${name}`, bytes })
   }
   return icons
+}
+
+async function readPixelArtMedia(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
+  const mediaDirectory = join(sourceDirectory, "media")
+  return Promise.all(pixelArtMedia.map(async expected => {
+    const bytes = new Uint8Array(await readFile(join(mediaDirectory, expected.file)))
+    assert.ok(bytes.byteLength === expected.bytes, `Pixel artwork byte length changed: ${expected.file}`)
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), expected.sha256,
+      `Pixel artwork digest changed: ${expected.file}`)
+    assert.ok(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
+      `Pixel artwork is not a PNG: ${expected.file}`)
+    return { path: `media/${expected.file}`, bytes }
+  }))
 }
 
 async function readBrandMarks(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
@@ -278,6 +295,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
   const preview = await buildPreview(appDirectory)
   const icons = await readPublicIcons(appDirectory)
   const marketingIcons = await readMarketingIcons()
+  const pixelArt = await readPixelArtMedia()
   const brandMarks = await readBrandMarks()
   const examples = await readExampleAssets(appDirectory)
   const launchAssets = await readLaunchAssets(appDirectory)
@@ -303,7 +321,7 @@ export async function buildWebsite(options: BuildOptions = {}): Promise<Readonly
       : [writeFile(join(outputDirectory, analyticsPath.slice(1)), analytics)]),
   ])
 
-  for (const { path, bytes } of [...icons, ...marketingIcons, ...brandMarks, ...examples, ...launchAssets]) {
+  for (const { path, bytes } of [...icons, ...marketingIcons, ...pixelArt, ...brandMarks, ...examples, ...launchAssets]) {
     const destination = join(outputDirectory, path)
     await mkdir(dirname(destination), { recursive: true })
     await writeFile(destination, bytes, { flag: "wx", mode: 0o644 })

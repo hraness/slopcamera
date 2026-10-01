@@ -224,8 +224,9 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // the required shared foundation, canonical snapshots, and retained product CSS.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
   // design-kit 0.35.0 and footer 0.20.5 add shared product and consent controls:
-  // measured 516,718 bytes; retain 782 bytes of bounded headroom.
-  if (bytes >= 517_500) throw new Error(`Combined site CSS exceeds its 517,500-byte budget: ${bytes}`)
+  // The product studio, feature mockups, and pixel-art treatment add 7,390
+  // bytes to the measured package output; retain 1,891 bytes of headroom.
+  if (bytes >= 526_000) throw new Error(`Combined site CSS exceeds its 526,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -301,15 +302,15 @@ test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its rout
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(317_499), "x".repeat(200_000))).toBe(517_499)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(317_500), "x".repeat(200_000)))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(317_499), `${"x".repeat(200_000)}é`))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517501")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(517_500), ""))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(517_500)))
-    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(assertCombinedSiteCssBudget("x".repeat(325_999), "x".repeat(200_000))).toBe(525_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(326_000), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(325_999), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(526_000), ""))
+    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(526_000)))
+    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -353,7 +354,7 @@ test("authored shell budget rejects content growth and unapproved slot discounts
   }
   expect(() => assertAuthoredShellBudget(`${template}{{SITE_SKIP_CLASS}}`))
     .toThrow("Site document must contain 1 instance(s) of {{SITE_SKIP_CLASS}}")
-  for (const slot of ["RELEASE_URL", "RELEASE_VERSION", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL", "EXAMPLE_HERO", "EXAMPLE_GALLERY", "EXAMPLE_REVISION"]) {
+  for (const slot of ["RELEASE_URL", "RELEASE_VERSION", "RELEASE_INSTALL_COMMANDS", "SOURCE_INSTALL_URL", "EXAMPLE_GALLERY", "EXAMPLE_REVISION"]) {
     expect(() => assertAuthoredShellBudget(`${template}{{${slot}}}`))
       .toThrow(`Site document must contain 1 instance(s) of {{${slot}}}`)
   }
@@ -1397,6 +1398,7 @@ describe("static Slopcamera site", () => {
   test("presents finished films, revision and starting paths before installation and trust details", async () => {
     const html = await readSource("index.html")
     const sections = [
+      'id="features"',
       'id="examples"',
       'id="revision"',
       'id="start"',
@@ -1411,13 +1413,13 @@ describe("static Slopcamera site", () => {
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((left, right) => left - right))
     expect([...navigation.matchAll(/href="([^"]+)"/gu)].map(match => match[1])).toEqual([
-      "#examples",
+      "#features",
       "/docs",
       "/blog",
       "https://github.com/hraness/slopcamera",
       "#cli-install",
     ])
-    expect(navigation).toContain('href="#examples">Films</a>')
+    expect(navigation).toContain('href="#features">Features</a>')
     expect(navigation).toContain('class="site-action {{SITE_NAVIGATION_ACTION_CLASS}}" data-emphasis="primary" href="#cli-install"')
     expect(html).not.toContain('class="docs-index"')
     for (const role of [
@@ -1594,7 +1596,7 @@ describe("static Slopcamera site", () => {
     expect(css).toContain(".origin-note")
     expect(css).not.toMatch(/@font-face|url\([^)]*\.woff/)
     expect(html).toContain('<h1 class="hraness-marketing-hero__heading" id="page-title">Give your agent a multimedia studio.</h1>')
-    expect(html).toContain("{{EXAMPLE_HERO}}")
+    expect(html).toContain('class="slopcamera-studio"')
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative Slopcamera terminal session")
     expect(html).toContain('<main data-hraness-marketing-preset="editorial"')
@@ -1605,7 +1607,7 @@ describe("static Slopcamera site", () => {
     expect(html).not.toContain("Ben Guo")
     expect(html).not.toContain('class="hraness-marketing-hero__eyebrow"')
     expect(html).toContain('class="hraness-marketing-hero slopcamera-product-hero" data-align="start"')
-    expect(css).toContain("grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)")
+    expect(css).toContain("grid-template-columns: minmax(0, .72fr) minmax(28rem, 1.28fr)")
     for (const declaration of ["white-space: pre", "overflow-wrap: normal", "word-break: normal", "overflow: auto"]) {
       expect(css).toContain(declaration)
     }
@@ -2088,6 +2090,7 @@ describe("static Slopcamera site", () => {
       "llms.txt",
       "marketing-preset",
       "marks",
+      "media",
       "og",
       "og.png",
       "preview.html",
@@ -2148,11 +2151,11 @@ describe("static Slopcamera site", () => {
     // contract measured 346,025, and the design-kit v0.21.0 status-page
     // snapshot for the shared 404 measured 354,712. The design-kit v0.22.0
     // union with the icon library and status snapshot measured 434,750; the
-    // Catppuccin palette, contour material and shared hero rollout bring it to
-    // 484,800. Keep
-    // a strict ceiling over the full sealed union and captured foundation;
+    // Catppuccin palette, contour material, shared hero rollout, and product
+    // studio/pixel-art treatment bring it to 524,108. Keep a strict ceiling
+    // over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(517_500)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(526_000)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)

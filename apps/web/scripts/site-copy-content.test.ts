@@ -89,7 +89,7 @@ describe("media studio public copy (pure, process-free)", () => {
       read("examples/showcase/studio-relaunch/requests/last-tram-original.json"),
       read("examples/showcase/studio-relaunch/requests/last-tram-moonrise.json"),
     ])
-    expect(html).toContain("{{EXAMPLE_HERO}}")
+    expect(html).toContain('class="slopcamera-studio"')
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     for (const source of [readme, html, homeMarkdown]) {
       expect(source).toContain("/docs/tutorials/first-animation")
