@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "b8d6adccb6a340399cc15b5d69127055820d2aec6abbc65dd0501c12de08d281",
+    "identityLinesSha256": "944a7e04d344b6d602151fe87968d58b2463ddd02516c52e68faf326bfd6a7c1",
     "occurrenceCount": 475,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1893,6 +1893,15 @@
     ]
   },
   {
+    "identityLineCount": 2,
+    "identityLinesSha256": "da8faf5e51b7725cccf1f37be77d1649361156fc711d6cf6f2997beb7be128d3",
+    "occurrenceCount": 233,
+    "path": "dist/index-2f8wsjrk.js",
+    "categories": [
+      "generated"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "e77643029c4268f8844d480f736054510134348d678ecabd2a3ede8795b081db",
     "occurrenceCount": 9,
@@ -1902,17 +1911,8 @@
     ]
   },
   {
-    "identityLineCount": 2,
-    "identityLinesSha256": "5516298b4239ab8dd1afca15b172bd2800d963190084e3961718167b2113736a",
-    "occurrenceCount": 233,
-    "path": "dist/index-xm1zqhzc.js",
-    "categories": [
-      "generated"
-    ]
-  },
-  {
     "identityLineCount": 1,
-    "identityLinesSha256": "3ced834301bcb0aac8c1e7ca914631caa3119c00fce5f5d2650a4ac8fa24bf6b",
+    "identityLinesSha256": "b262654201733a44848f977dd43841ecd969513d2443d4decb89bc3475ee238a",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -2131,6 +2131,69 @@
     "identityLinesSha256": "32c809b84834c9bc0b232ea5e0679e57b8f8c412099b20152093348753c34f28",
     "occurrenceCount": 2,
     "path": "examples/design/spiral-stair.scene.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "f10732d2d709b4a31522e3bbcbaf5472c9719094910d7ba603619d3942ba23b9",
+    "occurrenceCount": 1,
+    "path": "examples/pixel-landscape/continuous.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "5213a20bb599c5d5fe2473adbe4d45ea55767dadcf39b8155d6e3ea8811a528d",
+    "occurrenceCount": 4,
+    "path": "examples/pixel-landscape/detail-study.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "0480b44b9f21ae74fc82f56efb882dbe001f45641572f3c86628682e3263a994",
+    "occurrenceCount": 7,
+    "path": "examples/pixel-landscape/landscape-world.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 4,
+    "identityLinesSha256": "ed754956060b1502eab1cbd5eedf1194a932a41405e6f41d2aeaff441b762cde",
+    "occurrenceCount": 5,
+    "path": "examples/pixel-landscape/phone-world.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 3,
+    "identityLinesSha256": "b26dc29a50a1e773b18fcdf7502f207b6772ea11bcc5b23f3c1793f916953381",
+    "occurrenceCount": 3,
+    "path": "examples/pixel-landscape/README.md",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "ecb63496282926c692f52df5a012fd3bd0aac2b2b0b077023abf5358a28e7a01",
+    "occurrenceCount": 1,
+    "path": "examples/pixel-landscape/slopcamera.json",
+    "categories": [
+      "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 5,
+    "identityLinesSha256": "f4d0f61d89ec5b4327904a6fbe602cf1854bfc1e006d83a48e9bbbe13f612831",
+    "occurrenceCount": 5,
+    "path": "examples/pixel-landscape/visual-review.md",
     "categories": [
       "native-film-studio"
     ]
@@ -3417,6 +3480,24 @@
     "path": "src/index.ts",
     "categories": [
       "native-film-studio"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "b60437962f873892641d8758569cd38d744390059f2f0f489c408a595558b479",
+    "occurrenceCount": 1,
+    "path": "src/pixel-landscape-repair.test.ts",
+    "categories": [
+      "test-fixture"
+    ]
+  },
+  {
+    "identityLineCount": 1,
+    "identityLinesSha256": "da6cf067174eb4aee2cb4abb4d824d30a2c1b33e6604ea070d0fe09c323c50fc",
+    "occurrenceCount": 1,
+    "path": "src/pixel-landscape-run.test.ts",
+    "categories": [
+      "test-fixture"
     ]
   },
   {

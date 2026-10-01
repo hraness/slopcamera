@@ -44,7 +44,7 @@ Parser, layout, operation, protocol, configuration, or scheduler changes need de
 
 Keep the portable declarative graph SDK canonical in `src/code/`. The complete local host extends that fixed model under `apps/desktop/`; it does not maintain a competing graph contract. Public local-host entrypoints use `@hraness/slopcamera/local/*`.
 
-Generation uses Vercel AI Gateway directly. Do not add an account service, session store, custom OAuth flow, hosted proxy, billing dependency, or browser credential field. Tests must use inert credentials and controlled transports.
+Default generation uses Vercel AI Gateway directly. Explicit standalone image commands can use Vertex express, Google Gemini, or OpenAI keys. Do not add an account service, session store, custom OAuth flow, hosted proxy, billing dependency, or browser credential field. Tests must use inert credentials and controlled transports.
 
 Do not loosen byte, path, pixel, frame, duration, process, fidelity, download, or resource-admission limits to make a fixture pass. Explain and test any deliberate limit change.
 

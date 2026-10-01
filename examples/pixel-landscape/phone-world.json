@@ -1,0 +1,60 @@
+{
+  "kind": "slopcamera.pixel-landscape",
+  "schemaVersion": 1,
+  "product": "SlopCamera",
+  "brief": "Create a detailed continuous futuristic landscape for SlopCamera, a multimedia studio for coding agents. Show inhabited terrain containing small studios, camera paths, lighting, scene construction and animation studies. The environment establishes a coherent world with purposefully integrated media-making activity. Use tactile grayscale materials on white, controlled local shading, shared light and perspective, and a quiet central content corridor. Do not render pixels directly; conversion and theme tint happen locally.",
+  "theme": {
+    "background": "#eff1f5",
+    "primary": "#1750bf",
+    "secondary": "#dce0e8"
+  },
+  "sections": [
+    {
+      "id": "continuous-world",
+      "description": "One uninterrupted very tall descent through sky observatory highlands, suspended creative districts, geological studio caverns and a calm planted foundation. Concentrate the connected inhabited terrain along both edges, keep the central 55% quiet for narrow-screen text, and fade the foundation naturally to white."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "phone-media-rift",
+      "direction": "Use refined grayscale layered paper materials to create a continuous very tall 1:8 inhabited landscape for a phone page. Compose one slow descent through sky observatory highlands, suspended creative districts, geological studio caverns and a calm planted foundation. The structures and landforms are irregular, varied in depth and continuously connected; no stacked icon shelves, giant camera, rectangular display panels or repeated terrace pattern. Keep the middle 55% predominantly white and quiet for narrow-screen text. Concentrate the two side silhouettes in the outer edges, using readable clusters of inhabited cliff architecture, curved pavilions, planted strata, local bridges and small integrated workshops. Scale all optical, scene, lighting and animation equipment as believable small things inside the place. Use a few tiny figures and a small side tram for scale, plus distinctive sculptural material studies and garden forms. Stretch the narrative by revealing new connected terrain and neighborhood activity down the page, rather than repeating the same motif. Clear near/middle/far relationships, shared light and one coherent oblique cutaway view. Keep fine detail organized and subordinate to strong medium-scale silhouettes that survive pixel conversion at phone width. Pure white ground, soft local grayscale shading and confident selected contours; no broad dark masses or center-crossing rails. Fade the foundation naturally to white. No words, lettering, logos, UI or direct pixel rendering. This is ONE unified native 1:8 tall 4K artwork, not stacked panels."
+    }
+  ],
+  "generation": {
+    "provider": "google",
+    "model": "gemini-3.1-flash-image",
+    "judgeModel": "gemini-3.1-pro-preview",
+    "resolution": "4K",
+    "rounds": 1,
+    "concurrency": 1,
+    "maxImageCalls": 1,
+    "maxJudgeCalls": 1,
+    "aspectRatio": "1:8"
+  },
+  "processing": {
+    "width": 768,
+    "panelHeight": 6144,
+    "overlap": 0,
+    "pixelSize": 3,
+    "alphaMax": 1,
+    "gamma": 0.8,
+    "quietCenter": 0.55,
+    "upscale": 1,
+    "inkContrast": 1.5
+  },
+  "rubric": "Act as a demanding art director assessing a continuous long-scroll marketing illustration for SlopCamera. The images include the true source drawing and its actual single-ink pixel treatment. Inspect the source for purposeful detail and inspect the pixel result for surviving form; do not mistake the pixel grid itself for detail. Return ONLY one JSON object with relevance, continuity, composition and detail as numeric scores from 0 through 10, defects as an array of concrete blocking defects, revision as an actionable instruction in at most 120 words, and overall as the arithmetic mean. Relevance: 9-10 requires a specific, visible story of making and revising media across several activities such as scene staging, diagram construction, motion phases, optical direction, lighting and 3D material studies. 5-6 is a generic futuristic architecture drawing decorated with cubes, film strips or lenses. Judge the actual depicted activities, not the nouns in the prompt. Continuity: 9-10 is one coherent place with shared perspective, scale, lighting, contour or material language and visibly supported connections from upper atelier through workshops to the foundation. The two main structures must continue deliberately. Local camera arcs may terminate at a visible rig or scene boundary; do not penalize those intentional ends as broken main paths. 5-6 has disconnected structures, inconsistent geometry or a vacant band separating unrelated worlds. Composition: 9-10 has varied vertical rhythm, substantial side silhouettes and open central space that plausibly frames real headings, media and buttons. 5-6 is flat repetition, oversized empty planes, or some central intrusion; dense gray masses or crosswise rails behind content are defects. Detail: evaluate the source's organized secondary structures and differentiated workshop activity first, then whether the important shapes remain recognizable in the alpha pixel result. 9-10 requires intricate meaningful local detail with clear hierarchy, distinct media-making scenes and readable material or construction methods. 5-6 is dominated by large blank walls, terraces, basic repeated blocks or decorative texture. A dense mesh of hatching earns no extra credit. Neither high resolution nor many pixels proves detail. Losing incidental fine hatching can be acceptable; losing the activity or principal geometry lowers the score. Scores at least 8 require visible evidence rather than assumed success. Locate blocking defects as upper, middle, lower, left support, right support or content corridor. Keep defects empty only when no issue prevents quiet decorative use; put minor improvements in revision. Model acceptance requires all four scores at least 8, overall at least 8.5 and no blocking defects. Recommend changes to the two weakest dimensions while preserving the successful parts. Never infer quality from deterministic measurements or the candidate name.",
+  "content": [
+    {
+      "heading": "Give your agent a multimedia studio.",
+      "body": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source."
+    },
+    {
+      "heading": "Take an idea somewhere strange.",
+      "body": "Films, moving illustrations, and little worlds. Every example comes with the source and a guide so you can make it your own."
+    },
+    {
+      "heading": "The next version starts with a sentence.",
+      "body": "Describe a scene. Pick a direction. Ask for a change. Your agent writes the source and keeps it ready for the next version."
+    }
+  ]
+}

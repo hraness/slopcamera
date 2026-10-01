@@ -461,7 +461,7 @@ jobs:
           const { posix } = require("node:path");
           const { gunzipSync } = require("node:zlib");
 
-          const maximumFiles = 570;
+          const maximumFiles = 580;
           const maximumMetadataBytes = 1_000_000;
           const maximumPackedBytes = 5_200_000;
           const maximumUnpackedBytes = 15_000_000;

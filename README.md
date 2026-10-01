@@ -186,6 +186,12 @@ run prompt-only image generation through the hosted API
 [Generate media](docs/how-to/generate-media.md) and
 [Direct short generated clips](docs/directing-video.md).
 
+Standalone image files can also use your own Vertex express, Google Gemini,
+or OpenAI key with `slopcamera image generate --provider …`. The
+[scrolling pixel landscape guide](docs/how-to/pixel-landscapes.md) compares
+continuous landscapes or linked image sections and produces a transparent pixel mask
+that can take a site's tint.
+
 ### Edit footage and deliver finished videos
 
 Import existing footage or recording bundles. Remove pauses and filler words,

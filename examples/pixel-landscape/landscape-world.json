@@ -1,0 +1,64 @@
+{
+  "kind": "slopcamera.pixel-landscape",
+  "schemaVersion": 1,
+  "product": "SlopCamera",
+  "brief": "Create a detailed continuous futuristic landscape for SlopCamera, a multimedia studio for coding agents. Show inhabited terrain containing small studios, camera paths, lighting, scene construction and animation studies. The environment establishes a coherent world with purposefully integrated media-making activity. Use tactile grayscale materials on white, controlled local shading, shared light and perspective, and a quiet central content corridor. Do not render pixels directly; conversion and theme tint happen locally.",
+  "theme": {
+    "background": "#eff1f5",
+    "primary": "#1750bf",
+    "secondary": "#dce0e8"
+  },
+  "sections": [
+    {
+      "id": "continuous-world",
+      "description": "One uninterrupted descent from optical observatory highlands, through varied connected studio districts carved into landforms, to a planted subterranean foundation. Structures and activity grow naturally from the terrain. Keep the central 45% pale and quiet, and fade the foundation into white."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "inhabited-media-rift",
+      "direction": "Use refined grayscale paper surfaces, layered cuts and soft local shading to create a vast futuristic landscape descending through one continuous inhabited media-making rift. The environment establishes the image: dramatic sculpted ridgelines, inhabited cliff architecture, pocket gardens, tiny working studios, local transport paths and bridges tucked into the two side regions. Upper: distant sky terraces and an optical observatory built into a curved ridge, with lenses as small architectural mechanisms. Middle: asymmetrical interlocking neighborhoods of open studios carved into landforms, different sizes and depths, with human-scale camera carriages, lighting rigs, layered scenery and tiny meaningful animation/material studies visible inside. Include a small tram circulating on a supported side track and a few anonymous tiny figures for scale. Lower: the ridges open into a lush subterranean landscape of faceted botanical growth, sculpted geological strata, a winding shallow stream, curved shell pavilions and inhabited cave ateliers. Every area grows physically from the terrain and neighboring structures; use credible paths, retaining ribs and transitions. Media activity should occupy small integrated portions of a believable place. Create a clear near/middle/far hierarchy and vary dense neighborhoods with breathing space. Keep the central 45% very pale sky or atmosphere for page content; only extremely faint distant terrain may unify it, with no foreground bridge across it. Maintain one coherent oblique view and common light. Avoid giant camera icons, upright diagram boards and evenly stacked object shelves. Richness comes from mid-scale environmental activity and organized local material detail, not repeated props or hatching. Pure white ground, controlled grayscale, no large uniform dark masses, words, logos, interface panels or direct pixel rendering. Let the whole world fade gently into white at the foot. This is ONE unified native 1:4 tall 4K artwork, not stacked panels."
+    },
+    {
+      "id": "sculptural-studio-valley",
+      "direction": "Use tactile folded materials, readable grayscale modeling and careful constructed edges to create a monumental futuristic terrain, viewed as an oblique vertical cutaway descending from airy highlands into a deep creative valley and underground garden. One large curving landform on the left and a different terraced geological formation on the right contain lived-in architecture: irregular open rooms, ribbed canopies, narrow local footpaths, compact workshops, courtyards and planted alcoves. These are connected places of different scale, not two straight columns or matching shelving units. Show a few small media-making scenes nested naturally inside the landscape: a light-filled stage with a curved pavilion under an articulated rig, a layered miniature night-tram scene inside a workshop, a flight-motion study built into a small sculpture court, and a relief diagram used as a modest architectural detail. Make the environment at least three quarters of the visual emphasis; all equipment remains human-scale. Material detail includes cut strata, bent ribs, believable connections, varied foliage, water edges and layered scenic construction. Build depth through overlapping landforms and local shadow, without filling the center with gray. The central 45% stays almost white and quiet all the way down; architecture and complex forms cluster along the sides. Alternate a few grand shapes with organized medium-sized activity and selected fine details. Preserve common perspective, contour hierarchy and illumination throughout. Use careful grayscale tonal modeling, white highlights and restrained hatching. Exclude giant lenses, hanging square cards, catalog framing, identical platforms, broad blank slabs, giant crystals, text and logos. Finish with a spacious sculptural garden and clean white fade. This is ONE unified native 1:4 tall 4K artwork, not stacked panels."
+    }
+  ],
+  "generation": {
+    "provider": "google",
+    "model": "gemini-3.1-flash-image",
+    "judgeModel": "gemini-3.1-pro-preview",
+    "resolution": "4K",
+    "rounds": 1,
+    "concurrency": 2,
+    "maxImageCalls": 2,
+    "maxJudgeCalls": 2,
+    "aspectRatio": "1:4"
+  },
+  "processing": {
+    "width": 1536,
+    "panelHeight": 6144,
+    "overlap": 0,
+    "pixelSize": 4,
+    "alphaMax": 1,
+    "gamma": 0.8,
+    "quietCenter": 0.4,
+    "upscale": 1,
+    "inkContrast": 1.5
+  },
+  "rubric": "Act as a demanding art director assessing a continuous long-scroll marketing illustration for SlopCamera. The images include the true source drawing and its actual single-ink pixel treatment. Inspect the source for purposeful detail and inspect the pixel result for surviving form; do not mistake the pixel grid itself for detail. Return ONLY one JSON object with relevance, continuity, composition and detail as numeric scores from 0 through 10, defects as an array of concrete blocking defects, revision as an actionable instruction in at most 120 words, and overall as the arithmetic mean. Relevance: 9-10 requires a specific, visible story of making and revising media across several activities such as scene staging, diagram construction, motion phases, optical direction, lighting and 3D material studies. 5-6 is a generic futuristic architecture drawing decorated with cubes, film strips or lenses. Judge the actual depicted activities, not the nouns in the prompt. Continuity: 9-10 is one coherent place with shared perspective, scale, lighting, contour or material language and visibly supported connections from upper atelier through workshops to the foundation. The two main structures must continue deliberately. Local camera arcs may terminate at a visible rig or scene boundary; do not penalize those intentional ends as broken main paths. 5-6 has disconnected structures, inconsistent geometry or a vacant band separating unrelated worlds. Composition: 9-10 has varied vertical rhythm, substantial side silhouettes and open central space that plausibly frames real headings, media and buttons. 5-6 is flat repetition, oversized empty planes, or some central intrusion; dense gray masses or crosswise rails behind content are defects. Detail: evaluate the source's organized secondary structures and differentiated workshop activity first, then whether the important shapes remain recognizable in the alpha pixel result. 9-10 requires intricate meaningful local detail with clear hierarchy, distinct media-making scenes and readable material or construction methods. 5-6 is dominated by large blank walls, terraces, basic repeated blocks or decorative texture. A dense mesh of hatching earns no extra credit. Neither high resolution nor many pixels proves detail. Losing incidental fine hatching can be acceptable; losing the activity or principal geometry lowers the score. Scores at least 8 require visible evidence rather than assumed success. Locate blocking defects as upper, middle, lower, left support, right support or content corridor. Keep defects empty only when no issue prevents quiet decorative use; put minor improvements in revision. Model acceptance requires all four scores at least 8, overall at least 8.5 and no blocking defects. Recommend changes to the two weakest dimensions while preserving the successful parts. Never infer quality from deterministic measurements or the candidate name.",
+  "content": [
+    {
+      "heading": "Give your agent a multimedia studio.",
+      "body": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source."
+    },
+    {
+      "heading": "Take an idea somewhere strange.",
+      "body": "Films, moving illustrations, and little worlds. Every example comes with the source and a guide so you can make it your own."
+    },
+    {
+      "heading": "The next version starts with a sentence.",
+      "body": "Describe a scene. Pick a direction. Ask for a change. Your agent writes the source and keeps it ready for the next version."
+    }
+  ]
+}

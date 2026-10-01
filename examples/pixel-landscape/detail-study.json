@@ -1,0 +1,68 @@
+{
+  "kind": "slopcamera.pixel-landscape",
+  "schemaVersion": 1,
+  "product": "SlopCamera",
+  "brief": "Create one exceptionally considered, richly illustrated vertical media-making world for SlopCamera: a multimedia studio where a coding agent makes images, diagrams, animation, 3D scenes and video from source files it can keep revising. The visual story is author a scene, direct its camera and timing, inspect the result, then revise the retained scene. This is an imaginative place that expresses those activities through form, never a literal interface or a technology factory. Draw ONE continuous native 1:4 portrait composition. The outer sides should reward a slow downward look with inhabited instruments, varied scene chambers, carefully arranged materials and visible acts of making. Keep the central 40 percent almost white and free of objects for the real page's headings, copy, media and buttons. Richness belongs in the two side bands, not behind the content. Avoid the previous study's giant empty terraces, plain vertical walls, stacks of anonymous cubes and huge unused blank plates. Give each major side silhouette a specific purpose, then add readable secondary systems: optical elements, adjustable supports, articulated lights, layered scenery, joined material studies and meaningful motion phases. Use common light from upper left, one coherent oblique perspective, believable shared scale and structures that visibly carry their loads. A slim left camera-carrier track and a right scene-support spine remain continuous from the upper atelier to the foundation, with visible connections and deliberate branches. Neither crosses the central corridor. Compose different-sized volumes and alternating dense and quiet groups, rather than evenly repeating platforms. Use a hierarchy of confident main contours, organized secondary forms and restrained fine detail that can survive conversion to a four-pixel grid. Small detail should be grouped into meaningful silhouettes, not a uniform mesh of hairlines. Use organized filled and subtly shaded local forms to establish depth and visual hierarchy, rather than relying only on sparse outlines. Render grayscale on a genuinely white ground; retain white in the center and avoid fog, gray background washes and large filled dark masses. No words, letters, numbers, logos, interface panels, captions, rulers, printed pages, random decorative gears, city skylines, server racks, circuit boards, neon, stock cyberpunk props, realistic faces or unrelated weapons. Do not render pixels directly. The final single-ink alpha grid and site tint are applied locally. The product copy belongs on the web page and must not appear inside the illustration.",
+  "theme": {
+    "background": "#eff1f5",
+    "primary": "#1750bf",
+    "secondary": "#dce0e8"
+  },
+  "sections": [
+    {
+      "id": "continuous-media-world",
+      "description": "Draw an uninterrupted descent through three related places in the same world. Upper quarter: an optical scene atelier. The upper-left silhouette is a sculptural aperture assembly with a purposeful camera carriage, concentric lens elements, small adjustable flags and a parallax stage holding a distinct miniature composition. The upper-right silhouette is a lighter hanging light-and-material study: a faceted object, a curved reflector, articulated light mounts and thin depth-separated scenery held by visible supports. Replace generic domes with identifiable optical instruments. Carry the left camera track and right support spine onward without a vacant horizontal band. Middle half: varied working scene chambers inset along both sides. Include an animation chamber showing a specific folded wing or flowing ribbon in three clearly related motion phases, rather than three arbitrary cubes. Include a 3D scene chamber where a distinctive curved pavilion appears as a wireframe construction beside its finished solid form. Include a diagram chamber with a small relief arrangement of connected geometric nodes and deliberate routed curves, represented without labels or interface boxes. Include a film-stage chamber with a tiny midnight tram, a crescent backdrop and a camera moving along a physically supported local path; retain the scene's layered construction rather than a row of identical film frames. A separate lighting chamber shows a sculptural subject lit by an articulated rig and shaped reflector. Chambers differ in depth, scale and orientation, with open sides that reveal their activity; distribute them asymmetrically and keep all bridges inside their own side bands. Workable joints, recesses, clamps, depth layers and occasional material cuts provide secondary detail without covering every surface in noise. The two continuous main structures descend beside these spaces. Lower quarter: a sculptural render garden and foundation. The upper structural ribs gradually become pleated roots and cutaway material strata, with clear uninterrupted connections. Small plinths hold different finished compositions: a curved architectural shell, a botanical geometric sculpture, a quiet still-life stage and a shallow scene pool. Show a few retained construction layers or wireframe stems beside the finished forms to express revision. Use varied, carefully designed planted shapes and stepped niches; avoid merely adding crystals around blank slabs. Let the main track settle into a deliberate base and let the support spine end in a believable foundation. The outer silhouettes become calmer toward the bottom and dissolve into clean white. Keep the middle white and open throughout, with no rail, bridge, object or dense hatching crossing it."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "engraved-optics",
+      "direction": "Draw a meticulous contemporary pen-and-engraving world with tangible optical and scenic instruments. Use confident dark contours, a small range of line weights, selective contour hatching and crisp white highlights. Give the outer silhouettes substantial shape and the workshops finely organized interiors: visible lens stacks, light hinges, material cuts, supported camera carriages, layered scenic flats and distinct miniature compositions. Crosshatching belongs only on selected undersides and curved shaded forms, with gaps large enough to preserve the object after pixel conversion. Make the fine detail feel observed and functional rather than ornamental. Vary smooth optical curves, articulated hardware, fabric-like scenic folds and carved architectural edges. Build one coherent place, not an exploded technical diagram or a catalog of icons. Avoid uniform contour density, pseudo-technical doodles, antique parchment, decorative Victorian filigree and an endless repeated spiral. The drawing should reveal more meaningful activity when inspected, while its major contours stay calm at page size."
+    },
+    {
+      "id": "layered-paper-world",
+      "direction": "Build a luxurious grayscale world from sculpted paper, folded fabric-like sheets and layered architectural cuts. Give every sheet convincing thickness, joined edges, purposeful folds and carefully controlled shadows. Shape the optical atelier from nested curved apertures, the workshops from deeply layered open-sided scene boxes, and the garden from pleated roots and carved paper strata. Within those volumes, depict miniature media-making activity with clear silhouettes and modest detail: a wing in changing poses, a cutaway pavilion, a layered tram scene, shaped reflectors and wireframe-to-solid studies. Use local grayscale shading to reveal depth, with highlights and open cavities that remain legible in the single-ink alpha treatment. Reserve the white central corridor and do not spread shadow across it. Large sheets must carry openings, supports, layered scenery or material studies rather than remaining giant blank planes. The continuous track and spine are joined sculptural ribbons with deliberate connections. Avoid scattered scraps, book pages, collage noise, printed text, generic cubes and broad solid gray walls. Aim for an intricate physical paper theater that feels authored and revisable."
+    },
+    {
+      "id": "miniature-scene-studio",
+      "direction": "Create an exquisitely crafted sculptural miniature studio, translated into a detailed grayscale illustration on white. Use an oblique cutaway view, tangible small-scale materials, soft local form shading and a few crisp edges. The outer structures feel like a purposeful handmade set: fine ribbed supports, curved scenic frames, small hinged instruments, carefully shaped architectural shells and planted material studies. The chambers contain distinct physical scenes rather than abstract blocks: a miniature tram against a layered moon backdrop, a folded wing through related animation poses, a curved pavilion under an adjustable light, connected diagram reliefs and a sculptural still life on a camera turntable. Give each set a visible construction method and some retained alternate pieces that make revision understandable. Keep those objects coherent and sparingly arranged, never an inventory of toy props. The camera-carrier track and scene-support spine tie the miniature spaces into one continuous vertical world with believable supports and purposeful terminations. Avoid glossy plastic, photorealistic clutter, dolls, cartoon faces, a toy factory, an isometric game town and generic repeated terraces. Secondary detail must strengthen the miniature's material and activity, while white space and large forms keep it usable behind a page."
+    }
+  ],
+  "generation": {
+    "provider": "google",
+    "model": "gemini-3.1-flash-image",
+    "judgeModel": "gemini-3.1-pro-preview",
+    "resolution": "4K",
+    "rounds": 1,
+    "concurrency": 3,
+    "maxImageCalls": 6,
+    "maxJudgeCalls": 3,
+    "aspectRatio": "1:4"
+  },
+  "processing": {
+    "width": 1536,
+    "panelHeight": 6144,
+    "overlap": 0,
+    "pixelSize": 4,
+    "alphaMax": 1,
+    "gamma": 0.8,
+    "quietCenter": 0.4,
+    "upscale": 1,
+    "inkContrast": 1.5
+  },
+  "rubric": "Act as a demanding art director assessing a continuous long-scroll marketing illustration for SlopCamera. The images include the true source drawing and its actual single-ink pixel treatment. Inspect the source for purposeful detail and inspect the pixel result for surviving form; do not mistake the pixel grid itself for detail. Return ONLY one JSON object with relevance, continuity, composition and detail as numeric scores from 0 through 10, defects as an array of concrete blocking defects, revision as an actionable instruction in at most 120 words, and overall as the arithmetic mean. Relevance: 9-10 requires a specific, visible story of making and revising media across several activities such as scene staging, diagram construction, motion phases, optical direction, lighting and 3D material studies. 5-6 is a generic futuristic architecture drawing decorated with cubes, film strips or lenses. Judge the actual depicted activities, not the nouns in the prompt. Continuity: 9-10 is one coherent place with shared perspective, scale, lighting, contour or material language and visibly supported connections from upper atelier through workshops to the foundation. The two main structures must continue deliberately. Local camera arcs may terminate at a visible rig or scene boundary; do not penalize those intentional ends as broken main paths. 5-6 has disconnected structures, inconsistent geometry or a vacant band separating unrelated worlds. Composition: 9-10 has varied vertical rhythm, substantial side silhouettes and open central space that plausibly frames real headings, media and buttons. 5-6 is flat repetition, oversized empty planes, or some central intrusion; dense gray masses or crosswise rails behind content are defects. Detail: evaluate the source's organized secondary structures and differentiated workshop activity first, then whether the important shapes remain recognizable in the alpha pixel result. 9-10 requires intricate meaningful local detail with clear hierarchy, distinct media-making scenes and readable material or construction methods. 5-6 is dominated by large blank walls, terraces, basic repeated blocks or decorative texture. A dense mesh of hatching earns no extra credit. Neither high resolution nor many pixels proves detail. Losing incidental fine hatching can be acceptable; losing the activity or principal geometry lowers the score. Scores at least 8 require visible evidence rather than assumed success. Locate blocking defects as upper, middle, lower, left support, right support or content corridor. Keep defects empty only when no issue prevents quiet decorative use; put minor improvements in revision. Model acceptance requires all four scores at least 8, overall at least 8.5 and no blocking defects. Recommend changes to the two weakest dimensions while preserving the successful parts. Never infer quality from deterministic measurements or the candidate name.",
+  "content": [
+    {
+      "heading": "Give your agent a multimedia studio.",
+      "body": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source."
+    },
+    {
+      "heading": "Take an idea somewhere strange.",
+      "body": "Films, moving illustrations, and little worlds. Every example comes with the source and a guide so you can make it your own."
+    },
+    {
+      "heading": "The next version starts with a sentence.",
+      "body": "Describe a scene. Pick a direction. Ask for a change. Your agent writes the source and keeps it ready for the next version."
+    }
+  ]
+}
