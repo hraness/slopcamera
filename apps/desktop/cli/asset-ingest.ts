@@ -93,6 +93,31 @@ function isWithin(root: string, candidate: string): boolean {
   return pathRelative === "" || (!pathRelative.startsWith("..") && !isAbsolute(pathRelative));
 }
 
+function svgRootAttributes(contents: string): string | undefined {
+  let offset = 0;
+  const whitespace = /\s+/uy;
+  const skipWhitespace = (): void => {
+    whitespace.lastIndex = offset;
+    offset += whitespace.exec(contents)?.[0].length ?? 0;
+  };
+  skipWhitespace();
+  const declaration = /<\?xml[^>]*>\s*/iuy;
+  declaration.lastIndex = offset;
+  offset += declaration.exec(contents)?.[0].length ?? 0;
+
+  // Consume each comment once. A repeated lazy regex can reconsider every
+  // earlier comment terminator when the SVG root is missing.
+  while (contents.startsWith("<!--", offset)) {
+    const end = contents.indexOf("-->", offset + 4);
+    if (end === -1) return undefined;
+    offset = end + 3;
+    skipWhitespace();
+  }
+  const root = /<svg(?=[\s>])([^>]*)>/iuy;
+  root.lastIndex = offset;
+  return root.exec(contents)?.[1];
+}
+
 function validateSvg(bytes: Uint8Array): boolean {
   if (bytes.length > MAX_SVG_BYTES) return false;
   let contents: string;
@@ -101,8 +126,7 @@ function validateSvg(bytes: Uint8Array): boolean {
   } catch {
     return false;
   }
-  const start = contents.trimStart();
-  if (!/^(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg(?:\s|>)/iu.test(start)) return false;
+  if (svgRootAttributes(contents) === undefined) return false;
   if (
     /<!DOCTYPE|<!ENTITY|<\?xml-stylesheet|<\s*(?:script|foreignObject|iframe|object|embed)\b/iu.test(contents)
     || /\s+on[a-z][a-z0-9_-]*\s*=/iu.test(contents)
@@ -227,13 +251,13 @@ export function parseSvgIntrinsicSize(bytes: Uint8Array): OverlayIntrinsicSize {
     throw new CliError("invalid-data", "SVG overlay is not valid UTF-8.");
   }
   if (!validateSvg(bytes)) throw new CliError("invalid-data", "SVG overlay failed the safe SVG profile.");
-  const root = /^(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg\b(?<attributes>[^>]*)>/iu.exec(contents.trimStart());
-  if (root?.groups?.attributes === undefined) {
+  const attributes = svgRootAttributes(contents);
+  if (attributes === undefined) {
     throw new CliError("invalid-data", "SVG overlay omits its root element.");
   }
-  const width = svgLength(svgAttribute(root.groups.attributes, "width"));
-  const height = svgLength(svgAttribute(root.groups.attributes, "height"));
-  const viewBox = svgAttribute(root.groups.attributes, "viewBox")
+  const width = svgLength(svgAttribute(attributes, "width"));
+  const height = svgLength(svgAttribute(attributes, "height"));
+  const viewBox = svgAttribute(attributes, "viewBox")
     ?.split(/[\s,]+/u)
     .filter(Boolean)
     .map(Number);

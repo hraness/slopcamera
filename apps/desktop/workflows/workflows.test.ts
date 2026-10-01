@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+
+import * as fc from "fast-check";
 
 import { z } from "zod";
 
@@ -791,6 +794,70 @@ describe("built-in workflow catalog", () => {
       "matrix/preview/portrait/output",
     );
   });
+
+  test("social variant paths trim only trailing slashes", () => {
+    const registry = createApplicationOperationRegistry();
+    const workflow = builtInWorkflow("social-variants")!;
+    for (const directory of ["renders/launch", "renders/launch/nested"]) {
+      for (const count of [0, 1, 8, 16_384]) {
+        const built = workflow.build(registry, {
+          project: "project_fixture",
+          tier: "preview",
+          outputDirectory: directory + "/".repeat(count),
+        });
+        expect(built.graph.nodes.find(
+          node => node.key === "render/preview/portrait/output",
+        )?.input).toMatchObject({
+          output: { path: `${directory}/preview/portrait.mp4` },
+        });
+      }
+    }
+  });
+
+  test("trailing-slash normalization preserves accepted nested directory paths", () => {
+    const registry = createApplicationOperationRegistry();
+    const workflow = builtInWorkflow("social-variants")!;
+    const segment = fc.array(fc.constantFrom("a", "b", "0", "_", "-"), {
+      minLength: 1, maxLength: 12,
+    }).map(characters => characters.join(""));
+    fc.assert(fc.property(
+      fc.array(segment, { minLength: 1, maxLength: 4 }),
+      fc.integer({ min: 0, max: 64 }),
+      (segments, trailingSlashes) => {
+        const directory = `renders/a${segments.join("/")}`;
+        const built = workflow.build(registry, {
+          project: "project_fixture", tier: "preview",
+          outputDirectory: directory + "/".repeat(trailingSlashes),
+        });
+        expect(built.graph.nodes.find(
+          node => node.key === "render/preview/portrait/output",
+        )?.input).toMatchObject({
+          output: { path: `${directory}/preview/portrait.mp4` },
+        });
+      },
+    ), { numRuns: 30 });
+  });
+
+  test("adversarial interior slash runs reach output-path rejection", () => {
+    const probe = spawnSync(process.execPath, ["--eval", `
+      import { createApplicationOperationRegistry } from ${JSON.stringify(new URL("../application/default-registry.ts", import.meta.url).href)};
+      import { builtInWorkflow } from ${JSON.stringify(new URL("./index.ts", import.meta.url).href)};
+      const registry = createApplicationOperationRegistry();
+      try {
+        builtInWorkflow("social-variants").build(registry, {
+          project: "project_fixture",
+          outputDirectory: "renders/launch" + "/".repeat(262_144) + "x",
+        });
+        process.exit(1);
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes("normalized repository-relative path")) process.exit(1);
+        console.log("rejected");
+      }
+    `], { encoding: "utf8", timeout: 10_000, maxBuffer: 8_192 });
+    expect(probe.error).toBeUndefined();
+    expect(probe.status).toBe(0);
+    expect(probe.stdout.trim()).toBe("rejected");
+  }, 15_000);
 
   test("social variants share four revisions across eight parallel clean and captioned outputs", () => {
     const registry = createApplicationOperationRegistry();

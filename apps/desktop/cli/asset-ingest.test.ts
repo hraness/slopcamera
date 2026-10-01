@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { link, mkdtemp, mkdir, open, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as fc from "fast-check";
 import {
   copyOverlaySourceChunks,
   ingestGeneratedVideoOverlayAsset,
@@ -373,6 +375,49 @@ test("keeps SVG sanitation on a bounded in-memory path", async () => {
     await rm(temporary, { force: true, recursive: true });
   }
 });
+
+test("preserves SVG dimensions across XML declarations, whitespace, and comments", () => {
+  fc.assert(fc.property(
+    fc.boolean(),
+    fc.constantFrom("", " ", "\n\t", "\uFEFF"),
+    fc.array(fc.constantFrom("", "plain text", "line\nbreak", "123"), { maxLength: 50 }),
+    fc.integer({ min: 1, max: 1_000 }),
+    fc.integer({ min: 1, max: 1_000 }),
+    (declaration, whitespace, comments, width, height) => {
+      const prolog = whitespace + (declaration ? `<?xml version='1.0'?>${whitespace}` : "")
+        + comments.map((comment) => `<!--${comment}-->${whitespace}`).join("");
+      const source = `${prolog}<SVG width='${width}' height='${height}'></SVG>`;
+      expect(parseSvgIntrinsicSize(new TextEncoder().encode(source))).toEqual({ height, width });
+    },
+  ), { numRuns: 100 });
+});
+
+test("rejects unterminated and interrupted SVG prologs", () => {
+  for (const prolog of ["<!--", "<?xml", "<!-- first -->not a comment<!-- second -->", "<!-- first --><?xml version='1.0'?>"]) {
+    expect(() => parseSvgIntrinsicSize(new TextEncoder().encode(`${prolog}<svg width='1' height='1'></svg>`)))
+      .toThrow(/safe SVG profile/u);
+  }
+});
+
+test("rejects repeated comment prologs in a bounded subprocess", () => {
+  const moduleUrl = new URL("./asset-ingest.ts", import.meta.url).href;
+  const probe = spawnSync(process.execPath, ["--eval", `
+    import { parseSvgIntrinsicSize } from ${JSON.stringify(moduleUrl)};
+    for (const count of [...Array(16).fill(30), 50_000]) {
+      const bytes = new TextEncoder().encode('<!---->'.repeat(count) + '<bad>');
+      let rejected = false;
+      try { parseSvgIntrinsicSize(bytes); } catch { rejected = true; }
+      if (!rejected) process.exit(1);
+    }
+    const valid = new TextEncoder().encode('<!---->'.repeat(50_000) + '<svg width="2" height="3"></svg>');
+    const dimensions = parseSvgIntrinsicSize(valid);
+    if (dimensions.width !== 2 || dimensions.height !== 3) process.exit(1);
+    console.log('rejected');
+  `], { encoding: "utf8", timeout: 10_000, maxBuffer: 8_192 });
+  expect(probe.error).toBeUndefined();
+  expect(probe.status).toBe(0);
+  expect(probe.stdout.trim()).toBe("rejected");
+}, 15_000);
 
 test("derives a missing SVG dimension from the viewBox aspect ratio", () => {
   const encode = (value: string) => new TextEncoder().encode(value);

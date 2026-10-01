@@ -304,7 +304,11 @@ export function renderProjectVariantMatrix(
     readonly variants: readonly ProjectExportVariant[];
   },
 ): Readonly<Record<string, RenderedProjectVariant>> {
-  const directory = input.outputDirectory.replace(/\/+$/u, "");
+  let directoryEnd = input.outputDirectory.length;
+  while (directoryEnd > 0 && input.outputDirectory[directoryEnd - 1] === "/") {
+    directoryEnd -= 1;
+  }
+  const directory = input.outputDirectory.slice(0, directoryEnd);
   const requested = WorkflowProjectVariantMatrixSchema.parse(input.variants);
   const outputLayout = z.enum(["flat", "tiered"]).parse(
     input.outputLayout ?? "tiered",
