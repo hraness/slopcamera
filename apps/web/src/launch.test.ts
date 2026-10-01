@@ -46,24 +46,26 @@ describe("launch beats", () => {
 })
 
 describe("launch post", () => {
-  test("renders every beat once, with its figure and the film", () => {
+  test("renders every beat once with its registered example", () => {
     const html = renderBlogBodyHtml(post)
     for (const beat of resolvedLaunchBeats) {
       expect(html).toContain(beat.headline.replaceAll("\"", "&quot;"))
     }
-    expect((html.match(/<figure>/gu) ?? []).length).toBe(resolvedLaunchBeats.length + 1)
-    expect(html).toContain(`src="/assets/launch/${launchMediaFile("film").file}"`)
-    expect(html).toContain(`src="/assets/launch/${launchMediaFile("captions").file}"`)
+    expect((html.match(/<figure>/gu) ?? []).length).toBe(resolvedLaunchBeats.length)
+    for (const beat of resolvedLaunchBeats) {
+      const example = workflowExamples.find(item => item.id === beat.visual.scene)!
+      expect(html).toContain(`/assets/examples/${example.video?.file ?? example.poster.file}`)
+    }
     const explainerCaptions = workflowExamples.find(example => example.id === "one-shoot-explainer")?.video?.captions
     expect(explainerCaptions).toBeDefined()
     expect(html).toContain(`<track kind="captions" src="/assets/examples/${explainerCaptions?.file}" srclang="en" label="English">`)
     expect(html).not.toMatch(/\{\{|LAUNCHFIGURESENTINEL/u)
   })
 
-  test("the Markdown mirror carries the beats and links the film", () => {
+  test("the Markdown mirror carries the beats and their examples", () => {
     const markdown = resolveBlogContent(post)
     for (const beat of resolvedLaunchBeats) expect(markdown).toContain(`## ${beat.headline}`)
-    expect(markdown).toContain(`/assets/launch/${launchMediaFile("film").file}`)
+    expect(markdown).toContain("/assets/examples/")
   })
 })
 

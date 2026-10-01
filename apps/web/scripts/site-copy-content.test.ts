@@ -33,7 +33,7 @@ describe("media studio public copy (pure, process-free)", () => {
       expect(positions.every(position => position >= 0)).toBe(true)
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
-    expect(readme).toContain("Historical Atet release evidence")
+    expect(readme).not.toContain("Historical Atet release evidence")
     expect(publishedArchiveUrl).toBe("https://github.com/hraness/slopcamera/releases/download/v3.10.1/hraness-slopcamera-3.10.1.tgz")
     expect(html).toContain("{{RELEASE_INSTALL_COMMANDS}}")
     expect(html).not.toContain("{{SOURCE_CHECKOUT_COMMAND}}")

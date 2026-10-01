@@ -1,10 +1,10 @@
 # Internal writing and voice
 
-<!-- synced from hraness/.github WRITING.md sha256:9ff22e15275ceb5a9113b49d177a6b309233164661cc723bddd98912fb80c92b -->
+<!-- synced from hraness/.github WRITING.md sha256:882791ef6642ffab1453f5f1b81fc035e88ab5308d3bee9a9bad584c06776593 -->
 
 This guide covers agent responses, code comments, commits, pull requests, plans, and knowledge-base notes. [`STYLE.md`](STYLE.md) adds rules for public prose.
 
-This copy is synced from [hraness/.github](https://github.com/hraness/.github/blob/main/WRITING.md). Change shared rules there; add rules for this repository under “Repository additions” below.
+This is the canonical copy. Repositories keep a synced copy; rules that apply to one repository go under “Repository additions” at the end of that copy.
 
 ## Write for the spoken voice
 
@@ -70,3 +70,8 @@ Apply its controlled dictionary and numeric limits only when the task requires S
 - The vocabulary of `AGENTS.md`, CI, and admission ledgers is internal. Use it in commits, pull requests, and agent notes when it is the precise term; translate it when the text will reach a reader outside the repository.
 - Knowledge-base notes use complete thoughts, durable context, source links, and descriptive titles.
 - Riffs preserve first-person voice and uncertainty while they repair transcription errors. Do not flatten personality into a summary.
+
+## Repository additions
+
+- Preserve the current behavior facts in [STYLE.md](STYLE.md#facts-public-copy-must-keep) when writing reviews, plans, or summaries. A historical trial or compatibility flag does not enable a disabled operation.
+- Report source review, synthetic tests, formal proofs, live provider testing, and delivery status separately. Name each proof's assumptions and bounds; do not call a successful model check a proof of the entire application.

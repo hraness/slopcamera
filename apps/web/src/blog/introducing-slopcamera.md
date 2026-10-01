@@ -35,22 +35,12 @@ slopcamera ai image generate --model openai/gpt-image-2 \
 
 If you would rather not set up a key, you can buy prepaid credits through a hosted checkout, and prompt-only image generation then runs on a hosted service billed against those credits. That route accepts only a prompt and a model. Reference images, video, speech, and transcription go through your own key, and SlopCamera uploads named local media only when you pass its explicit upload flag. The [media generation guide](/docs/how-to/generate-media) covers both routes.
 
-## Where SlopCamera images already appear
-
-SlopCamera has supplied editorial figures for the aicharts blog and an illustration for GhostGet's WebMCP page, with prompt, job and receipt files kept beside the site code. SlopCamera used to be called Atet, and older records that credit Atet stay as they were recorded.
+## Give a scene repeatable behavior
 
 A character in a portable 3D scene can also be given a behavior written as a small [ALGAL]({{PRODUCT_URL_ALGAL}}) program, which SlopCamera runs with no model calls, tools or other side effects. The post on [how SlopCamera uses ALGAL](/blog/how-slopcamera-uses-algal) covers the details.
-
-The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).
 
 ## Go deeper
 
 - [Remix a film and inspect its source](/docs/how-to/remix-the-showcase).
 - [Direct another film](/docs/how-to/direct-a-film).
 - [Check formats, platforms and limits](/docs/reference/capabilities).
-
-## Original launch film
-
-This earlier introduction is retained as an example of SlopCamera's launch-film template. Its diagrams and example count describe the collection when the film was made.
-
-{{LAUNCH_FIGURE_FILM}}

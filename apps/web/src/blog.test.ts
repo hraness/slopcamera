@@ -29,7 +29,7 @@ const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const bodies = Object.fromEntries(await Promise.all(blogPosts.map(async post =>
   [post.slug, await readFile(join(appDirectory, "src/blog", `${post.slug}.md`), "utf8")] as const)))
 const quarantined = blogPosts.filter(post => post.lifecycle === "quarantined")
-const reviewer = "Claude Opus 5.5"
+const editorialReview = JSON.parse(await readFile(join(appDirectory, "editorial-review-20261001.json"), "utf8"))
 
 describe("blog admissions", () => {
   test("design-kit validates every admission record", () => {
@@ -39,14 +39,11 @@ describe("blog admissions", () => {
 
   test("records a disclosed AI review, never a human one", () => {
     for (const record of blogAdmissions) {
-      expect(record.drafting).toBe("ai-from-source")
-      const reviewedOn = ({
-        "/blog/introducing-slopcamera": "2026-09-30",
-        "/blog/how-slopcamera-uses-algal": "2026-09-26",
-      } as Readonly<Partial<Record<string, typeof record.review.reviewedOn>>>)[record.href] ?? "2026-09-28"
-      expect(record.review.reviewer).toBe(record.href === "/blog/introducing-slopcamera" ? "Codex (GPT-6)" : reviewer)
+      expect(record.drafting).toBe("ai")
+      expect(record.review.reviewer).toBe(editorialReview.reviewer)
       expect(record.review.reviewerType).toBe("ai")
-      expect(record.review.reviewedOn).toBe(reviewedOn)
+      expect(record.review.reviewedOn).toBe(editorialReview.reviewedOn)
+      expect(record.scores).toEqual(editorialReview.scores)
       expect(record.humanReview).toBeNull()
       expect(record.review.reviewer).not.toMatch(/human/iu)
       const total = Object.values(record.scores).reduce((sum, score) => sum + score, 0)
@@ -55,14 +52,14 @@ describe("blog admissions", () => {
     }
   })
 
-  test("admits the reviewed posts and quarantines the ALGAL post", () => {
+  test("admits all independently reviewed posts", () => {
     expect(blogPosts.map(post => [post.slug, post.lifecycle])).toEqual([
       ["one-shot-render-vs-installed-techniques", "indexable"],
       ["make-video-with-claude-code", "indexable"],
       ["editable-diagrams-with-coding-agents", "indexable"],
       ["headless-blender-manim-cadquery-for-agents", "indexable"],
       ["introducing-slopcamera", "indexable"],
-      ["how-slopcamera-uses-algal", "quarantined"],
+      ["how-slopcamera-uses-algal", "indexable"],
     ])
     expect(indexableBlogPosts.map(post => post.slug)).toEqual([
       "one-shot-render-vs-installed-techniques",
@@ -70,6 +67,7 @@ describe("blog admissions", () => {
       "editable-diagrams-with-coding-agents",
       "headless-blender-manim-cadquery-for-agents",
       "introducing-slopcamera",
+      "how-slopcamera-uses-algal",
     ])
   })
 })
@@ -79,12 +77,15 @@ describe("blog pages", () => {
     for (const post of blogPosts) {
       const slots = blogPostSlots(post, bodies[post.slug]!)
       const sentence = articleProvenanceSentence(articleProvenanceFromAdmission(admissionForPost(post)))
-      expect(sentence).toBe(`Drafted with AI from the source code and reviewed by ${post.slug === "introducing-slopcamera" ? "Codex (GPT-6)" : reviewer}.`)
+      expect(sentence).toContain(editorialReview.reviewer)
       expect(slots.main).toContain(">By Hraness</span>")
       expect(slots.main).toContain(sentence)
       expect(slots.main).toContain('data-reviewer-type="ai"')
       const markdown = blogPostMarkdown(post, bodies[post.slug]!)
-      expect(markdown).toContain("By Hraness · Published")
+      expect(markdown).toContain("By Hraness")
+      expect(markdown).not.toMatch(/(?:Published|Updated|checked) \d/iu)
+      expect(slots.main).not.toContain("<time")
+      expect(slots.main).not.toContain(">Checked ")
       expect(markdown).toContain(sentence)
       expect(markdown).toContain("## Sources")
     }
@@ -109,7 +110,7 @@ describe("blog pages", () => {
       expect(schema.headline).toBe(post.title)
       expect(JSON.stringify(schema.author)).toContain("Hraness")
     }
-    expect(quarantined.map(post => post.slug)).toEqual(["how-slopcamera-uses-algal"])
+    expect(quarantined).toEqual([])
   })
 
   test("the index lists only indexable posts", () => {
@@ -194,16 +195,12 @@ describe("blog discovery", () => {
       }
     }
     expect(blogSitemapPaths().map(entry => entry.path)).toEqual(["/blog", ...indexableBlogPosts.map(blogPostPath)])
-    expect(blogSitemapPaths().map(entry => [entry.path, entry.lastModified])).toEqual([
-      ["/blog", "2026-09-28T00:00:00.000Z"],
-      ["/blog/one-shot-render-vs-installed-techniques", "2026-09-28T00:00:00.000Z"],
-      ["/blog/make-video-with-claude-code", "2026-09-28T00:00:00.000Z"],
-      ["/blog/editable-diagrams-with-coding-agents", "2026-09-28T00:00:00.000Z"],
-      ["/blog/headless-blender-manim-cadquery-for-agents", "2026-09-28T00:00:00.000Z"],
-      ["/blog/introducing-slopcamera", "2026-09-24T00:00:00.000Z"],
-    ])
-    expect(sitemap).toContain("<loc>https://slopcamera.com/blog/introducing-slopcamera</loc>\n    <lastmod>2026-09-24T00:00:00.000Z</lastmod>")
-    expect(sitemap).toContain("<loc>https://slopcamera.com/blog</loc>\n    <lastmod>2026-09-28T00:00:00.000Z</lastmod>")
+    expect(blogSitemapPaths().map(entry => [entry.path, entry.lastModified])).toEqual(
+      ["/blog", ...indexableBlogPosts.map(blogPostPath)].map(path => [path, "2026-10-01T00:00:00.000Z"]),
+    )
+    expect(sitemap).toContain("<lastmod>2026-10-01T00:00:00.000Z</lastmod>")
+    expect(blogIndexSlots().main).not.toContain("<time")
+    expect(blogIndexMarkdown()).not.toContain("Published ")
   })
 
   test("vercel noindex headers cover exactly the quarantined posts", async () => {

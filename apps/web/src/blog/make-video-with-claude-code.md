@@ -1,6 +1,6 @@
-To make a video with Claude Code or Codex, match the shot to the engine that draws its frames, then have the agent write a short source file for that engine. A kinetic title, a camera move through a 3D room, a glass product shot, a geometry lesson, and a cut of footage you already filmed each suit a different renderer. Each video ends up as a short source file in a project that the agent can open and revise later.
+To make a video with Claude Code or Codex, match the shot to the engine that draws its frames, then have the agent write a short source file for that engine. A kinetic title, a camera move through a 3D room, a glass product shot, a geometry lesson, and a cut of footage you already filmed each suit a different renderer. Keep the editable scene source or footage with the project so the agent can revise it later.
 
-You install the renderer and the skill once; after that, each video is a source file the agent writes and the command line renders. The guide uses SlopCamera for the commands because that is what we build. The same questions apply if you choose another tool, and a later section names the alternatives.
+Install the renderer and skill once, then keep each video's sources and edit in a project. These recipes use SlopCamera to keep the source, rendered clips and final edit in one project.
 
 ## Choose the engine by the shot
 
@@ -16,11 +16,11 @@ The first two engines render in the local Chrome runtime that SlopCamera checks.
 
 ## What the agent writes
 
-Without an installed renderer, the agent writes the whole pipeline for each video: the page or scene, a script that steps a headless browser through the frames, the FFmpeg flags, and whatever checks it thinks to add. A frontier model can often write all of that in one reply. The cost comes later, when a revision means reading that pipeline back or writing it again.
+A video pipeline needs scene authoring, frame rendering, encoding and checks. You can keep a custom pipeline with the project or use a renderer that supplies those steps. A reusable pipeline lets a title revision change the scene without also changing how frames are captured.
 
-With SlopCamera installed, the agent writes only the part that is specific to the video. In the recipes below, that is a 13-line JSON request next to an HTML page, a scene JSON file with named entities and cameras, or a Blender or Manim `scene.py`. The `slopcamera` command does the rendering, checks the frames, encodes the output, and prints a JSON result for the agent to read. A revision is an edit to the source followed by another render. The skill tells the agent which command fits which shot and what each source file looks like. Anthropic's [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) describes the same pattern for scripts bundled with a skill: the agent runs the script through bash and receives only its output, so the script's code stays out of the context window.
+With SlopCamera installed, the agent writes only the part that is specific to the video. In the recipes below, that is a JSON request next to an HTML page, a scene JSON file with named entities and cameras, or a Blender or Manim `scene.py`. The `slopcamera` command does the rendering, checks the frames, encodes the output, and prints a JSON result for the agent to read. A revision is an edit to the source followed by another render. The skill tells the agent which command fits which shot and what each source file looks like. Anthropic's [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) describes the same pattern for scripts bundled with a skill: the agent runs the script through bash and receives only its output, so the script's code stays out of the context window.
 
-The post on [one-shot renders and installed techniques](/blog/one-shot-render-vs-installed-techniques) follows four gallery revisions, with the editable sources, rendered results, and bytes and lines the agent writes for each.
+The post on [one-shot renders and installed techniques](/blog/one-shot-render-vs-installed-techniques) follows four gallery revisions, showing the source fields that change and the formats each command produces.
 
 ## Install once for Claude Code or Codex
 
@@ -47,7 +47,7 @@ The `claude` target writes the skill to `~/.claude/skills`, where Claude Code lo
 
 ## Recipe 1: a title or motion graphic in HTML
 
-The [first-animation tutorial](/docs/tutorials/first-animation) renders an editorial title, "Form follows a frame", over a field of moving SVG ellipses. The example files come from a clone of the repository, so follow the tutorial's [Get the supplied scene](/docs/tutorials/first-animation#get-the-supplied-scene) step first and run the commands from the clone's root. The request the agent writes is 13 lines of JSON that name the HTML document, the canvas, the timing, and any parameters:
+The [editorial title example](https://github.com/hraness/slopcamera/tree/d2accc8badd991f288bb0c83668efc641aa89981/examples/showcase/html) renders "Form follows a frame" over moving SVG ellipses. Use the example files from the linked source revision and run these commands from the checkout root. The [first-animation tutorial](/docs/tutorials/first-animation) provides a guided starting point with another scene. The JSON request names the HTML document, the canvas, the timing, and any parameters:
 
 ```json
 {
@@ -122,7 +122,7 @@ slopcamera studio assemble <studio-id> --output-id beauty \
   --name "Product preview" --json
 ```
 
-The agent edits `scene.py`, and `source.json` lists every file the render may read. Between bundling and planning, `prepare-preview.ts` copies the bundle digest into a new job file with a fresh job ID and sets a small CPU preview; the tutorial gives its short Bun source. `run` executes your Python as your user under `--allow-trusted-code`, which is not an operating-system sandbox, so read what the agent wrote before you run it. `run` returns a `jobId`; use it in place of `<studio-id>`. `assemble` turns the verified frames into an ordinary project.
+The agent edits `scene.py`, and `source.json` lists the files included with the scene. Between bundling and planning, `prepare-preview.ts` copies the bundle digest into a new job file with a fresh job ID and sets a small CPU preview; the tutorial gives its short Bun source. `run` executes your Python as your user under `--allow-trusted-code`, which is not an operating-system sandbox, so read what the agent wrote before you run it. `run` returns a `jobId`; use it in place of `<studio-id>`. `assemble` turns the verified frames into an ordinary project.
 
 The [native films guide](/docs/how-to/native-films) covers the finished examples: an optical instrument with brass and glass, a character that waves and blinks, cloth and liquid replayed from saved simulation caches, and a CadQuery bracket whose width changes from one parameter before Blender presents it. The [headless Blender, Manim, and CadQuery post](/blog/headless-blender-manim-cadquery-for-agents) explains why these run as scripts rather than as a live session.
 
@@ -188,5 +188,3 @@ SlopCamera fits when one project needs more than one engine, or when native tool
 ## What you still check yourself
 
 Every render here runs on your machine. A finished encode does not prove the video is right, so watch the start, the middle, the last frame, and each cut, and listen to any audio. Rendering the same source on another computer can produce small pixel differences, because browsers, GPUs, and native engine builds differ. The published Three.js gallery shots used a macOS WebGL2 hardware profile, and the native examples need Blender, Manim, or CadQuery installed at the versions their guides name.
-
-The install steps use release [{{PUBLISHED_VERSION}}]({{RELEASE_URL}}).

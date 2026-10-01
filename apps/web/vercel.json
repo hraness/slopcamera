@@ -288,15 +288,6 @@
       ]
     },
     {
-      "source": "/blog/how-slopcamera-uses-algal(\\.md)?",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex"
-        }
-      ]
-    },
-    {
       "source": "/llms.txt",
       "headers": [
         {

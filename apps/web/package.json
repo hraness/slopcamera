@@ -7,7 +7,7 @@
   "packageManager": "bun@1.3.14",
   "dependencies": {
     "@hraness/design-kit": "github:hraness/design-kit#v0.35.0",
-    "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
+    "@hraness/design-kit-articles": "github:hraness/design-kit#v0.35.2",
     "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
     "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
     "@hraness/ui": "github:hraness/ui#v0.5.25",

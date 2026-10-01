@@ -1,20 +1,20 @@
 # SlopCamera documentation
 
-Slopcamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it, and a revision is an edit to that file and a new render. Choose a guide for the work you want to do.
+SlopCamera is a media studio for coding agents. Your agent works with editable source and a media project. The CLI checks and renders them, and a revision keeps those inputs available for the next version. Choose a guide for the work you want to do.
 
-Install the [current Slopcamera release](../README.md#install-slopcamera) for the CLI, SDK, and matching Agent Skill. Each guide names its local runtimes and any correction that needs [current source](how-to/use-current-source.md). Some examples import TypeScript from the repository and need a checkout to run. Historical Atet archives retain their original package and commands. The [CLI parity table](cli-parity.md) maps every action of the retired menu-bar companion to a command. The [capability reference](reference/capabilities.md) distinguishes them and lists local runtime requirements.
+Install the [current SlopCamera release](../README.md#install-slopcamera) for the CLI, SDK and matching Agent Skill. Each guide lists the tools it needs and explains when an example requires a source checkout. The [capability reference](reference/capabilities.md) covers formats, interfaces and local runtime requirements.
 
 ## Learn by making something
 
 - [Create and revise your first animation](tutorials/first-animation.md): send a midnight tram toward the moon, enlarge the moon, and keep both films.
 - [Create and revise your first diagram](tutorials/first-diagram.md): make a two-node diagram, inspect its five exports, then change its source.
-- [Render your first native film](tutorials/first-native-film.md): retain a Blender source, render a small shot, and export an ordinary Slopcamera project.
+- [Render your first native film](tutorials/first-native-film.md): retain a Blender source, render a small shot, and export an ordinary SlopCamera project.
 
 ## Complete a task
 
 - [Remix the showcase](how-to/remix-the-showcase.md): open the finished films, study the creative decisions, and make your own version.
 - [Direct a film](how-to/direct-a-film.md): write a useful brief, test the hardest shot, and refine composition, movement, and sound.
-- [Run current-source commands](how-to/use-current-source.md): build an exact checkout of Slopcamera.
+- [Run current-source commands](how-to/use-current-source.md): build an exact checkout of SlopCamera.
 - [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF.
 
 - [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
@@ -31,11 +31,11 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 - [Plan camera moves, lighting, and effects for a 3D scene](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
 - [Make a math explainer video with Manim](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
 - [Run or recover a workflow](how-to/run-workflows.md): use a built-in recipe or trusted Bun module and inspect its durable run.
-- [Configure Vercel](vercel.md), [publish Slopcamera](publishing.md), [operate the hosted API](hosted-api.md), or [file a platform submission](platform-submission.md): provider and maintainer procedures.
+- [Configure Vercel](vercel.md), [publish SlopCamera](publishing.md), [operate the hosted API](hosted-api.md), or [file a platform submission](platform-submission.md): provider and maintainer procedures.
 
 ## Look up a contract
 
-- [Capabilities, versions, and platforms](reference/capabilities.md): current Slopcamera capabilities, historical Atet versions, and supported runtime boundaries.
+- [Capabilities, versions, and platforms](reference/capabilities.md): formats, commands, platforms and runtime requirements.
 - [SDK surfaces](reference/sdk.md): portable and local imports, operation projections, and execution contracts.
 - [Techniques catalog](https://slopcamera.com/docs/reference/techniques): every packaged technique by job, with its first command, guide, and a rendered example where one exists.
 - [CLI help](reference/capabilities.md#discover-the-installed-contract): exact grammar and JSON schemas from the installed host.
@@ -44,10 +44,10 @@ Install the [current Slopcamera release](../README.md#install-slopcamera) for th
 
 - [Source, representations, and projects](architecture.md): what stays editable, what a receipt proves, and how local and cloud work fit together.
 - [Extension architecture](extension-architecture.md): the closed registry, inert recipe packs, trusted workflows, and where authored code can and cannot go.
-- [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera): why the agent keeps a source file and reuses installed techniques, with comparisons to [Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion), [HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes), and [other tools](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents).
+- [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera): why the agent keeps a source file and reuses installed techniques, with comparisons to [Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion), [HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes), and [other tools](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents).
 - [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark): methods and reports for first-render and revision costs, with the harness and raw results in [`bench/token-savings`](../bench/token-savings).
 - [Choose an HTML authoring surface](html-overlay-creative-toolkit.md): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs. Its ecosystem research is dated separately from its supported locks.
 
 ## Work with an agent
 
-The [Slopcamera Agent Skill](../skills/slopcamera/SKILL.md) routes an agent to the relevant task reference. Install the skill from the same release or source build as your CLI; installing a skill alone does not install the CLI or native tools. See the [installation instructions](../README.md#install-slopcamera).
+The [SlopCamera Agent Skill](../skills/slopcamera/SKILL.md) routes an agent to the relevant task reference. Install the skill from the same release or source build as your CLI; installing a skill alone does not install the CLI or native tools. See the [installation instructions](../README.md#install-slopcamera).
