@@ -230,7 +230,9 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // CSS grows from 112,231 to 114,769 bytes. This complete site now measures
   // 504,729 bytes; the 505,500 ceiling keeps 771 bytes of headroom.
   const bytes = Buffer.byteLength(styles, "utf8") + Buffer.byteLength(foundation, "utf8")
-  if (bytes >= 505_500) throw new Error(`Combined site CSS exceeds its 505,500-byte budget: ${bytes}`)
+  // design-kit 0.35.0 and footer 0.20.5 add shared studio and consent controls:
+  // measured 516,718 bytes; retain 782 bytes of bounded headroom.
+  if (bytes >= 517_500) throw new Error(`Combined site CSS exceeds its 517,500-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -1699,11 +1701,11 @@ describe("static Slopcamera site", () => {
       "@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0",
       "@hraness/design-kit-status": "github:hraness/design-kit#v0.21.0",
       "@hraness/site-footer": "https://github.com/hraness/site-footer/releases/download/v0.20.5/hraness-site-footer-0.20.5.tgz",
-      "@hraness/posthog": "github:hraness/posthog#v0.3.4",
+      "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.9/hraness-posthog-0.3.9.tgz",
       "@hraness/ui": "github:hraness/ui#v0.5.25",
       "@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0",
       "@resvg/resvg-js": "2.6.2",
-      "posthog-js": "1.413.2",
+      "posthog-js": "1.422.5",
       "react": "19.2.3",
       "react-dom": "19.2.3",
       "satori": "0.33.4",
@@ -1734,7 +1736,7 @@ describe("static Slopcamera site", () => {
     expect(localLockfile).toContain('"@hraness/design-kit-articles": "github:hraness/design-kit#v0.21.0"')
     expect(localLockfile).toContain('"@hraness/web-discovery": "github:hraness/web-discovery#v0.13.0"')
     expect(localLockfile).toContain('"@resvg/resvg-js": "2.6.2"')
-    expect(localLockfile).toContain('"posthog-js": "1.413.2"')
+    expect(localLockfile).toContain('"posthog-js": "1.422.5"')
     for (const [name, version] of Object.entries(manifest.devDependencies ?? {})) {
       expect(localLockfile).toContain(`"${name}": "${version}"`)
     }
@@ -1815,9 +1817,9 @@ describe("static Slopcamera site", () => {
     expect(beforeSend(event)).toBeNull()
     const bootstrap = await readSource("analytics.ts")
     expect(bootstrap).toContain("createBeforeSend(token, () => window.location, isNotFound, dntEnabled)")
-    expect(bootstrap).toContain("if (!dntEnabled()")
-    expect(bootstrap.indexOf("if (!dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
-    expect(bootstrap).toContain("if (!dntEnabled() && shouldInitializeAnalytics(window.location, token)) {")
+    expect(bootstrap).toContain("if (initialized || dntEnabled() || !consent?.allowed() || !shouldInitializeAnalytics(window.location, token)")
+    expect(bootstrap.indexOf("if (initialized || dntEnabled()")).toBeLessThan(bootstrap.indexOf("posthog.init("))
+    expect(bootstrap).toContain("|| !installConsentTransport(posthog, consent)) return")
   })
 
   test("classifies every public route and scrubs values without rebuilding the property set", () => {
@@ -1965,9 +1967,10 @@ describe("static Slopcamera site", () => {
       expect(preview).not.toMatch(/<script\b|analytics-|posthog|phc_test-token_value/iu)
       expect(asset).toContain("phc_test-token_value")
       expect(asset).toContain("https://us.i.posthog.com")
-      expect(asset).toStartWith("/*! posthog-js 1.413.2")
+      expect(asset).toStartWith("/*! posthog-js 1.422.5")
       expect(asset).toContain("Apache License\n                           Version 2.0")
-      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(310_000)
+      // Qualified PostHog 1.422.5 plus regional preferences and withdrawal transport measure 340,673 B.
+      expect(new TextEncoder().encode(asset).byteLength).toBeLessThan(350_000)
     })
   }, repeatedCompilationTimeoutMs)
 
@@ -2090,7 +2093,7 @@ describe("static Slopcamera site", () => {
     // 484,800. Keep
     // a strict ceiling over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(505_500)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(517_500)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)
@@ -2406,7 +2409,8 @@ describe("static Slopcamera site", () => {
       expect(document.indexOf(`${contentFooter}\n    <footer`)).toBeGreaterThan(-1)
       expect(footer).toContain('data-slot="hraness-site-footer"')
       expect(footer?.match(/data-slot="hraness-mark"/gu)).toHaveLength(1)
-      expect(footer?.match(/data-slot="hraness-support-icon"/gu)).toHaveLength(1)
+      expect(footer?.match(/data-slot="hraness-support-icon"/gu)).toHaveLength(2)
+      expect(footer).toContain('aria-label="About cookies"')
       expect(footer?.match(/data-slot="social-icon"/gu)).toHaveLength(4)
       expect(footer).not.toContain("hraness-site-footer__wordmark")
       expect(
