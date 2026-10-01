@@ -150,10 +150,14 @@ async function removalFixture(anchor: string, name: string, token: string) {
     return {
       ctimeNs: details.ctimeNs.toString(),
       dev: details.dev.toString(),
+      gid: details.gid.toString(),
       ino: details.ino.toString(),
       mode: Number(details.mode & 0o177777n),
+      mtimeNs: details.mtimeNs.toString(),
+      nlink: details.nlink.toString(),
       path: entry.path,
       size: details.size.toString(),
+      uid: details.uid.toString(),
     };
   }));
   return {
@@ -161,10 +165,14 @@ async function removalFixture(anchor: string, name: string, token: string) {
     containerIdentity: {
       ctimeNs: containerDetails.ctimeNs.toString(),
       dev: containerDetails.dev.toString(),
+      gid: containerDetails.gid.toString(),
       ino: containerDetails.ino.toString(),
       mode: Number(containerDetails.mode & 0o177777n),
+      mtimeNs: containerDetails.mtimeNs.toString(),
+      nlink: containerDetails.nlink.toString(),
       path: "<snapshot-container>",
       size: containerDetails.size.toString(),
+      uid: containerDetails.uid.toString(),
     },
     directory,
     identity,

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { chmodSync, closeSync, fstatSync, openSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, fstatSync, openSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createBrowserRuntimeKqueue, type BrowserWatchIdentity } from "./html-overlay-kqueue";
@@ -7,7 +8,7 @@ import { createBrowserRuntimeKqueue, type BrowserWatchIdentity } from "./html-ov
 const nativeTest = process.platform === "darwin" ? test : test.skip;
 function identity(absolute: string, path: string): BrowserWatchIdentity {
   const info = lstatSync(absolute, { bigint: true });
-  return { path, dev: info.dev.toString(), ino: info.ino.toString(), mode: Number(info.mode & 0o177777n), size: info.size.toString(), ctimeNs: info.ctimeNs.toString() };
+  return { path, dev: info.dev.toString(), ino: info.ino.toString(), mode: Number(info.mode & 0o177777n), size: info.size.toString(), ctimeNs: info.ctimeNs.toString(), mtimeNs: info.mtimeNs.toString(), uid: info.uid.toString(), gid: info.gid.toString(), nlink: info.nlink.toString() };
 }
 function fixture() {
   const anchor = mkdtempSync(join(tmpdir(), "slopcamera-kqueue-test-"));
@@ -19,6 +20,89 @@ function fixture() {
   const anchorInfo = identity(anchor, ".");
   return { anchor, container, runtimeRoot, anchorIdentity: { path: ".", dev: anchorInfo.dev, ino: anchorInfo.ino, mode: anchorInfo.mode }, containerIdentity: identity(container, "."), identities: [identity(runtimeRoot, "."), identity(join(runtimeRoot, "payload"), "payload"), identity(join(runtimeRoot, "link"), "link")] };
 }
+
+function refresh(item: ReturnType<typeof fixture>) {
+  item.identities = item.identities.map(entry => identity(entry.path === "." ? item.runtimeRoot : join(item.runtimeRoot, entry.path), entry.path));
+}
+function flags(path: string, value: "uchg" | "nouchg") {
+  execFileSync("/usr/bin/chflags", [value, path], { timeout: 5000 });
+}
+function mmapRead(path: string) {
+  execFileSync("/usr/bin/python3", ["-c", "import mmap,sys; f=open(sys.argv[1],'rb'); m=mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ); assert m[:]==b'original'; m.close(); f.close()", path], { timeout: 5000 });
+}
+function immutableFixture() {
+  const item = fixture(), payload = join(item.runtimeRoot, "payload");
+  utimesSync(payload, 0, 1); flags(payload, "uchg"); refresh(item);
+  return item;
+}
+
+nativeTest("immutable payload reads and mmap access preserve original status identity", async () => {
+  const item = immutableFixture(), payload = join(item.runtimeRoot, "payload");
+  const original = identity(payload, "payload");
+  const guard = await createBrowserRuntimeKqueue(item);
+  try {
+    const mutations = new Set<string>(); readFileSync(payload); guard.poll(mutations); expect([...mutations]).toEqual([]);
+    mmapRead(payload); guard.poll(mutations); expect([...mutations]).toEqual([]);
+    expect(identity(payload, "payload")).toEqual(original);
+    mmapRead(payload); guard.poll(mutations); expect([...mutations]).toEqual([]);
+    expect(identity(payload, "payload")).toEqual(original);
+  } finally { guard.close(); flags(payload, "nouchg"); rmSync(item.anchor, { recursive: true, force: true }); }
+});
+
+nativeTest("restored immutable flags remain fatal after a previously accepted access event", async () => {
+  const item = immutableFixture(), payload = join(item.runtimeRoot, "payload");
+  const before = lstatSync(payload, { bigint: true }), guard = await createBrowserRuntimeKqueue(item);
+  try {
+    const mutations = new Set<string>(); mmapRead(payload); guard.poll(mutations); expect(mutations.size).toBe(0);
+    flags(payload, "nouchg"); flags(payload, "uchg"); mmapRead(payload); guard.poll(mutations);
+    expect(lstatSync(payload, { bigint: true }).ctimeNs).not.toBe(before.ctimeNs);
+    expect([...mutations]).toContain("vnode-8:payload");
+    guard.poll(mutations); expect([...mutations]).toContain("vnode-8:payload");
+  } finally { guard.close(); flags(payload, "nouchg"); rmSync(item.anchor, { recursive: true, force: true }); }
+});
+
+for (const missing of ["ctimeNs", "mtimeNs", "uid", "gid", "nlink", "size"] as const) {
+  nativeTest(`mmap cannot classify access with missing original ${missing}`, async () => {
+    const item = immutableFixture(), payload = join(item.runtimeRoot, "payload");
+    item.identities = item.identities.map(entry => { if (entry.path !== "payload") return entry; const incomplete = { ...entry }; delete incomplete[missing]; return incomplete; });
+    const guard = await createBrowserRuntimeKqueue(item);
+    try { const mutations = new Set<string>(); mmapRead(payload); guard.poll(mutations); expect([...mutations]).toContain("vnode-8:payload"); }
+    finally { guard.close(); flags(payload, "nouchg"); rmSync(item.anchor, { recursive: true, force: true }); }
+  });
+}
+
+nativeTest("mutable payload mmap remains fatal without immutable flag readback", async () => {
+  const item = fixture(), payload = join(item.runtimeRoot, "payload");
+  utimesSync(payload, 0, 1); refresh(item); const guard = await createBrowserRuntimeKqueue(item);
+  try { const mutations = new Set<string>(); mmapRead(payload); guard.poll(mutations); expect([...mutations]).toContain("vnode-8:payload"); }
+  finally { guard.close(); rmSync(item.anchor, { recursive: true, force: true }); }
+});
+
+for (const [name, mutate] of [
+  ["permissions", (path: string) => { chmodSync(path, 0o600); chmodSync(path, 0o644); }],
+  ["times", (path: string) => { utimesSync(path, 2, 2); utimesSync(path, 0, 1); }],
+  ["extended attributes", (path: string) => { execFileSync("/usr/bin/xattr", ["-w", "com.slopcamera.kqueue-fixture", "changed", path]); execFileSync("/usr/bin/xattr", ["-w", "com.slopcamera.kqueue-fixture", "original", path]); }],
+] as const) {
+  nativeTest(`restored ${name} change original ctime and remain fatal`, async () => {
+    const item = fixture(), payload = join(item.runtimeRoot, "payload");
+    utimesSync(payload, 0, 1); execFileSync("/usr/bin/xattr", ["-w", "com.slopcamera.kqueue-fixture", "original", payload]); refresh(item);
+    const before = identity(payload, "payload"), guard = await createBrowserRuntimeKqueue(item);
+    try {
+      mutate(payload); const after = identity(payload, "payload"); expect(after.ctimeNs).not.toBe(before.ctimeNs);
+      expect(after).toEqual({ ...before, ctimeNs: after.ctimeNs! });
+      const mutations = new Set<string>(); guard.poll(mutations); expect([...mutations]).toContain("vnode-8:payload");
+    } finally { guard.close(); rmSync(item.anchor, { recursive: true, force: true }); }
+  });
+}
+
+nativeTest("mixed write and attribute notes stay fatal despite subsequent mmap", async () => {
+  const item = immutableFixture(), payload = join(item.runtimeRoot, "payload"), guard = await createBrowserRuntimeKqueue(item);
+  try {
+    flags(payload, "nouchg"); writeFileSync(payload, "modified"); writeFileSync(payload, "original"); flags(payload, "uchg"); mmapRead(payload);
+    const mutations = new Set<string>(); guard.poll(mutations);
+    expect([...mutations].some(value => value.endsWith(":payload") && value !== "vnode-8:payload")).toBe(true);
+  } finally { guard.close(); flags(payload, "nouchg"); rmSync(item.anchor, { recursive: true, force: true }); }
+});
 
 nativeTest("vnode registration excludes historical preparation and preserves a clean baseline", async () => {
   const item = fixture();

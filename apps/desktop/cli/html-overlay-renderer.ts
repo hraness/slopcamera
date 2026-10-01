@@ -392,10 +392,14 @@ interface SnapshotAnchorIdentity {
 interface SnapshotPathIdentity {
   readonly ctimeNs: string;
   readonly dev: string;
+  readonly gid: string;
   readonly ino: string;
   readonly mode: number;
+  readonly mtimeNs: string;
+  readonly nlink: string;
   readonly path: string;
   readonly size: string;
+  readonly uid: string;
 }
 
 interface SnapshotDirectChildIdentity {
@@ -546,10 +550,14 @@ async function captureBrowserRuntimeSnapshotIdentity(
     identities.push({
       ctimeNs: details.ctimeNs.toString(),
       dev: details.dev.toString(),
+      gid: details.gid.toString(),
       ino: details.ino.toString(),
       mode: Number(details.mode & 0o177777n),
+      mtimeNs: details.mtimeNs.toString(),
+      nlink: details.nlink.toString(),
       path: entry.path,
       size: details.size.toString(),
+      uid: details.uid.toString(),
     });
   }
   return identities;
@@ -570,10 +578,14 @@ async function captureBrowserRuntimeSnapshotContainerIdentity(
   return {
     ctimeNs: details.ctimeNs.toString(),
     dev: details.dev.toString(),
+    gid: details.gid.toString(),
     ino: details.ino.toString(),
     mode: Number(details.mode & 0o177777n),
+    mtimeNs: details.mtimeNs.toString(),
+    nlink: details.nlink.toString(),
     path: "<snapshot-container>",
     size: details.size.toString(),
+    uid: details.uid.toString(),
   };
 }
 

@@ -1,4 +1,4 @@
-import { fstatSync } from "node:fs";
+import { fstatSync, lstatSync, type BigIntStats } from "node:fs";
 import { endianness } from "node:os";
 import { basename, join } from "node:path";
 import { ApplicationError } from "../application/errors";
@@ -10,6 +10,17 @@ export interface BrowserWatchIdentity {
   readonly mode: number;
   readonly size?: string;
   readonly ctimeNs?: string;
+  readonly mtimeNs?: string;
+  readonly uid?: string;
+  readonly gid?: string;
+  readonly nlink?: string;
+}
+
+const metadataKeys = ["size", "ctimeNs", "mtimeNs", "uid", "gid", "nlink"] as const;
+function matchesIdentity(details: BigIntStats, identity: BrowserWatchIdentity): boolean {
+  return details.dev.toString() === identity.dev && details.ino.toString() === identity.ino
+    && Number(details.mode & 0o177777n) === identity.mode
+    && metadataKeys.every(key => identity[key] === undefined || details[key].toString() === identity[key]);
 }
 
 interface WatchTarget {
@@ -38,6 +49,7 @@ export async function createBrowserRuntimeKqueue(options: {
     close: { args: [T.i32], returns: T.i32 },
     fcntl: { args: [T.i32, T.i32, T.i32], returns: T.i32 },
     getrlimit: { args: [T.i32, T.ptr], returns: T.i32 },
+    fgetattrlist: { args: [T.i32, T.ptr, T.ptr, T.u64, T.u32], returns: T.i32 },
   });
   const targets: WatchTarget[] = [
     { absolute: options.anchor, identity: options.anchorIdentity, label: "<snapshot-anchor>", kind: "anchor" },
@@ -49,6 +61,18 @@ export async function createBrowserRuntimeKqueue(options: {
   let closeFailure: unknown;
   let failure: unknown;
   const descriptors = new Map<number, WatchTarget>();
+  const payloadAccess = new Map<number, { atimeNs: bigint; readonly flags: number }>();
+  const immutableFlags = (descriptor: number): number => {
+    // Darwin attrlist: five attribute groups, requesting only ATTR_CMN_FLAGS.
+    const request = Buffer.alloc(24), result = Buffer.alloc(8);
+    request.writeUInt16LE(5, 0);
+    request.writeUInt32LE(0x00040000, 4);
+    if (native.symbols.fgetattrlist(descriptor, ptr(request), ptr(result), 8n, 0) !== 0
+      || result.readUInt32LE(0) !== 8) {
+      throw new ApplicationError("unavailable", "Browser vnode immutable flags could not be read completely.");
+    }
+    return result.readUInt32LE(4);
+  };
   const close = () => {
     if (closed) { if (closeFailure !== undefined) throw closeFailure; return; }
     // A failed close may already have released its numeric descriptor. Never
@@ -87,11 +111,11 @@ export async function createBrowserRuntimeKqueue(options: {
       descriptors.set(descriptor, target);
       const details = fstatSync(descriptor, { bigint: true });
       const identity = target.identity;
-      if (details.dev.toString() !== identity.dev || details.ino.toString() !== identity.ino
-        || Number(details.mode & 0o177777n) !== identity.mode
-        || (identity.size !== undefined && details.size.toString() !== identity.size)
-        || (identity.ctimeNs !== undefined && details.ctimeNs.toString() !== identity.ctimeNs)) {
+      if (!matchesIdentity(details, identity)) {
         reject(`Browser vnode identity changed before registration: ${target.label}`);
+      }
+      if (target.kind === "payload" && details.isFile()) {
+        payloadAccess.set(descriptor, { atimeNs: details.atimeNs, flags: immutableFlags(descriptor) });
       }
       const change = Buffer.alloc(48);
       const receipt = Buffer.alloc(48);
@@ -120,18 +144,36 @@ export async function createBrowserRuntimeKqueue(options: {
           if (count < 0 || count > targets.length) reject("Browser vnode event queue could not be read completely.");
           for (let index = 0; index < count; index += 1) {
             const offset = index * 48;
-            const target = descriptors.get(Number(output.readBigUInt64LE(offset)));
+            const descriptor = Number(output.readBigUInt64LE(offset));
+            const target = descriptors.get(descriptor);
             const flags = output.readUInt16LE(offset + 10);
             const notes = output.readUInt32LE(offset + 12);
             if (target === undefined) throw new ApplicationError("conflict", "Browser vnode event has an unknown descriptor.");
             if (output.readInt16LE(offset + 8) !== -4 || flags & (0x4000 | 0x8000) || notes === 0 || notes & ~0x7f) {
               reject("Browser vnode event queue returned an untrusted event.");
             }
-            // Keep only the existing launch-managed app-root ATTRIB exception.
+            // Preserve the existing launch-managed app-root ATTRIB exception.
             // No WRITE/RENAME/DELETE/LINK combination becomes a metadata event.
             if (target.kind === "runtime-root" && notes === 8) {
               mutations.add(`change:${basename(options.runtimeRoot)}`);
               continue;
+            }
+            const access = payloadAccess.get(descriptor);
+            if (target.kind === "payload" && notes === 8 && access !== undefined
+              && (access.flags & 2) !== 0 && metadataKeys.every(key => target.identity[key] !== undefined)) {
+              const details = fstatSync(descriptor, { bigint: true });
+              const pathDetails = lstatSync(target.absolute, { bigint: true });
+              // mmap can emit pure ATTRIB for access-time updates on immutable
+              // files. Original ctime and all status identity remain fixed:
+              // restored flags, xattrs, permissions, and times still reject.
+              // The renderer also retains its full content-manifest checks.
+              if (details.isFile() && pathDetails.isFile()
+                && matchesIdentity(details, target.identity) && matchesIdentity(pathDetails, target.identity)
+                && details.atimeNs > access.atimeNs && pathDetails.atimeNs >= details.atimeNs
+                && immutableFlags(descriptor) === access.flags) {
+                access.atimeNs = pathDetails.atimeNs;
+                continue;
+              }
             }
             mutations.add(`vnode-${String(notes)}:${target.label}`);
           }
