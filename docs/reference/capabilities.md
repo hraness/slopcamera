@@ -8,9 +8,9 @@ Install the [current release](https://github.com/hraness/slopcamera/releases/lat
 
 ## Verified release contents
 
-The [published release](https://github.com/hraness/slopcamera/releases/tag/v3.10.1) provides these capabilities. Run `slopcamera --version` and the installed command's help when you need to check a particular installation.
+The [published release](https://github.com/hraness/slopcamera/releases/tag/v3.10.3) provides these capabilities. Run `slopcamera --version` and the installed command's help when you need to check a particular installation.
 
-| Capability | SlopCamera v3.10.1 |
+| Capability | SlopCamera v3.10.3 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
@@ -29,7 +29,7 @@ The static and rigged/morph GLB profiles have separate admission limits within t
 
 ## Parametric architectural designs
 
-SlopCamera v3.10.1 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
+SlopCamera v3.10.3 includes `scene design catalog|init|inspect|set|compile|gallery` and portable design helpers in `@hraness/slopcamera/code`. Named controls and constraints compile into retained geometry and ordinary scenes. Four original starters supply materials, lights and cameras. Compilation uses local geometry code and needs no additional modeling application or cloud credentials; rendering uses the existing spatial browser runtime. See the [design guide](../how-to/parametric-design.md).
 
 Wall openings use corrected elevations, arched crowns, and Boolean surface partitioning and normals. See [wall openings and limits](../parametric-design.md#wall-openings-and-boolean-geometry) and [film integration](../how-to/parametric-design.md#integrate-a-design-into-an-existing-film).
 

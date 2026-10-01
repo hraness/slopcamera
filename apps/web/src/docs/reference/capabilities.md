@@ -23,9 +23,9 @@ The verified release is published at `{{RELEASE_URL}}` and requires Bun 1.3.14 o
 
 ## Verified release contents
 
-The [published release](https://github.com/hraness/slopcamera/releases/tag/v3.10.1) provides these capabilities. Run `slopcamera --version` and the installed command's help when you need to check a particular installation.
+The [published release](https://github.com/hraness/slopcamera/releases/tag/v3.10.3) provides these capabilities. Run `slopcamera --version` and the installed command's help when you need to check a particular installation.
 
-| Capability | SlopCamera v3.10.1 |
+| Capability | SlopCamera v3.10.3 |
 | --- | --- |
 | HTML scene export, all seven authoring profiles, music-clock helpers, audio-reactive bands | Included |
 | Blender, CadQuery, Manim, seven native starters, retained video takes | Included; runtime/provider requirements apply |
