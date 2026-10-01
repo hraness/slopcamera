@@ -34,11 +34,11 @@ for prompt-only hosted images; model usage is billed separately.
 ## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[SlopCamera v3.10.1 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.1)
+[SlopCamera v3.10.2 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.2)
 and its matching Agent Skill:
 
 ```sh
-bun add --global https://github.com/hraness/slopcamera/releases/download/v3.10.1/hraness-slopcamera-3.10.1.tgz
+bun add --global https://github.com/hraness/slopcamera/releases/download/v3.10.2/hraness-slopcamera-3.10.2.tgz
 slopcamera skill install --target agents
 ```
 
