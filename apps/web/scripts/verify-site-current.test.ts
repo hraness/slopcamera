@@ -79,6 +79,11 @@ test("live review has one fixed public origin and preserves the local network bo
   expect(allowsRequest("http://us.i.posthog.com/i/v0/e/", "https://slopcamera.com")).toBe(false)
   expect(allowsRequest("https://us.i.posthog.com.example.com/", "https://slopcamera.com")).toBe(false)
   expect(allowsRequest("https://example.com/font.woff2", "https://slopcamera.com")).toBe(false)
+  expect(allowsRequest("https://account.hraness.com/api/consent/region", "https://slopcamera.com")).toBe(true)
+  expect(allowsRequest("https://account.hraness.com/api/consent/region", "http://127.0.0.1:1234")).toBe(false)
+  expect(allowsRequest("https://account.hraness.com/api/account", "https://slopcamera.com")).toBe(false)
+  expect(allowsRequest("https://account.hraness.com.example.com/api/consent/region", "https://slopcamera.com")).toBe(false)
+  expect(allowsRequest("http://account.hraness.com/api/consent/region", "https://slopcamera.com")).toBe(false)
 })
 
 test("resolves clean URLs the way the static host does and refuses traversal", async () => {
