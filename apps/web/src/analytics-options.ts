@@ -44,5 +44,6 @@ export function posthogBrowserOptions(apiHost: string): Partial<PostHogConfig> {
     rageclick: false,
     rate_limiting: { events_per_second: 2, events_burst_limit: 12 },
     respect_dnt: true,
+    request_batching: false,
   }
 }

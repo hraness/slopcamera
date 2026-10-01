@@ -184,7 +184,7 @@ https://slopcamera.com/blog/introducing-slopcamera
 
 ## Product Hunt
 
-Tagline: Visual work your agent can keep revising.
+Tagline: A multimedia studio for your coding agent.
 
 Description:
 
@@ -196,7 +196,7 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 
 ## Show HN and first comment fact sheet
 
-- Visual work your agent can keep revising.
+- A multimedia studio for your coding agent.
 - SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
 - A copper tram leaves a rainy midnight city and climbs toward the moon. The original artwork, animation and score are editable source, so your agent can change the destination, pacing or musical cues.
 - "Make the moon larger." The revised film changes the destination's scale while keeping the route, palette, score and exact timing. Both versions come from the same HTML scene, with separate retained requests.

@@ -54,6 +54,8 @@ from vulnerability reports.
 Report suspected vulnerabilities through GitHub private vulnerability
 reporting at https://github.com/hraness/slopcamera/security/advisories/new.
 
+## Website analytics
+
 The public slopcamera.com website sends cookieless page views, page exits,
 performance measurements, explicit link and install-copy actions, missing-page
 reports, and rate-limited redacted client errors to PostHog. It keeps no person
@@ -61,3 +63,8 @@ profiles, analytics cookies, or session recordings and respects Do Not Track.
 Public campaign parameters are retained; other query values and credentials
 are removed. Sensitive paths collapse to `/private` and their campaign
 attribution is removed. Preview builds and the inert preview page send nothing.
+
+The site checks the shared regional analytics policy service. Analytics
+waits for acceptance where that policy requires consent, or when the region is
+unknown. Elsewhere it can run without cookies before a visitor responds.
+A stored refusal or Do Not Track keeps analytics off.
