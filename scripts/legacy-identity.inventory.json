@@ -1523,7 +1523,7 @@
   },
   {
     "identityLineCount": 16,
-    "identityLinesSha256": "a1940783bfc7f85f47f789bdb7b04f3b772b4a0d79e163960420f7fd2b6830a3",
+    "identityLinesSha256": "cae4bd7a2184389e9ce3f1518826dcc1dba49d74bb5d42a6a047ddbca51ed39e",
     "occurrenceCount": 21,
     "path": "apps/web/scripts/verify-site-current.mjs",
     "categories": [
@@ -1531,9 +1531,9 @@
     ]
   },
   {
-    "identityLineCount": 12,
-    "identityLinesSha256": "d1f4e32b8cbb2f7530b8c32fb6ac2db2d8bf633aa1bfe4406ce1188d394ac019",
-    "occurrenceCount": 12,
+    "identityLineCount": 14,
+    "identityLinesSha256": "928a718f4d6e677581360aef6bef1a8fd60240f0f038317640d130f2c83e5401",
+    "occurrenceCount": 14,
     "path": "apps/web/scripts/verify-site-current.test.ts",
     "categories": [
       "test-fixture"

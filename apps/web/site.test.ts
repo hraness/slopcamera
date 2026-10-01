@@ -74,7 +74,7 @@ import middleware, { config as middlewareConfig } from "./middleware"
 import { buildWebsite, renderAskAiAboutThis, renderSitemapXml } from "./scripts/build"
 import { homeSocialImage, renderSocialImage, slopcameraSocialSite, socialImageFitFor, socialImageForDocument, socialImages } from "./src/social-image"
 import { htmlText as plainCode } from "./scripts/html-text.testing"
-import { siteContentSlots } from "./src/site-content"
+import { renderPlatformInstall, siteContentSlots } from "./src/site-content"
 import { workflowExamples, workflowExampleAssets, exampleUrl } from "./src/example-registry"
 import { homepageExampleName, homepageExamples } from "./src/example-gallery"
 import { archiveInstall, parsePublishedRelease, publishedArchiveUrl, publishedRelease, sourceInstall } from "./src/published-release"
@@ -1489,8 +1489,11 @@ describe("static Slopcamera site", () => {
       readSource("404.html"),
       readSource("styles.css"),
     ])
-    const fragmentLinks = [...html.matchAll(/href="#([^"]+)"/gu)].map(match => match[1])
-    const ids = new Set([...html.matchAll(/\sid="([^"]+)"/gu)].map(match => match[1]))
+    const withInstaller = html.replace("{{PLATFORM_INSTALL}}", renderPlatformInstall())
+    const fragmentLinks = [...withInstaller.matchAll(/href="#([^"]+)"/gu)].map(match => match[1])
+    const idValues = [...withInstaller.matchAll(/\sid="([^"]+)"/gu)].map(match => match[1])
+    const ids = new Set(idValues)
+    expect(ids.size).toBe(idValues.length)
 
     expect(html.match(/<h1\b/gu)).toHaveLength(1)
     expect(html).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
