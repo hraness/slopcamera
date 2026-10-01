@@ -15,8 +15,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative } from "node:path";
 
-import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { afterEach, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import type { Browser, LaunchOptions } from "playwright-core";
+
+import * as browserKqueue from "./html-overlay-kqueue";
 
 import { bindExactCapability } from "../application/capability-binding";
 import { bindHtmlOverlayBrowserRuntime } from "../application/html-overlay-browser-runtime";
@@ -502,41 +504,35 @@ describe("private HTML-overlay browser runtime launch", () => {
       launchCalls += 1;
       return Promise.reject(new Error("must not launch a changed baseline"));
     } });
-    let renderFailure: unknown;
-    const rendering = renderer.renderFrames({ authoring: item.authoring,
-      browserRuntime: item.browserRuntime, outputDirectory: item.frames, resources: [],
-    }, controller.signal).catch((error: unknown) => { renderFailure = error; return error; });
     let changed = false;
+    const originalFactory = browserKqueue.createBrowserRuntimeKqueue;
+    const registration = spyOn(browserKqueue, "createBrowserRuntimeKqueue").mockImplementation(async options => {
+      const guard = await originalFactory(options);
+      try {
+        // Real kernel registration has completed, but the renderer has not
+        // yet re-proved the original snapshot identity. No timing window.
+        const target = options.runtimeRoot;
+        expect((await readFile(target)).equals(item.original)).toBe(true);
+        const originalMode = (await lstat(target)).mode & 0o777;
+        await chmod(target, 0o700);
+        await writeFile(target, "substitute baseline bytes");
+        await writeFile(target, item.original);
+        await chmod(target, originalMode);
+        changed = true;
+        return guard;
+      } catch (error) { guard.close(); throw error; }
+    });
     try {
-      for (let attempt = 0; attempt < 200 && !changed; attempt += 1) {
-        for (const name of await readdir("/private/tmp")) {
-          if (!name.startsWith(".slopcamera-browser-runtime-")) continue;
-          const target = join("/private/tmp", name, "browser");
-          const details = await lstat(target).catch(() => undefined);
-          if (details === undefined) continue;
-          const bytes = await readFile(target).catch(() => undefined);
-          if (bytes === undefined || !bytes.equals(item.original)) continue;
-          // The single-file fixture has no native process. Let preparation
-          // finish and enter its two-second FSEvents quiet baseline.
-          await new Promise<void>(resolve => setTimeout(resolve, 250));
-          const originalMode = (await lstat(target)).mode & 0o777;
-          await chmod(target, 0o700);
-          await writeFile(target, "substitute baseline bytes");
-          await writeFile(target, item.original);
-          await chmod(target, originalMode);
-          changed = true;
-          break;
-        }
-        if (!changed) await new Promise<void>(resolve => setTimeout(resolve, 10));
-      }
-      if (!changed) throw new Error("The baseline fixture did not find and mutate its exact private runtime.", { cause: renderFailure });
-      const failure = await rendering;
+      const failure = await renderer.renderFrames({ authoring: item.authoring,
+        browserRuntime: item.browserRuntime, outputDirectory: item.frames, resources: [],
+      }, controller.signal).catch((error: unknown) => error);
+      expect(changed).toBe(true);
       expect(failure).toBeInstanceOf(Error);
       expect((failure as Error).message).toMatch(/snapshot identity changed immediately before launch/u);
       expect(launchCalls).toBe(0);
     } finally {
+      registration.mockRestore();
       controller.abort(new Error("baseline fixture finished"));
-      await rendering;
     }
   });
 

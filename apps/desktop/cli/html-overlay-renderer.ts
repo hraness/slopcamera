@@ -24,6 +24,7 @@ import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 
 import { verifyStableBrowserWatcherBaseline } from "./html-overlay-watcher-baseline";
+import { createBrowserRuntimeKqueue } from "./html-overlay-kqueue";
 
 import {
   chromium,
@@ -1458,8 +1459,10 @@ export async function removeBrowserRuntimeSnapshot(
 async function assertNoBrowserRuntimeMutationEvents(
   mutations: ReadonlySet<string>,
   label: string,
+  poll?: () => void,
 ): Promise<void> {
   await new Promise<void>(resolve => setImmediate(resolve));
+  poll?.();
   if (mutations.size > 0) {
     throw new ApplicationError(
       "conflict",
@@ -2011,6 +2014,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
     let browserRuntimeSnapshot: PreparedBrowserRuntimeSnapshot | undefined;
     const browserRuntimeWatchers: FSWatcher[] = [];
     const browserRuntimeMutations = new Set<string>();
+    let kernelWatcher: Awaited<ReturnType<typeof createBrowserRuntimeKqueue>> | undefined;
     let renderFailure: Readonly<{ error: unknown }> | undefined;
     let renderResult: HtmlOverlayFrameRenderResult | undefined;
     let gpuEvidence: HtmlOverlayGpuEvidence | undefined;
@@ -2026,71 +2030,82 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
       let watcherFailure: Error | undefined;
       const runtimeName = basename(preparedBrowserRuntime.runtimeRoot);
       const snapshotName = basename(preparedBrowserRuntime.directory);
-      const anchorWatcher = watch(
-        preparedBrowserRuntime.anchorPath,
-        { persistent: false },
-        (eventType, filename) => {
-          const path = filename?.toString() ?? "<snapshot-anchor>";
-          if (path === snapshotName) {
+      if (process.platform === "darwin") {
+        kernelWatcher = await createBrowserRuntimeKqueue({
+          anchor: preparedBrowserRuntime.anchorPath,
+          anchorIdentity: preparedBrowserRuntime.anchorIdentity,
+          container: preparedBrowserRuntime.directory,
+          containerIdentity: preparedBrowserRuntime.containerIdentity,
+          runtimeRoot: preparedBrowserRuntime.runtimeRoot,
+          identities: preparedBrowserRuntime.identity,
+        });
+      } else {
+        const anchorWatcher = watch(
+          preparedBrowserRuntime.anchorPath,
+          { persistent: false },
+          (eventType, filename) => {
+            const path = filename?.toString() ?? "<snapshot-anchor>";
+            if (path === snapshotName) {
+              watcherVersion += 1;
+              browserRuntimeMutations.add(`anchor-${eventType}:${path}`);
+            }
+          },
+        );
+        anchorWatcher.on("error", error => {
+          watcherFailure = error;
+          browserRuntimeMutations.add(`anchor-watch-error:${error.message}`);
+        });
+        browserRuntimeWatchers.push(anchorWatcher);
+        const containerWatcher = watch(
+          preparedBrowserRuntime.directory,
+          { persistent: false, recursive: false },
+          (eventType, filename) => {
+            const path = filename?.toString().replaceAll("\\", "/")
+              ?? "<snapshot-container>";
+            if (
+              path === "home"
+              || path.startsWith("home/")
+              || path === "tmp"
+              || path.startsWith("tmp/")
+            ) return;
+            if (path === runtimeName && eventType === "change") {
+              // Gatekeeper may change the app root's first-launch metadata. The
+              // immutable parent and its exact ctime identity independently
+              // prove that this pathname was never removed or replaced.
+              return;
+            }
+            if (
+              request.browserRuntime.provenance.kind === "test-only-unverified"
+              && request.browserRuntime.manifest.layout === "single-executable"
+              && path === runtimeName
+              && eventType === "rename"
+            ) {
+              // Darwin reports synthetic rename events for accesses to the
+              // test-only single-file fixture. Production rejects this layout;
+              // its exact path identity still detects fixture substitution.
+              return;
+            }
             watcherVersion += 1;
-            browserRuntimeMutations.add(`anchor-${eventType}:${path}`);
-          }
-        },
-      );
-      anchorWatcher.on("error", error => {
-        watcherFailure = error;
-        browserRuntimeMutations.add(`anchor-watch-error:${error.message}`);
-      });
-      browserRuntimeWatchers.push(anchorWatcher);
-      const containerWatcher = watch(
-        preparedBrowserRuntime.directory,
-        { persistent: false, recursive: process.platform === "darwin" },
-        (eventType, filename) => {
-          const path = filename?.toString().replaceAll("\\", "/")
-            ?? "<snapshot-container>";
-          if (
-            path === "home"
-            || path.startsWith("home/")
-            || path === "tmp"
-            || path.startsWith("tmp/")
-          ) return;
-          if (path === runtimeName && eventType === "change") {
-            // Gatekeeper may change the app root's first-launch metadata. The
-            // immutable parent and its exact ctime identity independently
-            // prove that this pathname was never removed or replaced.
-            return;
-          }
-          if (
-            request.browserRuntime.provenance.kind === "test-only-unverified"
-            && request.browserRuntime.manifest.layout === "single-executable"
-            && path === runtimeName
-            && eventType === "rename"
-          ) {
-            // Darwin reports synthetic rename events for accesses to the
-            // test-only single-file fixture. Production rejects this layout;
-            // its exact path identity still detects fixture substitution.
-            return;
-          }
-          watcherVersion += 1;
-          if (path === runtimeName || path.startsWith(`${runtimeName}/`)) {
+            if (path === runtimeName || path.startsWith(`${runtimeName}/`)) {
+              browserRuntimeMutations.add(`${eventType}:${path}`);
+              return;
+            }
             browserRuntimeMutations.add(`${eventType}:${path}`);
-            return;
-          }
-          browserRuntimeMutations.add(`${eventType}:${path}`);
-        },
-      );
-      containerWatcher.on("error", error => {
-        watcherFailure = error;
-        browserRuntimeMutations.add(`watch-error:${error.message}`);
-      });
-      browserRuntimeWatchers.push(containerWatcher);
+          },
+        );
+        containerWatcher.on("error", error => {
+          watcherFailure = error;
+          browserRuntimeMutations.add(`watch-error:${error.message}`);
+        });
+        browserRuntimeWatchers.push(containerWatcher);
+      }
       let browser: Browser | undefined;
       let browserFailure: Readonly<{ error: unknown }> | undefined;
       try {
         // Delayed preparation notifications can arrive during full verification.
         // Recheck the SAME pre-wait identities until one pass is stable. Nothing
         // after the synchronous baseline commit is discarded.
-        await verifyStableBrowserWatcherBaseline({
+        const baselineOptions = {
           signal,
           version: () => watcherVersion,
           failure: () => watcherFailure,
@@ -2121,7 +2136,16 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
             );
           },
           commit: () => { browserRuntimeMutations.clear(); },
-        });
+        };
+        if (kernelWatcher !== undefined) {
+          // Vnode notes begin at registration, not an asynchronous history
+          // stream. Never clear a payload event, including during baseline.
+          await baselineOptions.verify();
+          kernelWatcher.poll(browserRuntimeMutations);
+        } else {
+          await verifyStableBrowserWatcherBaseline(baselineOptions);
+        }
+        kernelWatcher?.poll(browserRuntimeMutations);
         discardProvenLaunchManagedRootMetadataEvent(
           browserRuntimeMutations,
           runtimeName,
@@ -2129,6 +2153,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         await assertNoBrowserRuntimeMutationEvents(
           browserRuntimeMutations,
           "before browser launch",
+          () => kernelWatcher?.poll(browserRuntimeMutations),
         );
         const launchedBrowser = await boundedBrowserStep(
           async () => {
@@ -2188,6 +2213,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
           "during browser launch",
           signal,
         );
+        kernelWatcher?.poll(browserRuntimeMutations);
         discardProvenLaunchManagedRootMetadataEvent(
           browserRuntimeMutations,
           runtimeName,
@@ -2195,6 +2221,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         await assertNoBrowserRuntimeMutationEvents(
           browserRuntimeMutations,
           "during browser launch",
+          () => kernelWatcher?.poll(browserRuntimeMutations),
         );
         const contextContract = HTML_OVERLAY_RENDERER_CONTRACT.browserContext;
         const context = await boundedBrowserStep(
@@ -2489,6 +2516,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         "through browser shutdown",
         signal,
       );
+      kernelWatcher?.poll(browserRuntimeMutations);
       discardProvenLaunchManagedRootMetadataEvent(
         browserRuntimeMutations,
         runtimeName,
@@ -2496,6 +2524,7 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
       await assertNoBrowserRuntimeMutationEvents(
         browserRuntimeMutations,
         "through browser shutdown",
+        () => kernelWatcher?.poll(browserRuntimeMutations),
       );
       renderResult = {
         ...(gpuEvidence === undefined ? {} : { gpuEvidence }),
@@ -2510,6 +2539,12 @@ export class PlaywrightHtmlOverlayRenderer implements HtmlOverlayRenderer {
         .catch(() => undefined);
     } finally {
       for (const watcher of browserRuntimeWatchers) watcher.close();
+      try { kernelWatcher?.close(); } catch (error) {
+        renderFailure = { error: new ApplicationError("unavailable", "Browser vnode watch cleanup failed; frames were not published.", {
+          cause: error,
+          ...(renderFailure === undefined ? {} : { renderFailure: renderFailure.error }),
+        }) };
+      }
       if (browserRuntimeSnapshot !== undefined) {
         if (browserShutdownRequired) {
           const retainedError = new ApplicationError("unavailable", "HTML overlay browser shutdown is unproven; its active runtime snapshot was retained and frames were not published.", {
