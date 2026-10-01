@@ -16,7 +16,7 @@ const foundationRoot = "graphs/site-foundation/"
 const maxArtifactBytes = 16 * 1024 * 1024
 const releases = [
   { name: "@hraness/design-kit", version: "0.35.0" },
-  { name: "@hraness/site-footer", version: "0.20.5" },
+  { name: "@hraness/site-footer", version: "0.20.7" },
   { name: "@hraness/ui", version: "0.5.25" },
 ] as const
 
