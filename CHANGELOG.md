@@ -2,6 +2,14 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.10.3 - 2026-10-01
+
+Slopcamera rejects malformed SVG overlays promptly and handles long social-variant output paths without slowing down planning.
+
+- Read SVG declarations and comments without backtracking before checking the root element.
+- Reject text inserted between comments and the SVG root while preserving supported declarations, whitespace, and dimensions.
+- Trim trailing output-directory slashes without repeatedly scanning interior separators.
+
 ## 3.10.2 - 2026-10-01
 
 Slopcamera renders HTML scenes on macOS without treating access-time updates from reading immutable browser files as changes to those files.
