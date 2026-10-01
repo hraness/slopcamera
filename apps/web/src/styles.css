@@ -398,7 +398,7 @@ main[data-hraness-marketing-preset="editorial"] {
   block-size: 100%;
   object-fit: cover;
   object-position: top center;
-  filter: grayscale(1) contrast(.82);
+  filter: grayscale(.25) saturate(.78) contrast(.9) brightness(.86) blur(.35px);
 }
 html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .14; }
 @media (prefers-color-scheme: dark) {
