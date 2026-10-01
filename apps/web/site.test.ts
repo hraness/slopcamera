@@ -308,15 +308,15 @@ test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its rout
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(305_499), "x".repeat(200_000))).toBe(505_499)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(305_500), "x".repeat(200_000)))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(305_499), `${"x".repeat(200_000)}é`))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505501")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(505_500), ""))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(505_500)))
-    .toThrow("Combined site CSS exceeds its 505,500-byte budget: 505500")
+  expect(assertCombinedSiteCssBudget("x".repeat(317_499), "x".repeat(200_000))).toBe(517_499)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(317_500), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(317_499), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517501")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(517_500), ""))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(517_500)))
+    .toThrow("Combined site CSS exceeds its 517,500-byte budget: 517500")
 })
 
 function assertThemeBundleBudget(script: string): number {
