@@ -46,6 +46,13 @@ Apply these defaults deeply:
 - Put icons directly inside their semantic shape. Do not place a bordered icon
   tile inside another bordered card.
 - Use three to seven primary elements when the prompt permits abstraction.
+- Make the canvas wide: about 2.2 to 3 times wider than tall. Put a short
+  sequence in one horizontal row and fold a longer one into two rows that turn
+  once at the edge. Do not stack a flow into a vertical tower or draw a long
+  diagonal return arrow; `diagram check` reports `tall-aspect` when the canvas
+  is more than 1.5 times taller than wide.
+- Keep labels legible on a 360px phone screen: a label's font size times the
+  page column width divided by the canvas width should stay at least 12px.
 - Establish a clear reading order and align peers to a shared grid.
 - Use whitespace before borders, colors, or prose to separate groups.
 - Use one color distinction by default. A supplied system with several stable
@@ -91,6 +98,10 @@ Use a coordinate-free `stack` layout for one horizontal or vertical sequence:
 - Keep stack shapes to rectangles or ellipses and omit `x` and `y`.
 - Use the default 160px gap unless the prompt or publication frame requires a
   different runway.
+- Prefer `"direction": "horizontal"` with two to four cards. For five or more
+  steps, switch to positioned mode and fold the sequence into two rows, as in
+  `examples/showcase/diagram/production-pipeline`. Use a vertical stack only
+  for a short sequence whose canvas stays within the `tall-aspect` limit.
 - Switch to positioned mode for branching, non-adjacent edges, charts, free
   text, lines, or deliberately unequal placement. Do not force those meanings
   into a one-dimensional stack.

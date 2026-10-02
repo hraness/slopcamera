@@ -11,6 +11,14 @@ Slopcamera checks a GLB against a web delivery budget and an LOD plan, and its A
 - The Agent Skill's 3D quality bar, "accurate physics, AAA graphics, VFX", applies to every 3D brief unless the user overrides it, with a review checklist and the renderer limits that apply.
 - A new how-to, "Make web-ready 3D assets with Blender", walks through the workflow.
 
+## 3.11.0 - 2026-10-02
+
+`slopcamera diagram check` now warns when a diagram is a tall tower, and the pipeline example shows the wide two-row layout that reads well on pages and phones.
+
+- Report a `tall-aspect` finding when a diagram canvas is more than 1.5 times taller than wide, with guidance to lay the flow out horizontally or fold it into two rows. `--strict` fails on it like any other finding.
+- Rework the five-step production pipeline example from a 720×1232 vertical stack into a 1200×520 two-row layout, in both its default and themed versions.
+- Document every diagram check finding in the diagram format reference.
+
 ## 3.10.3 - 2026-10-01
 
 Slopcamera rejects malformed SVG overlays promptly and handles long social-variant output paths without slowing down planning.

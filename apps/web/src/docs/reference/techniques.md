@@ -19,7 +19,7 @@ What you get: one `.diagram.json` source rendered to an editable `.tldr` file pl
 - **Use when:** you need an architecture diagram, a flow, or a pipeline that you will change later.
 - **Start with:** `slopcamera diagram init flow.diagram.json`, then `slopcamera diagram check flow.diagram.json --strict` and `slopcamera diagram render flow.diagram.json`.
 - **Guide:** [Create and revise your first diagram](/docs/tutorials/first-diagram) and [the .diagram.json format](/docs/reference/diagram-format).
-- **Example:** [Lay out a pipeline from ordered cards](/docs/tutorials/first-diagram#slopcamera-example-production-pipeline-title).
+- **Example:** [Fold a pipeline into two rows](/docs/tutorials/first-diagram#slopcamera-example-production-pipeline-title).
 - **Status:** Shown in a rendered example.
 
 ### Diagram themes and revisions

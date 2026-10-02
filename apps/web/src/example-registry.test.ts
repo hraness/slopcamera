@@ -8,7 +8,7 @@ import { assertVisibleExampleGuide, readExampleAssets, validateExampleBytes } fr
 import { exampleMarkdown, exampleMediaRecord, examplesInMarkdown, renderRegisteredExample } from "./example-content"
 import { renderExampleMedia } from "./example-media"
 import { renderDocsMarkdown } from "./docs-markdown"
-import { parseWorkflowExamples, workflowExampleAssets, workflowExamples, type WorkflowExample } from "./example-registry"
+import { exampleUrl, parseWorkflowExamples, workflowExampleAssets, workflowExamples, type WorkflowExample } from "./example-registry"
 
 function fixture(): WorkflowExample {
   return {
@@ -113,6 +113,15 @@ describe("closed documentation examples", () => {
     const withDownload = { ...example, downloads: [{ ...example.poster, label: "Poster" }] }
     expect(renderRegisteredExample(withDownload.id, [withDownload])).toContain('<summary>Download this example</summary><p>Requires:')
     expect(renderRegisteredExample(withDownload.id, [withDownload])).toContain(' download>Poster</a>')
+  })
+
+  test("pairs a still's light poster with its dark render so docs follow the page theme", () => {
+    const example = fixture()
+    const dark = { file: `flow-dark-${"e".repeat(12)}.png`, sha256: "e".repeat(64), bytes: 100, mime: "image/png" as const, label: "Dark PNG" }
+    const html = renderRegisteredExample(example.id, [{ ...example, downloads: [dark] }])
+    expect(html).toContain(`slopcamera-example__media slopcamera-example__media--light" src="${exampleUrl(example.poster)}"`)
+    expect(html).toContain(`slopcamera-example__media slopcamera-example__media--dark" src="${exampleUrl(dark)}"`)
+    expect(renderRegisteredExample(example.id, [example])).not.toContain("slopcamera-example__media--dark")
   })
 
   test("renders real media and mirrors useful links without enabling raw HTML", () => {
