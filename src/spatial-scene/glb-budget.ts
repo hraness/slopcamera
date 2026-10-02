@@ -25,6 +25,8 @@ export interface SpatialGlbBudgetMeasurement {
 }
 
 const count = (maximum: number) => z.number().int().min(0).max(maximum)
+/** Longest embedded image edge the parser admits (the embedded image size check in gltf.ts). */
+const MAX_IMAGE_EDGE = 8192
 
 /** The measurement shape, so measurements stored in a manifest are re-validated before checking. */
 export const SpatialGlbBudgetMeasurementSchema = z.strictObject({
@@ -33,7 +35,7 @@ export const SpatialGlbBudgetMeasurementSchema = z.strictObject({
   textures: count(SPATIAL_GLB_LIMITS.images),
   texturePixels: count(SPATIAL_GLB_LIMITS.imagePixels),
   textureBytes: count(SPATIAL_GLB_LIMITS.imageTotalBytes),
-  maxTextureEdge: count(SPATIAL_GLB_LIMITS.imagePixels),
+  maxTextureEdge: count(MAX_IMAGE_EDGE),
   nonPowerOfTwoTextures: count(SPATIAL_GLB_LIMITS.images),
 })
 
@@ -44,7 +46,7 @@ export const SpatialGlbBudgetSchema = z.strictObject({
   maxTextures: count(SPATIAL_GLB_LIMITS.images).optional(),
   maxTexturePixels: count(SPATIAL_GLB_LIMITS.imagePixels).optional(),
   maxTextureBytes: count(SPATIAL_GLB_LIMITS.imageTotalBytes).optional(),
-  maxTextureEdge: count(65_535).optional(),
+  maxTextureEdge: count(MAX_IMAGE_EDGE).optional(),
   requirePowerOfTwoTextures: z.boolean().optional(),
 })
 export type SpatialGlbBudget = Readonly<z.infer<typeof SpatialGlbBudgetSchema>>

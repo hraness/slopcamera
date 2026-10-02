@@ -25,9 +25,10 @@ those steps is Blender Python in a trusted studio job, as in
 
 The Slopcamera scene importer rejects Draco and meshopt compression, KTX2 and
 other unlisted extensions, tangents, vertex colors, a second UV set and external
-files. It allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image and 32 MiB of images in total. Keep an
-uncompressed GLB as the master and make compressed copies only for a runtime
-that decodes them.
+files. It allows up to 100,000 triangles, 256 primitives,
+65,536 vertices per primitive, 128 images, 16 MiB per image, and
+32 MiB of images in total. Keep an uncompressed GLB as the master and make
+compressed copies only for a runtime that decodes them.
 
 ## Run a small stage first
 

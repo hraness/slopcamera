@@ -98,6 +98,8 @@ describe("GLB delivery budget", () => {
     expect(() => checkSpatialGlbBudget(measurement, { maxTriangles: 100_001 })).toThrow()
     expect(() => checkSpatialGlbBudget(measurement, { maxTriangles: 1.5 })).toThrow()
     expect(() => checkSpatialGlbBudget(measurement, { maxTris: 10 })).toThrow()
+    expect(() => checkSpatialGlbBudget(measurement, { maxTextureEdge: 8193 })).toThrow()
+    expect(checkSpatialGlbBudget(measurement, { maxTextureEdge: 8192 })).toEqual([])
     expect(() => measureSpatialGlbBudget({} as never)).toThrow("parsed GLB model")
   })
 

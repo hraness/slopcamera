@@ -2,6 +2,15 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## Unreleased
+
+Slopcamera checks a GLB against a web delivery budget and an LOD plan, and its Agent Skill guides Blender models to web-ready GLB and applies a default 3D quality bar.
+
+- `measureSpatialGlbBudget`, `checkSpatialGlbBudget` and `checkSpatialGlbLodChain` from `@hraness/slopcamera/code` count a parsed GLB's triangles, primitives and embedded images, and report typed findings when a project budget is exceeded or an LOD level is not lighter than the one before.
+- The Agent Skill's web-ready 3D assets reference covers block-out, high-to-low baking, bake diagnostics, texture budgets, LODs, GLB export, admission and runtime comparison, adapted from the MIT-licensed vgpu Agent Skill.
+- The Agent Skill's 3D quality bar, "accurate physics, AAA graphics, VFX", applies to every 3D brief unless the user overrides it, with a review checklist and the renderer limits that apply.
+- A new how-to, "Make web-ready 3D assets with Blender", walks through the workflow.
+
 ## 3.10.3 - 2026-10-01
 
 Slopcamera rejects malformed SVG overlays promptly and handles long social-variant output paths without slowing down planning.

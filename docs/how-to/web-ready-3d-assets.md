@@ -6,7 +6,7 @@ uses it. Each stage is a Blender Python program in a retained
 [studio job](../studio.md), so a failed bake reruns from the saved low-poly mesh
 instead of from scratch.
 
-Slopcamera has no modelling, baking, decimation or compression command. It runs
+Slopcamera has no modelling, baking, decimation, or compression command. It runs
 your Blender source, records what it wrote, and checks the GLB. The stages
 adapt the Blender asset workflow in Vercel Labs'
 [vgpu Agent Skill](https://github.com/vercel-labs/vgpu/tree/38188e694a20ad355a00faf29aa0bb0ffab0c954/skills/vgpu).
@@ -35,11 +35,11 @@ look instead.
 
 | Target | Accepts |
 | --- | --- |
-| Slopcamera scenes (`scene render`) | Self-contained GLB 2.0, metallic-roughness materials, embedded PNG or JPEG, one UV set. No Draco, meshopt or KTX2. |
+| Slopcamera scenes (`scene render`) | Self-contained GLB 2.0, metallic-roughness materials, embedded PNG or JPEG, one UV set. No Draco, meshopt, or KTX2. |
 | The HTML `three` profile | What the page's Three.js loader decodes. The scaffold stops above 64 draw calls or 200,000 triangles. |
-| Your own web app, or vgpu | What that runtime's loader decodes, such as Draco, meshopt or KTX2. |
+| Your own web app, or vgpu | What that runtime's loader decodes, such as Draco, meshopt, or KTX2. |
 
-For a Slopcamera scene, the importer allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image and 32 MiB of images in total. Keep an uncompressed GLB as the master and make
+For a Slopcamera scene, the importer allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image, and 32 MiB of images in total. Keep an uncompressed GLB as the master and make
 compressed copies only for a runtime that decodes them.
 
 ### 2. Block out the shape
@@ -78,8 +78,8 @@ inverted on bumps, the normal map's green channel is flipped.
 ### 4. Size textures and build LODs
 
 Choose one texel density from the closest camera distance and size each map to
-it, in power-of-two sizes. Store base color in sRGB and normal, roughness,
-metallic and occlusion maps as linear data. A 2048 × 2048 texture takes about
+it, in power-of-two sizes. Store base color in sRGB, and normal, roughness,
+metallic, and occlusion maps as linear data. A 2048 × 2048 texture takes about
 21.3 MiB of GPU memory with mipmaps whether it ships as PNG or JPEG.
 
 Make each LOD lighter than the one before, with fewer triangles and no more
@@ -136,8 +136,8 @@ asset and manifest; switching back is the recovery path.
 
 ## Limits
 
-- The checks count triangles, primitives and embedded images. They do not
-  decode pixels or measure GPU memory, load time or draw cost.
+- The checks count triangles, primitives, and embedded images. They do not
+  decode pixels or measure GPU memory, load time, or draw cost.
 - The Slopcamera scene renderer samples each pixel once and has no
   anti-aliasing, so its stills show stair-stepped edges. Render a final where
   edges matter in a Blender job or the HTML `three` profile.
