@@ -37,6 +37,7 @@ Then give your coding agent the matching guidance:
 - [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.
 - [Convert raster images to SVG](/docs/how-to/vectorize-images): trace artwork locally, compare a duotone treatment, and inspect fidelity.
+- [Paint a deterministic oil study](/docs/how-to/oil-paint): mix named pigment tubes into piles, carry wet paint with bounded bristles, and replay the result.
 - [Generate images, video, and narration](/docs/how-to/generate-media): use your own Vercel AI Gateway account, or prepaid Hraness Credits for prompt-only images.
 - [Make a scrolling pixel landscape](/docs/how-to/pixel-landscapes): compare continuous backgrounds and turn them into palette-checked alpha pixels.
 - [Make a math explainer video with Manim](/docs/how-to/educational-video): keep mathematical visuals, narration, and timing evidence revisable.

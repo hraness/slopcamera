@@ -19,3 +19,7 @@ apps/desktop/analysis/dist/
 # Local builds of the launch-film template
 examples/html/launch-film/out/
 examples/html/launch-film/node_modules/
+
+# Worker scratch and vendored context
+.xcb-*
+tmp-run/

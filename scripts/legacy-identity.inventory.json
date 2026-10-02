@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "653832fc975619b71e427c37ae9e1eaa22bb0318ff462ffeb1fe744bc5e570aa",
+    "identityLinesSha256": "241e99af0b0125a659513342f7940a9e74cf5f690c2acf5747da11b156b1f05a",
     "occurrenceCount": 475,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1939,16 +1939,16 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "da8faf5e51b7725cccf1f37be77d1649361156fc711d6cf6f2997beb7be128d3",
+    "identityLinesSha256": "90b354d809e2bd707e3246f8d1d621ffb2d0d80b9efb61c95a0e19da81dc5162",
     "occurrenceCount": 233,
-    "path": "dist/index-k9r9jex4.js",
+    "path": "dist/index-vgyfkdvt.js",
     "categories": [
       "generated"
     ]
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "75e9b2e3de9f325879d4ab7666c96e0db19ade51bbe7194823aa5f7d022a6d90",
+    "identityLinesSha256": "d7e31da9d8d751d3c428052c231f713e18b7f4c774bfd3a06101237afba77946",
     "occurrenceCount": 64,
     "path": "dist/index.js",
     "categories": [
@@ -3540,7 +3540,7 @@
     "identityLineCount": 1,
     "identityLinesSha256": "b87f8d40f1993e57d4d5140fdb976b34e6a826e94a7b39aa3e6cffa22faa13f2",
     "occurrenceCount": 1,
-    "path": "src/index.ts",
+    "path": "src/index-core.ts",
     "categories": [
       "native-film-studio"
     ]
