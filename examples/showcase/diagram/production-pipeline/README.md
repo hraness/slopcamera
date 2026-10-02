@@ -5,10 +5,18 @@ Check → Render → Review → Deliver**. Review is a human inspection of the
 exports. The arrows describe a useful order of work; they do not invoke an
 automatic scheduler or claim that a successful check guarantees good artwork.
 
-Both sources use a vertical `stack` on a 720×1232 canvas. Their five equal cards have no authored
-`x` or `y` coordinates. Array order determines placement; the four explicit
-edges determine relationships. The 96 px gap leaves each arrow visible at the intended display size.
-Only the delivery card uses a second color role, which is also named in text.
+Both sources place five equal 272×136 cards in two rows on a 1200×520 canvas.
+Author, Check and Render run left to right; the flow turns down at the right
+edge, and Review points back to Deliver. The four explicit edges determine the
+relationships, and no connector crosses the diagram. Each gap leaves at least
+120 px of visible arrow. Only the delivery card uses a second color role, which
+is also named in text.
+
+The canvas is about 2.3 times wider than tall, so it sits in a page column
+without becoming a tower, and its 48 px labels still render at about 13 px on a
+360 px phone screen. An earlier version stacked the five cards vertically on a
+720×1232 canvas; `slopcamera diagram check` now reports a `tall-aspect` finding
+for a canvas more than 1.5 times taller than wide.
 
 | Source | Treatment |
 | --- | --- |

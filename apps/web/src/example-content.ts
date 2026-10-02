@@ -39,7 +39,7 @@ const techniqueLabels: Readonly<Record<string, string>> = {
   "design.spiral-stair": "Parametric stair",
   "diagram.positioned": "Positioned diagram",
   "diagram.revision": "Diagram revision",
-  "diagram.stack": "Stacked diagram",
+  "diagram.stack": "Stack layout",
   "diagram.theming": "Diagram theme",
   "edit.bootstrap": "Timeline bootstrap",
   "edit.cuts-speed": "Cut pacing",
@@ -95,8 +95,11 @@ export function exampleMediaRecord(example: WorkflowExample, includeDownloads = 
   }
 }
 
+/** Documentation stills follow the page theme when the example ships a dark render. */
 export function renderRegisteredExample(id: string, examples: readonly WorkflowExample[] = workflowExamples): string {
-  return renderExampleMedia(exampleMediaRecord(registeredExample(id, examples), true))
+  const example = registeredExample(id, examples)
+  const darkPoster = example.video ? undefined : example.downloads.find(file => file.label === "Dark PNG")
+  return renderExampleMedia(exampleMediaRecord(example, true), darkPoster ? { darkPosterUrl: exampleUrl(darkPoster) } : {})
 }
 
 function markdownText(value: string): string {

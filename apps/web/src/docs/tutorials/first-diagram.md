@@ -58,11 +58,18 @@ The revised source changes “Delivery” to “Social delivery” while preserv
 
 The diagram illustrates media relationships. Importing arbitrary source files does not create a new Slopcamera project; [editing and delivery](/docs/how-to/edit-video) explains the supported entry paths.
 
-## Stack layout
+## Two-row pipeline
 
-For an ordered pipeline, let a stack position equal cards. This source lists five
-steps and four explicit arrows without giving the cards `x` or `y` coordinates.
-Array order controls placement; the edges still state the relationships.
+Lay a sequence out horizontally. A diagram about two to three times wider than
+tall fits a page column without becoming a tower, and its labels stay readable
+on a phone. A stack like the two-node lesson above suits two to four cards in
+one row. For a longer sequence, fold it into two rows instead of stacking it
+vertically.
+
+This source places five equal cards on a 1200×520 canvas. Author, Check and
+Render run left to right, the flow turns down at the right edge, and Review
+points back to Deliver. Four explicit arrows state the order, and none crosses
+the diagram.
 
 ::example[production-pipeline]
 
@@ -70,6 +77,9 @@ The diagram describes a working sequence. Its check and review cards do not run
 an automatic scheduler. Download either theme or the editable canvas, or use the
 [source recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/diagram/production-pipeline)
 to render both versions from a checkout with locked dependencies.
+
+Since v3.11.0, `slopcamera diagram check` reports a `tall-aspect` finding when a
+canvas is more than 1.5 times taller than wide, and `--strict` fails on it.
 
 ## Custom fonts and icons
 

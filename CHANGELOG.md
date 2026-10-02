@@ -2,6 +2,14 @@
 
 Each released version has a section headed with its version, such as `## 3.4.0 - 2026-09-23`. The section holds a summary paragraph and then one bullet per change a user, integrator or operator would notice. The release workflow copies that section onto the GitHub Release page and stops if it is missing, empty or still says Unreleased. Work that has merged but not shipped goes under `## Unreleased`; the version bump pull request renames that heading to the new version.
 
+## 3.11.0 - 2026-10-02
+
+`slopcamera diagram check` now warns when a diagram is a tall tower, and the pipeline example shows the wide two-row layout that reads well on pages and phones.
+
+- Report a `tall-aspect` finding when a diagram canvas is more than 1.5 times taller than wide, with guidance to lay the flow out horizontally or fold it into two rows. `--strict` fails on it like any other finding.
+- Rework the five-step production pipeline example from a 720×1232 vertical stack into a 1200×520 two-row layout, in both its default and themed versions.
+- Document every diagram check finding in the diagram format reference.
+
 ## 3.10.3 - 2026-10-01
 
 Slopcamera rejects malformed SVG overlays promptly and handles long social-variant output paths without slowing down planning.
