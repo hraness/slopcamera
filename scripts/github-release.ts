@@ -13,6 +13,13 @@ export const authorityPaths = [workflow, "scripts/github-release.ts", "scripts/p
   "scripts/npm-package-identity.ts", "scripts/npm-publish-policy.ts", "package.json", "bun.lock"] as const;
 const workflowId = 320001524;
 const actorId = 894119;
+// The hraness-release-tagger App's bot creates the tag when a version bump
+// passes CI on main; releases still run only from tag pushes.
+const taggerId = 337004703;
+function trustedActor(value: unknown, label: string): boolean {
+  const actor = record(value, label);
+  return (actor.id === actorId && actor.type === "User") || (actor.id === taggerId && actor.type === "Bot");
+}
 const authorId = 41898282;
 const sha = /^[a-f0-9]{40}$/u;
 const digest = /^[a-f0-9]{64}$/u;
@@ -129,7 +136,7 @@ export function admitAttempt(value: unknown, expected: { sourceSha: string; tag:
   const repo = record(run.repository, "Release repository");
   if (run.id !== expected.runId || run.run_attempt !== expected.runAttempt || run.head_sha !== expected.sourceSha
     || run.head_branch !== expected.tag || run.workflow_id !== workflowId || run.name !== "Release" || run.path !== workflow || run.event !== "push"
-    || actor.id !== actorId || actor.type !== "User" || triggering.id !== actorId || triggering.type !== "User"
+    || !trustedActor(actor, "Release actor") || !trustedActor(triggering, "Release triggering actor")
     || repo.id !== repositoryId || repo.full_name !== repository || repo.private !== false
     || (completed ? run.status !== "completed" || run.conclusion !== "success" : run.status !== "in_progress" || run.conclusion !== null)) throw new Error("Release attempt is not the exact authorized owner/source/workflow.");
 }
@@ -174,7 +181,7 @@ export async function authorizeRelease(environment = process.env): Promise<strin
   const runId = positive(Number(environment.GITHUB_RUN_ID), "Run ID");
   const runAttempt = positive(Number(environment.GITHUB_RUN_ATTEMPT), "Run attempt");
   if (!sha.test(sourceSha) || tag !== `v${stableVersion(tag.slice(1))}` || environment.GITHUB_REF !== `refs/tags/${tag}`
-    || environment.GITHUB_EVENT_NAME !== "push" || environment.GITHUB_ACTOR_ID !== String(actorId)
+    || environment.GITHUB_EVENT_NAME !== "push" || (environment.GITHUB_ACTOR_ID !== String(actorId) && environment.GITHUB_ACTOR_ID !== String(taggerId))
     || environment.GITHUB_REPOSITORY !== repository || environment.GITHUB_REPOSITORY_ID !== String(repositoryId)
     || environment.GITHUB_WORKFLOW_REF !== `${repository}/${workflow}@refs/tags/${tag}`) throw new Error("Release environment is not the exact protected tag request.");
   const root = record(await request(`/repos/${repository}`), "Repository");

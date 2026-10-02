@@ -12,7 +12,7 @@ Keep the source candidate separate from a verified public release. `apps/web/pub
 
 1. In the version bump pull request, rename the `## Unreleased` heading in `CHANGELOG.md` to the new version, such as `## 3.4.1 - 2026-10-01`, and keep its summary paragraph and change bullets. The release page copies that section. `scripts/push-release-tag.ts`, the verification job and the publisher each stop when the section is missing, empty, still says Unreleased, or lacks a summary followed by bullets.
 2. Merge the new stable source through the current-head Required gate and complete the repository's local and native acceptance. From clean current `main`, run `bun run ./scripts/push-release-tag.ts <exact-stable-version>`. Its sole annotated-tag push follows owner, repository, protected-main, exact CI run/attempt/Required job, both live tag rulesets, immutable GitHub latest and monotonic remote-tag checks. It never publishes npm, moves a tag, or deletes a remote ref.
-3. The protected tag workflow repeats owner and sender ID `894119`, repository ID `1310516748`, annotated tag, source ancestry and current-main workflow/helper closure checks. The read-only job runs the complete source gate, builds one `npm pack --ignore-scripts` archive, independently validates its bounded USTAR inventory and metadata, and exercises the exact archive in isolated Bun and npm consumers. Five official VTracer targets must pass before attestation.
+3. The protected tag workflow repeats the owner (`894119`) or tagger bot (`337004703`) actor and sender ID, repository ID `1310516748`, annotated tag, source ancestry and current-main workflow/helper closure checks. The read-only job runs the complete source gate, builds one `npm pack --ignore-scripts` archive, independently validates its bounded USTAR inventory and metadata, and exercises the exact archive in isolated Bun and npm consumers. Five official VTracer targets must pass before attestation.
 4. A checkout-free job reauthorizes the current run and loads only the byte-identical current-main/tagged release helper. It verifies the four-file handoff against the verification job's digests before requesting OIDC. Pinned `actions/attest` signs the archive, `npm-pack.json`, `release-manifest.json` and `SHA256SUMS`. `provenance.jsonl` carries the returned bundle. No package or product code runs with attestation or release credentials.
 5. The dependent publisher independently verifies the five exact files, cryptographic provenance and hosted source/run/attempt identity. It creates an Actions-authored draft, uploads only missing matching assets, checks all provider names, sizes and digests, rechecks live source/authority and version ordering, then publishes immutable Latest. It never overwrites an asset or deletes/recreates a release. Discover existing drafts through the bounded authenticated release list, require one exact-tag match, and use its positive release ID for readback; GitHub may return 404 for a draft at the tag endpoint. Matching state from the same attempt is reconciled; a prior attempt's different manifest or bundle stops with its exact state rather than relabeling historical provenance.
 6. Verify the live release, download its five assets into a fresh directory, and verify the archive before installation:
@@ -113,9 +113,13 @@ behaviorally aligned.
 Keep two active repository rulesets matching `refs/tags/v*`. **Immutable
 version tags** restricts update and deletion with an empty bypass list.
 **Release tag creation** restricts creation only and gives immutable owner
-`User` ID `894119` the sole always-bypass entry. Do not grant the generic
-GitHub Actions integration, an administrator, a repository role, a team, or
-another integration this bypass, and never combine creation with update or
+`User` ID `894119` and the `hraness-release-tagger` App the only always-bypass
+entries. `.github/workflows/auto-tag.yml` uses that App to create the
+annotated `v<version>` tag once a version bump passes CI on main, and the
+release accepts its `hraness-release-tagger[bot]` user (`Bot` ID `337004703`)
+as the tag pusher. Do not grant the generic GitHub Actions integration, an
+administrator, a repository role, a team, or any other integration this
+bypass, and never combine creation with update or
 deletion. This one-time provider setup lets the already-authenticated owner
 create the exact release tag under standing task authority without a routine
 GitHub sudo approval. Never create probe tags or move a version tag. The canonical GitHub gate is independent of optional npm mirroring.

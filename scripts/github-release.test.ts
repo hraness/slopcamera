@@ -100,6 +100,12 @@ test("release authorization rejects collaborator reruns and stale source or atte
     { repository: { id: 1310516748, full_name: "other/slopcamera", private: false } }]) {
     expect(() => admitAttempt({ ...attempt(), ...change }, m)).toThrow("exact authorized");
   }
+  const tagger = { id: 337004703, type: "Bot" };
+  expect(() => admitAttempt({ ...attempt(), actor: tagger, triggering_actor: tagger }, m)).not.toThrow();
+  expect(() => admitAttempt({ ...attempt(), actor: tagger }, m)).not.toThrow();
+  for (const change of [{ actor: { id: 41898282, type: "Bot" } }, { actor: { id: 337004703, type: "User" } }]) {
+    expect(() => admitAttempt({ ...attempt(), ...change }, m)).toThrow("exact authorized");
+  }
   expect(() => admitAttempt({ ...attempt(), status: "completed", conclusion: "success" }, m, true)).not.toThrow();
   expect(() => admitAttempt(attempt(), m, true)).toThrow("exact authorized");
   expect(() => admitAttempt({ ...attempt(), status: "completed", conclusion: "failure" }, m, true)).toThrow("exact authorized");
@@ -238,6 +244,8 @@ test("live admission rejects drift anywhere in the transitive release helper clo
   try {
     expect(await authorizeRelease(environment)).toBe(current);
     expect([...reads].sort()).toEqual([...authorityPaths].sort());
+    expect(await authorizeRelease({ ...environment, GITHUB_ACTOR_ID: "337004703" })).toBe(current);
+    await expect(authorizeRelease({ ...environment, GITHUB_ACTOR_ID: "41898282" })).rejects.toThrow();
     for (const path of authorityPaths) {
       changedPath = path;
       await expect(authorizeRelease(environment)).rejects.toThrow("Current release authority changed");
@@ -260,7 +268,7 @@ test("canonical workflow preserves all source gates before scoped signing and im
   expect(privileged).not.toContain("actions/checkout@");
   expect(privileged).not.toContain("bun install");
   expect(privileged).not.toContain("npm install");
-  expect(privileged).toContain("run.triggering_actor?.id !== 894119");
+  expect(privileged).toContain("![run.actor, run.triggering_actor].every(a => (a?.id === 894119 && a?.type === 'User') || (run.event === 'push' && a?.id === 337004703 && a?.type === 'Bot'))");
   expect(privileged).toContain("current.equals(decode(e.GITHUB_SHA))");
   expect(privileged).toContain("artifact-ids: ${{ needs.verify.outputs.artifact_id }}");
   expect(privileged).toContain("artifact-ids: ${{ needs.attest.outputs.artifact_id }}");

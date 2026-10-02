@@ -79,6 +79,11 @@ function requireOwnerReleaseAuthorization(workflow: string): void {
   if (!authorize.includes('event.sender?.type !== "User"')) {
     throw new Error("release.yml is missing the immutable sender type guard")
   }
+  if (!authorize.includes('TAGGER_ACTOR_ID: "337004703"')
+    || !authorize.includes('(event.sender?.id !== Number(process.env.TAGGER_ACTOR_ID) || event.sender?.type !== "Bot")')
+    || !authorize.includes("event.sender?.id !== Number(process.env.GITHUB_ACTOR_ID)")) {
+    throw new Error("release.yml is missing the exact release tagger guard")
+  }
   const firstCheckout = workflow.indexOf("actions/checkout@")
   if (firstCheckout === -1 || firstCheckout < end) {
     throw new Error("release.yml must authorize before checkout")
@@ -386,6 +391,12 @@ test("hostile actor or sender drift cannot reach the protected release workflow"
   expect(senderDrift).not.toBe(workflow)
   expect(() => requireOwnerReleaseAuthorization(senderDrift)).toThrow(
     "exact event sender guard",
+  )
+
+  const taggerDrift = workflow.replace('TAGGER_ACTOR_ID: "337004703"', 'TAGGER_ACTOR_ID: "41898282"')
+  expect(taggerDrift).not.toBe(workflow)
+  expect(() => requireOwnerReleaseAuthorization(taggerDrift)).toThrow(
+    "exact release tagger guard",
   )
 })
 
@@ -1008,7 +1019,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).not.toContain("bun run")
   expect(publishJob).not.toContain("./scripts/")
   expect(publishJob).toContain("name: Load current release authority")
-  expect(publishJob).toContain("run.triggering_actor?.id !== 894119")
+  expect(publishJob).toContain("![run.actor, run.triggering_actor].every(a => (a?.id === 894119 && a?.type === 'User') || (run.event === 'push' && a?.id === 337004703 && a?.type === 'Bot'))")
   expect(publishJob).toContain("run.workflow_id !== 320001524")
   expect(publishJob).toContain("current.equals(decode(e.GITHUB_SHA))")
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" authorize "$RUNNER_TEMP"')
