@@ -90,6 +90,15 @@ export interface CopyFacts {
     readonly images: number;
     readonly moduleMiB: number;
   };
+  /** Static-scene GLB import limits, from `SPATIAL_GLB_LIMITS`. */
+  readonly sceneGlb: {
+    readonly triangles: number;
+    readonly primitives: number;
+    readonly verticesPerPrimitive: number;
+    readonly images: number;
+    readonly imageMiB: number;
+    readonly imageTotalMiB: number;
+  };
 }
 
 export interface CopyClaim {
@@ -293,6 +302,48 @@ export const COPY_RULES: readonly CopyRule[] = [
     pattern: re(String.raw`\ba ${NUMBER} MiB generated module\b`),
     expected: (facts) => [facts.riggedGlb.moduleMiB],
     describe: "`THREE_RIGGED_GLB_LIMITS.moduleBytes` in apps/desktop/html-overlay/rigged-glb.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-triangles",
+    pattern: re(String.raw`\b(?:allows|accepts) up to ${NUMBER} triangles\b`),
+    expected: (facts) => [facts.sceneGlb.triangles],
+    describe: "`SPATIAL_GLB_LIMITS.triangles` in src/spatial-scene/gltf.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-primitives",
+    pattern: re(String.raw`\btriangles, ${NUMBER} primitives\b`),
+    expected: (facts) => [facts.sceneGlb.primitives],
+    describe: "`SPATIAL_GLB_LIMITS.primitives` in src/spatial-scene/gltf.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-vertices",
+    pattern: re(String.raw`\b${NUMBER} vertices per primitive\b`),
+    expected: (facts) => [facts.sceneGlb.verticesPerPrimitive],
+    describe: "`SPATIAL_GLB_LIMITS.verticesPerPrimitive` in src/spatial-scene/gltf.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-images",
+    pattern: re(String.raw`\bper primitive, ${NUMBER} images\b`),
+    expected: (facts) => [facts.sceneGlb.images],
+    describe: "`SPATIAL_GLB_LIMITS.images` in src/spatial-scene/gltf.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-image-bytes",
+    pattern: re(String.raw`\b${NUMBER} MiB per image\b`),
+    expected: (facts) => [facts.sceneGlb.imageMiB],
+    describe: "`SPATIAL_GLB_LIMITS.imageBytes` in src/spatial-scene/gltf.ts",
+  },
+  {
+    kind: "count",
+    name: "scene-glb-image-total",
+    pattern: re(String.raw`\b${NUMBER} MiB of images in total\b`),
+    expected: (facts) => [facts.sceneGlb.imageTotalMiB],
+    describe: "`SPATIAL_GLB_LIMITS.imageTotalBytes` in src/spatial-scene/gltf.ts",
   },
   {
     kind: "text",

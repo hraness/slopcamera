@@ -36,6 +36,7 @@ const facts: CopyFacts = {
   ],
   releaseCommit: "e08bacf68c140062d9e2aebf314a4bd5d4d17cb7",
   riggedGlb: { images: 32, jointsPerSkin: 256, moduleMiB: 32, nodes: 1024, skins: 64 },
+  sceneGlb: { imageMiB: 16, imageTotalMiB: 32, images: 128, primitives: 256, triangles: 100_000, verticesPerPrimitive: 65_536 },
   styleProfileCount: 17,
   version: "3.4.0",
   workflowCount: 8,
@@ -187,4 +188,11 @@ test("icon and soundtrack tools count separately from scene tools", () => {
     .filter((claim) => claim.problem !== undefined)
     .map((claim) => claim.rule);
   expect(stale).toEqual(["scene-tools", "media-tools"]);
+});
+
+test("static-scene GLB import limits are checked against the parser profile", () => {
+  const current = "It allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image and 32 MiB of images in total.";
+  expect(problems(current)).toEqual([]);
+  const stale = "It allows up to 50,000 triangles, 256 primitives, 65,536 vertices per primitive, 64 images, 16 MiB per image and 32 MiB of images in total.";
+  expect(problems(stale).map((claim) => claim.rule)).toEqual(["scene-glb-triangles", "scene-glb-images"]);
 });

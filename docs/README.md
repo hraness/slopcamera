@@ -31,6 +31,7 @@ Install the [current SlopCamera release](../README.md#install-slopcamera) for th
 - [Build a directed cinematic character world](how-to/cinematic-character-worlds.md): admit a rigged world, direct it semantically, plan effects and galleries, and audit temporal evidence.
 - [Plan camera moves, lighting, and effects for a 3D scene](how-to/direct-cinematic-worlds.md): author an inert recipe pack and run the `cinematic-world` planning-and-review workflow.
 - [Make a math explainer video with Manim](how-to/educational-video.md): keep mathematical visuals, narration, and timing evidence revisable.
+- [Make web-ready 3D assets with Blender](how-to/web-ready-3d-assets.md): bake detail onto a light mesh, export GLB levels of detail, and check budgets.
 - [Run or recover a workflow](how-to/run-workflows.md): use a built-in recipe or trusted Bun module and inspect its durable run.
 - [Configure Vercel](vercel.md), [publish SlopCamera](publishing.md), [operate the hosted API](hosted-api.md), or [file a platform submission](platform-submission.md): provider and maintainer procedures.
 

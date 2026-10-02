@@ -17,6 +17,10 @@ preserve deliberate pixel grids, period aspect ratios, source limits, and the
 user's explicit settings. Treat quality as staging,
 materials, movement, and finishing together.
 
+For every 3D brief, apply the [3D quality bar](references/3d-quality-bar.md),
+"accurate physics, AAA graphics, VFX", unless the user overrides it, and review
+the render against all three parts before handing it back.
+
 ## Establish the host
 
 Run `slopcamera --help` and use `slopcamera doctor --json` for the selected local tools. `slopcamera status --json` reports what is running, credits and the newest outputs; `slopcamera commands --json` lists every command with what it may change. If installation or a version mismatch blocks the task, read [installation and readiness](references/install.md). A skill installation does not install the CLI or native engines.
@@ -51,6 +55,8 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Refine an existing scene, organic interactions, contact, staging, or final movie quality | [Scene refinement](references/scene-building.md#refine-an-existing-scene) |
 | Parametric architecture, furniture, dimensions, repeated structures or editable design variants | [Parametric design](references/parametric-design.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
+| Any 3D brief: physics, PBR, color management, anti-aliasing, VFX and the review checklist | [3D quality bar](references/3d-quality-bar.md) |
+| Blender model for the web: high-to-low baking, texture budgets, LODs, GLB export and runtime checks | [Web-ready 3D assets](references/web-ready-3d-assets.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |
 | Typed Bun SDK, built-in workflow, durable resume or MCP | [Workflows and SDK](references/workflows-sdk.md) |
 | Reference-led Three scene, transparent 3D loop or metallic logo | [Reference-led 3D](references/reference-led-3d.md) |

@@ -9,6 +9,7 @@
 - `behavior-stdlib.ts` – standard-library organisms composing the fn catalog into reusable patterns: locomotion FSM, expression layer, interaction sequence, and the combined top-level organism that chains pairwise append across all three.
 - `behavior-audit.ts` – behavior-trace audit: state-thrash, exact-periodicity, dead-channel, and unreachable-state findings on baked emitted traces; advisory for gallery review.
 - `behavior-authoring.test.ts` – end-to-end authoring proof: assembles a behavior doc from stdlib organisms, runs check→bake→audit→gallery, verifies incremental composition and deterministic replay.
+- `glb-budget.ts` – pure delivery-budget measurement for one parsed GLB (instanced triangles, primitives, referenced texture count, pixels, encoded bytes, longest edge) plus project-budget and LOD-chain checks returning typed findings.
 - Pure identity, evaluation, inspection and audit modules – scene source and derived state without host effects.
 - Colocated deterministic and property tests – reference, transformation, time and edit laws.
 

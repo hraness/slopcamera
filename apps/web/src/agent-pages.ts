@@ -175,6 +175,7 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 - [Render and edit Three.js 3D scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
 - [Plan camera moves, lighting, and effects for a 3D scene](https://slopcamera.com/docs/how-to/cinematic-worlds.md): Recipe packs, direction, galleries, effects, and audits
 - [Render Blender, CadQuery, and Manim films from source](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
+- [Make web-ready 3D assets with Blender](https://slopcamera.com/docs/how-to/web-ready-3d-assets.md): Baking, GLB levels of detail, budgets, and admission
 - [Direct generated clips](https://slopcamera.com/docs/how-to/direct-takes.md): Shot recipes, budgets, takes, and review
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
 - [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup

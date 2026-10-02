@@ -4,6 +4,16 @@ The `cinematic-world` workflow takes one 3D scene from direction to review. It c
 
 This guide is the durable-graph counterpart of [building a directed cinematic character world](cinematic-character-worlds.md), which covers the same surfaces command by command.
 
+## Ask for the quality bar
+
+When an agent with the Slopcamera Agent Skill writes the scene, a brief can set the quality bar in one line:
+
+```text
+A lantern-lit courtyard reveal at dusk: accurate physics, AAA graphics, VFX.
+```
+
+The skill applies that bar to every 3D brief unless you override it: real-world scale and contact, physically based materials, a tone map, soft shadows and clean edges, and effects only where they help the shot. The agent checks the rendered previews against all three parts before it hands them back. The spatial scene renderer has no live physics and no anti-aliasing, so the agent reports those limits when they apply.
+
 ## Author the direction
 
 A `slopcamera.spatial-direction` document describes beats, actions, camera coverage, and look intents semantically. Its `projectDigest` must equal the scene's canonical SHA-256:
