@@ -1604,7 +1604,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "c6e7b41d61058c9c78e323585cfdd537605311ab022f4afb3d2e79c8e4f9080a",
+    "identityLinesSha256": "47ab62a69f9ae978068dfc2effcd82807ffc53b8979e473332e9c2b0740a47bf",
     "occurrenceCount": 3,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
@@ -1614,7 +1614,7 @@
   },
   {
     "identityLineCount": 18,
-    "identityLinesSha256": "c627dd3e83ac91331c11647eef0a0bd4df65b178e4a7caed91bd78605701d5d7",
+    "identityLinesSha256": "ce2d5ba359c98be88437e4b40e6b7f9c73746babcd44f684731279c8196d5160",
     "occurrenceCount": 23,
     "path": "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md",
     "categories": [

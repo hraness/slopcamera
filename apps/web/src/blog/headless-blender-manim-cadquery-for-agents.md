@@ -4,7 +4,7 @@ A Blender product shot often needs a second version: warmer metal, a lower camer
 
 [MCP for Blender](https://github.com/ahujasid/mcp-for-blender) connects an agent to an open Blender session. You can watch the scene change in the viewport, inspect existing objects and explore an idea interactively. Save the Blender file and any scripts you want to reuse; either can be part of a repeatable workflow. The project's setup guide explains the access its code-execution tool has.
 
-A scene program is useful when a render should start from declared inputs. Blender supports [command-line rendering](https://docs.blender.org/manual/en/latest/advanced/command_line/render.html), Manim renders scene classes through [its CLI](https://docs.manim.community/en/stable/guides/configuration.html), and [CadQuery](https://cadquery.readthedocs.io/en/latest/intro.html) builds solids in Python. SlopCamera's `studio` commands package a scene program with its settings and outputs, then run that saved job.
+A scene program is useful when a render should start from declared inputs. Blender supports [command-line rendering](https://docs.blender.org/manual/en/latest/advanced/command_line/render.html), Manim renders scene classes through [its CLI](https://docs.manim.community/en/stable/guides/configuration.html), and [CadQuery](https://cadquery.readthedocs.io/en/latest/intro.html) builds solids in Python. Slopcamera's `studio` commands package a scene program with its settings and outputs, then run that saved job.
 
 ## What the agent writes
 
@@ -16,7 +16,7 @@ The [product example](https://github.com/hraness/slopcamera/tree/d2accc8badd991f
 
 A `job.json` file sets the rest: 1280×720, frames 0 to 143 at 24 fps, Cycles with 32 samples and denoising, the AgX view transform, and two outputs, a PNG sequence and the saved `.blend` file.
 
-That split is where the agent saves effort. It writes or edits the scene code. SlopCamera handles the rest. It copies the listed files into a fixed bundle and starts Blender with no window and no user preferences. `studio run` checks that every declared frame and file was written. `studio encode` makes a video that it checks frame by frame against the PNGs, and `studio assemble` puts the clip in an ordinary video project. The agent does not rewrite render settings, file handling, or encoding each time. To start a new film, it picks one of seven starters:
+That split is where the agent saves effort. It writes or edits the scene code. Slopcamera handles the rest. It copies the listed files into a fixed bundle and starts Blender with no window and no user preferences. `studio run` checks that every declared frame and file was written. `studio encode` makes a video that it checks frame by frame against the PNGs, and `studio assemble` puts the clip in an ordinary video project. The agent does not rewrite render settings, file handling, or encoding each time. To start a new film, it picks one of seven starters:
 
 ```sh
 slopcamera studio init product --template blender-product --json
@@ -78,13 +78,13 @@ The same CadQuery source builds the larger part, and it rejects values outside i
 
 The [geometry lesson](https://github.com/hraness/slopcamera/tree/d2accc8badd991f288bb0c83668efc641aa89981/examples/showcase/native/education) is a ten-second portrait Manim render: a 3–4–5 triangle becomes 9 + 16 = 25 square tiles, with a presenter, typeset math, and a caption rail. Scene timings, gestures, and captions live in the lesson source.
 
-SlopCamera's Manim driver renders silent visuals and rejects audio in the scene source. Narration, music, and effects go in the video project instead. When the voice-over changes, the agent edits the project. It does not render the math again. The [math explainer guide](/docs/how-to/educational-video) covers this path from `studio init lesson --template manim-lesson`.
+Slopcamera's Manim driver renders silent visuals and rejects audio in the scene source. Narration, music, and effects go in the video project instead. When the voice-over changes, the agent edits the project. It does not render the math again. The [math explainer guide](/docs/how-to/educational-video) covers this path from `studio init lesson --template manim-lesson`.
 
 ## Know what runs on your machine
 
 - `studio run` runs the bundled Python as your user. There is no operating-system sandbox. Blender starts with scripts embedded in `.blend` files turned off and with a clean environment, and your AI provider keys are not passed to it. That limits what the run inherits. It does not contain what the Python itself can do.
 - Every run needs `--allow-trusted-code` on that command. Choosing a Blender or Python path does not grant it, and a stored approval cannot stand in for it. Read the source first, especially anything downloaded.
-- You install the engines. SlopCamera does not install or upgrade Blender, CadQuery, or Manim. Use the versions and platforms named in the linked recipe, then run `studio probe` before a render.
+- You install the engines. Slopcamera does not install or upgrade Blender, CadQuery, or Manim. Use the versions and platforms named in the linked recipe, then run `studio probe` before a render.
 - A GPU request fails if no GPU is available. The product job asks for Cycles on the GPU. To render on the CPU, set `device: "cpu"` in a new job.
 - A failed or interrupted run is never started again on its own. `studio inspect` and `studio reconcile` show what happened before you choose a new job.
 
@@ -94,7 +94,7 @@ The [native engines reference](/docs/reference/native-engines) lists the full ru
 
 A live MCP session suits sketching in an open Blender window, poking at an existing `.blend`, or asking questions about a scene. Scene source you keep suits work that will be revised or rendered again: product shots with several color variants, parts whose dimensions change, and lessons whose narration will be rewritten. You can use both. Explore live, then have the agent write the scene you settled on as a `scene.py`.
 
-For how this fits the rest of SlopCamera, read [why SlopCamera](/docs/explanation/why-slopcamera), the [native film guide](/docs/how-to/native-films), and the films section of the [techniques reference](/docs/reference/techniques#films-from-blender-cadquery-and-manim). [Remotion alternatives for coding agents](/docs/explanation/remotion-alternatives-for-coding-agents#mcp-for-blender) compares MCP for Blender with other tools. The guide also covers cloth and fluid caches, character rigs, color and alpha masters, and imported models.
+For how this fits the rest of Slopcamera, read [why Slopcamera](/docs/explanation/why-slopcamera), the [native film guide](/docs/how-to/native-films), and the films section of the [techniques reference](/docs/reference/techniques#films-from-blender-cadquery-and-manim). [Remotion alternatives for coding agents](/docs/explanation/remotion-alternatives-for-coding-agents#mcp-for-blender) compares MCP for Blender with other tools. The guide also covers cloth and fluid caches, character rigs, color and alpha masters, and imported models.
 
 ## Limits
 
