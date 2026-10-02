@@ -1029,7 +1029,7 @@ test("the tag workflow publishes the exact immutable release bytes to npm throug
   expect(publishJob).toContain('node "$RUNNER_TEMP/github-release.ts" npm-admit "$RUNNER_TEMP/slopcamera-release"')
   expect(publishJob).toContain("name: Rebind attested package before OIDC")
   expect(publishJob).toContain('const expectedName = "@hraness/slopcamera"')
-  expect(publishJob).toContain("const maximumFiles = 580")
+  expect(publishJob).toContain("const maximumFiles = 640")
   expect(publishJob).toContain("const maximumPackedBytes = 5_200_000")
   expect(publishJob).toContain("const maximumUnpackedBytes = 15_000_000")
   expect(publishJob).toContain("record.files.length !== record.entryCount")
@@ -1401,25 +1401,25 @@ test("both tar readers bound file count and content independently of USTAR frami
     readFile(join(import.meta.dir, "npm-publish-authority.ts"), "utf8"),
     readFile(join(import.meta.dir, "github-release.ts"), "utf8"),
   ])
-  expect(identitySource).toContain("const maximumEntries = 580;")
+  expect(identitySource).toContain("const maximumEntries = 640;")
   expect(identitySource).toContain("const maximumArchiveBytes = 5_200_000;")
   expect(identitySource).toContain("const maximumContentBytes = 15_000_000;")
   expect(identitySource).toContain("maximumContentBytes + maximumEntries * 1_024 + 1_024")
-  expect(smoke).toContain("const maximumPackedFiles = 580;")
+  expect(smoke).toContain("const maximumPackedFiles = 640;")
   expect(smoke).toContain("const maximumPackedBytes = 5_200_000;")
   expect(smoke).toContain("const maximumUnpackedBytes = 15_000_000;")
   expect(npmAuthority).toContain("const maximumArchiveBytes = 5_200_000;")
   expect(canonicalRelease).toContain('positive(archive.bytes, "Archive size") > 5_200_000')
-  expect(script).toContain("const maximumFiles = 580;")
+  expect(script).toContain("const maximumFiles = 640;")
   expect(script).toContain("maxOutputLength: maximumUnpackedBytes + maximumFiles * 1_024 + 1_024")
-  const maximumAlignedTarBytes = Math.floor((15_000_000 + 580 * 1_024 + 1_024) / 512) * 512
-  expect(maximumAlignedTarBytes).toBe(15_594_496)
+  const maximumAlignedTarBytes = Math.floor((15_000_000 + 640 * 1_024 + 1_024) / 512) * 512
+  expect(maximumAlignedTarBytes).toBe(15_655_936)
   const root = await mkdtemp(join(tmpdir(), "slopcamera-tar-budgets-"))
   try {
     for (const scenario of ["at-all-limits", "content-over", "count-over", "framing-over"] as const) {
       await rm(join(root, "slopcamera-release"), { recursive: true, force: true })
       const artifact = await writeReleaseArtifactFixture(root, undefined, {
-        entries: scenario === "count-over" ? 581 : 580,
+        entries: scenario === "count-over" ? 641 : 640,
         contentBytes: scenario === "content-over" ? 15_000_001 : 15_000_000,
         serializedBytes: maximumAlignedTarBytes + (scenario === "framing-over" ? 512 : 0),
       })
@@ -1430,7 +1430,7 @@ test("both tar readers bound file count and content independently of USTAR frami
         const removed = metadata[0]!.files.findIndex(file => file.path.startsWith("fixture-") && file.size === 0)
         if (removed < 0) throw new Error("Fixture has no empty extra file")
         metadata[0]!.files.splice(removed, 1)
-        metadata[0]!.entryCount = 580
+        metadata[0]!.entryCount = 640
       } else if (scenario === "content-over") {
         metadata[0]!.files.at(-1)!.size -= 1
         metadata[0]!.unpackedSize = 15_000_000
@@ -1463,7 +1463,7 @@ test("package smoke rejects oversized tar framing before installing a package be
   try {
     const guard = join(work, "deny-processes.ts")
     await writeFile(guard, `for (const name of ["spawn", "spawnSync"]) Object.defineProperty(Bun, name, { value: () => { throw new Error("PACKAGE_SMOKE_INSTALL_REACHED"); } });\n`)
-    const maximumAlignedTarBytes = Math.floor((15_000_000 + 580 * 1_024 + 1_024) / 512) * 512
+    const maximumAlignedTarBytes = Math.floor((15_000_000 + 640 * 1_024 + 1_024) / 512) * 512
     for (const extraBlock of [0, 1]) {
       const entries: PackageFixtureEntry[] = [
         { path: "package.json", body: "{}\n", mode: 0o644 },
@@ -1471,7 +1471,7 @@ test("package smoke rejects oversized tar framing before installing a package be
       ]
       const contents = packageFixtureTar(entries)
       const tar = Buffer.concat([contents, Buffer.alloc(maximumAlignedTarBytes + extraBlock * 512 - contents.length)])
-      expect(tar.length).toBe(extraBlock === 0 ? 15_594_496 : 15_595_008)
+      expect(tar.length).toBe(extraBlock === 0 ? 15_655_936 : 15_656_448)
       const archive = gzipSync(tar, { level: 9 })
       const metadata: readonly Record<string, unknown>[] = [{ ...npmPackFixture(archive, entries)[0]!, filename, version: manifest.version }]
       expect(metadata[0]!.unpackedSize).toBeLessThan(15_000_000)

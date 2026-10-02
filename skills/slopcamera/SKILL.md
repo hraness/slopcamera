@@ -13,9 +13,7 @@ staging, a hardest-shot test, deliberate sound, and a visible source revision.
 Use [visual style direction](references/visual-style-direction.md) for historical
 footage, animation families, resolution, and visual review. Default to native 4K
 for an unspecified creative master when the renderer and source support it;
-preserve deliberate pixel grids, period aspect ratios, source limits, and the
-user's explicit settings. Treat quality as staging,
-materials, movement, and finishing together.
+preserve deliberate pixel grids, period aspect ratios, source limits, and the user's explicit settings. Treat quality as staging, materials, movement, and finishing together.
 
 ## Establish the host
 
@@ -33,6 +31,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Patent-style drawing sheets, physical margins, monochrome SVGs or a drawing PDF | [Drawing sheets](references/patent-drawings.md) |
 | Custom diagram themes, fonts or icon packages | [Customization](references/customization.md) |
 | Raster artwork converted to SVG | [Vectorization](references/vectorization.md) |
+| Deterministic oil-paint study from named tubes and replayable bristle strokes | [Oil paint](references/oil-paint.md) |
 | Deterministic vector icon, icon scene or construction program, no model | [Icon scenes](references/icon-place.md) |
 | Tempo, meter and section cues from a Soundfish score or MIDI file | [Soundtracks](references/soundtracks.md) |
 | Clean up, caption, frame, or deliver existing recordings and footage | [Video projects](references/video-projects.md) |

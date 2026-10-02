@@ -66,3 +66,10 @@ package's `THIRD_PARTY_NOTICES.md` and `licenses/` record.
 Slopcamera imports their library entry points only and never runs their
 commands. The Soundfish Agent Skill ships with `@hraness/soundfish`, not with
 Slopcamera.
+
+The bounded oil-paint technique adapts the physical-bristle, wet-film,
+drying-clock, pigment-pile, and Kubelka–Munk ideas studied from
+[`aliceisjustplaying/claude-paint`](https://github.com/aliceisjustplaying/claude-paint),
+used under its MIT License (Copyright © aliceisjustplaying). Slopcamera's
+TypeScript implementation is an independent reimplementation and does not
+include that source tree.

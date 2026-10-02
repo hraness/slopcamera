@@ -128,7 +128,7 @@ describe("media studio public copy (pure, process-free)", () => {
   test("the diagram fallback retains the released commands and five real derived outputs", async () => {
     const [guide, webGuide, cli, artifacts] = await Promise.all([
       read("docs/tutorials/first-diagram.md"), read("apps/web/src/docs/tutorials/first-diagram.md"),
-      read("src/cli.ts"), read("src/artifacts.ts"),
+      read("src/cli-core.ts"), read("src/artifacts.ts"),
     ])
     expect(cli).toContain('name: "example-flow"')
     expect(artifacts).toContain('`${spec.name}.tldr`')

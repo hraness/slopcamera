@@ -23,7 +23,7 @@ Commands:
                                  Direct short Gateway clips with retained takes and budgets
   studio init|bundle|plan|probe|run|encode|asset|assemble|inspect|reconcile
                                  Author and render retained Blender, CAD and Manim productions
-  image vectorize|generate|gallery|icon|landscape
+  image vectorize|generate|gallery|icon|landscape|oil-paint
                                  Create local SVGs, generated images, or review galleries
   html catalog|scaffold|init|render|still|preview|deliver
                                  Author HTML scenes and launch films, render, and deliver web video
@@ -278,6 +278,8 @@ line art and outlined uppercase labels. Init never overwrites; check is read-onl
 one vector PDF, one SVG per sheet and a drawing receipt. Geometry checks do not certify legal
 compliance. Drawing sheets are exposed through this CLI and the root SDK, not code/MCP operations.`,
   image: `Usage:
+  slopcamera image oil-paint <spec.json> --output <file.ppm> [--log <file.json>] [--json]
+  slopcamera image oil-paint --replay <log.json> --output <file.ppm> [--json]
   slopcamera image vectorize <raster-path> --output <file.svg> [--json]
         [--duotone '<#primary,#secondary>'] [--alpha-cutoff <n>] [--timeout-ms <n>]
   slopcamera image generate <prompt> --output <file.webp> [--model <model>]
@@ -756,7 +758,7 @@ export function completions(words: readonly string[]): readonly string[] {
   if (command === "diagram") return words[1] === "sheets"
     ? ["init", "check", "render"]
     : ["init", "check", "render", "sheets"];
-  if (command === "image") return words[1] === "icon" ? ["compose", "render"] : words[1] === "landscape" ? ["plan", "run", "process", "repair"] : ["vectorize", "generate", "gallery", "icon", "landscape"];
+  if (command === "image") return words[1] === "icon" ? ["compose", "render"] : words[1] === "landscape" ? ["plan", "run", "process", "repair"] : ["vectorize", "generate", "gallery", "icon", "landscape", "oil-paint"];
   if (command === "workflows") return ["list", "show", "plan", "run"];
   if (command === "code") return ["init", "check", "plan", "run"];
   if (command === "runs") return ["list", "show", "resume", "approve", "cancel"];

@@ -117,6 +117,7 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
   },
   "docs/how-to/direct-takes.html": { description: "Budget, review takes, and keep continuity." },
   "docs/how-to/run-workflows.html": { description: "Run a recipe and inspect its durable run." },
+  "docs/how-to/oil-paint.html": { description: "Piles from pigment tubes, replayable bristle strokes." },
   "docs/reference/techniques.html": {
     headline: "Techniques catalog",
     description: "Every packaged technique by job, with its first command and guide.",

@@ -49,9 +49,9 @@ const nodeImportSpecifiers = importSpecifiers.slice(0, 8);
 // immutable 3.10.3 inventory (567 files, 14,644,682 content bytes). The count
 // budget admits this growth; packed and content byte bounds stay unchanged.
 // Final rebuilt candidates must still pass these bounded admission limits.
-// Archive: at most 580 files, 5.2 MB packed and 15 MB of file content.
+// Archive: at most 640 files, 5.2 MB packed and 15 MB of file content.
 // Independent readers add only bounded USTAR headers, padding and termination.
-const maximumPackedFiles = 580;
+const maximumPackedFiles = 640;
 const maximumPackedBytes = 5_200_000;
 const maximumUnpackedBytes = 15_000_000;
 const packedHtmlExamplePaths = [

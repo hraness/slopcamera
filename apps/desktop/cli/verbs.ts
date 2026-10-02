@@ -107,6 +107,7 @@ export const CLI_VERBS: readonly VerbRow[] = [
   row("image icon", "operate", "Generate a line-art SVG icon"),
   row("image icon compose", "operate", "Solve a vector icon scene and report its digests"),
   row("image icon render", "operate", "Draw a vector icon scene or recipe to inert SVG"),
+  row("image oil-paint", "operate", "Paint a deterministic spectral oil study"),
 
   row("html catalog", "read", "List HTML scene profiles"),
   row("html scaffold", "operate", "Write a new HTML scene"),

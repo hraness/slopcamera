@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "width": 160,
+  "height": 120,
+  "seed": 23,
+  "ground": { "color": "#e8dcc8", "tooth": 0.55, "relief": 0.8 },
+  "tubes": [
+    { "name": "titanium white", "color": "#f5f0e5", "opacity": 0.96, "scattering": 1.1, "drying": 0.7 },
+    { "name": "ultramarine", "color": "#1e3f9a", "opacity": 0.92, "scattering": 0.8, "drying": 0.65 },
+    { "name": "burnt sienna", "color": "#8c4029", "opacity": 0.9, "scattering": 0.9, "drying": 0.8 },
+    { "name": "sap green", "color": "#3f6b3a", "opacity": 0.9, "scattering": 0.85, "drying": 0.7 }
+  ],
+  "piles": [
+    { "name": "sky violet", "knifePasses": 4, "ingredients": [
+      { "tube": "ultramarine", "amount": 2 },
+      { "tube": "titanium white", "amount": 1 }
+    ] },
+    { "name": "distant hill", "knifePasses": 3, "ingredients": [
+      { "tube": "sap green", "amount": 1 },
+      { "tube": "ultramarine", "amount": 0.35 },
+      { "tube": "titanium white", "amount": 0.2 }
+    ] },
+    { "name": "warm earth", "knifePasses": 3, "ingredients": [
+      { "tube": "burnt sienna", "amount": 1 },
+      { "tube": "sap green", "amount": 0.2 }
+    ] }
+  ],
+  "layers": [
+    { "name": "underpainting", "waitSteps": 18, "strokes": [
+      { "pile": "warm earth", "points": [[12, 92], [148, 89]], "pressure": [0.82, 0.65], "brush": { "kind": "hog", "bristles": 24, "width": 18 } },
+      { "pile": "distant hill", "points": [[18, 72], [72, 64], [142, 70]], "pressure": [0.7, 0.52], "brush": { "kind": "filbert", "bristles": 20, "width": 14 } }
+    ] },
+    { "name": "sky and accents", "waitSteps": 0, "strokes": [
+      { "pile": "sky violet", "points": [[12, 28], [148, 28]], "pressure": [0.68, 0.5], "brush": { "kind": "round", "bristles": 18, "width": 13 } },
+      { "pile": "distant hill", "points": [[18, 70], [70, 62], [142, 68]], "pressure": [0.55, 0.38], "brush": { "kind": "fan", "bristles": 18, "width": 18 } }
+    ] }
+  ]
+}

@@ -16,6 +16,7 @@ Install the [current SlopCamera release](../README.md#install-slopcamera) for th
 - [Direct a film](how-to/direct-a-film.md): write a useful brief, test the hardest shot, and refine composition, movement, and sound.
 - [Run current-source commands](how-to/use-current-source.md): build an exact checkout of SlopCamera.
 - [Prepare patent-style drawing sheets](how-to/patent-drawings.md): retain diagram source, check physical bounds, and render monochrome SVG sheets and a PDF.
+- [Paint a deterministic oil study](how-to/oil-paint.md): mix named pigment tubes into piles, carry wet paint with bounded bristles, and replay the result.
 
 - [Render motion graphics from HTML](how-to/render-motion-graphics.md): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Direct a film or animation style](how-to/direct-visual-styles.md): use reusable art direction and render the original style studies; requires current source.
