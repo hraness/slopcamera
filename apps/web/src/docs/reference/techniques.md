@@ -230,6 +230,15 @@ What you get: an existing textured GLB model lit in Blender and rendered from se
 - **Example:** [Import a textured packaging mockup](/docs/how-to/native-films#slopcamera-example-native-import-model-hero-title).
 - **Status:** Shown in a rendered example.
 
+### Web-ready 3D assets
+
+What you get: a Blender model baked onto a light mesh and exported as GLB levels of detail, each admitted into a scene-ready manifest and checked against triangle and texture budgets.
+
+- **Use when:** a model must load quickly in a Three.js scene, a web page, or a WebGPU runtime.
+- **Start with:** `slopcamera studio init chair --template blender-product --json`, then `slopcamera scene asset admit chair.lod0.glb --source-root assets --output chair.lod0.manifest.json --json`.
+- **Guide:** [Make web-ready 3D assets with Blender](/docs/how-to/web-ready-3d-assets).
+- **Status:** Available, no rendered example yet. The budget and LOD checks need a source build until they ship in a release.
+
 ### Character animation
 
 What you get: a Blender character with a weighted rig, an IK target, and facial shape keys, animated with gestures such as a wave or a blink.

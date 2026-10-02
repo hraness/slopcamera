@@ -43,6 +43,7 @@ Then give your coding agent the matching guidance:
 - [Build and revise a parametric design](/docs/how-to/parametric-design): compile an architectural or furniture study, change its dimensions, and compare the rendered result.
 - [Plan camera moves, lighting, and effects for a 3D scene](/docs/how-to/cinematic-worlds): pack direction, galleries, effects, and an audit into the cinematic-world workflow.
 - [Render Blender, CadQuery, and Manim films from source](/docs/how-to/native-films): use Blender, CadQuery, or Manim and share assets across renderers.
+- [Make web-ready 3D assets with Blender](/docs/how-to/web-ready-3d-assets): bake detail onto a light mesh, export GLB levels of detail, and check budgets.
 - [Direct short generated clips](/docs/how-to/direct-takes): budget, review takes, and preserve endpoint continuity.
 - [Run or recover a workflow](/docs/how-to/run-workflows): use a built-in recipe or trusted Bun module and inspect its durable run.
 

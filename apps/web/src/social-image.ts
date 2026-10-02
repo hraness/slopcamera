@@ -111,6 +111,7 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
     headline: "Direct a 3D scene",
     description: "Plan camera moves, lighting, and effects, then review before selecting.",
   },
+  "docs/how-to/web-ready-3d-assets.html": { description: "Bake, export LODs, and check GLB budgets." },
   "docs/how-to/native-films.html": {
     headline: "Render native films from source",
     description: "Blender, CadQuery, or Manim, with caches.",
