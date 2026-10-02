@@ -1,6 +1,6 @@
 # @hraness/slopcamera-api
 
-Hosted SlopCamera tool surface for agent platforms. Serves the canonical MCP tool registry over REST (`/v1/tools/{name}/call`) and a stateless MCP endpoint (`/v1/mcp`), with R2 artifact tickets and Credits-billed image generation.
+Hosted Slopcamera tool surface for agent platforms. Serves the canonical MCP tool registry over REST (`/v1/tools/{name}/call`) and a stateless MCP endpoint (`/v1/mcp`), with R2 artifact tickets and Credits-billed image generation.
 
 ```sh
 bun run dev      # http://localhost:8787

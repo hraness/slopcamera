@@ -1,4 +1,4 @@
-# Public Tesseract ideas for SlopCamera
+# Public Tesseract ideas for Slopcamera
 
 Reviewed 2026-09-23. This note compares public first-party documentation with
 Slopcamera source in the style-portfolio worktree. It recommends ways to make
@@ -37,7 +37,7 @@ preview. We should preserve that distinction when describing any Slopcamera
 controls: a brief composer is a brief composer until it updates retained source
 and produces a new render.
 
-## SlopCamera already has the underlying pieces
+## Slopcamera already has the underlying pieces
 
 The current source supports several parts of this workflow:
 

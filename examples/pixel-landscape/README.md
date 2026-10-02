@@ -1,6 +1,6 @@
 # Make a scrolling media atelier
 
-This example generates a tall background drawing for SlopCamera, then turns it
+This example generates a tall background drawing for Slopcamera, then turns it
 into square pixels with one ink color and varying opacity. The drawing follows
 the product's work: images and diagrams become staged animation, 3D scenes,
 and film. It is conceptual artwork for a marketing page.
@@ -123,7 +123,7 @@ result, then inspect the preview again.
 
 ## Use the target site's colors
 
-The light example takes its colors from SlopCamera's pinned Catppuccin theme.
+The light example takes its colors from Slopcamera's pinned Catppuccin theme.
 The site selects that palette in
 [index.html](../../apps/web/src/index.html), and the palette bridge provides
 the computed semantic colors. The local page study also checks the dark
@@ -149,7 +149,7 @@ separation of the full ink. The example does not modify the live marketing site.
 compositions at `4K`, using Google's `gemini-3.1-flash-image`. It compares
 detailed pen engraving, shaded paper architecture, and a sculptural miniature
 studio. Each direction gives the workshops distinct media-making activity
-while keeping the central passage open. The page copy comes from SlopCamera's
+while keeping the central passage open. The page copy comes from Slopcamera's
 current marketing page.
 
 Set `GEMINI_API_KEY`, or its `GOOGLE_API_KEY` alias, in the process that invokes

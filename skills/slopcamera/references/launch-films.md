@@ -36,7 +36,7 @@ bun run build
 
 `--aspect` takes `16:9`, `1:1` or `9:16` and only sets the default in
 `film.json`; `bun build.ts --aspect 9:16` re-lays the same film at another size.
-The project pins the SlopCamera version that wrote it in `package.json`, so the
+The project pins the Slopcamera version that wrote it in `package.json`, so the
 CLI version is recorded next to the source.
 
 | File | Edit it to |

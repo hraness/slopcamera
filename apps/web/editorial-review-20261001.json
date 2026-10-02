@@ -69,5 +69,36 @@
       "apps/web/site.test.ts": "da28abac69ebea6d88bde228db44aec6820393c68688aa9073e1eefec63eca28",
       "apps/web/scripts/site-copy-content.test.ts": "84124d3619ada7d2b2b00fd6adf7bd15338ed92f7903b269454ee6da1763294b"
     }
+  },
+  "nameReview": {
+    "reviewer": "Claude independent editorial review subagent (AI)",
+    "reviewedOn": "2026-10-02",
+    "verdict": "approved",
+    "total": 11,
+    "scores": {
+      "readerUtility": 2,
+      "originalEvidence": 1,
+      "factualConfidence": 2,
+      "hostFit": 2,
+      "voiceIntegrity": 2,
+      "maintenanceValue": 2
+    },
+    "scope": "Canonical product name rename (SlopCamera to Slopcamera) across six blog bodies, blog registry and admissions, and launch beats, facts, figures, and social-kit copy. Diff is casing-only; code identifiers, package and CLI names, paths, slugs, and domains unchanged; no historical release claim altered. Record write approved by the owner on 2026-10-02.",
+    "sha256": {
+      "apps/web/src/blog-admissions.ts": "8f47acede95defac74a571d477eb403483589099379920e70924511905c0514b",
+      "apps/web/src/blog-registry.ts": "77f2a20fec8600444301e1fe71eaed2945731d076b3274e124f9969f40092f9d",
+      "apps/web/src/blog/editable-diagrams-with-coding-agents.md": "1f20e427d5d010a04861252e9a4dcdf42cde5f086f312171b338c80e5a885b34",
+      "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md": "4c87e0634de10fb2f14ea0b778330e0b554f0abe7f03066d272419c7781f9c68",
+      "apps/web/src/blog/how-slopcamera-uses-algal.md": "ab3b3ed7881b0e2f81347701f8d2ac03470a549e7aeb9d55e2918bc15c8177c6",
+      "apps/web/src/blog/introducing-slopcamera.md": "67f1306ad78029e824e80b24a0902ceffc3585879ba8b81e4454962bf26fe933",
+      "apps/web/src/blog/make-video-with-claude-code.md": "db200c5570446c5fbddbb607b64170b833dd2a2db93090c8459b6ea3bd151efd",
+      "apps/web/src/blog/one-shot-render-vs-installed-techniques.md": "c1f2a978849358825645bce4cc138a64ed1a4165557d9d31b32d35634deb6e0a",
+      "apps/web/src/launch-beats.ts": "1162cd9e7d24c58296b2650f7f622351d69b232738652d6ff2c627aa3c3faec0",
+      "apps/web/src/launch-facts.ts": "1f778918ef6e1879651f7a2ac27dd17702cf4724f2d9f0b45185792abb7818cd",
+      "apps/web/src/launch-figures.ts": "d306509d68b1e2ae19f1a9380d82594f3eee9b871fe976ec1fdc77bc8f2be012",
+      "apps/web/src/launch-social-kit-markdown.ts": "4f7e3eb98d7ab49427655bb2b8995dea6a63d95eba0eeebd1f0557df0ced1277"
+    },
+    "findings": [],
+    "limits": "originalEvidence scored 1: articles carry no measured results or failure cases beyond the docs. Product Hunt description in kb/launch/social-kit.md still comes from upstream @hraness/design-kit metadata."
   }
 }

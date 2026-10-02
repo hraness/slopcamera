@@ -1585,9 +1585,9 @@
     ]
   },
   {
-    "identityLineCount": 4,
-    "identityLinesSha256": "8d0b596ae3de0d515aa4c0761eb08469d805d3563115214e21543abf65aa5dba",
-    "occurrenceCount": 4,
+    "identityLineCount": 3,
+    "identityLinesSha256": "b0c0e69ba7a2ed67cbe0c192d79c6f42bbabad580ee34658b3f9b0b8c0fbca10",
+    "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
       "native-film-studio"
@@ -1604,7 +1604,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "c6e7b41d61058c9c78e323585cfdd537605311ab022f4afb3d2e79c8e4f9080a",
+    "identityLinesSha256": "47ab62a69f9ae978068dfc2effcd82807ffc53b8979e473332e9c2b0740a47bf",
     "occurrenceCount": 3,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
@@ -1614,7 +1614,7 @@
   },
   {
     "identityLineCount": 18,
-    "identityLinesSha256": "c627dd3e83ac91331c11647eef0a0bd4df65b178e4a7caed91bd78605701d5d7",
+    "identityLinesSha256": "ce2d5ba359c98be88437e4b40e6b7f9c73746babcd44f684731279c8196d5160",
     "occurrenceCount": 23,
     "path": "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md",
     "categories": [
@@ -1650,7 +1650,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "1ce8fad6651b5d0a917f5685fe1183bb138efb35f52ce8234c64e70241074e4d",
+    "identityLinesSha256": "d03f30b0a683af0d945a38d149c6211dd1643eaa5f0c2748f475c0bd97a577cd",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/remotion-alternatives-for-coding-agents.md",
     "categories": [
@@ -1865,9 +1865,9 @@
     ]
   },
   {
-    "identityLineCount": 9,
-    "identityLinesSha256": "7ab65822ced0c862e5af592ac1d15e77361f79938f7f6b3f6414103eb2dc9e4a",
-    "occurrenceCount": 14,
+    "identityLineCount": 6,
+    "identityLinesSha256": "dbbe02e47c5c116e783bc1e7bd474ab0e584b78bdf2ca6a095ddacd6bf59e16d",
+    "occurrenceCount": 11,
     "path": "apps/web/src/index.html",
     "categories": [
       "native-film-studio"
@@ -1884,7 +1884,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "1f7625cf63d5fd0fb2a1b5b22cdb8fef2d39e4f1e9fc1c5d24f4ba7f07519ec9",
+    "identityLinesSha256": "362c0ad7f241336348cfbdf8bbc83e22937a5008e3b5a12276c999a26ce1edaa",
     "occurrenceCount": 6,
     "path": "apps/web/src/portfolio-messaging.generated.json",
     "categories": [
@@ -1893,7 +1893,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
+    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
@@ -2065,7 +2065,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "8adfc1776ed70eaf4dedbf250d8ce21b64d8f30e3028913fb53b8c1e10c3ca81",
+    "identityLinesSha256": "06c99b6e86aff27b377e790181ea615f22dc6e62459a6cc655b284d3020b4906",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
@@ -3362,7 +3362,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "1cfd91c6127c0aa7bee042e4c31cff5889c7d17e9bcaf5044696e941786230ca",
+    "identityLinesSha256": "7795e936e7fcf85e84da01cd4f52944825b09c88dd3ea7b483d457b099a005b3",
     "occurrenceCount": 8,
     "path": "README.md",
     "categories": [

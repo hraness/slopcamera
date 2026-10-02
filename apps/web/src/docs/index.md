@@ -1,5 +1,7 @@
 Slopcamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK and Agent Skill.
 
+It works with Claude Code, Codex, Cursor, and other coding agents through the CLI, the Agent Skill, and an MCP server. The source can be a diagram, an HTML animation, a 3D scene, a Blender, CadQuery, or Manim program, or edit decisions over your own footage.
+
 Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop Slopcamera:
 
 ```sh

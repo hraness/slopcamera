@@ -48,7 +48,7 @@ Remotion, HyperFrames, and MCP for Blender all have much larger communities than
 
 Competitor details as of 28 September 2026.
 
-## What SlopCamera does not provide
+## What Slopcamera does not provide
 
 - No hosted projects. Without an account or project database there is no built-in sync, sharing, or multi-machine collaboration.
 - No hosted video rendering. Video renders run on your machine.

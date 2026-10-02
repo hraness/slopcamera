@@ -9,7 +9,7 @@ export const blogAdmissions = [
     "readerJob": "Choose how to keep media source and rendering reusable across revisions.",
     "nonObviousAnswer": "A custom pipeline and an installed framework can both be reused. Their maintenance responsibilities differ; source fields and per-format layout work determine what a revision needs.",
     "originalContribution": "Traces diagram labels, title parameters, pavilion dimensions and aspect-ratio layouts from editable source to rendered outputs.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "/docs/reference/techniques",
@@ -90,7 +90,7 @@ export const blogAdmissions = [
     "readerJob": "Choose an engine and a practical command sequence for a coding agent to make and revise a video.",
     "nonObviousAnswer": "Choose the engine by the shot, then retain editable source or footage with the project. Bundled scene inputs do not limit the files native Python can read.",
     "originalContribution": "Maps five kinds of shot to engines, editable inputs and commands, including bundle-digest updates before native jobs.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "/docs/tutorials/claude-code",
@@ -179,7 +179,7 @@ export const blogAdmissions = [
     "readerJob": "Revise a diagram once and keep its light, dark and editable exports consistent.",
     "nonObviousAnswer": "The JSON is the lasting source; tldraw edits do not flow back into it, and layout lint does not establish whether a diagram is semantically correct.",
     "originalContribution": "Explains a concrete source edit, validation exit codes, export formats and the choice between Mermaid and pre-rendered diagrams.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "https://slopcamera.com/docs/tutorials/first-diagram",
@@ -280,7 +280,7 @@ export const blogAdmissions = [
     "readerJob": "Choose between interactive scene exploration and a saved scene program, then revise native renders safely.",
     "nonObviousAnswer": "Live sessions can preserve Blender files and scripts. Saved scene jobs make inputs explicit, and a source change needs a new bundle digest and job ID before rendering.",
     "originalContribution": "Connects material edits, CAD parameters and silent Manim visuals to the native command sequence and runtime boundaries.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "/docs/tutorials/first-native-film",
@@ -386,10 +386,10 @@ export const blogAdmissions = [
   {
     "href": "/blog/introducing-slopcamera",
     "lifecycle": "indexable",
-    "readerJob": "Choose a first SlopCamera project after seeing what editable source can produce.",
+    "readerJob": "Choose a first Slopcamera project after seeing what editable source can produce.",
     "nonObviousAnswer": "A precise change can reuse source and timing; diagrams provide a portable first result, while animation and paid generation have their own tool requirements.",
     "originalContribution": "Connects original gallery films and a controlled moon-scale revision to first-project commands and the generation routes.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "https://slopcamera.com/",
@@ -417,12 +417,12 @@ export const blogAdmissions = [
         "checkedOn": "2026-09-30"
       },
       {
-        "title": "SlopCamera README",
+        "title": "Slopcamera README",
         "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/README.md",
         "checkedOn": "2026-10-01"
       },
       {
-        "title": "SlopCamera scene behavior bake",
+        "title": "Slopcamera scene behavior bake",
         "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/src/spatial-scene/behavior-bake.ts",
         "checkedOn": "2026-10-01"
       }
@@ -465,7 +465,7 @@ export const blogAdmissions = [
     "readerJob": "Understand how to keep character behavior repeatable while revising a rendered scene.",
     "nonObviousAnswer": "Bake the behavior into a saved timeline before rendering. A mapped channel drives existing performance assets; it does not generate rigs or animation clips.",
     "originalContribution": "Shows a state-machine example, check/bake/audit commands, input fingerprints and the closed behavior function boundary.",
-    "hostFit": "A SlopCamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
+    "hostFit": "A Slopcamera guide grounded in its editable examples and commands, with links to the relevant task documentation.",
     "nearestUrls": [
       {
         "url": "https://slopcamera.com/docs/how-to/direct-scenes",
@@ -482,37 +482,37 @@ export const blogAdmissions = [
     ],
     "sources": [
       {
-        "title": "SlopCamera behavior bake",
+        "title": "Slopcamera behavior bake",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.ts",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera behavior bake tests",
+        "title": "Slopcamera behavior bake tests",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.test.ts",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera behavior functions",
+        "title": "Slopcamera behavior functions",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-fns.ts",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera behavior trace and channel map",
+        "title": "Slopcamera behavior trace and channel map",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-trace.ts",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera package manifest (ALGAL dependency)",
+        "title": "Slopcamera package manifest (ALGAL dependency)",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/package.json",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera Agent Skill: directed scenes",
+        "title": "Slopcamera Agent Skill: directed scenes",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/skills/slopcamera/references/directed-scenes.md",
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera ALGAL character behaviors plan",
+        "title": "Slopcamera ALGAL character behaviors plan",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/kb/plans/algal-character-behaviors.md",
         "checkedOn": "2026-09-24"
       },
@@ -522,7 +522,7 @@ export const blogAdmissions = [
         "checkedOn": "2026-09-24"
       },
       {
-        "title": "SlopCamera v3.4.0 release",
+        "title": "Slopcamera v3.4.0 release",
         "url": "https://github.com/hraness/slopcamera/releases/tag/v3.4.0",
         "checkedOn": "2026-09-24"
       }

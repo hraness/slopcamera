@@ -51,7 +51,7 @@ That one-line edit rewrites the `.tldr` file, both SVGs, and both PNGs.
 - Ecosystem. Remotion has many more users, a template gallery, paid experts, and years of documented answers. Slopcamera is a small project.
 - Commercial support. A Company License includes prioritized support.
 
-## What SlopCamera does better
+## What Slopcamera does better
 
 - Formats beyond React. The agent can write a diagram, a Three.js scene, a parametric design, or a Blender, CadQuery, or Manim program, and the same CLI renders each one.
 - Diagrams. One `.diagram.json` source renders to an editable `.tldr` file and light and dark SVG and PNG, and a strict check reports layout problems first.
@@ -71,19 +71,19 @@ The cuts, captions, and delivery variants in that project stay editable. See [Ed
 
 ## FAQ
 
-### Is SlopCamera a replacement for Remotion?
+### Is Slopcamera a replacement for Remotion?
 
 Not for every job. If you need a player in your web app or rendering on Lambda, use Remotion. If you need diagrams, 3D, native films, or footage edits from one agent-facing CLI, use Slopcamera. Many projects can use both.
 
-### Does SlopCamera use React?
+### Does Slopcamera use React?
 
 No. HTML graphics use plain HTML in one of seven profiles: plain (no library), Motion, p5.js, Two.js, Paper Shaders, Three.js, or vgpu (WGSL). Each profile pins its library version. See [HTML render profiles](/docs/reference/html-profiles).
 
-### Can my company use SlopCamera for free?
+### Can my company use Slopcamera for free?
 
 Slopcamera is MIT licensed, so there is no company tier. Optional AI generation uses your own Vercel AI Gateway key and bills through that account.
 
-### Can SlopCamera render in the cloud?
+### Can Slopcamera render in the cloud?
 
 Not video. Video renders run on your machine. The hosted API at `api.slopcamera.com` checks and renders diagrams for free with rate limits and generates images with prepaid Hraness Credits. See [Choose an interface](/docs/explanation/choose-an-interface).
 

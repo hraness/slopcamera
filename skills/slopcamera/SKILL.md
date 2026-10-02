@@ -1,9 +1,9 @@
 ---
 name: slopcamera
-description: Create, inspect, edit and render visual media with the SlopCamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
+description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
 ---
 
-# Create visual media with SlopCamera
+# Create visual media with Slopcamera
 
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
 
