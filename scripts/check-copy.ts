@@ -22,6 +22,7 @@ import { HTML_FILM_TEMPLATES } from "../apps/desktop/cli/html-film-names";
 import { HTML_OVERLAY_SCAFFOLD_KINDS } from "../apps/desktop/html-overlay/catalog";
 import { THREE_RIGGED_GLB_LIMITS } from "../apps/desktop/html-overlay/rigged-glb";
 import { BUILT_IN_WORKFLOWS } from "../apps/desktop/workflows/index";
+import { SPATIAL_GLB_LIMITS } from "../src/spatial-scene/gltf";
 import { PORTABLE_SLOPCAMERA_OPERATION_KINDS } from "../src/code/public-operations";
 import {
   mcpMaximumEdges,
@@ -124,6 +125,14 @@ async function loadFacts(): Promise<CopyFacts> {
       moduleMiB: THREE_RIGGED_GLB_LIMITS.moduleBytes / (1024 * 1024),
       nodes: THREE_RIGGED_GLB_LIMITS.nodes,
       skins: THREE_RIGGED_GLB_LIMITS.skins,
+    },
+    sceneGlb: {
+      imageMiB: SPATIAL_GLB_LIMITS.imageBytes / (1024 * 1024),
+      imageTotalMiB: SPATIAL_GLB_LIMITS.imageTotalBytes / (1024 * 1024),
+      images: SPATIAL_GLB_LIMITS.images,
+      primitives: SPATIAL_GLB_LIMITS.primitives,
+      triangles: SPATIAL_GLB_LIMITS.triangles,
+      verticesPerPrimitive: SPATIAL_GLB_LIMITS.verticesPerPrimitive,
     },
     styleProfileCount: VISUAL_STYLE_IDS.length,
     version,
