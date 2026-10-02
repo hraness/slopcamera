@@ -325,7 +325,7 @@ const problems = [
   ...inventoryUpdate.problems,
 ];
 const rootPackage = await readJson(join(ROOT, "package.json"));
-const expectedDescription = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.";
+const expectedDescription = "SlopCamera lets Codex, Claude Code, and other coding agents make images, diagrams, animation, 3D scenes, Blender films, and edited video from source files they can keep revising.";
 const expectedKeywords = [
   "ai-media-generation",
   "ai-video-generation",
@@ -345,6 +345,13 @@ const expectedKeywords = [
   "typescript",
   "bun",
   "local-first",
+  "claude-code",
+  "codex",
+  "blender",
+  "manim",
+  "3d",
+  "animation",
+  "diagram-as-code",
 ] as const;
 if (rootPackage.name !== "@hraness/slopcamera") {
   problems.push("package.json name must be @hraness/slopcamera");
