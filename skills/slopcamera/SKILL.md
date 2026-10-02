@@ -55,6 +55,7 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Refine an existing scene, organic interactions, contact, staging, or final movie quality | [Scene refinement](references/scene-building.md#refine-an-existing-scene) |
 | Parametric architecture, furniture, dimensions, repeated structures or editable design variants | [Parametric design](references/parametric-design.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
+| Any 3D brief: physics, PBR, color management, anti-aliasing, VFX and the review checklist | [3D quality bar](references/3d-quality-bar.md) |
 | Blender model for the web: high-to-low baking, texture budgets, LODs, GLB export and runtime checks | [Web-ready 3D assets](references/web-ready-3d-assets.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |
 | Typed Bun SDK, built-in workflow, durable resume or MCP | [Workflows and SDK](references/workflows-sdk.md) |
