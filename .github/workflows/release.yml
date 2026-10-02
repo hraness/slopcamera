@@ -23,27 +23,32 @@ jobs:
       - name: Verify immutable owner and public repository identity
         env:
           EXPECTED_ACTOR_ID: "894119"
+          # hraness-release-tagger[bot]: auto-tag.yml creates the tag once a
+          # version bump passes CI on main.
+          TAGGER_ACTOR_ID: "337004703"
           EXPECTED_REPOSITORY: "hraness/slopcamera"
           EXPECTED_REPOSITORY_ID: "1310516748"
           REF_PROTECTED: ${{ github.ref_protected }}
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" != push || \
-                "$GITHUB_ACTOR_ID" != "$EXPECTED_ACTOR_ID" || \
+                ( "$GITHUB_ACTOR_ID" != "$EXPECTED_ACTOR_ID" && "$GITHUB_ACTOR_ID" != "$TAGGER_ACTOR_ID" ) || \
                 "$GITHUB_REPOSITORY" != "$EXPECTED_REPOSITORY" || \
                 "$GITHUB_REPOSITORY_ID" != "$EXPECTED_REPOSITORY_ID" || \
                 "$REF_PROTECTED" != true ]]; then
-            echo "::error::Release requires an owner-created protected tag in the exact public repository"
+            echo "::error::Release requires an owner- or tagger-created protected tag in the exact public repository"
             exit 1
           fi
           EXPECTED_ACTOR_ID="$EXPECTED_ACTOR_ID" \
             EXPECTED_REPOSITORY="$EXPECTED_REPOSITORY" \
-            EXPECTED_REPOSITORY_ID="$EXPECTED_REPOSITORY_ID" node <<'NODE'
+            EXPECTED_REPOSITORY_ID="$EXPECTED_REPOSITORY_ID" \
+            TAGGER_ACTOR_ID="$TAGGER_ACTOR_ID" node <<'NODE'
           const { readFileSync } = require("node:fs");
           const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
           if (
-            event.sender?.id !== Number(process.env.EXPECTED_ACTOR_ID)
-            || event.sender?.type !== "User"
+            ((event.sender?.id !== Number(process.env.EXPECTED_ACTOR_ID) || event.sender?.type !== "User")
+              && (event.sender?.id !== Number(process.env.TAGGER_ACTOR_ID) || event.sender?.type !== "Bot"))
+            || event.sender?.id !== Number(process.env.GITHUB_ACTOR_ID)
             || event.repository?.id !== Number(process.env.EXPECTED_REPOSITORY_ID)
             || event.repository?.full_name !== process.env.EXPECTED_REPOSITORY
             || event.repository?.visibility !== "public"
@@ -224,7 +229,7 @@ jobs:
           import { writeFileSync } from 'node:fs';
           const e = process.env;
           if (e.GITHUB_REPOSITORY !== 'hraness/slopcamera' || e.GITHUB_REPOSITORY_ID !== '1310516748'
-            || e.GITHUB_ACTOR_ID !== '894119' || e.GITHUB_EVENT_NAME !== 'push'
+            || (e.GITHUB_ACTOR_ID !== '894119' && e.GITHUB_ACTOR_ID !== '337004703') || e.GITHUB_EVENT_NAME !== 'push'
             || !/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(e.GITHUB_REF_NAME ?? '')
             || e.GITHUB_REF !== `refs/tags/${e.GITHUB_REF_NAME}` || !/^[a-f0-9]{40}$/u.test(e.GITHUB_SHA ?? '')) throw new Error('Unexpected release request');
           const api = path => JSON.parse(execFileSync('gh', ['api', `repos/hraness/slopcamera/${path}`],
@@ -233,7 +238,7 @@ jobs:
           if (run.id !== Number(e.GITHUB_RUN_ID) || run.run_attempt !== Number(e.GITHUB_RUN_ATTEMPT)
             || run.head_sha !== e.GITHUB_SHA || run.head_branch !== e.GITHUB_REF_NAME || run.event !== 'push'
             || run.workflow_id !== 320001524 || run.path !== '.github/workflows/release.yml'
-            || run.actor?.id !== 894119 || run.actor?.type !== 'User' || run.triggering_actor?.id !== 894119 || run.triggering_actor?.type !== 'User'
+            || ![run.actor, run.triggering_actor].every(a => (a?.id === 894119 && a?.type === 'User') || (run.event === 'push' && a?.id === 337004703 && a?.type === 'Bot'))
             || run.repository?.id !== 1310516748 || run.repository?.full_name !== 'hraness/slopcamera' || run.repository?.private !== false
             || run.status !== 'in_progress' || run.conclusion !== null) throw new Error('Untrusted release attempt');
           const main = api('git/ref/heads/main').object;
@@ -314,7 +319,7 @@ jobs:
           import { writeFileSync } from 'node:fs';
           const e = process.env;
           if (e.GITHUB_REPOSITORY !== 'hraness/slopcamera' || e.GITHUB_REPOSITORY_ID !== '1310516748'
-            || e.GITHUB_ACTOR_ID !== '894119' || e.GITHUB_EVENT_NAME !== 'push'
+            || (e.GITHUB_ACTOR_ID !== '894119' && e.GITHUB_ACTOR_ID !== '337004703') || e.GITHUB_EVENT_NAME !== 'push'
             || !/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(e.GITHUB_REF_NAME ?? '')
             || e.GITHUB_REF !== `refs/tags/${e.GITHUB_REF_NAME}` || !/^[a-f0-9]{40}$/u.test(e.GITHUB_SHA ?? '')) throw new Error('Unexpected release request');
           const api = path => JSON.parse(execFileSync('gh', ['api', `repos/hraness/slopcamera/${path}`],
@@ -323,7 +328,7 @@ jobs:
           if (run.id !== Number(e.GITHUB_RUN_ID) || run.run_attempt !== Number(e.GITHUB_RUN_ATTEMPT)
             || run.head_sha !== e.GITHUB_SHA || run.head_branch !== e.GITHUB_REF_NAME || run.event !== 'push'
             || run.workflow_id !== 320001524 || run.path !== '.github/workflows/release.yml'
-            || run.actor?.id !== 894119 || run.actor?.type !== 'User' || run.triggering_actor?.id !== 894119 || run.triggering_actor?.type !== 'User'
+            || ![run.actor, run.triggering_actor].every(a => (a?.id === 894119 && a?.type === 'User') || (run.event === 'push' && a?.id === 337004703 && a?.type === 'Bot'))
             || run.repository?.id !== 1310516748 || run.repository?.full_name !== 'hraness/slopcamera' || run.repository?.private !== false
             || run.status !== 'in_progress' || run.conclusion !== null) throw new Error('Untrusted release attempt');
           const main = api('git/ref/heads/main').object;
@@ -381,7 +386,7 @@ jobs:
           import { writeFileSync } from 'node:fs';
           const e = process.env;
           if (e.GITHUB_REPOSITORY !== 'hraness/slopcamera' || e.GITHUB_REPOSITORY_ID !== '1310516748'
-            || e.GITHUB_ACTOR_ID !== '894119' || e.GITHUB_EVENT_NAME !== 'push'
+            || (e.GITHUB_ACTOR_ID !== '894119' && e.GITHUB_ACTOR_ID !== '337004703') || e.GITHUB_EVENT_NAME !== 'push'
             || !/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.test(e.GITHUB_REF_NAME ?? '')
             || e.GITHUB_REF !== `refs/tags/${e.GITHUB_REF_NAME}` || !/^[a-f0-9]{40}$/u.test(e.GITHUB_SHA ?? '')) throw new Error('Unexpected release request');
           const api = path => JSON.parse(execFileSync('gh', ['api', `repos/hraness/slopcamera/${path}`],
@@ -390,7 +395,7 @@ jobs:
           if (run.id !== Number(e.GITHUB_RUN_ID) || run.run_attempt !== Number(e.GITHUB_RUN_ATTEMPT)
             || run.head_sha !== e.GITHUB_SHA || run.head_branch !== e.GITHUB_REF_NAME || run.event !== 'push'
             || run.workflow_id !== 320001524 || run.path !== '.github/workflows/release.yml'
-            || run.actor?.id !== 894119 || run.actor?.type !== 'User' || run.triggering_actor?.id !== 894119 || run.triggering_actor?.type !== 'User'
+            || ![run.actor, run.triggering_actor].every(a => (a?.id === 894119 && a?.type === 'User') || (run.event === 'push' && a?.id === 337004703 && a?.type === 'Bot'))
             || run.repository?.id !== 1310516748 || run.repository?.full_name !== 'hraness/slopcamera' || run.repository?.private !== false
             || run.status !== 'in_progress' || run.conclusion !== null) throw new Error('Untrusted release attempt');
           const main = api('git/ref/heads/main').object;
