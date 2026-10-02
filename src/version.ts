@@ -1,1 +1,1 @@
-export const SLOPCAMERA_VERSION = "3.10.3" as const
+export const SLOPCAMERA_VERSION = "3.11.0" as const

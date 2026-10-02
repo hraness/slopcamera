@@ -24,6 +24,22 @@ One render writes five same-stem outputs beside the source:
 
 Rendering again replaces the five derived files while the JSON source survives untouched. Editing a label means editing the source and re-rendering, which keeps the diagram and its exports connected instead of producing an orphan image. [Create and revise your first diagram](/docs/tutorials/first-diagram) walks that loop.
 
+## Check findings
+
+`slopcamera diagram check` lists layout problems as findings. Each finding has a code, a message and the shape IDs it concerns. Without `--strict` the command reports them and succeeds; with `--strict` any finding fails the check.
+
+| Code | Reported when |
+| --- | --- |
+| `tall-aspect` | The canvas is more than 1.5 times taller than wide. Lay the flow out horizontally, about two to three times wider than tall, or fold a longer sequence into two rows instead of a vertical tower. Introduced in v3.11.0. |
+| `outside-canvas` | A box extends past the canvas edge. |
+| `long-label` | A box label or label row is longer than 32 characters. |
+| `label-overflow` | A box's label rows and icon do not fit inside it. |
+| `small-target` | A box is narrower than 120 px or shorter than 64 px. |
+| `too-many-elements` | The diagram has more than nine boxes. |
+| `short-arrow` | A connector is shorter than 96 px. |
+| `long-edge-label` | A connector label is longer than 24 characters. |
+| `shared-edge-port` | Two connectors start or end at the same point on one box. Give them distinct `startPosition` or `endPosition` values. |
+
 ## Configuration
 
 A `slopcamera.config.*` file beside the source extends what the renderer draws: a configured font with local files, named icon bodies as sanitized SVG geometry, and light and dark theme overrides. A JSON config is inert data; a TypeScript or JavaScript config is imported as trusted workspace code and evaluates as your current user.

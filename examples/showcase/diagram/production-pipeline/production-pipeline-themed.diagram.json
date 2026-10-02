@@ -3,25 +3,21 @@
   "version": 1,
   "name": "production-pipeline-themed",
   "canvas": {
-    "width": 720,
-    "height": 1232,
+    "width": 1200,
+    "height": 520,
     "padding": 64
-  },
-  "layout": {
-    "type": "stack",
-    "direction": "vertical",
-    "gap": 96,
-    "align": "center"
   },
   "shapes": [
     {
       "id": "author",
       "type": "rect",
-      "width": 480,
-      "height": 144,
+      "x": 64,
+      "y": 64,
+      "width": 272,
+      "height": 136,
       "radius": 24,
       "label": "Author",
-      "labelFontSize": 44,
+      "labelFontSize": 48,
       "labelWeight": 700,
       "tone": "neutral",
       "icon": "pipeline-author",
@@ -30,11 +26,13 @@
     {
       "id": "check",
       "type": "rect",
-      "width": 480,
-      "height": 144,
+      "x": 464,
+      "y": 64,
+      "width": 272,
+      "height": 136,
       "radius": 24,
       "label": "Check",
-      "labelFontSize": 44,
+      "labelFontSize": 48,
       "labelWeight": 700,
       "tone": "neutral",
       "icon": "pipeline-check",
@@ -43,11 +41,13 @@
     {
       "id": "render",
       "type": "rect",
-      "width": 480,
-      "height": 144,
+      "x": 864,
+      "y": 64,
+      "width": 272,
+      "height": 136,
       "radius": 24,
       "label": "Render",
-      "labelFontSize": 44,
+      "labelFontSize": 48,
       "labelWeight": 700,
       "tone": "neutral",
       "icon": "pipeline-render",
@@ -56,11 +56,13 @@
     {
       "id": "review",
       "type": "rect",
-      "width": 480,
-      "height": 144,
+      "x": 864,
+      "y": 320,
+      "width": 272,
+      "height": 136,
       "radius": 24,
       "label": "Review",
-      "labelFontSize": 44,
+      "labelFontSize": 48,
       "labelWeight": 700,
       "tone": "neutral",
       "icon": "pipeline-review",
@@ -69,11 +71,13 @@
     {
       "id": "deliver",
       "type": "rect",
-      "width": 480,
-      "height": 144,
+      "x": 464,
+      "y": 320,
+      "width": 272,
+      "height": 136,
       "radius": 24,
       "label": "Deliver",
-      "labelFontSize": 44,
+      "labelFontSize": 48,
       "labelWeight": 700,
       "tone": "green",
       "icon": "pipeline-deliver",
@@ -84,22 +88,30 @@
     {
       "id": "author-check",
       "from": "author",
-      "to": "check"
+      "to": "check",
+      "start": "right",
+      "end": "left"
     },
     {
       "id": "check-render",
       "from": "check",
-      "to": "render"
+      "to": "render",
+      "start": "right",
+      "end": "left"
     },
     {
       "id": "render-review",
       "from": "render",
-      "to": "review"
+      "to": "review",
+      "start": "bottom",
+      "end": "top"
     },
     {
       "id": "review-deliver",
       "from": "review",
-      "to": "deliver"
+      "to": "deliver",
+      "start": "left",
+      "end": "right"
     }
   ]
 }

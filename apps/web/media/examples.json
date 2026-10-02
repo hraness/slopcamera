@@ -3460,22 +3460,22 @@
   },
   {
     "id": "production-pipeline",
-    "title": "Lay out a pipeline from ordered cards",
-    "description": "Five equal cards and four explicit arrows form a coordinate-free stack. Light, dark and editable exports preserve the declared order.",
+    "title": "Fold a pipeline into two rows",
+    "description": "Five equal cards and four explicit arrows turn once at the right edge, so the sequence stays wide on a page and readable on a phone. Light, dark and editable exports preserve the declared order.",
     "family": "diagram",
     "techniques": [
-      "diagram.stack"
+      "diagram.positioned"
     ],
     "guideSlug": "tutorials/first-diagram",
-    "guideAnchor": "stack-layout",
+    "guideAnchor": "two-row-pipeline",
     "featured": false,
     "requirements": "A repository checkout with locked dependencies and Bun 1.3.14. Local diagram rendering; no account, browser, native engine or paid model.",
     "source": {
-      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "engineRevision": "df01c351f32b510a6119753e06e5973e922c53c4",
       "files": [
         {
           "path": "examples/showcase/diagram/production-pipeline/production-pipeline.diagram.json",
-          "sha256": "c0058cce3f198768f2535092d417e9fe297f94cbe932e65afada91cf8e85376a"
+          "sha256": "a3b4c7f1c55ebaca04f7cec9d191fb95de1ab0eccb26bd03a63bdfe291d03d58"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/baseline.config.json",
@@ -3483,7 +3483,7 @@
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/production-pipeline-themed.diagram.json",
-          "sha256": "15c127a261f1a45846ffeb74f7b5697bcbcab868cc1668aaded93bdbab127fc2"
+          "sha256": "01e12388c7e9fde702fbdd61d6a08c773c1088d96088c2404ef15553a0d2f8b4"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/themed.config.json",
@@ -3491,15 +3491,15 @@
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/render.ts",
-          "sha256": "244c734caa6545e376515e296175bdb521589138a7fcbf8e7e22219eb06a9332"
+          "sha256": "8cf8ef5f4a3d46832d354ca31ba210a90670467b07ac1fcae193d91c2c75e2a4"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/README.md",
-          "sha256": "995f3c3104edc8828bdd33a7a50369e1ebfa089a4713865049372f2be7e34c38"
+          "sha256": "66c7adc409c64def860a48374eb45d4967a271bd36d280420077d62ccc0cdaeb"
         }
       ],
       "command": "bun examples/showcase/diagram/production-pipeline/render.ts",
-      "toolVersion": "3.3.1; engine matched to ad49406",
+      "toolVersion": "3.10.3; engine matched to df01c35",
       "runtimes": [
         "Bun 1.3.14",
         "Bundled Resvg 2.6.2"
@@ -3507,54 +3507,54 @@
       "license": "MIT; Nebula Sans SIL OFL 1.1"
     },
     "poster": {
-      "file": "production-pipeline-light-png-f5f2fff6316b.png",
-      "sha256": "f5f2fff6316be8987c63200a4aabbdd773fca21eb2ee14ef7fe31459b6efb430",
-      "bytes": 32385,
+      "file": "production-pipeline-light-png-ebecc13b1658.png",
+      "sha256": "ebecc13b165869217595b1b92ce13a3d7ffef16e18943d55d699d6f1007c6335",
+      "bytes": 27216,
       "mime": "image/png",
-      "width": 720,
-      "height": 1232,
-      "alt": "Five equal cards read Author, Check, Render, Review and Deliver, connected by four downward arrows."
+      "width": 1200,
+      "height": 520,
+      "alt": "Author, Check and Render run left to right; an arrow turns down to Review, which points back to a green Deliver card on the second row."
     },
     "downloads": [
       {
-        "file": "production-pipeline-tldr-06d28479d8e9.tldr",
-        "sha256": "06d28479d8e92e108a78dd34d4592facfb803a857d9260d3d321c036a8677c35",
-        "bytes": 17372,
+        "file": "production-pipeline-tldr-6a51f83b9641.tldr",
+        "sha256": "6a51f83b96415e787bb59286a08b261366aa6868e123582733aecdac4eb7617f",
+        "bytes": 17529,
         "mime": "application/json",
         "label": "Editable canvas"
       },
       {
-        "file": "production-pipeline-light-svg-8c95d22a6271.svg",
-        "sha256": "8c95d22a6271264c51cfd1e3b52fcd268d8cacab047fd422e782dcdc37fa9ca1",
-        "bytes": 197858,
+        "file": "production-pipeline-light-svg-73fde5b19bd4.svg",
+        "sha256": "73fde5b19bd43f8be5a52898d813e2d10a34994b712bf9203a524ddd1a264f63",
+        "bytes": 197855,
         "mime": "image/svg+xml",
         "label": "Light SVG"
       },
       {
-        "file": "production-pipeline-dark-svg-0eec8d9831c5.svg",
-        "sha256": "0eec8d9831c58b4aea89eb87f46521bfec97826b806b97b454464034483a8e0e",
-        "bytes": 197857,
+        "file": "production-pipeline-dark-svg-9c471076cbd2.svg",
+        "sha256": "9c471076cbd23be828307510a0424b985c93e99ce1ee8d9b0ac7a5ddd2776347",
+        "bytes": 197854,
         "mime": "image/svg+xml",
         "label": "Dark SVG"
       },
       {
-        "file": "production-pipeline-light-png-f5f2fff6316b.png",
-        "sha256": "f5f2fff6316be8987c63200a4aabbdd773fca21eb2ee14ef7fe31459b6efb430",
-        "bytes": 32385,
+        "file": "production-pipeline-light-png-ebecc13b1658.png",
+        "sha256": "ebecc13b165869217595b1b92ce13a3d7ffef16e18943d55d699d6f1007c6335",
+        "bytes": 27216,
         "mime": "image/png",
         "label": "Light PNG"
       },
       {
-        "file": "production-pipeline-dark-png-0b9573fffa52.png",
-        "sha256": "0b9573fffa52f43731661040cd08a6e2865960486dd9a48549e89a163a9a3a4d",
-        "bytes": 31210,
+        "file": "production-pipeline-dark-png-3fc8fa0b9408.png",
+        "sha256": "3fc8fa0b9408e1bd42cb9452178b26a1f1cb8b8afa7e79f3f2c63a22779859c4",
+        "bytes": 26536,
         "mime": "image/png",
         "label": "Dark PNG"
       }
     ],
     "review": {
-      "agent": "root + editorial_recovery: light/dark and editable export review",
-      "date": "2026-09-20",
+      "agent": "claude: light/dark review at 1280 and 390 px",
+      "date": "2026-10-02",
       "still": "passed",
       "motion": "not-applicable",
       "sound": "silent",
@@ -3564,7 +3564,7 @@
   {
     "id": "production-pipeline-themed",
     "title": "Apply a house style without changing the graph",
-    "description": "The same stack uses a warm light palette, an ink dark palette, licensed Nebula Sans Bold and five original line icons. Labels, relationships and geometry stay unchanged.",
+    "description": "The same two-row pipeline uses a warm light palette, an ink dark palette, licensed Nebula Sans Bold and five original line icons. Labels, relationships and geometry stay unchanged.",
     "family": "diagram",
     "techniques": [
       "diagram.theming"
@@ -3574,15 +3574,15 @@
     "featured": false,
     "requirements": "A repository checkout with locked dependencies and Bun 1.3.14. Local diagram rendering; no account, browser, native engine or paid model.",
     "source": {
-      "engineRevision": "ad49406c1890a35409a854008fae50195f794ed2",
+      "engineRevision": "df01c351f32b510a6119753e06e5973e922c53c4",
       "files": [
         {
           "path": "examples/showcase/diagram/production-pipeline/production-pipeline-themed.diagram.json",
-          "sha256": "15c127a261f1a45846ffeb74f7b5697bcbcab868cc1668aaded93bdbab127fc2"
+          "sha256": "01e12388c7e9fde702fbdd61d6a08c773c1088d96088c2404ef15553a0d2f8b4"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/production-pipeline.diagram.json",
-          "sha256": "c0058cce3f198768f2535092d417e9fe297f94cbe932e65afada91cf8e85376a"
+          "sha256": "a3b4c7f1c55ebaca04f7cec9d191fb95de1ab0eccb26bd03a63bdfe291d03d58"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/baseline.config.json",
@@ -3594,15 +3594,15 @@
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/render.ts",
-          "sha256": "244c734caa6545e376515e296175bdb521589138a7fcbf8e7e22219eb06a9332"
+          "sha256": "8cf8ef5f4a3d46832d354ca31ba210a90670467b07ac1fcae193d91c2c75e2a4"
         },
         {
           "path": "examples/showcase/diagram/production-pipeline/README.md",
-          "sha256": "995f3c3104edc8828bdd33a7a50369e1ebfa089a4713865049372f2be7e34c38"
+          "sha256": "66c7adc409c64def860a48374eb45d4967a271bd36d280420077d62ccc0cdaeb"
         }
       ],
       "command": "bun examples/showcase/diagram/production-pipeline/render.ts",
-      "toolVersion": "3.3.1; engine matched to ad49406",
+      "toolVersion": "3.10.3; engine matched to df01c35",
       "runtimes": [
         "Bun 1.3.14",
         "Bundled Resvg 2.6.2"
@@ -3610,54 +3610,54 @@
       "license": "MIT; Nebula Sans SIL OFL 1.1"
     },
     "poster": {
-      "file": "production-pipeline-themed-light-png-5325021afed3.png",
-      "sha256": "5325021afed31d8fde4d071e24a05c4ca006c44eabf63faa043bf28d2c82da4f",
-      "bytes": 35849,
+      "file": "production-pipeline-themed-light-png-3d5f2b7c4bfb.png",
+      "sha256": "3d5f2b7c4bfb240ed2846f9f9a52418d850c7befc15d2845df9d801f5b4d9e96",
+      "bytes": 30093,
       "mime": "image/png",
-      "width": 720,
-      "height": 1232,
-      "alt": "A vertical Author, Check, Render, Review and Deliver pipeline uses bold labels, matching outline icons and a green delivery card."
+      "width": 1200,
+      "height": 520,
+      "alt": "A two-row Author, Check, Render, Review and Deliver pipeline uses bold labels, matching outline icons and a green delivery card."
     },
     "downloads": [
       {
-        "file": "production-pipeline-themed-tldr-a034e2a58b4d.tldr",
-        "sha256": "a034e2a58b4decba031097cf0a155a34310055d27ee55c0f329f4c9956b19230",
-        "bytes": 25129,
+        "file": "production-pipeline-themed-tldr-3bc2fb208901.tldr",
+        "sha256": "3bc2fb208901f18c0149125aae77a4d82c3c7a28ad8b94ee07c208e8ba2d5a85",
+        "bytes": 25286,
         "mime": "application/json",
         "label": "Editable canvas"
       },
       {
-        "file": "production-pipeline-themed-light-svg-d2a4786fcac5.svg",
-        "sha256": "d2a4786fcac5ec8171e872692d7186fc790a102b70c7c173a0ffda5f84e16b6d",
-        "bytes": 199172,
+        "file": "production-pipeline-themed-light-svg-d8be9991a23d.svg",
+        "sha256": "d8be9991a23d26cb62e90befcc5e45ca7bfbb385c286f3840490b694889e4491",
+        "bytes": 199169,
         "mime": "image/svg+xml",
         "label": "Light SVG"
       },
       {
-        "file": "production-pipeline-themed-dark-svg-1b6ff38b889e.svg",
-        "sha256": "1b6ff38b889edc99c0bca267c0cb7164af6fb7fc26d6a8c132cd5996ca841c25",
-        "bytes": 199171,
+        "file": "production-pipeline-themed-dark-svg-c1193310187a.svg",
+        "sha256": "c1193310187adedbbf4e22efe8c12454c1d57b92740aaf5a70d978688da13007",
+        "bytes": 199168,
         "mime": "image/svg+xml",
         "label": "Dark SVG"
       },
       {
-        "file": "production-pipeline-themed-light-png-5325021afed3.png",
-        "sha256": "5325021afed31d8fde4d071e24a05c4ca006c44eabf63faa043bf28d2c82da4f",
-        "bytes": 35849,
+        "file": "production-pipeline-themed-light-png-3d5f2b7c4bfb.png",
+        "sha256": "3d5f2b7c4bfb240ed2846f9f9a52418d850c7befc15d2845df9d801f5b4d9e96",
+        "bytes": 30093,
         "mime": "image/png",
         "label": "Light PNG"
       },
       {
-        "file": "production-pipeline-themed-dark-png-7f4441ceac7f.png",
-        "sha256": "7f4441ceac7f2403cd1f964b83b600d98e0590dc52608d041d9b5dd95c3be74e",
-        "bytes": 37125,
+        "file": "production-pipeline-themed-dark-png-d1946d151755.png",
+        "sha256": "d1946d1517554c30e8f79aaee7871e291db450f75d2367523a63a50b6fc51137",
+        "bytes": 30580,
         "mime": "image/png",
         "label": "Dark PNG"
       }
     ],
     "review": {
-      "agent": "root + editorial_recovery: light/dark and editable export review",
-      "date": "2026-09-20",
+      "agent": "claude: light/dark review at 1280 and 390 px",
+      "date": "2026-10-02",
       "still": "passed",
       "motion": "not-applicable",
       "sound": "silent",

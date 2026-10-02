@@ -11,8 +11,20 @@ function boxOutsideCanvas(shape: BoxShape, spec: DiagramSpec): boolean {
   )
 }
 
+/** A canvas taller than this multiple of its width becomes a tower on wide
+ * pages and shrinks its labels on phones. */
+export const tallAspectRatioLimit = 1.5
+
 export function lintDiagram(spec: DiagramSpec): readonly LintFinding[] {
   const findings: LintFinding[] = []
+  const { width, height } = spec.canvas
+  if (height > width * tallAspectRatioLimit) {
+    findings.push({
+      code: "tall-aspect",
+      message: `The ${width}x${height} canvas is ${(height / width).toFixed(2)} times taller than wide; lay the flow out horizontally (about 2.2 to 3 times wider than tall) or fold a longer sequence into two rows or columns instead of a vertical tower`,
+      shapeIds: [],
+    })
+  }
   const boxes = spec.shapes.filter(
     (shape): shape is BoxShape => shape.type === "rect" || shape.type === "ellipse",
   )

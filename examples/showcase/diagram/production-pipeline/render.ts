@@ -67,7 +67,7 @@ assert.ok(totalBytes <= 10 * 1024 * 1024, "The ten exports exceeded the aggregat
 assert.deepEqual(await Promise.all(inputs.map(fingerprint)), before, "Rendering must not mutate any retained input")
 const receipt = {
   schema: "slopcamera.showcase.diagram-pair/v1", bun: Bun.version,
-  dimensions: { width: 720, height: 1232, scale: 1 }, inputs: before,
+  dimensions: { width: 1200, height: 520, scale: 1 }, inputs: before,
   invariant: geometry[0], outputs, totalBytes,
   review: "pending-independent-light-dark-inspection",
 }
