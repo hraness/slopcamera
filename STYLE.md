@@ -192,7 +192,7 @@ Readers trust a page that states its limits plainly. They skim a page that repea
 
 - Give a product's article collection one authored visual direction: consistent drawing technique, line weight, texture, framing, and degree of abstraction. Start with a reviewed image from the collection and the product's brand palette.
 - Use a quiet neutral ground, one dominant brand color, and at most one supporting accent. Keep the accent subordinate and use tonal variations for depth. Avoid unrelated bright colors, glossy stock-art treatments, and a different style for each topic.
-- Generate editorial artwork through [SlopCamera](https://slopcamera.com). Retain its authored prompt, reference assets, and generation record with the source. Inspect the image at article and card sizes in both page themes before accepting it.
+- Generate editorial artwork through [Slopcamera](https://slopcamera.com). Retain its authored prompt, reference assets, and generation record with the source. Inspect the image at article and card sizes in both page themes before accepting it.
 - Make each illustration explain the article's central idea through one clear visual relationship. Avoid generic technology collages, decorative interface fragments, and text baked into images. A diagram may use labels when those labels carry the explanation.
 - Give every illustrated article a complete, intentional card and lead-image treatment. Preserve the actual generation history when replacing an old asset; credit the tool that made the new image and link its current public site.
 

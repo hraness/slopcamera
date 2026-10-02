@@ -53,7 +53,7 @@ Slopcamera's native studio runs Manim 0.21.0 programs and keeps the source next 
 
 video-use, from Browser Use, is an agent skill for editing a folder of raw footage in a conversation. It cuts filler words and dead space, grades color, burns subtitles, and hands animation overlays to HyperFrames, Remotion, Manim, or PIL. Setup asks for an ElevenLabs API key. Pick it when you want a finished cut from raw takes with little setup.
 
-### SlopCamera projects
+### Slopcamera projects
 
 A Slopcamera project stores cuts, speed changes, zooms, overlays, captions, filler removal, and audio alignment as edit decisions over untouched originals, and renders 16:9, 9:16, 1:1, and 4:5 deliveries from one edit. Pick it when you will revise the edit later or need several aspect ratios. See [Edit and deliver video](/docs/how-to/edit-video).
 
@@ -63,13 +63,13 @@ A Slopcamera project stores cuts, speed changes, zooms, overlays, captions, fill
 
 MCP for Blender connects an MCP client to a running Blender through an MCP server and a Blender add-on, so the agent can create and change objects interactively. Pick it when you want to steer a Blender session live.
 
-### SlopCamera native studio
+### Slopcamera native studio
 
 Slopcamera runs Blender, CadQuery, and Manim programs that you allow with `--allow-trusted-code`, with 7 starters, and records what ran. A revision is an edit to the program and a re-render. It also renders Three.js scenes from scene JSON, where every part has a stable ID the agent can patch. See [Render native films](/docs/how-to/native-films) and [Directed spatial scenes](/docs/reference/spatial-scenes).
 
 ## Several jobs from one CLI
 
-### SlopCamera
+### Slopcamera
 
 Slopcamera packages diagrams, HTML motion graphics, Three.js scenes, parametric designs, native Blender, CadQuery, and Manim films, and footage editing behind one CLI, an Agent Skill, an SDK, and 21 MCP tools. The agent writes a short source file, and the CLI renders it, checks it, and writes the variants each technique supports, such as light and dark diagrams or 16:9 and 9:16 cuts of a video. It renders locally, with no account, under the MIT license.
 

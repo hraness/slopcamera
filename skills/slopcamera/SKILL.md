@@ -1,9 +1,9 @@
 ---
 name: slopcamera
-description: Create, inspect, edit and render visual media with the SlopCamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
+description: Create, inspect, edit and render visual media with the Slopcamera CLI and SDK. Use for diagrams, raster-to-SVG conversion, existing screen or camera recordings, video editing and captions, social collage banners, music videos from authored scenes and local tracks, AI images/video/speech/transcription, Three.js scenes and world-space media, Blender rigs and simulation, CadQuery models, parametric architectural designs, Manim educational films, HTML/WGSL motion graphics, and durable agent workflows.
 ---
 
-# Create visual media with SlopCamera
+# Create visual media with Slopcamera
 
 Start from the requested result and existing source. Use the installed `slopcamera` CLI, inspect its real capabilities and retain the authored source beside its derived media. Read only the references needed by the task.
 
@@ -14,6 +14,10 @@ Use [visual style direction](references/visual-style-direction.md) for historica
 footage, animation families, resolution, and visual review. Default to native 4K
 for an unspecified creative master when the renderer and source support it;
 preserve deliberate pixel grids, period aspect ratios, source limits, and the user's explicit settings. Treat quality as staging, materials, movement, and finishing together.
+
+For every 3D brief, apply the [3D quality bar](references/3d-quality-bar.md),
+"accurate physics, AAA graphics, VFX", unless the user overrides it, and review
+the render against all three parts before handing it back.
 
 ## Establish the host
 
@@ -50,6 +54,8 @@ Slopcamera installs from its verified release archive or from source. Historical
 | Refine an existing scene, organic interactions, contact, staging, or final movie quality | [Scene refinement](references/scene-building.md#refine-an-existing-scene) |
 | Parametric architecture, furniture, dimensions, repeated structures or editable design variants | [Parametric design](references/parametric-design.md) |
 | Blender, rigs, bakes, CAD, shared native assets or production frames | [Native studio](references/native-studio.md) |
+| Any 3D brief: physics, PBR, color management, anti-aliasing, VFX and the review checklist | [3D quality bar](references/3d-quality-bar.md) |
+| Blender model for the web: high-to-low baking, texture budgets, LODs, GLB export and runtime checks | [Web-ready 3D assets](references/web-ready-3d-assets.md) |
 | Manim lesson, narrated explanation or mathematical animation | [Educational video](references/educational-video.md) |
 | Typed Bun SDK, built-in workflow, durable resume or MCP | [Workflows and SDK](references/workflows-sdk.md) |
 | Reference-led Three scene, transparent 3D loop or metallic logo | [Reference-led 3D](references/reference-led-3d.md) |

@@ -72,6 +72,7 @@ const linkedReferences = new Set(
     .filter((path): path is string => path !== undefined),
 )
 for (const relativePath of [
+  "references/3d-quality-bar.md",
   "references/customization.md",
   "references/gateway-media.md",
   "references/install.md",
@@ -81,6 +82,7 @@ for (const relativePath of [
   "references/social-collage-banners.md",
   "references/video-projects.md",
   "references/visual-communication.md",
+  "references/web-ready-3d-assets.md",
 ]) {
   if (!linkedReferences.has(relativePath)) {
     throw new Error(`SKILL.md must route to ${relativePath}`)
@@ -131,6 +133,37 @@ for (const executableBlock of [
   if (!executableBlock.test(rubberStampReference)) {
     throw new Error("Rubber-stamp executable blocks must be self-contained")
   }
+}
+if (!text.includes("accurate physics, AAA graphics, VFX")) {
+  throw new Error("SKILL.md must apply the 3D quality bar by its invocation phrase")
+}
+const qualityBar = await readFile(join(root, "references", "3d-quality-bar.md"), "utf8")
+for (const required of [
+  "## Accurate physics",
+  "## AAA graphics",
+  "## VFX",
+  "## Review before handing back",
+  "accurate physics, AAA graphics, VFX",
+  "has no live physics engine",
+  "has no MSAA, FXAA, SMAA or TAA",
+  "`antialias: true`",
+  "slopcamera scene effects bake",
+  "slopcamera scene effects check",
+]) {
+  if (!qualityBar.includes(required)) throw new Error(`3D quality bar must retain ${required}`)
+}
+const webAssets = await readFile(join(root, "references", "web-ready-3d-assets.md"), "utf8")
+for (const required of [
+  "slopcamera scene asset admit",
+  "slopcamera studio asset <studio-id> --output-id <id> --asset-id <asset-id> --representation native --json",
+  "--allow-trusted-code",
+  "measureSpatialGlbBudget",
+  "checkSpatialGlbBudget",
+  "checkSpatialGlbLodChain",
+  "https://github.com/vercel-labs/vgpu/tree/38188e694a20ad355a00faf29aa0bb0ffab0c954/skills/vgpu",
+  "Slopcamera has no modelling, baking, decimation or compression command",
+]) {
+  if (!webAssets.includes(required)) throw new Error(`Web-ready 3D asset workflow must retain ${required}`)
 }
 const socialCollageReference = await readFile(
   join(root, "references", "social-collage-banners.md"),

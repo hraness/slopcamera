@@ -73,3 +73,11 @@ drying-clock, pigment-pile, and Kubelka–Munk ideas studied from
 used under its MIT License (Copyright © aliceisjustplaying). Slopcamera's
 TypeScript implementation is an independent reimplementation and does not
 include that source tree.
+
+The web-ready 3D asset workflow in
+`skills/slopcamera/references/web-ready-3d-assets.md` and its how-to guide adapt
+the Blender asset workflow of the
+[vgpu Agent Skill](https://github.com/vercel-labs/vgpu/tree/38188e694a20ad355a00faf29aa0bb0ffab0c954/skills/vgpu)
+by Vercel Labs, distributed under the MIT License (Copyright (c) 2025 Vercel,
+Inc.). The guidance is rewritten for Slopcamera's commands; no vgpu text or code
+is bundled.

@@ -216,7 +216,7 @@ export async function observeSupportFooter(page: Page, scenario: ShellCase, foun
   }
   const selector = '[data-slot="hraness-support-link"]', link = page.locator(selector)
   assert.equal(await link.count(), 1); assert.equal(await link.getAttribute("href"), supportHref)
-  assert.equal(await link.getAttribute("aria-label"), "Support SlopCamera: optional paid membership")
+  assert.equal(await link.getAttribute("aria-label"), "Support Slopcamera: optional paid membership")
   // v0.14 renders the support target as the muted question-mark icon only; the
   // accessible name stays on the link and its title carries the proposition.
   assert.equal(await link.textContent(), ""); assert.equal(await link.getAttribute("target"), null)

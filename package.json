@@ -1,7 +1,7 @@
 {
   "name": "@hraness/slopcamera",
   "version": "3.11.0",
-  "description": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+  "description": "Slopcamera lets Codex, Claude Code, and other coding agents make images, diagrams, animation, 3D scenes, Blender films, and edited video from source files they can keep revising.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -77,7 +77,14 @@
     "cli",
     "typescript",
     "bun",
-    "local-first"
+    "local-first",
+    "claude-code",
+    "codex",
+    "blender",
+    "manim",
+    "3d",
+    "animation",
+    "diagram-as-code"
   ],
   "exports": {
     ".": {

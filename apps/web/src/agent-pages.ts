@@ -17,9 +17,9 @@ Slopcamera is free and open source. Use it with Codex, Claude Code, or another a
 
 ${homepageHeroMarkdown()}
 
-## Direct the whole visual workflow.
+## Image, diagram, 3D, and video techniques for coding agents.
 
-Images, diagrams, worlds, edits, and delivery stay in one editable project. Start with a brief, then keep the source beside every render.
+Slopcamera keeps images, diagrams, 3D scenes, edits, and exports in one local project. Every render keeps the source your agent wrote, so the next change is an edit to that source.
 
 ### Images and pixel art
 
@@ -31,15 +31,15 @@ Build positioned diagrams and visual explanations with a retained source, theme,
 
 ### 3D scenes and worlds
 
-Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief. [Build a native film](https://slopcamera.com/docs/tutorials/first-native-film.md).
+Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief. [Render a Blender scene](https://slopcamera.com/docs/tutorials/first-native-film.md).
 
 ### Edit and deliver
 
 Cut footage, add captions and overlays, grade the result, then frame landscape, vertical, square, or portrait exports. [Edit a video](https://slopcamera.com/docs/how-to/edit-video.md).
 
-## Still studies from the studio.
+## Every technique, with its source.
 
-Each study is a poster with its source and guide. Open the docs when you want to make it your own.
+Each technique links to its source and the guide that produced it. Open one to make your own version.
 
 ${homepageExampleMarkdown()}
 
@@ -95,7 +95,7 @@ The website displays work and documentation. Creation happens in the CLI and SDK
 
 ### How is Slopcamera different from Remotion or HyperFrames?
 
-Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. [Compare their workflows and licensing](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md) and [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md).
+Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. [Compare their workflows and licensing](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md) and [Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md).
 
 ### Is Slopcamera the same as Atet?
 
@@ -175,6 +175,7 @@ Paying to support Slopcamera's development is optional and unlocks no features. 
 - [Render and edit Three.js 3D scenes](https://slopcamera.com/docs/how-to/direct-scenes.md): Portable geometry, cameras, media surfaces, GPU, and saved worlds
 - [Plan camera moves, lighting, and effects for a 3D scene](https://slopcamera.com/docs/how-to/cinematic-worlds.md): Recipe packs, direction, galleries, effects, and audits
 - [Render Blender, CadQuery, and Manim films from source](https://slopcamera.com/docs/how-to/native-films.md): Blender, CadQuery, Manim, explicit native trust, and interchange
+- [Make web-ready 3D assets with Blender](https://slopcamera.com/docs/how-to/web-ready-3d-assets.md): Baking, GLB levels of detail, budgets, and admission
 - [Direct generated clips](https://slopcamera.com/docs/how-to/direct-takes.md): Shot recipes, budgets, takes, and review
 - [Run workflows](https://slopcamera.com/docs/how-to/run-workflows.md): Recipes, declarative graphs, and recovery
 - [Build from source](https://slopcamera.com/docs/how-to/install-from-source.md): Locked dependencies, SDK and CLI build, and engine setup
@@ -202,8 +203,8 @@ ${blogPostLinks}
 - [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
 - [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): Why an agent with Slopcamera writes a short source file instead of a whole render pipeline, and how to choose between it and other tools
-- [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
-- [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
+- [Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
+- [Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
 - [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
 - [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark.md): Methods and reports from a controlled study of first-render and revision costs
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines

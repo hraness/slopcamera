@@ -92,9 +92,9 @@ export function renderHighlightedCode(value: string, language: SyntaxLanguage): 
  * header's own destinations and metallic mark. Presentation comes from design-kit's `hraness-marketing-footer`
  * grammar; product links and disclosures stay outside the shared footer. */
 function renderSiteContentFooter(): string {
-  return `<footer aria-label="SlopCamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
+  return `<footer aria-label="Slopcamera" class="hraness-marketing-footer" data-hraness-marketing="footer">
       <div class="hraness-marketing-footer__inner">
-        <a aria-label="SlopCamera home" class="hraness-marketing-footer__brand" data-foil="" href="/"><span aria-hidden="true" class="hraness-foil-mark" data-foil=""><img alt="" class="hraness-foil-mark__image" height="22" src="/marks/slopcamera.svg" width="22"><span aria-hidden="true" class="hraness-foil-mark__paint"></span></span><span class="hraness-marketing-footer__name">SlopCamera</span></a>
+        <a aria-label="Slopcamera home" class="hraness-marketing-footer__brand" data-foil="" href="/"><span aria-hidden="true" class="hraness-foil-mark" data-foil=""><img alt="" class="hraness-foil-mark__image" height="22" src="/marks/slopcamera.svg" width="22"><span aria-hidden="true" class="hraness-foil-mark__paint"></span></span><span class="hraness-marketing-footer__name">Slopcamera</span></a>
         <nav aria-label="Footer navigation" class="hraness-marketing-footer__nav">
           <a href="/docs">Docs</a>
           <a href="https://github.com/hraness/slopcamera">GitHub</a>
