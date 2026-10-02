@@ -17,9 +17,9 @@ Slopcamera is free and open source. Use it with Codex, Claude Code, or another a
 
 ${homepageHeroMarkdown()}
 
-## Direct the whole visual workflow.
+## Image, diagram, 3D, and video techniques for coding agents.
 
-Images, diagrams, worlds, edits, and delivery stay in one editable project. Start with a brief, then keep the source beside every render.
+Slopcamera keeps images, diagrams, 3D scenes, edits, and exports in one local project. Every render keeps the source your agent wrote, so the next change is an edit to that source.
 
 ### Images and pixel art
 
@@ -31,15 +31,15 @@ Build positioned diagrams and visual explanations with a retained source, theme,
 
 ### 3D scenes and worlds
 
-Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief. [Build a native film](https://slopcamera.com/docs/tutorials/first-native-film.md).
+Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief. [Render a Blender scene](https://slopcamera.com/docs/tutorials/first-native-film.md).
 
 ### Edit and deliver
 
 Cut footage, add captions and overlays, grade the result, then frame landscape, vertical, square, or portrait exports. [Edit a video](https://slopcamera.com/docs/how-to/edit-video.md).
 
-## Still studies from the studio.
+## Every technique, with its source.
 
-Each study is a poster with its source and guide. Open the docs when you want to make it your own.
+Each technique links to its source and the guide that produced it. Open one to make your own version.
 
 ${homepageExampleMarkdown()}
 

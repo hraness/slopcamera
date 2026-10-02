@@ -87,9 +87,9 @@
 
         <section aria-labelledby="features-title" class="slopcamera-features" id="features">
           <header class="slopcamera-section-heading">
-            <p class="slopcamera-eyebrow">A local visual studio for agents</p>
-            <h2 id="features-title">Direct the whole visual workflow.</h2>
-            <p>Images, diagrams, worlds, edits, and delivery stay in one editable project. Start with a brief, then keep the source beside every render.</p>
+            <p class="slopcamera-eyebrow">What Slopcamera makes</p>
+            <h2 id="features-title">Image, diagram, 3D, and video techniques for coding agents.</h2>
+            <p>Slopcamera keeps images, diagrams, 3D scenes, edits, and exports in one local project. Every render keeps the source your agent wrote, so the next change is an edit to that source.</p>
           </header>
           <div class="slopcamera-feature-grid">
             <article class="slopcamera-feature-card">
@@ -102,7 +102,7 @@
             </article>
             <article class="slopcamera-feature-card">
               <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--world" aria-hidden="true"><span></span><i></i><b></b></div>
-              <div><h3>3D scenes and worlds</h3><p>Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief.</p><a href="/docs/tutorials/first-native-film">Build a native film</a></div>
+              <div><h3>3D scenes and worlds</h3><p>Compose Three.js, Blender, CadQuery, and Manim scenes with a camera that can be revised from the same brief.</p><a href="/docs/tutorials/first-native-film">Render a Blender scene</a></div>
             </article>
             <article class="slopcamera-feature-card">
               <div class="slopcamera-feature-card__mockup slopcamera-feature-card__mockup--timeline" aria-hidden="true"><span></span><i></i><b></b></div>
@@ -113,8 +113,8 @@
 
         <section aria-labelledby="examples-title" class="slopcamera-screening" id="examples">
           <header class="slopcamera-section-heading">
-            <h2 id="examples-title">Still studies from the studio.</h2>
-            <p>Each study is a poster with its source and guide. Open the docs when you want to make it your own; the homepage stays quick to scan.</p>
+            <h2 id="examples-title">Every technique, with its source.</h2>
+            <p>Each technique links to its source and the guide that produced it. Open one to make your own version.</p>
           </header>
           <div class="slopcamera-screening-grid">
             {{EXAMPLE_GALLERY}}
@@ -132,7 +132,7 @@
           </header>
           <div class="slopcamera-start-paths">
             <a href="/docs/tutorials/first-animation"><h3>{{PRODUCT_HEADING_START_ANIMATION}}</h3><p>Send a midnight tram toward the moon, then change the scene.</p><span>Make your first animation</span></a>
-            <a href="/docs/tutorials/first-native-film"><h3>{{PRODUCT_HEADING_START_WORLD}}</h3><p>Compose a scene, place the camera, and give the light a job.</p><span>Make your first 3D film</span></a>
+            <a href="/docs/tutorials/first-native-film"><h3>{{PRODUCT_HEADING_START_WORLD}}</h3><p>Compose a scene, place the camera, and give the light a job.</p><span>Make your first Blender scene</span></a>
             <a href="/docs/how-to/edit-video"><h3>{{PRODUCT_HEADING_START_FOOTAGE}}</h3><p>Find the cut, add graphics and sound, and frame each delivery.</p><span>Edit your first video</span></a>
           </div>
           <p class="slopcamera-start-more">Working on a still? <a href="/docs/how-to/generate-media">Make an image</a> or <a href="/docs/tutorials/first-diagram">draw a diagram</a>. Explore <a href="/docs/reference/techniques">every technique</a> when you are ready.</p>
@@ -173,7 +173,7 @@
           </header>
           <div class="hraness-marketing-question-list">
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>How is Slopcamera different from Remotion or HyperFrames?</summary><div class="hraness-marketing-question__answer"><p>Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. <a href="/docs/explanation/why-slopcamera#compared-with-other-tools">Compare their workflows and licensing</a>, or read <a href="/docs/explanation/slopcamera-vs-remotion">{{SHELL_PRODUCT_NAME}} vs Remotion</a> and <a href="/docs/explanation/slopcamera-vs-hyperframes">{{SHELL_PRODUCT_NAME}} vs HyperFrames</a>.</p></div></details>
-            <details class="hraness-marketing-question hraness-material-disclosure"><summary>Do I need to write code?</summary><div class="hraness-marketing-question__answer"><p>Describe the result to your coding agent; it writes the source and runs the commands.</p></div></details>
+            <details class="hraness-marketing-question hraness-material-disclosure"><summary>Do I need to write code?</summary><div class="hraness-marketing-question__answer"><p>No. Describe the result to your coding agent; it writes the source and runs the commands.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>Does Slopcamera require an account or subscription?</summary><div class="hraness-marketing-question__answer"><p>No. Slopcamera has no account or subscription. Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits for hosted image generation.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>What does it cost?</summary><div class="hraness-marketing-question__answer"><p>Slopcamera is free; editing, diagrams, vectorization, and exports run locally. Model usage is billed to your Vercel AI Gateway account, or to prepaid Hraness Credits for hosted image generation.</p></div></details>
             <details class="hraness-marketing-question hraness-material-disclosure"><summary>Which platforms does Slopcamera run on?</summary><div class="hraness-marketing-question__answer"><p>Use Bun 1.3.14+ on macOS, Linux, or Windows. A few features are narrower: vectorization, local audio and color effects, and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux. Native HTML rendering, GPU scene profiles, and face analysis need macOS. Import existing recordings; Slopcamera does not record your screen or camera. Run <code>slopcamera doctor</code> to check local tools and see the <a href="https://github.com/hraness/slopcamera/blob/main/docs/reference/capabilities.md">platform requirements</a>.</p></div></details>
@@ -186,10 +186,10 @@
 
         <section aria-labelledby="cta-title" class="hraness-marketing-cta" data-hraness-marketing="cta" id="closing">
           <h2 class="hraness-marketing-cta__heading" id="cta-title">{{PRODUCT_HEADING_CTA}}</h2>
-          <p class="hraness-marketing-cta__summary">Install Slopcamera, give your agent a brief, and start directing.</p>
+          <p class="hraness-marketing-cta__summary">Install the CLI and its Agent Skill, then ask your agent for an image, a diagram, a 3D scene, or an edit.</p>
           <div class="hraness-marketing-cta__actions">
             <a class="hraness-marketing-action" data-emphasis="primary" href="#cli-install">{{PRODUCT_PRIMARY_ACTION}}</a>
-            <a class="slopcamera-text-link" href="/docs">Open the studio guide</a>
+            <a class="slopcamera-text-link" href="/docs">Read the docs</a>
           </div>
         </section>
       </div>
