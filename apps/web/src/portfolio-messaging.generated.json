@@ -11,7 +11,7 @@
     "formatVersion": 1,
     "product": "slopcamera",
     "names": {
-      "name": "SlopCamera",
+      "name": "Slopcamera",
       "command": "slopcamera",
       "formerly": [
         "Atet",
@@ -21,9 +21,9 @@
     "category": "Media studio for agents",
     "tagline": "A multimedia studio for your coding agent.",
     "short": "A multimedia studio for your coding agent",
-    "meta": "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
-    "medium": "SlopCamera is a media studio for coding agents. Codex, Claude Code, and other agents make images, diagrams, animation, 3D scenes, and edited video from source files they can keep revising.",
-    "long": "Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. SlopCamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. SlopCamera is free and open source.",
+    "meta": "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising.",
+    "medium": "Slopcamera is a media studio for coding agents. Codex, Claude Code, and other agents make images, diagrams, animation, 3D scenes, and edited video from source files they can keep revising.",
+    "long": "Agents that write code can also make media, but generated assets usually arrive as finished files nobody can change. Slopcamera is a media studio for coding agents: images, diagrams, animation, 3D scenes, and edited video are built from source files the agent can keep revising, so a change is a new render, not a new prompt lottery. Codex, Claude Code, and other command-capable agents drive it through the CLI and skill. Slopcamera is free and open source.",
     "hero": {
       "heading": "Give your agent a multimedia studio.",
       "summary": "Make images, animation, 3D scenes, and video with your coding agent. Direct the details. Keep the source.",
@@ -43,7 +43,7 @@
       "home-design": "Your tools. Your files.",
       "home-questions": "Common questions",
       "home-cta": "Make something worth replaying.",
-      "home-search-title": "SlopCamera: video, diagrams and 3D your coding agent can revise",
+      "home-search-title": "Slopcamera: video, diagrams and 3D your coding agent can revise",
       "agent-home-examples": "See what you can make",
       "agent-home-revision": "Direct it again",
       "agent-home-workflow": "From an idea to a finished piece",

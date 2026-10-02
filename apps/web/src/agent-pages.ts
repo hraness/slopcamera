@@ -95,7 +95,7 @@ The website displays work and documentation. Creation happens in the CLI and SDK
 
 ### How is Slopcamera different from Remotion or HyperFrames?
 
-Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. [Compare their workflows and licensing](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md) and [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md).
+Remotion renders React to video; HyperFrames renders HTML. Slopcamera combines HTML motion, diagrams, 3D and native scenes, and edits of your own footage in a local project. [Compare their workflows and licensing](https://slopcamera.com/docs/explanation/why-slopcamera.md#compared-with-other-tools), or read [Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md) and [Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md).
 
 ### Is Slopcamera the same as Atet?
 
@@ -203,8 +203,8 @@ ${blogPostLinks}
 - [Choose an interface](https://slopcamera.com/docs/explanation/choose-an-interface.md): Skill, CLI, SDK, MCP, and hosted adapter compared
 - [Architecture](https://slopcamera.com/docs/explanation/architecture.md): Sources, projects, operations, and local host
 - [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera.md): Why an agent with Slopcamera writes a short source file instead of a whole render pipeline, and how to choose between it and other tools
-- [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
-- [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
+- [Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
+- [Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
 - [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
 - [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark.md): Methods and reports from a controlled study of first-render and revision costs
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines

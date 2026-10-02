@@ -40,7 +40,7 @@ test("a product failure still releases its installation", async () => {
 
 import { slopcameraUpdatePolicy } from "./update-policy";
 
-test("SlopCamera keeps local media offline and does not infer help for portable work", () => {
+test("Slopcamera keeps local media offline and does not infer help for portable work", () => {
   for (const argv of [[], ["--help"], ["help", "render"], ["render", "--help"], ["--version"], ["__complete", "render"], ["diagram", "--help"]]) {
     expect(slopcameraUpdatePolicy(argv).effectFree).toBe(true);
   }

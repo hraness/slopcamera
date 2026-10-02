@@ -49,7 +49,7 @@ That one-line edit rewrites the `.tldr` file, both SVGs, and both PNGs.
 - Depth of HTML guidance. Its 21 skills, block catalog, and Figma import cover HTML video in more detail than Slopcamera's HTML profiles.
 - Community and backing. HyperFrames is maintained by HeyGen and has a much larger user base.
 
-## What SlopCamera does better
+## What Slopcamera does better
 
 - Engines beyond the browser. Blender, CadQuery, and Manim programs render from the same CLI, with their source kept next to the output.
 - Diagrams. One `.diagram.json` source renders to an editable `.tldr` file and light and dark SVG and PNG, and a strict check reports layout problems first.
@@ -69,19 +69,19 @@ In the other direction, use a Slopcamera diagram SVG, a Blender still, or a Mani
 
 ## FAQ
 
-### Is SlopCamera built on HyperFrames?
+### Is Slopcamera built on HyperFrames?
 
 No. Slopcamera has its own HTML renderer with seven profiles. See [HTML render profiles](/docs/reference/html-profiles).
 
-### Can SlopCamera render GSAP animations?
+### Can Slopcamera render GSAP animations?
 
 Not through a GSAP profile. The `motion` profile uses the Motion library, and the `plain` profile covers CSS, SVG, and Canvas. Render GSAP work with HyperFrames and edit the result in Slopcamera.
 
-### Are SlopCamera renders deterministic?
+### Are Slopcamera renders deterministic?
 
 HTML renders use one absolute clock, seeded randomness, declared assets, and locked library versions, so a frame renders the same way whenever it is requested on the same machine. Slopcamera does not claim identical pixels across machines.
 
-### Does SlopCamera have cloud rendering?
+### Does Slopcamera have cloud rendering?
 
 Not for video. The hosted API at `api.slopcamera.com` checks and renders diagrams for free with rate limits and generates images with prepaid Hraness Credits. See [Choose an interface](/docs/explanation/choose-an-interface).
 

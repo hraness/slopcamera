@@ -5,7 +5,7 @@ a vertical composition with a pulse, and a narrated explanation of the corona.
 The brief is to change the pacing, typography, crop, and sound while keeping
 the same astronomical event recognizable.
 
-The [recipe](render.ts) combines SlopCamera's local `media color` operation
+The [recipe](render.ts) combines Slopcamera's local `media color` operation
 with FFmpeg cuts, overlays, and audio mixing. It writes its own synthesized
 scores and uses the bundled Instrument Serif font. The original footage and
 its audio are described in [Footage credit and usage](footage-credit.md).
@@ -60,7 +60,7 @@ bun examples/showcase/studio-relaunch/one-shoot/render.ts \
 
 Omit the final argument to render only the cinematic and vertical cuts. The
 two local scores are created in either case. FFmpeg edits wait for available
-CPU, disk, and encode capacity through SlopCamera's resource coordinator; the
+CPU, disk, and encode capacity through Slopcamera's resource coordinator; the
 color command handles its own resource request.
 
 The command prints the output directory and video paths. For the command above,
@@ -79,7 +79,7 @@ motion. Its original audio is replaced by the new scores and narration.
 Each cut also gets a WebP poster. The directory keeps the intermediate picture,
 PNG overlays, score WAVs, command logs, probe results, and `lineage.json` with
 source, recipe, font, and output hashes. `mono-grade.json` records the separate
-SlopCamera color output. A reused run name fails instead of replacing an earlier
+Slopcamera color output. A reused run name fails instead of replacing an earlier
 run; inspect its logs and choose a new name after fixing a failure.
 
 ## Direct another version

@@ -1586,7 +1586,7 @@
   },
   {
     "identityLineCount": 4,
-    "identityLinesSha256": "8d0b596ae3de0d515aa4c0761eb08469d805d3563115214e21543abf65aa5dba",
+    "identityLinesSha256": "7f12206d768ad746699fc7362a4cf39bea7df412f62c874ba164a6cac4a55fc0",
     "occurrenceCount": 4,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1650,7 +1650,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "1ce8fad6651b5d0a917f5685fe1183bb138efb35f52ce8234c64e70241074e4d",
+    "identityLinesSha256": "d03f30b0a683af0d945a38d149c6211dd1643eaa5f0c2748f475c0bd97a577cd",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/remotion-alternatives-for-coding-agents.md",
     "categories": [
@@ -1884,7 +1884,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "1f7625cf63d5fd0fb2a1b5b22cdb8fef2d39e4f1e9fc1c5d24f4ba7f07519ec9",
+    "identityLinesSha256": "362c0ad7f241336348cfbdf8bbc83e22937a5008e3b5a12276c999a26ce1edaa",
     "occurrenceCount": 6,
     "path": "apps/web/src/portfolio-messaging.generated.json",
     "categories": [
@@ -1893,7 +1893,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
+    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
@@ -2065,7 +2065,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "8adfc1776ed70eaf4dedbf250d8ce21b64d8f30e3028913fb53b8c1e10c3ca81",
+    "identityLinesSha256": "06c99b6e86aff27b377e790181ea615f22dc6e62459a6cc655b284d3020b4906",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
@@ -3362,7 +3362,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "1cfd91c6127c0aa7bee042e4c31cff5889c7d17e9bcaf5044696e941786230ca",
+    "identityLinesSha256": "7795e936e7fcf85e84da01cd4f52944825b09c88dd3ea7b483d457b099a005b3",
     "occurrenceCount": 8,
     "path": "README.md",
     "categories": [

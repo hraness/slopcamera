@@ -73,7 +73,7 @@ export const homeSocialImage: SocialImage = {
 export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: string; description?: string }>>> = Object.freeze({
   // A card with an eyebrow and a two-line headline has room for one line of
   // description at the standard size, so most of these are one short line.
-  "blog/index.html": { description: "Posts from Hraness on how SlopCamera's techniques work and when to use them." },
+  "blog/index.html": { description: "Posts from Hraness on how Slopcamera's techniques work and when to use them." },
   "blog/one-shot-render-vs-installed-techniques.html": {
     headline: "What the second render takes",
     description: "Four gallery examples at one commit.",
@@ -133,19 +133,19 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
   "docs/reference/vectorization.html": { description: "Trace a raster to SVG, then check fidelity." },
   "docs/reference/gateway-generation.html": { description: "Image, video, speech, and transcription." },
   "docs/reference/video-pipeline.html": { description: "The FFmpeg-backed project model, end to end." },
-  "docs/reference/native-engines.html": { description: "How SlopCamera runs jobs from kept source." },
+  "docs/reference/native-engines.html": { description: "How Slopcamera runs jobs from kept source." },
   "docs/reference/mcp-tools.html": { description: "The 21 fixed tools slopcamera mcp serves." },
   "docs/explanation/architecture.html": {
-    headline: "How SlopCamera works",
+    headline: "How Slopcamera works",
     description: "What stays editable after a render and which work runs where.",
   },
   "docs/explanation/why-slopcamera.html": {
-    headline: "Why SlopCamera",
+    headline: "Why Slopcamera",
     description: "Why an agent writes a short source file instead of a whole render pipeline.",
   },
   "docs/explanation/slopcamera-vs-remotion.html": { description: "Formats, rendering, licenses, and using both." },
   "docs/explanation/slopcamera-vs-hyperframes.html": {
-    headline: "SlopCamera vs HyperFrames",
+    headline: "Slopcamera vs HyperFrames",
     description: "HTML video versus several engines.",
   },
   "docs/explanation/remotion-alternatives-for-coding-agents.html": { description: "Tools to use instead of or beside Remotion." },
@@ -189,7 +189,7 @@ function docsSocialPage(page: DocsPage): SocialImagePage {
   return pageCard(docsDocumentForPage(page), {
     // The docs index is titled "Documentation" on the site; under that
     // eyebrow the card names the product instead of repeating the section.
-    headline: page.section === "index" ? "SlopCamera documentation" : page.title,
+    headline: page.section === "index" ? "Slopcamera documentation" : page.title,
     description: page.description,
     eyebrow: comparisonDocuments.has(docsDocumentForPage(page)) ? "Comparison" : docsCardEyebrows[page.section],
   })
