@@ -1,4 +1,4 @@
-== Slopcamera ==
+== SlopCamera ==
 ┌ Now ─────────────────────────────────────────────────────────────────────────┐
 │✓ Ready · Last job finished 9 min ago                                         │
 │⚠ Credits are low · $0.40 left · checked 2 hours ago                          │
