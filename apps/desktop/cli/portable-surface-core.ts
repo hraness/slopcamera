@@ -35,7 +35,7 @@ async function runHeadlessSlopcameraCli(
     || !("main" in module)
     || typeof module.main !== "function"
   ) {
-    throw new CliError("unavailable", "The portable Slopcamera CLI is unavailable.");
+    throw new CliError("unavailable", "The portable SlopCamera CLI is unavailable.");
   }
   await module.main(argv, options);
 }

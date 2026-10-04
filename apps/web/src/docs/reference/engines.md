@@ -1,4 +1,4 @@
-Slopcamera divides media work among engine families with different trust and runtime requirements. Some are bundled and deterministic, some are separately installed native tools, and one crosses the network boundary to paid models. Run `{{DOCTOR_COMMAND}}` to see which engines the installed host can use on this machine, and check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
+SlopCamera divides media work among engine families with different trust and runtime requirements. Some are bundled and deterministic, some are separately installed native tools, and one crosses the network boundary to paid models. Run `{{DOCTOR_COMMAND}}` to see which engines the installed host can use on this machine, and check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
 
 ## Engine families
 

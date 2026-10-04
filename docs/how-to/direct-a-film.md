@@ -2,7 +2,7 @@
 
 Give your agent a creative brief it can turn into decisions about the picture, movement, and sound. Keep the source after the first render so you can revise those decisions.
 
-Start with [Slopcamera installed](../../README.md#install-slopcamera) and its matching Agent Skill. Choose a [supported workflow](../reference/capabilities.md) before promising a particular effect. Authored animation runs locally; Blender and other native engines install separately. Generated media uses your own Vercel AI Gateway access, or prepaid Hraness Credits for prompt-only images.
+Start with [SlopCamera installed](../../README.md#install-slopcamera) and its matching Agent Skill. Choose a [supported workflow](../reference/capabilities.md) before promising a particular effect. Authored animation runs locally; Blender and other native engines install separately. Generated media uses your own Vercel AI Gateway access, or prepaid Hraness Credits for prompt-only images.
 
 ## Describe what happens
 

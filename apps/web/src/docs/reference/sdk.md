@@ -1,4 +1,4 @@
-Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed Slopcamera distribution — the installed Bun package or a checkout — and its admitted tools. Check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
+Installing `@hraness/slopcamera` does not enable every operation in every host. Each public import path selects a capability boundary: the portable surfaces run anywhere Bun runs, while the `local` subpaths need the source-backed SlopCamera distribution — the installed Bun package or a checkout — and its admitted tools. Check [release and platform support](/docs/reference/capabilities) for released commands and any later source corrections.
 
 ## Public entrypoints
 

@@ -62,7 +62,7 @@ test("a copied executable uses physical caller state without requiring a source 
   await expect(resolveRepositoryPaths(project, { SLOPCAMERA_REPOSITORY_ROOT: "/$bunfs/root" }, "/$bunfs/root", executable))
     .rejects.toThrow("physical caller workspace");
   await expect(resolveRepositoryPaths(project, {}, install, executable))
-    .rejects.toThrow("Could not find a Slopcamera checkout");
+    .rejects.toThrow("Could not find a SlopCamera checkout");
 });
 
 test("preserves the caller project directory mode while creating only owned state", async () => {

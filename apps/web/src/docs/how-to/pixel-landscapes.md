@@ -1,4 +1,4 @@
-Use a landscape manifest to make a continuous illustrated background for a marketing page. Slopcamera compares art directions, generates a native tall composition or links portrait panels with overlap references, and converts the resulting brightness to a crisp alpha grid. The result includes detailed source art, a single-ink transparent PNG, a recolorable mask, a comparison sheet, and a local review page.
+Use a landscape manifest to make a continuous illustrated background for a marketing page. SlopCamera compares art directions, generates a native tall composition or links portrait panels with overlap references, and converts the resulting brightness to a crisp alpha grid. The result includes detailed source art, a single-ink transparent PNG, a recolorable mask, a comparison sheet, and a local review page.
 
 Start from `examples/pixel-landscape/landscape-world.json` in the source checkout. Set the product, scene progression, theme colors and art directions. Use the site's resolved background, primary and secondary colors, including any contrast adjustments.
 
@@ -46,7 +46,7 @@ The judge scores relevance, continuity, composition and retained detail. A model
 
 The pixel PNG uses one darker hue related to the background. Bright source pixels become transparent; dark pixels become opaque according to `alphaMax` and `gamma`. `quietCenter` reserves a width fraction for page content, and the ends fade. All panels share one pixel grid, so seams do not reset the cells.
 
-Slopcamera checks the opaque ink and its alpha blends against chromatic accents in OKLab. A near-background neutral secondary surface inevitably overlaps a continuous opacity ramp; the receipt reports that exception and the actual minimum distance. This keeps decorative tones from borrowing an accent's identity without promising impossible separation from every neutral surface.
+SlopCamera checks the opaque ink and its alpha blends against chromatic accents in OKLab. A near-background neutral secondary surface inevitably overlaps a continuous opacity ramp; the receipt reports that exception and the actual minimum distance. This keeps decorative tones from borrowing an accent's identity without promising impossible separation from every neutral surface.
 
 Render `pixels.png` in a decorative `<img alt="" aria-hidden="true">` with `image-rendering: pixelated` and `pointer-events: none`, placed behind content. Start with opacity around 0.18 and hide the artwork under forced colors. Preserve the image's aspect ratio or use a section-aware layout; stretching changes its composition.
 

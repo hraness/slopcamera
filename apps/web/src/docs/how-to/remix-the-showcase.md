@@ -8,7 +8,7 @@ For a first project, follow [Create and revise your first animation](/docs/tutor
 
 **The brief:** make a tiny weather instrument feel like an object worth collecting. A metal selector, a suspended cloud, a contained storm, and a final droplet give the fourteen-second advertisement a beginning and an ending.
 
-The scene uses Blender geometry, a volume cloud, clear glass, studio lighting, and four camera setups. The rain and water rings are art-directed geometry. A separately authored score supplies metal clicks, rain, thunder, and the final droplet. Picture and sound remain separate inputs in the assembled Slopcamera project.
+The scene uses Blender geometry, a volume cloud, clear glass, studio lighting, and four camera setups. The rain and water rings are art-directed geometry. A separately authored score supplies metal clicks, rain, thunder, and the final droplet. Picture and sound remain separate inputs in the assembled SlopCamera project.
 
 [Open the source and production recipe](https://github.com/hraness/slopcamera/tree/main/examples/showcase/studio-relaunch/rain-bottled). Render a still before the complete sequence: transparent materials and small engraved details need inspection at full size.
 
@@ -20,7 +20,7 @@ The scene uses Blender geometry, a volume cloud, clear glass, studio lighting, a
 
 **The brief:** a copper tram in a rainy midnight city changes its destination to MOON, then follows the rails into the sky. The destination must register before departure; the last composition needs time to settle.
 
-The scene is original Canvas artwork with layered city silhouettes, rain, moving wheels, and a rising track. Slopcamera renders the retained HTML scene and its original score. The artwork needs no image service, stock assets, or downloaded font.
+The scene is original Canvas artwork with layered city silhouettes, rain, moving wheels, and a rising track. SlopCamera renders the retained HTML scene and its original score. The artwork needs no image service, stock assets, or downloaded font.
 
 ### Last tram, revised
 
@@ -68,7 +68,7 @@ The lead voice and displayed curve use the same Fourier sum, with partial weight
 
 ## One shoot, three stories
 
-The same NASA eclipse time-lapse becomes three different pieces through selection, framing, typography, pace, and sound. Footage: NASA / Mike Toillion, Mazatlán, Mexico, 8 April 2024. These are independent edits; NASA does not endorse Slopcamera.
+The same NASA eclipse time-lapse becomes three different pieces through selection, framing, typography, pace, and sound. Footage: NASA / Mike Toillion, Mazatlán, Mexico, 8 April 2024. These are independent edits; NASA does not endorse SlopCamera.
 
 ### One shoot, cinematic
 
@@ -88,7 +88,7 @@ The same sequence gets a square crop inside a vertical canvas, a different typog
 
 A tighter selection, a labeled corona, narration, and captions explain what becomes visible when the Moon covers the Sun's bright disk. The recording and picture remain separate source files.
 
-[Open the editing recipe, footage credit, and narration text](https://github.com/hraness/slopcamera/tree/main/examples/showcase/studio-relaunch/one-shoot). It combines Slopcamera's local color operation with explicit FFmpeg edits, overlays, and audio mixing. The recipe makes no provider call; supply your own short recording or follow [Generate images, video, and narration](/docs/how-to/generate-media).
+[Open the editing recipe, footage credit, and narration text](https://github.com/hraness/slopcamera/tree/main/examples/showcase/studio-relaunch/one-shoot). It combines SlopCamera's local color operation with explicit FFmpeg edits, overlays, and audio mixing. The recipe makes no provider call; supply your own short recording or follow [Generate images, video, and narration](/docs/how-to/generate-media).
 
 **Direct another version:** “Keep the eclipse, but make the vertical cut quiet and contemplative. Remove the pulse, delay the title, and hold the last clear view.” Review the crop on a phone and check that every spoken word has time to finish.
 

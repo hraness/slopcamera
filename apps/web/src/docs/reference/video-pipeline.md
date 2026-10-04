@@ -1,4 +1,4 @@
-Slopcamera's video pipeline is a local project compositor over FFmpeg and FFprobe. A project keeps original media immutable beside typed edit decisions, analysis evidence, and delivery variants, so preview and final renders evaluate the same timeline and composition. Neither the released nor current CLI captures new recordings: projects start from an existing finished recording bundle, a studio or directing assembly, or an authored HTML scene render.
+SlopCamera's video pipeline is a local project compositor over FFmpeg and FFprobe. A project keeps original media immutable beside typed edit decisions, analysis evidence, and delivery variants, so preview and final renders evaluate the same timeline and composition. Neither the released nor current CLI captures new recordings: projects start from an existing finished recording bundle, a studio or directing assembly, or an authored HTML scene render.
 
 ## Projects and inputs
 

@@ -1,10 +1,10 @@
 # Native film studio
 
-Slopcamera lets an agent retain a production scene, direct a native renderer, inspect its exact outputs and bring the result into an ordinary video project. Blender handles detailed 3D, CadQuery handles parametric solids and STEP, and Manim Community handles educational animation. Existing Three/Spark rendering, diagrams, image generation, narration, captions, effects and short-clip directing remain available in the same CLI.
+SlopCamera lets an agent retain a production scene, direct a native renderer, inspect its exact outputs and bring the result into an ordinary video project. Blender handles detailed 3D, CadQuery handles parametric solids and STEP, and Manim Community handles educational animation. Existing Three/Spark rendering, diagrams, image generation, narration, captions, effects and short-clip directing remain available in the same CLI.
 
 Native authoring preserves the engine's control. A Blender source can use armatures, skinning, IK, shape keys, geometry nodes, materials, lights, cameras and simulation caches. A CadQuery program preserves dimensions and solid operations. A Manim scene preserves mathematical objects and timing. Portable meshes and finished videos are derivatives; retain the native source when later edits require it.
 
-The `studio` commands described here ship in the [verified Slopcamera release](reference/capabilities.md). Start with the [one-second native film tutorial](tutorials/first-native-film.md) for a bounded CPU shot, or use [educational animation with narration](how-to/educational-video.md) for Manim.
+The `studio` commands described here ship in the [verified SlopCamera release](reference/capabilities.md). Start with the [one-second native film tutorial](tutorials/first-native-film.md) for a bounded CPU shot, or use [educational animation with narration](how-to/educational-video.md) for Manim.
 
 ## Inspect retained simulation examples
 
@@ -38,7 +38,7 @@ The example was qualified on Blender 5.2.1 using Cycles on CPU.
 
 ## Make the first shot
 
-Install a supported engine yourself, or use an existing installation. Slopcamera does not silently install or upgrade native tools. The initial qualified versions are Blender 5.2.1 LTS, CadQuery 2.8.0 and Manim Community 0.21.0. Select the exact Blender executable or Python virtual environment for each invocation.
+Install a supported engine yourself, or use an existing installation. SlopCamera does not silently install or upgrade native tools. The initial qualified versions are Blender 5.2.1 LTS, CadQuery 2.8.0 and Manim Community 0.21.0. Select the exact Blender executable or Python virtual environment for each invocation.
 
 ```sh
 slopcamera studio init product --template blender-product --json
@@ -119,7 +119,7 @@ slopcamera studio assets import asset-plan.json --json
 
 A search input is `{"provider":"poly-haven","query":"football","type":"models","limit":5}`. A model selection is `{"provider":"poly-haven","assetId":"dirty_football","resolution":"1k","kind":"model","format":"gltf"}`. Save the complete JSON plan returned by the plan command before importing it. The default total download bound is 50 MiB. Include the returned source files explicitly in a studio bundle; acquisition never executes or inserts an asset into a native scene. See the [asset adapter contract](../apps/desktop/studio/assets/README.md) for texture/HDRI selections, current terms and supported dependencies.
 
-Use Blender's native importers for supplied GLB/glTF, OBJ/MTL, FBX and other supported formats. Retain all required textures, buffers and animation files. `examples/studio/blender/import_model.py` and the CadQuery STEP example show explicit local-input routes. Native imports have a broader feature set than Slopcamera's deliberately bounded portable GLB parser; an imported native control rig is not automatically editable through portable spatial patches.
+Use Blender's native importers for supplied GLB/glTF, OBJ/MTL, FBX and other supported formats. Retain all required textures, buffers and animation files. `examples/studio/blender/import_model.py` and the CadQuery STEP example show explicit local-input routes. Native imports have a broader feature set than SlopCamera's deliberately bounded portable GLB parser; an imported native control rig is not automatically editable through portable spatial patches.
 
 The original character example includes a deforming skeleton, blended weights, an IK target and facial shape keys. Keep control names and source parameters stable when directing later takes. Full upstream rigging APIs remain available to trusted authoring code, but arbitrary rig retargeting, production facial systems and third-party add-ons require their own setup and qualification.
 
@@ -134,7 +134,7 @@ Keep each native source alongside its portable representations. Use `.blend` for
 | Representation | Useful transfer | Boundary |
 | --- | --- | --- |
 | Native `.blend`, STEP and caches | Edit or rerender in the originating tool | Native rig controls, solids, solvers and procedural materials remain engine-specific |
-| Portable GLB | Share measured geometry, supported base-color materials and node TRS clips with Three | The static profile rejects skins and morph targets. Slopcamera v3.3.1 also includes `slopcamera.glb-rigged-morph-skin-v1` for supported skins, morphs and STEP/LINEAR clips; sparse accessors, cubic animation and unsupported features still reject. Native control rigs and IK remain engine-specific |
+| Portable GLB | Share measured geometry, supported base-color materials and node TRS clips with Three | The static profile rejects skins and morph targets. SlopCamera v3.3.1 also includes `slopcamera.glb-rigged-morph-skin-v1` for supported skins, morphs and STEP/LINEAR clips; sparse accessors, cubic animation and unsupported features still reject. Native control rigs and IK remain engine-specific |
 | sRGB PNG or retained RGB(A) video | Mount a diagram, avatar, generated shot or GPU graphic in either scene | Preserve pixel size, alpha, color interpretation and the exact source clock |
 | Splats | Film a captured appearance through the qualified Three/Spark profile | Appearance capture does not establish collision geometry, relighting or native mesh editability |
 
@@ -151,7 +151,7 @@ The result contains an `asset`, a `binding`, and a retained admission `receipt`.
 
 Prepared GLB geometry travels as a hash-bound local JSON resource, with source interpretation and validated primitives retained in the render evidence. Vertex arrays do not inflate the HTML document. An explicit resource fetch flag admits only its exact private path; the host and browser both verify its bytes. Existing geometry, texture, frame and resource limits still apply. Detailed native meshes may need an explicit preview LOD; preserve its export settings and measured bounds alongside the native source.
 
-Blender owns full native scene production. Three owns Slopcamera's calibrated portable scene and world-space media composition. vgpu supplies programmable WebGPU passes. The [optional vgpu example](../examples/studio/vgpu/README.md) renders an exact-time graphic into retained raster frames for use on a world-space screen. It uses a separately provisioned runtime. It does not enable a second scene renderer or shared GPU textures inside Slopcamera's WebGL2/Spark profile. The upstream [Three integration](https://github.com/vercel-labs/vgpu/blob/main/docs/topics/threejs.docs.md) can expose WGSL functions as TSL nodes, but using that path requires a qualified Three WebGPU profile.
+Blender owns full native scene production. Three owns SlopCamera's calibrated portable scene and world-space media composition. vgpu supplies programmable WebGPU passes. The [optional vgpu example](../examples/studio/vgpu/README.md) renders an exact-time graphic into retained raster frames for use on a world-space screen. It uses a separately provisioned runtime. It does not enable a second scene renderer or shared GPU textures inside SlopCamera's WebGL2/Spark profile. The upstream [Three integration](https://github.com/vercel-labs/vgpu/blob/main/docs/topics/threejs.docs.md) can expose WGSL functions as TSL nodes, but using that path requires a qualified Three WebGPU profile.
 
 ## Exchange calibrated cameras
 
@@ -228,7 +228,7 @@ Use `slopcamera diagram init|check|render` for structured diagrams, `slopcamera 
 
 Ordinary project overlays interpret `--position x,y` as a pixel offset from the selected anchor. Use `--anchor center --position 0,0` to center an overlay, or `--anchor top-left --position 42,70 --width 636 --height 180` to place a caption inside a 720×1280 portrait frame with 42-pixel side margins. A full-frame closing image uses `--anchor top-left --position 0,0` with the output dimensions. Inspect the rendered caption bounds and closing frame before delivery.
 
-The Manim driver owns silent visuals and exact frames. It rejects source-side audio so the existing Slopcamera composition remains the audio owner. That separation lets an agent revise narration or sound independently while preserving the mathematical rendering and provider receipts.
+The Manim driver owns silent visuals and exact frames. It rejects source-side audio so the existing SlopCamera composition remains the audio owner. That separation lets an agent revise narration or sound independently while preserving the mathematical rendering and provider receipts.
 
 ## Qualified profiles and extension limits
 
@@ -244,7 +244,7 @@ Local acceptance used Blender 5.2.1 LTS on an Apple M4 Max, CadQuery 2.8.0 and M
 | Education | Portrait presenter, Typst mathematics, exact frame interval and transparent frame output | Authored cue timing is distinct from measured speech alignment |
 | Acquisition | Free Poly Haven HDRI and complete glTF dependency closure, verified offline replay | Other catalogs use authorized supplied files; no generic marketplace automation |
 
-Blender's native Python APIs can author Geometry Nodes, hair, volumes, additional solvers and compositor effects. Those APIs are available to trusted source; Slopcamera does not advertise each as a separately qualified automatic workflow. USD, Alembic and other interchange retain only the semantics their particular exporters support. Robotics or RL environments additionally need step/reset, state/action, sensor and physical validation contracts; a cinematic scene or splat capture alone does not supply those guarantees.
+Blender's native Python APIs can author Geometry Nodes, hair, volumes, additional solvers and compositor effects. Those APIs are available to trusted source; SlopCamera does not advertise each as a separately qualified automatic workflow. USD, Alembic and other interchange retain only the semantics their particular exporters support. Robotics or RL environments additionally need step/reset, state/action, sensor and physical validation contracts; a cinematic scene or splat capture alone does not supply those guarantees.
 
 ## Use native jobs in an agent workflow
 
@@ -259,7 +259,7 @@ The same runtime/authorization flags are available on `workflows run`. Runtime s
 
 Use the source-backed Bun package for `code` workflows and local SDK imports. The copied macOS executable supports direct `studio` commands with embedded starters and drivers; durable workflow commands bind a build identity over the installed host source tree, so they run from the installed package or a checkout but not from the copied executable, which embeds no physical source tree.
 
-Native results can be imported into ordinary Slopcamera projects with their declared video/audio roles. The existing V2 spatial renderer still has its qualified Three-specific rendering path; attaching a native candidate does not make that path consume it. Preserve a native shot's source and receipt alongside its ordinary project media derivative.
+Native results can be imported into ordinary SlopCamera projects with their declared video/audio roles. The existing V2 spatial renderer still has its qualified Three-specific rendering path; attaching a native candidate does not make that path consume it. Preserve a native shot's source and receipt alongside its ordinary project media derivative.
 
 ## Inspection and recovery
 

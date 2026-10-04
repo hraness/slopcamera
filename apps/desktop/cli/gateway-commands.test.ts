@@ -1785,7 +1785,7 @@ describe("Gateway CLI commands", () => {
       expect(requiredString(job, "ambiguity"))
         .toContain("may have reached one or more paid providers");
       expect(requiredString(job, "interruptionSemantics"))
-        .toContain("must not be retried by Slopcamera");
+        .toContain("must not be retried by SlopCamera");
       expect(job).toMatchObject({
         chargeMayHaveOccurred: true,
         failure: {

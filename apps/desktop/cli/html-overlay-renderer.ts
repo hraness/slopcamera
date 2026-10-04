@@ -358,7 +358,7 @@ async function assertPathAbsent(path: string, label: string): Promise<void> {
   }
   throw new ApplicationError(
     "conflict",
-    `${label} already exists; Slopcamera will not replace it.`,
+    `${label} already exists; SlopCamera will not replace it.`,
   );
 }
 

@@ -1,4 +1,4 @@
-This lesson needs no account, paid model, or browser: a diagram renders entirely on your machine. Before starting, install Slopcamera so the `slopcamera` command is available. Use a new empty working directory so the lesson cannot replace existing artwork.
+This lesson needs no account, paid model, or browser: a diagram renders entirely on your machine. Before starting, install SlopCamera so the `slopcamera` command is available. Use a new empty working directory so the lesson cannot replace existing artwork.
 
 ```sh
 mkdir slopcamera-first-diagram
@@ -56,7 +56,7 @@ The revised source changes “Delivery” to “Social delivery” while preserv
 
 ::example[source-to-film-revised]
 
-The diagram illustrates media relationships. Importing arbitrary source files does not create a new Slopcamera project; [editing and delivery](/docs/how-to/edit-video) explains the supported entry paths.
+The diagram illustrates media relationships. Importing arbitrary source files does not create a new SlopCamera project; [editing and delivery](/docs/how-to/edit-video) explains the supported entry paths.
 
 ## Two-row pipeline
 
@@ -97,7 +97,7 @@ font service or paid model is required.
 
 ## What you learned
 
-You now have one editable source and five derived outputs. This is the pattern behind every Slopcamera workflow: keep the source, re-render the derivatives, and let your agent inspect or revise either.
+You now have one editable source and five derived outputs. This is the pattern behind every SlopCamera workflow: keep the source, re-render the derivatives, and let your agent inspect or revise either.
 
 - For your own diagram, change the labels, shapes, and relationships in that source.
 - To give an agent this workflow, install the Agent Skill with `{{SKILL_INSTALL_COMMAND}}`.

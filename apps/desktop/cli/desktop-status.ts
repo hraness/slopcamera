@@ -91,8 +91,8 @@ export function explain(code: string): string {
     case "authorization-required": return "It needs more credits first";
     case "subprocess": return "A render tool stopped with an error";
     case "invalid-data":
-    case "incompatible": return "Its input wasn't in a form Slopcamera can use";
-    case "unsafe-path": return "It was asked to use a folder Slopcamera won't write to";
+    case "incompatible": return "Its input wasn't in a form SlopCamera can use";
+    case "unsafe-path": return "It was asked to use a folder SlopCamera won't write to";
     case "usage": return "The command had a typo or a missing option";
     case "conflict": return "Something else was changing the same project";
     default: return "Something went wrong. Run the command again to see why";
@@ -203,7 +203,7 @@ function mark(state: ActivityState): string {
 function loginLine(report: LegacyLoginReport): string {
   switch (report.state) {
     case "found": return "⚠ The old menu bar still opens at login · run slopcamera legacy retire";
-    case "not-ours": return "– A menu bar login item changed outside Slopcamera is left alone";
+    case "not-ours": return "– A menu bar login item changed outside SlopCamera is left alone";
     default: return "✓ Nothing starts at login";
   }
 }
@@ -212,7 +212,7 @@ function loginLine(report: LegacyLoginReport): string {
 export function statusViews(now: () => Date): View<StatusData>[] {
   return [{
     id: "status",
-    title: "Slopcamera",
+    title: "SlopCamera",
     render(data, width) {
       const nowMs = now().getTime();
       const lines = [`${mark(data.activity.state)} ${clean(data.activity.headline)} · ${clean(data.activity.detail)}`];

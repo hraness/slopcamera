@@ -19,7 +19,7 @@ const read = async (path: string) => {
   return source
 }
 const compact = (value: string) => value.replace(/\*\*|`/gu, "").replace(/\s+/gu, " ")
-const definition = "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
+const definition = "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising."
 
 describe("media studio public copy (pure, process-free)", () => {
   test("the source install is complete in the guide and never renames historical archive bytes", async () => {

@@ -1,20 +1,20 @@
-# Slopcamera
+# SlopCamera
 
-[![Rain, bottled: a still from a Slopcamera Blender showcase film, in which a cloud rains inside a glass vessel with brass fittings](apps/web/media/rain-bottled-poster-479a32b54a03.webp)](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)
+[![Rain, bottled: a still from a SlopCamera Blender showcase film, in which a cloud rains inside a glass vessel with brass fittings](apps/web/media/rain-bottled-poster-479a32b54a03.webp)](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)
 
-**A multimedia studio for your coding agent.** Slopcamera lets your coding
+**A multimedia studio for your coding agent.** SlopCamera lets your coding
 agent make images, diagrams, animation, 3D scenes, and video from source files
 it can keep revising. It is a free, open-source Bun CLI, TypeScript SDK,
 Agent Skill, and MCP server for Codex, Claude Code, and other coding agents.
 
 Your agent writes the scene, diagram, or edit as a short source file.
-Slopcamera checks it, renders it with the right engine on your machine, and
+SlopCamera checks it, renders it with the right engine on your machine, and
 keeps the inputs, so the next change is an edit to that file and a new render.
 Combine authored scenes, generated media, and your own footage in one project.
 
 [Install](#install-slopcamera) · [Techniques](https://slopcamera.com/docs/reference/techniques) · [First diagram](https://slopcamera.com/docs/tutorials/first-diagram) · [Docs](https://slopcamera.com/docs) · [Examples](examples/showcase)
 
-## What you can make with Slopcamera
+## What you can make with SlopCamera
 
 - **Films and animation.** Author motion graphics, illustrated scenes, and
   native Blender shots. Control camera, materials, lighting, and timing.
@@ -28,15 +28,15 @@ Combine authored scenes, generated media, and your own footage in one project.
   then export horizontal, vertical, square, or portrait versions.
 
 The [techniques catalog](https://slopcamera.com/docs/reference/techniques)
-connects each job to its supported commands and requirements. Slopcamera is
-free and open source. Local editing and rendering need no Slopcamera account.
+connects each job to its supported commands and requirements. SlopCamera is
+free and open source. Local editing and rendering need no SlopCamera account.
 Generation uses your own Vercel AI Gateway account, or prepaid Hraness Credits
 for prompt-only hosted images; model usage is billed separately.
 
-## Install Slopcamera
+## Install SlopCamera
 
 Install [Bun 1.3.14 or newer](https://bun.sh), then install the
-[Slopcamera v3.10.3 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.3)
+[SlopCamera v3.10.3 release](https://github.com/hraness/slopcamera/releases/tag/v3.10.3)
 and its matching Agent Skill:
 
 ```sh
@@ -102,7 +102,7 @@ placement and resuming long runs.
 
 </details>
 
-CLI updates in Slopcamera 3.10.0 and newer are enabled by default for supported
+CLI updates in SlopCamera 3.10.0 and newer are enabled by default for supported
 Bun and npm global installations. See [update controls](docs/reference/capabilities.md#cli-updates)
 to keep a version or check for a release.
 
@@ -136,7 +136,7 @@ render and check it. The
 [techniques reference](https://slopcamera.com/docs/reference/techniques) lists
 them all with their requirements.
 
-| Technique | The agent writes | Slopcamera renders | Example |
+| Technique | The agent writes | SlopCamera renders | Example |
 | --- | --- | --- | --- |
 | Diagrams | Diagram JSON | `.tldr`, light and dark SVG and PNG, after a strict check | [Pipeline](https://slopcamera.com/docs/tutorials/first-diagram#stack-layout) |
 | Vector tracing | A path to a raster image | SVG traced locally with VTracer (macOS and Linux) | [Color and duotone](https://slopcamera.com/docs/how-to/vectorize-images#inspect-a-reproducible-example) |
@@ -148,7 +148,7 @@ them all with their requirements.
 | Explainer video | A Manim scene, captions, and a presenter | A lesson video with typeset math | [Geometry lesson](https://slopcamera.com/docs/how-to/educational-video#inspect-the-finished-example) |
 | Footage edits | Cuts, captions, reframes, and color as project decisions | 16:9, 9:16, 1:1, and 4:5 exports from one edit | [Four formats](https://slopcamera.com/docs/how-to/edit-video#landscape-delivery) |
 
-Slopcamera also composes vector icon scenes with the bundled icon.place library
+SlopCamera also composes vector icon scenes with the bundled icon.place library
 and reads Soundfish scores or MIDI files into beat grids for music-timed scenes,
 both locally and without a model. Neither renders audio.
 
@@ -159,7 +159,7 @@ of these yet.
 
 ### Blender, CadQuery, and Manim for coding agents
 
-Slopcamera can direct Blender for sets, materials, lighting, skinned
+SlopCamera can direct Blender for sets, materials, lighting, skinned
 characters, cloth, and liquid caches; CadQuery for parametric solids and STEP;
 and Manim Community for mathematical animation. Seven editable starters
 include a product, character, shaded street, cloth, liquid, CAD bracket, and
@@ -205,7 +205,7 @@ and captioned versions in each format from the same edit.
 > the speaker framed, add captions and `logo.svg`, and show a preview before
 > export.
 
-Slopcamera edits recordings you already have; it does not record the screen,
+SlopCamera edits recordings you already have; it does not record the screen,
 camera, or microphone.
 Standalone media imports need an existing project; `html render`, `studio assemble`,
 or `direct assemble` can create one. Read [`PRIVACY.md`](PRIVACY.md) before
@@ -220,12 +220,12 @@ slopcamera workflows show social-variants --json
 Start with [Edit a video](docs/how-to/edit-video.md) or
 [Run workflows](docs/how-to/run-workflows.md).
 
-## How Slopcamera works
+## How SlopCamera works
 
 Each kind of work keeps its own source file. A native scene holds a rig or
 simulation; a portable scene holds geometry, cameras, and media placement; a
 diagram holds its shapes and labels; a video project holds cuts and delivery
-settings. Slopcamera connects them through files: a rendered diagram can
+settings. SlopCamera connects them through files: a rendered diagram can
 appear on a screen in a 3D scene, and native frames can become a clip in a
 video project.
 
@@ -251,22 +251,22 @@ changes, inspect the resulting files, and report their paths. A successful
 plan does not show that provider access, native trust, or model quality is in
 place.
 
-## Slopcamera vs Remotion and HyperFrames
+## SlopCamera vs Remotion and HyperFrames
 
 Details as of 28 September 2026.
 
 | | Agent writes | License | Cloud rendering | Choose it when |
 | --- | --- | --- | --- | --- |
-| Slopcamera | Diagram JSON, HTML scenes, scene JSON, Blender, CadQuery, or Manim programs, and video edits | MIT | Video renders on your machine; a hosted API checks and renders diagrams and generates images | One agent needs diagrams, 3D, native films, and footage edits in one local project |
+| SlopCamera | Diagram JSON, HTML scenes, scene JSON, Blender, CadQuery, or Manim programs, and video edits | MIT | Video renders on your machine; a hosted API checks and renders diagrams and generates images | One agent needs diagrams, 3D, native films, and footage edits in one local project |
 | [Remotion](https://www.remotion.dev/) | React components | Source-available; free for individuals, non-profits, and organizations of up to 3 people | AWS Lambda in your account | Your team writes React and renders at scale |
 | [HyperFrames](https://github.com/heygen-com/hyperframes) | HTML, CSS, and JavaScript animation | Apache 2.0 | HeyGen-hosted rendering or AWS Lambda | You want HTML motion graphics rendered to MP4 |
 
 Remotion and HyperFrames have much larger communities. For a one-off image or
 clip, a hosted app needs no install. Read
-[Slopcamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion),
-[Slopcamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes),
+[SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion),
+[SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes),
 [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents),
-or [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera).
+or [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera).
 
 ## Important limitations
 
@@ -292,7 +292,7 @@ or [Why Slopcamera](https://slopcamera.com/docs/explanation/why-slopcamera).
 
 ## Design and trust
 
-There is no Slopcamera account or hosted project database. Video editing and
+There is no SlopCamera account or hosted project database. Video editing and
 rendering run on your machine; the optional hosted API checks and renders
 diagrams and generates images. Gateway generation and cloud
 analysis use credentials from the local process and ask for your
@@ -317,22 +317,22 @@ vision](https://algal.computer/docs/vision/) states the bet behind it.
 
 ## Frequently asked questions
 
-### What is Slopcamera?
+### What is SlopCamera?
 
-Slopcamera is an open-source CLI, TypeScript SDK, Agent Skill, and MCP server
+SlopCamera is an open-source CLI, TypeScript SDK, Agent Skill, and MCP server
 that lets coding agents make images, diagrams, animation, 3D scenes, and
 video. The agent writes a short source file for a diagram, HTML scene, 3D
 scene, native Blender, CadQuery, or Manim program, or video edit, and the
 `slopcamera` CLI renders it. A revision is an edit to that file and a new render.
 
-### Does Slopcamera work with Claude Code and Codex?
+### Does SlopCamera work with Claude Code and Codex?
 
 Yes. Install the CLI, then run `slopcamera skill install --target claude` for
 Claude Code, or `slopcamera skill install` for Codex. Other agents that read
 `~/.agents/skills` use `--target agents`, and MCP clients can connect to
 `slopcamera mcp`.
 
-### Can a coding agent make AI video with Slopcamera?
+### Can a coding agent make AI video with SlopCamera?
 
 Yes, through your own Vercel AI Gateway access: the agent can generate short
 video shots, images, and voiceover, and combine them with authored scenes and
@@ -340,21 +340,21 @@ your footage. Local editing and rendering need no model account.
 
 ### Can my agent drive Blender?
 
-Yes. Slopcamera directs an installed Blender for sets, materials, lighting,
+Yes. SlopCamera directs an installed Blender for sets, materials, lighting,
 skinned characters, cloth, and liquid caches, starting from editable
 starters. Blender installs separately, and native source runs only with
 explicit current-user trust.
 
-### Is Slopcamera a Remotion alternative?
+### Is SlopCamera a Remotion alternative?
 
 It depends on the job. Choose Remotion when your team writes React components
-and renders at scale. Choose Slopcamera when one agent needs diagrams, 3D,
+and renders at scale. Choose SlopCamera when one agent needs diagrams, 3D,
 native films, and footage edits in one local project. See the
 [comparison above](#slopcamera-vs-remotion-and-hyperframes).
 
-### What does Slopcamera cost?
+### What does SlopCamera cost?
 
-Slopcamera is free and open source under the MIT license. Generation uses your
+SlopCamera is free and open source under the MIT license. Generation uses your
 own Vercel AI Gateway account, or prepaid Hraness Credits for prompt-only
 hosted images, and model usage is billed separately.
 

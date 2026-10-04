@@ -37,7 +37,7 @@ The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, ser
 | --- | --- |
 | `check_diagram` | Parse and lint one `.diagram.json` source. Read-only. |
 | `render_diagram` | Write the same five artifacts the CLI render produces: `.tldr`, light and dark SVG, and light and dark PNG. |
-| `search_slopcamera` | Search the fixed Slopcamera operation registry by bounded text. Never executes anything. |
+| `search_slopcamera` | Search the fixed SlopCamera operation registry by bounded text. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
 
 `execute_slopcamera` admits ten operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, `slopcamera.image.gallery`, `slopcamera.icon.compose`, `slopcamera.icon.render`, `slopcamera.soundtrack.compose`, and `slopcamera.soundtrack.grid`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.

@@ -12,7 +12,7 @@ export const slopcameraSupportAdvancedHelp = () => supportAdvancedHelp({ command
 
 export const supportProfile = {
   id: "slopcamera",
-  name: "Slopcamera",
+  name: "SlopCamera",
   valueProposition: "Support ongoing development of local media tools for agents.",
   updates: false,
 } as const

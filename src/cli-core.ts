@@ -130,7 +130,7 @@ Generate sends one bounded, non-retried request directly to Vercel AI Gateway.
 Explicit --provider vertex, google, or openai selects that vendor's API instead.
 Direct image keys are read only from the environment; Gateway remains the default.
 Set AI_GATEWAY_API_KEY, or run through \`vercel env run -- …\` so
-VERCEL_OIDC_TOKEN is available. Slopcamera never stores or prints the token.
+VERCEL_OIDC_TOKEN is available. SlopCamera never stores or prints the token.
 PNG, JPEG, and WebP responses are signature-checked and published atomically.
 
 Landscape plan reports the full request cap without network calls. Run compares
@@ -141,7 +141,7 @@ panels only. Continuity and judging require --allow-cloud-upload.
 Icon produces isometric line-art SVG: a style-locked Gateway raster is
 normalized to canonical ink-on-transparent pixels, traced by the local
 vectorizer, and (when --rounds exceeds 1) critiqued by a vision model whose
-feedback revises the prompt for the next attempt. Only Slopcamera's own
+feedback revises the prompt for the next attempt. Only SlopCamera's own
 generated output is uploaded for critique — never user media.
 
 Icon --set reads a bounded JSON manifest ({name?, ink?, context?, members:
@@ -427,7 +427,7 @@ function canonicalArguments(args: readonly string[]): readonly string[] {
     surface === "vectorize" ||
     surface === "generate"
   ) {
-    throw new Error(`The flat \`${surface}\` command moved to a namespaced Slopcamera surface.\n\n${help()}`)
+    throw new Error(`The flat \`${surface}\` command moved to a namespaced SlopCamera surface.\n\n${help()}`)
   }
   return args
 }
@@ -1111,7 +1111,7 @@ export async function main(
         ? requestedOperation
         : undefined
       if (operation === undefined) {
-        throw new Error(`Unknown Slopcamera operation code: ${requestedOperation}`)
+        throw new Error(`Unknown SlopCamera operation code: ${requestedOperation}`)
       }
       const inputText = requiredOption(parsed, "input")
       if (Buffer.byteLength(inputText, "utf8") > 64 * 1024) {

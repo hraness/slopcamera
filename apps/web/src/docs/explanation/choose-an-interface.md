@@ -1,4 +1,4 @@
-Slopcamera offers four local interfaces plus a hosted adapter for platforms. They reach the same closed operation registry; they differ in who drives them, how much surface they expose, and where credentials live. Pick the interface by who reads it and how much of the contract they need.
+SlopCamera offers four local interfaces plus a hosted adapter for platforms. They reach the same closed operation registry; they differ in who drives them, how much surface they expose, and where credentials live. Pick the interface by who reads it and how much of the contract they need.
 
 | Interface | Driven by | Surface | Needs |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Slopcamera offers four local interfaces plus a hosted adapter for platforms. The
 
 ## Agent Skill
 
-The skill is instructions, not a runtime. `{{SKILL_INSTALL_COMMAND}}` (or `{{SKILL_INSTALL_COMMAND_CLAUDE}}` for Claude Code) installs guidance matched to your CLI version that tells the agent which commands fit each creative job and how to check local tools. Installing it does not install the CLI or native engines, and `--scope project` keeps it inside one repository. Choose it first: it is how most agents should meet Slopcamera.
+The skill is instructions, not a runtime. `{{SKILL_INSTALL_COMMAND}}` (or `{{SKILL_INSTALL_COMMAND_CLAUDE}}` for Claude Code) installs guidance matched to your CLI version that tells the agent which commands fit each creative job and how to check local tools. Installing it does not install the CLI or native engines, and `--scope project` keeps it inside one repository. Choose it first: it is how most agents should meet SlopCamera.
 
 ## CLI
 

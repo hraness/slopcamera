@@ -1,8 +1,8 @@
 # Create and revise your first diagram
 
-Make a two-node flow, inspect its light and dark exports, then change a label by editing its source. This lesson uses the released Slopcamera CLI and needs no account, paid model, browser, or tldraw installation.
+Make a two-node flow, inspect its light and dark exports, then change a label by editing its source. This lesson uses the released SlopCamera CLI and needs no account, paid model, browser, or tldraw installation.
 
-Before starting, [install Slopcamera](../../README.md#install-slopcamera) so the `slopcamera` command is available. Use a new empty working directory so the lesson cannot replace existing artwork.
+Before starting, [install SlopCamera](../../README.md#install-slopcamera) so the `slopcamera` command is available. Use a new empty working directory so the lesson cannot replace existing artwork.
 
 ## Create the source
 

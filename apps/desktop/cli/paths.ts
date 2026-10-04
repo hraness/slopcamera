@@ -34,7 +34,7 @@ export async function discoverRepositoryRoot(start: string): Promise<string> {
   }
   throw new CliError(
     "not-found",
-    `Could not find a Slopcamera checkout from ${resolve(start)} (expected package.json and apps/desktop).`,
+    `Could not find a SlopCamera checkout from ${resolve(start)} (expected package.json and apps/desktop).`,
   );
 }
 
@@ -221,10 +221,10 @@ export async function resolveRepositoryPaths(
   const repositoryRootInput = env.SLOPCAMERA_REPOSITORY_ROOT;
   const requestedRoot = resolve(repositoryRootInput ?? cwd);
   if (requestedRoot === "/$bunfs" || requestedRoot.startsWith("/$bunfs/")) {
-    throw new CliError("unsafe-path", "Slopcamera project state requires a physical caller workspace, not the embedded executable filesystem.");
+    throw new CliError("unsafe-path", "SlopCamera project state requires a physical caller workspace, not the embedded executable filesystem.");
   }
   if (!await isDirectory(requestedRoot)) {
-    throw new CliError("not-found", `Slopcamera project root is not a directory: ${requestedRoot}`);
+    throw new CliError("not-found", `SlopCamera project root is not a directory: ${requestedRoot}`);
   }
   const repositoryRoot = await realpath(requestedRoot);
   const requiredArtifactRoot = defaultArtifactRoot(repositoryRoot);

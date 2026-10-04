@@ -41,7 +41,7 @@ Commands:
   media audio|color|soundtrack   Apply local audio and video effects; derive soundtrack beat grids
   outputs                        Print the agent outputs directory
   outputs list|open|reveal       List the newest outputs or open one on this Mac
-  status                         What Slopcamera is doing, credits and newest outputs
+  status                         What SlopCamera is doing, credits and newest outputs
   tui [--snapshot]               The status screen; --snapshot prints it once
   commands [--json]              List every command with what it may change
   legacy retire                  Stop the old menu bar opening at login
@@ -270,7 +270,7 @@ reconciliation and never automatically overwrites a later revision.`,
 
 These commands delegate to the canonical @hraness/slopcamera parser. Init never overwrites.
 Check parses and lints without writing; --strict exits 2 on findings. Render replaces the same five
-portable derivatives: editable .tldr plus light/dark SVG and PNG. The registered Slopcamera diagram
+portable derivatives: editable .tldr plus light/dark SVG and PNG. The registered SlopCamera diagram
 operations separately publish equivalent derivatives by content hash for workflow composition.
 
 Sheets use a separate .drawing.json format with explicit US Letter or A4 page geometry, black
@@ -405,7 +405,7 @@ protocol data. --plan fails if source, input, structural bindings, registry, or 
 Raw provider options are ephemeral: only their digest and namespace list may enter an exact plan.
 
 Trusted code mode is not a sandbox. Module top-level and later acknowledged compute callbacks run
-with the current user's filesystem, process, and network authority. Slopcamera injects no
+with the current user's filesystem, process, and network authority. SlopCamera injects no
 credentials or privileged handles into the worker.`,
   runs: `Usage:
   slopcamera runs list [--limit <n>] [--json]
@@ -460,7 +460,7 @@ run journal.`,
         [--timeout <time>] [--json]
 
 Set AI_GATEWAY_API_KEY in the process environment, or run through a linked Vercel project with
-\`vercel env run -- slopcamera …\` so VERCEL_OIDC_TOKEN is injected. Slopcamera never persists,
+\`vercel env run -- slopcamera …\` so VERCEL_OIDC_TOKEN is injected. SlopCamera never persists,
 prints, or accepts either credential through argv.
 
 Alternatively, prepaid hosted generation bills Hraness Credits instead of your own Gateway
@@ -483,7 +483,7 @@ names and its values are arbitrary bounded JSON objects, so newly released model
 available without a CLI update. gateway.models is rejected because fallback models have not been
 independently catalog-validated or accounted. Provider-specific sample-count fields are rejected;
 use --count with --max-per-call at least as large so one job remains one AI SDK call. Options may contain BYOK credentials, webhook
-secrets, or similar sensitive values: keep the source JSON ignored and owner-protected. Slopcamera
+secrets, or similar sensitive values: keep the source JSON ignored and owner-protected. SlopCamera
 persists only its digest and namespace list, never its raw values. Common video controls are
 first-class flags, including primary image, first/last frames, image/audio/video references, count,
 aspect ratio, resolution, duration, FPS, seed, and generated audio. Frame inputs and generic
@@ -520,7 +520,7 @@ locally. Add a <media-type>= prefix when the URL path has no recognized extensio
 literal targets are rejected, and receipts retain only the URL digest and media type, never the
 URL. Direct URL arguments remain visible to shell and process history, so use only references safe
 for that exposure. The AI SDK client uses
-maxRetries=0, and Slopcamera never resubmits an ambiguous paid call. AI Gateway can still route or
+maxRetries=0, and SlopCamera never resubmits an ambiguous paid call. AI Gateway can still route or
 fail over one request across multiple providers, so one command may have multiple provider
 attempts; provider timeouts may still incur charges. Outputs and immutable receipts are written
 under gitignored artifacts/slopcamera/generated/. Receipts report complete, partial, or overproduced
@@ -614,7 +614,7 @@ Options: --kind <kind[,kind]> (repeatable) --from <time> --to <time>
   slopcamera credits wait [--timeout <time>] [--json]
   slopcamera credits forget [--json]
 
-Prepaid credits power hosted Slopcamera generation at api.slopcamera.com — an alternative to
+Prepaid credits power hosted SlopCamera generation at api.slopcamera.com — an alternative to
 running your own Vercel AI Gateway credential. \`topup\` opens a hosted checkout page and prints
 its URL; the page renders the current pack list and prices from the live rate card. \`wait\`
 polls the pending claim until payment lands, then stores the returned device token with 0600

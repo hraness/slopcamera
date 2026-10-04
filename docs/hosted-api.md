@@ -1,6 +1,6 @@
 # Hosted API runbook
 
-`apps/api/` is the Slopcamera tool surface for agent platforms that cannot run a local CLI — Muse connectors, Grok-style bots, Instinct-class clients, and direct HTTP integrations. It serves the checked MCP tool registry over REST and a stateless MCP endpoint, executes each call inside a per-request ephemeral workspace, and returns binary outputs as ticketed artifact URLs backed by Cloudflare R2.
+`apps/api/` is the SlopCamera tool surface for agent platforms that cannot run a local CLI — Muse connectors, Grok-style bots, Instinct-class clients, and direct HTTP integrations. It serves the checked MCP tool registry over REST and a stateless MCP endpoint, executes each call inside a per-request ephemeral workspace, and returns binary outputs as ticketed artifact URLs backed by Cloudflare R2.
 
 The canonical tool semantics live in `src/mcp/tools.ts`. This app owns transport, admission, billing, and storage only; it adds no operation semantics of its own.
 
@@ -57,7 +57,7 @@ Rate limiting is in-memory per process. Paid calls are bounded by Credits holds,
 
 ## Calling from the CLI
 
-The Slopcamera CLI can drive the paid operation directly: `slopcamera credits topup` prints a Credits checkout URL, `slopcamera credits wait` polls the claim and stores the returned `cr_dev_…` device token under the CLI state root in owner-only files, and `slopcamera ai image generate --hosted` calls `execute_slopcamera` with `{model, prompt, outputPath}` and writes the verified artifact below `artifacts/slopcamera/generated/`. When no Gateway credential is configured, a stored token routes `ai image generate` here automatically; `SLOPCAMERA_CREDITS_TOKEN` overrides the stored token for ephemeral environments.
+The SlopCamera CLI can drive the paid operation directly: `slopcamera credits topup` prints a Credits checkout URL, `slopcamera credits wait` polls the claim and stores the returned `cr_dev_…` device token under the CLI state root in owner-only files, and `slopcamera ai image generate --hosted` calls `execute_slopcamera` with `{model, prompt, outputPath}` and writes the verified artifact below `artifacts/slopcamera/generated/`. When no Gateway credential is configured, a stored token routes `ai image generate` here automatically; `SLOPCAMERA_CREDITS_TOKEN` overrides the stored token for ephemeral environments.
 
 ## Credits setup
 

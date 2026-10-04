@@ -1,8 +1,8 @@
 # Create and revise your first animation
 
-Send a midnight tram toward the moon, then make the moon larger in the same scene. You will finish with two 12-second films, their retained source requests, and ordinary Slopcamera projects you can keep editing.
+Send a midnight tram toward the moon, then make the moon larger in the same scene. You will finish with two 12-second films, their retained source requests, and ordinary SlopCamera projects you can keep editing.
 
-Native HTML rendering currently requires macOS. Start with [Slopcamera installed](../../README.md#install-slopcamera), Git, and the browser and FFmpeg runtimes reported by `slopcamera doctor --json`. This lesson uses original local artwork and no paid model. It renders the picture; the scored showcase adds separately authored music and effects. First-use runtime provisioning may need a network connection.
+Native HTML rendering currently requires macOS. Start with [SlopCamera installed](../../README.md#install-slopcamera), Git, and the browser and FFmpeg runtimes reported by `slopcamera doctor --json`. This lesson uses original local artwork and no paid model. It renders the picture; the scored showcase adds separately authored music and effects. First-use runtime provisioning may need a network connection.
 
 ## Get the supplied scene
 

@@ -1,4 +1,4 @@
-An agent without a dedicated Slopcamera integration still has two routes in: the portable Agent Skill directory for agents that read the `agents` convention, and the plain `slopcamera` command for agents that only run shell commands. Both come from the same install. If the client speaks MCP, its fixed tools cover diagrams, images, and scene inspection and planning; see [Use Slopcamera from an MCP client](/docs/tutorials/mcp).
+An agent without a dedicated SlopCamera integration still has two routes in: the portable Agent Skill directory for agents that read the `agents` convention, and the plain `slopcamera` command for agents that only run shell commands. Both come from the same install. If the client speaks MCP, its fixed tools cover diagrams, images, and scene inspection and planning; see [Use SlopCamera from an MCP client](/docs/tutorials/mcp).
 
 ## Install the portable skill
 

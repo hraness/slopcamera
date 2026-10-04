@@ -1,7 +1,7 @@
 /**
  * Launch post figures. A beat in a post may stand on a line of its own as
  * `{{LAUNCH_FIGURE_<NAME>}}`; the name picks one reviewed workflow example, so
- * every picture in the post is a real Slopcamera render with its source and
+ * every picture in the post is a real SlopCamera render with its source and
  * command already published on the site. Nothing here accepts a caller URL.
  */
 import { exampleUrl, workflowExamples, type WorkflowExample } from "./example-registry"
@@ -16,8 +16,8 @@ export const launchFigures: Readonly<Record<string, LaunchFigure>> = Object.free
 ))
 
 /** The launch film is the one figure that is not a workflow example. */
-const filmCaption = "The original launch film, rendered from Slopcamera's launch-film template. Its example count records the collection at the time of filming. Captions are included."
-const filmAlt = "The original Slopcamera launch film, showing an earlier diagram-led introduction and its historical example count."
+const filmCaption = "The original launch film, rendered from SlopCamera's launch-film template. Its example count records the collection at the time of filming. Captions are included."
+const filmAlt = "The original SlopCamera launch film, showing an earlier diagram-led introduction and its historical example count."
 
 /**
  * Expand `{{LAUNCH_BEATS}}` into one section per beat: headline, post, figure

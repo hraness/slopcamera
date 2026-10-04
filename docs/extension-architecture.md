@@ -1,6 +1,6 @@
 # Extension architecture
 
-Slopcamera has no plugin API and no open operation-registration hook. Everything an agent or integrator can do composes a fixed, host-owned operation registry through a small set of bounded surfaces, each with an explicit trust level. This document explains why the model is shaped this way and which surface fits which job.
+SlopCamera has no plugin API and no open operation-registration hook. Everything an agent or integrator can do composes a fixed, host-owned operation registry through a small set of bounded surfaces, each with an explicit trust level. This document explains why the model is shaped this way and which surface fits which job.
 
 The static capability manifest, recipe packs, and cinematic-world workflow ship in v3.3.1. See [release and platform support](reference/capabilities.md) for installation and runtime requirements.
 
@@ -41,9 +41,9 @@ Coding agents still extend the system in practice — they author documents, rec
 
 Two public systems frame the design space — as architectural context only, implying no integration, endorsement, or equivalent security posture.
 
-[GhostGet](https://ghostget.com/) demonstrates a strong local agent contract: each request selects one named, versioned action; capability discovery is authoritative; transport, risk, and runtime identity are bound before dispatch; contract drift fails closed; and uncertain mutations are not retried blindly. Slopcamera adopts those principles for its own media capabilities, resource admission, receipts, and discovery — the closed registry and static capability manifest are how a filmmaking host keeps an authoritative contract.
+[GhostGet](https://ghostget.com/) demonstrates a strong local agent contract: each request selects one named, versioned action; capability discovery is authoritative; transport, risk, and runtime identity are bound before dispatch; contract drift fails closed; and uncertain mutations are not retried blindly. SlopCamera adopts those principles for its own media capabilities, resource admission, receipts, and discovery — the closed registry and static capability manifest are how a filmmaking host keeps an authoritative contract.
 
-[pi.dev extensions](https://pi.dev/docs/latest/extensions) demonstrate excellent agent ergonomics: typed tools, lifecycle hooks, commands, UI, session state, explicit project trust, and packageable examples — and pi.dev states plainly that extensions execute with full user permissions. Slopcamera therefore does not copy hot-loaded operation registration into its portable or complete host. Trusted TypeScript remains an explicit authoring surface (a workflow module is imported as current-user code), while production capabilities stay reviewed and statically assembled.
+[pi.dev extensions](https://pi.dev/docs/latest/extensions) demonstrate excellent agent ergonomics: typed tools, lifecycle hooks, commands, UI, session state, explicit project trust, and packageable examples — and pi.dev states plainly that extensions execute with full user permissions. SlopCamera therefore does not copy hot-loaded operation registration into its portable or complete host. Trusted TypeScript remains an explicit authoring surface (a workflow module is imported as current-user code), while production capabilities stay reviewed and statically assembled.
 
 The synthesis: adopt GhostGet-style contract discipline for *what the host can do*, pi-style ergonomics for *how an agent expresses intent* — recipe packs, direction documents, and declarative graphs give agents the same comfortable authoring surface without giving authored code a path into the execution kernel.
 

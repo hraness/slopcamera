@@ -7,7 +7,7 @@ export function assertAppleSiliconMacosCompiledCliHost(
 ): void {
   if (platform !== "darwin" || architecture !== "arm64") {
     throw new Error(
-      `The copied Slopcamera CLI is an Apple Silicon macOS artifact; received ${platform}/${architecture}.`,
+      `The copied SlopCamera CLI is an Apple Silicon macOS artifact; received ${platform}/${architecture}.`,
     );
   }
 }

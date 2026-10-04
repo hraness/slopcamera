@@ -4,7 +4,7 @@
  * are all cut from this list. Every number comes from `launch-facts.ts` through
  * a `{placeholder}`; the design-kit checks reject a digit typed by hand.
  *
- * Every visual is a real Slopcamera render from the reviewed example registry
+ * Every visual is a real SlopCamera render from the reviewed example registry
  * (`kind: "clip"`, `scene` = example id), so nothing here is an illustration.
  */
 import {
@@ -51,7 +51,7 @@ export const launchBeats: readonly SlopcameraLaunchBeat[] = Object.freeze([
     id: "what",
     part: "what",
     headline: "Give your coding agent a multimedia studio",
-    post: "Slopcamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.",
+    post: "SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.",
     visual: { kind: "clip", scene: "rain-bottled" },
     alt: "A brass and glass instrument contains a small cloud, falling rain and a flash of lightning.",
     caption: "A miniature storm, rendered in Blender with original geometry, lighting and an authored score.",
@@ -131,8 +131,8 @@ export const launchBeats: readonly SlopcameraLaunchBeat[] = Object.freeze([
     id: "status",
     part: "status",
     headline: "Free and open source",
-    post: "Slopcamera is free and open source under the MIT license. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.",
-    socialPost: "{status}. Slopcamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.",
+    post: "SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then start with an animation on macOS or a portable diagram.",
+    socialPost: "{status}. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.",
     visual: { kind: "clip", scene: "one-shoot-cinematic" },
     alt: "A wide monochrome eclipse film with a restrained title and a held ending.",
     caption: "NASA eclipse footage becomes a quiet monochrome film. Its edit and locally composed score remain available as source.",

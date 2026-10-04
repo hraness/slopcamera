@@ -126,7 +126,7 @@ function implemented(deps: RegistryDependencies): Verb<any, any>[] {
     path: ["status"],
     opClass: "read",
     schema: STATUS_SCHEMA,
-    summary: "What Slopcamera is doing, credits, newest outputs and old login items",
+    summary: "What SlopCamera is doing, credits, newest outputs and old login items",
     output: "raw",
     input: () => ({}),
     async run(_input, ctx) {
@@ -185,7 +185,7 @@ function implemented(deps: RegistryDependencies): Verb<any, any>[] {
     },
     text(output) {
       const moved = output.retired.map(item => `Moved ${item.from} to ${item.to}. The old menu bar no longer opens at login.`);
-      if (output.loginItem.state === "not-ours") moved.push("A menu bar login item was changed outside Slopcamera, so it was left alone.");
+      if (output.loginItem.state === "not-ours") moved.push("A menu bar login item was changed outside SlopCamera, so it was left alone.");
       return moved.length === 0 ? "Nothing to retire. The old menu bar doesn't open at login." : moved.join("\n");
     },
   };

@@ -1,8 +1,8 @@
-Slopcamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK and Agent Skill.
+SlopCamera is a media studio for coding agents. Your agent writes a short source file, the CLI checks and renders it on your machine, and a revision is an edit to that file and a new render. These pages cover the CLI, SDK and Agent Skill.
 
 It works with Claude Code, Codex, Cursor, and other coding agents through the CLI, the Agent Skill, and an MCP server. The source can be a diagram, an HTML animation, a 3D scene, a Blender, CadQuery, or Manim program, or edit decisions over your own footage.
 
-Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop Slopcamera:
+Install the v{{PUBLISHED_VERSION}} release, or [build from source](/docs/how-to/install-from-source) to develop SlopCamera:
 
 ```sh
 {{ARCHIVE_INSTALL_COMMAND}}
@@ -33,7 +33,7 @@ Then give your coding agent the matching guidance:
 
 - [Remix the showcase](/docs/how-to/remix-the-showcase): open the finished films, study the creative decisions, and make your own version.
 - [Direct a film](/docs/how-to/direct-a-film): write a useful brief, test the hardest shot, and refine composition, movement, and sound.
-- [Build Slopcamera from source](/docs/how-to/install-from-source): record the commit, install locked dependencies, and build the SDK and CLI.
+- [Build SlopCamera from source](/docs/how-to/install-from-source): record the commit, install locked dependencies, and build the SDK and CLI.
 - [Render motion graphics from HTML](/docs/how-to/render-motion-graphics): choose among seven authoring profiles, render a graphic, and retain its source.
 - [Edit and deliver video](/docs/how-to/edit-video): import footage, align related tracks, place overlays, and check a delivery.
 - [Convert raster images to SVG](/docs/how-to/vectorize-images): trace artwork locally, compare a duotone treatment, and inspect fidelity.
@@ -54,24 +54,24 @@ Then give your coding agent the matching guidance:
 
 - [Capabilities, versions, and platforms](/docs/reference/capabilities): release availability, supported profiles, and runtime requirements.
 - [SDK surfaces](/docs/reference/sdk): portable and local imports, operation projections, and execution contracts.
-- [The Slopcamera engine stack](/docs/reference/engines): what each part of the multimedia engine does, needs, and where its limits are.
+- [The SlopCamera engine stack](/docs/reference/engines): what each part of the multimedia engine does, needs, and where its limits are.
 - [The .diagram.json format](/docs/reference/diagram-format): the version-one diagram source, its five exports, and .tldr interchange.
 - [HTML render profiles](/docs/reference/html-profiles): the seven locked browser profiles, from Motion and p5.js to Three.js and vgpu.
 - [Spatial scenes, cameras, and saved worlds](/docs/reference/spatial-scenes): the .scene.json contract, hardware profiles, and bounded splats.
 - [Local raster-to-SVG vectorization](/docs/reference/vectorization): how a pinned VTracer build traces a raster into SVG and checks fidelity.
 - [Vercel AI Gateway media generation](/docs/reference/gateway-generation): credentials, live model discovery, upload acknowledgements, and receipts.
 - [Video editing, compositing, and delivery](/docs/reference/video-pipeline): the FFmpeg-backed project model, typed edits, and delivery variants.
-- [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the source Slopcamera keeps, the runtime you choose, and the job lifecycle.
-- [The Slopcamera MCP toolset](/docs/reference/mcp-tools): the 21 fixed tools, their bounds, and what stays CLI-only.
+- [Native engines: Blender, CadQuery, and Manim](/docs/reference/native-engines): the source SlopCamera keeps, the runtime you choose, and the job lifecycle.
+- [The SlopCamera MCP toolset](/docs/reference/mcp-tools): the 21 fixed tools, their bounds, and what stays CLI-only.
 
 ## Understand the design
 
-- [Slopcamera use cases](/docs/explanation/use-cases): the jobs Slopcamera covers, the interface each uses, and where it is not the right tool.
+- [SlopCamera use cases](/docs/explanation/use-cases): the jobs SlopCamera covers, the interface each uses, and where it is not the right tool.
 - [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
-- [How Slopcamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
-- [Why Slopcamera](/docs/explanation/why-slopcamera): why the agent writes a short source file and reuses installed techniques instead of a loose toolchain.
+- [How SlopCamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
+- [Why SlopCamera](/docs/explanation/why-slopcamera): why the agent writes a short source file and reuses installed techniques instead of a loose toolchain.
 - [Agent cost study](/docs/explanation/token-benchmark): methods and reports from a controlled study of first-render and revision costs.
-- [Extend Slopcamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
+- [Extend SlopCamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
 - [Choose an HTML authoring surface](/docs/explanation/html-authoring): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs.
 
 Every page is also available as Markdown: request any page with `Accept: text/markdown` or append `.md` to its path.

@@ -1,7 +1,7 @@
 # Direct a film or animation style
 
 Choose a style profile to make the drawing, materials, camera, timing, and finish
-agree. Slopcamera v3.10.3 includes the style catalog and SDK helpers. The
+agree. SlopCamera v3.10.3 includes the style catalog and SDK helpers. The
 executable portfolio examples below run from a source checkout; follow
 [source setup](use-current-source.md) before rendering a study.
 
@@ -41,11 +41,11 @@ bun examples/style-portfolio/render.ts --style theatrical-cel --run train-film
 bun examples/style-portfolio/render.ts --style theatrical-cel --still --offset 2.5 --run train-still
 ```
 
-Rendering requires Slopcamera's admitted local browser and FFmpeg/FFprobe.
+Rendering requires SlopCamera's admitted local browser and FFmpeg/FFprobe.
 The script invokes the canonical `html render` command, uses no external assets,
 and writes requests, logs, results, and attempt intents below
 `artifacts/style-portfolio/<run>/`. Follow each result's `output.path` and
-`receipt.path` for the movie and retained Slopcamera evidence. A still request
+`receipt.path` for the movie and retained SlopCamera evidence. A still request
 produces a one-frame movie and retained full-resolution PNG in the render job.
 
 Use `--all` instead of `--style` to render all twelve animation studies

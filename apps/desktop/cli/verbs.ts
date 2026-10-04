@@ -201,7 +201,7 @@ export const CLI_VERBS: readonly VerbRow[] = [
   row("support release", "operate", "Release an invitation an integration did not show"),
 
 
-  row("status", "read", "What Slopcamera is doing, credits, newest outputs and old login items"),
+  row("status", "read", "What SlopCamera is doing, credits, newest outputs and old login items"),
   row("tui", "read", "The status screen; --snapshot prints it once, --json prints the status"),
   row("legacy retire", "operate", "Stop the old menu bar opening at login, keeping its file"),
 ];

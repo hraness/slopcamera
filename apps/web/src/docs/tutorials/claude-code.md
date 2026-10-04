@@ -1,6 +1,6 @@
-Claude Code can create diagrams, images, animations, and video through Slopcamera once two pieces are installed: the `slopcamera` command, which does the local media work, and the Slopcamera Agent Skill, which teaches Claude Code which operation to reach for.
+Claude Code can create diagrams, images, animations, and video through SlopCamera once two pieces are installed: the `slopcamera` command, which does the local media work, and the SlopCamera Agent Skill, which teaches Claude Code which operation to reach for.
 
-You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization, local audio and color effects (`media audio` and `media color`), and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. Slopcamera edits recordings you already have; it does not record. There is no Slopcamera account.
+You need Bun 1.3.14 or newer on macOS, Linux, or Windows. A few features are narrower: vectorization, local audio and color effects (`media audio` and `media color`), and the native engines (Blender, CadQuery, and Manim) run on macOS and Linux, and the GPU scene profiles need macOS. SlopCamera edits recordings you already have; it does not record. There is no SlopCamera account.
 
 ## Install the CLI
 
@@ -14,7 +14,7 @@ Confirm the install:
 {{DOCTOR_COMMAND}}
 ```
 
-The doctor reports which parts of Slopcamera work on this machine. Diagrams need nothing more, video editing needs FFmpeg and FFprobe, and native engines such as Blender install separately.
+The doctor reports which parts of SlopCamera work on this machine. Diagrams need nothing more, video editing needs FFmpeg and FFprobe, and native engines such as Blender install separately.
 
 ## Install the Agent Skill for Claude Code
 

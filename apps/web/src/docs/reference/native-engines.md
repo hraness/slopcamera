@@ -1,4 +1,4 @@
-The `slopcamera studio` commands run retained Blender, CadQuery, or Manim source through a closed host adapter while keeping the engine's own program as the editable artifact. Slopcamera never installs or upgrades native tools: you install a supported engine and select the exact executable or Python environment per invocation.
+The `slopcamera studio` commands run retained Blender, CadQuery, or Manim source through a closed host adapter while keeping the engine's own program as the editable artifact. SlopCamera never installs or upgrades native tools: you install a supported engine and select the exact executable or Python environment per invocation.
 
 ## Qualified engines
 
