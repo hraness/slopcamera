@@ -325,7 +325,7 @@ const problems = [
   ...inventoryUpdate.problems,
 ];
 const rootPackage = await readJson(join(ROOT, "package.json"));
-const expectedDescription = "Slopcamera lets Codex, Claude Code, and other coding agents make images, diagrams, animation, 3D scenes, Blender films, and edited video from source files they can keep revising.";
+const expectedDescription = "SlopCamera lets Codex, Claude Code, and other coding agents make images, diagrams, animation, 3D scenes, Blender films, and edited video from source files they can keep revising.";
 const expectedKeywords = [
   "ai-media-generation",
   "ai-video-generation",
