@@ -44,8 +44,8 @@ const generatedTextFiles = {
 
 const marketingIconMaxBytes = 128 * 1024
 const pixelArtMedia = [
-  { file: "pixel-landscape-af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44.png", bytes: 1_055_624, sha256: "af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44" },
-  { file: "pixel-landscape-5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca.png", bytes: 710_586, sha256: "5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca" },
+  { file: "landscape-9a872464bc5cb3396d357d1f79837cde926108f9931bfe9d20e6abd588012619.jpg", bytes: 1_136_696, sha256: "9a872464bc5cb3396d357d1f79837cde926108f9931bfe9d20e6abd588012619" },
+  { file: "landscape-d84fa3026bd98835f91f4cf759ce418dffa7c53375c01480e8a9e28350e928b2.jpg", bytes: 530_484, sha256: "d84fa3026bd98835f91f4cf759ce418dffa7c53375c01480e8a9e28350e928b2" },
 ] as const
 
 async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
@@ -69,8 +69,8 @@ async function readPixelArtMedia(): Promise<Readonly<{ path: string; bytes: Uint
     assert.ok(bytes.byteLength === expected.bytes, `Pixel artwork byte length changed: ${expected.file}`)
     assert.equal(createHash("sha256").update(bytes).digest("hex"), expected.sha256,
       `Pixel artwork digest changed: ${expected.file}`)
-    assert.ok(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
-      `Pixel artwork is not a PNG: ${expected.file}`)
+    assert.ok(bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+      `Landscape artwork is not a JPEG: ${expected.file}`)
     return { path: `media/${expected.file}`, bytes }
   }))
 }
