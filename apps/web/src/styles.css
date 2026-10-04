@@ -391,7 +391,7 @@ main[data-hraness-marketing-preset="editorial"] {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: .2;
+  opacity: .15;
   mix-blend-mode: multiply;
 }
 
@@ -401,19 +401,19 @@ main[data-hraness-marketing-preset="editorial"] {
   block-size: auto;
   filter: invert(1);
 }
-html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .13; }
+html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
 html[data-theme="dark"] .slopcamera-pixel-art img { filter: none; }
 @media (prefers-color-scheme: dark) {
-  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .13; }
+  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
   html[data-theme="system"] .slopcamera-pixel-art img { filter: none; }
 }
 /* Phone copy spans the drawing's side scenery, so it recedes further there. */
 @media (max-width: 48rem) {
-  html .slopcamera-pixel-art { opacity: .13; }
-  html[data-theme="dark"] .slopcamera-pixel-art { opacity: .09; }
+  html .slopcamera-pixel-art { opacity: .11; }
+  html[data-theme="dark"] .slopcamera-pixel-art { opacity: .07; }
 }
 @media (max-width: 48rem) and (prefers-color-scheme: dark) {
-  html[data-theme="system"] .slopcamera-pixel-art { opacity: .09; }
+  html[data-theme="system"] .slopcamera-pixel-art { opacity: .07; }
 }
 
 .slopcamera-product-hero,
