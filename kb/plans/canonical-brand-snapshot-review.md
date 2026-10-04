@@ -3,7 +3,7 @@ type: plan
 title: Canonical SlopCamera snapshot review
 description: Review the exact support-anchor and legacy-identity fingerprint changes required by canonical SlopCamera branding without relaxing standalone boundaries.
 area: product-identity
-status: in-progress
+status: completed
 repository_scopes:
   - scripts/standalone-support-fixture.ts
   - scripts/standalone-support-fixture.test.ts
@@ -24,7 +24,7 @@ Approve or reject a finite snapshot update for the canonical `SlopCamera` displa
 
 The branding work uses the portfolio registry's `messaging.names.name`. Commands, domains, packages, application paths, operation codes, and exported API names retain their technical spellings. The [[notes/repository-seams|repository seams]] note explains why public copy cannot acquire Accounts or suite-auth authority.
 
-## Evidence and current status
+## Initial evidence
 
 Evidence collected on 2026-10-04 against SlopCamera source baseline `8310399403fdbbf69f97e0754fe46d5804c5605a`:
 
@@ -149,4 +149,18 @@ The source rows and anchor fixture are updated to those reviewed values; no path
 
 Devin (AI) separately accepted the generated CLI row after a fresh normal `bun run build:desktop:cli` with Bun 1.3.14 and the unchanged lockfile reproduced artifact SHA-256 `8ffc34ca6fc3cee08f9f572b99b154541685edd4da22265660f9b31a745250ba` from baseline artifact SHA-256 `e144ae8c3d82e442bbdbc1510547611e03b7df25cdcac070103addc1f83fa62f`. The read-only `artifacts/review-branding-cli.ts` comparison pins baseline `8310399403fdbbf69f97e0754fe46d5804c5605a`, verifies 15 changed source files differ only in public-name tokens, and verifies unchanged technical identifiers. After normalizing only those literal tokens and scope-resolved compiler-renamed local bindings, both complete ASTs contain 38,732 bindings and have identical SHA-256 `27590540ce0a7c08914faa2fa8a3dbb06e29c34a4bae20cd1dd597be64c438bc`. The generated row retains 85 identity-bearing lines, 475 occurrences, its path, and its generated category. Earlier focused CLI contracts, typecheck, lint, and build passed; the rebuild and independent AST comparison close the separate artifact-review condition.
 
-Full-package acceptance and main delivery remain pending the complete required gates on the integrated candidate. The historical footer-profile digest remains untouched.
+Full required source acceptance and main delivery are complete. The historical footer-profile digest remains untouched.
+
+## Result
+
+[PR #357](https://github.com/hraness/slopcamera/pull/357) delivered reviewed head `29a981cd30c321ba3b116780d58f056a228e1c9a` to main as `c482b04735e5680d6b1766ee9c8ba95e86fabb96` on 2026-10-04. The canonical public name ships across the site, CLI, documentation, metadata, social kit, authored gallery, and installed agent guidance. Technical identifiers and the standalone policy remain unchanged.
+
+The [complete current-head PR CI](https://github.com/hraness/slopcamera/actions/runs/37234228252) and independent [complete dispatch](https://github.com/hraness/slopcamera/actions/runs/37234224129) passed every source phase: standalone boundary, public copy, SDK, hosted API, all four local-runtime shards, site compilation, site browser verification, packed consumer, and Required. Updating stale site expectations and regenerating the 27 status text goldens resolved the remaining naming failures; serialized status fixtures and compatibility behavior did not change.
+
+The exact merged commit also passed [post-merge source CI](https://github.com/hraness/slopcamera/actions/runs/37234750882), the official VTracer matrix, CodeQL, and [production site browser verification](https://github.com/hraness/slopcamera/actions/runs/37234828646). These checks establish their recorded scopes, not a separate full public DNS/resolver readiness claim.
+
+## Durable memory
+
+The display-name versus technical-identifier distinction is enforced by [`src/style-portfolio-branding.test.ts`](../../src/style-portfolio-branding.test.ts). Exact support-anchor admission remains owned by [`scripts/standalone-support-fixture.ts`](../../scripts/standalone-support-fixture.ts) and its hostile-counterexample tests. Reviewed predecessor fingerprints remain owned by [`scripts/legacy-identity.inventory.json`](../../scripts/legacy-identity.inventory.json) and the unchanged source-row review refusal in [`scripts/legacy-identity.ts`](../../scripts/legacy-identity.ts).
+
+No new concept or inferred graph relationship was needed: the existing [[notes/repository-seams|repository seams]] note and these checked contracts already own the reusable conclusions. This plan retains the finite hashes, independent artifact comparison, review decision, and delivered evidence as history.
