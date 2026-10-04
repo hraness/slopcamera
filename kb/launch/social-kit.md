@@ -6,10 +6,10 @@ Posts go out from the @hraness account. The status is "Latest release: v3.10.3",
 
 ## X thread
 
-Post 1 of 8, 190 characters
+Post 1 of 8, 188 characters
 
 ```text
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
+Your coding agent can write the code but not the picture. SlopCamera lets it make images, diagrams, animation, 3D scenes and video from editable source, like a storm inside a glass bottle.
 ```
 
 Post 2 of 8, 199 characters
@@ -48,20 +48,20 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 210 characters
+Post 8 of 8, 235 characters
 
 ```text
-Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
+Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Ask your agent to install SlopCamera from slopcamera.com, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
 
 ## Bluesky thread
 
-Post 1 of 8, 190 characters
+Post 1 of 8, 188 characters
 
 ```text
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
+Your coding agent can write the code but not the picture. SlopCamera lets it make images, diagrams, animation, 3D scenes and video from editable source, like a storm inside a glass bottle.
 ```
 
 Post 2 of 8, 199 characters
@@ -100,20 +100,20 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 210 characters
+Post 8 of 8, 235 characters
 
 ```text
-Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
+Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Ask your agent to install SlopCamera from slopcamera.com, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
 
 ## Threads thread
 
-Post 1 of 8, 190 characters
+Post 1 of 8, 188 characters
 
 ```text
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
+Your coding agent can write the code but not the picture. SlopCamera lets it make images, diagrams, animation, 3D scenes and video from editable source, like a storm inside a glass bottle.
 ```
 
 Post 2 of 8, 199 characters
@@ -152,10 +152,10 @@ Post 7 of 8, 204 characters
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 ```
 
-Post 8 of 8, 210 characters
+Post 8 of 8, 235 characters
 
 ```text
-Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
+Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Ask your agent to install SlopCamera from slopcamera.com, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -163,7 +163,7 @@ https://slopcamera.com/blog/introducing-slopcamera
 ## LinkedIn post
 
 ```text
-SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
+Your coding agent can write the code but not the picture. SlopCamera lets it make images, diagrams, animation, 3D scenes and video from editable source, like a storm inside a glass bottle.
 
 A copper tram leaves a rainy midnight city and climbs toward the moon. The original artwork, animation and score are editable source, so your agent can change the destination, pacing or musical cues.
 
@@ -177,7 +177,7 @@ Make a short explainer, an illustrated story or an edit of your own footage with
 
 The aim is a studio where increasingly strange ideas remain practical to direct. A vinyl record can become a dancer, with its choreography, palette and soundtrack available for the next creative decision.
 
-Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
+Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Ask your agent to install SlopCamera from slopcamera.com, then make your first animation or diagram.
 
 https://slopcamera.com/blog/introducing-slopcamera
 ```
@@ -197,13 +197,13 @@ Topics: Developer Tools, Design Tools, Artificial Intelligence
 ## Show HN and first comment fact sheet
 
 - A multimedia studio for your coding agent.
-- SlopCamera lets your coding agent make images, diagrams, animation, 3D scenes and video from editable source. Start with a storm inside a glass bottle; direct the camera, lighting and sound.
+- Your coding agent can write the code but not the picture. SlopCamera lets it make images, diagrams, animation, 3D scenes and video from editable source, like a storm inside a glass bottle.
 - A copper tram leaves a rainy midnight city and climbs toward the moon. The original artwork, animation and score are editable source, so your agent can change the destination, pacing or musical cues.
 - "Make the moon larger." The revised film changes the destination's scale while keeping the route, palette, score and exact timing. Both versions come from the same HTML scene, with separate retained requests.
 - NASA eclipse footage becomes a cinematic film, a vertical edit or a narrated explainer. The same source gets different pacing, framing, typography and sound. Each cut keeps its own recipe and the original footage intact.
 - Build the picture, test its movement, then finish the film. The paper ocean keeps its layered artwork, animation and score in source files; its ending can also be rendered as a print.
 - Make a short explainer, an illustrated story or an edit of your own footage with the coding agent you already use. This jazz miniature makes Fourier synthesis visible and audible through waveforms, labels and sound.
-- Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Install the CLI and Agent Skill, then make your first animation or diagram.
+- Latest release: v3.10.3. SlopCamera is free and open source under the MIT license. Ask your agent to install SlopCamera from slopcamera.com, then make your first animation or diagram.
 - Latest release: v3.10.3. https://slopcamera.com/blog/introducing-slopcamera
 
 ## Beats and their visuals

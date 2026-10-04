@@ -44,8 +44,9 @@ const generatedTextFiles = {
 
 const marketingIconMaxBytes = 128 * 1024
 const pixelArtMedia = [
-  { file: "pixel-landscape-af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44.png", bytes: 1_055_624, sha256: "af3ef474b16dbf5f813e3ca574747b50eb163710acc082cabc677e25c47d3a44" },
-  { file: "pixel-landscape-5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca.png", bytes: 710_586, sha256: "5d62ac3cc46a6bdfed9bb88e818d5010ad2955ab71ba68527409ca1ebb22f2ca" },
+  { file: "landscape-3d79d0700995c363750bd4a78258432b48c4114e3882a6a09582fff3f4545f63.webp", bytes: 1_797_576, sha256: "3d79d0700995c363750bd4a78258432b48c4114e3882a6a09582fff3f4545f63" },
+  { file: "landscape-09b2266789acd4bba2056ab96047114c2afbb31e1f880c5dd418eaacff27ca03.webp", bytes: 3_264_880, sha256: "09b2266789acd4bba2056ab96047114c2afbb31e1f880c5dd418eaacff27ca03" },
+  { file: "landscape-b8eab9eda939f9de2d901041d80b60abc01fc3487188fd78aff28e126f54142c.webp", bytes: 815_594, sha256: "b8eab9eda939f9de2d901041d80b60abc01fc3487188fd78aff28e126f54142c" },
 ] as const
 
 async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
@@ -69,8 +70,8 @@ async function readPixelArtMedia(): Promise<Readonly<{ path: string; bytes: Uint
     assert.ok(bytes.byteLength === expected.bytes, `Pixel artwork byte length changed: ${expected.file}`)
     assert.equal(createHash("sha256").update(bytes).digest("hex"), expected.sha256,
       `Pixel artwork digest changed: ${expected.file}`)
-    assert.ok(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
-      `Pixel artwork is not a PNG: ${expected.file}`)
+    assert.ok(new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP",
+      `Landscape artwork is not a WebP image: ${expected.file}`)
     return { path: `media/${expected.file}`, bytes }
   }))
 }
