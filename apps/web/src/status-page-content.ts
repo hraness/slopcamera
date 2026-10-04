@@ -39,7 +39,7 @@ export function renderStatusPage(): string {
       {
         description: "Install the release and the Agent Skill so Claude Code can make visual media.",
         href: "/docs/tutorials/claude-code",
-        label: "Set up Slopcamera for Claude Code",
+        label: "Set up SlopCamera for Claude Code",
       },
       {
         description: "Tutorials and task guides for diagrams, animation, 3D scenes, and video.",

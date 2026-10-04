@@ -52,7 +52,7 @@ describe("slopcamera status", () => {
       },
     });
     expect(snapshot(input({}))).toBe([
-      "== Slopcamera ==",
+      "== SlopCamera ==",
       "┌ Now ─────────────────────────────────────────────────────┐",
       "│○ Ready · Nothing rendered yet                            │",
       "└──────────────────────────────────────────────────────────┘",

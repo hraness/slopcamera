@@ -4,12 +4,12 @@ uses it. Each stage is a Blender Python program in a retained
 [studio job](/docs/how-to/native-films), so a failed bake reruns from the saved low-poly mesh
 instead of from scratch.
 
-Slopcamera has no modelling, baking, decimation, or compression command. It runs
+SlopCamera has no modelling, baking, decimation, or compression command. It runs
 your Blender source, records what it wrote, and checks the GLB. The stages
 adapt the Blender asset workflow in Vercel Labs'
 [vgpu Agent Skill](https://github.com/vercel-labs/vgpu/tree/38188e694a20ad355a00faf29aa0bb0ffab0c954/skills/vgpu).
 
-You need Blender 5.2.1 LTS and Slopcamera with the `studio` and `scene`
+You need Blender 5.2.1 LTS and SlopCamera with the `studio` and `scene`
 commands. The budget and LOD checks in step 5 need a
 [source build](/docs/how-to/install-from-source) until they ship in a release.
 
@@ -21,7 +21,7 @@ A brief can name the result and the quality bar in one line:
 Model a café chair for the product page as a web-ready GLB with two LODs: accurate physics, AAA graphics, VFX.
 ```
 
-The agent applies the Slopcamera Agent Skill's 3D quality bar to every 3D brief
+The agent applies the SlopCamera Agent Skill's 3D quality bar to every 3D brief
 even when the brief does not name it: real-world scale and contact, physically
 based materials with managed color and anti-aliased edges, and effects only
 where they help the shot. Say so in the brief when you want a flat or stylized
@@ -33,11 +33,11 @@ look instead.
 
 | Target | Accepts |
 | --- | --- |
-| Slopcamera scenes (`scene render`) | Self-contained GLB 2.0, metallic-roughness materials, embedded PNG or JPEG, one UV set. No Draco, meshopt, or KTX2. |
+| SlopCamera scenes (`scene render`) | Self-contained GLB 2.0, metallic-roughness materials, embedded PNG or JPEG, one UV set. No Draco, meshopt, or KTX2. |
 | The HTML `three` profile | What the page's Three.js loader decodes. The scaffold stops above 64 draw calls or 200,000 triangles. |
 | Your own web app, or vgpu | What that runtime's loader decodes, such as Draco, meshopt, or KTX2. |
 
-For a Slopcamera scene, the importer allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image, and 32 MiB of images in total. Keep an uncompressed GLB as the master and make
+For a SlopCamera scene, the importer allows up to 100,000 triangles, 256 primitives, 65,536 vertices per primitive, 128 images, 16 MiB per image, and 32 MiB of images in total. Keep an uncompressed GLB as the master and make
 compressed copies only for a runtime that decodes them.
 
 ### 2. Block out the shape
@@ -136,12 +136,12 @@ asset and manifest; switching back is the recovery path.
 
 - The checks count triangles, primitives, and embedded images. They do not
   decode pixels or measure GPU memory, load time, or draw cost.
-- The Slopcamera scene renderer samples each pixel once and has no
+- The SlopCamera scene renderer samples each pixel once and has no
   anti-aliasing, so its stills show stair-stepped edges. Render a final where
   edges matter in a Blender job or the HTML `three` profile.
 - The scene renderer has no live physics. Simulate contact in Blender, or stage
   it by hand.
-- WebGPU is not a Slopcamera renderer. The optional `examples/studio/vgpu`
+- WebGPU is not a SlopCamera renderer. The optional `examples/studio/vgpu`
   example in the source checkout renders through vgpu 0.4.1 in a separate
   runtime; qualify your own version there.
 

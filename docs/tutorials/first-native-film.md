@@ -1,8 +1,8 @@
 # Render your first native film
 
-Create a one-second product shot in Blender, inspect its retained frames, and export it through an ordinary Slopcamera video project. You will keep the native source and the encoded clip as separate artifacts.
+Create a one-second product shot in Blender, inspect its retained frames, and export it through an ordinary SlopCamera video project. You will keep the native source and the encoded clip as separate artifacts.
 
-This lesson uses Slopcamera's native studio commands. [Install Slopcamera](../../README.md#install-slopcamera), and verify `slopcamera help studio` lists `init`, `run`, `encode` and `assemble`. The following setup uses macOS, Blender 5.2.1 LTS, Bun, FFmpeg and FFprobe. Set `SLOPCAMERA_BLENDER_BIN` to your installed Blender executable; the usual application path is shown below. The small preview deliberately uses CPU rendering; no cloud service or GPU is required.
+This lesson uses SlopCamera's native studio commands. [Install SlopCamera](../../README.md#install-slopcamera), and verify `slopcamera help studio` lists `init`, `run`, `encode` and `assemble`. The following setup uses macOS, Blender 5.2.1 LTS, Bun, FFmpeg and FFprobe. Set `SLOPCAMERA_BLENDER_BIN` to your installed Blender executable; the usual application path is shown below. The small preview deliberately uses CPU rendering; no cloud service or GPU is required.
 
 ## Inspect the finished example
 

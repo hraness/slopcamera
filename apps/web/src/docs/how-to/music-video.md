@@ -1,6 +1,6 @@
 An authored HTML or Three.js scene can become a finished MP4 over your own track, while the rendered scene video and the original music stay separate sources inside an ordinary project. You can revise the scene, the edit, and the mix independently instead of extracting audio from a finished movie.
 
-Scene export ships in v{{PUBLISHED_VERSION}}. [Install Slopcamera](/docs) and confirm its `slopcamera help html` lists `html render`. Rendering also needs the admitted local Chrome runtime and FFmpeg/FFprobe, so check the host before preparing a full render:
+Scene export ships in v{{PUBLISHED_VERSION}}. [Install SlopCamera](/docs) and confirm its `slopcamera help html` lists `html render`. Rendering also needs the admitted local Chrome runtime and FFmpeg/FFprobe, so check the host before preparing a full render:
 
 ```sh
 slopcamera help html

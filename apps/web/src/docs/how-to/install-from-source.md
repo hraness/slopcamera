@@ -1,4 +1,4 @@
-A source checkout gives you the complete Slopcamera capability set: the portable SDK, the canonical `slopcamera` CLI, and the matching Agent Skill, all built from one recorded commit. If you only need the released command set, install the verified v{{PUBLISHED_VERSION}} archive instead and skip this page:
+A source checkout gives you the complete SlopCamera capability set: the portable SDK, the canonical `slopcamera` CLI, and the matching Agent Skill, all built from one recorded commit. If you only need the released command set, install the verified v{{PUBLISHED_VERSION}} archive instead and skip this page:
 
 ```sh
 {{ARCHIVE_INSTALL_COMMAND}}
@@ -28,7 +28,7 @@ bun run build:desktop:cli
 
 These build the portable SDK and the source-backed CLI entrypoint at `apps/desktop/dist/cli/main.js`. They do not build a desktop application, provision a native engine, or run a scene.
 
-`slopcamera status` shows what Slopcamera is rendering, your last known credits balance and your newest outputs, and `slopcamera tui` keeps that on screen. Earlier releases had an optional macOS menu-bar companion; `slopcamera legacy retire` stops it opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
+`slopcamera status` shows what SlopCamera is rendering, your last known credits balance and your newest outputs, and `slopcamera tui` keeps that on screen. Earlier releases had an optional macOS menu-bar companion; `slopcamera legacy retire` stops it opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
 
 ## Define the slopcamera command
 

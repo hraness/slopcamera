@@ -120,13 +120,13 @@ describe("slopcamera commands", () => {
 
     const snapshot = await run(["tui", "--snapshot", "--width", "40"], { home, stateRoot });
     expect(snapshot.code).toBe(0);
-    expect(snapshot.stdout.startsWith("== Slopcamera ==\n")).toBe(true);
+    expect(snapshot.stdout.startsWith("== SlopCamera ==\n")).toBe(true);
     expect(snapshot.stdout).not.toContain("\u001b");
 
     // Without a terminal, plain `tui` prints the snapshot instead of taking over the screen.
     const plain = await run(["tui"], { home, stateRoot });
     expect(plain.code).toBe(0);
-    expect(plain.stdout.startsWith("== Slopcamera ==\n")).toBe(true);
+    expect(plain.stdout.startsWith("== SlopCamera ==\n")).toBe(true);
     expect(plain.stdout).not.toContain("\u001b");
 
     const json = await run(["tui", "--json"], { home, stateRoot });

@@ -42,7 +42,7 @@ export async function readHtmlFilmTemplate(template: HtmlFilmTemplate, from = im
   }
   const root = await discoverRepositoryRoot(from);
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { readonly version?: unknown };
-  if (typeof manifest.version !== "string") throw new CliError("invalid-data", "The Slopcamera package has no version.");
+  if (typeof manifest.version !== "string") throw new CliError("invalid-data", "The SlopCamera package has no version.");
   const files: Record<string, string> = {};
   for (const name of HTML_FILM_TEMPLATE_FILES) {
     files[name] = await readFile(join(root, "examples", "html", template, name), "utf8");

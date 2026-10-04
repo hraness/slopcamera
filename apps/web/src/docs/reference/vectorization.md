@@ -8,7 +8,7 @@ slopcamera image vectorize input.png --output duotone.svg --duotone '#1c3557,#f2
 ```
 
 - macOS and Linux only; Windows deliberately rejects this profile. First use may download a verified VTracer archive; after that the prepared local tool runs without a network.
-- The emitted SVG is inert rebuilt geometry. Slopcamera never embeds the raster inside the SVG and never applies an upscaling model to disguise a failed trace.
+- The emitted SVG is inert rebuilt geometry. SlopCamera never embeds the raster inside the SVG and never applies an upscaling model to disguise a failed trace.
 - Every run writes a provenance receipt naming the actual VTracer and image-library identities, the input identity, and the measured fidelity: support recall and color RMSE for the run.
 - Tracing fails closed. A source that cannot meet the fidelity and output gates reports the rejection reason and produces no accepted SVG rather than emitting a bad vector.
 - `--duotone` takes exactly two `#rrggbb` colors and repalettes the traced output; evaluate its silhouette and boundaries separately from the original colors.

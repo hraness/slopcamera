@@ -238,7 +238,7 @@ function document(manifest: GalleryManifest, prepared: PreparedStudy[], reel: Pr
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><meta name="description" content="${html(manifest.intro ?? manifest.title)}">
-<title>${html(manifest.title)} · Slopcamera</title>
+<title>${html(manifest.title)} · SlopCamera</title>
 <style>
 @font-face{font-family:Portfolio Serif;src:url('${url(font.output)}') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 :root{--paper:#faf8f3;--ink:#171612;--muted:#625d54;--line:#d9d4c9;--accent:#754900;--space:clamp(1.2rem,3.6vw,3.5rem);--serif:'Portfolio Serif',Georgia,serif;--sans:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color-scheme:light}
@@ -249,12 +249,12 @@ function document(manifest: GalleryManifest, prepared: PreparedStudy[], reel: Pr
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 @media(forced-colors:active){.picture{border:1px solid CanvasText}a:focus-visible,summary:focus-visible,video:focus-visible{outline-color:Highlight}}
 </style></head><body id="top"><a class="skip" href="#collection">Skip to the collection</a>
-<div class="shell"><header class="masthead"><a class="wordmark" href="#top">Slopcamera</a><nav aria-label="Portfolio"><a href="#collection">The studies</a>${reel ? '<a href="#reel">Watch the reel</a>' : ""}</nav></header>
+<div class="shell"><header class="masthead"><a class="wordmark" href="#top">SlopCamera</a><nav aria-label="Portfolio"><a href="#collection">The studies</a>${reel ? '<a href="#reel">Watch the reel</a>' : ""}</nav></header>
 <main><section class="opening" aria-labelledby="title-${hero.study.id}">${media(hero)}${caption(hero, "h1")}</section>
 <section id="collection" aria-labelledby="collection-title"><div class="collection-heading"><h2 id="collection-title">${html(manifest.title)}</h2><p>${html(manifest.intro ?? "Original scenes in different visual languages. Play a film to see its timing; open its source to see how it was made.")}</p></div>
 <div class="studies">${remaining.map(item => `<article class="study" aria-labelledby="title-${item.study.id}">${media(item)}${caption(item, "h3")}</article>`).join("\n")}</div></section>
 ${reel ? `<section class="reel" id="reel" aria-labelledby="reel-heading"><h2 id="reel-heading">The collection in motion</h2><div class="reel-layout">${media(reel)}${caption(reel, "h3")}</div></section>` : ""}
-</main><footer class="site-footer"><p>Authored studies made with Slopcamera. Each film retains its production method, source files, and execution evidence.</p><div class="footer-links"><a href="manifest.json">Selected works</a><a href="gallery-receipt.json">Assembly record</a><a href="font-license.txt">Type license</a><a href="#top">Back to top</a></div></footer></div>
+</main><footer class="site-footer"><p>Authored studies made with SlopCamera. Each film retains its production method, source files, and execution evidence.</p><div class="footer-links"><a href="manifest.json">Selected works</a><a href="gallery-receipt.json">Assembly record</a><a href="font-license.txt">Type license</a><a href="#top">Back to top</a></div></footer></div>
 <script>
 // User-initiated playback only. One film owns motion and audio at a time.
 const films = Array.from(document.querySelectorAll('video'));

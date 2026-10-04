@@ -1,4 +1,4 @@
-== Slopcamera ==
+== SlopCamera ==
 ┌ Now ─────────────────────────────────┐
 │⚠ Last job didn't finish · Rendering a│
 └──────────────────────────────────────┘

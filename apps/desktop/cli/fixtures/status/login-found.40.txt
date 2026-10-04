@@ -1,4 +1,4 @@
-== Slopcamera ==
+== SlopCamera ==
 ┌ Now ─────────────────────────────────┐
 │○ Ready · Nothing rendered yet        │
 └──────────────────────────────────────┘

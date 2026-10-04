@@ -2,16 +2,16 @@
 
 Render a retained drawing source as monochrome vector sheets and a multipage
 PDF. This guide applies to block diagrams and flowcharts whose content you have
-already chosen. Slopcamera checks its drawing profile; the result still needs
+already chosen. SlopCamera checks its drawing profile; the result still needs
 technical and filing review.
 
-The `diagram sheets` commands ship in Slopcamera v3.3.5 and later releases and
+The `diagram sheets` commands ship in SlopCamera v3.3.5 and later releases and
 in [current source](use-current-source.md). Rendering runs locally without a
 browser, model, account, or network request.
 
 ## Create or open the drawing source
 
-Work in a project directory outside the Slopcamera checkout. Preserve an existing
+Work in a project directory outside the SlopCamera checkout. Preserve an existing
 same-subject `.drawing.json` rather than recreating its content.
 
 For a new drawing, create a starter:
@@ -36,7 +36,7 @@ The separate drawing manifest preserves `.diagram.json` version one. Ordinary
 exports; use `diagram sheets render` for physical drawing sheets.
 
 Keep a reference numeral attached to the same component in every view. Write
-numerals and labels explicitly in the source. Slopcamera does not assign their
+numerals and labels explicitly in the source. SlopCamera does not assign their
 meaning or compare them with your specification.
 
 ## Fit the authored content

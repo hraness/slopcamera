@@ -1,6 +1,6 @@
 # Make a music video from an HTML scene
 
-Render an authored HTML or Three.js scene with a local soundtrack into an MP4 and an ordinary editable Slopcamera project. The project keeps the rendered scene and original music as separate sources, so you can continue editing without extracting audio from the finished movie.
+Render an authored HTML or Three.js scene with a local soundtrack into an MP4 and an ordinary editable SlopCamera project. The project keeps the rendered scene and original music as separate sources, so you can continue editing without extracting audio from the finished movie.
 
 Install the [verified release](../reference/capabilities.md) and confirm its `slopcamera help html` lists `html render`. Rendering requires the admitted local Chrome runtime and FFmpeg/FFprobe. Check the host before preparing a full render:
 

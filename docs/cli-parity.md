@@ -1,6 +1,6 @@
 # CLI parity with the retired menu bar
 
-Slopcamera had an optional macOS menu-bar companion until the menu-bar retirement. Everything it showed or did is a command now, and every command also takes `--json`. `apps/desktop/cli/status-goldens.test.ts` fails if a row here stops matching a registered command, and it keeps a `tui --snapshot` golden at widths 40, 80 and 120 plus a `status --json` golden for every state the menu had.
+SlopCamera had an optional macOS menu-bar companion until the menu-bar retirement. Everything it showed or did is a command now, and every command also takes `--json`. `apps/desktop/cli/status-goldens.test.ts` fails if a row here stops matching a registered command, and it keeps a `tui --snapshot` golden at widths 40, 80 and 120 plus a `status --json` golden for every state the menu had.
 
 | Menu action | Command | Notes |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Slopcamera had an optional macOS menu-bar companion until the menu-bar retiremen
 
 ## States
 
-The menu had a fixture per state: first run, empty, ready, rendering, error, low credits, stale job and a login item changed outside Slopcamera. Each has a golden under `apps/desktop/cli/fixtures/status/`, plus one for an old login item that `legacy retire` can move. The menu's "action error" state has no equivalent: a command that fails reports its own error and exit code.
+The menu had a fixture per state: first run, empty, ready, rendering, error, low credits, stale job and a login item changed outside SlopCamera. Each has a golden under `apps/desktop/cli/fixtures/status/`, plus one for an old login item that `legacy retire` can move. The menu's "action error" state has no equivalent: a command that fails reports its own error and exit code.
 
 ## Approvals
 

@@ -1,4 +1,4 @@
-Slopcamera serves people and agents who need a visual asset that stays editable after it is made. The common thread across the jobs below is retained source: every result keeps the document, project, or program that produced it, so a revision edits the source instead of starting over. Each entry names the surface that does the work, what it needs, and the guide that proves it.
+SlopCamera serves people and agents who need a visual asset that stays editable after it is made. The common thread across the jobs below is retained source: every result keeps the document, project, or program that produced it, so a revision edits the source instead of starting over. Each entry names the surface that does the work, what it needs, and the guide that proves it.
 
 ## Documentation diagrams and visual explanations
 
@@ -32,7 +32,7 @@ When the job needs Blender rigs and simulation, CadQuery solids and STEP, or Man
 
 Trace raster artwork into measured, inert SVG through [local vectorization](/docs/reference/vectorization), or produce a canonical icon through the Gateway-backed [icon recipe](/docs/reference/gateway-generation).
 
-## When Slopcamera is not the right tool
+## When SlopCamera is not the right tool
 
 - No hosted state: without an account or project database there is no built-in sync, sharing, or multi-machine collaboration.
 - The current CLI does not start new screen or camera recordings; it consumes existing finished bundles.
@@ -40,4 +40,4 @@ Trace raster artwork into measured, inert SVG through [local vectorization](/doc
 - Native Python and custom Bun workflows run as your current user without an operating-system sandbox.
 - Generated media needs review: models can change subject identity, motion, or text, and a local budget estimate is not a provider-enforced spending cap.
 
-[Why Slopcamera](/docs/explanation/why-slopcamera) develops the retained-source model behind these jobs, and [Choose an interface](/docs/explanation/choose-an-interface) picks the surface that fits your setup.
+[Why SlopCamera](/docs/explanation/why-slopcamera) develops the retained-source model behind these jobs, and [Choose an interface](/docs/explanation/choose-an-interface) picks the surface that fits your setup.

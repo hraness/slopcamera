@@ -1,8 +1,8 @@
 # Parametric design reference
 
-A Slopcamera design retains the rules that generate a model. Named parameters feed derived values and geometry stages; changing a parameter updates every stage that depends on it. The compiler produces ordinary editable spatial scenes with retained GLB geometry, asset facts and receipts. Use the [design guide](how-to/parametric-design.md) to create and render a first study.
+A SlopCamera design retains the rules that generate a model. Named parameters feed derived values and geometry stages; changing a parameter updates every stage that depends on it. The compiler produces ordinary editable spatial scenes with retained GLB geometry, asset facts and receipts. Use the [design guide](how-to/parametric-design.md) to create and render a first study.
 
-This interface is available in Slopcamera v3.3.1 through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses Slopcamera's local geometry code and needs no additional modeling application. It does not execute authored JavaScript or Python.
+This interface is available in SlopCamera v3.3.1 through `slopcamera scene design` and the portable `@hraness/slopcamera/code` SDK. Compilation uses SlopCamera's local geometry code and needs no additional modeling application. It does not execute authored JavaScript or Python.
 
 ## Commands
 
@@ -76,7 +76,7 @@ The design compiler admits at most 128 parameters, 256 named values, 128 constra
 
 Compilation receipts bind the normalized effective design, parameter values, input and output scene identities, stage specifications and emission receipts. Same-source compilation is deterministic within the declared compiler profile. A receipt establishes source and output identity; inspect actual geometry and render pixels separately.
 
-Slopcamera v3.3.3 corrects wall opening elevations, curved arch crowns and boolean surface partitioning. Wall receipts carry compiler `slopcamera.parametric-wall-v2`; affected boolean evaluations and receipts carry `slopcamera.geometry-boolean-v2`. These revisions change affected source/runtime identities without changing entity IDs or the v1 retained-asset format. Existing retained GLBs remain readable; recompile affected source designs to receive the corrected geometry.
+SlopCamera v3.3.3 corrects wall opening elevations, curved arch crowns and boolean surface partitioning. Wall receipts carry compiler `slopcamera.parametric-wall-v2`; affected boolean evaluations and receipts carry `slopcamera.geometry-boolean-v2`. These revisions change affected source/runtime identities without changing entity IDs or the v1 retained-asset format. Existing retained GLBs remain readable; recompile affected source designs to receive the corrected geometry.
 
 ## SDK
 

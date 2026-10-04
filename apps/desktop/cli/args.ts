@@ -3716,7 +3716,7 @@ export function parseCliArgs(argv: readonly string[]): CliCommand {
     case "inspect": return parseInspect(argv.slice(1));
     case "events": return parseEvents(argv.slice(1));
     // Retired with the menu-bar companion; the old command name explains where it went.
-    case "menubar": throw new CliError("usage", "The menu bar was retired. Use slopcamera status or slopcamera tui to see what Slopcamera is doing, and slopcamera legacy retire to stop an old copy opening at login.");
+    case "menubar": throw new CliError("usage", "The menu bar was retired. Use slopcamera status or slopcamera tui to see what SlopCamera is doing, and slopcamera legacy retire to stop an old copy opening at login.");
     case "outputs": {
       const parsed = parseOptions(argv.slice(1), JSON_SPEC);
       exactPositionals(parsed, 0, "slopcamera outputs [--json]");

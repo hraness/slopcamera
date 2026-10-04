@@ -16,7 +16,7 @@ Check the model's actual input types and settings before paying for a call: a vi
 
 ## Supply credentials for one invocation
 
-Slopcamera reads `AI_GATEWAY_API_KEY` first, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the commands directly. A direct key needs no Vercel CLI, linked project, or deployment.
+SlopCamera reads `AI_GATEWAY_API_KEY` first, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the commands directly. A direct key needs no Vercel CLI, linked project, or deployment.
 
 If you already use a linked Vercel project, environment injection is an optional alternative:
 
@@ -30,7 +30,7 @@ If `slopcamera` is a shell function from a [source build](/docs/how-to/install-f
 vercel env run -- bun "$SLOPCAMERA_SOURCE_ROOT/apps/desktop/dist/cli/main.js" ai models list --type image --json
 ```
 
-Environment injection applies only to that child invocation, so repeat the same launcher for each generation command. Never put a credential on argv, in a source file, in a project, or in a provider-options file: Slopcamera sends it only to the fixed Gateway origin and never persists it. Generation can incur provider charges, and discovery does not authorize spending beyond the task's scope.
+Environment injection applies only to that child invocation, so repeat the same launcher for each generation command. Never put a credential on argv, in a source file, in a project, or in a provider-options file: SlopCamera sends it only to the fixed Gateway origin and never persists it. Generation can incur provider charges, and discovery does not authorize spending beyond the task's scope.
 
 ## Or pay for hosted images with Hraness Credits
 

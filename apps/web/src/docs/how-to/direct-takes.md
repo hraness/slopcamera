@@ -1,4 +1,4 @@
-Turn a shot recipe into reviewed, retained video takes and an editable project. Each shot names its prompt, model, duration, and output settings, and a later shot can open on the accepted predecessor's final decoded frame. Slopcamera retains the requests, media, review decisions, dependency identities, and estimated spending across revisions.
+Turn a shot recipe into reviewed, retained video takes and an editable project. Each shot names its prompt, model, duration, and output settings, and a later shot can open on the accepted predecessor's final decoded frame. SlopCamera retains the requests, media, review decisions, dependency identities, and estimated spending across revisions.
 
 The `slopcamera direct` commands ship in v{{PUBLISHED_VERSION}}. Generation uses a caller-owned Vercel AI Gateway credential, and endpoint extraction and assembly use local FFmpeg and FFprobe. Check `slopcamera help direct` and `{{DOCTOR_COMMAND}}` first. For one generated artifact without takes or continuity, use [Generate images, video, and narration](/docs/how-to/generate-media).
 
@@ -70,7 +70,7 @@ slopcamera direct start film.recipe.json --budget-usd 5.00 --json
 
 Starting retains the recipe and budget without generating video, and reusing the ID cannot reset its spending. Budgets accept positive values with at most six decimal places and are stored as integer microdollars. The retained amounts are catalog estimates rather than settled invoices or a provider-enforced cap, and completed, rejected, and ambiguous calls all keep their reservations against the budget.
 
-Make `AI_GATEWAY_API_KEY` available in the local process environment, then generate the first take. Slopcamera falls back to `VERCEL_OIDC_TOKEN` when the key is absent. The Vercel CLI is optional; a linked workspace can prefix an installed CLI command with `vercel env run --`. [Credential setup](/docs/how-to/generate-media) also covers the source-build shell function. Keep credentials out of recipes, prompts, command arguments, and retained output.
+Make `AI_GATEWAY_API_KEY` available in the local process environment, then generate the first take. SlopCamera falls back to `VERCEL_OIDC_TOKEN` when the key is absent. The Vercel CLI is optional; a linked workspace can prefix an installed CLI command with `vercel env run --`. [Credential setup](/docs/how-to/generate-media) also covers the source-build shell function. Keep credentials out of recipes, prompts, command arguments, and retained output.
 
 ```sh
 slopcamera direct generate direct_atrium --shot opening --attempt take_opening_v1 \
@@ -79,7 +79,7 @@ slopcamera direct generate direct_atrium --shot opening --attempt take_opening_v
 
 Each new `take_<id>` permits at most one new Gateway dispatch. The command rechecks the live catalog, retains its reservation before dispatch, and saves the video and Gateway receipt before extracting the endpoint.
 
-Check each shot's `inputTransport` in the plan. `none` means the shot has no image references, and `inline` sends the exact retained image bytes with the Gateway request. `url` means the model accepts image URLs only, so the take needs temporary private hosting on an existing Vercel Blob store: make `VERCEL_OIDC_TOKEN` with `BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN`, available to the CLI process, and if you set `BLOB_STORE_ID` beside a read-write token, both must name the same store. A `url` shot adds both `--allow-cloud-upload` and `--allow-reference-hosting` to the invocation, and Slopcamera hosts private copies of only that take's exact first and last images, at most two images of 30 MiB each. It verifies the copied bytes and private access before issuing signed GET URLs that expire 15 minutes after issue; credentials and signed URLs never enter retained receipts. Allow for Blob storage, operations, and transfer charges separately from the model budget, and note that URL expiry ends access without deleting the stored object.
+Check each shot's `inputTransport` in the plan. `none` means the shot has no image references, and `inline` sends the exact retained image bytes with the Gateway request. `url` means the model accepts image URLs only, so the take needs temporary private hosting on an existing Vercel Blob store: make `VERCEL_OIDC_TOKEN` with `BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN`, available to the CLI process, and if you set `BLOB_STORE_ID` beside a read-write token, both must name the same store. A `url` shot adds both `--allow-cloud-upload` and `--allow-reference-hosting` to the invocation, and SlopCamera hosts private copies of only that take's exact first and last images, at most two images of 30 MiB each. It verifies the copied bytes and private access before issuing signed GET URLs that expire 15 minutes after issue; credentials and signed URLs never enter retained receipts. Allow for Blob storage, operations, and transfer charges separately from the model budget, and note that URL expiry ends access without deleting the stored object.
 
 ## Review and continue
 
@@ -98,7 +98,7 @@ slopcamera direct generate direct_atrium --shot orbit --attempt take_orbit_v1 \
   --allow-paid-generation --allow-cloud-upload --allow-reference-hosting --json
 ```
 
-Reject a take with `--decision rejected` and a review note. Rejection retains the media and its spending reservation. Regeneration is a deliberate new attempt ID such as `take_orbit_v2` with another `--allow-paid-generation` invocation; Slopcamera never retries rejected output automatically.
+Reject a take with `--decision rejected` and a review note. Rejection retains the media and its spending reservation. Regeneration is a deliberate new attempt ID such as `take_orbit_v2` with another `--allow-paid-generation` invocation; SlopCamera never retries rejected output automatically.
 
 ## Revise or recover work
 

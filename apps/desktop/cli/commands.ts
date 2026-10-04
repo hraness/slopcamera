@@ -501,7 +501,7 @@ function contextWithApplicationHostResourceLease(
   if (inheritedFileDescriptors.length > 16) {
     throw new CliError(
       "unavailable",
-      "A direct Slopcamera subprocess cannot inherit more than 16 file descriptors.",
+      "A direct SlopCamera subprocess cannot inherit more than 16 file descriptors.",
     );
   }
   const combinedLease: NonNullable<ApplicationContext["hostResourceLease"]> =
@@ -548,7 +548,7 @@ function contextWithApplicationHostResourceLease(
         if (subprocessDescriptors.length > 16) {
           throw new CliError(
             "unavailable",
-            "A direct Slopcamera subprocess cannot inherit more than 16 file descriptors.",
+            "A direct SlopCamera subprocess cannot inherit more than 16 file descriptors.",
           );
         }
         return await context.runner.run(argv, {
@@ -745,7 +745,7 @@ function requireCapability(capabilities: readonly Capability[], name: Capability
   if ((!capability.available || capability.command === undefined) && name === "face-analyzer") {
     throw new CliError(
       "unavailable",
-      "Face analysis needs a small helper that isn't built on this Mac yet. In a Slopcamera checkout, run bun run build:desktop:analysis:macos; it uses Apple's command line tools and asks before installing them.",
+      "Face analysis needs a small helper that isn't built on this Mac yet. In a SlopCamera checkout, run bun run build:desktop:analysis:macos; it uses Apple's command line tools and asks before installing them.",
       { capability: name, ...(capability.reason === undefined ? {} : { reason: capability.reason }) },
     );
   }
@@ -2164,7 +2164,7 @@ async function projectMetadataContext(
   if (asset?.source.kind !== "recording") {
     throw new CliError(
       "conflict",
-      `Placement ${placement.placementId} is not backed by a Slopcamera recording with window and input metadata.`,
+      `Placement ${placement.placementId} is not backed by a SlopCamera recording with window and input metadata.`,
     );
   }
   const recording = await openRecording(context.paths.artifactRoot, asset.source.recordingId);
@@ -5117,7 +5117,7 @@ async function createGatewayJobTracker(
       await persist("dispatched", {
         chargeMayHaveOccurred: true,
         dispatchedAt: event.startedAt,
-        interruptionSemantics: "A nonterminal dispatched job is ambiguous and must not be retried by Slopcamera; AI Gateway may have attempted multiple providers internally.",
+        interruptionSemantics: "A nonterminal dispatched job is ambiguous and must not be retried by SlopCamera; AI Gateway may have attempted multiple providers internally.",
       });
     },
     displayPath: display,
@@ -5888,7 +5888,7 @@ async function handleHostedImageGenerate(
     throw new CliError(
       "authorization-required",
       pending === undefined
-        ? "Hosted generation needs a Slopcamera credits device token. Run `slopcamera credits topup`, then `slopcamera credits wait`."
+        ? "Hosted generation needs a SlopCamera credits device token. Run `slopcamera credits topup`, then `slopcamera credits wait`."
         : `Hosted generation needs a paid top-up first: finish payment at ${pending.url} then run \`slopcamera credits wait\`.`,
     );
   }
@@ -8000,7 +8000,7 @@ async function dispatch(context: CommandContext, command: CliCommand): Promise<v
         output.legacyLoginItem.state === "found"
           ? "login the old menu bar still opens at login; run: slopcamera legacy retire"
           : output.legacyLoginItem.state === "not-ours"
-            ? `login ${output.legacyLoginItem.label ?? "an item"} was changed outside Slopcamera and is left alone`
+            ? `login ${output.legacyLoginItem.label ?? "an item"} was changed outside SlopCamera and is left alone`
             : "login nothing starts at login",
         ...output.legacyLoginItem.retired.map((item) => `retired ${item.path}; restore: ${item.restore}`),
       ].join("\n"));
@@ -8401,7 +8401,7 @@ async function resolveMutationTarget(
     return {
       command: mutationCommandName(command),
       directory: stateRoot,
-      label: "Slopcamera local state",
+      label: "SlopCamera local state",
       scope: "private",
     };
   }
@@ -8410,7 +8410,7 @@ async function resolveMutationTarget(
     return {
       command: mutationCommandName(command),
       directory: paths.privateRoot,
-      label: "Slopcamera repository-private media state",
+      label: "SlopCamera repository-private media state",
       scope: "private",
     };
   }

@@ -34,7 +34,7 @@ const diagramOutputs = diagram.downloads.filter(item => !item.file.endsWith(".js
 const deliveryCuts = workflowExamples.filter(item => item.family === "video-editing" && item.id.startsWith("edit-directed-"))
 
 export const launchFacts = Object.freeze({
-  product: "Slopcamera",
+  product: "SlopCamera",
   url: "slopcamera.com",
   /** Release status comes from the published release record, never from copy. */
   release: Object.freeze({ version: publishedRelease.version, url: publishedRelease.releaseUrl }),

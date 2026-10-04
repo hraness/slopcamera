@@ -1,6 +1,6 @@
 # Run commands from current source
 
-Slopcamera installs from its verified release archive (see the README); this guide is the contributor path from source. Historical Atet releases retain their original package and command. Use this guide for the Slopcamera CLI, SDK and matching Agent Skill. The [capability reference](../reference/capabilities.md) names each workflow’s additional runtime requirements.
+SlopCamera installs from its verified release archive (see the README); this guide is the contributor path from source. Historical Atet releases retain their original package and command. Use this guide for the SlopCamera CLI, SDK and matching Agent Skill. The [capability reference](../reference/capabilities.md) names each workflow’s additional runtime requirements.
 
 You need Git and Bun 1.3.14. Clone into a new directory, record the exact source commit and install its locked dependencies:
 
@@ -15,7 +15,7 @@ bun run build:desktop:cli
 
 These commands build the SDK and source-backed CLI. They do not run a native scene. Keep the commit file with your work: the branch can advance while a source build retains the same package version.
 
-`slopcamera status` shows what Slopcamera is rendering, your last known credits balance and your newest outputs, and `slopcamera tui` keeps that on screen. Earlier releases had an optional macOS menu-bar companion; `slopcamera legacy retire` stops it opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
+`slopcamera status` shows what SlopCamera is rendering, your last known credits balance and your newest outputs, and `slopcamera tui` keeps that on screen. Earlier releases had an optional macOS menu-bar companion; `slopcamera legacy retire` stops it opening at login by moving its LaunchAgent aside; nothing is deleted, and `slopcamera doctor` prints the command that restores it.
 
 In this shell, make `slopcamera` invoke that exact checkout:
 

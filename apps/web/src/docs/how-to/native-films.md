@@ -1,6 +1,6 @@
 A native film keeps the engine's own source, a Blender scene, a CadQuery program, or a Manim scene, as the editable artifact. The `slopcamera studio` commands save that source as a fixed bundle, run it with the Blender, CadQuery, or Manim you installed, check every declared output, and pass the result to an ordinary video project.
 
-Install a supported engine before running a job; Slopcamera does not silently install or upgrade native tools. The examples use Blender 5.2.1 LTS, CadQuery 2.8.0, and Manim Community 0.21.0 on macOS arm64; each source recipe records its qualified runtime. The `studio` commands ship in the verified release and run under Bun; a durable workflow that contains a native job needs the installed Bun package or a source checkout, since a copied standalone executable has no host source tree. For a bounded end-to-end pass, start with [Render your first native film](/docs/tutorials/first-native-film).
+Install a supported engine before running a job; SlopCamera does not silently install or upgrade native tools. The examples use Blender 5.2.1 LTS, CadQuery 2.8.0, and Manim Community 0.21.0 on macOS arm64; each source recipe records its qualified runtime. The `studio` commands ship in the verified release and run under Bun; a durable workflow that contains a native job needs the installed Bun package or a source checkout, since a copied standalone executable has no host source tree. For a bounded end-to-end pass, start with [Render your first native film](/docs/tutorials/first-native-film).
 
 ## Know the trust boundary
 

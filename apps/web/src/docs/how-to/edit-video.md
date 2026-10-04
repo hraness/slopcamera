@@ -1,4 +1,4 @@
-An ordinary Slopcamera project is where you revise footage, audio, cuts, camera framing, overlays, and delivery variants while every source stays editable. Start from an existing finished recording bundle, an existing project, a retained studio or directing assembly, or an authored HTML scene. Ordinary media work needs FFmpeg and FFprobe; `{{DOCTOR_COMMAND}}` reports what this host already has.
+An ordinary SlopCamera project is where you revise footage, audio, cuts, camera framing, overlays, and delivery variants while every source stays editable. Start from an existing finished recording bundle, an existing project, a retained studio or directing assembly, or an authored HTML scene. Ordinary media work needs FFmpeg and FFprobe; `{{DOCTOR_COMMAND}}` reports what this host already has.
 
 Neither the released nor current CLI captures new recordings. These commands consume existing finished bundles or projects. Cursor and input-aware effects require the matching recording metadata.
 
@@ -72,7 +72,7 @@ The retained presets resolve to these controls:
 | `cool` | 1.05 | 0.96 | -0.35 |
 | `mono` (stored as `monochrome`) | 1.10 | 0 | 0 |
 
-Brightness, hue, and tint are zero; gamma is one. Temperature is Slopcamera's normalized control, not Kelvin. The returned receipt includes the exact FFmpeg filter graph used for your run.
+Brightness, hue, and tint are zero; gamma is one. Temperature is SlopCamera's normalized control, not Kelvin. The returned receipt includes the exact FFmpeg filter graph used for your run.
 
 ::example[color-warm]
 
@@ -114,7 +114,7 @@ These times address the original project clock. Trimming keeps 5.5 seconds; the 
 
 Follow the [retained recipe and prerequisites](https://github.com/hraness/slopcamera/tree/main/examples/showcase/edit) to assemble the actual successful native job, review selected frames, and render all four projects. It needs Bun, FFmpeg/FFprobe, and `rsvg-convert`; the checked SVG lettering is already converted to paths, so rendering it needs no font installation. The [font provenance](https://github.com/hraness/slopcamera/blob/main/examples/showcase/edit/ratio-frames/provenance.json) records the original OFL-licensed Nebula Sans source and asset hashes.
 
-These outputs depend on the [static-overlay timing correction](https://github.com/hraness/slopcamera/commit/81217777f193718e20351a886516ecae445590a9), which keeps the SVG visible through the final frame. Slopcamera v3.3.4 and later releases include it, as does a [source installation](/docs/how-to/install-from-source); v3.3.1 does not.
+These outputs depend on the [static-overlay timing correction](https://github.com/hraness/slopcamera/commit/81217777f193718e20351a886516ecae445590a9), which keeps the SVG visible through the final frame. SlopCamera v3.3.4 and later releases include it, as does a [source installation](/docs/how-to/install-from-source); v3.3.1 does not.
 
 ### Landscape delivery
 

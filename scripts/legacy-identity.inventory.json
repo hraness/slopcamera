@@ -1305,7 +1305,7 @@
   },
   {
     "identityLineCount": 85,
-    "identityLinesSha256": "241e99af0b0125a659513342f7940a9e74cf5f690c2acf5747da11b156b1f05a",
+    "identityLinesSha256": "f4faddb7bb2793b279ab25438d471ba1dc27295170a389d1dc1a554e1048be57",
     "occurrenceCount": 475,
     "path": "apps/desktop/dist/cli/main.js",
     "categories": [
@@ -1586,7 +1586,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "b0c0e69ba7a2ed67cbe0c192d79c6f42bbabad580ee34658b3f9b0b8c0fbca10",
+    "identityLinesSha256": "59bb8b9a5226f8614d7b273c09e42a908217ee7e40b549630efe60a4cdd25fe6",
     "occurrenceCount": 3,
     "path": "apps/web/src/agent-pages.ts",
     "categories": [
@@ -1604,7 +1604,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "47ab62a69f9ae978068dfc2effcd82807ffc53b8979e473332e9c2b0740a47bf",
+    "identityLinesSha256": "c6e7b41d61058c9c78e323585cfdd537605311ab022f4afb3d2e79c8e4f9080a",
     "occurrenceCount": 3,
     "path": "apps/web/src/blog-registry.ts",
     "categories": [
@@ -1614,7 +1614,7 @@
   },
   {
     "identityLineCount": 18,
-    "identityLinesSha256": "ce2d5ba359c98be88437e4b40e6b7f9c73746babcd44f684731279c8196d5160",
+    "identityLinesSha256": "c627dd3e83ac91331c11647eef0a0bd4df65b178e4a7caed91bd78605701d5d7",
     "occurrenceCount": 23,
     "path": "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md",
     "categories": [
@@ -1641,7 +1641,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "3405e0ff935ea99c06d1fa9e5fee0e9c5d13565d748c2e70465e8eb12df5d6cc",
+    "identityLinesSha256": "860e47b87565eacc7e94835e60a525cd6e1afa172f2dd532f0c5696113caa638",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/extending.md",
     "categories": [
@@ -1650,7 +1650,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "d03f30b0a683af0d945a38d149c6211dd1643eaa5f0c2748f475c0bd97a577cd",
+    "identityLinesSha256": "801038a9b580316aca04ce3bf3011e869b4706a7fba0b974685ef30df56e005d",
     "occurrenceCount": 3,
     "path": "apps/web/src/docs/explanation/remotion-alternatives-for-coding-agents.md",
     "categories": [
@@ -1659,7 +1659,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "cc94474d205d5ba5c0cdbda8028447bff45ce6516768a733a49e1d1e82baae2e",
+    "identityLinesSha256": "c00189fe8ffccdeb8a5bb9dace68f1f0117c25fa620fbd9242e16529b9578a31",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/explanation/slopcamera-vs-hyperframes.md",
     "categories": [
@@ -1668,7 +1668,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "8df26ad1255c6eea13182b6ac5b77cdefca21b835f62b25278c3a15f6236e453",
+    "identityLinesSha256": "72cd318fbb53a7731b89e6f92fd0f95133e78132052dd349cdc4180977d68ad4",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/explanation/slopcamera-vs-remotion.md",
     "categories": [
@@ -1686,7 +1686,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "1ebabacd7dc8b7784ee41d67f787eebb78f778aeea3fe565ded6579320b51895",
+    "identityLinesSha256": "373b805b91ad6ad5635aca72a375ffac7144f970dfa0a35ab3e2d81a5b80a23d",
     "occurrenceCount": 2,
     "path": "apps/web/src/docs/how-to/edit-video.md",
     "categories": [
@@ -1704,7 +1704,7 @@
   },
   {
     "identityLineCount": 27,
-    "identityLinesSha256": "42fdd84a05a488d4bd69b8e852d90df169956e70018b71c0693c0075e1b32b28",
+    "identityLinesSha256": "0084bffa3e2c5727d3729d79ab63ceb1d5f91cf915de0e045c497b32330a5e84",
     "occurrenceCount": 38,
     "path": "apps/web/src/docs/how-to/native-films.md",
     "categories": [
@@ -1713,7 +1713,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "9c75304f1b9c98d194c61ac04cce9f47597ae1fedce68986acaabb6f7fa9bd00",
+    "identityLinesSha256": "3a36fca48e7c10aef4ccd3adb88f7ca1ab7ae468aa8dea743880c903ca005a02",
     "occurrenceCount": 8,
     "path": "apps/web/src/docs/how-to/remix-the-showcase.md",
     "categories": [
@@ -1722,7 +1722,7 @@
   },
   {
     "identityLineCount": 3,
-    "identityLinesSha256": "787d039bf832245360bcca7498f2c5227c655633b5910422ee2e2171377264e3",
+    "identityLinesSha256": "7f38a3235c9ef897ecb50eb0ec6a5a274d4a9aeaa770eea6b35667750f1d9c53",
     "occurrenceCount": 6,
     "path": "apps/web/src/docs/how-to/run-workflows.md",
     "categories": [
@@ -1731,7 +1731,7 @@
   },
   {
     "identityLineCount": 8,
-    "identityLinesSha256": "4e12e2ca2d80585a3e67c5e0d12ff1721fe05078389604de70eddcedcc3b73c4",
+    "identityLinesSha256": "425f15c64ad3de0c712e1676de1d87d6e43fa2bd2e4319d6bb2bcc0732fcb64e",
     "occurrenceCount": 9,
     "path": "apps/web/src/docs/how-to/web-ready-3d-assets.md",
     "categories": [
@@ -1740,7 +1740,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "21e9f02c679f0a348d5d1944b752a62919ee00ff6c956e6735aa1e6adb340a41",
+    "identityLinesSha256": "3e8f823eefb42fdc61f0306470b45a18fdf9495ef9bc965a52bdc39bebdbe35c",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/index.md",
     "categories": [
@@ -1776,7 +1776,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "c6ccc5728b4ade49c2d892e4ae43b3a192f695009e3c0b38cadc8d14b9a3c060",
+    "identityLinesSha256": "0b4ef40b442a7b0c6bf75045958c671362066c088a733b632209caea616bb9de",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/reference/mcp-tools.md",
     "categories": [
@@ -1785,7 +1785,7 @@
   },
   {
     "identityLineCount": 13,
-    "identityLinesSha256": "cbf63ab9cfa1a2dfc457286eb3c40e96a37677f5a2caf87de9b2ce32e61aafcb",
+    "identityLinesSha256": "57fd2032cea9be0450eb0f4d474621fb30aea488187749bada7ac372601f2986",
     "occurrenceCount": 18,
     "path": "apps/web/src/docs/reference/native-engines.md",
     "categories": [
@@ -1812,7 +1812,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "6f61e17ba3e3d098cfed3ce0426f921ad50fbb749bccd8a9d95ff2264ab5c437",
+    "identityLinesSha256": "6eec2bfbb02076d0c26fab70ddef2a94943c34d184cbf8e6295d1669fe7b6d76",
     "occurrenceCount": 1,
     "path": "apps/web/src/docs/reference/video-pipeline.md",
     "categories": [
@@ -1830,7 +1830,7 @@
   },
   {
     "identityLineCount": 11,
-    "identityLinesSha256": "db82e07fe3261d98eb8e0cc7dc27c8edef582e1ce66b056ba0d191f7c81225c6",
+    "identityLinesSha256": "2178e970bab39aa8d5e46cf23d4f906dee0bd5ffe71485db984ae59f3d91d76b",
     "occurrenceCount": 15,
     "path": "apps/web/src/docs/tutorials/first-native-film.md",
     "categories": [
@@ -1884,7 +1884,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "362c0ad7f241336348cfbdf8bbc83e22937a5008e3b5a12276c999a26ce1edaa",
+    "identityLinesSha256": "1f7625cf63d5fd0fb2a1b5b22cdb8fef2d39e4f1e9fc1c5d24f4ba7f07519ec9",
     "occurrenceCount": 6,
     "path": "apps/web/src/portfolio-messaging.generated.json",
     "categories": [
@@ -1893,7 +1893,7 @@
   },
   {
     "identityLineCount": 1,
-    "identityLinesSha256": "34d9ca5419f153d5875fe32c036092482f155c7a1c36a8d9f7ed58893783325e",
+    "identityLinesSha256": "96583e01770dbabc5e15b616f39f99d88f1611bec14f1cd1358cb94486036c85",
     "occurrenceCount": 1,
     "path": "apps/web/src/preview.html",
     "categories": [
@@ -2020,7 +2020,7 @@
   },
   {
     "identityLineCount": 7,
-    "identityLinesSha256": "19e6a9bd0a9a6c88c40d27e2bd360a5621aed45658ea36811af0c272c60895a2",
+    "identityLinesSha256": "31f5d7aaf80c8984bd5a5ec771f5271d025244e811bd15192d4e2a8412c2883b",
     "occurrenceCount": 8,
     "path": "docs/how-to/remix-the-showcase.md",
     "categories": [
@@ -2047,7 +2047,7 @@
   },
   {
     "identityLineCount": 9,
-    "identityLinesSha256": "d06cc5a98fa1fbbc7a4b3ef2eab6edea829b9a59b0c2e1215752879f8dcf39ea",
+    "identityLinesSha256": "b0b06f412120beaeb6f2c38b0d2c91e431cb2e413b90427a73a8c5e96e1926b3",
     "occurrenceCount": 11,
     "path": "docs/how-to/web-ready-3d-assets.md",
     "categories": [
@@ -2065,7 +2065,7 @@
   },
   {
     "identityLineCount": 2,
-    "identityLinesSha256": "06c99b6e86aff27b377e790181ea615f22dc6e62459a6cc655b284d3020b4906",
+    "identityLinesSha256": "8adfc1776ed70eaf4dedbf250d8ce21b64d8f30e3028913fb53b8c1e10c3ca81",
     "occurrenceCount": 2,
     "path": "docs/README.md",
     "categories": [
@@ -2110,7 +2110,7 @@
   },
   {
     "identityLineCount": 41,
-    "identityLinesSha256": "1b120c43b71ca3bf2690ba15e07d3cedc1f19481d366610d879fdcae40dc0817",
+    "identityLinesSha256": "9e936607c45256d98658949c62b19fa7eed1e7db4220d1a181d675b3746fb3d8",
     "occurrenceCount": 55,
     "path": "docs/studio.md",
     "categories": [
@@ -2128,7 +2128,7 @@
   },
   {
     "identityLineCount": 12,
-    "identityLinesSha256": "75b6b9e1deed8b5be93162f764813e40a1073342f3b2b61d49f10f8a9ee1359d",
+    "identityLinesSha256": "2e055a66fc7c83c0eca02405b7e7676f30f333908e217a8fb77c09e1090b809f",
     "occurrenceCount": 16,
     "path": "docs/tutorials/first-native-film.md",
     "categories": [
@@ -3362,7 +3362,7 @@
   },
   {
     "identityLineCount": 6,
-    "identityLinesSha256": "7795e936e7fcf85e84da01cd4f52944825b09c88dd3ea7b483d457b099a005b3",
+    "identityLinesSha256": "1cfd91c6127c0aa7bee042e4c31cff5889c7d17e9bcaf5044696e941786230ca",
     "occurrenceCount": 8,
     "path": "README.md",
     "categories": [

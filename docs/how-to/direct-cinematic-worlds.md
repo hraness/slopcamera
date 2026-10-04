@@ -1,12 +1,12 @@
 # Plan camera moves, lighting, and effects for a 3D scene
 
-The `cinematic-world` workflow takes one 3D scene from direction to review. It checks your direction, plans variants along the axes you choose, such as camera or lighting, renders up to four previews with any effects you declare, and can audit frames sampled across the shot. You describe all of this in one JSON recipe file (`slopcamera.spatial-recipe-pack`), which Slopcamera reads as data and never runs as code.
+The `cinematic-world` workflow takes one 3D scene from direction to review. It checks your direction, plans variants along the axes you choose, such as camera or lighting, renders up to four previews with any effects you declare, and can audit frames sampled across the shot. You describe all of this in one JSON recipe file (`slopcamera.spatial-recipe-pack`), which SlopCamera reads as data and never runs as code.
 
 This guide is the durable-graph counterpart of [building a directed cinematic character world](cinematic-character-worlds.md), which covers the same surfaces command by command.
 
 ## Ask for the quality bar
 
-When an agent with the Slopcamera Agent Skill writes the scene, a brief can set the quality bar in one line:
+When an agent with the SlopCamera Agent Skill writes the scene, a brief can set the quality bar in one line:
 
 ```text
 A lantern-lit courtyard reveal at dusk: accurate physics, AAA graphics, VFX.

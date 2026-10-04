@@ -1,6 +1,6 @@
 # SDK and workflow surfaces
 
-Slopcamera exposes a portable Bun SDK and a complete local media host. Imports select their capability boundary; installing a package does not enable every operation in every host. See [version and capability support](capabilities.md) for released commands and any later source corrections.
+SlopCamera exposes a portable Bun SDK and a complete local media host. Imports select their capability boundary; installing a package does not enable every operation in every host. See [version and capability support](capabilities.md) for released commands and any later source corrections.
 
 ## Public entrypoints
 
@@ -178,4 +178,4 @@ Effect approval and native source authorization have different scopes. `runs app
 
 The MCP server exposes 21 named tools: `check_diagram`, `render_diagram`, `search_slopcamera`, `execute_slopcamera`, 13 scene tools, and four local icon and soundtrack tools (`compose_icon`, `render_icon`, `compose_soundtrack`, `derive_soundtrack_grid`). These include scene inspection and evaluation, direction and gallery planning, effects planning, temporal audit, and behavior check/audit. The operation registry behind `execute_slopcamera` has ten operation codes; the typed portable projection covers four of them. Paths are root-relative, configuration is inert, and diagram tools admit at most 64 shapes and 128 edges with at most 40 reported findings. Scene tools cap returned entities, samples, and diff entries. No tool mutates project state; the icon and soundtrack tools write only optional outputs inside the root. The CLI supports larger checked diagrams and trusted workspace configuration.
 
-Generated `.tldr` is editable interchange for browser-based canvas tooling. Slopcamera does not install or launch a diagram editor or application bundle, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.
+Generated `.tldr` is editable interchange for browser-based canvas tooling. SlopCamera does not install or launch a diagram editor or application bundle, and the diagram JSON remains the authored source. See the [diagram tutorial](../tutorials/first-diagram.md) for source and export behavior.

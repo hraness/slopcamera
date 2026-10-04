@@ -14,8 +14,8 @@ export const blogIndexDocument = "blog/index.html"
 
 export const blogIndex = Object.freeze({
   title: "Blog",
-  heading: "Slopcamera blog",
-  description: "Posts from Hraness about Slopcamera, the media studio for agents: how its techniques work and when to use them.",
+  heading: "SlopCamera blog",
+  description: "Posts from Hraness about SlopCamera, the media studio for agents: how its techniques work and when to use them.",
 })
 
 export type BlogLifecycle = "quarantined" | "indexable" | "archived"
@@ -81,13 +81,13 @@ const sources: readonly BlogPostSource[] = [
     updated: "2026-10-01",
     keywords: [
       "headless Blender", "Blender MCP", "Blender command-line rendering", "Manim", "CadQuery", "coding agents",
-      "Claude Code Blender", "parametric CAD agent", "scene as code", "Slopcamera studio",
+      "Claude Code Blender", "parametric CAD agent", "scene as code", "SlopCamera studio",
     ],
   },
   {
     slug: "introducing-slopcamera",
-    title: "Introducing Slopcamera",
-    description: "Slopcamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
+    title: "Introducing SlopCamera",
+    description: "SlopCamera, the media studio for agents, makes images, diagrams, animation, 3D scenes, and video from source files your coding agent can keep revising.",
     eyebrow: "Release",
     published: "2026-09-24",
     updated: "2026-10-01",
@@ -95,8 +95,8 @@ const sources: readonly BlogPostSource[] = [
   },
   {
     slug: "how-slopcamera-uses-algal",
-    title: "How Slopcamera bakes character behavior with ALGAL",
-    description: "Slopcamera runs a character's behavior as a small ALGAL program with no tools, models, or side effects, so the same scene and seed always bake the same motion.",
+    title: "How SlopCamera bakes character behavior with ALGAL",
+    description: "SlopCamera runs a character's behavior as a small ALGAL program with no tools, models, or side effects, so the same scene and seed always bake the same motion.",
     eyebrow: "Integration",
     published: "2026-09-24",
     updated: "2026-10-01",

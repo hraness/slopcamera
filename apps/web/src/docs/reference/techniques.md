@@ -73,7 +73,7 @@ What you get: an SVG icon from a subject description, and a gallery of image can
 
 ## Motion graphics from HTML
 
-Every HTML technique uses one of seven locked authoring profiles. The agent writes one HTML file from a scaffold; Slopcamera renders it frame by frame to H.264 and can add a local audio track. The [HTML render profiles](/docs/reference/html-profiles) reference lists the library versions for each profile.
+Every HTML technique uses one of seven locked authoring profiles. The agent writes one HTML file from a scaffold; SlopCamera renders it frame by frame to H.264 and can add a local audio track. The [HTML render profiles](/docs/reference/html-profiles) reference lists the library versions for each profile.
 
 ### Editorial layouts
 
@@ -147,7 +147,7 @@ What you get: a WGSL program rendered to raster frames on the GPU.
 
 ### Three.js scenes timed to a declared tempo
 
-What you get: a Three.js scene in one HTML file, rendered with a local music track. Motion follows the BPM you declare in the source; Slopcamera does not detect beats.
+What you get: a Three.js scene in one HTML file, rendered with a local music track. Motion follows the BPM you declare in the source; SlopCamera does not detect beats.
 
 - **Use when:** you need a music video, a loop, or 3D visuals timed to a track.
 - **Start with:** `slopcamera html scaffold three --output pulse.html`.
@@ -271,7 +271,7 @@ What you get: a CadQuery program for a part, with STEP output and renders at two
 
 ### Math explainers with Manim
 
-What you get: a Manim lesson rendered as silent visuals, with narration, music, and sound effects placed in an ordinary Slopcamera project you can keep editing.
+What you get: a Manim lesson rendered as silent visuals, with narration, music, and sound effects placed in an ordinary SlopCamera project you can keep editing.
 
 - **Use when:** you are explaining a proof, a formula, or a geometric idea.
 - **Start with:** `slopcamera studio init lesson --template manim-lesson --json`.
@@ -281,7 +281,7 @@ What you get: a Manim lesson rendered as silent visuals, with narration, music, 
 
 ## Editing your footage
 
-Slopcamera edits footage you already have. It does not record the screen, a camera, or a microphone.
+SlopCamera edits footage you already have. It does not record the screen, a camera, or a microphone.
 
 ### Edit decisions: cuts, speed, zooms, and overlays
 
@@ -365,8 +365,8 @@ What you get: 17 style profiles that describe palette, shape, materials, camera,
 
 ## Next steps
 
-- New to Slopcamera? Start with [Create and revise your first diagram](/docs/tutorials/first-diagram).
-- Deciding between tools? Read [Why Slopcamera](/docs/explanation/why-slopcamera), then the comparisons with [Remotion](/docs/explanation/slopcamera-vs-remotion) and [HyperFrames](/docs/explanation/slopcamera-vs-hyperframes), and the [Remotion alternatives for coding agents](/docs/explanation/remotion-alternatives-for-coding-agents).
+- New to SlopCamera? Start with [Create and revise your first diagram](/docs/tutorials/first-diagram).
+- Deciding between tools? Read [Why SlopCamera](/docs/explanation/why-slopcamera), then the comparisons with [Remotion](/docs/explanation/slopcamera-vs-remotion) and [HyperFrames](/docs/explanation/slopcamera-vs-hyperframes), and the [Remotion alternatives for coding agents](/docs/explanation/remotion-alternatives-for-coding-agents).
 - Making diagrams? [Editable diagrams with coding agents](/blog/editable-diagrams-with-coding-agents) walks through a diagram revision.
 - Want the measurements? [Your model can one-shot a render. What does the second one take?](/blog/one-shot-render-vs-installed-techniques) compares file sizes and changed lines on four revisions.
 - Using an MCP client? The [MCP toolset](/docs/reference/mcp-tools) covers diagrams, images, and scene checks; editing, native films, and workflows use the CLI.

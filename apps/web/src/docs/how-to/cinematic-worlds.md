@@ -1,10 +1,10 @@
-The `cinematic-world` workflow takes one 3D scene from direction to review. It checks your direction, plans variants along the axes you choose, such as camera or lighting, renders up to four previews with any effects you declare, and can audit frames sampled across the shot. You describe all of this in one JSON recipe file (`slopcamera.spatial-recipe-pack`), which Slopcamera reads as data and never runs as code.
+The `cinematic-world` workflow takes one 3D scene from direction to review. It checks your direction, plans variants along the axes you choose, such as camera or lighting, renders up to four previews with any effects you declare, and can audit frames sampled across the shot. You describe all of this in one JSON recipe file (`slopcamera.spatial-recipe-pack`), which SlopCamera reads as data and never runs as code.
 
 This guide is the durable-graph counterpart of the scene, direction, and effects commands covered in [Render and edit Three.js 3D scenes](/docs/how-to/direct-scenes). The commands ship in v3.3.1 and later releases; install the [verified release](/docs/reference/capabilities#install-the-release) or build from source. Check `slopcamera help scene` and `slopcamera workflows show cinematic-world --json` for the installed contract.
 
 ## Ask for the quality bar
 
-When an agent with the Slopcamera Agent Skill writes the scene, a brief can set the quality bar in one line:
+When an agent with the SlopCamera Agent Skill writes the scene, a brief can set the quality bar in one line:
 
 ```text
 A lantern-lit courtyard reveal at dusk: accurate physics, AAA graphics, VFX.
@@ -93,7 +93,7 @@ The run produces inspect output, a direction check report, a `verified: false` d
 - It never selects or promotes a candidate. `slopcamera scene project select-candidate` and the creative-selection workflow are separate explicit operations after review.
 - Compiled direction stays `verified: false`; it is a proposal document, not applied state.
 - Planning and graph compilation execute no operations, read no credentials, contact no providers, and mutate no project state.
-- A recipe pack cannot register operations, executors, source paths beyond the declared render source, permissions, secrets, or remote URLs. It is inert data validated before graph construction — see [Extend Slopcamera](/docs/explanation/extending) for the full trust model.
+- A recipe pack cannot register operations, executors, source paths beyond the declared render source, permissions, secrets, or remote URLs. It is inert data validated before graph construction — see [Extend SlopCamera](/docs/explanation/extending) for the full trust model.
 
 ## Iterate
 

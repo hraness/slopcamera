@@ -16,7 +16,7 @@ Check the model's actual input types and settings. A video model may not accept 
 
 ## Supply credentials for this invocation
 
-Slopcamera reads `AI_GATEWAY_API_KEY`, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the `slopcamera` commands directly. This path needs no Vercel CLI, linked project, or deployment.
+SlopCamera reads `AI_GATEWAY_API_KEY`, falling back to `VERCEL_OIDC_TOKEN`. Make your Gateway key available through your local secret manager or process environment, then run the `slopcamera` commands directly. This path needs no Vercel CLI, linked project, or deployment.
 
 If you already use a linked Vercel project, environment injection is an optional alternative:
 

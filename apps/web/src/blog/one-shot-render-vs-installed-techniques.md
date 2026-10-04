@@ -1,14 +1,14 @@
 An eight-second title animation can start with an HTML page, a browser capture script and an FFmpeg command. A coding agent can assemble that pipeline when the required tools are available. The next request tests how well it was put together: change the title, make a dark version, or fit the same film into a vertical frame.
 
-A reusable renderer lets those requests change the creative source while keeping capture and export code in one place. Slopcamera provides that renderer through installed commands. The examples below show the source edits behind specific gallery revisions and the files those commands produce.
+A reusable renderer lets those requests change the creative source while keeping capture and export code in one place. SlopCamera provides that renderer through installed commands. The examples below show the source edits behind specific gallery revisions and the files those commands produce.
 
 ## Keep the rendering pipeline reusable
 
-A custom script and an installed framework can both be saved, tested and used again. The choice is who maintains the renderer. With a custom pipeline, your project owns capture, export and validation alongside the scene. With Slopcamera, those steps live in the CLI; the project keeps the scene and its assets.
+A custom script and an installed framework can both be saved, tested and used again. The choice is who maintains the renderer. With a custom pipeline, your project owns capture, export and validation alongside the scene. With SlopCamera, those steps live in the CLI; the project keeps the scene and its assets.
 
 For a title revision, the agent can edit a parameter and run the same command. It still needs to read the file format and inspect the result, but it does not have to rewrite the encoder or frame-capture loop.
 
-[Remotion](https://www.remotion.dev/docs/ai/skills) and [HyperFrames](https://hyperframes.heygen.com/guides/skills) also supply agent skills for code-based video work. The useful comparison is whether a framework's source formats and checks fit the work you need to repeat. These examples use Slopcamera's source formats.
+[Remotion](https://www.remotion.dev/docs/ai/skills) and [HyperFrames](https://hyperframes.heygen.com/guides/skills) also supply agent skills for code-based video work. The useful comparison is whether a framework's source formats and checks fit the work you need to repeat. These examples use SlopCamera's source formats.
 
 ## Revisions and variants from the same source
 
@@ -86,7 +86,7 @@ This example uses an authored script because each crop has a different compositi
 
 ## What the commands check
 
-Slopcamera checks the source before rendering and verifies supported output properties afterward. These checks give the agent concrete errors it can repair:
+SlopCamera checks the source before rendering and verifies supported output properties afterward. These checks give the agent concrete errors it can repair:
 
 - `slopcamera diagram check` stops with exit code 1 and a message when the file is invalid, such as a stack wider than its canvas. With `--strict`, a layout finding, such as a label likely to overflow its box, sets exit code 2.
 - `scene design set` enforces the template's limits. Asking for a 9-meter span stops with `Parameter span must be between 4 and 8.` and writes nothing.
@@ -97,14 +97,14 @@ None of these checks say whether the result looks good. Someone still has to wat
 ## When a custom pipeline fits better
 
 - **The existing tool already does the job.** A chat tool with built-in image generation or a renderer already available in your project may be enough for a one-off result.
-- **You need a format or renderer outside Slopcamera's scope.** Keep the custom pipeline where its extra control matters. The [techniques reference](/docs/reference/techniques) lists supported work and examples.
-- **You cannot add local dependencies.** Use a tool available in that environment. Local Slopcamera commands require their documented runtimes; a hosted chat service supplies its own execution environment.
+- **You need a format or renderer outside SlopCamera's scope.** Keep the custom pipeline where its extra control matters. The [techniques reference](/docs/reference/techniques) lists supported work and examples.
+- **You cannot add local dependencies.** Use a tool available in that environment. Local SlopCamera commands require their documented runtimes; a hosted chat service supplies its own execution environment.
 
 ## What installing costs
 
-An agent skill adds instructions to the agent's context. [Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) exposes a name and description for discovery, then loads the skill instructions when needed. Slopcamera's skill points to separate references for individual techniques. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
+An agent skill adds instructions to the agent's context. [Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) exposes a name and description for discovery, then loads the skill instructions when needed. SlopCamera's skill points to separate references for individual techniques. The agent runs the CLI and reads what it prints; it does not need to read or write the renderer's code.
 
-Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are Slopcamera's formats, and the agent reads examples or references before writing them.
+Your agent also has to learn a file format. The diagram file, the HTML scene file, and the design values are small, but they are SlopCamera's formats, and the agent reads examples or references before writing them.
 
 ## Make a first revision
 

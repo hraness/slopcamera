@@ -1,4 +1,4 @@
-Slopcamera renders an authored HTML document to frames and video through `slopcamera html`. Seven named profiles admit exactly one tested library lock each; every profile shares the same deterministic render contract, so the choice is which substrate owns the visible surface. Rendering ships in the verified release and needs the admitted local Chrome runtime plus FFmpeg and FFprobe.
+SlopCamera renders an authored HTML document to frames and video through `slopcamera html`. Seven named profiles admit exactly one tested library lock each; every profile shares the same deterministic render contract, so the choice is which substrate owns the visible surface. Rendering ships in the verified release and needs the admitted local Chrome runtime plus FFmpeg and FFprobe.
 
 ## The shared render contract
 

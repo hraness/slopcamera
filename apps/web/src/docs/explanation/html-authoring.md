@@ -1,4 +1,4 @@
-Every HTML authoring profile in Slopcamera renders through the same contract: one absolute clock, declared assets only, seeded randomness, and a browser whose network access is denied during the render. Because the execution model does not change, choosing a profile is choosing which substrate owns the visible surface, whether that is a DOM tree, a canvas, a retained vector scene, a shader mount, a WebGL scene graph, or an explicit WebGPU pipeline. That choice decides what an agent can still edit after the first frame.
+Every HTML authoring profile in SlopCamera renders through the same contract: one absolute clock, declared assets only, seeded randomness, and a browser whose network access is denied during the render. Because the execution model does not change, choosing a profile is choosing which substrate owns the visible surface, whether that is a DOM tree, a canvas, a retained vector scene, a shader mount, a WebGL scene graph, or an explicit WebGPU pipeline. That choice decides what an agent can still edit after the first frame.
 
 ## One render contract under every profile
 
@@ -10,7 +10,7 @@ The render host owns the invariants a profile cannot replace:
 - Exact library locks. Each admitted module is one exact version with a verified digest, served through the overlay's private origin. The supported set is the tested locks, not version ranges.
 - Isolation. The content security policy forbids dynamic evaluation, external network access is denied during the render, and transparent capture, resource bounds, timeouts, and receipts stay with the host.
 
-Each adapter disables its library's own loop so the Slopcamera clock drives output. Motion animations are paused and seeked, p5 runs `noLoop()` with one awaited `redraw()` per frame, Two.js keeps `autostart: false` with one manual `render()`, Three.js derives scene state from absolute time before rendering once, and Paper Shaders receives `setFrame(timeMs)`. `slopcamera html catalog` lists the seven profiles in recommendation order, and `slopcamera html scaffold <profile> --output <file.html>` writes a starter without replacing an existing file.
+Each adapter disables its library's own loop so the SlopCamera clock drives output. Motion animations are paused and seeked, p5 runs `noLoop()` with one awaited `redraw()` per frame, Two.js keeps `autostart: false` with one manual `render()`, Three.js derives scene state from absolute time before rendering once, and Paper Shaders receives `setFrame(timeMs)`. `slopcamera html catalog` lists the seven profiles in recommendation order, and `slopcamera html scaffold <profile> --output <file.html>` writes a starter without replacing an existing file.
 
 ## Match the profile to the primary job
 

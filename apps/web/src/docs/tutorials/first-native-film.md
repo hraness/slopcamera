@@ -1,6 +1,6 @@
-Create a one-second Blender shot, inspect its retained frames, and export the result through an ordinary Slopcamera video project. You finish with four artifacts: the editable Python scene, a content-addressed source bundle, the verified PNG frames, and a project that holds the encoded clip.
+Create a one-second Blender shot, inspect its retained frames, and export the result through an ordinary SlopCamera video project. You finish with four artifacts: the editable Python scene, a content-addressed source bundle, the verified PNG frames, and a project that holds the encoded clip.
 
-The `studio` commands ship in v{{PUBLISHED_VERSION}}. [Install Slopcamera](/docs) and confirm `slopcamera help studio` lists `init`, `run`, `encode`, and `assemble`. The setup below uses macOS with Blender 5.2.1 LTS, Bun, FFmpeg, and FFprobe. The preview renders on the CPU, so no GPU or cloud service is involved. The current CLI does not capture new recordings.
+The `studio` commands ship in v{{PUBLISHED_VERSION}}. [Install SlopCamera](/docs) and confirm `slopcamera help studio` lists `init`, `run`, `encode`, and `assemble`. The setup below uses macOS with Blender 5.2.1 LTS, Bun, FFmpeg, and FFprobe. The preview renders on the CPU, so no GPU or cloud service is involved. The current CLI does not capture new recordings.
 
 ## Inspect the finished example
 
@@ -12,7 +12,7 @@ The showcase job requests Cycles on a GPU at 32 samples. Its reproduction helper
 
 ## Select the Blender executable
 
-Slopcamera does not install native engines; point each invocation at the Blender you already have.
+SlopCamera does not install native engines; point each invocation at the Blender you already have.
 
 ```sh
 export SLOPCAMERA_BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender"

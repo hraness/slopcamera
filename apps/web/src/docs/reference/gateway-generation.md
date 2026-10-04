@@ -1,4 +1,4 @@
-Slopcamera generates images, video, speech, and batch transcripts through the caller's own Vercel AI Gateway access. The `slopcamera ai` commands discover support from the live catalog rather than a checked-in model list, so the set of available models is whatever your Gateway account exposes at invocation time. Generation can incur provider charges on your account.
+SlopCamera generates images, video, speech, and batch transcripts through the caller's own Vercel AI Gateway access. The `slopcamera ai` commands discover support from the live catalog rather than a checked-in model list, so the set of available models is whatever your Gateway account exposes at invocation time. Generation can incur provider charges on your account.
 
 Prompt-only images can instead run on the hosted API at `api.slopcamera.com` and bill prepaid Hraness Credits rather than your Gateway account. [Generate images, video, and narration](/docs/how-to/generate-media) covers the `slopcamera credits` commands and the `--hosted` flag.
 
@@ -31,7 +31,7 @@ Two bounded recipes sit beside the `ai` grammar. `slopcamera image icon <subject
 
 ## Paid-call behavior
 
-The client sets `maxRetries: 0`, and Slopcamera never resubmits an ambiguous paid call. AI Gateway can still route or fail over one request across multiple providers, so one command may carry several provider attempts and a provider timeout can still incur charges. Reconcile the retained receipt before deciding to spend again.
+The client sets `maxRetries: 0`, and SlopCamera never resubmits an ambiguous paid call. AI Gateway can still route or fail over one request across multiple providers, so one command may carry several provider attempts and a provider timeout can still incur charges. Reconcile the retained receipt before deciding to spend again.
 
 Outputs and immutable receipts land under `artifacts/slopcamera/generated/`, recording catalog and model revision, settings, input digests, warnings, fulfillment counts, and the suggested next command. Generated media is fully decoded locally before an import command is emitted; invalid paid bytes stay quarantined with no import path. Headerless PCM, L16, A-law, and mu-law speech output is saved and hashed but receives no project-add command until converted with explicit sample metadata.
 

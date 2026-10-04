@@ -42,4 +42,4 @@ No surface accepts source text, evaluates caller code, executes workspace config
 
 ## What stays outside
 
-The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full local surface, use the [CLI and Agent Skill](/docs/explanation/choose-an-interface), or see [Use Slopcamera from an MCP client](/docs/tutorials/mcp) for setup.
+The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full local surface, use the [CLI and Agent Skill](/docs/explanation/choose-an-interface), or see [Use SlopCamera from an MCP client](/docs/tutorials/mcp) for setup.

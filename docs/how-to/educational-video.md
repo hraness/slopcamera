@@ -1,6 +1,6 @@
 # Make a math explainer video with Manim
 
-Use Manim for mathematical visuals and keep narration, music and sound effects in an ordinary Slopcamera project. Use a native Blender scene when the explanation depends on detailed 3D, or a spatial scene when named geometry and world-space media need editable camera direction.
+Use Manim for mathematical visuals and keep narration, music and sound effects in an ordinary SlopCamera project. Use a native Blender scene when the explanation depends on detailed 3D, or a spatial scene when named geometry and world-space media need editable camera direction.
 
 This Manim path requires the [released studio commands](../reference/capabilities.md), a selected Python environment with Manim Community and the starter's Typst dependency, and FFmpeg/FFprobe.
 

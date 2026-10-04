@@ -1,4 +1,4 @@
-A `.diagram.json` file is Slopcamera's editable diagram source: a version-one JSON document that checks, renders, and stays authoritative while its rendered exports remain replaceable. The public schema lives at `schema/diagram.schema.json` in the repository, and the format needs no tldraw installation, account, or network.
+A `.diagram.json` file is SlopCamera's editable diagram source: a version-one JSON document that checks, renders, and stays authoritative while its rendered exports remain replaceable. The public schema lives at `schema/diagram.schema.json` in the repository, and the format needs no tldraw installation, account, or network.
 
 ## Two source forms
 
