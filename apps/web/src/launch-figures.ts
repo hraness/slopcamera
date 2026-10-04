@@ -16,8 +16,8 @@ export const launchFigures: Readonly<Record<string, LaunchFigure>> = Object.free
 ))
 
 /** The launch film is the one figure that is not a workflow example. */
-const filmCaption = "The original launch film, rendered from Slopcamera's launch-film template. Its example count records the collection at the time of filming. Captions are included."
-const filmAlt = "The original Slopcamera launch film, showing an earlier diagram-led introduction and its historical example count."
+const filmCaption = "The launch film: real renders from the example collection, one directed revision, and how to ask your agent to install Slopcamera. Its counts record the collection at the time of filming. Captions are included."
+const filmAlt = "The Slopcamera launch film: a coding agent that cannot draw, the Slopcamera reveal, rendered examples, a moon made larger in one revision, the example counts, and an end card that says to ask your agent to install Slopcamera."
 
 /**
  * Expand `{{LAUNCH_BEATS}}` into one section per beat: headline, post, figure
@@ -101,5 +101,5 @@ function launchFilmHtml(cls: (token: string) => string): string {
   const film = launchMediaFile("film")
   const poster = launchMediaFile("poster")
   const captions = launchMediaFile("captions")
-  return `<figure${cls("BLOG_FIGURE_CLASS")}><video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${launchMediaUrl(poster)}" width="${String(film.width)}" height="${String(film.height)}" aria-label="${escape(filmAlt)}"><source src="${launchMediaUrl(film)}" type="video/mp4"><track kind="captions" srclang="en" label="English" src="${launchMediaUrl(captions)}" default><a href="${launchMediaUrl(film)}">Open the original launch film</a></video><figcaption${cls("BLOG_FIGCAPTION_CLASS")}>${escape(filmCaption)} <a href="${launchMediaUrl(launchMediaFile("square"))}">Square cut</a> · <a href="${launchMediaUrl(launchMediaFile("portrait"))}">Portrait cut</a></figcaption></figure>`
+  return `<figure${cls("BLOG_FIGURE_CLASS")}><video${cls("BLOG_FIGURE_MEDIA_CLASS")} controls muted playsinline preload="none" poster="${launchMediaUrl(poster)}" width="${String(film.width)}" height="${String(film.height)}" aria-label="${escape(filmAlt)}"><source src="${launchMediaUrl(film)}" type="video/mp4"><track kind="captions" srclang="en" label="English" src="${launchMediaUrl(captions)}" default><a href="${launchMediaUrl(film)}">Open the launch film</a></video><figcaption${cls("BLOG_FIGCAPTION_CLASS")}>${escape(filmCaption)} <a href="${launchMediaUrl(launchMediaFile("square"))}">Square cut</a> · <a href="${launchMediaUrl(launchMediaFile("portrait"))}">Portrait cut</a></figcaption></figure>`
 }

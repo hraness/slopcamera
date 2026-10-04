@@ -1,7 +1,6 @@
 /**
- * Reviewed launch film derivatives. The film is built from `launch/film/` with
- * the Slopcamera launch-film template and rendered by `slopcamera html render`
- * and `html deliver`; only the files declared here are published, under
+ * Reviewed launch film derivatives. The film is built from `launch/story/`
+ * (the story-film engine, configured in `story.config.ts`); only the files declared here are published, under
  * `/assets/launch/`, after `scripts/launch-assets.ts` checks their exact bytes.
  */
 import inventory from "../launch-media/launch-media.json"

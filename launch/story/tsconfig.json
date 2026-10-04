@@ -3,17 +3,12 @@
     "target": "ES2023",
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": [
-      "bun"
-    ]
+    "types": ["bun"]
   },
-  "include": [
-    "*.ts",
-    "*.tsx"
-  ]
+  "include": ["*.ts"]
 }
