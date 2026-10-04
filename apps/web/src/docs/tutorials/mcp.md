@@ -1,4 +1,4 @@
-An MCP-capable client can check and render diagrams, inspect scenes, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Cursor, Claude Desktop, and similar clients launch it with a workspace directory, and every path the tools accept stays relative to that root.
+An MCP-capable client can check and render diagrams, inspect scenes, vectorize rasters, and generate images inside one workspace through `slopcamera mcp`, a local stdio server. Claude Code, Codex, Cursor, and Claude Desktop launch it with a workspace directory, and every path the tools accept stays relative to that root.
 
 ## Install the CLI
 
@@ -16,7 +16,50 @@ The server requires one option, an existing workspace directory:
 slopcamera mcp --root /absolute/path/to/workspace
 ```
 
-Clients register it as a stdio command with arguments. Claude Desktop's `claude_desktop_config.json` and Cursor's `mcp.json` accept the same `mcpServers` shape:
+Clients register it as a stdio command with arguments. After you add it, start a new session so the client launches a fresh server.
+
+### Claude Code
+
+```sh
+claude mcp add slopcamera -- slopcamera mcp --root /absolute/path/to/workspace
+```
+
+Everything after `--` is the server command. By default Claude Code saves the server in local scope, for you in the current project only. Put `--scope user` before the name to load it in every project, or `--scope project` to write a `.mcp.json` file you can commit. Check the registration from a terminal:
+
+```sh
+claude mcp list
+claude mcp get slopcamera
+```
+
+`claude mcp list` starts the server and reports `✔ Connected` when it answers. A server saved in `.mcp.json` shows `⏸ Pending approval` until you run `claude` in that project and approve it. Inside a session, `/mcp` shows each connected server with its tool count.
+
+### Codex
+
+```sh
+codex mcp add slopcamera -- slopcamera mcp --root /absolute/path/to/workspace
+```
+
+This adds a `[mcp_servers.slopcamera]` table to `~/.codex/config.toml`, the file the Codex CLI and IDE extension share. You can also write the table by hand, there or in a trusted project's `.codex/config.toml`:
+
+```toml
+[mcp_servers.slopcamera]
+command = "slopcamera"
+args = ["mcp", "--root", "/absolute/path/to/workspace"]
+env_vars = ["AI_GATEWAY_API_KEY"]
+```
+
+Codex starts a stdio server with a short list of default environment variables, so `env_vars` forwards your Gateway key from Codex's own environment for image generation. Leave that line out if you only check and render diagrams. Check the table from a terminal:
+
+```sh
+codex mcp list
+codex mcp get slopcamera
+```
+
+`codex mcp list` prints the saved command and `enabled` without starting the server, so a wrong executable path looks the same as a working one. In the `codex` terminal interface, `/mcp` lists the servers that started.
+
+### Cursor and Claude Desktop
+
+Claude Desktop's `claude_desktop_config.json` and Cursor's `mcp.json` accept the same `mcpServers` shape:
 
 ```json
 {
@@ -29,7 +72,11 @@ Clients register it as a stdio command with arguments. Claude Desktop's `claude_
 }
 ```
 
-The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, server name `hraness-slopcamera`). Protocol messages are the only stdout surface; diagnostics go to stderr. Restart the client after editing its configuration so it launches a fresh server.
+Cursor reads `~/.cursor/mcp.json`, or `.cursor/mcp.json` inside one project. Restart Claude Desktop or Cursor after editing the file. For Devin CLI, see [Set up SlopCamera for Cursor, Devin CLI, and other coding agents](/docs/tutorials/other-agents).
+
+The Claude Code and Codex commands above were checked on 4 October 2026 with SlopCamera 3.10.3, Claude Code 2.1.287, and Codex CLI 0.160.0. Each one saved the server, `claude mcp list` connected to it, and the server listed 21 tools.
+
+The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, server name `hraness-slopcamera`). Protocol messages are the only output on stdout; diagnostics go to stderr.
 
 ## Check the connection without generating media
 
@@ -55,8 +102,10 @@ paid provider request.
 | --- | --- | --- |
 | The client cannot launch `slopcamera` | The client's process environment may not have your terminal's `PATH`. | Set `command` to the installed executable's absolute path, keep the arguments unchanged, then restart the client. |
 | The server starts but no tools appear | This is a stdio server, not an HTTP endpoint; stdout contains protocol messages only. | Register a command and arguments, not a URL. Check the client's server diagnostics and stderr. |
+| `claude mcp list` shows `⏸ Pending approval` | The server is in the project's `.mcp.json`, which Claude Code loads only after you approve it. | Run `claude` in that project and approve the server, or add it again without `--scope project`. |
+| Codex shows the server as `enabled`, but no SlopCamera tools load | `codex mcp list` reads `config.toml` without starting the server. | Set `command` to the path that `command -v slopcamera` prints, then open `/mcp` in a new Codex session. |
 | A file path is rejected | Tool paths are relative to the configured workspace, not your terminal directory. | Keep the file inside that workspace and pass a path without an absolute prefix or `..`. |
-| A check works but generation fails | Generation reads credentials from the server process, not from the website or an unrelated shell. | Follow [credentials and scope](#credentials-and-scope); retry only after checking whether the paid request completed. |
+| A check works but generation fails | Generation reads credentials from the server process, not from the website or an unrelated shell. Beyond a short default list, Codex forwards a variable from its own environment only when `env_vars` names it. | Follow [credentials and scope](#credentials-and-scope), and in Codex add `env_vars = ["AI_GATEWAY_API_KEY"]`. Retry only after checking whether the paid request completed. |
 
 ## Use the released tools
 
@@ -64,10 +113,10 @@ paid provider request.
 | --- | --- |
 | `check_diagram` | Parse and lint one `.diagram.json` source. Read-only. |
 | `render_diagram` | Write the same five artifacts the CLI render produces: `.tldr`, light and dark SVG, and light and dark PNG. |
-| `search_slopcamera` | Search the fixed SlopCamera operation registry by bounded text. Never executes anything. |
+| `search_slopcamera` | Search the fixed SlopCamera operation registry with a short text query. Never executes anything. |
 | `execute_slopcamera` | Run one exact operation code with typed JSON input. |
 
-`execute_slopcamera` admits ten operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, `slopcamera.image.gallery`, `slopcamera.icon.compose`, `slopcamera.icon.render`, `slopcamera.soundtrack.compose`, and `slopcamera.soundtrack.grid`. No surface accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
+`execute_slopcamera` accepts ten operation codes: `slopcamera.diagram.check`, `slopcamera.diagram.render`, `slopcamera.image.vectorize`, `slopcamera.image.generate`, `slopcamera.image.icon`, `slopcamera.image.gallery`, `slopcamera.icon.compose`, `slopcamera.icon.render`, `slopcamera.soundtrack.compose`, and `slopcamera.soundtrack.grid`. No tool accepts source text, evaluates caller code, executes workspace configuration, or registers a new operation. Renders run one at a time.
 
 ## Inspect and plan scenes
 
@@ -77,7 +126,7 @@ The server exposes 21 named tools: the four above, these 13 scene tools, and the
 | --- | --- |
 | `check_scene`, `inspect_scene`, `diff_scenes` | Validate, summarize, or compare scene JSON sources. Read-only. |
 | `evaluate_scene`, `audit_scene`, `audit_scene_temporal` | Sample world state and report spatial or temporal findings. Read-only. |
-| `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery` | Check a direction document, compile proposals, plan bounded variants. Read-only. |
+| `check_scene_direction`, `plan_scene_direction`, `plan_scene_gallery` | Check a direction document, compile proposals, plan a limited set of variants. Read-only. |
 | `check_scene_effects`, `plan_scene_effects` | Check declared effects and bind them to a render plan. Read-only. |
 | `check_scene_behavior`, `audit_scene_behavior` | Check a behavior document and audit its declared behavior. Read-only. |
 

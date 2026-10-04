@@ -50,7 +50,7 @@ Install the [current SlopCamera release](../README.md#install-slopcamera) for th
 - [Source, representations, and projects](architecture.md): what stays editable, what a receipt proves, and how local and cloud work fit together.
 - [Extension architecture](extension-architecture.md): the closed registry, inert recipe packs, trusted workflows, and where authored code can and cannot go.
 - [Why SlopCamera](https://slopcamera.com/docs/explanation/why-slopcamera): why the agent keeps a source file and reuses installed techniques, with comparisons to [Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion), [HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes), and [other tools](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents).
-- [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark): methods and reports for first-render and revision costs, with the harness and raw results in [`bench/token-savings`](../bench/token-savings).
+- [Does installing SlopCamera cut Claude Code token costs?](https://slopcamera.com/docs/explanation/token-benchmark): a controlled study of four media tasks, with the harness and raw results in [`bench/token-savings`](../bench/token-savings).
 - [Choose an HTML authoring surface](html-overlay-creative-toolkit.md): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs. Its ecosystem research is dated separately from its supported locks.
 
 ## Work with an agent
