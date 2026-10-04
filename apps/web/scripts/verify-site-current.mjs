@@ -57,7 +57,7 @@ export function allowsRequest(url, origin) {
 }
 
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml",
-  ".woff2": "font/woff2", ".png": "image/png", ".webp": "image/webp", ".mp4": "video/mp4", ".vtt": "text/vtt", ".json": "application/json" }
+  ".woff2": "font/woff2", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".vtt": "text/vtt", ".json": "application/json" }
 
 /** Resolves a request path to a built file with Vercel's clean-URL rules. */
 export function resolveBuilt(root, pathname) {

@@ -382,27 +382,38 @@ main[data-hraness-marketing-preset="editorial"] {
 .slopcamera-studio__edit i:nth-child(3) { width: 80%; align-self: start; }
 .slopcamera-studio > figcaption { margin-block-start: 1.25rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
 
+/* The landscape is a grayscale luminance drawing. Light themes invert it and
+ * multiply, so the ink is a darker shade of the page's own hue; dark themes
+ * screen the light lines over the page instead. */
 .slopcamera-pixel-art {
   position: absolute;
   z-index: 0;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: .2;
+  opacity: .15;
   mix-blend-mode: multiply;
 }
 
 .slopcamera-pixel-art img {
   display: block;
   inline-size: 100%;
-  block-size: 100%;
-  object-fit: cover;
-  object-position: top center;
-  filter: grayscale(1) contrast(.82);
+  block-size: auto;
+  filter: invert(1);
 }
-html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .14; }
+html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
+html[data-theme="dark"] .slopcamera-pixel-art img { filter: none; }
 @media (prefers-color-scheme: dark) {
-  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .14; }
+  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
+  html[data-theme="system"] .slopcamera-pixel-art img { filter: none; }
+}
+/* Phone copy spans the drawing's side scenery, so it recedes further there. */
+@media (max-width: 48rem) {
+  html .slopcamera-pixel-art { opacity: .11; }
+  html[data-theme="dark"] .slopcamera-pixel-art { opacity: .07; }
+}
+@media (max-width: 48rem) and (prefers-color-scheme: dark) {
+  html[data-theme="system"] .slopcamera-pixel-art { opacity: .07; }
 }
 
 .slopcamera-product-hero,
