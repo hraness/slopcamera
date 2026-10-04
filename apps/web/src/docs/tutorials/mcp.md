@@ -31,6 +31,33 @@ Clients register it as a stdio command with arguments. Claude Desktop's `claude_
 
 The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, server name `hraness-slopcamera`). Protocol messages are the only stdout surface; diagnostics go to stderr. Restart the client after editing its configuration so it launches a fresh server.
 
+## Check the connection without generating media
+
+Create a `.diagram.json` source inside the configured workspace using
+[the first-diagram tutorial](/docs/tutorials/first-diagram). After restarting the
+client, inspect its available tools and call `check_diagram` with the source's
+root-relative path. For a file named `hello.diagram.json` directly inside the
+workspace, the tool arguments are:
+
+```json
+{"path": "hello.diagram.json"}
+```
+
+A successful call returns `ok: true`, `source`, `findings`, and a `summary` with
+shape, edge, and finding counts. Read the findings before rendering; a successful
+parse can still report diagram problems. This check does not change files or
+request image generation. Tool discovery alone does not verify a render or a
+paid provider request.
+
+## Troubleshoot client setup
+
+| Observed condition | What to check | Next action |
+| --- | --- | --- |
+| The client cannot launch `slopcamera` | The client's process environment may not have your terminal's `PATH`. | Set `command` to the installed executable's absolute path, keep the arguments unchanged, then restart the client. |
+| The server starts but no tools appear | This is a stdio server, not an HTTP endpoint; stdout contains protocol messages only. | Register a command and arguments, not a URL. Check the client's server diagnostics and stderr. |
+| A file path is rejected | Tool paths are relative to the configured workspace, not your terminal directory. | Keep the file inside that workspace and pass a path without an absolute prefix or `..`. |
+| A check works but generation fails | Generation reads credentials from the server process, not from the website or an unrelated shell. | Follow [credentials and scope](#credentials-and-scope); retry only after checking whether the paid request completed. |
+
 ## Use the released tools
 
 | Tool | Effect |
