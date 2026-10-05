@@ -316,7 +316,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "agent-browser": "0.32.3",
-    "ajv": "8.17.1",
+    "ajv": "8.20.0",
     "eslint": "^9.39.2",
     "fast-check": "^4.8.0",
     "tldraw": "5.2.5",
@@ -326,5 +326,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
+  },
+  "overrides": {
+    "@tiptap/core": "3.31.4"
   }
 }

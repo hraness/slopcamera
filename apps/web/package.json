@@ -16,7 +16,7 @@
     "posthog-js": "1.422.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "satori": "0.33.4",
+    "satori": "0.35.0",
     "@hraness/posthog": "https://github.com/hraness/posthog/releases/download/v0.3.11/hraness-posthog-0.3.11.tgz"
   },
   "devDependencies": {
