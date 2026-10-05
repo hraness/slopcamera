@@ -1,7 +1,9 @@
 import type { ArticleAdmission } from "@hraness/design-kit-articles"
 
-// Current editorial decisions; truthful AI review and source-check dates remain
-// available to discovery while the reading layout omits date labels.
+// Current editorial decisions; truthful review and source-check dates remain
+// available to discovery while the reading layout omits date labels. Ben Guo
+// reviewed every post as a human editor on 2026-10-04; posts he left unchanged
+// keep their earlier AI review alongside his humanReview.
 export const blogAdmissions = [
   {
     "href": "/blog/one-shot-render-vs-installed-techniques",
@@ -37,7 +39,7 @@ export const blogAdmissions = [
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera showcase examples at a95e7fe",
+        "title": "SlopCamera showcase examples at a95e7fe",
         "url": "https://github.com/hraness/slopcamera/tree/a95e7feef61c65076c3cfd37cc23c0357eb3ecd4/examples/showcase",
         "checkedOn": "2026-09-28"
       },
@@ -76,7 +78,11 @@ export const blogAdmissions = [
       "reviewerType": "ai",
       "reviewedOn": "2026-10-01"
     },
-    "humanReview": null,
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
     "reassessOn": "2026-11-12",
     "harmIfWrong": "Readers could install Slopcamera expecting measured token or cost savings, or expect a new format or revision to take less work than it does, and lose trust in the project's other claims.",
     "refreshTriggers": [
@@ -161,7 +167,11 @@ export const blogAdmissions = [
       "reviewerType": "ai",
       "reviewedOn": "2026-10-01"
     },
-    "humanReview": null,
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
     "reassessOn": "2026-11-12",
     "harmIfWrong": "A reader copies a command block that fails (missing job file, missing example path, wrong flag) or picks an engine that cannot produce the shot, wasting setup time; overstating capabilities such as recording, beat detection, or cloud rendering would mislead readers choosing between Slopcamera and Remotion or HyperFrames.",
     "refreshTriggers": [
@@ -196,32 +206,32 @@ export const blogAdmissions = [
     ],
     "sources": [
       {
-        "title": "Slopcamera v3.6.0 release",
+        "title": "SlopCamera v3.6.0 release",
         "url": "https://github.com/hraness/slopcamera/releases/tag/v3.6.0",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera diagram lint rules",
+        "title": "SlopCamera diagram lint rules",
         "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/lint.ts",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera CLI (diagram check exit codes)",
+        "title": "SlopCamera CLI (diagram check exit codes)",
         "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/cli.ts",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera diagram artifacts and config discovery",
+        "title": "SlopCamera diagram artifacts and config discovery",
         "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/artifacts.ts",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera diagram parser (shape types and tones)",
+        "title": "SlopCamera diagram parser (shape types and tones)",
         "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/src/parse.ts",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera Agent Skill: diagrams",
+        "title": "SlopCamera Agent Skill: diagrams",
         "url": "https://github.com/hraness/slopcamera/blob/v3.6.0/skills/slopcamera/references/diagrams.md",
         "checkedOn": "2026-09-28"
       },
@@ -260,7 +270,11 @@ export const blogAdmissions = [
       "reviewerType": "ai",
       "reviewedOn": "2026-10-01"
     },
-    "humanReview": null,
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
     "reassessOn": "2026-11-12",
     "harmIfWrong": "A reader could wire `diagram check --strict` into CI expecting different exit codes, and pull requests would pass that should fail. They could also expect tldraw edits to flow back into the JSON, or expect byte-identical exports across machines, and lose edits or chase false diffs.",
     "refreshTriggers": [
@@ -317,37 +331,37 @@ export const blogAdmissions = [
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera product example scene.py",
+        "title": "SlopCamera product example scene.py",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/scene.py",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera product example studio_scene.py",
+        "title": "SlopCamera product example studio_scene.py",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/studio_scene.py",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera product example job.json",
+        "title": "SlopCamera product example job.json",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/product/job.json",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera CAD example scene.py (widthMm 50-160 limit)",
+        "title": "SlopCamera CAD example scene.py (widthMm 50-160 limit)",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad/scene.py",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera CAD wide variation job",
+        "title": "SlopCamera CAD wide variation job",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad/wide.job.json",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera cad-variations.ts (STEP round-trip volume check)",
+        "title": "SlopCamera cad-variations.ts (STEP round-trip volume check)",
         "url": "https://github.com/hraness/slopcamera/blob/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/cad-variations.ts",
         "checkedOn": "2026-09-28"
       },
       {
-        "title": "Slopcamera education example",
+        "title": "SlopCamera education example",
         "url": "https://github.com/hraness/slopcamera/tree/81217777f193718e20351a886516ecae445590a9/examples/showcase/native/education",
         "checkedOn": "2026-09-28"
       }
@@ -371,7 +385,11 @@ export const blogAdmissions = [
       "reviewerType": "ai",
       "reviewedOn": "2026-10-01"
     },
-    "humanReview": null,
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
     "reassessOn": "2026-11-12",
     "harmIfWrong": "A reader could let an agent run bundled Python believing it is sandboxed, expect byte-identical renders across machines, expect a GLB export to keep an editable rig, or dismiss a live MCP session as unable to keep scripts. Any of these would cost them time or expose their machine to untrusted code.",
     "refreshTriggers": [
@@ -417,12 +435,12 @@ export const blogAdmissions = [
         "checkedOn": "2026-09-30"
       },
       {
-        "title": "Slopcamera README",
+        "title": "SlopCamera README",
         "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/README.md",
         "checkedOn": "2026-10-01"
       },
       {
-        "title": "Slopcamera scene behavior bake",
+        "title": "SlopCamera scene behavior bake",
         "url": "https://github.com/hraness/slopcamera/blob/d2accc8badd991f288bb0c83668efc641aa89981/src/spatial-scene/behavior-bake.ts",
         "checkedOn": "2026-10-01"
       }
@@ -446,7 +464,11 @@ export const blogAdmissions = [
       "reviewerType": "ai",
       "reviewedOn": "2026-10-01"
     },
-    "humanReview": null,
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
     "reassessOn": "2026-11-12",
     "harmIfWrong": "A reader could expect the hosted route to accept reference images or media, or expect Slopcamera to be a hosted app, and install a tool that does not fit their work.",
     "refreshTriggers": [
@@ -482,49 +504,49 @@ export const blogAdmissions = [
     ],
     "sources": [
       {
-        "title": "Slopcamera behavior bake",
+        "title": "SlopCamera behavior bake",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.ts",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera behavior bake tests",
+        "title": "SlopCamera behavior bake tests",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-bake.test.ts",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera behavior functions",
+        "title": "SlopCamera behavior functions",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-fns.ts",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera behavior trace and channel map",
+        "title": "SlopCamera behavior trace and channel map",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/src/spatial-scene/behavior-trace.ts",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera package manifest (ALGAL dependency)",
+        "title": "SlopCamera package manifest (ALGAL dependency)",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/package.json",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera Agent Skill: directed scenes",
+        "title": "SlopCamera Agent Skill: directed scenes",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/skills/slopcamera/references/directed-scenes.md",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera ALGAL character behaviors plan",
+        "title": "SlopCamera ALGAL character behaviors plan",
         "url": "https://github.com/hraness/slopcamera/blob/7e7027521f134aaaaa8404efebdc5bac24be6252/kb/plans/algal-character-behaviors.md",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
         "title": "ALGAL README",
         "url": "https://github.com/hraness/algal/blob/1bc117df7e9d18911123e736e28e2c051598a9f3/README.md",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       },
       {
-        "title": "Slopcamera v3.4.0 release",
+        "title": "SlopCamera v3.4.0 release",
         "url": "https://github.com/hraness/slopcamera/releases/tag/v3.4.0",
-        "checkedOn": "2026-09-24"
+        "checkedOn": "2026-10-04"
       }
     ],
     "observations": [
@@ -542,12 +564,16 @@ export const blogAdmissions = [
     "owner": "hraness/slopcamera",
     "drafting": "ai",
     "review": {
-      "reviewer": "Codex independent editorial review (AI)",
-      "reviewerType": "ai",
-      "reviewedOn": "2026-10-01"
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
     },
-    "humanReview": null,
-    "reassessOn": "2026-11-12",
+    "humanReview": {
+      "reviewer": "Ben Guo",
+      "reviewerType": "human-editor",
+      "reviewedOn": "2026-10-04"
+    },
+    "reassessOn": "2026-11-15",
     "harmIfWrong": "A reader could trust a bake guarantee that the code does not enforce, or assume behavior can reach tools, models or files.",
     "refreshTriggers": [
       "Slopcamera release tag bump",

@@ -29,7 +29,10 @@ const appDirectory = dirname(dirname(fileURLToPath(import.meta.url)))
 const bodies = Object.fromEntries(await Promise.all(blogPosts.map(async post =>
   [post.slug, await readFile(join(appDirectory, "src/blog", `${post.slug}.md`), "utf8")] as const)))
 const quarantined = blogPosts.filter(post => post.lifecycle === "quarantined")
-const editorialReview = JSON.parse(await readFile(join(appDirectory, "editorial-review-20261001.json"), "utf8"))
+// The 2026-10-01 AI review stays on record for posts the 2026-10-04 pass left
+// unchanged; Ben Guo's 2026-10-04 human-editor review covers every post.
+const aiEditorialReview = JSON.parse(await readFile(join(appDirectory, "editorial-review-20261001.json"), "utf8"))
+const humanEditorialReview = JSON.parse(await readFile(join(appDirectory, "editorial-review-20261004.json"), "utf8"))
 
 describe("blog admissions", () => {
   test("design-kit validates every admission record", () => {
@@ -37,19 +40,30 @@ describe("blog admissions", () => {
     expect(blogAdmissions.map((record): string => record.href).sort()).toEqual(blogPosts.map(blogPostPath).sort())
   })
 
-  test("records a disclosed AI review, never a human one", () => {
+  test("records each review as it happened: AI as AI, a human editor as human", () => {
+    expect(humanEditorialReview.reviewerType).toBe("human-editor")
     for (const record of blogAdmissions) {
       expect(record.drafting).toBe("ai")
-      expect(record.review.reviewer).toBe(editorialReview.reviewer)
-      expect(record.review.reviewerType).toBe("ai")
-      expect(record.review.reviewedOn).toBe(editorialReview.reviewedOn)
-      expect(record.scores).toEqual(editorialReview.scores)
-      expect(record.humanReview).toBeNull()
-      expect(record.review.reviewer).not.toMatch(/human/iu)
+      const review = record.review.reviewerType === "human-editor" ? humanEditorialReview : aiEditorialReview
+      expect(record.review.reviewer).toBe(review.reviewer)
+      expect(record.review.reviewedOn).toBe(review.reviewedOn)
+      expect(record.humanReview).toEqual(humanEditorialReview.humanReview)
+      if (record.review.reviewerType === "ai") {
+        expect(record.review.reviewer).not.toMatch(/human/iu)
+        expect(record.scores).toEqual(aiEditorialReview.scores)
+        expect(humanEditorialReview.unchanged).toContain(record.href)
+      } else {
+        expect(Object.keys(humanEditorialReview.edited)).toContain(record.href)
+      }
       const total = Object.values(record.scores).reduce((sum, score) => sum + score, 0)
       expect(total).toBeGreaterThanOrEqual(9)
       expect(Object.values(record.scores)).not.toContain(0)
     }
+    // An AI review may not call itself human, and humanReview may not record an AI reviewer.
+    const first = blogAdmissions[0]!
+    const aiReview = { reviewer: "Codex independent editorial review (AI)", reviewerType: "ai", reviewedOn: "2026-10-01" }
+    expect(() => assertArticleAdmissions([{ ...first, review: { ...aiReview, reviewer: "Codex human review (AI)" } }])).toThrow()
+    expect(() => assertArticleAdmissions([{ ...first, review: aiReview, humanReview: aiReview }])).toThrow()
   })
 
   test("admits all independently reviewed posts", () => {
@@ -76,11 +90,13 @@ describe("blog pages", () => {
   test("every post carries the Hraness byline and the visible provenance note", () => {
     for (const post of blogPosts) {
       const slots = blogPostSlots(post, bodies[post.slug]!)
+      const review = admissionForPost(post).review!
       const sentence = articleProvenanceSentence(articleProvenanceFromAdmission(admissionForPost(post)))
-      expect(sentence).toContain(editorialReview.reviewer)
+      expect(sentence).toContain(review.reviewer)
+      expect(sentence.endsWith(", a human editor.")).toBe(review.reviewerType === "human-editor")
       expect(slots.main).toContain(">By Hraness</span>")
       expect(slots.main).toContain(sentence)
-      expect(slots.main).toContain('data-reviewer-type="ai"')
+      expect(slots.main).toContain(`data-reviewer-type="${review.reviewerType}"`)
       const markdown = blogPostMarkdown(post, bodies[post.slug]!)
       expect(markdown).toContain("By Hraness")
       expect(markdown).not.toMatch(/(?:Published|Updated|checked) \d/iu)

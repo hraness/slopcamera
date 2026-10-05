@@ -67,7 +67,7 @@ The saved bake also records the fingerprints of the behavior, the scene, the fun
 
 ## Comparing, varying, and auditing baked motion
 
-Rendering the same bake again does not re-roll the motion. If you edit the scene itself, SlopCamera marks the behavior as stale until you rebind it to the new scene and bake again; keep the earlier bake and you can compare the two. When you do want variety, the gallery command bakes the same program with six different seeds and keeps only the results that actually differ, so a program that ignores its seed returns one candidate instead of six copies. It never picks one for you.
+Rendering the same bake again does not re-roll the motion. If you edit the scene itself, SlopCamera marks the behavior as stale until you rebind it to the new scene and bake again; keep the earlier bake and you can compare the two. When you do want variety, the gallery command bakes the same program with six different seeds and keeps only the results that differ, so a program that ignores its seed returns one candidate instead of six copies. It never picks one for you.
 
 The audit command reviews a baked timeline. It flags a character that switches state too often, motion that repeats on an exact loop, a channel that never changes, and states that are never reached. These are warnings for a person or agent to read; the audit changes nothing.
 
