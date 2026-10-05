@@ -50,7 +50,7 @@ test("terminal proof requires all 76 cases, actual design observations and both 
   }
 })
 test("Lantern DOM normalization admits only the finite reviewed opt-in hooks", () => {
-  const dom = '<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1"><header class="topbar xborder xbackground xbackdrop"><div class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"></div><figure class="hraness-marketing-proof-frame hraness-material-pane"></figure>'
+  const dom = '<main data-hraness-landscape="page" data-hraness-marketing-preset="editorial" id="main" tabindex="-1"><header class="topbar xborder xbackground xbackdrop"><div class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"></div><figure class="hraness-marketing-proof-frame hraness-material-pane"></figure>'
     + '<details class="hraness-marketing-question hraness-material-disclosure"></details>'.repeat(9) + '</main>'
   const normalized = normalizeMainOptIn(dom)
   expect(normalized).not.toContain("hraness-material-")
@@ -360,7 +360,7 @@ function completeLanternComparison(chromePaint = "oklch(0.996677 0.00538764 none
   const paint: MarketingPaintPair = { baseline: { ink: actionPaint.color, line: "line", strongLine: "strong", primaryInk: "primary", header },
     current: { ink: actionPaint.color, line: "line", strongLine: "strong", primaryInk: "primary", header,
       lantern: { chrome, wall: {}, pane: {}, warm: {} } } }
-  const dom = '<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">'
+  const dom = '<main data-hraness-landscape="page" data-hraness-marketing-preset="editorial" id="main" tabindex="-1">'
     + '<header class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"></header>'
     + '<figure class="hraness-marketing-proof-frame hraness-material-pane"></figure>'
     + '<details class="hraness-marketing-question hraness-material-disclosure"></details>'.repeat(9) + '</main>'

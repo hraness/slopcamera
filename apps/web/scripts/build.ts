@@ -44,9 +44,9 @@ const generatedTextFiles = {
 
 const marketingIconMaxBytes = 128 * 1024
 const pixelArtMedia = [
-  { file: "landscape-3d79d0700995c363750bd4a78258432b48c4114e3882a6a09582fff3f4545f63.webp", bytes: 1_797_576, sha256: "3d79d0700995c363750bd4a78258432b48c4114e3882a6a09582fff3f4545f63" },
-  { file: "landscape-09b2266789acd4bba2056ab96047114c2afbb31e1f880c5dd418eaacff27ca03.webp", bytes: 3_264_880, sha256: "09b2266789acd4bba2056ab96047114c2afbb31e1f880c5dd418eaacff27ca03" },
-  { file: "landscape-b8eab9eda939f9de2d901041d80b60abc01fc3487188fd78aff28e126f54142c.webp", bytes: 815_594, sha256: "b8eab9eda939f9de2d901041d80b60abc01fc3487188fd78aff28e126f54142c" },
+  { file: "landscape-d14ba7a4ef3064d3a5e7b9f0809fb54f5abddf1c1ced4cbc688f81b06b9a9d57.webp", bytes: 1_775_068, sha256: "d14ba7a4ef3064d3a5e7b9f0809fb54f5abddf1c1ced4cbc688f81b06b9a9d57" },
+  { file: "landscape-52365d3071a6e6a3b91c3f46ba2f0295f191b2f4cae6dc4db7d8b3c599675140.webp", bytes: 3_221_354, sha256: "52365d3071a6e6a3b91c3f46ba2f0295f191b2f4cae6dc4db7d8b3c599675140" },
+  { file: "landscape-502c55f65ed20976a3287c7a0011c6ba4b75ac3b4931750750b53cc06e031446.webp", bytes: 802_838, sha256: "502c55f65ed20976a3287c7a0011c6ba4b75ac3b4931750750b53cc06e031446" },
 ] as const
 
 async function readMarketingIcons(): Promise<Readonly<{ path: string; bytes: Uint8Array }[]>> {
