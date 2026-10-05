@@ -1476,6 +1476,15 @@
     ]
   },
   {
+    "identityLineCount": 9,
+    "identityLinesSha256": "15c940fdf2d9cdd6baaf724e389f1b0deb942d09e3ac11794e3b668f0c4829cf",
+    "occurrenceCount": 9,
+    "path": "apps/web/editorial-history-20261004.json",
+    "categories": [
+      "compat-doc"
+    ]
+  },
+  {
     "identityLineCount": 1,
     "identityLinesSha256": "9e3a728ad4180784963298d6e587c1435fb08365c27fc0fba689d57cc81ec7a1",
     "occurrenceCount": 1,
@@ -1595,7 +1604,7 @@
   },
   {
     "identityLineCount": 9,
-    "identityLinesSha256": "c05e4cd2b5bf695c86fb760140c137e2b3f2fc511cbe52bdf867f0b87a9724df",
+    "identityLinesSha256": "b18ff2b307ff8e284ffb53ab782158e431c24a2d2a4d5b95b1a9c2149767c53f",
     "occurrenceCount": 9,
     "path": "apps/web/src/blog-admissions.ts",
     "categories": [

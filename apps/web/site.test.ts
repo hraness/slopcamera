@@ -2502,7 +2502,10 @@ describe("static SlopCamera site", () => {
       expect(document.indexOf('data-hraness-marketing="footer"')).toBeGreaterThan(-1)
       expect(document.indexOf('data-hraness-marketing="footer"')).toBeLessThan(siteFooter)
       expect(document.split("by Hraness")).toHaveLength(2)
-      expect(document).not.toMatch(/Ben Guo|hraness-marketing-maker|id="maker"|href="#maker"/u)
+      // The provenance note names the recorded reviewer; that is editorial
+      // provenance, not a maker credit, so it is exempt from the name ban.
+      const withoutProvenance = document.replaceAll(/<p [^>]*data-reviewer-type="[^"]*"[^>]*>.*?<\/p>/gsu, "")
+      expect(withoutProvenance).not.toMatch(/Ben Guo|hraness-marketing-maker|id="maker"|href="#maker"/u)
     }
     const source = await readSource("index.html")
     expect(source).not.toMatch(/Ben Guo|Puerto Rico|Venmo|hraness-marketing-maker|id="maker"|href="#maker"/u)

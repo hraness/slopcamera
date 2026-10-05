@@ -1,0 +1,32 @@
+{
+  "reviewer": "Ben Guo",
+  "reviewerType": "human-editor",
+  "reviewedOn": "2026-10-04",
+  "humanReview": {
+    "reviewer": "Ben Guo",
+    "reviewerType": "human-editor",
+    "reviewedOn": "2026-10-04"
+  },
+  "verdict": "approved",
+  "scope": "Portfolio editorial pass on 2026-10-04. Ben Guo approved all six posts and is recorded as their human editor. Checked names against the portfolio registry, claims against current source and the published release, cross-product links against registered relations, and copy against STYLE.md. The 2026-10-01 AI review stays on record for posts this pass left unchanged.",
+  "edited": {
+    "/blog/how-slopcamera-uses-algal": "Removed one filler word; review moved to Ben Guo and its sources rechecked."
+  },
+  "unchanged": [
+    "/blog/one-shot-render-vs-installed-techniques",
+    "/blog/make-video-with-claude-code",
+    "/blog/editable-diagrams-with-coding-agents",
+    "/blog/headless-blender-manim-cadquery-for-agents",
+    "/blog/introducing-slopcamera"
+  ],
+  "allPosts": "Source titles use the registry name SlopCamera; every record gains Ben Guo's humanReview.",
+  "sha256": {
+    "apps/web/src/blog/editable-diagrams-with-coding-agents.md": "ea514f8bf6f91c8a6009d18dc02cf1c075df92dbbff43fbc635a5dbc31d7e0ce",
+    "apps/web/src/blog/headless-blender-manim-cadquery-for-agents.md": "83eeb22225b1e2672a7ed32f5de9ac19dcb68ec10f71391038c998c939386e7b",
+    "apps/web/src/blog/how-slopcamera-uses-algal.md": "cc2685aff4f3cd6b08fd9830fb322adbf441b26c394daf74b29dfa793bc36b14",
+    "apps/web/src/blog/introducing-slopcamera.md": "f185fe01ee58e4d21f652b987587acdacfbc4e6bb8b02de407c2ecdc3af73f0c",
+    "apps/web/src/blog/make-video-with-claude-code.md": "f7854b244d6cd88d4da974b126b21b5a3f4558bfd48bad32d49f8859f327ef39",
+    "apps/web/src/blog/one-shot-render-vs-installed-techniques.md": "32d57f341029a697d86b6b807b06ccf17bcbdef2c608dbac98c1caf48ec6c552",
+    "apps/web/src/blog-admissions.ts": "76bc3b81d6541bb82d21dd1b1fe35ef0e0f1372bcc7d2be5e542b4604bd38653"
+  }
+}

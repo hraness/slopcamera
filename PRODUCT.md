@@ -12,11 +12,11 @@ People using coding agents such as Codex and Claude Code who want to make and re
 
 ## Product Purpose
 
-Slopcamera lets a coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. The website helps someone see the possible results, understand how to direct a useful revision, install the tools, and finish a first project.
+SlopCamera lets a coding agent make images, diagrams, animation, 3D scenes, and video from source files it can keep revising. The website helps someone see the possible results, understand how to direct a useful revision, install the tools, and finish a first project.
 
 ## Positioning
 
-A multimedia studio for a coding agent. Source files, deliberate creative direction, and repeatable edits connect the finished work to the process that made it. Impeccable is an inspiration for teaching a useful vocabulary through visible results; Slopcamera's subject is multimedia creation.
+A multimedia studio for a coding agent. Source files, deliberate creative direction, and repeatable edits connect the finished work to the process that made it. Impeccable is an inspiration for teaching a useful vocabulary through visible results; SlopCamera's subject is multimedia creation.
 
 ## Operating Context
 
@@ -32,7 +32,7 @@ The canonical local CLI and Agent Skill work with authored scenes and media proj
 
 ## Brand Commitments
 
-The user requested imaginative, sometimes absurd concepts executed with strong motion design, graphic design, illustration, and CG craft. Finished work should make the breadth and possible polish of Slopcamera immediately visible. Public prose stays factual and direct; the artwork carries the surprise.
+The user requested imaginative, sometimes absurd concepts executed with strong motion design, graphic design, illustration, and CG craft. Finished work should make the breadth and possible polish of SlopCamera immediately visible. Public prose stays factual and direct; the artwork carries the surprise.
 
 ## Evidence on Hand
 
