@@ -1773,7 +1773,7 @@ describe("static SlopCamera site", () => {
     })
     expect(manifest.devDependencies).toEqual({
       "@babel/core": "7.29.7",
-      "@hraness/direct": "github:hraness/direct#f19d0fdac747e4359d6e2f915537cc826269b2d7",
+      "@hraness/direct": "https://github.com/hraness/direct/releases/download/v0.7.29/hraness-direct-0.7.29.tgz",
       "@stylexjs/babel-plugin": "0.19.0",
       "@stylexjs/stylex": "0.19.0",
       "@types/babel__core": "7.20.5",
