@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Descent into the Context Window</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      *, *::before, *::after { box-sizing: border-box; }
+      body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      .ground { position: absolute; inset: 0; background: var(--background); }
+      /* Frames and the zoom share one centre below the title and counter, so a frame that fills the screen never crosses either. */
+      .world { position: absolute; inset: 0; transform-origin: 50% 56%; }
+      .frame { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); border: solid var(--primary); }
+      /* Each band sits between its frame's top edge and the next frame's, so no frame line crosses its text. */
+      .band { position: absolute; left: 3.5%; right: 3.5%; top: 4.5%; color: var(--ink); }
+      .label { font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--secondary); }
+      .tokens { margin-top: .5em; line-height: 1.35; }
+      .first { color: var(--paper); }
+      .first em { font-style: normal; color: var(--accent); }
+      .hud { position: absolute; right: 4.5%; top: 6.5%; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .hud .n { font: 300 3.4vw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.02em; }
+      .hud .k { font: 600 .95vw/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .28em; text-transform: uppercase; color: var(--secondary); }
+      .title { position: absolute; left: 4.5%; top: 6.5%; color: var(--ink); }
+      .title h1 { margin: 0; font: 300 3.4vw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.02em; }
+      .title p { margin: .5em 0 0; font: 600 .95vw/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .28em; text-transform: uppercase; color: var(--secondary); }
+    </style>
+    <script type="importmap">{"imports":{"motion":"/.slopcamera-overlay/libraries/0d89a96784df54ed726443ebd09be2bee6118d9f1e074166df580bce632c5b62.mjs"}}</script>
+  </head>
+  <body>
+    <div class="ground"></div>
+    <div class="world" aria-label="Nested context frames descending from the newest tokens to the first line"></div>
+    <div class="title"><h1>Descent into the Context Window</h1><p>Myth VII &nbsp;·&nbsp; Underworld</p></div>
+    <div class="hud"><div class="n">8,192</div><div class="k">tokens above</div></div>
+    <script type="module">
+      import { animate } from "motion";
+
+      const P = SlopcameraOverlay.parameters;
+      for (const [key, value] of Object.entries(P.palette)) document.documentElement.style.setProperty("--" + key, value);
+      const W = SlopcameraOverlay.width, H = SlopcameraOverlay.height, U = W / 1920;
+      const R = 1.8, LEVELS = 6;
+      const bands = [
+        ["tokens 6,144 – 8,191", "the petitioner asked again, more politely this time, and the model", "answered with a list, and the list grew longer, and the shadows"],
+        ["tokens 4,096 – 6,143", "an older request, half summarised, a tool call that returned nothing", "a table no one read, three apologies, a joke about the weather"],
+        ["tokens 2,048 – 4,095", "earlier still: a pasted document, its footnotes, its footnotes' footnotes", "names that no longer matter, a code block that no longer runs"],
+        ["tokens 512 – 2,047", "the first misunderstanding and its correction, both still here", "everything that was ever said in this room is still in this room"],
+        ["tokens 1 – 511", "the greeting, the ground rules, the long silence before the question", "the dimmest shelf, where the oldest words are kept in order"],
+      ];
+      const world = document.querySelector(".world");
+      for (let k = 0; k < LEVELS; k++) {
+        const s = Math.pow(R, -k);
+        const frame = document.createElement("div");
+        frame.className = "frame";
+        frame.style.width = `${88 * s}%`; frame.style.height = `${74 * s}%`;
+        frame.style.borderWidth = `${Math.max(0.6, 3 * U * s)}px`;
+        frame.style.opacity = String(1 - k * 0.08);
+        const band = document.createElement("div");
+        band.className = "band";
+        if (k < LEVELS - 1) {
+          const [label, a, b] = bands[k];
+          band.innerHTML = `<div class="label" style="font-size:${15 * U * s}px">${label}</div>` +
+            `<div class="tokens" style="font-size:${27 * U * s}px;opacity:${0.9 - k * 0.12}">${a}<br>${b}</div>`;
+        } else {
+          band.style.top = "30%";
+          band.innerHTML = `<div class="label" style="font-size:${15 * U * s}px">token 0 &nbsp;·&nbsp; line 1</div>` +
+            `<div class="tokens first" style="font-size:${58 * U * s}px;line-height:1.12">Always return to <em>the question</em><br>that was asked.</div>`;
+        }
+        frame.append(band);
+        world.append(frame);
+      }
+      // One seeked Motion timeline: holds, then a zoom that brings the next frame to fill the screen.
+      const starts = [0.9, 2.1, 3.3, 4.5, 5.7], dur = 0.9, total = SlopcameraOverlay.durationMs / 1000 || 8;
+      const times = [0], scales = [1];
+      starts.forEach((s, k) => { times.push(s / 8, (s + dur) / 8); scales.push(Math.pow(R, k), Math.pow(R, k + 1)); });
+      times.push(1); scales.push(Math.pow(R, LEVELS - 1));
+      const offset = P.timeOffsetSeconds;
+      // Stills seek the same curve: shift the keyframe times by the requested offset.
+      const shifted = times.map((x) => Math.min(1, Math.max(0, (x * 8 - offset) / Math.max(total, 1e-6))));
+      if (offset > 0) {
+        const at = (u) => { for (let i = 1; i < times.length; i++) if (u <= times[i] * 8) { const a = times[i - 1] * 8, b = times[i] * 8; const x = b > a ? (u - a) / (b - a) : 1; const e = x * x * (3 - 2 * x); return scales[i - 1] + (scales[i] - scales[i - 1]) * e; } return scales.at(-1); };
+        world.style.transform = `scale(${at(offset)})`;
+      } else {
+        // One easing per segment, as in the still curve above: a single easing warps the whole timeline, so the zooms drift off the level schedule that the bands and counter follow.
+        SlopcameraOverlay.trackAnimation(animate(world, { scale: scales }, { duration: total, times: shifted, ease: scales.slice(1).map(() => "easeInOut") }));
+      }
+      const title = document.querySelector(".title");
+      const hud = document.querySelector(".hud .n"), hudK = document.querySelector(".hud .k");
+      const counts = [8192, 6144, 4096, 2048, 512, 0];
+      const bandEls = [...document.querySelectorAll(".band")];
+      const smooth = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+      SlopcameraOverlay.onFrame(({ timeMs }) => {
+        const t = offset + timeMs / 1000;
+        let level = 0;
+        starts.forEach((s, k) => { if (t >= s + dur * 0.5) level = k + 1; });
+        // A level's band fades in the first part of its zoom, while it is still whole on screen, so no cropped line lingers over the level below.
+        starts.forEach((s, k) => { bandEls[k].style.opacity = String(1 - smooth(s, s + dur * 0.3, t)); });
+        hud.textContent = counts[level].toLocaleString("en-US");
+        hudK.textContent = level === LEVELS - 1 ? "the first line" : "tokens above";
+        // The title leaves before the first band scrolls up through its block; a dimmed title under passing tokens read as a collision.
+        title.style.opacity = String(1 - smooth(0.8, 1.6, t));
+      });
+    </script>
+  </body>
+</html>

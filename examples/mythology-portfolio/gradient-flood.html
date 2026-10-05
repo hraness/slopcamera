@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Gradient Flood</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      *, *::before, *::after { box-sizing: border-box; }
+      .sketch { display: block; width: 100%; height: 100%; contain: strict; }
+    </style>
+    <script type="importmap">{"imports":{"p5":"/.slopcamera-overlay/libraries/78062f4b654ec2d7eab8391cb9f960720e90a379789974f27b6fc4aed94fae21.mjs"}}</script>
+  </head>
+  <body>
+    <canvas class="sketch" aria-label="An ink sketch of hills drowned by rising gradient water while a small ark carrying a checkpoint rides the crest"></canvas>
+    <script type="module">
+      import p5 from "p5";
+
+      p5.disableFriendlyErrors = true;
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const BOIL = Object.fromEntries(Object.entries(P.boil).map(([key, value]) => [key, value.split(",").map(Number)]));
+      const styleFrame = (timeMs) => {
+        const frame = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return { frame, t: EXPOSURE[frame] / 1e6, boil: (channel) => BOIL[channel][frame] };
+      };
+      const pal = P.palette;
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+      // Keyed per-vertex jitter from the per-exposure SDK variation: identical on re-render.
+      const jitter = (seedValue, i) => { const s = Math.sin(i * 12.9898 + seedValue * 78.233) * 43758.5453; return s - Math.floor(s) - 0.5; };
+      const W = SlopcameraOverlay.width, H = SlopcameraOverlay.height, U = W / 1920;
+      const rnd = (key) => SlopcameraOverlay.randomFor("flood:" + key);
+
+      const ridges = [
+        { base: 0.60, amp: 0.34, freq: 1.3, phase: 0.4, weight: 2.2 },
+        { base: 0.70, amp: 0.11, freq: 2.1, phase: 2.2, weight: 2.6 },
+        { base: 0.80, amp: 0.07, freq: 3.4, phase: 4.1, weight: 3.0 },
+      ];
+      const ridgeY = (r, x) => H * (r.base - r.amp * (0.55 + 0.45 * Math.sin(x / W * Math.PI * r.freq + r.phase)) * (0.7 + 0.3 * Math.cos(x / W * 5.3 + r.phase * 2)));
+      const trees = Array.from({ length: 16 }, (_, i) => {
+        const r = ridges[1 + (i % 2)];
+        const x = W * (0.06 + 0.88 * rnd("tree" + i));
+        return { x, y: ridgeY(r, x), size: (18 + rnd("ts" + i) * 22) * U };
+      });
+
+      let currentFrame = { timeMs: 0 };
+      let sketch = null;
+      const initialization = new Promise((resolve, reject) => {
+        sketch = new p5((p) => {
+          let startupDraw = true, settled = false;
+          const redraw = p.redraw.bind(p);
+          p.redraw = async (...args) => {
+            try { await redraw(...args); if (!settled) { settled = true; resolve(); } } catch (error) { reject(error); throw error; }
+          };
+          p.setup = () => {
+            p.createCanvas(W, H, p.P2D, document.querySelector(".sketch"), { alpha: true, colorSpace: "srgb", desynchronized: false });
+            p.pixelDensity(devicePixelRatio);
+            p.noLoop();
+          };
+          const wobblyLine = (points, amount, seedValue, offset = 0) => {
+            p.beginShape();
+            points.forEach(([x, y], i) => p.vertex(x + jitter(seedValue, i * 2 + offset) * amount, y + jitter(seedValue, i * 2 + 1 + offset) * amount));
+            p.endShape();
+          };
+          p.draw = () => {
+            if (startupDraw) { startupDraw = false; return; }
+            const { t, boil } = styleFrame(currentFrame.timeMs);
+            const wob = boil("wobble"), str = boil("stroke"), arkB = boil("ark");
+            p.clear();
+            p.background(pal.background);
+            p.noFill();
+            p.strokeCap(p.ROUND); p.strokeJoin(p.ROUND);
+            // Rain: long diagonal hatching that thickens as the learning rate is raised.
+            const storm = smooth(0.2, 2.0, t);
+            p.stroke(pal.secondary); p.strokeWeight(1.2 * U);
+            for (let k = 0; k < 150 * storm; k++) {
+              const rx = (rnd("rx" + k) * (W + 300 * U) + t * 520 * U * (0.8 + 0.4 * rnd("rs" + k))) % (W + 300 * U) - 150 * U;
+              const ry = ((rnd("ry" + k) * H * 0.8 + t * 900 * U) % (H * 0.8)) + jitter(str, k) * 8 * U;
+              const len = (40 + 50 * rnd("rl" + k)) * U;
+              p.line(rx, ry, rx - len * 0.35, ry + len);
+            }
+            // The storm cloud: stacked hatched arcs over the far ridge.
+            p.stroke(pal.ink); p.strokeWeight(1.6 * U); p.fill(pal.background);
+            for (let k = 0; k < 7; k++) {
+              const cx = W * (0.52 + k * 0.065) + jitter(wob, k + 300) * 4 * U, cy = H * (0.2 + 0.03 * Math.sin(k * 1.7)) - 20 * U * storm;
+              p.ellipse(cx, cy, (150 + 40 * Math.sin(k * 2.3)) * U, (86 + 20 * Math.cos(k)) * U);
+            }
+            p.noFill(); p.stroke(pal.primary); p.strokeWeight(1 * U);
+            for (let k = 0; k < 28; k++) {
+              const x = W * 0.5 + k * 16 * U + jitter(str, k + 600) * 3 * U;
+              p.line(x, H * 0.235, x - 14 * U, H * 0.27);
+            }
+            p.noStroke(); p.fill(pal.accent); p.textFont("Georgia"); p.textStyle(p.ITALIC); p.textSize(34 * U);
+            p.text("lr = " + (0.001 * Math.pow(10, 3 * smooth(0.4, 3.0, t))).toFixed(3), W * 0.74, H * 0.13);
+            p.noFill();
+            // Hills: confident contours plus sparse searching lines and hatching.
+            ridges.forEach((r, k) => {
+              const pts = [];
+              for (let x = -20 * U; x <= W + 20 * U; x += 24 * U) pts.push([x, ridgeY(r, x)]);
+              p.stroke(pal.ink); p.strokeWeight(r.weight * U);
+              wobblyLine(pts, 2.2 * U, wob + k, k * 400);
+              p.stroke(pal.primary); p.strokeWeight(1.1 * U);
+              wobblyLine(pts.map(([x, y]) => [x, y + 7 * U]), 5 * U, str + k, k * 400 + 200);
+              p.strokeWeight(1 * U);
+              for (let x = 0; x < W; x += 34 * U) {
+                const y = ridgeY(r, x), slope = ridgeY(r, x + 8 * U) - y;
+                if (slope < 0) continue;
+                const j = jitter(str, x + k * 91) * 6 * U;
+                p.line(x + j, y + 14 * U, x - 16 * U + j, y + 44 * U + slope * 0.5);
+              }
+            });
+            // Small features stand on the lower ridges until the water reaches them.
+            trees.forEach((tree, i) => {
+              p.stroke(pal.ink); p.strokeWeight(1.8 * U);
+              const s = tree.size;
+              p.line(tree.x, tree.y, tree.x + jitter(wob, i) * 3 * U, tree.y - s * 1.6);
+              p.ellipse(tree.x + jitter(str, i) * 4 * U, tree.y - s * 1.9, s * 1.1 + jitter(wob, i + 50) * 5 * U, s * 1.25);
+            });
+            // The flood: a crest line, parallel hatching, and gradient arrows in the current.
+            const rise = smooth(1.4, 6.4, t);
+            const level = H * (0.93 - 0.36 * rise);
+            const crest = (x) => level + Math.sin(x / W * 11 + t * 2.2) * 9 * U + Math.sin(x / W * 23 - t * 3.1) * 4 * U;
+            p.noStroke(); p.fill(pal.background);
+            p.beginShape();
+            p.vertex(-20 * U, H + 20);
+            for (let x = -20 * U; x <= W + 20 * U; x += 20 * U) p.vertex(x, crest(x));
+            p.vertex(W + 20 * U, H + 20);
+            p.endShape(p.CLOSE);
+            p.noFill();
+            p.stroke(pal.ink); p.strokeWeight(3.2 * U);
+            const crestPts = [];
+            for (let x = -20 * U; x <= W + 20 * U; x += 20 * U) crestPts.push([x, crest(x)]);
+            wobblyLine(crestPts, 2.4 * U, wob + 9, 900);
+            p.stroke(pal.primary); p.strokeWeight(1.2 * U);
+            for (let row = 1; row < 14; row++) {
+              const y0 = level + row * 26 * U;
+              if (y0 > H) break;
+              const pts = [];
+              for (let x = -20 * U; x <= W + 20 * U; x += 40 * U) pts.push([x, y0 + Math.sin(x / W * 9 + row + t * 1.6) * 6 * U]);
+              wobblyLine(pts, 3 * U, str + row, 1200 + row * 60);
+            }
+            p.stroke(pal.accent); p.strokeWeight(2 * U);
+            for (let a = 0; a < 9; a++) {
+              const ax = ((a * 233 * U + t * 180 * U) % (W + 200 * U)) - 100 * U;
+              const ay = level + (60 + (a % 3) * 70) * U;
+              if (ay > H - 20 * U) continue;
+              const len = 46 * U, j = jitter(str, a + 700) * 3 * U;
+              p.line(ax, ay + j, ax + len, ay - j);
+              p.line(ax + len, ay - j, ax + len - 12 * U, ay - j - 8 * U);
+              p.line(ax + len, ay - j, ax + len - 12 * U, ay - j + 8 * U);
+            }
+            // The ark rides the crest with a sealed checkpoint aboard.
+            const ax = W * (0.18 + 0.44 * smooth(0.5, 7.5, t));
+            const ay = crest(ax) - 4 * U;
+            const tilt = Math.atan2(crest(ax + 30 * U) - crest(ax - 30 * U), 60 * U);
+            p.push(); p.translate(ax, ay); p.rotate(tilt + (arkB - 0.5) * 0.03);
+            p.stroke(pal.ink); p.strokeWeight(3 * U); p.fill(pal.paper);
+            p.beginShape();
+            p.vertex(-70 * U, -18 * U); p.vertex(70 * U, -18 * U); p.vertex(48 * U, 16 * U); p.vertex(-50 * U, 16 * U);
+            p.endShape(p.CLOSE);
+            p.fill(pal.paper); p.rect(-24 * U, -70 * U, 48 * U, 48 * U, 3 * U);
+            p.fill(pal.accent); p.noStroke(); p.rect(-14 * U, -70 * U, 28 * U, 16 * U);
+            p.stroke(pal.ink); p.strokeWeight(2 * U); p.noFill(); p.rect(-15 * U, -44 * U, 30 * U, 18 * U);
+            p.line(-2 * U, -18 * U, -2 * U, -22 * U);
+            p.pop();
+            // Caption and hand-lettered title, legible at 1080p.
+            p.noStroke(); p.fill(pal.ink);
+            p.textFont("Georgia"); p.textStyle(p.ITALIC); p.textSize(64 * U);
+            p.text("The Gradient Flood", 104 * U, 150 * U);
+            p.textStyle(p.NORMAL); p.textSize(20 * U);
+            p.text("MYTH IV  ·  FLOOD  ·  THE LEARNING RATE WAS SET TOO HIGH", 106 * U, 196 * U);
+          };
+        });
+      });
+      SlopcameraOverlay.ready(initialization);
+      SlopcameraOverlay.onFrame(async (frame) => { currentFrame = frame; await initialization; await sketch.redraw(); });
+      addEventListener("pagehide", () => { sketch?.remove(); }, { once: true });
+    </script>
+  </body>
+</html>
