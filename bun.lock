@@ -31,7 +31,7 @@
       "devDependencies": {
         "@antithesishq/bombadil": "0.7.2",
         "@eslint/js": "^9.39.2",
-        "@hraness/direct": "github:hraness/direct#v0.7.20",
+        "@hraness/direct": "https://github.com/hraness/direct/releases/download/v0.7.29/hraness-direct-0.7.29.tgz",
         "@native-sdk/cli": "0.5.3",
         "@types/bun": "^1.3.14",
         "@types/json-schema": "^7.0.15",
@@ -71,7 +71,7 @@
       },
       "devDependencies": {
         "@babel/core": "7.29.7",
-        "@hraness/direct": "github:hraness/direct#f19d0fdac747e4359d6e2f915537cc826269b2d7",
+        "@hraness/direct": "https://github.com/hraness/direct/releases/download/v0.7.29/hraness-direct-0.7.29.tgz",
         "@stylexjs/babel-plugin": "0.19.0",
         "@stylexjs/stylex": "0.19.0",
         "@types/babel__core": "7.20.5",
@@ -207,7 +207,7 @@
 
     "@hraness/desktop-foundation": ["@hraness/desktop-foundation@https://github.com/hraness/desktop-foundation/releases/download/v0.9.0/hraness-desktop-foundation-0.9.0.tgz", { "bin": { "companion": "./dist/src/cli.js" } }, "sha512-+TlrHoM1wZ2rE4p3u1CIAz1+aGKPZhmiNOKjEKOYPZmTx8BFSyFLPeL06tupfX2WxcRzRZ3QwmOsyjlgSu/p1Q=="],
 
-    "@hraness/direct": ["@hraness/direct@github:hraness/direct#af954e7", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "hraness-direct-af954e7", "sha512-q1iauLS/UaP0gLknME4Roca46yosjsc2oQ3ULrH1cxiUBwbfRMREf0BeiQtiKJGPOkPsHNXUEJM6I68IgRqm/Q=="],
+    "@hraness/direct": ["@hraness/direct@https://github.com/hraness/direct/releases/download/v0.7.29/hraness-direct-0.7.29.tgz", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "sha512-AS4pfDeoLCMM9ZrZOMhoSA8QxCd0+Xeuj6J2D6/ZbljLOtxK937IGahzMclRvo/kOHw3YqKMLVA88JsCv9AbpQ=="],
 
     "@hraness/iconplace": ["@hraness/iconplace@0.1.0", "", { "bin": { "iconplace": "bin/iconplace.mjs" } }, "sha512-ULepQla+5B37ULLSA0tMf48q/C7PyU8r3z1iOa4DNOHw2iJ/U+xod+6YUzgRj5ub7Nzd+sAIu6hKwk3HrBJy4g=="],
 
@@ -1328,8 +1328,6 @@
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
     "@eslint/eslintrc/ajv": ["ajv@6.15.0", "", { "dependencies": { "fast-deep-equal": "^3.1.1", "fast-json-stable-stringify": "^2.0.0", "json-schema-traverse": "^0.4.1", "uri-js": "^4.2.2" } }, "sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw=="],
-
-    "@hraness/slopcamera-web/@hraness/direct": ["@hraness/direct@github:hraness/direct#f19d0fd", { "peerDependencies": { "@antithesishq/bombadil": "0.7.2", "agent-browser": "0.32.3", "effect": "3.22.1", "react": ">=18 <20" }, "optionalPeers": ["@antithesishq/bombadil", "agent-browser", "effect", "react"] }, "hraness-direct-f19d0fd", "sha512-rRzriJYSuIobCJFRWNK2Ye4esZYRkfyamsQpIndWf/8Wa0G16f7MQ/bmKr5XFhOYx6MLc8xzkRgfqZdZ8mTAxQ=="],
 
     "@hraness/slopcamera-web/@types/react": ["@types/react@19.2.14", "", { "dependencies": { "csstype": "^3.2.2" } }, "sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w=="],
 
