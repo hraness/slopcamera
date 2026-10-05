@@ -152,7 +152,7 @@ Discover the installed server's tools after restarting the client. Older release
 
 `slopcamera.image.generate` uses the server process's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN`; supply it through the client's environment or secret configuration. A direct Gateway key needs no Vercel CLI. Vectorization needs no credential and no network, and on Windows that profile deliberately fails closed. Image icon and gallery operations also use the Gateway credential and can make paid requests. Scene inspection and planning run locally against the workspace.
 
-The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full set of local commands, install the Agent Skill for [Codex](/docs/tutorials/codex) or [Claude Code](/docs/tutorials/claude-code), or give another agent the [portable skill or plain CLI](/docs/tutorials/other-agents).
+The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full local surface, install the Agent Skill for [Codex](/docs/tutorials/codex) or [Claude Code](/docs/tutorials/claude-code), or give another agent the [portable skill or plain CLI](/docs/tutorials/other-agents).
 
 - [Create and revise your first diagram](/docs/tutorials/first-diagram) explains the five artifacts `render_diagram` writes.
 - [SDK surfaces](/docs/reference/sdk) covers the fixed registry and its typed inputs.
