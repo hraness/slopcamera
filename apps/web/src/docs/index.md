@@ -26,8 +26,8 @@ Then give your coding agent the matching guidance:
 
 - [Claude Code](/docs/tutorials/claude-code): install the release and the Agent Skill so Claude Code can create visual media.
 - [Codex](/docs/tutorials/codex): install the release and the Agent Skill inside a repository.
-- [MCP clients](/docs/tutorials/mcp): expose fixed tools for diagrams, images, and scene inspection and planning to Cursor, Claude Desktop, and other MCP-capable clients.
-- [Other agents](/docs/tutorials/other-agents): the portable skill target and plain CLI access.
+- [MCP clients](/docs/tutorials/mcp): add the fixed tools for diagrams, images, and scene inspection and planning to Claude Code, Codex, Cursor, or Claude Desktop.
+- [Cursor, Devin CLI, and other agents](/docs/tutorials/other-agents): the skill folders Cursor and Devin CLI load, the `/slopcamera` command, and plain CLI access.
 
 ## Complete a task
 
@@ -70,7 +70,7 @@ Then give your coding agent the matching guidance:
 - [Choose an interface](/docs/explanation/choose-an-interface): compare the Agent Skill, CLI, SDK, MCP server, and hosted adapter.
 - [How SlopCamera works: sources, renders, and projects](/docs/explanation/architecture): what stays editable after a render, what an operation record shows, and which work runs locally or in the cloud.
 - [Why SlopCamera](/docs/explanation/why-slopcamera): why the agent writes a short source file and reuses installed techniques instead of a loose toolchain.
-- [Agent cost study](/docs/explanation/token-benchmark): methods and reports from a controlled study of first-render and revision costs.
+- [Does installing SlopCamera cut Claude Code token costs?](/docs/explanation/token-benchmark): a controlled study of four media tasks, with its methods, small-sample limits, and raw reports.
 - [Extend SlopCamera](/docs/explanation/extending): workflows, declarative graphs, the SDK, MCP, and separately installed native engines.
 - [Choose an HTML authoring surface](/docs/explanation/html-authoring): why DOM, vector, Three.js, and explicit GPU profiles serve different jobs.
 

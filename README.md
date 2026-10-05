@@ -56,7 +56,7 @@ agent session so it loads the skill, then ask for a result:
 
 Setup guides: [Claude Code](https://slopcamera.com/docs/tutorials/claude-code) ·
 [Codex](https://slopcamera.com/docs/tutorials/codex) ·
-[Other agents](https://slopcamera.com/docs/tutorials/other-agents) ·
+[Cursor, Devin CLI, and other agents](https://slopcamera.com/docs/tutorials/other-agents) ·
 [MCP clients](https://slopcamera.com/docs/tutorials/mcp). Native engines such as
 Blender install separately; the
 [capability reference](docs/reference/capabilities.md) lists what each

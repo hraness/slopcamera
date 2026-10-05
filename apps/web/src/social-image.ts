@@ -96,7 +96,10 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
   "docs/tutorials/claude-code.html": { description: "Ask for a first diagram and short video." },
   "docs/tutorials/codex.html": { description: "Ask for a diagram and video in a repository." },
   "docs/tutorials/mcp.html": { description: "Fixed tools for diagrams, images, and scenes." },
-  "docs/tutorials/other-agents.html": { description: "Use the portable Agent Skill or the plain CLI." },
+  "docs/tutorials/other-agents.html": {
+    headline: "Set up Cursor, Devin CLI, and other agents",
+    description: "Skill folders, the /slopcamera command, and MCP paths.",
+  },
   "docs/how-to/direct-a-film.html": { description: "Brief, picture, movement, sound, and revision." },
   "docs/how-to/remix-the-showcase.html": { description: "Open the sources. Direct your own version." },
   "docs/how-to/install-from-source.html": { description: "Install locked dependencies, then build the CLI." },
@@ -150,7 +153,10 @@ export const socialCardCopy: Readonly<Record<string, Readonly<{ headline?: strin
     description: "HTML video versus several engines.",
   },
   "docs/explanation/remotion-alternatives-for-coding-agents.html": { description: "Tools to use instead of or beside Remotion." },
-  "docs/explanation/token-benchmark.html": { description: "Methods and reports from a controlled study of first-render and revision costs." },
+  "docs/explanation/token-benchmark.html": {
+    headline: "Token costs with and without SlopCamera",
+    description: "Claude Code cost more on all four media tasks, in a small sample.",
+  },
   "docs/explanation/html-authoring.html": { description: "DOM, vector, Three.js, and GPU profiles." },
   "docs/explanation/use-cases.html": { description: "What people make, and where it is the wrong tool." },
   "docs/explanation/choose-an-interface.html": { description: "Agent Skill, CLI, SDK, MCP, or hosted adapter." },

@@ -160,8 +160,8 @@ Paying to support SlopCamera's development is optional and unlocks no features. 
 
 - [Claude Code](https://slopcamera.com/docs/tutorials/claude-code.md): Install the release and Agent Skill for Claude Code
 - [Codex](https://slopcamera.com/docs/tutorials/codex.md): Install the release and Agent Skill for Codex
-- [MCP clients](https://slopcamera.com/docs/tutorials/mcp.md): Expose the fixed diagram, image, and scene toolset
-- [Other agents](https://slopcamera.com/docs/tutorials/other-agents.md): Portable skill target and plain CLI access
+- [MCP clients](https://slopcamera.com/docs/tutorials/mcp.md): Add the fixed diagram, image, and scene toolset to Claude Code, Codex, Cursor, or Claude Desktop
+- [Cursor, Devin CLI, and other agents](https://slopcamera.com/docs/tutorials/other-agents.md): Skill folders Cursor and Devin CLI load, the /slopcamera command, and plain CLI access
 
 ## Choose a task
 
@@ -206,7 +206,7 @@ ${blogPostLinks}
 - [SlopCamera vs Remotion](https://slopcamera.com/docs/explanation/slopcamera-vs-remotion.md): React video components compared with installed techniques and source files the agent revises
 - [SlopCamera vs HyperFrames](https://slopcamera.com/docs/explanation/slopcamera-vs-hyperframes.md): HTML-to-video rendering compared with a wider local media studio
 - [Remotion alternatives for coding agents](https://slopcamera.com/docs/explanation/remotion-alternatives-for-coding-agents.md): Tools a coding agent can drive to make video, and when each fits
-- [Agent cost study](https://slopcamera.com/docs/explanation/token-benchmark.md): Methods and reports from a controlled study of first-render and revision costs
+- [Does installing SlopCamera cut Claude Code token costs?](https://slopcamera.com/docs/explanation/token-benchmark.md): A controlled study of four media tasks in which cost was higher with SlopCamera installed, from a small sample
 - [Extending](https://slopcamera.com/docs/explanation/extending.md): Workflows, graphs, SDK, MCP, and native engines
 - [HTML authoring](https://slopcamera.com/docs/explanation/html-authoring.md): DOM, vector, Three.js, and GPU surfaces
 - [Tutorials](https://slopcamera.com/docs/index.md): First diagram, first animation, first native film, and agent setup
