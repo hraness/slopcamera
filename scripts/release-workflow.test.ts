@@ -172,6 +172,16 @@ function requireCompleteSourceCoverage(workflow: string): void {
     }
     priorWorkflow = priorWorkflow.replace(scan, "")
   }
+  const apiSource = priorWorkflow.match(/\n {2}api:\n[\s\S]*?(?=\n {2}[a-z]+:\n|$)/u)?.[0]
+  const apiNode = '      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n        with:\n          node-version: "24.18.1"\n          package-manager-cache: false\n'
+  if (apiSource === undefined || apiSource.split(apiNode).length !== 2
+    || apiSource.indexOf(apiNode) > apiSource.indexOf("run: bun run check:api")) {
+    throw new Error("API runtime proof requires pinned Node before the complete API phase")
+  }
+  // Reviewed 2026-10-05: add the site's already pinned Node runtime to the
+  // API job for emitted-JS parity. Require its exact pin/order above, then
+  // remove only this additive step to preserve the existing coverage digest.
+  priorWorkflow = priorWorkflow.replace(apiSource, apiSource.replace(apiNode, ""))
   // This additive comparison preserves every prior job, condition, command,
   // deadline and failure boundary. A future update needs a coverage review.
   // Reviewed 2026-09-24: the unconditional `copy` job (public copy against
@@ -260,6 +270,10 @@ test("complete source CI preserves every aggregate phase and adds post-build sca
     "bun run verify:current",
   ])
   expect(() => requireCompleteSourceCoverage(workflow)).not.toThrow()
+  expect(() => requireCompleteSourceCoverage(workflow.replace(
+    /(?<= {2}api:[\s\S]*?) {6}- uses: actions\/setup-node@[^\n]+\n {8}with:\n {10}node-version: "24\.18\.1"\n {10}package-manager-cache: false\n/u,
+    "",
+  ))).toThrow("API runtime proof requires pinned Node")
 
   const sdkScan = "      - name: Check generated SDK standalone boundary\n        run: bun run check:standalone\n"
   expect(() => requireCompleteSourceCoverage(workflow.replace(sdkScan, ""))).toThrow("after its complete phase")

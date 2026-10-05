@@ -2,7 +2,9 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023"
+    ],
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
@@ -16,7 +18,14 @@
     "noUnusedParameters": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ],
+    "allowJs": true,
+    "checkJs": true
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../../api/**/*.js"
+  ]
 }

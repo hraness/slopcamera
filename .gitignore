@@ -23,3 +23,6 @@ examples/html/launch-film/node_modules/
 # Worker scratch and vendored context
 .xcb-*
 tmp-run/
+
+# Generated shared implementation for the hosted API functions.
+.api-build/

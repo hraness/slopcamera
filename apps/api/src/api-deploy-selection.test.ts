@@ -128,7 +128,7 @@ function assertLocalImportClosureOutsideWeb(directory: string, entries: readonly
 test("API local module and static asset imports stay outside the skipped website tree", () => {
   const files = spawnSync("git", ["ls-files", "api"], { cwd: root, encoding: "utf8" })
   expect(files.status).toBe(0)
-  const entries = files.stdout.trim().split("\n").filter((path) => path.endsWith(".ts")).map((path) => join(root, path))
+  const entries = files.stdout.trim().split("\n").filter((path) => /\.[jt]s$/u.test(path)).map((path) => join(root, path))
   expect(entries.length).toBeGreaterThan(0)
   expect(assertLocalImportClosureOutsideWeb(root, entries).size).toBeGreaterThan(10)
 })

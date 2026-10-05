@@ -274,7 +274,8 @@
     "typecheck:objects": "tsc --noEmit -p apps/objects/tsconfig.json",
     "lint:api": "eslint apps/api/src api apps/objects/src",
     "test:api": "bun test ./apps/api/src",
-    "check:api": "bun run typecheck:api && bun run typecheck:objects && bun run lint:api && bun run test:api"
+    "check:api": "bun run build:api && bun run typecheck:objects && bun run lint:api && bun run test:api",
+    "build:api": "bun run scripts/build-api.ts && bun run typecheck:api"
   },
   "dependencies": {
     "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",

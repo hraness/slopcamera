@@ -1,10 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "ignoreCommand": "bun scripts/api-deploy-selection.ts",
-  "buildCommand": "echo 'slopcamera-api: functions only'",
+  "buildCommand": "bun run build:api",
   "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 60
+    "api/**/*.js": {
+      "maxDuration": 60,
+      "includeFiles": ".api-build/*.{otf,woff2}"
     }
   },
   "rewrites": [
