@@ -165,7 +165,7 @@ export const docPages: readonly DocsPage[] = [
     description: "Video and graphics tools a coding agent can use instead of or beside Remotion in 2026, grouped by job, with licenses and trade-offs.",
     section: "explanation", modified: "2026-09-28" },
   { slug: "explanation/token-benchmark", title: "Does installing SlopCamera cut Claude Code token costs? A controlled study",
-    description: "On four media tasks, Claude Code cost 1.14 to 2.69 times more with SlopCamera installed. Two sessions per task and condition make this a small sample.",
+    description: "On four media tasks, Claude Code cost 1.14 to 2.69 times as much with SlopCamera installed. Two sessions per task and condition make this a small sample.",
     section: "explanation", modified: "2026-09-30" },
   { slug: "explanation/extending", title: "Extend SlopCamera",
     description: "Workflows, declarative graphs, the SDK, MCP, and separately installed native engines.",

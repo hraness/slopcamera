@@ -55,7 +55,7 @@ codex mcp list
 codex mcp get slopcamera
 ```
 
-`codex mcp list` prints the saved command and `enabled` without starting the server, so a wrong executable path looks the same as a working one. In the `codex` terminal interface, `/mcp` lists the servers that started.
+`codex mcp list` prints the saved command and `enabled` without starting the server, so a wrong executable path looks the same as a working one. In the `codex` terminal interface, `/mcp` lists the MCP servers and tools Codex can call in that session.
 
 ### Cursor and Claude Desktop
 
@@ -74,7 +74,7 @@ Claude Desktop's `claude_desktop_config.json` and Cursor's `mcp.json` accept the
 
 Cursor reads `~/.cursor/mcp.json`, or `.cursor/mcp.json` inside one project. Restart Claude Desktop or Cursor after editing the file. For Devin CLI, see [Set up SlopCamera for Cursor, Devin CLI, and other coding agents](/docs/tutorials/other-agents).
 
-The Claude Code and Codex commands above were checked on 4 October 2026 with SlopCamera 3.10.3, Claude Code 2.1.287, and Codex CLI 0.160.0. Each one saved the server, `claude mcp list` connected to it, and the server listed 21 tools.
+The Claude Code and Codex commands above follow the MCP documentation for [Claude Code](https://code.claude.com/docs/en/mcp) and [Codex](https://developers.openai.com/codex/mcp), and were checked on 4 October 2026 with SlopCamera 3.10.3, Claude Code 2.1.287, and Codex CLI 0.160.0. Both commands saved the server, and `claude mcp list` connected to it. A direct request to the server listed its 21 tools. No Claude Code or Codex session called a tool.
 
 The server speaks newline-delimited JSON-RPC (protocol version `2025-11-25`, server name `hraness-slopcamera`). Protocol messages are the only output on stdout; diagnostics go to stderr.
 
@@ -152,7 +152,7 @@ Discover the installed server's tools after restarting the client. Older release
 
 `slopcamera.image.generate` uses the server process's `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN`; supply it through the client's environment or secret configuration. A direct Gateway key needs no Vercel CLI. Vectorization needs no credential and no network, and on Windows that profile deliberately fails closed. Image icon and gallery operations also use the Gateway credential and can make paid requests. Scene inspection and planning run locally against the workspace.
 
-The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full local surface, install the Agent Skill for [Codex](/docs/tutorials/codex) or [Claude Code](/docs/tutorials/claude-code), or give another agent the [portable skill or plain CLI](/docs/tutorials/other-agents).
+The server is deliberately a subset: it exposes no recording, project, studio, or workflow command. For the full set of local commands, install the Agent Skill for [Codex](/docs/tutorials/codex) or [Claude Code](/docs/tutorials/claude-code), or give another agent the [portable skill or plain CLI](/docs/tutorials/other-agents).
 
 - [Create and revise your first diagram](/docs/tutorials/first-diagram) explains the five artifacts `render_diagram` writes.
 - [SDK surfaces](/docs/reference/sdk) covers the fixed registry and its typed inputs.

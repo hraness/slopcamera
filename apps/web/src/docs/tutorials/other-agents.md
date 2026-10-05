@@ -24,7 +24,7 @@ Both agents can also load the skill on their own when a request matches its desc
 
 Keep one of these skill folders. With both `~/.agents/skills/slopcamera` and `~/.claude/skills/slopcamera` present, Devin CLI lists two copies, `/agents:slopcamera` and `/claude:slopcamera`. If you also use Claude Code, install only with `{{SKILL_INSTALL_COMMAND_CLAUDE}}`; Devin CLI and Cursor read that folder too.
 
-The Devin CLI column was checked on 4 October 2026 with Devin CLI 3000.11.3 and SlopCamera 3.10.3: `devin skills list` showed `/slopcamera` from each folder in the table and did not list `~/.codex/skills`. The Cursor column comes from Cursor's [skills](https://cursor.com/docs/skills) and [MCP](https://cursor.com/docs/context/mcp) documentation, read the same day; this setup was not tested in Cursor. Devin's own reference is its [skills overview](https://docs.devin.ai/cli/extensibility/skills/overview).
+The Devin CLI folders and MCP commands were checked on 4 October 2026 with Devin CLI 3000.11.3 and SlopCamera 3.10.3: `devin skills list` showed `/slopcamera` from each folder in the table but not from `~/.codex/skills`, and `devin mcp list` showed the added server. No Devin CLI session ran the skill. Devin documents its own folders in its [skills overview](https://docs.devin.ai/cli/extensibility/skills/overview) and the Claude Code and Cursor files it reads in [configuration import](https://docs.devin.ai/cli/reference/configuration/read-config-from). The Cursor column comes from Cursor's [skills](https://cursor.com/docs/skills) and [MCP](https://cursor.com/docs/context/mcp) documentation, read the same day; this setup was not tested in Cursor.
 
 ## Drive the CLI directly
 
