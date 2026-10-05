@@ -124,7 +124,7 @@ export function headingSize(width: number, level: 1 | 2): number {
 const near = (actual: string | number, expected: number, label: string, tolerance = .1) =>
   assert.ok(Math.abs(Number.parseFloat(String(actual)) - expected) <= tolerance, `${label}: ${actual} != ${expected}`)
 export function normalizeMainOptIn(dom: string): string {
-  const current = '<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">'
+  const current = '<main data-hraness-landscape="page" data-hraness-marketing-preset="editorial" id="main" tabindex="-1">'
   assert.equal(dom.split(current).length, 2, "Exactly one reviewed main opt-in required")
   const hooks = [
     ['class="hraness-marketing-hero slopcamera-product-hero hraness-material-wall"', 'class="hraness-marketing-hero slopcamera-product-hero"', 1],

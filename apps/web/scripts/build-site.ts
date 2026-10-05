@@ -123,6 +123,18 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     path: below(root, wordmarkMaskPath),
     sha256: siteSha256(await bytesAt(wordmarkMaskPath, 2 * 1024 * 1024)),
   }
+  // The product landscape paints through CSS masks; its three luminance plates
+  // are admitted beside the wordmark as mask inputs.
+  const landscapeMaskPaths = [
+    "src/media/landscape-d14ba7a4ef3064d3a5e7b9f0809fb54f5abddf1c1ced4cbc688f81b06b9a9d57.webp",
+    "src/media/landscape-52365d3071a6e6a3b91c3f46ba2f0295f191b2f4cae6dc4db7d8b3c599675140.webp",
+    "src/media/landscape-502c55f65ed20976a3287c7a0011c6ba4b75ac3b4931750750b53cc06e031446.webp",
+  ].map(path => join(app, path))
+  const landscapeMasks = await Promise.all(landscapeMaskPaths.map(async path => ({
+    path: below(root, path),
+    sha256: siteSha256(await bytesAt(path, 8 * 1024 * 1024)),
+  })))
+  const masks = [wordmarkMask, ...landscapeMasks]
   const docsSourceDirectory = join(app, "src/docs")
   const docsSources = (await readdir(docsSourceDirectory, { recursive: true }))
     .filter((entry): entry is string => typeof entry === "string" && entry.endsWith(".md"))
@@ -134,11 +146,11 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     .sort()
   assert.deepEqual(blogSources, blogPosts.map(post => `${post.slug}.md`).sort(), "Blog sources must match the blog registry exactly")
   const sourcePaths = [...sourceFiles.map(path => join(app, path)), ...docsSources.map(path => join(docsSourceDirectory, path)),
-    ...blogSources.map(path => join(blogSourceDirectory, path)), wordmarkMaskPath,
+    ...blogSources.map(path => join(blogSourceDirectory, path)), wordmarkMaskPath, ...landscapeMaskPaths,
     ...[...presetPaths, "provenance.json"].map(path => join(presetRoot, path)), ...materialPaths.map(path => join(materialRoot, path)), ...packageInputs.map(item => item.path), fontCss,
     ...(root === app ? [] : [join(root, "package.json"), join(root, "bun.lock")])]
   const inputs = await Promise.all(sourcePaths.map(async path => ({
-    path: below(root, path), bytes: await bytesAt(path, 2 * 1024 * 1024),
+    path: below(root, path), bytes: await bytesAt(path, path.includes("/src/media/") ? 8 * 1024 * 1024 : 2 * 1024 * 1024),
   })))
   const docBodies: Record<string, string> = {}
   for (const input of inputs) {
@@ -158,7 +170,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
   }
   const snapshot = inputs.map(({ path, bytes }) => ({ path, bytes: bytes.byteLength, sha256: siteSha256(bytes) }))
   const fingerprint = siteSha256(canonicalJson({
-    assets, bun: Bun.version, compilerSha256, fonts, images, inputs: snapshot, marketingSourceCommit: preset.sourceCommit, masks: [wordmarkMask.sha256], materialSourceCommit: material.sourceCommit,
+    assets, bun: Bun.version, compilerSha256, fonts, images, inputs: snapshot, marketingSourceCommit: preset.sourceCommit, masks: masks.map(mask => mask.sha256), materialSourceCommit: material.sourceCommit,
     unionPolicySha256: stylexUnionPolicySha256, vite: viteVersion,
   }))
   const finalCssPath = `assets/site-${fingerprint}.css`
@@ -178,7 +190,7 @@ export async function buildSite(appDirectory: string, assets: SiteAssets): Promi
     const foundation = snapshotSiteFoundation(await viteBuild({
       base: "./", configFile: false, envFile: false, mode: "production",
       plugins: [stylexVite({ generation, graphId: "site-foundation", rootDirectory: root })],
-    }), fonts.map(font => font.sha256), join(app, "src/site-foundation.ts"), inspectSiteCssResources, images.map(image => image.sha256), [wordmarkMask.sha256])
+    }), fonts.map(font => font.sha256), join(app, "src/site-foundation.ts"), inspectSiteCssResources, images.map(image => image.sha256), masks.map(mask => mask.sha256))
     const renderer = await collectBunStylexGraph({
       build: { minify: true, sourcemap: "none" }, generation, graphId: "site-renderer", rootDirectory: root,
     })

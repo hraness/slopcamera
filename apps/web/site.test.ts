@@ -226,7 +226,8 @@ function assertCombinedSiteCssBudget(styles: string, foundation: string): number
   // design-kit 0.35.0 and footer 0.20.5 add shared product and consent controls:
   // The product studio, feature mockups, and pixel-art treatment add 7,390
   // bytes to the measured package output; retain 1,891 bytes of headroom.
-  if (bytes >= 526_000) throw new Error(`Combined site CSS exceeds its 526,000-byte budget: ${bytes}`)
+  // The product-landscape ruleset adds the shared mask layer to the union.
+  if (bytes >= 532_000) throw new Error(`Combined site CSS exceeds its 532,000-byte budget: ${bytes}`)
   return bytes
 }
 
@@ -302,15 +303,15 @@ test("the 404 status page snapshot is byte-exact design-kit v0.21.0 and its rout
 })
 
 test("combined site CSS budget counts both complete UTF-8 artifacts and rejects its exact ceiling", () => {
-  expect(assertCombinedSiteCssBudget("x".repeat(325_999), "x".repeat(200_000))).toBe(525_999)
-  expect(() => assertCombinedSiteCssBudget("x".repeat(326_000), "x".repeat(200_000)))
-    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(325_999), `${"x".repeat(200_000)}é`))
-    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526001")
-  expect(() => assertCombinedSiteCssBudget("x".repeat(526_000), ""))
-    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
-  expect(() => assertCombinedSiteCssBudget("", "x".repeat(526_000)))
-    .toThrow("Combined site CSS exceeds its 526,000-byte budget: 526000")
+  expect(assertCombinedSiteCssBudget("x".repeat(331_999), "x".repeat(200_000))).toBe(531_999)
+  expect(() => assertCombinedSiteCssBudget("x".repeat(332_000), "x".repeat(200_000)))
+    .toThrow("Combined site CSS exceeds its 532,000-byte budget: 532000")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(331_999), `${"x".repeat(200_000)}é`))
+    .toThrow("Combined site CSS exceeds its 532,000-byte budget: 532001")
+  expect(() => assertCombinedSiteCssBudget("x".repeat(532_000), ""))
+    .toThrow("Combined site CSS exceeds its 532,000-byte budget: 532000")
+  expect(() => assertCombinedSiteCssBudget("", "x".repeat(532_000)))
+    .toThrow("Combined site CSS exceeds its 532,000-byte budget: 532000")
 })
 
 function assertThemeBundleBudget(script: string): number {
@@ -1154,9 +1155,11 @@ describe("static SlopCamera site", () => {
     const artifacts = builtAssets.siteArtifacts
     const paths = artifacts.map(item => item.path)
     const blogDocuments = [blogIndexDocument, ...blogPosts.map(blogDocumentForPost)]
-    expect(artifacts).toHaveLength(17 + 2 + docPages.length + blogDocuments.length)
+    // Two shared SVG textures plus the three landscape mask plates emitted by
+    // the product-landscape ruleset.
+    expect(artifacts).toHaveLength(17 + 2 + 3 + docPages.length + blogDocuments.length)
     expect(paths).toEqual([...paths].sort())
-    expect(new Set(paths).size).toBe(17 + 2 + docPages.length + blogDocuments.length)
+    expect(new Set(paths).size).toBe(17 + 2 + 3 + docPages.length + blogDocuments.length)
     expect(paths.filter(path => path.endsWith(".html"))).toEqual([
       "404.html", ...docPages.map(docsDocumentForPage), ...blogDocuments, "index.html",
     ].sort())
@@ -1174,18 +1177,23 @@ describe("static SlopCamera site", () => {
     }
     const fonts = paths.filter(path => path.endsWith(".woff2"))
     expect(fonts).toHaveLength(14)
-    const images = paths.filter(path => path.endsWith(".svg"))
-    expect(images).toHaveLength(1)
+    const images = paths.filter(path => path.endsWith(".svg") || path.endsWith(".webp"))
+    expect(images).toHaveLength(4)
     for (const name of ["grain.svg", "cells.svg"]) {
       const expected = await readFile(join(appDirectory, "vendor/marketing-preset/marketing-assets", name))
       expect(images.some(path => artifacts.find(item => item.path === path)!.sha256 === new Bun.CryptoHasher("sha256").update(expected).digest("hex"))).toBe(false)
     }
-    // The third SVG is the foil wordmark mask: the canonical product mark bytes.
-    const markBytes = await readFile(join(appDirectory, "src/marks/slopcamera.svg"))
-    const markSha256 = new Bun.CryptoHasher("sha256").update(markBytes).digest("hex")
-    const masks = images.filter(path => artifacts.find(item => item.path === path)!.sha256 === markSha256)
+    // The SVG is the foil wordmark mask: the canonical product mark bytes. The
+    // three WebP plates are the product-landscape masks.
+    const maskSources = ["src/marks/slopcamera.svg",
+      "src/media/landscape-d14ba7a4ef3064d3a5e7b9f0809fb54f5abddf1c1ced4cbc688f81b06b9a9d57.webp",
+      "src/media/landscape-52365d3071a6e6a3b91c3f46ba2f0295f191b2f4cae6dc4db7d8b3c599675140.webp",
+      "src/media/landscape-502c55f65ed20976a3287c7a0011c6ba4b75ac3b4931750750b53cc06e031446.webp"]
+    const maskSha256s = new Set(await Promise.all(maskSources.map(async name =>
+      new Bun.CryptoHasher("sha256").update(await readFile(join(appDirectory, name))).digest("hex"))))
+    const masks = images.filter(path => maskSha256s.has(artifacts.find(item => item.path === path)!.sha256))
     const textures = images.filter(path => !masks.includes(path))
-    expect(masks).toHaveLength(1)
+    expect(masks).toHaveLength(4)
     expect(textures).toHaveLength(0)
     const foundation = await readBuilt(builtAssets.siteFoundationPath.slice(1))
     const union = await readBuilt(builtAssets.stylesPath.slice(1))
@@ -1519,7 +1527,7 @@ describe("static SlopCamera site", () => {
     expect(html).toContain('<a class="skip-link {{SITE_SKIP_CLASS}}" href="#main">')
     expect(html).toContain('<nav aria-label="Primary" class="{{SITE_NAVIGATION_CLASS}}">')
     expect(html).toContain('<div class="topbar-actions {{SITE_ACTIONS_CLASS}}">')
-    expect(html).toContain('<main data-hraness-marketing-preset="editorial" id="main" tabindex="-1">')
+    expect(html).toContain('<main data-hraness-landscape="page" data-hraness-marketing-preset="editorial" id="main" tabindex="-1">')
     expect(html).not.toMatch(/<section(?![^>]*aria-labelledby)/)
     expect(fragmentLinks.every(fragment => ids.has(fragment))).toBe(true)
     expect(renderStatusPage().match(/<h1\b/gu)).toHaveLength(1)
@@ -1599,7 +1607,7 @@ describe("static SlopCamera site", () => {
     expect(html).toContain('class="slopcamera-studio"')
     expect(html).toContain("{{EXAMPLE_GALLERY}}")
     expect(html).not.toContain("Illustrative SlopCamera terminal session")
-    expect(html).toContain('<main data-hraness-marketing-preset="editorial"')
+    expect(html).toContain('<main data-hraness-landscape="page" data-hraness-marketing-preset="editorial"')
     expect(html).toContain('data-hraness-material="lantern"')
     expect(html).not.toContain('class="hraness-marketing-field"')
     expect(await readSource("404.html")).not.toContain("data-hraness-marketing-preset")
@@ -2152,10 +2160,11 @@ describe("static SlopCamera site", () => {
     // snapshot for the shared 404 measured 354,712. The design-kit v0.22.0
     // union with the icon library and status snapshot measured 434,750; the
     // Catppuccin palette, contour material, shared hero rollout, and product
-    // studio/pixel-art treatment bring it to 524,108. Keep a strict ceiling
-    // over the full sealed union and captured foundation;
+    // studio/pixel-art treatment bring it to 524,108. The product-landscape
+    // ruleset with its emitted mask plates measures 530,409. Keep a strict
+    // ceiling over the full sealed union and captured foundation;
     // no import, recipe, snapshot, or repeated layered rule is discounted.
-    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(526_000)
+    expect(assertCombinedSiteCssBudget(stylesAsset, foundationAsset)).toBeLessThan(532_000)
     expect(assertThemeBundleBudget(themeAsset)).toBeLessThan(32_800)
     expect(themeAsset).not.toMatch(/react|next-themes|react-aria/i)
     expect(themeAsset).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/)

@@ -382,39 +382,210 @@ main[data-hraness-marketing-preset="editorial"] {
 .slopcamera-studio__edit i:nth-child(3) { width: 80%; align-self: start; }
 .slopcamera-studio > figcaption { margin-block-start: 1.25rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
 
-/* The landscape is a grayscale luminance drawing. Light themes invert it and
- * multiply, so the ink is a darker shade of the page's own hue; dark themes
- * screen the light lines over the page instead. */
-.slopcamera-pixel-art {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: .15;
-  mix-blend-mode: multiply;
+/* Product landscape: this product's drawing, contract @hraness/design-kit/product-landscape.css v0.41.0 inlined
+ * for this sealed static build (the site pins the kit foundation at v0.35.0). Public pages opt in
+ * with data-hraness-landscape="page"; see the kit's LANDSCAPE.md. */
+:root {
+  --hraness-landscape-ink: color-mix(in oklch, var(--ink, CanvasText) 30%, var(--paper, Canvas));
+  --hraness-landscape-opacity: .15;
+  --hraness-landscape-opacity-narrow: .11;
+}
+html[data-theme="dark"] {
+  --hraness-landscape-opacity: .1;
+  --hraness-landscape-opacity-narrow: .07;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] {
+    --hraness-landscape-opacity: .1;
+    --hraness-landscape-opacity-narrow: .07;
+  }
 }
 
-.slopcamera-pixel-art img {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
-  filter: invert(1);
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) {
+  --_hraness-landscape-ink: var(
+    --hraness-landscape-ink,
+    color-mix(
+      in oklch,
+      var(--foreground, var(--plain-foreground, CanvasText)) var(--hraness-landscape-strength, 30%),
+      var(--background, var(--plain-background, Canvas))
+    )
+  );
+  position: relative;
+  isolation: isolate;
 }
-html[data-theme="dark"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
-html[data-theme="dark"] .slopcamera-pixel-art img { filter: none; }
-@media (prefers-color-scheme: dark) {
-  html[data-theme="system"] .slopcamera-pixel-art { mix-blend-mode: screen; opacity: .1; }
-  html[data-theme="system"] .slopcamera-pixel-art img { filter: none; }
+
+@supports (mask-mode: luminance) or (-webkit-mask-source-type: luminance) {
+  :is(
+    body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+    [data-hraness-landscape="contained"]
+  )::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--_hraness-landscape-ink);
+    content: "";
+    opacity: var(--hraness-landscape-opacity, 0.5);
+    pointer-events: none;
+    -webkit-mask-image: var(--hraness-landscape-image, linear-gradient(transparent, transparent));
+    mask-image: var(--hraness-landscape-image, linear-gradient(transparent, transparent));
+    -webkit-mask-source-type: luminance;
+    mask-mode: luminance;
+    -webkit-mask-position: top center;
+    mask-position: top center;
+    -webkit-mask-repeat: repeat-y;
+    mask-repeat: repeat-y;
+    -webkit-mask-size: 100% auto;
+    mask-size: 100% auto;
+  }
+
+  @media (max-width: 48rem) {
+    :is(
+      body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+      [data-hraness-landscape="contained"]
+    )::before {
+      opacity: var(--hraness-landscape-opacity-narrow, 0.36);
+      -webkit-mask-image: var(--hraness-landscape-image-narrow, var(--hraness-landscape-image, linear-gradient(transparent, transparent)));
+      mask-image: var(--hraness-landscape-image-narrow, var(--hraness-landscape-image, linear-gradient(transparent, transparent)));
+    }
+  }
 }
-/* Phone copy spans the drawing's side scenery, so it recedes further there. */
-@media (max-width: 48rem) {
-  html .slopcamera-pixel-art { opacity: .11; }
-  html[data-theme="dark"] .slopcamera-pixel-art { opacity: .07; }
+
+@media (forced-colors: active), print {
+  :is(
+    body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+    [data-hraness-landscape="contained"]
+  )::before {
+    display: none;
+  }
 }
-@media (max-width: 48rem) and (prefers-color-scheme: dark) {
-  html[data-theme="system"] .slopcamera-pixel-art { opacity: .07; }
+
+/* Page wrappers that repaint the page colour would hide the drawing behind a
+ * hard-edged slab. Over a landscape they let the identical body colour show. */
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) :is(.hraness-marketing-page, .plain-site:not(body), .plain-footer, [data-hraness-landscape-surface="clear"]) {
+  background: transparent;
 }
+
+/* Reading surfaces stay opaque and gain rounded edges: code, tables, and any
+ * product element marked `data-hraness-landscape-surface="solid"`. */
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) :is(.plain-publication__article-body pre, .plain-publication__table-scroll, [data-hraness-landscape-surface="solid"]) {
+  border-radius: var(--hraness-landscape-radius, 0.75rem);
+  background: var(--hraness-landscape-solid, var(--plain-surface, var(--hraness-marketing-surface, var(--background, Canvas))));
+}
+
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) .plain-publication__article-body pre {
+  padding: 0.9rem 1.1rem;
+}
+
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) .plain-publication__table-scroll {
+  border: 1px solid var(--plain-line, color-mix(in srgb, currentColor 14%, transparent));
+}
+
+/* Small cards and callouts become frosted panels over the drawing, using the
+ * sticky header's material. Without backdrop support, under reduced
+ * transparency, and in forced colours they keep their opaque surface. Keep the
+ * browser aliases in separate feature queries: CSS optimizers can collapse
+ * adjacent aliases to the prefixed property and lose Chromium blur. */
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) :is(
+  .hraness-marketing-card,
+  .hraness-marketing-quote,
+  .hraness-marketing-plan,
+  .hraness-marketing-trust-item,
+  .hraness-marketing-interface,
+  .hraness-marketing-primitive,
+  .plain-publication__callout,
+  .plain-publication__social-kit-item,
+  [data-hraness-landscape-surface="glass"]
+) {
+  --_hraness-landscape-glass-base: var(--hraness-landscape-glass, var(--hraness-marketing-surface, var(--plain-surface, var(--background, Canvas))));
+  background: var(--_hraness-landscape-glass-base);
+}
+
+:is(
+  body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+  [data-hraness-landscape="contained"]
+) [data-hraness-landscape-surface="glass"] {
+  border-radius: var(--hraness-landscape-radius, 0.75rem);
+}
+
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  :is(
+    body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+    [data-hraness-landscape="contained"]
+  ) :is(
+    .hraness-marketing-card,
+    .hraness-marketing-quote,
+    .hraness-marketing-plan,
+    .hraness-marketing-trust-item,
+    .hraness-marketing-interface,
+    .hraness-marketing-primitive,
+    .plain-publication__callout,
+    .plain-publication__social-kit-item,
+    [data-hraness-landscape-surface="glass"]
+  ) {
+    background: color-mix(in srgb, var(--_hraness-landscape-glass-base) 82%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  :is(
+    body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+    [data-hraness-landscape="contained"]
+  ) :is(
+    .hraness-marketing-card,
+    .hraness-marketing-quote,
+    .hraness-marketing-plan,
+    .hraness-marketing-trust-item,
+    .hraness-marketing-interface,
+    .hraness-marketing-primitive,
+    .plain-publication__callout,
+    .plain-publication__social-kit-item,
+    [data-hraness-landscape-surface="glass"]
+  ) {
+    background: color-mix(in srgb, var(--_hraness-landscape-glass-base) 82%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :is(
+    body:is([data-hraness-landscape="page"], :has([data-hraness-landscape="page"])):not(:has([data-hraness-landscape="off"])),
+    [data-hraness-landscape="contained"]
+  ) :is(
+    .hraness-marketing-card,
+    .hraness-marketing-quote,
+    .hraness-marketing-plan,
+    .hraness-marketing-trust-item,
+    .hraness-marketing-interface,
+    .hraness-marketing-primitive,
+    .plain-publication__callout,
+    .plain-publication__social-kit-item,
+    [data-hraness-landscape-surface="glass"]
+  ) {
+    background: var(--_hraness-landscape-glass-base);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+/* Product landscape: end */
 
 .slopcamera-product-hero,
 .slopcamera-features,
@@ -663,7 +834,6 @@ html[data-theme="dark"] .slopcamera-pixel-art img { filter: none; }
 }
 
 @media (forced-colors: active) {
-  .slopcamera-pixel-art { display: none; }
   .hraness-platform-install__tab[aria-selected="true"] {
     forced-color-adjust: none;
   }
