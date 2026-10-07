@@ -2357,16 +2357,16 @@ describe("static SlopCamera site", () => {
     expect(csp).toContain("connect-src https://us.i.posthog.com https://account.hraness.com")
     expect(csp).toContain("font-src 'self'")
     expect(csp).toContain("form-action 'none'")
-    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).not.toContain("frame-ancestors")
     expect(csp).toContain("object-src 'none'")
     expect(csp).not.toMatch(/font-src[^;]*(?:https?:|data:)/u)
-    expect(byKey.get("X-Frame-Options")).toBe("DENY")
+    expect(byKey.get("X-Frame-Options")).toBeUndefined()
     expect(byKey.get("Referrer-Policy")).toBe("no-referrer")
     expect(byKey.get("Strict-Transport-Security")).toContain("includeSubDomains")
     expect(byKey.get("Vary")).toBe("Accept, Accept-Encoding")
     expect(previewByKey.get("Content-Security-Policy")).toBe(
       "default-src 'none'; base-uri 'none'; connect-src 'none'; font-src 'self'; "
-      + "form-action 'none'; frame-ancestors https://hraness.com https://www.hraness.com; "
+      + "form-action 'none'; "
       + "img-src 'none'; object-src 'none'; script-src 'none'; style-src 'self'; "
       + "upgrade-insecure-requests",
     )
