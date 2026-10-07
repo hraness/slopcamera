@@ -2,6 +2,8 @@
 
 Report suspected vulnerabilities privately through [GitHub’s security advisory form](https://github.com/hraness/slopcamera/security/advisories/new). Do not open a public issue for credential exposure, path escape, unsafe SVG output, archive extraction, subprocess containment, unbounded resource use, Gateway authority substitution, or MCP boundary failures.
 
+You can also email the maintainer at [hraness@pm.me](mailto:hraness@pm.me).
+
 Include the affected version, platform, command or API, minimal reproduction, expected boundary, observed result, and whether any secret or caller-owned media left the machine. Remove tokens, account identifiers, private paths, and proprietary media from the report.
 
 Slopcamera’s local MCP server confines paths to one caller-selected root but is not an operating-system sandbox against concurrent same-user mutation. Vectorization is network-silent. Generation sends its prompt and explicitly supplied media directly to Vercel AI Gateway. Slopcamera reads `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` from the process environment and never persists either value.
