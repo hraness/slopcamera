@@ -1,5 +1,14 @@
 # SlopCamera
 
+> 📸 SlopCamera is a media studio for your coding agent. Codex, Claude Code, and
+> other agents make images, diagrams, animation, 3D scenes, and edited video
+> from source files, so a change is a new render and the next version starts
+> from the last one.
+>
+> Ask your agent to set it up: https://slopcamera.com
+>
+> — Ben Guo
+
 [![Rain, bottled: a still from a SlopCamera Blender showcase film, in which a cloud rains inside a glass vessel with brass fittings](apps/web/media/rain-bottled-poster-479a32b54a03.webp)](https://slopcamera.com/docs/how-to/remix-the-showcase#rain-bottled)
 
 **A multimedia studio for your coding agent.** SlopCamera lets your coding
