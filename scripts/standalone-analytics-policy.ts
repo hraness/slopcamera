@@ -6,7 +6,7 @@ import { supportHref } from "../apps/web/scripts/site-support-profile";
 // this does not admit an account client or a dependency in the local runtime.
 const admittedLines: Readonly<Record<string, readonly string[]>> = {
   "apps/web/vercel.json": [
-    "30f89c70cc44f3c71028226c6c00d6a7a2724f0211b45b5b54d061c70dd6fb6d",
+    "c0a9b13f5eec53243c18510299b5e586a37b76ee53bb62471c3e265305dd0abb",
   ],
   "apps/web/site.test.ts": [
     "a72e61e89ea54e50c269f34cf29aaaa76c6b77bc7a8802bde82b05df5c772089",

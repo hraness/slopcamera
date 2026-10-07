@@ -64,7 +64,7 @@ describe("contained spatial asset preparation", () => {
         outputPath = prepared.resources[0]!.absolutePath;
         expect(sha(await readFile(outputPath))).toBe(prepared.resources[0]!.sha256);
         expect(createSpatialOverlayBatch({ snapshots: [frame], preparedAssets: prepared.preparedAssets, frameRate: { numerator: 30_000, denominator: 1_001 }, mode: { kind: "beauty" } }).authoring.resources).toHaveLength(1);
-        expect(prepared.receipt.profiles).toContain("sdr-png-jpeg-sharp-0.35.4");
+        expect(prepared.receipt.profiles).toContain("sdr-png-jpeg-sharp-0.35.5");
         return "consumed";
       });
       expect(result).toBe("consumed"); expect(await readdir(workspaceParent)).toEqual([]);

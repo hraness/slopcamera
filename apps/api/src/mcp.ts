@@ -1,7 +1,10 @@
+import { readBoundedText } from "./body.js"
 import { isApiError, isRecord } from "./errors.js"
 import type { HostedCallRequest, HostedCallResult } from "./handler.js"
 import { hostedTools } from "./tools.js"
 import { SLOPCAMERA_VERSION } from "../../../src/version.js"
+
+const MCP_BODY_MAX_BYTES = 16 * 1024 * 1024
 
 /**
  * Stateless streamable-HTTP MCP endpoint. Each POST carries one JSON-RPC
@@ -52,9 +55,10 @@ export async function handleMcpRequest(
   clientKey: string,
   toolEnv?: Record<string, string | undefined>,
 ): Promise<Response> {
+  const text = await readBoundedText(request, MCP_BODY_MAX_BYTES)
   let body: unknown
   try {
-    body = await request.json()
+    body = JSON.parse(text)
   } catch {
     return rpcError(null, -32700, "Body must be valid JSON.")
   }

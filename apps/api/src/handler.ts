@@ -9,6 +9,7 @@ import {
   isApiError,
   isRecord,
 } from "./errors.js"
+import { readBoundedText } from "./body.js"
 import { handleMcpRequest } from "./mcp.js"
 import { openApiDocument } from "./openapi.js"
 import { RateLimiter } from "./ratelimit.js"
@@ -91,14 +92,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 async function readJsonBody(request: Request): Promise<unknown> {
-  const length = Number(request.headers.get("content-length") ?? "0")
-  if (length > BODY_MAX_BYTES) {
-    throw new ApiError(413, "too_large", "Request body exceeds the service limit.")
-  }
-  const text = await request.text()
-  if (Buffer.byteLength(text, "utf8") > BODY_MAX_BYTES) {
-    throw new ApiError(413, "too_large", "Request body exceeds the service limit.")
-  }
+  const text = await readBoundedText(request, BODY_MAX_BYTES)
   try {
     return JSON.parse(text)
   } catch {

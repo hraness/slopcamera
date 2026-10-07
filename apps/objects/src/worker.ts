@@ -204,6 +204,9 @@ export default {
     const headers = new Headers()
     object.writeHttpMetadata(headers)
     headers.set("content-length", String(object.size))
+    headers.set("x-content-type-options", "nosniff")
+    headers.set("content-security-policy", "default-src 'none'; sandbox")
+    headers.set("cache-control", "private, no-store")
     for (const [name, value] of Object.entries(object.customMetadata ?? {})) {
       headers.set(`x-meta-${name}`, value)
     }

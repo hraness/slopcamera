@@ -27,8 +27,8 @@
     ],
     "catalog": {
       "@ai-sdk/gateway-v4": "npm:@ai-sdk/gateway@^4.0.27",
-      "@img/sharp-darwin-arm64": "0.35.4",
-      "@img/sharp-libvips-darwin-arm64": "1.3.3",
+      "@img/sharp-darwin-arm64": "0.35.5",
+      "@img/sharp-libvips-darwin-arm64": "1.3.4",
       "@native-sdk/cli": "0.5.3",
       "@types/bun": "^1.3.14",
       "@types/node": "^24.10.0",
@@ -294,15 +294,15 @@
     "playwright-core": "1.62.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "three": "0.183.2",
     "typescript": "^6.0.3",
     "zod": "^4.4.3",
     "@hraness/cli-update": "https://github.com/hraness/cli-update/releases/download/v0.1.0/hraness-cli-update-0.1.0.tgz"
   },
   "optionalDependencies": {
-    "@img/sharp-darwin-arm64": "0.35.4",
-    "@img/sharp-libvips-darwin-arm64": "1.3.3"
+    "@img/sharp-darwin-arm64": "0.35.5",
+    "@img/sharp-libvips-darwin-arm64": "1.3.4"
   },
   "devDependencies": {
     "@antithesishq/bombadil": "0.7.2",
@@ -328,6 +328,10 @@
     "registry": "https://registry.npmjs.org"
   },
   "overrides": {
-    "@tiptap/core": "3.31.4"
+    "@tiptap/core": "3.31.4",
+    "fflate": "^0.8.2",
+    "prosemirror-view": "^1.42.3",
+    "sharp": "0.35.5",
+    "source-map-js": "^1.2.2"
   }
 }

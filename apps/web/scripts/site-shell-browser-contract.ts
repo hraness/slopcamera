@@ -12,9 +12,9 @@ export const siteInstallBaselineProfile = "install-family-ed48ebb3-v1"
 export const siteInstallBaselineRevision = "ed48ebb3bb3aceb30fe369586467d2efbfa42455"
 export const siteInstallBaselineTree = "b3a2708ae6fc0a09dbf7d3eb694b2eebecdc1342"
 export const siteShellHeaders = Object.freeze({
-  "content-security-policy": "default-src 'self'; base-uri 'none'; connect-src https://us.i.posthog.com; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests",
+  "content-security-policy": "default-src 'self'; base-uri 'none'; connect-src https://us.i.posthog.com; font-src 'self'; form-action 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests",
   "permissions-policy": "camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
-  "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer", "x-content-type-options": "nosniff",
   "cross-origin-opener-policy": "same-origin", "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
   vary: "Accept, Accept-Encoding",
 })

@@ -4,7 +4,7 @@ import type { Browser, Page } from "playwright-core"
 const timeoutMs = 30_000
 
 export const expectedPreviewHeaders = Object.freeze({
-  "content-security-policy": "default-src 'none'; base-uri 'none'; connect-src 'none'; font-src 'self'; form-action 'none'; frame-ancestors https://hraness.com https://www.hraness.com; img-src 'none'; object-src 'none'; script-src 'none'; style-src 'self'; upgrade-insecure-requests",
+  "content-security-policy": "default-src 'none'; base-uri 'none'; connect-src 'none'; font-src 'self'; form-action 'none'; img-src 'none'; object-src 'none'; script-src 'none'; style-src 'self'; upgrade-insecure-requests",
   "permissions-policy": "camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",

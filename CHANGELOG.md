@@ -10,6 +10,7 @@ Slopcamera checks a GLB against a web delivery budget and an LOD plan, and its A
 - The Agent Skill's web-ready 3D assets reference covers block-out, high-to-low baking, bake diagnostics, texture budgets, LODs, GLB export, admission and runtime comparison, adapted from the MIT-licensed vgpu Agent Skill.
 - The Agent Skill's 3D quality bar, "accurate physics, AAA graphics, VFX", applies to every 3D brief unless the user overrides it, with a review checklist and the renderer limits that apply.
 - A new how-to, "Make web-ready 3D assets with Blender", walks through the workflow.
+- Image processing uses sharp 0.35.5, which fixes a high-severity librsvg advisory. Spatial asset receipts now record the profile `sdr-png-jpeg-sharp-0.35.5`.
 
 ## 3.11.0 - 2026-10-02
 

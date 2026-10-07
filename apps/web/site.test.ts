@@ -1,4 +1,5 @@
 import { homepageMarketingSlots, productMessaging, shellProductNameSlot } from "./src/messaging"
+import { securityTxt } from "./src/security-txt"
 import { paletteColors } from "@hraness/design-kit"
 import { assertSiteRecipeResources } from "./scripts/site-css"
 import { supportHref } from "./scripts/site-support-profile"
@@ -2084,6 +2085,7 @@ describe("static SlopCamera site", () => {
     expect(notFound).toContain(`<script src="${builtAssets.themePath}"></script>`)
     expect(`${html}\n${notFound}`).not.toContain("{{")
     expect(rootFiles.sort()).toEqual([
+      ".well-known",
       "404.html",
       "apple-touch-icon.png",
       "assets",
@@ -2204,6 +2206,10 @@ describe("static SlopCamera site", () => {
     expect(await readBuilt("llms.txt")).toBe(llmsTxt)
     expect(await readBuilt("sitemap.md")).toBe(sitemapMarkdown)
     expect(await readBuilt("robots.txt")).toBe(robotsTxt)
+    expect(await readBuilt(".well-known/security.txt")).toBe(securityTxt)
+    expect(securityTxt).toContain("Contact: https://github.com/hraness/slopcamera/security/advisories/new")
+    expect(securityTxt).toContain("Canonical: https://slopcamera.com/.well-known/security.txt")
+    expect(securityTxt).toMatch(/^Expires: \d{4}-\d{2}-\d{2}T/mu)
     for (const document of [sitemap, sitemapMarkdown, homeMarkdown, llmsTxt]) {
       expect(document).not.toMatch(/\/reading|paint-with-code|draw-faces-with-javascript|feynobg|painting-with-gaussians|gemini-omni|how-i-design-with-ai/u)
       expect(document).not.toContain("/preview")
@@ -2351,16 +2357,16 @@ describe("static SlopCamera site", () => {
     expect(csp).toContain("connect-src https://us.i.posthog.com https://account.hraness.com")
     expect(csp).toContain("font-src 'self'")
     expect(csp).toContain("form-action 'none'")
-    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).not.toContain("frame-ancestors")
     expect(csp).toContain("object-src 'none'")
     expect(csp).not.toMatch(/font-src[^;]*(?:https?:|data:)/u)
-    expect(byKey.get("X-Frame-Options")).toBe("DENY")
+    expect(byKey.get("X-Frame-Options")).toBeUndefined()
     expect(byKey.get("Referrer-Policy")).toBe("no-referrer")
     expect(byKey.get("Strict-Transport-Security")).toContain("includeSubDomains")
     expect(byKey.get("Vary")).toBe("Accept, Accept-Encoding")
     expect(previewByKey.get("Content-Security-Policy")).toBe(
       "default-src 'none'; base-uri 'none'; connect-src 'none'; font-src 'self'; "
-      + "form-action 'none'; frame-ancestors https://hraness.com https://www.hraness.com; "
+      + "form-action 'none'; "
       + "img-src 'none'; object-src 'none'; script-src 'none'; style-src 'self'; "
       + "upgrade-insecure-requests",
     )
