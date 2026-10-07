@@ -20,7 +20,7 @@ if (import.meta.main) {
   const sharpAddon = join(
     dirname(sharpPackageEntry),
     "lib",
-    "sharp-darwin-arm64-0.35.4.node",
+    "sharp-darwin-arm64-0.35.5.node",
   );
   const result = await Bun.build({
     compile: { outfile: resolve(import.meta.dir, "..", "dist", "slopcamera") },
@@ -48,7 +48,7 @@ if (import.meta.main) {
             const declaration = "let sharp;";
             if (source.split(declaration).length !== 2) {
               throw new Error(
-                "Pinned Sharp 0.35.4 loader no longer has its expected native-binding declaration.",
+                "Pinned Sharp 0.35.5 loader no longer has its expected native-binding declaration.",
               );
             }
             return {
