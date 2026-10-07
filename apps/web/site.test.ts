@@ -2797,3 +2797,18 @@ test("the real analytics entry waits for regional permission and honors acceptan
     expect(output.requestsAfterFreshCapture).toBe(2)
   }
 })
+
+describe("founder note", () => {
+  test("the home page sets the founder's blurb below the hero without a signature", async () => {
+    const html = await readSource("index.html")
+    const hero = html.indexOf('data-hraness-marketing="hero"')
+    const note = html.indexOf('class="founder-note"')
+    const features = html.indexOf('id="features"')
+    expect(hero).toBeGreaterThan(-1)
+    expect(note).toBeGreaterThan(hero)
+    expect(note).toBeLessThan(features)
+    expect(html).toContain("Slopcamera is a media studio for your coding agent.")
+    expect(html).toContain('<a href="https://slopcamera.com">slopcamera.com</a>')
+    expect(html).not.toContain("Ben Guo")
+  })
+})
