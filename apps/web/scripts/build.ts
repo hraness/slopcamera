@@ -16,6 +16,7 @@ import { pruneRetainedEvidence } from "./retained-evidence"
 import { exampleUrl, workflowExamples, type WorkflowExample } from "../src/example-registry"
 import type { SiteArtifact } from "./site-contract"
 export { renderAskAiAboutThis } from "../src/site-content"
+import { securityTxt } from "../src/security-txt"
 import { docsCanonicalUrl, docsPageMarkdown, docPages } from "../src/docs-registry"
 import { blogFeedPath, blogIndexMarkdownPath, blogMarkdownPath, blogPosts } from "../src/blog-registry"
 import { blogAtomFeed, blogIndexMarkdown, blogPostMarkdown, blogSitemapPaths } from "../src/blog-content"
@@ -38,6 +39,7 @@ const generatedTextFiles = {
   "index.md": homeMarkdown,
   "llms.txt": llmsTxt,
   "robots.txt": robotsTxt,
+  ".well-known/security.txt": securityTxt,
   "sitemap.xml": renderSitemapXml(),
   "sitemap.md": sitemapMarkdown,
 } as const
