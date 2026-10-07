@@ -18,6 +18,7 @@ export interface ObjectProxyConfig {
 }
 
 const MAX_PROXY_PUT_BYTES = 64 * 1024 * 1024
+const PROXY_TIMEOUT_MS = 60_000
 
 function hmacHex(secret: string, message: string): string {
   return createHmac("sha256", secret).update(message).digest("hex")
@@ -104,7 +105,13 @@ export class ObjectProxyStore {
             ]),
           )),
     }
-    const response = await fetch(url, { method: "PUT", headers, body })
+    const response = await fetch(url, {
+      method: "PUT",
+      headers,
+      body,
+      redirect: "error",
+      signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
+    })
     if (!response.ok) {
       throw new ApiError(503, "storage_unavailable", "Artifact storage write failed.")
     }
@@ -115,7 +122,10 @@ export class ObjectProxyStore {
     maximumBytes: number,
   ): Promise<Uint8Array | undefined> {
     const url = this.signedUrl("GET", key, { expiresSeconds: 300 })
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      redirect: "error",
+      signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
+    })
     if (response.status === 404) return undefined
     if (!response.ok || response.body === null) {
       throw new ApiError(503, "storage_unavailable", "Artifact storage read failed.")
@@ -146,7 +156,11 @@ export class ObjectProxyStore {
     key: string,
   ): Promise<{ bytes: number; metadata: Record<string, string> } | undefined> {
     const url = this.signedUrl("HEAD", key, { expiresSeconds: 300 })
-    const response = await fetch(url, { method: "HEAD" })
+    const response = await fetch(url, {
+      method: "HEAD",
+      redirect: "error",
+      signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
+    })
     if (response.status === 404) return undefined
     if (!response.ok) {
       throw new ApiError(503, "storage_unavailable", "Artifact storage check failed.")
