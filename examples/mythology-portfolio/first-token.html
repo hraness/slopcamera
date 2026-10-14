@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The First Token — a creation myth</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+      *, *::before, *::after { box-sizing: border-box; }
+      .ground { position: absolute; inset: 0; background: var(--bg); }
+      .field { position: absolute; inset: 0; }
+      .spark { position: absolute; left: 50%; top: 46%; width: 1px; height: 1px; border-radius: 50%; }
+      .line { position: absolute; left: 0; top: 0; font: italic 400 5.1vw/1 Georgia, "Times New Roman", serif; color: var(--paper); white-space: pre; }
+      .line span { position: absolute; left: 0; top: 0; will-change: transform, opacity; text-shadow: 0 0 1.2vw rgb(234 213 164 / 45%); }
+      .measure { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); font: italic 400 5.1vw/1 Georgia, "Times New Roman", serif; white-space: pre; visibility: hidden; }
+      .question { position: absolute; left: 50%; top: 73%; font: 400 9vw/1 Georgia, "Times New Roman", serif; color: var(--accent); transform: translate(-50%, -50%); text-shadow: 0 0 2vw rgb(189 102 80 / 55%); }
+      .caption { position: absolute; left: 5.5%; bottom: 6.5%; font: 600 1.05vw/1.4 Georgia, serif; letter-spacing: .32em; text-transform: uppercase; color: var(--paper); opacity: .78; }
+    </style>
+    <script type="importmap">{"imports":{"@paper-design/shaders":"/.slopcamera-overlay/libraries/4b7f8d053f6c91b4d3ec6abdcfd4b07b9fce7ec2b8086a0f0781f485c59d097e.mjs"}}</script>
+  </head>
+  <body>
+    <div class="ground"></div>
+    <div class="field" aria-hidden="true"></div>
+    <div class="spark" aria-hidden="true"></div>
+    <div class="measure" aria-hidden="true"></div>
+    <div class="line" aria-label="and the light divided into words"></div>
+    <div class="question" aria-hidden="true">?</div>
+    <div class="caption">Myth I &nbsp;·&nbsp; Creation &nbsp;·&nbsp; The First Token</div>
+    <script type="module">
+      import { ShaderFitOptions, ShaderMount, getShaderColorFromString, neuroNoiseFragmentShader } from "@paper-design/shaders";
+
+      // Style clock precomputed by render.ts with sampleVisualStyleExposure and
+      // visualStyleFrameVariation: the page never keeps its own animation state.
+      const P = SlopcameraOverlay.parameters;
+      const EXPOSURE = P.exposureUs.split(",").map(Number);
+      const BOIL = Object.fromEntries(Object.entries(P.boil ?? {}).map(([key, value]) => [key, value.split(",").map(Number)]));
+      const styleFrame = (timeMs) => {
+        const frame = Math.min(EXPOSURE.length - 1, Math.max(0, Math.round((P.timeOffsetSeconds * 1000 + timeMs) * 24 / 1000)));
+        return { frame, t: EXPOSURE[frame] / 1e6, boil: (channel) => BOIL[channel][frame] };
+      };
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const smooth = (a, b, v) => { const x = clamp((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+      const TAU = Math.PI * 2;
+      const pal = P.palette;
+      for (const [key, value] of Object.entries(pal)) document.documentElement.style.setProperty("--" + key, value);
+
+      const W = SlopcameraOverlay.width, H = SlopcameraOverlay.height, unit = Math.min(W, H);
+      const field = document.querySelector(".field");
+      const shader = new ShaderMount(field, neuroNoiseFragmentShader, {
+        u_colorFront: getShaderColorFromString(pal.paper),
+        u_colorMid: getShaderColorFromString(pal.secondary),
+        u_colorBack: getShaderColorFromString(pal.background),
+        u_brightness: 0.06, u_contrast: 0.32,
+        u_fit: ShaderFitOptions.cover, u_worldWidth: W, u_worldHeight: H,
+        u_originX: 0.5, u_originY: 0.5, u_offsetX: 0, u_offsetY: 0, u_rotation: 0, u_scale: 1,
+      }, { alpha: true, premultipliedAlpha: false }, 0);
+
+      const text = "and the light divided into words";
+      const measure = document.querySelector(".measure");
+      const line = document.querySelector(".line");
+      const glyphs = [...text].map((ch, i) => {
+        const probe = document.createElement("span");
+        probe.textContent = ch;
+        measure.append(probe);
+        const span = document.createElement("span");
+        span.textContent = ch;
+        line.append(span);
+        return { ch, i, probe, span,
+          angle: SlopcameraOverlay.randomFor("glyph-angle-" + i) * TAU,
+          reach: 0.05 + SlopcameraOverlay.randomFor("glyph-reach-" + i) * 0.16,
+          delay: SlopcameraOverlay.randomFor("glyph-delay-" + i) * 0.9 };
+      });
+      const spark = document.querySelector(".spark");
+      const question = document.querySelector(".question");
+      let targets = null;
+
+      SlopcameraOverlay.onFrame(({ timeMs }) => {
+        const { t, boil } = styleFrame(timeMs);
+        if (targets === null) targets = glyphs.map(g => { const r = g.probe.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+        // The field opens from a single point: the light divides.
+        const open = smooth(0.4, 4.2, t);
+        const radius = 2 + open * 95;
+        field.style.maskImage = field.style.webkitMaskImage = `radial-gradient(circle at 50% 46%, black ${radius * 0.55}%, transparent ${radius}%)`;
+        shader.setUniforms({ u_scale: 3.2 - 2.1 * open, u_brightness: 0.03 + 0.07 * open, u_rotation: 8 * t });
+        shader.setFrame(2600 + t * 700);
+        const pulse = 0.5 + 0.5 * Math.cos(TAU * t * 0.9);
+        const sparkSize = unit * (0.012 + 0.02 * pulse) * (1 - smooth(1.6, 3.2, t) * 0.7);
+        spark.style.width = spark.style.height = `${sparkSize}px`;
+        spark.style.transform = "translate(-50%, -50%)";
+        spark.style.opacity = String(1 - smooth(3.0, 4.6, t));
+        spark.style.background = `radial-gradient(circle, ${pal.paper} 0%, ${pal.primary} 45%, transparent 72%)`;
+        spark.style.boxShadow = `0 0 ${unit * 0.08}px ${unit * 0.03}px rgb(234 213 164 / ${0.55 * (1 - smooth(2.5, 4.5, t))})`;
+        // Glyphs condense out of the light and settle into their line.
+        const cx = W / 2, cy = H * 0.46;
+        glyphs.forEach((g, i) => {
+          const start = 1.5 + i * 0.075 + g.delay;
+          const p = smooth(start, start + 1.9, t);
+          const tx = targets[i].x, ty = targets[i].y;
+          const ox = cx + Math.cos(g.angle) * unit * g.reach, oy = cy + Math.sin(g.angle) * unit * g.reach;
+          const arc = Math.sin(p * Math.PI) * unit * 0.07;
+          const jitterX = Math.sin(boil("glyph-x") * TAU * 3 + i * 1.7) * unit * 0.0022 * (1 - p * 0.6);
+          const jitterY = Math.cos(boil("glyph-y") * TAU * 3 + i * 2.3) * unit * 0.0022 * (1 - p * 0.6);
+          const x = ox + (tx - ox) * p + Math.cos(g.angle + Math.PI / 2) * arc + jitterX;
+          const y = oy + (ty - oy) * p + Math.sin(g.angle + Math.PI / 2) * arc + jitterY;
+          g.span.style.opacity = String(smooth(start - 0.1, start + 0.5, t));
+          g.span.style.transform = `translate(${x}px, ${y}px) scale(${0.35 + 0.65 * p}) rotate(${(1 - p) * (g.angle - Math.PI) * 40}deg)`;
+        });
+        const q = smooth(5.9, 6.9, t);
+        question.style.opacity = String(q);
+        question.style.transform = `translate(-50%, -50%) translateY(${(1 - q) * unit * 0.06}px) scale(${0.8 + 0.2 * q})`;
+      });
+    </script>
+  </body>
+</html>
