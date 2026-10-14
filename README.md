@@ -1,9 +1,9 @@
 # SlopCamera
 
-> 📸 SlopCamera is a media studio for your coding agent. Codex, Claude Code, and
+> 📸 Slopcamera is a media studio for your coding agent. Codex, Claude Code, and
 > other agents make images, diagrams, animation, 3D scenes, and edited video
-> from source files, so a change is a new render and the next version starts
-> from the last one.
+> from source files. A change is a new render, and the next version starts from
+> the last one.
 >
 > Ask your agent to set it up: https://slopcamera.com
 >
